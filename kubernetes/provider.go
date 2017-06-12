@@ -101,6 +101,7 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_resource_quota":            resourceKubernetesResourceQuota(),
 			"kubernetes_secret":                    resourceKubernetesSecret(),
 			"kubernetes_service":                   resourceKubernetesService(),
+			"kubernetes_cluster_role_binding":      resourceKubernetesClusterRoleBinding(),
 		},
 		ConfigureFunc: providerConfigure,
 	}

@@ -1,5 +1,4 @@
-Terraform Provider
-==================
+# Terraform Provider
 
 - Website: https://www.terraform.io
 - [![Gitter chat](https://badges.gitter.im/hashicorp-terraform/Lobby.png)](https://gitter.im/hashicorp-terraform/Lobby)
@@ -7,14 +6,13 @@ Terraform Provider
 
 ![Terraform](https://rawgithub.com/hashicorp/terraform/master/website/source/assets/images/logo-hashicorp.svg)
 
-Requirements
-------------
+## Requirements
+
 
 -	[Terraform](https://www.terraform.io/downloads.html) 0.10.x
 -	[Go](https://golang.org/doc/install) 1.8 (to build the provider plugin)
 
-Building The Provider
----------------------
+## Building The Provider
 
 Clone repository to: `$GOPATH/src/github.com/hashicorp/terraform-provider-$PROVIDER_NAME`
 
@@ -30,19 +28,24 @@ $ cd $GOPATH/src/github.com/hashicorp/terraform-provider-$PROVIDER_NAME
 $ make build
 ```
 
-Using the provider
-----------------------
-## Fill in for each provider
+## Using the provider
 
-Developing the Provider
----------------------------
+- [ ] Fill in for each provider
+
+## Developing the Provider
+
+### Contributing Resources
+
+In order to prevent breaking changes and migration of user-created resources, resources included in this provider will be limited to `v1` APIs and not `alpha` or `beta`. You can find `v1` resources in the Kubernetes [API documentation](https://kubernetes.io/docs/reference/#api-reference) for the appropriate version of Kubernetes.
+
+### Development Environment
 
 If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.8+ is *required*). You'll also need to correctly setup a [GOPATH](http://golang.org/doc/code.html#GOPATH), as well as adding `$GOPATH/bin` to your `$PATH`.
 
 To compile the provider, run `make build`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
 
 ```sh
-$ make bin
+$ make build
 ...
 $ $GOPATH/bin/terraform-provider-$PROVIDER_NAME
 ...

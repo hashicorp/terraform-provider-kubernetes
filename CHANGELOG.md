@@ -1,4 +1,9 @@
 ## 0.1.1 (Unreleased)
+
+FEATURES:
+
+* **New Resource:** `kubernetes_replication_controller` [GH-9]
+
 ## 0.1.0 (June 20, 2017)
 
 FEATURES:

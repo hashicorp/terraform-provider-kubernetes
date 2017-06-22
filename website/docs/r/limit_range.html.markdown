@@ -50,7 +50,7 @@ resource "kubernetes_limit_range" "example" {
 The following arguments are supported:
 
 * `metadata` - (Required) Standard limit range's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata
-* `spec` - (Optional) Spec defines the limits enforced. More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#spec-and-status
+* `spec` - (Optional) Spec defines the limits enforced. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#spec-and-status
 
 ## Nested Blocks
 

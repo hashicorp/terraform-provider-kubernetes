@@ -1484,6 +1484,14 @@
 			"versionExact": "v3.0.0-beta.0"
 		},
 		{
+			"checksumSHA1": "drjIIoy0trL0gWi/jxi7Nj/Xi/c=",
+			"path": "k8s.io/client-go/plugin/pkg/client/auth",
+			"revision": "3627aeb7d4f6ade38f995d2c923e459146493c7e",
+			"revisionTime": "2017-03-31T20:34:26Z",
+			"version": "v3.0.0-beta.0",
+			"versionExact": "v3.0.0-beta.0"
+		},
+		{
 			"checksumSHA1": "7196s+oMOOyzgMIcyV9M5Aglq3I=",
 			"path": "k8s.io/client-go/plugin/pkg/client/auth/gcp",
 			"revision": "3627aeb7d4f6ade38f995d2c923e459146493c7e",
@@ -1506,6 +1514,12 @@
 			"revisionTime": "2017-03-31T20:34:26Z",
 			"version": "v3.0.0-beta.0",
 			"versionExact": "v3.0.0-beta.0"
+		},
+		{
+			"checksumSHA1": "PmCh3R76TMf8+0P5Jek4fsBO2hA=",
+			"path": "k8s.io/client-go/third_party/forked/golang/template",
+			"revision": "51bf18f5e6291a6e27dc267e99def9635dc2e1c2",
+			"revisionTime": "2017-06-22T03:54:09Z"
 		},
 		{
 			"checksumSHA1": "1ckiORH3dJD8v3R8tLEZ/5wttAk=",
@@ -1600,12 +1614,10 @@
 			"versionExact": "v3.0.0-beta.0"
 		},
 		{
-			"checksumSHA1": "xkQLKFsFx+jXOqOAWVAZeMiDLH4=",
+			"checksumSHA1": "GsIX2f2J67NXq1HBiSEQh0SuTB4=",
 			"path": "k8s.io/client-go/util/jsonpath",
-			"revision": "3627aeb7d4f6ade38f995d2c923e459146493c7e",
-			"revisionTime": "2017-03-31T20:34:26Z",
-			"version": "v3.0.0-beta.0",
-			"versionExact": "v3.0.0-beta.0"
+			"revision": "51bf18f5e6291a6e27dc267e99def9635dc2e1c2",
+			"revisionTime": "2017-06-22T03:54:09Z"
 		},
 		{
 			"checksumSHA1": "eaK1Po3ddJzBtAw117hEGj9Wvxw=",

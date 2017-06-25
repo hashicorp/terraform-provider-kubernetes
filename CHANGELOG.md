@@ -1,5 +1,9 @@
 ## 0.1.1 (Unreleased)
 
+BUG FIXES:
+
+* Register auth plugins (gcp, oidc) automatically [GH-6]
+
 FEATURES:
 
 * **New Resource:** `kubernetes_replication_controller` [GH-9]

@@ -12,4 +12,4 @@ FEATURES:
 
 FEATURES:
 
-* **New Resource:** `kubernetes_pod` [[#13571](https://github.com/terraform-providers/terraform-provider-kubernetes/13571)](https://github.com/hashicorp/terraform/pull/13571)
+* **New Resource:** `kubernetes_pod` [[#13571](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/13571)](https://github.com/hashicorp/terraform/pull/13571)

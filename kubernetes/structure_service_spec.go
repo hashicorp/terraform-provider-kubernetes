@@ -59,6 +59,19 @@ func flattenServiceSpec(in v1.ServiceSpec) []interface{} {
 	return []interface{}{att}
 }
 
+func flattenLoadBalancerIngress(in []v1.LoadBalancerIngress) []interface{} {
+	out := make([]interface{}, len(in), len(in))
+	for i, ingress := range in {
+		att := make(map[string]interface{})
+
+		att["ip"] = ingress.IP
+		att["hostname"] = ingress.Hostname
+
+		out[i] = att
+	}
+	return out
+}
+
 // Expanders
 
 func expandIntOrString(in int) intstr.IntOrString {

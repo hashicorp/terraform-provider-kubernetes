@@ -112,7 +112,6 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_ips.1452553500", "10.0.0.4"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_ips.3371212991", "10.0.0.3"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_name", "ext-name-"+name),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_ip", "12.0.0.120"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_source_ranges.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_source_ranges.138364083", "10.0.0.5/32"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_source_ranges.445311837", "10.0.0.6/32"),
@@ -140,7 +139,6 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_ips.1452553500", "10.0.0.4"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_ips.563283338", "10.0.0.5"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_name", "ext-name-modified-"+name),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_ip", "12.0.0.125"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_source_ranges.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_source_ranges.2271073252", "10.0.0.1/32"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_source_ranges.2515041290", "10.0.0.2/32"),
@@ -415,7 +413,6 @@ resource "kubernetes_service" "test" {
 	spec {
 		external_name = "ext-name-%s"
 		external_ips = ["10.0.0.3", "10.0.0.4"]
-		load_balancer_ip = "12.0.0.120"
 		load_balancer_source_ranges = ["10.0.0.5/32", "10.0.0.6/32"]
 		selector {
 			App = "MyApp"
@@ -439,7 +436,6 @@ resource "kubernetes_service" "test" {
 	spec {
 		external_name = "ext-name-modified-%s"
 		external_ips = ["10.0.0.4", "10.0.0.5"]
-		load_balancer_ip = "12.0.0.125"
 		load_balancer_source_ranges = ["10.0.0.1/32", "10.0.0.2/32"]
 		selector {
 			App = "MyModifiedApp"

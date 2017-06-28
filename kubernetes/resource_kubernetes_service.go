@@ -3,7 +3,9 @@ package kubernetes
 import (
 	"fmt"
 	"log"
+	"time"
 
+	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -120,6 +122,22 @@ func resourceKubernetesService() *schema.Resource {
 					},
 				},
 			},
+			"load_balancer_ingress": {
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"ip": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"hostname": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -140,6 +158,31 @@ func resourceKubernetesServiceCreate(d *schema.ResourceData, meta interface{}) e
 	log.Printf("[INFO] Submitted new service: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
+	if out.Spec.Type == api.ServiceTypeLoadBalancer {
+		log.Printf("[DEBUG] Waiting for load balancer to assign IP/hostname")
+
+		err = resource.Retry(5*time.Minute, func() *resource.RetryError {
+			svc, err := conn.CoreV1().Services(out.Namespace).Get(out.Name, meta_v1.GetOptions{})
+			if err != nil {
+				log.Printf("[DEBUG] Received error: %#v", err)
+				return resource.NonRetryableError(err)
+			}
+
+			lbIngress := svc.Status.LoadBalancer.Ingress
+
+			log.Printf("[INFO] Received service status: %#v", svc.Status)
+			if len(lbIngress) > 0 {
+				return nil
+			}
+
+			return resource.RetryableError(fmt.Errorf(
+				"Waiting for load balancer %q to assign IP/hostname", d.Id()))
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	return resourceKubernetesServiceRead(d, meta)
 }
 
@@ -155,6 +198,11 @@ func resourceKubernetesServiceRead(d *schema.ResourceData, meta interface{}) err
 	}
 	log.Printf("[INFO] Received service: %#v", svc)
 	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta))
+	if err != nil {
+		return err
+	}
+
+	err = d.Set("load_balancer_ingress", flattenLoadBalancerIngress(svc.Status.LoadBalancer.Ingress))
 	if err != nil {
 		return err
 	}

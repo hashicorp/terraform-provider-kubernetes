@@ -38,7 +38,7 @@ resource "kubernetes_service" "example" {
 The following arguments are supported:
 
 * `metadata` - (Required) Standard service's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata
-* `spec` - (Required) Spec defines the behavior of a service. http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#spec-and-status
+* `spec` - (Required) Spec defines the behavior of a service. https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#spec-and-status
 
 ## Nested Blocks
 

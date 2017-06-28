@@ -32,7 +32,7 @@ resource "kubernetes_resource_quota" "example" {
 The following arguments are supported:
 
 * `metadata` - (Required) Standard resource quota's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata
-* `spec` - (Optional) Spec defines the desired quota. http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#spec-and-status
+* `spec` - (Optional) Spec defines the desired quota. https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#spec-and-status
 
 ## Nested Blocks
 

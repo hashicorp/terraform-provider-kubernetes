@@ -34,7 +34,7 @@ resource "kubernetes_horizontal_pod_autoscaler" "example" {
 The following arguments are supported:
 
 * `metadata` - (Required) Standard horizontal pod autoscaler's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata
-* `spec` - (Required) Behaviour of the autoscaler. More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#spec-and-status.
+* `spec` - (Required) Behaviour of the autoscaler. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#spec-and-status
 
 ## Nested Blocks
 

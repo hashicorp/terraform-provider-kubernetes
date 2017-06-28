@@ -84,6 +84,17 @@ The following arguments are supported:
 * `protocol` - (Optional) The IP protocol for this port. Supports `TCP` and `UDP`. Default is `TCP`.
 * `target_port` - (Required) Number or name of the port to access on the pods targeted by the service. Number must be in the range 1 to 65535. This field is ignored for services with `cluster_ip = "None"`. More info: http://kubernetes.io/docs/user-guide/services#defining-a-service
 
+## Attributes
+
+* `load_balancer_ingress` - A list containing ingress points for the load-balancer (only valid if `type = "LoadBalancer"`)
+
+### `load_balancer_ingress`
+
+#### Attributes
+
+* `ip` - IP which is set for load-balancer ingress points that are IP based (typically GCE or OpenStack load-balancers)
+* `hostname` - Hostname which is set for load-balancer ingress points that are DNS based (typically AWS load-balancers)
+
 ## Import
 
 Service can be imported using its namespace and name, e.g.

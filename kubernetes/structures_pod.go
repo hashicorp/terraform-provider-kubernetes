@@ -473,7 +473,7 @@ func expandConfigMapVolumeSource(l []interface{}) *v1.ConfigMapVolumeSource {
 	}
 	in := l[0].(map[string]interface{})
 	obj := &v1.ConfigMapVolumeSource{
-		DefaultMode: ptrToInt32(int32(in["default_mode "].(int))),
+		DefaultMode: ptrToInt32(int32(in["default_mode"].(int))),
 	}
 
 	if v, ok := in["name"].(string); ok {
@@ -493,7 +493,7 @@ func expandDownwardAPIVolumeSource(l []interface{}) (*v1.DownwardAPIVolumeSource
 	}
 	in := l[0].(map[string]interface{})
 	obj := &v1.DownwardAPIVolumeSource{
-		DefaultMode: ptrToInt32(int32(in["default_mode "].(int))),
+		DefaultMode: ptrToInt32(int32(in["default_mode"].(int))),
 	}
 	if v, ok := in["items"].([]interface{}); ok && len(v) > 0 {
 		var err error

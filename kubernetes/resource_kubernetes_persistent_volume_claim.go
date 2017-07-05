@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	api "k8s.io/kubernetes/pkg/api/v1"
 	kubernetes "k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
@@ -166,7 +165,6 @@ func resourceKubernetesPersistentVolumeClaimCreate(d *schema.ResourceData, meta 
 	name := out.ObjectMeta.Name
 
 	if d.Get("wait_until_bound").(bool) {
-		var lastEvent api.Event
 		stateConf := &resource.StateChangeConf{
 			Target:  []string{"Bound"},
 			Pending: []string{"Pending"},
@@ -178,20 +176,6 @@ func resourceKubernetesPersistentVolumeClaimCreate(d *schema.ResourceData, meta 
 					return out, "", err
 				}
 
-				events, err := conn.CoreV1().Events(metadata.Namespace).List(meta_v1.ListOptions{
-					FieldSelector: fields.Set(map[string]string{
-						"involvedObject.name":      metadata.Name,
-						"involvedObject.namespace": metadata.Namespace,
-						"involvedObject.kind":      "PersistentVolumeClaim",
-					}).String(),
-				})
-				if err != nil {
-					return out, "", err
-				}
-				if len(events.Items) > 0 {
-					lastEvent = events.Items[0]
-				}
-
 				statusPhase := fmt.Sprintf("%v", out.Status.Phase)
 				log.Printf("[DEBUG] Persistent volume claim %s status received: %#v", out.Name, statusPhase)
 				return out, statusPhase, nil
@@ -199,11 +183,11 @@ func resourceKubernetesPersistentVolumeClaimCreate(d *schema.ResourceData, meta 
 		}
 		_, err = stateConf.WaitForState()
 		if err != nil {
-			reason := ""
-			if lastEvent.Reason != "" {
-				reason = fmt.Sprintf(". Reason: %s: %s", lastEvent.Reason, lastEvent.Message)
+			lastWarnings, wErr := getLastWarningsForObject(conn, out.ObjectMeta, "PersistentVolumeClaim", 3)
+			if wErr != nil {
+				return wErr
 			}
-			return fmt.Errorf("%s%s", err, reason)
+			return fmt.Errorf("%s%s", err, stringifyEvents(lastWarnings))
 		}
 	}
 	log.Printf("[INFO] Persistent volume claim %s created", out.Name)

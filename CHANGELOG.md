@@ -7,6 +7,9 @@ FEATURES:
 IMPROVEMENTS:
 
 * resource/kubernetes_service: Wait for LoadBalancer ingress [GH-12]
+* resource/persistent_volume_claim: Expose last warnings from the eventlog [GH-16]
+* resource/pod: Expose last warnings from the eventlog [GH-16]
+* resource/service: Expose last warnings from the eventlog [GH-16]
 
 BUG FIXES:
 

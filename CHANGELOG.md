@@ -3,6 +3,7 @@
 FEATURES:
 
 * **New Resource:** `kubernetes_replication_controller` [GH-9]
+* **New Resource:** `kubernetes_service_account` [GH-17]
 
 IMPROVEMENTS:
 

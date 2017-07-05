@@ -426,6 +426,7 @@ func flattenLocalObjectReferenceArray(in []api.LocalObjectReference) []interface
 	}
 	return att
 }
+
 func expandLocalObjectReferenceArray(in []interface{}) []api.LocalObjectReference {
 	att := []api.LocalObjectReference{}
 	if len(in) < 1 {
@@ -438,5 +439,36 @@ func expandLocalObjectReferenceArray(in []interface{}) []api.LocalObjectReferenc
 			att[i].Name = name.(string)
 		}
 	}
+	return att
+}
+
+func flattenServiceAccountSecrets(in []api.ObjectReference, defaultSecretName string) []interface{} {
+	att := make([]interface{}, 0)
+	for _, v := range in {
+		if v.Name == defaultSecretName {
+			continue
+		}
+		m := map[string]interface{}{}
+		if v.Name != "" {
+			m["name"] = v.Name
+		}
+		att = append(att, m)
+	}
+	return att
+}
+
+func expandServiceAccountSecrets(in []interface{}, defaultSecretName string) []api.ObjectReference {
+	att := make([]api.ObjectReference, 0)
+
+	for _, c := range in {
+		p := c.(map[string]interface{})
+		if name, ok := p["name"]; ok {
+			att = append(att, api.ObjectReference{Name: name.(string)})
+		}
+	}
+	if defaultSecretName != "" {
+		att = append(att, api.ObjectReference{Name: defaultSecretName})
+	}
+
 	return att
 }

@@ -165,6 +165,14 @@ func validateTerminationGracePeriodSeconds(value interface{}, key string) (ws []
 	return
 }
 
+func validateModeBits(value interface{}, key string) (ws []string, es []error) {
+	v := value.(int)
+	if v < 0 || v > 0777 {
+		es = append(es, fmt.Errorf("%s (%#o) expects octal notation (a value between 0 and 0777)", key, v))
+	}
+	return
+}
+
 func validateAttributeValueDoesNotContain(searchString string) schema.SchemaValidateFunc {
 	return func(v interface{}, k string) (ws []string, errors []error) {
 		input := v.(string)

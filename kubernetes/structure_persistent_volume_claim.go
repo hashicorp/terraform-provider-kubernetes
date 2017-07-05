@@ -41,6 +41,9 @@ func flattenPersistentVolumeClaimSpec(in v1.PersistentVolumeClaimSpec) []interfa
 	if in.VolumeName != "" {
 		att["volume_name"] = in.VolumeName
 	}
+	if in.StorageClassName != nil {
+		att["storage_class_name"] = *in.StorageClassName
+	}
 	return []interface{}{att}
 }
 
@@ -106,6 +109,9 @@ func expandPersistentVolumeClaimSpec(l []interface{}) (v1.PersistentVolumeClaimS
 	}
 	if v, ok := in["volume_name"].(string); ok {
 		obj.VolumeName = v
+	}
+	if v, ok := in["storage_class_name"].(string); ok && v != "" {
+		obj.StorageClassName = ptrToString(v)
 	}
 	return obj, nil
 }

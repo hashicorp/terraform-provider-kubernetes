@@ -91,6 +91,10 @@ func Provider() terraform.ResourceProvider {
 			},
 		},
 
+		DataSourcesMap: map[string]*schema.Resource{
+			"kubernetes_service": dataSourceKubernetesService(),
+		},
+
 		ResourcesMap: map[string]*schema.Resource{
 			"kubernetes_config_map":                resourceKubernetesConfigMap(),
 			"kubernetes_horizontal_pod_autoscaler": resourceKubernetesHorizontalPodAutoscaler(),

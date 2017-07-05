@@ -15,9 +15,7 @@ BUG FIXES:
 
 * Register auth plugins (gcp, oidc) automatically [GH-6]
 * resource/pod: Fix a crash caused by wrong field name (config map volume source) [GH-19]
-* resource/replication_controller: Fix a crash caused by wrong field name (config map volume source) [GH-19]
 * resource/pod: Add validation for `default_mode` (mode bits) [GH-19]
-* resource/replication_controller: Add validation for `default_mode` (mode bits) [GH-19]
 
 ## 0.1.0 (June 20, 2017)
 

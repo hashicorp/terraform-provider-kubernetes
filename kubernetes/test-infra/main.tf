@@ -65,3 +65,7 @@ output "client_key_b64" {
 output "cluster_ca_certificate_b64" {
   value = "${google_container_cluster.primary.master_auth.0.cluster_ca_certificate}"
 }
+
+output "node_version" {
+  value = "${google_container_cluster.primary.node_version}"
+}

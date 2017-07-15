@@ -488,14 +488,6 @@
 			"revisionTime": "2015-06-09T07:04:31Z"
 		},
 		{
-			"checksumSHA1": "L6QsHZcaByQ90Oyb59ZLw2TGskg=",
-			"path": "github.com/hashicorp/terraform/builtin/providers/google",
-			"revision": "8d560482c34e865458fd884cb0790b4f73f09ad1",
-			"revisionTime": "2017-06-08T00:14:54Z",
-			"version": "v0.9.8",
-			"versionExact": "v0.9.8"
-		},
-		{
 			"checksumSHA1": "BcxYPk5ME2ZyrHS1yK7gK9mzS1A=",
 			"path": "github.com/hashicorp/terraform/config",
 			"revision": "8d560482c34e865458fd884cb0790b4f73f09ad1",
@@ -749,6 +741,22 @@
 			"path": "github.com/spf13/pflag",
 			"revision": "9ff6c6923cfffbcd502984b8e0c80539a94968b7",
 			"revisionTime": "2017-01-30T21:42:45Z"
+		},
+		{
+			"checksumSHA1": "87aB2dgaK7wINQg5bMcBKPeVOYM=",
+			"path": "github.com/terraform-providers/terraform-provider-google",
+			"revision": "df0a8bb608b0ba6b3e6d1938c3720526b0cdc3de",
+			"revisionTime": "2017-06-21T15:24:57Z",
+			"version": "v0.1.1",
+			"versionExact": "v0.1.1"
+		},
+		{
+			"checksumSHA1": "J8ZVmWx+j9/kaTEgj0lRe23klm8=",
+			"path": "github.com/terraform-providers/terraform-provider-google/google",
+			"revision": "df0a8bb608b0ba6b3e6d1938c3720526b0cdc3de",
+			"revisionTime": "2017-06-21T15:24:57Z",
+			"version": "v0.1.1",
+			"versionExact": "v0.1.1"
 		},
 		{
 			"checksumSHA1": "jfIUoeCY4uLz1zCgnCxndi5/UNE=",

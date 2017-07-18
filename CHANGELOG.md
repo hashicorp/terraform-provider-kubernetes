@@ -3,6 +3,7 @@
 FEATURES:
 
 * **New Resource:** `kubernetes_storage_class` [GH-22]
+* **New Data Source:** `kubernetes_service` [GH-23]
 
 BUG FIXES:
 

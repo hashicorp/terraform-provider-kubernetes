@@ -1,6 +1,12 @@
 ## 0.1.2 (Unreleased)
 
+FEATURES:
+
 * **New Resource:** `kubernetes_storage_class` [GH-22]
+
+BUG FIXES:
+
+* resource/kubernetes_service: Make port field optional [GH-27]
 
 ## 0.1.1 (July 05, 2017)
 

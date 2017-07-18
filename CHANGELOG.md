@@ -1,4 +1,7 @@
 ## 0.1.2 (Unreleased)
+
+* **New Resource:** `kubernetes_storage_class` [GH-22]
+
 ## 0.1.1 (July 05, 2017)
 
 FEATURES:

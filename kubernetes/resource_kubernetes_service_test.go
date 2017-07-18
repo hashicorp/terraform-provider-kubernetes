@@ -181,7 +181,6 @@ func TestAccKubernetesService_nodePort(t *testing.T) {
 					testAccCheckKubernetesServiceExists("kubernetes_service.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.#", "1"),
 					resource.TestCheckResourceAttrSet("kubernetes_service.test", "spec.0.cluster_ip"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_ips.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_ips.1452553500", "10.0.0.4"),
@@ -217,6 +216,37 @@ func TestAccKubernetesService_nodePort(t *testing.T) {
 							TargetPort: intstr.FromInt(33),
 						},
 					}),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesService_externalName(t *testing.T) {
+	var conf api.Service
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_service.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesServiceDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesServiceConfig_externalName(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceExists("kubernetes_service.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.cluster_ip", ""),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_ips.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_name", "terraform.io"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_ip", ""),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_source_ranges.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.%", "0"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.session_affinity", "None"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.type", "ExternalName"),
 				),
 			},
 		},
@@ -478,6 +508,20 @@ resource "kubernetes_service" "test" {
 		type = "NodePort"
 	}
 }`, name, name)
+}
+
+func testAccKubernetesServiceConfig_externalName(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service" "test" {
+	metadata {
+		name = "%s"
+	}
+	spec {
+		type = "ExternalName"
+		external_name = "terraform.io"
+	}
+}
+`, name)
 }
 
 func testAccKubernetesServiceConfig_generatedName(prefix string) string {

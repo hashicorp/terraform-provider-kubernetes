@@ -68,7 +68,7 @@ func resourceKubernetesService() *schema.Resource {
 						"port": {
 							Type:        schema.TypeList,
 							Description: "The list of ports that are exposed by this service. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",
-							Required:    true,
+							Optional:    true,
 							MinItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{

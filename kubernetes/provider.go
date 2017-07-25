@@ -92,7 +92,8 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"kubernetes_service": dataSourceKubernetesService(),
+			"kubernetes_service":       dataSourceKubernetesService(),
+			"kubernetes_storage_class": dataSourceKubernetesStorageClass(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{

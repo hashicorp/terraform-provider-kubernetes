@@ -89,6 +89,12 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_CTX_CLUSTER", ""),
 				Description: "",
 			},
+			"token": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("KUBE_TOKEN", ""),
+				Description: "Token to authentifcate an service account",
+			},
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -148,6 +154,9 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 	if v, ok := d.GetOk("client_key"); ok {
 		cfg.KeyData = bytes.NewBufferString(v.(string)).Bytes()
+	}
+	if v, ok := d.GetOk("token"); ok {
+		cfg.BearerToken = v.(string)
 	}
 
 	k, err := kubernetes.NewForConfig(cfg)

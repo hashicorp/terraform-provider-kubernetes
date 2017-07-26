@@ -89,12 +89,12 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_CTX_CLUSTER", ""),
 				Description: "",
 			},
-		},
-		"token": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			DefaultFunc: schema.EnvDefaultFunc("KUBE_TOKEN", ""),
-			Description: "Token to authentifcate an service account",
+			"token": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("KUBE_TOKEN", ""),
+				Description: "Token to authentifcate an service account",
+			},
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{

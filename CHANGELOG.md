@@ -6,6 +6,10 @@ FEATURES:
 * **New Data Source:** `kubernetes_service` [GH-23]
 * **New Data Source:** `kubernetes_storage_class` [GH-33]
 
+IMPROVEMENTS: 
+
+* provider: Add support of token in auth [GH-35]
+
 BUG FIXES:
 
 * resource/kubernetes_service: Make port field optional [GH-27]

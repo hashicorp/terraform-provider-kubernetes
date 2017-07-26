@@ -95,6 +95,12 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_TOKEN", ""),
 				Description: "Token to authentifcate an service account",
 			},
+			"disable_local_config": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("KUBE_DISABLE_LOCAL_CONFIG", false),
+				Description: "Do not load local kubeconfig.",
+			},
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -122,8 +128,19 @@ func Provider() terraform.ResourceProvider {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-	// Config file loading
-	cfg, err := tryLoadingConfigFile(d)
+
+	var disableLocalConf bool
+	if v, ok := d.GetOk("disable_local_config"); ok {
+		disableLocalConf = v.(bool)
+	}
+
+	var cfg *restclient.Config
+	var err error
+	if disableLocalConf == false {
+		// Config file loading
+		cfg, err = tryLoadingConfigFile(d)
+	}
+
 	if err != nil {
 		return nil, err
 	}

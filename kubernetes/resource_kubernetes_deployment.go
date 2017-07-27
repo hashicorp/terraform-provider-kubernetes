@@ -57,12 +57,45 @@ func resourceKubernetesDeployment() *schema.Resource {
 							Description: "A label query over pods that should match the Replicas count. If Selector is empty, it is defaulted to the labels present on the Pod template. Label keys and values that must match in order to be controlled by this deployment, if empty defaulted to labels on Pod template. More info: http://kubernetes.io/docs/user-guide/labels#label-selectors",
 							Required:    true,
 						},
-						//todo: strategy not working yet
 						"strategy": {
-							Type:        schema.TypeMap,
+							Type:        schema.TypeList,
 							Optional:    true,
 							Computed:    true,
 							Description: "Update strategy. One of RollingUpdate, Destroy. Defaults to RollingDate",
+							MaxItems:    1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Computed:    true,
+										Description: "Update strategy",
+									},
+									"rollingUpdate": {
+										Type:        schema.TypeList,
+										Description: "rolling update",
+										Optional:    true,
+										Computed:    true,
+										MaxItems:    1,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"maxSurge": {
+													Type:        schema.TypeString,
+													Description: "max surge",
+													Optional:    true,
+													Default:     1,
+												},
+												"maxUnavailable": {
+													Type:        schema.TypeString,
+													Description: "max unavailable",
+													Optional:    true,
+													Default:     1,
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 						"template": {
 							Type:        schema.TypeList,

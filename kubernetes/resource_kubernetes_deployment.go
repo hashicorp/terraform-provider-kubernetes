@@ -91,13 +91,13 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 
 	spec.Template.Spec.AutomountServiceAccountToken = ptrToBool(false)
 
-	rc := v1beta1.Deployment{
+	deployment := v1beta1.Deployment{
 		ObjectMeta: metadata,
 		Spec:       spec,
 	}
 
-	log.Printf("[INFO] Creating new deployment: %#v", rc)
-	out, err := conn.ExtensionsV1beta1().Deployments(metadata.Namespace).Create(&rc)
+	log.Printf("[INFO] Creating new deployment: %#v", deployment)
+	out, err := conn.ExtensionsV1beta1().Deployments(metadata.Namespace).Create(&deployment)
 	if err != nil {
 		return fmt.Errorf("Failed to create deployment: %s", err)
 	}
@@ -126,19 +126,19 @@ func resourceKubernetesDeploymentRead(d *schema.ResourceData, meta interface{}) 
 
 	namespace, name := idParts(d.Id())
 	log.Printf("[INFO] Reading deployment %s", name)
-	rc, err := conn.ExtensionsV1beta1().Deployments(namespace).Get(name, metav1.GetOptions{})
+	deployment, err := conn.ExtensionsV1beta1().Deployments(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
 	}
-	log.Printf("[INFO] Received deployment: %#v", rc)
+	log.Printf("[INFO] Received deployment: %#v", deployment)
 
-	err = d.Set("metadata", flattenMetadata(rc.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(deployment.ObjectMeta))
 	if err != nil {
 		return err
 	}
 
-	spec, err := flattenDeploymentSpec(rc.Spec)
+	spec, err := flattenDeploymentSpec(deployment.Spec)
 	if err != nil {
 		return err
 	}
@@ -245,20 +245,20 @@ func resourceKubernetesDeploymentExists(d *schema.ResourceData, meta interface{}
 
 func waitForDeploymentReplicasFunc(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
 	return func() *resource.RetryError {
-		rc, err := conn.ExtensionsV1beta1().Deployments(ns).Get(name, metav1.GetOptions{})
+		deployment, err := conn.ExtensionsV1beta1().Deployments(ns).Get(name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
 		}
 
-		desiredReplicas := *rc.Spec.Replicas
+		desiredReplicas := *deployment.Spec.Replicas
 		log.Printf("[DEBUG] Current number of labelled replicas of %q: %d (of %d)\n",
-			rc.GetName(), rc.Status.Replicas, desiredReplicas)
+			deployment.GetName(), deployment.Status.Replicas, desiredReplicas)
 
-		if rc.Status.Replicas == desiredReplicas {
+		if deployment.Status.Replicas == desiredReplicas {
 			return nil
 		}
 
 		return resource.RetryableError(fmt.Errorf("Waiting for %d replicas of %q to be scheduled (%d)",
-			desiredReplicas, rc.GetName(), rc.Status.Replicas))
+			desiredReplicas, deployment.GetName(), deployment.Status.Replicas))
 	}
 }

@@ -122,8 +122,6 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 		return err
 	}
 
-	spec.Template.Spec.AutomountServiceAccountToken = ptrToBool(false)
-
 	deployment := v1beta1.Deployment{
 		ObjectMeta: metadata,
 		Spec:       spec,

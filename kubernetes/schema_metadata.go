@@ -23,6 +23,7 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 			Type:         schema.TypeMap,
 			Description:  fmt.Sprintf("Map of string keys and values that can be used to organize and categorize (scope and select) the %s. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels", objectName),
 			Optional:     true,
+			Computed:     true,
 			ValidateFunc: validateLabels,
 		},
 		"name": {
@@ -101,7 +102,8 @@ func namespacedMetadataSchema(objectName string, generatableName bool) *schema.S
 	return &schema.Schema{
 		Type:        schema.TypeList,
 		Description: fmt.Sprintf("Standard %s's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata", objectName),
-		Required:    true,
+		Optional:    true,
+		Computed:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{
 			Schema: fields,

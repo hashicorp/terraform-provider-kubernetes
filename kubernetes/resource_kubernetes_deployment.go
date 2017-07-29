@@ -32,6 +32,10 @@ func resourceKubernetesDeployment() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
 			"metadata": namespacedMetadataSchema("deployment", true),
 			"spec": {
 				Type:        schema.TypeList,
@@ -55,7 +59,8 @@ func resourceKubernetesDeployment() *schema.Resource {
 						"selector": {
 							Type:        schema.TypeMap,
 							Description: "A label query over pods that should match the Replicas count. If Selector is empty, it is defaulted to the labels present on the Pod template. Label keys and values that must match in order to be controlled by this deployment, if empty defaulted to labels on Pod template. More info: http://kubernetes.io/docs/user-guide/labels#label-selectors",
-							Required:    true,
+							Optional:    true,
+							Computed:    true,
 						},
 						"strategy": {
 							Type:        schema.TypeList,
@@ -120,6 +125,20 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 	spec, err := expandDeploymentSpec(d.Get("spec").([]interface{}))
 	if err != nil {
 		return err
+	}
+
+	//use name as label and selector if not set
+	if metadata.Name == "" {
+		metadata.Name = d.Get("name").(string)
+	}
+	if metadata.Namespace == "" {
+		metadata.Namespace = "default"
+	}
+	if len(spec.Selector.MatchLabels) == 0 {
+		spec.Selector.MatchLabels = map[string]string{
+			"app": d.Get("name").(string),
+		}
+		spec.Template.ObjectMeta.Labels = spec.Selector.MatchLabels
 	}
 
 	deployment := v1beta1.Deployment{

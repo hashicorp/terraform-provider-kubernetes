@@ -16,7 +16,10 @@ func flattenLabelSelector(in *metav1.LabelSelector) []interface{} {
 	if len(in.MatchExpressions) > 0 {
 		att["match_expressions"] = flattenLabelSelectorRequirement(in.MatchExpressions)
 	}
-	return []interface{}{att}
+	if len(att) > 0 {
+		return []interface{}{att}
+	}
+	return []interface{}{}
 }
 
 func flattenLabelSelectorRequirement(in []metav1.LabelSelectorRequirement) []interface{} {

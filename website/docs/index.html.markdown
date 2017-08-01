@@ -97,5 +97,5 @@ The following arguments are supported:
 * `config_context` - (Optional) Context to choose from the config file. Can be sourced from `KUBE_CTX`.
 * `config_context_auth_info` - (Optional) Authentication info context of the kube config (name of the kubeconfig user, `--user` flag in `kubectl`). Can be sourced from `KUBE_CTX_AUTH_INFO`.
 * `config_context_cluster` - (Optional) Cluster context of the kube config (name of the kubeconfig cluster, `--cluster` flag in `kubectl`). Can be sourced from `KUBE_CTX_CLUSTER`.
-* `token` - (Optional) Token of your service account
-* `disable_local_config` - (Optional) By default the local config (~/.kube/config) is loaded when you use this provider. This option disable this behaviour.
+* `token` - (Optional) Token of your service account.
+* `load_config_file` - (Optional) By default the local config (~/.kube/config) is loaded when you use this provider. This option at false disable this behaviour.

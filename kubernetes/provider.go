@@ -99,7 +99,7 @@ func Provider() terraform.ResourceProvider {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_LOAD_CONFIG_FILE", true),
-				Description: "Do not load local kubeconfig.",
+				Description: "Load local kubeconfig.",
 			},
 		},
 

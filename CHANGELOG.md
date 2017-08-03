@@ -9,6 +9,7 @@ FEATURES:
 IMPROVEMENTS: 
 
 * provider: Add support of token in auth [GH-35]
+* provider: Add switch to disable loading file config (`load_config_file`) [GH-36]
 
 BUG FIXES:
 

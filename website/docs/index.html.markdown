@@ -12,8 +12,6 @@ The Kubernetes (K8S) provider is used to interact with the resources supported b
 
 Use the navigation to the left to read about the available resources.
 
--> **Note:** The Kubernetes provider is new as of Terraform 0.9. It is ready to be used but many features are still being added. If there is a Kubernetes feature missing, please report it in the GitHub repo.
-
 ## Example Usage
 
 ```hcl

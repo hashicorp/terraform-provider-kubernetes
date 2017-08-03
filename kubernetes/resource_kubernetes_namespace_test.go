@@ -134,6 +134,45 @@ func TestAccKubernetesNamespace_generatedName(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesNamespace_withSpecialCharacters(t *testing.T) {
+	var conf api.Namespace
+	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_namespace.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesNamespaceDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesNamespaceConfig_specialCharacters(nsName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesNamespaceExists("kubernetes_namespace.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.annotations.%", "2"),
+					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{
+						"myhost.co.uk/any-path": "one",
+						"Different":             "1234",
+					}),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.annotations.myhost.co.uk/any-path", "one"),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.annotations.Different", "1234"),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.labels.%", "2"),
+					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{
+						"myhost.co.uk/any-path": "one",
+						"TestLabelThree":        "three",
+					}),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.labels.myhost.co.uk/any-path", "one"),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.labels.TestLabelThree", "three"),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.name", nsName),
+					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.uid"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesNamespace_importGeneratedName(t *testing.T) {
 	resourceName := "kubernetes_namespace.test"
 	prefix := "tf-acc-test-gen-import-"
@@ -270,4 +309,22 @@ resource "kubernetes_namespace" "test" {
 		generate_name = "%s"
 	}
 }`, prefix)
+}
+
+func testAccKubernetesNamespaceConfig_specialCharacters(nsName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_namespace" "test" {
+	metadata {
+		annotations {
+			"myhost.co.uk/any-path" = "one"
+			"Different"             = "1234"
+		}
+		labels {
+			"myhost.co.uk/any-path" = "one"
+			"TestLabelThree"        = "three"
+		}
+
+		name = "%s"
+	}
+}`, nsName)
 }

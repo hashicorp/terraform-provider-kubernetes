@@ -21,7 +21,9 @@ func diffStringMap(pathPrefix string, oldV, newV map[string]interface{}) PatchOp
 		if _, ok := newV[k]; ok {
 			continue
 		}
-		ops = append(ops, &RemoveOperation{Path: pathPrefix + "/" + k})
+		ops = append(ops, &RemoveOperation{
+			Path: pathPrefix + "/" + escapeJsonPointer(k),
+		})
 	}
 
 	for k, v := range newV {
@@ -33,19 +35,27 @@ func diffStringMap(pathPrefix string, oldV, newV map[string]interface{}) PatchOp
 			}
 
 			ops = append(ops, &ReplaceOperation{
-				Path:  pathPrefix + "/" + k,
+				Path:  pathPrefix + "/" + escapeJsonPointer(k),
 				Value: newValue,
 			})
 			continue
 		}
 
 		ops = append(ops, &AddOperation{
-			Path:  pathPrefix + "/" + k,
+			Path:  pathPrefix + "/" + escapeJsonPointer(k),
 			Value: newValue,
 		})
 	}
 
 	return ops
+}
+
+// escapeJsonPointer escapes string per RFC 6901
+// so it can be used as path in JSON patch operations
+func escapeJsonPointer(path string) string {
+	path = strings.Replace(path, "~", "~0", -1)
+	path = strings.Replace(path, "/", "~1", -1)
+	return path
 }
 
 type PatchOperations []PatchOperation

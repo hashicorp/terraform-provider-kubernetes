@@ -14,6 +14,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * resource/kubernetes_service: Make port field optional [GH-27]
+* all resources: Escape '/' in JSON Patch path correctly [GH-40]
 
 ## 0.1.1 (July 05, 2017)
 

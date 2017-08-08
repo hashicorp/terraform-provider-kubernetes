@@ -211,7 +211,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 		"env": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			ForceNew:    true,
+			ForceNew:    !updateable,
 			Description: "List of environment variables to set in the container. Cannot be updated.",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
@@ -333,7 +333,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
-			ForceNew:    true,
+			ForceNew:    !updateable,
 			Description: "Actions that the management system should take in response to container lifecycle events",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
@@ -360,7 +360,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
-			ForceNew:    true,
+			ForceNew:    !updateable,
 			Description: "Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/pod-states#container-probes",
 			Elem:        probeSchema(),
 		},
@@ -410,7 +410,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
-			ForceNew:    true,
+			ForceNew:    !updateable,
 			Description: "Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/pod-states#container-probes",
 			Elem:        probeSchema(),
 		},
@@ -429,7 +429,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
-			ForceNew:    true,
+			ForceNew:    !updateable,
 			Description: "Security options the pod should run with. More info: http://releases.k8s.io/HEAD/docs/design/security_context.md",
 			Elem:        securityContextSchema(),
 		},
@@ -448,7 +448,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 		"termination_message_path": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			ForceNew:    true,
+			ForceNew:    !updateable,
 			Default:     "/dev/termination-log",
 			Description: "Optional: Path at which the file to which the container's termination message will be written is mounted into the container's filesystem. Message written is intended to be brief final status, such as an assertion failure message. Defaults to /dev/termination-log. Cannot be updated.",
 		},
@@ -469,7 +469,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 		"working_dir": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			ForceNew:    true,
+			ForceNew:    !updateable,
 			Description: "Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.",
 		},
 	}

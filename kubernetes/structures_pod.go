@@ -266,7 +266,7 @@ func flattenConfigMapVolumeSource(in *v1.ConfigMapVolumeSource) []interface{} {
 		for i, v := range in.Items {
 			m := map[string]interface{}{}
 			m["key"] = v.Key
-			m["mode"] = *v.Mode
+			m["mode"] = int(*v.Mode)
 			m["path"] = v.Path
 			items[i] = m
 		}

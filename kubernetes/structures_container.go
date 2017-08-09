@@ -235,6 +235,30 @@ func flattenValueFrom(in *v1.EnvVarSource) []interface{} {
 	return []interface{}{att}
 }
 
+func flattenConfigMapEnvSource(in *v1.ConfigMapEnvSource) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.Name != "" {
+		att["name"] = in.Name
+	}
+
+	att["optional"] = *in.Optional
+
+	return []interface{}{att}
+}
+
+func flattenSecretEnvSource(in *v1.SecretEnvSource) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.Name != "" {
+		att["name"] = in.Name
+	}
+
+	att["optional"] = *in.Optional
+
+	return []interface{}{att}
+}
+
 func flattenContainerVolumeMounts(in []v1.VolumeMount) ([]interface{}, error) {
 	att := make([]interface{}, len(in))
 	for i, v := range in {
@@ -269,6 +293,26 @@ func flattenContainerEnvs(in []v1.EnvVar) []interface{} {
 		}
 		if v.ValueFrom != nil {
 			m["value_from"] = flattenValueFrom(v.ValueFrom)
+		}
+
+		att[i] = m
+	}
+	return att
+}
+
+func flattenContainerEnvFroms(in []v1.EnvFromSource) []interface{} {
+	att := make([]interface{}, len(in))
+
+	for i, v := range in {
+		m := map[string]interface{}{}
+		if v.Prefix != "" {
+			m["prefix"] = v.Prefix
+		}
+		if v.ConfigMapRef != nil {
+			m["config_map_ref"] = flattenConfigMapEnvSource(v.ConfigMapRef)
+		}
+		if v.SecretRef != nil {
+			m["secret_ref"] = flattenSecretEnvSource(v.SecretRef)
 		}
 
 		att[i] = m
@@ -351,6 +395,9 @@ func flattenContainers(in []v1.Container) ([]interface{}, error) {
 		if len(v.Env) > 0 {
 			c["env"] = flattenContainerEnvs(v.Env)
 		}
+		if len(v.EnvFrom) > 0 {
+			c["env_from"] = flattenContainerEnvFroms(v.EnvFrom)
+		}
 
 		if len(v.VolumeMounts) > 0 {
 			volumeMounts, err := flattenContainerVolumeMounts(v.VolumeMounts)
@@ -404,6 +451,14 @@ func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 		if v, ok := ctr["env"].([]interface{}); ok && len(v) > 0 {
 			var err error
 			cs[i].Env, err = expandContainerEnv(v)
+			if err != nil {
+				return cs, err
+			}
+		}
+
+		if v, ok := ctr["env_from"].([]interface{}); ok && len(v) > 0 {
+			var err error
+			cs[i].EnvFrom, err = expandContainerEnvFrom(v)
 			if err != nil {
 				return cs, err
 			}
@@ -682,6 +737,34 @@ func expandContainerEnv(in []interface{}) ([]v1.EnvVar, error) {
 	return envs, nil
 }
 
+func expandContainerEnvFrom(in []interface{}) ([]v1.EnvFromSource, error) {
+	if len(in) == 0 {
+		return []v1.EnvFromSource{}, nil
+	}
+	envs := make([]v1.EnvFromSource, len(in))
+	for i, c := range in {
+		p := c.(map[string]interface{})
+		if prefix, ok := p["prefix"]; ok {
+			envs[i].Prefix = prefix.(string)
+		}
+		if v, ok := p["config_map_ref"].([]interface{}); ok && len(v) > 0 {
+			var err error
+			envs[i].ConfigMapRef, err = expandEnvConfigMapRef(v)
+			if err != nil {
+				return envs, err
+			}
+		}
+		if v, ok := p["secret_ref"].([]interface{}); ok && len(v) > 0 {
+			var err error
+			envs[i].SecretRef, err = expandEnvSecretRef(v)
+			if err != nil {
+				return envs, err
+			}
+		}
+	}
+	return envs, nil
+}
+
 func expandContainerPort(in []interface{}) ([]v1.ContainerPort, error) {
 	if len(in) == 0 {
 		return []v1.ContainerPort{}, nil
@@ -804,6 +887,40 @@ func expandEnvValueFrom(r []interface{}) (*v1.EnvVarSource, error) {
 	}
 	return obj, nil
 
+}
+
+func expandEnvConfigMapRef(r []interface{}) (*v1.ConfigMapEnvSource, error) {
+	if len(r) == 0 || r[0] == nil {
+		return &v1.ConfigMapEnvSource{}, nil
+	}
+	in := r[0].(map[string]interface{})
+	obj := &v1.ConfigMapEnvSource{}
+
+	if v, ok := in["name"].(string); ok {
+		obj.Name = v
+	}
+	if v, ok := in["optional"].(bool); ok {
+		obj.Optional = &v
+	}
+
+	return obj, nil
+}
+
+func expandEnvSecretRef(r []interface{}) (*v1.SecretEnvSource, error) {
+	if len(r) == 0 || r[0] == nil {
+		return &v1.SecretEnvSource{}, nil
+	}
+	in := r[0].(map[string]interface{})
+	obj := &v1.SecretEnvSource{}
+
+	if v, ok := in["name"].(string); ok {
+		obj.Name = v
+	}
+	if v, ok := in["optional"].(bool); ok {
+		obj.Optional = &v
+	}
+
+	return obj, nil
 }
 
 func expandContainerResourceRequirements(l []interface{}) (v1.ResourceRequirements, error) {

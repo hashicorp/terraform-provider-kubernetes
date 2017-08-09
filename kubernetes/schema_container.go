@@ -318,6 +318,61 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 				},
 			},
 		},
+		"env_from": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			ForceNew:    !updateable,
+			Description: "List of environment variables to set in the container. Cannot be updated.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"prefix": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "An optional identifer to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.",
+					},
+					"config_map_ref": {
+						Type:        schema.TypeList,
+						Optional:    true,
+						MaxItems:    1,
+						Description: "Populate ENV from ConfigMap.",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"name": {
+									Type:        schema.TypeString,
+									Optional:    true,
+									Description: "Name of the ConfigMap. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+								},
+								"optional": {
+									Type:        schema.TypeBool,
+									Optional:    true,
+									Description: "Specify whether the ConfigMap must be defined",
+								},
+							},
+						},
+					},
+					"secret_ref": {
+						Type:        schema.TypeList,
+						Optional:    true,
+						MaxItems:    1,
+						Description: "Populate multiple ENV variables from Secret.",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"name": {
+									Type:        schema.TypeString,
+									Optional:    true,
+									Description: "Name of the Secret. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+								},
+								"optional": {
+									Type:        schema.TypeBool,
+									Optional:    true,
+									Description: "Specify whether the Secret must be defined",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 		"image": {
 			Type:        schema.TypeString,
 			Optional:    true,

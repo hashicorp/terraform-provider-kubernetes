@@ -24,7 +24,7 @@ func resourceKubernetesStorageClass() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("storage class", true),
+			"metadata": namespacedMetadataSchema("storage class", true),
 			"parameters": {
 				Type:        schema.TypeMap,
 				Description: "The parameters for the provisioner that should create volumes of this storage class",

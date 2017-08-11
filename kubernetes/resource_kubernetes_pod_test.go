@@ -360,7 +360,7 @@ func TestAccKubernetesPod_with_secret_vol_items(t *testing.T) {
 	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := "nginx:1.7.9"
-  
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,
@@ -386,7 +386,7 @@ func TestAccKubernetesPod_with_nodeSelector(t *testing.T) {
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := "nginx:1.7.9"
 	region := os.Getenv("GOOGLE_REGION")
-  
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,

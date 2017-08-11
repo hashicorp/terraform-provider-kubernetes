@@ -1,4 +1,10 @@
 ## 0.1.3 (Unreleased)
+
+BUG FIXES:
+
+* resource/kubernetes_pod: Respect previously ignored `node_selectors` field [GH-42]
+* resource/kubernetes_replication_controller: Respect previously ignored `node_selectors` field [GH-42]
+
 ## 0.1.2 (August 04, 2017)
 
 FEATURES:

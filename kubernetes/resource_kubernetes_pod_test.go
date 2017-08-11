@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -359,7 +360,7 @@ func TestAccKubernetesPod_with_secret_vol_items(t *testing.T) {
 	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := "nginx:1.7.9"
-
+  
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,
@@ -373,6 +374,31 @@ func TestAccKubernetesPod_with_secret_vol_items(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.secret.0.items.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.secret.0.items.0.key", "one"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.secret.0.items.0.path", "path/to/one"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPod_with_nodeSelector(t *testing.T) {
+	var conf api.Pod
+
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "nginx:1.7.9"
+	region := os.Getenv("GOOGLE_REGION")
+  
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodConfigNodeSelector(podName, imageName, region),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.node_selector.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.node_selector.failure-domain.beta.kubernetes.io/region", region),
 				),
 			},
 		},
@@ -867,4 +893,24 @@ resource "kubernetes_pod" "test" {
   }
 }
 `, podName, imageName)
+}
+
+func testAccKubernetesPodConfigNodeSelector(podName, imageName, region string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_pod" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+    node_selector {
+      "failure-domain.beta.kubernetes.io/region" = "%s"
+    }
+  }
+}
+`, podName, imageName, region)
 }

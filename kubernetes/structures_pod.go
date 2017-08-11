@@ -335,8 +335,14 @@ func expandPodSpec(p []interface{}) (v1.PodSpec, error) {
 		obj.NodeName = v.(string)
 	}
 
-	if v, ok := in["node_selector"].(map[string]string); ok {
-		obj.NodeSelector = v
+	if v, ok := in["node_selector"].(map[string]interface{}); ok {
+		nodeSelectors := make(map[string]string)
+		for k, v := range v {
+			if val, ok := v.(string); ok {
+				nodeSelectors[k] = val
+			}
+		}
+		obj.NodeSelector = nodeSelectors
 	}
 
 	if v, ok := in["restart_policy"].(string); ok {

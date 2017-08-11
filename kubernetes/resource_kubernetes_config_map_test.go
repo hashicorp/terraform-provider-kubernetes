@@ -187,7 +187,10 @@ func testAccCheckKubernetesConfigMapDestroy(s *terraform.State) error {
 		if rs.Type != "kubernetes_config_map" {
 			continue
 		}
-		namespace, name := idParts(rs.Primary.ID)
+		namespace, name, err := idParts(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
 		resp, err := conn.CoreV1().ConfigMaps(namespace).Get(name, meta_v1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
@@ -207,7 +210,10 @@ func testAccCheckKubernetesConfigMapExists(n string, obj *api.ConfigMap) resourc
 		}
 
 		conn := testAccProvider.Meta().(*kubernetes.Clientset)
-		namespace, name := idParts(rs.Primary.ID)
+		namespace, name, err := idParts(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
 		out, err := conn.CoreV1().ConfigMaps(namespace).Get(name, meta_v1.GetOptions{})
 		if err != nil {
 			return err

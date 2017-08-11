@@ -56,7 +56,10 @@ func resourceKubernetesConfigMapCreate(d *schema.ResourceData, meta interface{})
 func resourceKubernetesConfigMapRead(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
 	log.Printf("[INFO] Reading config map %s", name)
 	cfgMap, err := conn.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
@@ -76,7 +79,10 @@ func resourceKubernetesConfigMapRead(d *schema.ResourceData, meta interface{}) e
 func resourceKubernetesConfigMapUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("data") {
@@ -102,9 +108,12 @@ func resourceKubernetesConfigMapUpdate(d *schema.ResourceData, meta interface{})
 func resourceKubernetesConfigMapDelete(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
 	log.Printf("[INFO] Deleting config map: %#v", name)
-	err := conn.CoreV1().ConfigMaps(namespace).Delete(name, &metav1.DeleteOptions{})
+	err = conn.CoreV1().ConfigMaps(namespace).Delete(name, &metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -118,9 +127,13 @@ func resourceKubernetesConfigMapDelete(d *schema.ResourceData, meta interface{})
 func resourceKubernetesConfigMapExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return false, err
+	}
+
 	log.Printf("[INFO] Checking config map %s", name)
-	_, err := conn.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

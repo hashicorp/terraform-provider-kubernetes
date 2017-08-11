@@ -105,7 +105,10 @@ func resourceKubernetesLimitRangeCreate(d *schema.ResourceData, meta interface{}
 func resourceKubernetesLimitRangeRead(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
 	log.Printf("[INFO] Reading limit range %s", name)
 	limitRange, err := conn.CoreV1().LimitRanges(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
@@ -129,7 +132,10 @@ func resourceKubernetesLimitRangeRead(d *schema.ResourceData, meta interface{}) 
 func resourceKubernetesLimitRangeUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("spec") {
@@ -160,9 +166,13 @@ func resourceKubernetesLimitRangeUpdate(d *schema.ResourceData, meta interface{}
 func resourceKubernetesLimitRangeDelete(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
+
 	log.Printf("[INFO] Deleting limit range: %#v", name)
-	err := conn.CoreV1().LimitRanges(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().LimitRanges(namespace).Delete(name, &meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -176,9 +186,13 @@ func resourceKubernetesLimitRangeDelete(d *schema.ResourceData, meta interface{}
 func resourceKubernetesLimitRangeExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return false, err
+	}
+
 	log.Printf("[INFO] Checking limit range %s", name)
-	_, err := conn.CoreV1().LimitRanges(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().LimitRanges(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

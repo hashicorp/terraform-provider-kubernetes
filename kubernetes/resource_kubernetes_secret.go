@@ -70,7 +70,10 @@ func resourceKubernetesSecretCreate(d *schema.ResourceData, meta interface{}) er
 func resourceKubernetesSecretRead(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
 
 	log.Printf("[INFO] Reading secret %s", name)
 	secret, err := conn.CoreV1().Secrets(namespace).Get(name, meta_v1.GetOptions{})
@@ -93,7 +96,10 @@ func resourceKubernetesSecretRead(d *schema.ResourceData, meta interface{}) erro
 func resourceKubernetesSecretUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("data") {
@@ -127,10 +133,13 @@ func resourceKubernetesSecretUpdate(d *schema.ResourceData, meta interface{}) er
 func resourceKubernetesSecretDelete(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
 
 	log.Printf("[INFO] Deleting secret: %q", name)
-	err := conn.CoreV1().Secrets(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().Secrets(namespace).Delete(name, &meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -145,10 +154,13 @@ func resourceKubernetesSecretDelete(d *schema.ResourceData, meta interface{}) er
 func resourceKubernetesSecretExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return false, err
+	}
 
 	log.Printf("[INFO] Checking secret %s", name)
-	_, err := conn.CoreV1().Secrets(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().Secrets(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

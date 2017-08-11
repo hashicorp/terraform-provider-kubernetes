@@ -128,7 +128,11 @@ func diffObjectReferences(origOrs []api.ObjectReference, ors []api.ObjectReferen
 func resourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
+
 	log.Printf("[INFO] Reading service account %s", name)
 	svcAcc, err := conn.CoreV1().ServiceAccounts(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
@@ -154,7 +158,10 @@ func resourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interface
 func resourceKubernetesServiceAccountUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("image_pull_secret") {
@@ -191,9 +198,13 @@ func resourceKubernetesServiceAccountUpdate(d *schema.ResourceData, meta interfa
 func resourceKubernetesServiceAccountDelete(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
+
 	log.Printf("[INFO] Deleting service account: %#v", name)
-	err := conn.CoreV1().ServiceAccounts(namespace).Delete(name, &metav1.DeleteOptions{})
+	err = conn.CoreV1().ServiceAccounts(namespace).Delete(name, &metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -207,9 +218,13 @@ func resourceKubernetesServiceAccountDelete(d *schema.ResourceData, meta interfa
 func resourceKubernetesServiceAccountExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return false, err
+	}
+
 	log.Printf("[INFO] Checking service account %s", name)
-	_, err := conn.CoreV1().ServiceAccounts(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.CoreV1().ServiceAccounts(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

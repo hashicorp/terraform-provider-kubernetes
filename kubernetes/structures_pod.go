@@ -285,7 +285,7 @@ func flattenEmptyDirVolumeSource(in *v1.EmptyDirVolumeSource) []interface{} {
 func flattenSecretVolumeSource(in *v1.SecretVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	if in.DefaultMode != nil {
-		att["default_mode"] = *in.DefaultMode
+		att["default_mode"] = int(*in.DefaultMode)
 	}
 	if in.SecretName != "" {
 		att["secret_name"] = in.SecretName

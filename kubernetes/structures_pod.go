@@ -290,13 +290,17 @@ func flattenSecretVolumeSource(in *v1.SecretVolumeSource) []interface{} {
 		for i, v := range in.Items {
 			m := map[string]interface{}{}
 			m["key"] = v.Key
-			m["mode"] = int(*v.Mode)
+			if v.Mode != nil {
+				m["mode"] = int(*v.Mode)
+			}
 			m["path"] = v.Path
 			items[i] = m
 		}
 		att["items"] = items
 	}
-	att["optional"] = *in.Optional
+	if in.Optional != nil {
+		att["optional"] = *in.Optional
+	}
 	return []interface{}{att}
 }
 
@@ -577,13 +581,12 @@ func expandSecretVolumeSource(l []interface{}) *v1.SecretVolumeSource {
 	obj := &v1.SecretVolumeSource{
 		DefaultMode: ptrToInt32(int32(in["default_mode"].(int))),
 		SecretName:  in["secret_name"].(string),
+		Optional:    ptrToBool(in["optional"].(bool)),
 	}
 
 	if v, ok := in["items"].([]interface{}); ok && len(v) > 0 {
 		obj.Items = expandKeyPath(v)
 	}
-
-	obj.Optional = ptrToBool(in["optional"].(bool))
 
 	return obj
 }

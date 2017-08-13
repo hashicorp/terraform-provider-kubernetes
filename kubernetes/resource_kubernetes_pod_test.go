@@ -776,11 +776,11 @@ resource "kubernetes_pod" "test" {
     volume {
       name = "db"
       secret {
-				secret_name = "${kubernetes_secret.test.metadata.0.name}"
-				items {
-					key = "one"
-					path = "path/to/one"
-				}
+        secret_name = "${kubernetes_secret.test.metadata.0.name}"
+        items {
+          key = "one"
+          path = "path/to/one"
+        }
       }
     }
   }

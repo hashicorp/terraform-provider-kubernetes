@@ -1,5 +1,10 @@
 ## 0.1.3 (Unreleased)
 
+IMPROVEMENTS:
+
+* resource/kubernetes_pod: Add support for `default_mode`, `items` and `optional` in Secret Volume [GH-44]
+* resource/kubernetes_replication_controller: Add support for `default_mode`, `items` and `optional` in Secret Volume [GH-44]
+
 BUG FIXES:
 
 * resource/kubernetes_pod: Respect previously ignored `node_selectors` field [GH-42]

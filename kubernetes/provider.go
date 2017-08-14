@@ -121,6 +121,7 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_secret":                    resourceKubernetesSecret(),
 			"kubernetes_service":                   resourceKubernetesService(),
 			"kubernetes_service_account":           resourceKubernetesServiceAccount(),
+			"kubernetes_stateful_set":              resourceKubernetesStatefulSet(),
 			"kubernetes_storage_class":             resourceKubernetesStorageClass(),
 		},
 		ConfigureFunc: providerConfigure,

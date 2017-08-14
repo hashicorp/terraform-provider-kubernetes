@@ -279,8 +279,27 @@ func flattenEmptyDirVolumeSource(in *v1.EmptyDirVolumeSource) []interface{} {
 
 func flattenSecretVolumeSource(in *v1.SecretVolumeSource) []interface{} {
 	att := make(map[string]interface{})
+	if in.DefaultMode != nil {
+		att["default_mode"] = *in.DefaultMode
+	}
 	if in.SecretName != "" {
 		att["secret_name"] = in.SecretName
+	}
+	if len(in.Items) > 0 {
+		items := make([]interface{}, len(in.Items))
+		for i, v := range in.Items {
+			m := map[string]interface{}{}
+			m["key"] = v.Key
+			if v.Mode != nil {
+				m["mode"] = int(*v.Mode)
+			}
+			m["path"] = v.Path
+			items[i] = m
+		}
+		att["items"] = items
+	}
+	if in.Optional != nil {
+		att["optional"] = *in.Optional
 	}
 	return []interface{}{att}
 }
@@ -560,8 +579,15 @@ func expandSecretVolumeSource(l []interface{}) *v1.SecretVolumeSource {
 	}
 	in := l[0].(map[string]interface{})
 	obj := &v1.SecretVolumeSource{
-		SecretName: in["secret_name"].(string),
+		DefaultMode: ptrToInt32(int32(in["default_mode"].(int))),
+		SecretName:  in["secret_name"].(string),
+		Optional:    ptrToBool(in["optional"].(bool)),
 	}
+
+	if v, ok := in["items"].([]interface{}); ok && len(v) > 0 {
+		obj.Items = expandKeyPath(v)
+	}
+
 	return obj
 }
 

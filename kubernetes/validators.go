@@ -176,7 +176,7 @@ func validateModeBits(value interface{}, key string) (ws []string, es []error) {
 func validateAttributeValueDoesNotContain(searchString string) schema.SchemaValidateFunc {
 	return func(v interface{}, k string) (ws []string, errors []error) {
 		input := v.(string)
-		if !strings.Contains(input, searchString) {
+		if strings.Contains(input, searchString) {
 			errors = append(errors, fmt.Errorf(
 				"%q must not contain %q",
 				k, searchString))

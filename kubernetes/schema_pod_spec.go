@@ -355,6 +355,43 @@ func volumeSchema() *schema.Resource {
 		MaxItems:    1,
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
+				"default_mode": {
+					Type:         schema.TypeInt,
+					Description:  "Optional: mode bits to use on created files by default. Must be a value between 0 and 0777. Defaults to 0644. Directories within the path are not affected by this setting. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.",
+					Optional:     true,
+					Default:      0644,
+					ValidateFunc: validateModeBits,
+				},
+				"items": {
+					Type:        schema.TypeList,
+					Description: "If unspecified, each key-value pair in the Data field of the referenced Secret will be projected into the volume as a file whose name is the key and content is the value. If specified, the listed keys will be projected into the specified paths, and unlisted keys will not be present. If a key is specified which is not present in the Secret, the volume setup will error unless it is marked optional. Paths must be relative and may not contain the '..' path or start with '..'.",
+					Optional:    true,
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"key": {
+								Type:        schema.TypeString,
+								Optional:    true,
+								Description: "The key to project.",
+							},
+							"mode": {
+								Type:        schema.TypeInt,
+								Optional:    true,
+								Description: "Optional: mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.",
+							},
+							"path": {
+								Type:         schema.TypeString,
+								Optional:     true,
+								ValidateFunc: validateAttributeValueDoesNotContain(".."),
+								Description:  "The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.",
+							},
+						},
+					},
+				},
+				"optional": {
+					Type:        schema.TypeBool,
+					Description: "Optional: Specify whether the Secret or it's keys must be defined.",
+					Optional:    true,
+				},
 				"secret_name": {
 					Type:        schema.TypeString,
 					Description: "Name of the secret in the pod's namespace to use. More info: http://kubernetes.io/docs/user-guide/volumes#secrets",

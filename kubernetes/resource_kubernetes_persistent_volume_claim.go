@@ -205,7 +205,11 @@ func resourceKubernetesPersistentVolumeClaimCreate(d *schema.ResourceData, meta 
 func resourceKubernetesPersistentVolumeClaimRead(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
+
 	log.Printf("[INFO] Reading persistent volume claim %s", name)
 	claim, err := conn.CoreV1().PersistentVolumeClaims(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
@@ -227,7 +231,11 @@ func resourceKubernetesPersistentVolumeClaimRead(d *schema.ResourceData, meta in
 
 func resourceKubernetesPersistentVolumeClaimUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
-	namespace, name := idParts(d.Id())
+
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	// The whole spec is ForceNew = nothing to update there
@@ -249,9 +257,13 @@ func resourceKubernetesPersistentVolumeClaimUpdate(d *schema.ResourceData, meta 
 func resourceKubernetesPersistentVolumeClaimDelete(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
+
 	log.Printf("[INFO] Deleting persistent volume claim: %#v", name)
-	err := conn.CoreV1().PersistentVolumeClaims(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().PersistentVolumeClaims(namespace).Delete(name, &meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -265,9 +277,13 @@ func resourceKubernetesPersistentVolumeClaimDelete(d *schema.ResourceData, meta 
 func resourceKubernetesPersistentVolumeClaimExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return false, err
+	}
+
 	log.Printf("[INFO] Checking persistent volume claim %s", name)
-	_, err := conn.CoreV1().PersistentVolumeClaims(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().PersistentVolumeClaims(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

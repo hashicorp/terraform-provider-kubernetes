@@ -98,7 +98,11 @@ func resourceKubernetesResourceQuotaCreate(d *schema.ResourceData, meta interfac
 func resourceKubernetesResourceQuotaRead(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
+
 	log.Printf("[INFO] Reading resource quota %s", name)
 	resQuota, err := conn.CoreV1().ResourceQuotas(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
@@ -130,7 +134,10 @@ func resourceKubernetesResourceQuotaRead(d *schema.ResourceData, meta interface{
 func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	var spec api.ResourceQuotaSpec
@@ -183,9 +190,13 @@ func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interfac
 func resourceKubernetesResourceQuotaDelete(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
+
 	log.Printf("[INFO] Deleting resource quota: %#v", name)
-	err := conn.CoreV1().ResourceQuotas(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().ResourceQuotas(namespace).Delete(name, &meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -199,9 +210,13 @@ func resourceKubernetesResourceQuotaDelete(d *schema.ResourceData, meta interfac
 func resourceKubernetesResourceQuotaExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return false, err
+	}
+
 	log.Printf("[INFO] Checking resource quota %s", name)
-	_, err := conn.CoreV1().ResourceQuotas(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().ResourceQuotas(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

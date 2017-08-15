@@ -412,7 +412,12 @@ func testAccCheckKubernetesPodDestroy(s *terraform.State) error {
 		if rs.Type != "kubernetes_pod" {
 			continue
 		}
-		namespace, name := idParts(rs.Primary.ID)
+
+		namespace, name, err := idParts(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+
 		resp, err := conn.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Namespace == namespace && resp.Name == name {
@@ -433,7 +438,11 @@ func testAccCheckKubernetesPodExists(n string, obj *api.Pod) resource.TestCheckF
 
 		conn := testAccProvider.Meta().(*kubernetes.Clientset)
 
-		namespace, name := idParts(rs.Primary.ID)
+		namespace, name, err := idParts(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+
 		out, err := conn.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
 			return err

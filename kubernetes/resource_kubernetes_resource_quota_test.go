@@ -205,7 +205,12 @@ func testAccCheckKubernetesResourceQuotaDestroy(s *terraform.State) error {
 		if rs.Type != "kubernetes_resource_quota" {
 			continue
 		}
-		namespace, name := idParts(rs.Primary.ID)
+
+		namespace, name, err := idParts(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+
 		resp, err := conn.CoreV1().ResourceQuotas(namespace).Get(name, meta_v1.GetOptions{})
 		if err == nil {
 			if resp.Namespace == namespace && resp.Name == name {
@@ -225,7 +230,12 @@ func testAccCheckKubernetesResourceQuotaExists(n string, obj *api.ResourceQuota)
 		}
 
 		conn := testAccProvider.Meta().(*kubernetes.Clientset)
-		namespace, name := idParts(rs.Primary.ID)
+
+		namespace, name, err := idParts(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+
 		out, err := conn.CoreV1().ResourceQuotas(namespace).Get(name, meta_v1.GetOptions{})
 		if err != nil {
 			return err

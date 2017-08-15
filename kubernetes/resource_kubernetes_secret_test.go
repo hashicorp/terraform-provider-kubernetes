@@ -209,7 +209,12 @@ func testAccCheckKubernetesSecretDestroy(s *terraform.State) error {
 		if rs.Type != "kubernetes_secret" {
 			continue
 		}
-		namespace, name := idParts(rs.Primary.ID)
+
+		namespace, name, err := idParts(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+
 		resp, err := conn.CoreV1().Secrets(namespace).Get(name, meta_v1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
@@ -229,7 +234,12 @@ func testAccCheckKubernetesSecretExists(n string, obj *api.Secret) resource.Test
 		}
 
 		conn := testAccProvider.Meta().(*kubernetes.Clientset)
-		namespace, name := idParts(rs.Primary.ID)
+
+		namespace, name, err := idParts(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+
 		out, err := conn.CoreV1().Secrets(namespace).Get(name, meta_v1.GetOptions{})
 		if err != nil {
 			return err

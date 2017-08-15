@@ -12,9 +12,14 @@ import (
 	api "k8s.io/kubernetes/pkg/api/v1"
 )
 
-func idParts(id string) (string, string) {
+func idParts(id string) (string, string, error) {
 	parts := strings.Split(id, "/")
-	return parts[0], parts[1]
+	if len(parts) != 2 {
+		err := fmt.Errorf("Unexpected ID format (%q), expected %q.", id, "namespace/name")
+		return "", "", err
+	}
+
+	return parts[0], parts[1], nil
 }
 
 func buildId(meta metav1.ObjectMeta) string {

@@ -32,7 +32,7 @@ func resourceKubernetesPod() *schema.Resource {
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
-					Schema: podSpecFields(),
+					Schema: podSpecFields(false),
 				},
 			},
 		},
@@ -114,7 +114,7 @@ func resourceKubernetesPodUpdate(d *schema.ResourceData, meta interface{}) error
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 
-	log.Printf("[INFO] Updating  pod %s: %s", d.Id(), ops)
+	log.Printf("[INFO] Updating pod %s: %s", d.Id(), ops)
 
 	out, err := conn.CoreV1().Pods(namespace).Patch(name, pkgApi.JSONPatchType, data)
 	if err != nil {

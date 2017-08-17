@@ -1,9 +1,11 @@
 package kubernetes
 
-import "github.com/hashicorp/terraform/helper/schema"
+import (
+	"github.com/hashicorp/terraform/helper/schema"
+)
 
-func podSpecFields() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
+func podSpecFields(isUpdatable bool) map[string]*schema.Schema {
+	s := map[string]*schema.Schema{
 		"active_deadline_seconds": {
 			Type:         schema.TypeInt,
 			Optional:     true,
@@ -15,7 +17,7 @@ func podSpecFields() map[string]*schema.Schema {
 			Optional:    true,
 			Description: "List of containers belonging to the pod. Containers cannot currently be added or removed. There must be at least one container in a Pod. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/containers",
 			Elem: &schema.Resource{
-				Schema: containerFields(),
+				Schema: containerFields(isUpdatable),
 			},
 		},
 		"dns_policy": {
@@ -150,6 +152,22 @@ func podSpecFields() map[string]*schema.Schema {
 			Elem:        volumeSchema(),
 		},
 	}
+
+	if !isUpdatable {
+		for k, _ := range s {
+			if k == "active_deadline_seconds" {
+				// This field is always updatable
+				continue
+			}
+			if k == "container" {
+				// Some fields are always updatable
+				continue
+			}
+			s[k].ForceNew = true
+		}
+	}
+
+	return s
 }
 
 func volumeSchema() *schema.Resource {

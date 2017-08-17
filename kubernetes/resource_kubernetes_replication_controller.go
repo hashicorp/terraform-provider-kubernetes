@@ -63,7 +63,7 @@ func resourceKubernetesReplicationController() *schema.Resource {
 							Required:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
-								Schema: podSpecFields(),
+								Schema: podSpecFields(true),
 							},
 						},
 					},

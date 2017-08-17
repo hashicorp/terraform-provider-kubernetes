@@ -194,8 +194,8 @@ func volumeMountFields() map[string]*schema.Schema {
 	}
 }
 
-func containerFields() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
+func containerFields(isUpdatable bool) map[string]*schema.Schema {
+	s := map[string]*schema.Schema{
 		"args": {
 			Type:        schema.TypeList,
 			Optional:    true,
@@ -473,6 +473,18 @@ func containerFields() map[string]*schema.Schema {
 			Description: "Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.",
 		},
 	}
+
+	if !isUpdatable {
+		for k, _ := range s {
+			if k == "image" {
+				// This field is always updatable
+				continue
+			}
+			s[k].ForceNew = true
+		}
+	}
+
+	return s
 }
 
 func probeSchema() *schema.Resource {

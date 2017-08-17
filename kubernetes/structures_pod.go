@@ -703,10 +703,6 @@ func patchPodSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOpera
 				Path:  pathPrefix + "/containers/" + strconv.Itoa(i) + "/image",
 				Value: v.Image,
 			})
-			ops = append(ops, &ReplaceOperation{
-				Path:  pathPrefix + "/containers/" + strconv.Itoa(i) + "/name",
-				Value: v.Name,
-			})
 
 		}
 

@@ -1,16 +1,16 @@
-## 1.0.0 (Unreleased)
+## 1.0.0 (August 18, 2017)
 
 IMPROVEMENTS:
 
-* resource/kubernetes_pod: Add support for `default_mode`, `items` and `optional` in Secret Volume [GH-44]
-* resource/kubernetes_replication_controller: Add support for `default_mode`, `items` and `optional` in Secret Volume [GH-44]
+* resource/kubernetes_pod: Add support for `default_mode`, `items` and `optional` in Secret Volume ([#44](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/44))
+* resource/kubernetes_replication_controller: Add support for `default_mode`, `items` and `optional` in Secret Volume ([#44](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/44))
 
 BUG FIXES:
 
-* resource/kubernetes_pod: Respect previously ignored `node_selectors` field [GH-42]
-* resource/kubernetes_pod: Represent update-ability of spec correctly [GH-49]
-* resource/kubernetes_replication_controller: Respect previously ignored `node_selectors` field [GH-42]
-* all namespaced resources: Avoid crash when importing invalid ID [GH-46]
+* resource/kubernetes_pod: Respect previously ignored `node_selectors` field ([#42](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/42))
+* resource/kubernetes_pod: Represent update-ability of spec correctly ([#49](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/49))
+* resource/kubernetes_replication_controller: Respect previously ignored `node_selectors` field ([#42](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/42))
+* all namespaced resources: Avoid crash when importing invalid ID ([#46](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/46))
 * meta: Treat internal k8s annotations as invalid #50
 
 ## 0.1.2 (August 04, 2017)

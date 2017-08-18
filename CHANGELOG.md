@@ -11,6 +11,7 @@ BUG FIXES:
 * resource/kubernetes_pod: Represent update-ability of spec correctly [GH-49]
 * resource/kubernetes_replication_controller: Respect previously ignored `node_selectors` field [GH-42]
 * all namespaced resources: Avoid crash when importing invalid ID [GH-46]
+* meta: Treat internal k8s annotations as invalid #50
 
 ## 0.1.2 (August 04, 2017)
 

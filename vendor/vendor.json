@@ -1599,6 +1599,14 @@
 			"versionExact": "v3.0.0-beta.0"
 		},
 		{
+			"checksumSHA1": "wU1p+AMuZM77hzqX9kWGmL8itfI=",
+			"path": "k8s.io/client-go/dynamic",
+			"revision": "3627aeb7d4f6ade38f995d2c923e459146493c7e",
+			"revisionTime": "2017-03-31T20:34:26Z",
+			"version": "v3.0.0-beta.0",
+			"versionExact": "v3.0.0-beta.0"
+		},
+		{
 			"checksumSHA1": "NnHqF5QII9GH4l2bBCO4WAI9tPw=",
 			"path": "k8s.io/client-go/pkg/api",
 			"revision": "3627aeb7d4f6ade38f995d2c923e459146493c7e",

@@ -109,6 +109,7 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
+			"kubernetes_any":                       resourceKubernetesAny(),
 			"kubernetes_config_map":                resourceKubernetesConfigMap(),
 			"kubernetes_horizontal_pod_autoscaler": resourceKubernetesHorizontalPodAutoscaler(),
 			"kubernetes_limit_range":               resourceKubernetesLimitRange(),
@@ -176,7 +177,12 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, fmt.Errorf("Failed to configure: %s", err)
 	}
 
-	return k, nil
+	return &Meta{cfg, k}, nil
+}
+
+type Meta struct {
+	*restclient.Config
+	*kubernetes.Clientset
 }
 
 func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {

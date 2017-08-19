@@ -11,7 +11,6 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	api "k8s.io/kubernetes/pkg/api/v1"
-	kubernetes "k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
 )
 
 func resourceKubernetesPersistentVolume() *schema.Resource {
@@ -68,7 +67,7 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 }
 
 func resourceKubernetesPersistentVolumeCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*Meta).Clientset
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandPersistentVolumeSpec(d.Get("spec").([]interface{}))
@@ -115,7 +114,7 @@ func resourceKubernetesPersistentVolumeCreate(d *schema.ResourceData, meta inter
 }
 
 func resourceKubernetesPersistentVolumeRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*Meta).Clientset
 
 	name := d.Id()
 	log.Printf("[INFO] Reading persistent volume %s", name)
@@ -138,7 +137,7 @@ func resourceKubernetesPersistentVolumeRead(d *schema.ResourceData, meta interfa
 }
 
 func resourceKubernetesPersistentVolumeUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*Meta).Clientset
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("spec") {
@@ -165,7 +164,7 @@ func resourceKubernetesPersistentVolumeUpdate(d *schema.ResourceData, meta inter
 }
 
 func resourceKubernetesPersistentVolumeDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*Meta).Clientset
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting persistent volume: %#v", name)
@@ -181,7 +180,7 @@ func resourceKubernetesPersistentVolumeDelete(d *schema.ResourceData, meta inter
 }
 
 func resourceKubernetesPersistentVolumeExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*Meta).Clientset
 
 	name := d.Id()
 	log.Printf("[INFO] Checking persistent volume %s", name)

@@ -1,3 +1,4 @@
+terraform-provider-kubernetes
 *.dll
 *.exe
 .DS_Store

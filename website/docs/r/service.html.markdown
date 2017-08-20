@@ -20,7 +20,7 @@ resource "kubernetes_service" "example" {
   }
   spec {
     selector {
-      App = "MyApp"
+      app = "${kubernetes_pod.example.metadata.0.labels.app}"
     }
     session_affinity = "ClientIP"
     port {
@@ -29,6 +29,22 @@ resource "kubernetes_service" "example" {
     }
 
     type = "LoadBalancer"
+  }
+}
+
+resource "kubernetes_pod" "example" {
+  metadata {
+    name = "terraform-example"
+    labels {
+      app = "MyApp"
+    }
+  }
+
+  spec {
+    container {
+      image = "nginx:1.7.9"
+      name  = "example"
+    }
   }
 }
 ```

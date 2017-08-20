@@ -84,7 +84,9 @@ func TestAccKubernetesPersistentVolumeClaim_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPersistentVolumeClaim_importBasic(t *testing.T) {
+func TestAccKubernetesPersistentVolumeClaim_googleCloud_importBasic(t *testing.T) {
+	skipIfNoGoogleCloudSettingsFound(t)
+
 	resourceName := "kubernetes_persistent_volume_claim.test"
 	volumeName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	claimName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
@@ -108,7 +110,9 @@ func TestAccKubernetesPersistentVolumeClaim_importBasic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPersistentVolumeClaim_volumeMatch(t *testing.T) {
+func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T) {
+	skipIfNoGoogleCloudSettingsFound(t)
+
 	var pvcConf api.PersistentVolumeClaim
 	var pvConf api.PersistentVolume
 
@@ -258,7 +262,9 @@ func TestAccKubernetesPersistentVolumeClaim_volumeMatch(t *testing.T) {
 // 	})
 // }
 
-func TestAccKubernetesPersistentVolumeClaim_volumeUpdate(t *testing.T) {
+func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeUpdate(t *testing.T) {
+	skipIfNoGoogleCloudSettingsFound(t)
+
 	var pvcConf api.PersistentVolumeClaim
 	var pvConf api.PersistentVolume
 
@@ -325,7 +331,9 @@ func TestAccKubernetesPersistentVolumeClaim_volumeUpdate(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPersistentVolumeClaim_storageClass(t *testing.T) {
+func TestAccKubernetesPersistentVolumeClaim_googleCloud_storageClass(t *testing.T) {
+	skipIfNoGoogleCloudSettingsFound(t)
+
 	var pvcConf api.PersistentVolumeClaim
 	var storageClass storageapi.StorageClass
 	var secondStorageClass storageapi.StorageClass

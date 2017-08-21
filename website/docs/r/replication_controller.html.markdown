@@ -18,13 +18,13 @@ resource "kubernetes_replication_controller" "example" {
   metadata {
     name = "terraform-example"
     labels {
-      Test = "MyExampleApp"
+      test = "MyExampleApp"
     }
   }
 
   spec {
     selector {
-      Test = "MyExampleApp"
+      test = "MyExampleApp"
     }
     template {
       container {

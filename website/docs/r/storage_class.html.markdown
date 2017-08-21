@@ -14,7 +14,7 @@ Read more at http://blog.kubernetes.io/2017/03/dynamic-provisioning-and-storage-
 
 ## Example Usage
 
-```
+```hcl
 resource "kubernetes_storage_class" "example" {
   metadata {
     name = "terraform-example"

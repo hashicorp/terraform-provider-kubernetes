@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,6 +10,7 @@ import (
 	runtimeschema "k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	restclient "k8s.io/client-go/rest"
+	apiutil "k8s.io/kubernetes/pkg/api/util"
 )
 
 func resourceKubernetesAny() *schema.Resource {
@@ -32,24 +32,24 @@ func resourceKubernetesAny() *schema.Resource {
 }
 
 func resourceAnyCreate(d *schema.ResourceData, meta interface{}) error {
-	objs, err := getKubeObjects(d)
+	obj, err := getKubeObject(d)
 	if err != nil {
 		return err
 	}
 
-	rc, err := getResourceClient(meta.(*Meta).Config, objs)
+	rc, err := getResourceClient(meta.(*Meta).Config, obj)
 	if err != nil {
 		return err
 	}
 
 	_, err = rc.Create(&unstructured.Unstructured{
-		Object: objs.Unstructured,
+		Object: obj.Unstructured,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create kubernetes resource: %s", err)
 	}
 
-	d.SetId(buildId(objs.Structured.Metadata))
+	d.SetId(buildId(obj.Structured.Metadata))
 	return nil
 }
 
@@ -58,40 +58,40 @@ func resourceAnyRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceAnyUpdate(d *schema.ResourceData, meta interface{}) error {
-	objs, err := getKubeObjects(d)
+	obj, err := getKubeObject(d)
 	if err != nil {
 		return err
 	}
 
-	rc, err := getResourceClient(meta.(*Meta).Config, objs)
+	rc, err := getResourceClient(meta.(*Meta).Config, obj)
 	if err != nil {
 		return err
 	}
 
 	_, err = rc.Update(&unstructured.Unstructured{
-		Object: objs.Unstructured,
+		Object: obj.Unstructured,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create kubernetes resource: %s", err)
 	}
 
-	d.SetId(buildId(objs.Structured.Metadata))
+	d.SetId(buildId(obj.Structured.Metadata))
 	return nil
 }
 
 func resourceAnyDelete(d *schema.ResourceData, meta interface{}) error {
-	objs, err := getKubeObjects(d)
+	obj, err := getKubeObject(d)
 	if err != nil {
 		return err
 	}
 
-	rc, err := getResourceClient(meta.(*Meta).Config, objs)
+	rc, err := getResourceClient(meta.(*Meta).Config, obj)
 	if err != nil {
 		return err
 	}
 
 	fg := metav1.DeletePropagationForeground
-	if err := rc.Delete(objs.Structured.Metadata.Name, &metav1.DeleteOptions{
+	if err := rc.Delete(obj.Structured.Metadata.Name, &metav1.DeleteOptions{
 		PropagationPolicy: &fg,
 	}); err != nil {
 		return err
@@ -102,7 +102,7 @@ func resourceAnyDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-type kubeObjects struct {
+type kubeObject struct {
 	Unstructured map[string]interface{}
 	Structured   struct {
 		APIVersion string            `json:"apiVersion"`
@@ -110,42 +110,45 @@ type kubeObjects struct {
 	}
 }
 
-func (o *kubeObjects) process() {
+func (o *kubeObject) process() {
 	if len(o.Structured.Metadata.Namespace) == 0 {
 		o.Structured.Metadata.Namespace = "default"
 	}
 }
 
-func getKubeObjects(d *schema.ResourceData) (*kubeObjects, error) {
+func getKubeObject(d *schema.ResourceData) (*kubeObject, error) {
 	objJSON := []byte(d.Get("object_json").(string))
 
-	var objs kubeObjects
+	var obj kubeObject
 
 	// Unmarshal json twice into a map and a struct for pulling needed variables
-	if err := json.Unmarshal(objJSON, &objs.Structured); err != nil {
+	if err := json.Unmarshal(objJSON, &obj.Structured); err != nil {
 		return nil, err
 	}
-	if err := json.Unmarshal(objJSON, &objs.Unstructured); err != nil {
+	if err := json.Unmarshal(objJSON, &obj.Unstructured); err != nil {
 		return nil, err
 	}
 
-	objs.process()
+	obj.process()
 
-	return &objs, nil
+	return &obj, nil
 }
 
-func getResourceClient(cfg *restclient.Config, objs *kubeObjects) (*dynamic.ResourceClient, error) {
-	// TODO: More error handling (type assertion, etc.)
-	gv := strings.Split(objs.Structured.APIVersion, "/")
-	cfg.ContentConfig = restclient.ContentConfig{GroupVersion: &runtimeschema.GroupVersion{Group: gv[0], Version: gv[1]}}
+func getResourceClient(cfg restclient.Config, obj *kubeObject) (*dynamic.ResourceClient, error) {
+	cfg.ContentConfig = restclient.ContentConfig{
+		GroupVersion: &runtimeschema.GroupVersion{
+			Group:   apiutil.GetGroup(obj.Structured.APIVersion),
+			Version: apiutil.GetVersion(obj.Structured.APIVersion),
+		},
+	}
 	// TODO: Look into using API Path resolver out of kube lib
 	cfg.APIPath = "/apis"
 
-	c, err := dynamic.NewClient(cfg)
+	c, err := dynamic.NewClient(&cfg)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create dynamic client: %s", err)
 	}
 
 	resource := &metav1.APIResource{Name: "deployments", Namespaced: true}
-	return c.Resource(resource, objs.Structured.Metadata.Namespace), nil
+	return c.Resource(resource, obj.Structured.Metadata.Namespace), nil
 }

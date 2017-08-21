@@ -177,11 +177,11 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, fmt.Errorf("Failed to configure: %s", err)
 	}
 
-	return &Meta{cfg, k}, nil
+	return &Meta{*cfg, k}, nil
 }
 
 type Meta struct {
-	*restclient.Config
+	restclient.Config
 	*kubernetes.Clientset
 }
 

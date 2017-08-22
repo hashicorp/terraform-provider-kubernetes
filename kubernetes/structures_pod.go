@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"k8s.io/kubernetes/pkg/api/v1"
@@ -44,6 +45,11 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	if in.SecurityContext != nil {
 		att["security_context"] = flattenPodSecurityContext(in.SecurityContext)
 	}
+
+	if in.AutomountServiceAccountToken != nil {
+		att["automount_service_account_token"] = *in.AutomountServiceAccountToken
+	}
+
 	if in.ServiceAccountName != "" {
 		att["service_account_name"] = in.ServiceAccountName
 	}
@@ -112,11 +118,16 @@ func flattenSeLinuxOptions(in *v1.SELinuxOptions) []interface{} {
 }
 
 func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
-	att := make([]interface{}, len(volumes))
-	for i, v := range volumes {
+	var att []interface{}
+	for _, v := range volumes {
 		obj := map[string]interface{}{}
-
 		if v.Name != "" {
+			if strings.HasPrefix(v.Name, "default-token-") {
+				// This is a volume added server side to auto mount
+				// the service account token in the pod.
+				// Ignore it so we don't cause a diff.
+				continue
+			}
 			obj["name"] = v.Name
 		}
 		if v.ConfigMap != nil {
@@ -188,7 +199,7 @@ func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
 		if v.PhotonPersistentDisk != nil {
 			obj["photon_persistent_disk"] = flattenPhotonPersistentDiskVolumeSource(v.PhotonPersistentDisk)
 		}
-		att[i] = obj
+		att = append(att, obj)
 	}
 	return att, nil
 }
@@ -374,6 +385,10 @@ func expandPodSpec(p []interface{}) (v1.PodSpec, error) {
 
 	if v, ok := in["service_account_name"].(string); ok {
 		obj.ServiceAccountName = v
+	}
+
+	if v, ok := in["automount_service_account_token"]; ok {
+		obj.AutomountServiceAccountToken = ptrToBool(v.(bool))
 	}
 
 	if v, ok := in["subdomain"].(string); ok {

@@ -467,6 +467,42 @@ func TestAccKubernetesPod_with_nodeSelector(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPod_with_AutomountToken(t *testing.T) {
+	var conf api.Pod
+
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodAutomountToken(podName, imageName, ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.automount_service_account_token", "true"),
+				),
+			},
+			{
+				Config: testAccKubernetesPodAutomountToken(podName, imageName, "automount_service_account_token = false"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.automount_service_account_token", "false"),
+				),
+			},
+			{
+				Config: testAccKubernetesPodAutomountToken(podName, imageName, "automount_service_account_token = true"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.automount_service_account_token", "true"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesPodDestroy(s *terraform.State) error {
 	conn := testAccProvider.Meta().(*kubernetes.Clientset)
 
@@ -1003,4 +1039,22 @@ resource "kubernetes_pod" "test" {
   }
 }
 `, podName, imageName, args)
+}
+
+func testAccKubernetesPodAutomountToken(podName, imageName, automount string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_pod" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+    %s
+  }
+}
+`, podName, imageName, automount)
 }

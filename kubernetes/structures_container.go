@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"strconv"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/kubernetes/pkg/api/v1"
@@ -236,23 +237,29 @@ func flattenValueFrom(in *v1.EnvVarSource) []interface{} {
 }
 
 func flattenContainerVolumeMounts(in []v1.VolumeMount) ([]interface{}, error) {
-	att := make([]interface{}, len(in))
-	for i, v := range in {
+	var att []interface{}
+	for _, v := range in {
 		m := map[string]interface{}{}
+		if v.Name != "" {
+			if strings.HasPrefix(m["name"].(string), "default-token-") {
+				// This is a volume mount created server side to auto mount
+				// the service account token in the pod.
+				// Ignore it so we don't cause a diff.
+				continue
+			}
+			m["name"] = v.Name
+		}
 		m["read_only"] = v.ReadOnly
 
 		if v.MountPath != "" {
 			m["mount_path"] = v.MountPath
 
 		}
-		if v.Name != "" {
-			m["name"] = v.Name
-
-		}
 		if v.SubPath != "" {
 			m["sub_path"] = v.SubPath
 		}
-		att[i] = m
+
+		att = append(att, m)
 	}
 	return att, nil
 }

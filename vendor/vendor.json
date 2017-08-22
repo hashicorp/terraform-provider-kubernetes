@@ -1801,14 +1801,6 @@
 			"versionExact": "v1.6.1"
 		},
 		{
-			"checksumSHA1": "K6V726+5NNCE3GuJxjd4bxKA8KU=",
-			"path": "k8s.io/kubernetes/pkg/api/util",
-			"revision": "b0b7a323cc5a4a2019b2e9520c21c7830b7f708e",
-			"revisionTime": "2017-04-03T20:32:25Z",
-			"version": "v1.6.1",
-			"versionExact": "v1.6.1"
-		},
-		{
 			"checksumSHA1": "DEHfEI7ZMz6jje953KXClaElENs=",
 			"path": "k8s.io/kubernetes/pkg/api/v1",
 			"revision": "b0b7a323cc5a4a2019b2e9520c21c7830b7f708e",

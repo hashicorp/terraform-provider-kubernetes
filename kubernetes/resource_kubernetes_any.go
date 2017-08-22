@@ -10,7 +10,7 @@ import (
 	runtimeschema "k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	restclient "k8s.io/client-go/rest"
-	apiutil "k8s.io/kubernetes/pkg/api/util"
+	//"k8s.io/kubernetes/pkg/kubectl/validation"
 )
 
 func resourceKubernetesAny() *schema.Resource {
@@ -25,11 +25,21 @@ func resourceKubernetesAny() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "Raw json definition of a kubernetes resource",
 				Required:    true,
-				// TODO: Add a validator (kube lib?)
+				//ValidateFunc: validateObjectJSON,
 			},
 		},
 	}
 }
+
+/*
+func validateObjectJSON(x interface{}, s string) (strs []string, errs []error) {
+	btys := []byte(fmt.Sprint(x))
+	if err := (validation.NullSchema{}).ValidateBytes(btys); err != nil {
+		errs = append(errs, err)
+	}
+	return nil, nil
+}
+*/
 
 func resourceAnyCreate(d *schema.ResourceData, meta interface{}) error {
 	obj, err := getKubeObject(d)
@@ -135,12 +145,11 @@ func getKubeObject(d *schema.ResourceData) (*kubeObject, error) {
 }
 
 func getResourceClient(cfg restclient.Config, obj *kubeObject) (*dynamic.ResourceClient, error) {
-	cfg.ContentConfig = restclient.ContentConfig{
-		GroupVersion: &runtimeschema.GroupVersion{
-			Group:   apiutil.GetGroup(obj.Structured.APIVersion),
-			Version: apiutil.GetVersion(obj.Structured.APIVersion),
-		},
+	gv, err := runtimeschema.ParseGroupVersion(obj.Structured.APIVersion)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse group/version: %s", err)
 	}
+	cfg.ContentConfig = restclient.ContentConfig{GroupVersion: &gv}
 	// TODO: Look into using API Path resolver out of kube lib
 	cfg.APIPath = "/apis"
 

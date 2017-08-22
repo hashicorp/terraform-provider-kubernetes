@@ -13,7 +13,9 @@ import (
 	kubernetes "k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
 )
 
-func TestAccKubernetesPersistentVolume_basic(t *testing.T) {
+func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
+	skipIfNoGoogleCloudSettingsFound(t)
+
 	var conf api.PersistentVolume
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
@@ -99,7 +101,9 @@ func TestAccKubernetesPersistentVolume_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPersistentVolume_importBasic(t *testing.T) {
+func TestAccKubernetesPersistentVolume_googleCloud_importBasic(t *testing.T) {
+	skipIfNoGoogleCloudSettingsFound(t)
+
 	resourceName := "kubernetes_persistent_volume.test"
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	name := fmt.Sprintf("tf-acc-test-import-%s", randString)
@@ -124,7 +128,9 @@ func TestAccKubernetesPersistentVolume_importBasic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPersistentVolume_volumeSource(t *testing.T) {
+func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
+	skipIfNoGoogleCloudSettingsFound(t)
+
 	var conf api.PersistentVolume
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)

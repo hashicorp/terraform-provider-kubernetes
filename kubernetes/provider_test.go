@@ -167,9 +167,12 @@ func testAccPreCheck(t *testing.T) {
 				"KUBE_CLUSTER_CA_CERT_DATA",
 			}, ", "))
 	}
+}
 
+func skipIfNoGoogleCloudSettingsFound(t *testing.T) {
 	if os.Getenv("GOOGLE_PROJECT") == "" || os.Getenv("GOOGLE_REGION") == "" || os.Getenv("GOOGLE_ZONE") == "" {
-		t.Fatal("GOOGLE_PROJECT, GOOGLE_REGION and GOOGLE_ZONE must be set for acceptance tests")
+		t.Skip("The environment variables GOOGLE_PROJECT, GOOGLE_REGION and GOOGLE_ZONE" +
+			" must be set to run Google Cloud tests - skipping")
 	}
 }
 

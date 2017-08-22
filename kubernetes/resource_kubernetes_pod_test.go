@@ -457,6 +457,28 @@ func TestAccKubernetesPod_with_nodeSelector(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPod_without_AutomountToken(t *testing.T) {
+	var conf api.Pod
+
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodAutomountTokenFalse(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.automount_service_account_token", "false"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesPodDestroy(s *terraform.State) error {
 	conn := testAccProvider.Meta().(*kubernetes.Clientset)
 
@@ -992,4 +1014,22 @@ resource "kubernetes_pod" "test" {
   }
 }
 `, podName, imageName, args)
+}
+
+func testAccKubernetesPodAutomountTokenFalse(podName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_pod" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    automount_service_account_token = false
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+}
+`, podName, imageName)
 }

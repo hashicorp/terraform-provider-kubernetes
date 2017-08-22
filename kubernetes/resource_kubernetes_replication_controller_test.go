@@ -386,6 +386,41 @@ func TestAccKubernetesReplicationController_with_empty_dir_volume(t *testing.T) 
 	})
 }
 
+func TestAccKubernetesReplicationController_with_AutomountToken(t *testing.T) {
+	var conf api.ReplicationController
+
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesReplicationControllerConfig_autoMountToken(podName, ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.automount_service_account_token", "true"),
+				),
+			},
+			{
+				Config: testAccKubernetesReplicationControllerConfig_autoMountToken(podName, "automount_service_account_token = false"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.automount_service_account_token", "false"),
+				),
+			},
+			{
+				Config: testAccKubernetesReplicationControllerConfig_autoMountToken(podName, "automount_service_account_token = true"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.automount_service_account_token", "true"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesReplicationControllerDestroy(s *terraform.State) error {
 	conn := testAccProvider.Meta().(*kubernetes.Clientset)
 
@@ -847,4 +882,30 @@ resource "kubernetes_replication_controller" "test" {
   }
 }
 `, rcName, imageName)
+}
+
+func testAccKubernetesReplicationControllerConfig_autoMountToken(name, automount string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_replication_controller" "test" {
+  metadata {
+    name = "%s"
+    labels {
+      TestLabelOne = "one"
+    }
+  }
+  spec {
+    replicas = 1 # This is intentionally high to exercise the waiter
+    selector {
+      TestLabelOne = "one"
+    }
+    template {
+      %s
+      container {
+        image = "nginx:1.7.8"
+        name  = "tf-acc-test"
+      }
+    }
+  }
+}
+`, name, automount)
 }

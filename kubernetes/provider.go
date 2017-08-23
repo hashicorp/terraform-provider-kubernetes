@@ -180,6 +180,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	return &Meta{*cfg, k}, nil
 }
 
+// Meta is a wrapper for kubernetes clients and configs.
 type Meta struct {
 	restclient.Config
 	*kubernetes.Clientset

@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,9 +53,10 @@ func resourceAnyCreate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	_, err = rc.Create(&unstructured.Unstructured{
+	uns := unstructured.Unstructured{
 		Object: obj.Unstructured,
-	})
+	}
+	_, err = rc.Create(&uns)
 	if err != nil {
 		return fmt.Errorf("unable to create kubernetes resource: %s", err)
 	}
@@ -116,6 +118,7 @@ type kubeObject struct {
 	Unstructured map[string]interface{}
 	Structured   struct {
 		APIVersion string            `json:"apiVersion"`
+		Kind       string            `json:"kind"`
 		Metadata   metav1.ObjectMeta `json:"metadata"`
 	}
 }
@@ -158,6 +161,11 @@ func getResourceClient(cfg restclient.Config, obj *kubeObject) (*dynamic.Resourc
 		return nil, fmt.Errorf("unable to create dynamic client: %s", err)
 	}
 
-	resource := &metav1.APIResource{Name: "deployments", Namespaced: true}
+	resource := &metav1.APIResource{Name: kindToResource(obj.Structured.Kind), Namespaced: true}
 	return c.Resource(resource, obj.Structured.Metadata.Namespace), nil
+}
+
+func kindToResource(k string) string {
+	// TODO: Hacky, find the proper way (using discovery api?)
+	return strings.ToLower(k) + "s"
 }

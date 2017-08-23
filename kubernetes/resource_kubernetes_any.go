@@ -3,9 +3,9 @@ package kubernetes
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	runtimeschema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -48,7 +48,8 @@ func resourceAnyCreate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	rc, err := getResourceClient(meta.(*Meta).Config, obj)
+	m := meta.(*Meta)
+	rc, err := getResourceClient(m.Config, m.RESTMapper, obj)
 	if err != nil {
 		return err
 	}
@@ -75,7 +76,8 @@ func resourceAnyUpdate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	rc, err := getResourceClient(meta.(*Meta).Config, obj)
+	m := meta.(*Meta)
+	rc, err := getResourceClient(m.Config, m.RESTMapper, obj)
 	if err != nil {
 		return err
 	}
@@ -97,7 +99,8 @@ func resourceAnyDelete(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	rc, err := getResourceClient(meta.(*Meta).Config, obj)
+	m := meta.(*Meta)
+	rc, err := getResourceClient(m.Config, m.RESTMapper, obj)
 	if err != nil {
 		return err
 	}
@@ -147,7 +150,7 @@ func getKubeObject(d *schema.ResourceData) (*kubeObject, error) {
 	return &obj, nil
 }
 
-func getResourceClient(cfg restclient.Config, obj *kubeObject) (*dynamic.ResourceClient, error) {
+func getResourceClient(cfg restclient.Config, rm *meta.DefaultRESTMapper, obj *kubeObject) (*dynamic.ResourceClient, error) {
 	gv, err := runtimeschema.ParseGroupVersion(obj.Structured.APIVersion)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse group/version: %s", err)
@@ -161,11 +164,14 @@ func getResourceClient(cfg restclient.Config, obj *kubeObject) (*dynamic.Resourc
 		return nil, fmt.Errorf("unable to create dynamic client: %s", err)
 	}
 
-	resource := &metav1.APIResource{Name: kindToResource(obj.Structured.Kind), Namespaced: true}
-	return c.Resource(resource, obj.Structured.Metadata.Namespace), nil
-}
+	// Map the object to a REST resource
+	gk := runtimeschema.GroupKind{Group: gv.Group, Kind: obj.Structured.Kind}
+	m, err := rm.RESTMapping(gk, gv.Version)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get rest mapping: %s", err)
+	}
 
-func kindToResource(k string) string {
-	// TODO: Hacky, find the proper way (using discovery api?)
-	return strings.ToLower(k) + "s"
+	// TODO: How to determine Namespaced?
+	resource := &metav1.APIResource{Name: m.Resource, Namespaced: true}
+	return c.Resource(resource, obj.Structured.Metadata.Namespace), nil
 }

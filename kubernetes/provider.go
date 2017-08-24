@@ -179,7 +179,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to configure: %s", err)
 	}
-	rm, err := restMapperForConfig(cfg)
+	rm, err := restMapperForConfig(*cfg)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to configure: %s", err)
 	}
@@ -198,8 +198,10 @@ type Meta struct {
 	Clientset  *kubernetes.Clientset
 }
 
-func restMapperForConfig(cfg *restclient.Config) (*meta.DefaultRESTMapper, error) {
-	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
+func restMapperForConfig(cfg restclient.Config) (*meta.DefaultRESTMapper, error) {
+	// TODO: Un-hardcode this
+	cfg.APIPath = "/apis"
+	dc, err := discovery.NewDiscoveryClientForConfig(&cfg)
 	if err != nil {
 		return nil, fmt.Errorf("unable to setup discover client: %s", err)
 	}

@@ -43,26 +43,24 @@ func validateObjectJSON(x interface{}, s string) (strs []string, errs []error) {
 */
 
 func resourceAnyCreate(d *schema.ResourceData, meta interface{}) error {
-	obj, err := getKubeObject(d)
-	if err != nil {
-		return err
-	}
-
 	m := meta.(*Meta)
-	rc, err := getResourceClient(m.Config, m.RESTMapper, obj)
+
+	uns, err := getUnstructured(d)
 	if err != nil {
 		return err
 	}
 
-	uns := unstructured.Unstructured{
-		Object: obj.Unstructured,
+	rc, err := getResourceClient(m.Config, m.RESTMapper, uns)
+	if err != nil {
+		return err
 	}
-	_, err = rc.Create(&uns)
+
+	_, err = rc.Create(uns)
 	if err != nil {
 		return fmt.Errorf("unable to create kubernetes resource: %s", err)
 	}
 
-	d.SetId(buildId(obj.Structured.Metadata))
+	d.SetId(buildId(unstructuredMeta(uns)))
 	return nil
 }
 
@@ -71,42 +69,42 @@ func resourceAnyRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceAnyUpdate(d *schema.ResourceData, meta interface{}) error {
-	obj, err := getKubeObject(d)
-	if err != nil {
-		return err
-	}
-
 	m := meta.(*Meta)
-	rc, err := getResourceClient(m.Config, m.RESTMapper, obj)
+
+	uns, err := getUnstructured(d)
 	if err != nil {
 		return err
 	}
 
-	_, err = rc.Update(&unstructured.Unstructured{
-		Object: obj.Unstructured,
-	})
+	rc, err := getResourceClient(m.Config, m.RESTMapper, uns)
+	if err != nil {
+		return err
+	}
+
+	_, err = rc.Update(uns)
 	if err != nil {
 		return fmt.Errorf("unable to create kubernetes resource: %s", err)
 	}
 
-	d.SetId(buildId(obj.Structured.Metadata))
+	d.SetId(buildId(unstructuredMeta(uns)))
 	return nil
 }
 
 func resourceAnyDelete(d *schema.ResourceData, meta interface{}) error {
-	obj, err := getKubeObject(d)
+	m := meta.(*Meta)
+
+	uns, err := getUnstructured(d)
 	if err != nil {
 		return err
 	}
 
-	m := meta.(*Meta)
-	rc, err := getResourceClient(m.Config, m.RESTMapper, obj)
+	rc, err := getResourceClient(m.Config, m.RESTMapper, uns)
 	if err != nil {
 		return err
 	}
 
 	fg := metav1.DeletePropagationForeground
-	if err := rc.Delete(obj.Structured.Metadata.Name, &metav1.DeleteOptions{
+	if err := rc.Delete(uns.GetName(), &metav1.DeleteOptions{
 		PropagationPolicy: &fg,
 	}); err != nil {
 		return err
@@ -117,60 +115,53 @@ func resourceAnyDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-type kubeObject struct {
-	Unstructured map[string]interface{}
-	Structured   struct {
-		APIVersion string            `json:"apiVersion"`
-		Kind       string            `json:"kind"`
-		Metadata   metav1.ObjectMeta `json:"metadata"`
-	}
-}
-
-func (o *kubeObject) process() {
-	if len(o.Structured.Metadata.Namespace) == 0 {
-		o.Structured.Metadata.Namespace = "default"
-	}
-}
-
-func getKubeObject(d *schema.ResourceData) (*kubeObject, error) {
+func getUnstructured(d *schema.ResourceData) (*unstructured.Unstructured, error) {
 	objJSON := []byte(d.Get("object_json").(string))
 
-	var obj kubeObject
-
+	var uns unstructured.Unstructured
 	// Unmarshal json twice into a map and a struct for pulling needed variables
-	if err := json.Unmarshal(objJSON, &obj.Structured); err != nil {
-		return nil, err
-	}
-	if err := json.Unmarshal(objJSON, &obj.Unstructured); err != nil {
+	if err := json.Unmarshal(objJSON, &uns); err != nil {
 		return nil, err
 	}
 
-	obj.process()
-
-	return &obj, nil
+	return &uns, nil
 }
 
-func getResourceClient(cfg restclient.Config, rm *meta.DefaultRESTMapper, obj *kubeObject) (*dynamic.ResourceClient, error) {
-	gv, err := runtimeschema.ParseGroupVersion(obj.Structured.APIVersion)
+func getResourceClient(cfg restclient.Config, rm *meta.DefaultRESTMapper, uns *unstructured.Unstructured) (*dynamic.ResourceClient, error) {
+	// Create the dynamic client.
+	gv, err := runtimeschema.ParseGroupVersion(uns.GetAPIVersion())
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse group/version: %s", err)
 	}
 	cfg.ContentConfig = restclient.ContentConfig{GroupVersion: &gv}
 	// TODO: Look into using API Path resolver out of kube lib
 	cfg.APIPath = "/apis"
-
 	c, err := dynamic.NewClient(&cfg)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create dynamic client: %s", err)
 	}
 
-	// Map the object to a REST resource
-	gk := runtimeschema.GroupKind{Group: gv.Group, Kind: obj.Structured.Kind}
+	// Map the object to a REST resource.
+	gk := runtimeschema.GroupKind{Group: gv.Group, Kind: uns.GetKind()}
 	m, err := rm.RESTMapping(gk, gv.Version)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get rest mapping: %s", err)
 	}
 
-	resource := &metav1.APIResource{Name: m.Resource, Namespaced: m.Scope.Name() == meta.RESTScopeNameNamespace}
-	return c.Resource(resource, obj.Structured.Metadata.Namespace), nil
+	// Specify the resource.
+	nsd := m.Scope.Name() == meta.RESTScopeNameNamespace
+	ns := uns.GetNamespace()
+	if len(ns) == 0 && nsd {
+		ns = "default"
+	}
+	resource := &metav1.APIResource{Name: m.Resource, Namespaced: nsd}
+
+	return c.Resource(resource, ns), nil
+}
+
+func unstructuredMeta(uns *unstructured.Unstructured) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Namespace: uns.GetNamespace(),
+		Name:      uns.GetName(),
+	}
 }

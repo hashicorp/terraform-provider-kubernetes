@@ -119,7 +119,6 @@ func getUnstructured(d *schema.ResourceData) (*unstructured.Unstructured, error)
 	objJSON := []byte(d.Get("object_json").(string))
 
 	var uns unstructured.Unstructured
-	// Unmarshal json twice into a map and a struct for pulling needed variables
 	if err := json.Unmarshal(objJSON, &uns); err != nil {
 		return nil, err
 	}

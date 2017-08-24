@@ -171,7 +171,6 @@ func getResourceClient(cfg restclient.Config, rm *meta.DefaultRESTMapper, obj *k
 		return nil, fmt.Errorf("unable to get rest mapping: %s", err)
 	}
 
-	// TODO: How to determine Namespaced?
-	resource := &metav1.APIResource{Name: m.Resource, Namespaced: true}
+	resource := &metav1.APIResource{Name: m.Resource, Namespaced: m.Scope.Name() == meta.RESTScopeNameNamespace}
 	return c.Resource(resource, obj.Structured.Metadata.Namespace), nil
 }

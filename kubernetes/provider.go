@@ -201,11 +201,11 @@ type Meta struct {
 func restMapperForConfig(cfg *restclient.Config) (*meta.DefaultRESTMapper, error) {
 	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to setup discover client: %s", err)
 	}
 	sr, err := dc.ServerResources()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to get server resources: %s", err)
 	}
 	return dynamic.NewDiscoveryRESTMapper(sr, dynamic.VersionInterfaces)
 }

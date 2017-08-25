@@ -135,7 +135,9 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 	if v, ok := in["publish_not_ready_addresses"].(bool); ok {
 		obj.PublishNotReadyAddresses = v
 	}
-
+	if v, ok := in["external_traffic_policy"].(string); ok {
+		obj.ExternalName = v
+	}
 	return obj
 }
 

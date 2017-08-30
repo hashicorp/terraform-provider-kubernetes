@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -9,6 +10,9 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/terraform-providers/terraform-provider-google/google"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	api "k8s.io/kubernetes/pkg/api/v1"
+	kubernetes "k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
 )
 
 var testAccProviders map[string]terraform.ResourceProvider
@@ -174,6 +178,72 @@ func skipIfNoGoogleCloudSettingsFound(t *testing.T) {
 		t.Skip("The environment variables GOOGLE_PROJECT, GOOGLE_REGION and GOOGLE_ZONE" +
 			" must be set to run Google Cloud tests - skipping")
 	}
+}
+
+func skipIfNoLoadBalancersAvailable(t *testing.T) {
+	// TODO: Support AWS ELBs
+	isInGke, err := isRunningInGke()
+	if err != nil {
+		t.Skip(err)
+	}
+	if !isInGke {
+		t.Skip("The Kubernetes endpoint must come from an environment which supports " +
+			"load balancer provisioning for this test to run - skipping")
+	}
+}
+
+func skipIfNotRunningInGke(t *testing.T) {
+	isInGke, err := isRunningInGke()
+	if err != nil {
+		t.Skip(err)
+	}
+	if !isInGke {
+		t.Skip("The Kubernetes endpoint must come from GKE for this test to run - skipping")
+	}
+}
+
+func isRunningInMinikube() (bool, error) {
+	node, err := getFirstNode()
+	if err != nil {
+		return false, err
+	}
+
+	labels := node.GetLabels()
+	if v, ok := labels["kubernetes.io/hostname"]; ok && v == "minikube" {
+		return true, nil
+	}
+	return false, nil
+}
+
+func isRunningInGke() (bool, error) {
+	node, err := getFirstNode()
+	if err != nil {
+		return false, err
+	}
+
+	annotations := node.GetAnnotations()
+	if _, ok := annotations["cloud.google.com/gke-nodepool"]; ok {
+		return true, nil
+	}
+	return false, nil
+}
+
+func getFirstNode() (api.Node, error) {
+	meta := testAccProvider.Meta()
+	if meta == nil {
+		return api.Node{}, errors.New("Provider not initialized, unable to get cluster node")
+	}
+	conn := meta.(*kubernetes.Clientset)
+	resp, err := conn.CoreV1().Nodes().List(metav1.ListOptions{})
+	if err != nil {
+		return api.Node{}, err
+	}
+
+	if len(resp.Items) < 1 {
+		return api.Node{}, errors.New("Expected at least 1 node, none found")
+	}
+
+	return resp.Items[0], nil
 }
 
 type currentEnv struct {

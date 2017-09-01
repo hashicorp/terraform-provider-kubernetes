@@ -224,6 +224,59 @@ func TestAccKubernetesService_nodePort(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesService_noTargetPort(t *testing.T) {
+	var conf api.Service
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
+		IDRefreshName: "kubernetes_service.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesServiceDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesServiceConfig_noTargetPort(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceExists("kubernetes_service.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.#", "1"),
+					resource.TestCheckResourceAttrSet("kubernetes_service.test", "spec.0.cluster_ip"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_ips.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.name", "http"),
+					resource.TestCheckResourceAttrSet("kubernetes_service.test", "spec.0.port.0.node_port"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.port", "80"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.protocol", "TCP"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.target_port", "80"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.1.name", "https"),
+					resource.TestCheckResourceAttrSet("kubernetes_service.test", "spec.0.port.1.node_port"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.1.port", "443"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.1.protocol", "TCP"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.1.target_port", "443"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.App", "MyOtherApp"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.session_affinity", "None"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.type", "LoadBalancer"),
+					testAccCheckServicePorts(&conf, []api.ServicePort{
+						{
+							Name:       "http",
+							Port:       int32(80),
+							Protocol:   api.ProtocolTCP,
+							TargetPort: intstr.FromInt(80),
+						},
+						{
+							Name:       "https",
+							Port:       int32(443),
+							Protocol:   api.ProtocolTCP,
+							TargetPort: intstr.FromInt(443),
+						},
+					}),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesService_externalName(t *testing.T) {
 	var conf api.Service
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -520,6 +573,30 @@ resource "kubernetes_service" "test" {
 		type = "NodePort"
 	}
 }`, name, name)
+}
+
+func testAccKubernetesServiceConfig_noTargetPort(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    selector {
+      App = "MyOtherApp"
+    }
+    port {
+      name = "http"
+      port = 80
+    }
+    port {
+      name = "https"
+      port = 443
+    }
+    type = "LoadBalancer"
+  }
+}
+`, name)
 }
 
 func testAccKubernetesServiceConfig_externalName(name string) string {

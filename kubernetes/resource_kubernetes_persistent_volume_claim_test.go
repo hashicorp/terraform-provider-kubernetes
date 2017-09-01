@@ -30,10 +30,6 @@ func TestAccKubernetesPersistentVolumeClaim_basic(t *testing.T) {
 					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{
-						"TestAnnotationOne":                             "one",
-						"volume.beta.kubernetes.io/storage-provisioner": "kubernetes.io/gce-pd",
-					}),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.labels.TestLabelThree", "three"),
@@ -51,6 +47,32 @@ func TestAccKubernetesPersistentVolumeClaim_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
 				),
 			},
+			{ // GKE specific check
+				Config: testAccKubernetesPersistentVolumeClaimConfig_basic(name),
+				SkipFunc: func() (bool, error) {
+					isInGke, err := isRunningInGke()
+					return !isInGke, err
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{
+						"TestAnnotationOne":                             "one",
+						"volume.beta.kubernetes.io/storage-provisioner": "kubernetes.io/gce-pd",
+					}),
+				),
+			},
+			{ // minikube specific check
+				Config: testAccKubernetesPersistentVolumeClaimConfig_basic(name),
+				SkipFunc: func() (bool, error) {
+					isInMinikube, err := isRunningInMinikube()
+					return !isInMinikube, err
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{
+						"TestAnnotationOne":                             "one",
+						"volume.beta.kubernetes.io/storage-provisioner": "k8s.io/minikube-hostpath",
+					}),
+				),
+			},
 			{
 				Config: testAccKubernetesPersistentVolumeClaimConfig_metaModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -58,11 +80,6 @@ func TestAccKubernetesPersistentVolumeClaim_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
-					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{
-						"TestAnnotationOne":                             "one",
-						"TestAnnotationTwo":                             "two",
-						"volume.beta.kubernetes.io/storage-provisioner": "kubernetes.io/gce-pd",
-					}),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.labels.TestLabelTwo", "two"),
@@ -78,6 +95,34 @@ func TestAccKubernetesPersistentVolumeClaim_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
+				),
+			},
+			{ // GKE specific check
+				Config: testAccKubernetesPersistentVolumeClaimConfig_basic(name),
+				SkipFunc: func() (bool, error) {
+					isInGke, err := isRunningInGke()
+					return !isInGke, err
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{
+						"TestAnnotationOne":                             "one",
+						"TestAnnotationTwo":                             "two",
+						"volume.beta.kubernetes.io/storage-provisioner": "kubernetes.io/gce-pd",
+					}),
+				),
+			},
+			{ // minikube specific check
+				Config: testAccKubernetesPersistentVolumeClaimConfig_basic(name),
+				SkipFunc: func() (bool, error) {
+					isInMinikube, err := isRunningInMinikube()
+					return !isInMinikube, err
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{
+						"TestAnnotationOne":                             "one",
+						"TestAnnotationTwo":                             "two",
+						"volume.beta.kubernetes.io/storage-provisioner": "k8s.io/minikube-hostpath",
+					}),
 				),
 			},
 		},

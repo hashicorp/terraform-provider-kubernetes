@@ -86,6 +86,8 @@ func TestAccKubernetesService_basic(t *testing.T) {
 }
 
 func TestAccKubernetesService_loadBalancer(t *testing.T) {
+	skipIfNoLoadBalancersAvailable(t)
+
 	var conf api.Service
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 

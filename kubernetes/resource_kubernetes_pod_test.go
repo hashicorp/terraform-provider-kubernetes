@@ -442,7 +442,9 @@ func TestAccKubernetesPod_with_secret_vol_items(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPod_with_nodeSelector(t *testing.T) {
+func TestAccKubernetesPod_gke_with_nodeSelector(t *testing.T) {
+	skipIfNotRunningInGke(t)
+
 	var conf api.Pod
 
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))

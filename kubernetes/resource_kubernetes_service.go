@@ -11,7 +11,6 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	api "k8s.io/kubernetes/pkg/api/v1"
-	kubernetes "k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
 )
 
 func resourceKubernetesService() *schema.Resource {
@@ -143,7 +142,7 @@ func resourceKubernetesService() *schema.Resource {
 }
 
 func resourceKubernetesServiceCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*Meta).Clientset
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svc := api.Service{
@@ -191,7 +190,7 @@ func resourceKubernetesServiceCreate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesServiceRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*Meta).Clientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -226,7 +225,7 @@ func resourceKubernetesServiceRead(d *schema.ResourceData, meta interface{}) err
 }
 
 func resourceKubernetesServiceUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*Meta).Clientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -254,7 +253,7 @@ func resourceKubernetesServiceUpdate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesServiceDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*Meta).Clientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -274,7 +273,7 @@ func resourceKubernetesServiceDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesServiceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*Meta).Clientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

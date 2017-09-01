@@ -9,6 +9,9 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/mitchellh/go-homedir"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -109,6 +112,7 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
+			"kubernetes_any":                       resourceKubernetesAny(),
 			"kubernetes_config_map":                resourceKubernetesConfigMap(),
 			"kubernetes_horizontal_pod_autoscaler": resourceKubernetesHorizontalPodAutoscaler(),
 			"kubernetes_limit_range":               resourceKubernetesLimitRange(),
@@ -175,8 +179,37 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to configure: %s", err)
 	}
+	rm, err := restMapperForConfig(*cfg)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to configure: %s", err)
+	}
 
-	return k, nil
+	return &Meta{
+		Config:     *cfg,
+		RESTMapper: rm,
+		Clientset:  k,
+	}, nil
+}
+
+// Meta is a wrapper for kubernetes clients and configs.
+type Meta struct {
+	Config     restclient.Config
+	RESTMapper *meta.DefaultRESTMapper
+	Clientset  *kubernetes.Clientset
+}
+
+func restMapperForConfig(cfg restclient.Config) (*meta.DefaultRESTMapper, error) {
+	// TODO: Un-hardcode this
+	cfg.APIPath = "/apis"
+	dc, err := discovery.NewDiscoveryClientForConfig(&cfg)
+	if err != nil {
+		return nil, fmt.Errorf("unable to setup discover client: %s", err)
+	}
+	sr, err := dc.ServerResources()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get server resources: %s", err)
+	}
+	return dynamic.NewDiscoveryRESTMapper(sr, dynamic.VersionInterfaces)
 }
 
 func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {

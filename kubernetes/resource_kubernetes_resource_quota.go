@@ -11,7 +11,6 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	api "k8s.io/kubernetes/pkg/api/v1"
-	kubernetes "k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
 )
 
 func resourceKubernetesResourceQuota() *schema.Resource {
@@ -57,7 +56,7 @@ func resourceKubernetesResourceQuota() *schema.Resource {
 }
 
 func resourceKubernetesResourceQuotaCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*Meta).Clientset
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandResourceQuotaSpec(d.Get("spec").([]interface{}))
@@ -96,7 +95,7 @@ func resourceKubernetesResourceQuotaCreate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesResourceQuotaRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*Meta).Clientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -132,7 +131,7 @@ func resourceKubernetesResourceQuotaRead(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*Meta).Clientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -188,7 +187,7 @@ func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesResourceQuotaDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*Meta).Clientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -208,7 +207,7 @@ func resourceKubernetesResourceQuotaDelete(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesResourceQuotaExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*Meta).Clientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

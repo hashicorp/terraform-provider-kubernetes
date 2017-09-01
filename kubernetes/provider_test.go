@@ -171,6 +171,11 @@ func testAccPreCheck(t *testing.T) {
 				"KUBE_CLUSTER_CA_CERT_DATA",
 			}, ", "))
 	}
+
+	err := testAccProvider.Configure(terraform.NewResourceConfig(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func skipIfNoGoogleCloudSettingsFound(t *testing.T) {
@@ -184,7 +189,7 @@ func skipIfNoLoadBalancersAvailable(t *testing.T) {
 	// TODO: Support AWS ELBs
 	isInGke, err := isRunningInGke()
 	if err != nil {
-		t.Skip(err)
+		t.Fatal(err)
 	}
 	if !isInGke {
 		t.Skip("The Kubernetes endpoint must come from an environment which supports " +
@@ -195,7 +200,7 @@ func skipIfNoLoadBalancersAvailable(t *testing.T) {
 func skipIfNotRunningInGke(t *testing.T) {
 	isInGke, err := isRunningInGke()
 	if err != nil {
-		t.Skip(err)
+		t.Fatal(err)
 	}
 	if !isInGke {
 		t.Skip("The Kubernetes endpoint must come from GKE for this test to run - skipping")
@@ -221,8 +226,8 @@ func isRunningInGke() (bool, error) {
 		return false, err
 	}
 
-	annotations := node.GetAnnotations()
-	if _, ok := annotations["cloud.google.com/gke-nodepool"]; ok {
+	labels := node.GetLabels()
+	if _, ok := labels["cloud.google.com/gke-nodepool"]; ok {
 		return true, nil
 	}
 	return false, nil

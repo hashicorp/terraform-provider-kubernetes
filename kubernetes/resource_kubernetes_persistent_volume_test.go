@@ -14,8 +14,6 @@ import (
 )
 
 func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
-	skipIfNoGoogleCloudSettingsFound(t)
-
 	var conf api.PersistentVolume
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
@@ -25,7 +23,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 	zone := os.Getenv("GOOGLE_ZONE")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
+		PreCheck:      func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
 		IDRefreshName: "kubernetes_persistent_volume.test",
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
@@ -102,8 +100,6 @@ func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 }
 
 func TestAccKubernetesPersistentVolume_googleCloud_importBasic(t *testing.T) {
-	skipIfNoGoogleCloudSettingsFound(t)
-
 	resourceName := "kubernetes_persistent_volume.test"
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	name := fmt.Sprintf("tf-acc-test-import-%s", randString)
@@ -112,7 +108,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_importBasic(t *testing.T) {
 	zone := os.Getenv("GOOGLE_ZONE")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
 		Providers:    testAccProviders,
 		CheckDestroy: testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
@@ -129,8 +125,6 @@ func TestAccKubernetesPersistentVolume_googleCloud_importBasic(t *testing.T) {
 }
 
 func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
-	skipIfNoGoogleCloudSettingsFound(t)
-
 	var conf api.PersistentVolume
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
@@ -140,7 +134,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
 	zone := os.Getenv("GOOGLE_ZONE")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
+		PreCheck:      func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
 		IDRefreshName: "kubernetes_persistent_volume.test",
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,

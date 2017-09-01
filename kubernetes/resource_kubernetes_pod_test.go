@@ -443,8 +443,6 @@ func TestAccKubernetesPod_with_secret_vol_items(t *testing.T) {
 }
 
 func TestAccKubernetesPod_gke_with_nodeSelector(t *testing.T) {
-	skipIfNotRunningInGke(t)
-
 	var conf api.Pod
 
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -452,7 +450,7 @@ func TestAccKubernetesPod_gke_with_nodeSelector(t *testing.T) {
 	region := os.Getenv("GOOGLE_REGION")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
 		Providers:    testAccProviders,
 		CheckDestroy: testAccCheckKubernetesPodDestroy,
 		Steps: []resource.TestStep{

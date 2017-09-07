@@ -130,8 +130,6 @@ func TestAccKubernetesPersistentVolumeClaim_basic(t *testing.T) {
 }
 
 func TestAccKubernetesPersistentVolumeClaim_googleCloud_importBasic(t *testing.T) {
-	skipIfNoGoogleCloudSettingsFound(t)
-
 	resourceName := "kubernetes_persistent_volume_claim.test"
 	volumeName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	claimName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
@@ -139,7 +137,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_importBasic(t *testing.T
 	zone := os.Getenv("GOOGLE_ZONE")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
 		Providers:    testAccProviders,
 		CheckDestroy: testAccCheckKubernetesPersistentVolumeClaimDestroy,
 		Steps: []resource.TestStep{
@@ -156,8 +154,6 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_importBasic(t *testing.T
 }
 
 func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T) {
-	skipIfNoGoogleCloudSettingsFound(t)
-
 	var pvcConf api.PersistentVolumeClaim
 	var pvConf api.PersistentVolume
 
@@ -168,7 +164,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T
 	zone := os.Getenv("GOOGLE_ZONE")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
+		PreCheck:      func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
 		IDRefreshName: "kubernetes_persistent_volume_claim.test",
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeClaimDestroy,
@@ -308,8 +304,6 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T
 // }
 
 func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeUpdate(t *testing.T) {
-	skipIfNoGoogleCloudSettingsFound(t)
-
 	var pvcConf api.PersistentVolumeClaim
 	var pvConf api.PersistentVolume
 
@@ -319,7 +313,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeUpdate(t *testing.
 	zone := os.Getenv("GOOGLE_ZONE")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
+		PreCheck:      func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
 		IDRefreshName: "kubernetes_persistent_volume_claim.test",
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeClaimDestroy,
@@ -377,8 +371,6 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeUpdate(t *testing.
 }
 
 func TestAccKubernetesPersistentVolumeClaim_googleCloud_storageClass(t *testing.T) {
-	skipIfNoGoogleCloudSettingsFound(t)
-
 	var pvcConf api.PersistentVolumeClaim
 	var storageClass storageapi.StorageClass
 	var secondStorageClass storageapi.StorageClass
@@ -387,7 +379,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_storageClass(t *testing.
 	claimName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
+		PreCheck:      func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
 		IDRefreshName: "kubernetes_persistent_volume_claim.test",
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeClaimDestroy,

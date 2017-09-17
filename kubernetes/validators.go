@@ -55,13 +55,9 @@ func validateGenerateName(value interface{}, key string) (ws []string, es []erro
 
 func validateLabels(value interface{}, key string) (ws []string, es []error) {
 	m := value.(map[string]interface{})
-	for k, v := range m {
+	for k, _ := range m {
 		for _, msg := range utilValidation.IsQualifiedName(k) {
 			es = append(es, fmt.Errorf("%s (%q) %s", key, k, msg))
-		}
-		val := v.(string)
-		for _, msg := range utilValidation.IsValidLabelValue(val) {
-			es = append(es, fmt.Errorf("%s (%q) %s", key, val, msg))
 		}
 	}
 	return

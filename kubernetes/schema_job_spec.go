@@ -15,6 +15,7 @@ func jobSpecFields() map[string]*schema.Schema {
 		"completions": {
 			Type:         schema.TypeInt,
 			Optional:     true,
+			Default:      1,
 			ValidateFunc: validatePositiveInteger,
 			Description:  "Specifies the desired number of successfully finished pods the job should be run with. Setting to nil means that the success of any pod signals the success of all pods, and allows parallelism to have any positive value. Setting to 1 means that parallelism is limited to 1 and the success of that pod signals the success of the job. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
 		},
@@ -27,13 +28,54 @@ func jobSpecFields() map[string]*schema.Schema {
 		"parallelism": {
 			Type:         schema.TypeInt,
 			Optional:     true,
+			Default:      1,
 			ValidateFunc: validatePositiveInteger,
 			Description:  "Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
 		},
 		"selector": {
-			Type:        schema.TypeMap,
+			Type:        schema.TypeList,
+			Description: "A label query over volumes to consider for binding.",
 			Optional:    true,
-			Description: "A label query over pods that should match the pod count. Normally, the system sets this field for you. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors",
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"match_expressions": {
+						Type:        schema.TypeList,
+						Description: "A list of label selector requirements. The requirements are ANDed.",
+						Optional:    true,
+						ForceNew:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"key": {
+									Type:        schema.TypeString,
+									Description: "The label key that the selector applies to.",
+									Optional:    true,
+									ForceNew:    true,
+								},
+								"operator": {
+									Type:        schema.TypeString,
+									Description: "A key's relationship to a set of values. Valid operators ard `In`, `NotIn`, `Exists` and `DoesNotExist`.",
+									Optional:    true,
+									ForceNew:    true,
+								},
+								"values": {
+									Type:        schema.TypeSet,
+									Description: "An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.",
+									Optional:    true,
+									ForceNew:    true,
+									Elem:        &schema.Schema{Type: schema.TypeString},
+									Set:         schema.HashString,
+								},
+							},
+						},
+					},
+					"match_labels": {
+						Type:        schema.TypeMap,
+						Description: "A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is \"key\", the operator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
+						Optional:    true,
+					},
+				},
+			},
 		},
 		"template": {
 			Type:        schema.TypeList,

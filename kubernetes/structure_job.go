@@ -17,13 +17,17 @@ func flattenJobSpec(in batchv1.JobSpec) ([]interface{}, error) {
 		att["completions"] = *in.Completions
 	}
 
-	att["manual_selector"] = in.ManualSelector
+	if in.ManualSelector != nil {
+		att["manual_selector"] = *in.ManualSelector
+	}
 
 	if in.Parallelism != nil {
 		att["parallelism"] = *in.Parallelism
 	}
 
-	att["selector"] = in.Selector
+	if in.Selector != nil {
+		att["selector"] = flattenLabelSelector(in.Selector)
+	}
 
 	podSpec, err := flattenPodSpec(in.Template.Spec)
 	if err != nil {

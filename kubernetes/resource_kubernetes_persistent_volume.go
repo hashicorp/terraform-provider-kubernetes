@@ -60,6 +60,11 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							MaxItems:    1,
 							Elem:        persistentVolumeSourceSchema(),
 						},
+						"storage_class_name": {
+							Type:        schema.TypeString,
+							Description: "A description of the persistent volume's class. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class",
+							Optional:    true,
+						},
 					},
 				},
 			},

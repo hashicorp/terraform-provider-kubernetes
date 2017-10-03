@@ -97,7 +97,8 @@ func resourceKubernetesService() *schema.Resource {
 									"target_port": {
 										Type:        schema.TypeInt,
 										Description: "Number or name of the port to access on the pods targeted by the service. Number must be in the range 1 to 65535. This field is ignored for services with `cluster_ip = \"None\"`. More info: http://kubernetes.io/docs/user-guide/services#defining-a-service",
-										Required:    true,
+										Optional:    true,
+										Computed:    true,
 									},
 								},
 							},

@@ -4,6 +4,7 @@ BUG FIXES:
 
 * resource/pod: Avoid crash in reading `spec.container.security_context` `capability` [GH-53]
 * resource/replication_controller: Avoid crash in reading `template.container.security_context` `capability` [GH-53]
+* resource/service: Make spec.port.target_port optional [GH-69]
 
 ## 1.0.0 (August 18, 2017)
 

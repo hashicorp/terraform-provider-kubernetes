@@ -174,7 +174,7 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 func resourceKubernetesDeploymentRead(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
 	log.Printf("[INFO] Reading deployment %s", name)
 	deployment, err := conn.ExtensionsV1beta1().Deployments(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
@@ -204,7 +204,7 @@ func resourceKubernetesDeploymentRead(d *schema.ResourceData, meta interface{}) 
 func resourceKubernetesDeploymentUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
@@ -242,7 +242,7 @@ func resourceKubernetesDeploymentUpdate(d *schema.ResourceData, meta interface{}
 func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
 	log.Printf("[INFO] Deleting deployment: %#v", name)
 
 	// Drain all replicas before deleting
@@ -281,9 +281,9 @@ func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}
 func resourceKubernetesDeploymentExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
 	log.Printf("[INFO] Checking deployment %s", name)
-	_, err := conn.ExtensionsV1beta1().Deployments(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.ExtensionsV1beta1().Deployments(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

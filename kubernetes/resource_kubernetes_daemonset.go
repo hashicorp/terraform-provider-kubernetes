@@ -136,7 +136,7 @@ func resourceKubernetesDaemonSetCreate(d *schema.ResourceData, meta interface{})
 func resourceKubernetesDaemonSetRead(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
 	log.Printf("[INFO] Reading daemonset %s", name)
 	daemonset, err := conn.DaemonSets(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
@@ -166,7 +166,7 @@ func resourceKubernetesDaemonSetRead(d *schema.ResourceData, meta interface{}) e
 func resourceKubernetesDaemonSetUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
@@ -198,7 +198,7 @@ func resourceKubernetesDaemonSetUpdate(d *schema.ResourceData, meta interface{})
 func resourceKubernetesDaemonSetDelete(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
 	log.Printf("[INFO] Deleting daemonset: %#v", name)
 
 	falseVar := false
@@ -213,9 +213,9 @@ func resourceKubernetesDaemonSetDelete(d *schema.ResourceData, meta interface{})
 func resourceKubernetesDaemonSetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
 	log.Printf("[INFO] Checking daemonset %s", name)
-	_, err := conn.DaemonSets(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.DaemonSets(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

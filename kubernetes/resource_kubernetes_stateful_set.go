@@ -120,7 +120,7 @@ func resourceKubernetesStatefulSetCreate(d *schema.ResourceData, meta interface{
 func resourceKubernetesStatefulSetRead(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
 	log.Printf("[INFO] Reading statefulSet %s", name)
 	statefulSet, err := conn.AppsV1beta1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
@@ -150,7 +150,7 @@ func resourceKubernetesStatefulSetRead(d *schema.ResourceData, meta interface{})
 func resourceKubernetesStatefulSetUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
@@ -188,7 +188,7 @@ func resourceKubernetesStatefulSetUpdate(d *schema.ResourceData, meta interface{
 func resourceKubernetesStatefulSetDelete(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
 	log.Printf("[INFO] Deleting statefulSet: %#v", name)
 
 	// Drain all replicas before deleting
@@ -227,9 +227,13 @@ func resourceKubernetesStatefulSetDelete(d *schema.ResourceData, meta interface{
 func resourceKubernetesStatefulSetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return false, err
+	}
+
 	log.Printf("[INFO] Checking statefulSet %s", name)
-	_, err := conn.AppsV1beta1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.AppsV1beta1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

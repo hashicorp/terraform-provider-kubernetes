@@ -32,7 +32,7 @@ func resourceKubernetesIngress() *schema.Resource {
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"backend": backendSpecFields(),
+						"backend": backendSpecFields(defaultBackendDescription),
 						"rule": {
 							Type:        schema.TypeList,
 							Description: "A default backend capable of servicing requests that don't match any rule. At least one of 'backend' or 'rules' must be specified. This field is optional to allow the loadbalancer controller or defaulting logic to specify a global default.",
@@ -62,7 +62,7 @@ func resourceKubernetesIngress() *schema.Resource {
 																Description: "path.regex is an extended POSIX regex as defined by IEEE Std 1003.1, (i.e this follows the egrep/unix syntax, not the perl syntax) matched against the path of an incoming request. Currently it can contain characters disallowed from the conventional \"path\" part of a URL as defined by RFC 3986. Paths must begin with a '/'. If unspecified, the path defaults to a catch all sending traffic to the backend.",
 																Optional:    true,
 															},
-															"backend": backendSpecFields(),
+															"backend": backendSpecFields(ruleBackedDescription),
 														},
 													},
 												},
@@ -91,6 +91,22 @@ func resourceKubernetesIngress() *schema.Resource {
 									},
 								},
 							},
+						},
+					},
+				},
+			},
+			"load_balancer_ingress": {
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"ip": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+						"hostname": {
+							Type:     schema.TypeString,
+							Computed: true,
 						},
 					},
 				},
@@ -141,6 +157,11 @@ func resourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) err
 	flattened := flattenIngressSpec(ing.Spec)
 	log.Printf("[DEBUG] Flattened ingress spec: %#v", flattened)
 	err = d.Set("spec", flattened)
+	if err != nil {
+		return err
+	}
+
+	err = d.Set("load_balancer_ingress", flattenLoadBalancerIngress(ing.Status.LoadBalancer.Ingress))
 	if err != nil {
 		return err
 	}

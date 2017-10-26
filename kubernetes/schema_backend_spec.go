@@ -2,10 +2,13 @@ package kubernetes
 
 import "github.com/hashicorp/terraform/helper/schema"
 
-func backendSpecFields() *schema.Schema {
+const defaultBackendDescription = `A default backend capable of servicing requests that don't match any rule. At least one of 'backend' or 'rules' must be specified. This field is optional to allow the loadbalancer controller or defaulting logic to specify a global default.`
+const ruleBackedDescription = `Backend defines the referenced service endpoint to which the traffic will be forwarded to.`
+
+func backendSpecFields(description string) *schema.Schema {
 	s := &schema.Schema{
 		Type:        schema.TypeList,
-		Description: "A default backend capable of servicing requests that don't match any rule. At least one of 'backend' or 'rules' must be specified. This field is optional to allow the loadbalancer controller or defaulting logic to specify a global default.",
+		Description: description,
 		MaxItems:    1,
 		Optional:    true,
 		Elem: &schema.Resource{

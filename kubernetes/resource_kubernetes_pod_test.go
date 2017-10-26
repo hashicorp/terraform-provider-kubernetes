@@ -897,6 +897,31 @@ resource "kubernetes_pod" "test" {
         default_mode = 0777
       }
     }
+
+    volume {
+      name = "cfg-item"
+      config_map {
+        name = "${kubernetes_config_map.test.metadata.0.name}"
+
+        items {
+          key  = "one"
+          path = "one.txt"
+        }
+      }
+    }
+
+    volume {
+      name = "cfg-item-with-mode"
+      config_map {
+        name = "${kubernetes_config_map.test.metadata.0.name}"
+
+        items {
+          key  = "one"
+          path = "one-with-mode.txt"
+          mode = "0444"
+        }
+      }
+    }
   }
 }
 	`, secretName, podName, imageName)

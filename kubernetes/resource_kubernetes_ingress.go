@@ -32,13 +32,7 @@ func resourceKubernetesIngress() *schema.Resource {
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"backend": {
-							Type:        schema.TypeList,
-							Description: "A default backend capable of servicing requests that don't match any rule. At least one of 'backend' or 'rules' must be specified. This field is optional to allow the loadbalancer controller or defaulting logic to specify a global default.",
-							MaxItems:    1,
-							Optional:    true,
-							Elem:        backendSpecFields(),
-						},
+						"backend": backendSpecFields(),
 						"rule": {
 							Type:        schema.TypeList,
 							Description: "A default backend capable of servicing requests that don't match any rule. At least one of 'backend' or 'rules' must be specified. This field is optional to allow the loadbalancer controller or defaulting logic to specify a global default.",
@@ -63,18 +57,12 @@ func resourceKubernetesIngress() *schema.Resource {
 													Description: "Path array of path regex associated with a backend. Incoming urls matching the path are forwarded to the backend.",
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
-															"regex": {
+															"path_regex": {
 																Type:        schema.TypeString,
 																Description: "path.regex is an extended POSIX regex as defined by IEEE Std 1003.1, (i.e this follows the egrep/unix syntax, not the perl syntax) matched against the path of an incoming request. Currently it can contain characters disallowed from the conventional \"path\" part of a URL as defined by RFC 3986. Paths must begin with a '/'. If unspecified, the path defaults to a catch all sending traffic to the backend.",
-																Required:    true,
-															},
-															"backend": {
-																Type:        schema.TypeList,
-																Description: "backend defines the referenced service endpoint to which the traffic will be forwarded to.",
-																MaxItems:    1,
 																Optional:    true,
-																Elem:        backendSpecFields(),
 															},
+															"backend": backendSpecFields(),
 														},
 													},
 												},
@@ -90,16 +78,16 @@ func resourceKubernetesIngress() *schema.Resource {
 							Optional:    true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"host": {
+									"hosts": {
 										Type:        schema.TypeList,
 										Description: "Hosts are a list of hosts included in the TLS certificate. The values in this list must match the name/s used in the tlsSecret. Defaults to the wildcard host setting for the loadbalancer controller fulfilling this Ingress, if left unspecified.",
 										Optional:    true,
-										Elem:        schema.TypeString,
+										Elem:        &schema.Schema{Type: schema.TypeString},
 									},
 									"secret_name": {
 										Type:        schema.TypeString,
 										Description: "SecretName is the name of the secret used to terminate SSL traffic on 443. Field is left optional to allow SSL routing based on SNI hostname alone. If the SNI host in a listener conflicts with the \"Host\" header field used by an IngressRule, the SNI host is used for termination and value of the Host header is used for routing.",
-										Required:    true,
+										Optional:    true,
 									},
 								},
 							},
@@ -121,41 +109,11 @@ func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) e
 	ing.ObjectMeta = metadata
 	log.Printf("[INFO] Creating new ingress: %#v", ing)
 	out, err := conn.ExtensionsV1beta1().Ingresses(metadata.Namespace).Create(ing)
-	// out, err := conn.CoreV1().Services(metadata.Namespace).Create(&ing)
 	if err != nil {
 		return err
 	}
-	log.Printf("[INFO] Submitted new service: %#v", out)
+	log.Printf("[INFO] Submitted new ingress: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
-
-	// if out.Spec.Type == api.ServiceTypeLoadBalancer {
-	// 	log.Printf("[DEBUG] Waiting for load balancer to assign IP/hostname")
-
-	// 	err = resource.Retry(10*time.Minute, func() *resource.RetryError {
-	// 		ing, err := conn.CoreV1().Services(out.Namespace).Get(out.Name, meta_v1.GetOptions{})
-	// 		if err != nil {
-	// 			log.Printf("[DEBUG] Received error: %#v", err)
-	// 			return resource.NonRetryableError(err)
-	// 		}
-
-	// 		lbIngress := ing.Status.LoadBalancer.Ingress
-
-	// 		log.Printf("[INFO] Received service status: %#v", ing.Status)
-	// 		if len(lbIngress) > 0 {
-	// 			return nil
-	// 		}
-
-	// 		return resource.RetryableError(fmt.Errorf(
-	// 			"Waiting for service %q to assign IP/hostname for a load balancer", d.Id()))
-	// 	})
-	// 	if err != nil {
-	// 		lastWarnings, wErr := getLastWarningsForObject(conn, out.ObjectMeta, "Service", 3)
-	// 		if wErr != nil {
-	// 			return wErr
-	// 		}
-	// 		return fmt.Errorf("%s%s", err, stringifyEvents(lastWarnings))
-	// 	}
-	// }
 
 	return resourceKubernetesIngressRead(d, meta)
 }
@@ -197,12 +155,15 @@ func resourceKubernetesIngressUpdate(d *schema.ResourceData, meta interface{}) e
 	if err != nil {
 		return err
 	}
-
+	// Metadata
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
+
+	// Spec
 	if d.HasChange("spec") {
 		diffOps := patchIngressSpec("spec.0.", "/spec/", d)
 		ops = append(ops, diffOps...)
 	}
+
 	data, err := ops.MarshalJSON()
 	if err != nil {
 		return fmt.Errorf("Failed to marshal update operations: %s", err)

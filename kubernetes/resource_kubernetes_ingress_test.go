@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetes "k8s.io/client-go/kubernetes"
-	// api "k8s.io/client-go/pkg/api/v1"
 	api "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
 
@@ -34,15 +33,8 @@ func TestAccKubernetesIngress_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_name", ""),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_port", "0"),
-					// testAccCheckIngressPorts(&conf, []api.IngressPort{
-					// 	{
-					// 		Port:       int32(8080),
-					// 		Protocol:   api.ProtocolTCP,
-					// 		TargetPort: intstr.FromInt(80),
-					// 	},
-					// }),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_name", "app1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_port", "443"),
 				),
 			},
 			{
@@ -56,15 +48,53 @@ func TestAccKubernetesIngress_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_name", "https"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_port", "443"),
-					// testAccCheckIngressPorts(&conf, []api.IngressPort{
-					// 	{
-					// 		Port:       int32(443),
-					// 		Protocol:   api.ProtocolTCP,
-					// 		TargetPort: intstr.FromInt(80),
-					// 	},
-					// }),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_name", "svc"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_port", "8443"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesIngress_TLS(t *testing.T) {
+	var conf api.Ingress
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_ingress.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesIngressDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressConfig_TLS(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.tls.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.tls.0.hosts.0", "host1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.tls.0.secret_name", "super-sekret"),
+				),
+			},
+			{
+				Config: testAccKubernetesIngressConfig_TLS_modified(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.tls.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.tls.0.hosts.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.tls.0.hosts.1", "host2"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.tls.0.secret_name", "super-sekret"),
 				),
 			},
 		},
@@ -123,21 +153,24 @@ func testAccKubernetesIngressConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_ingress" "test" {
 	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
 		name = "%s"
 	}
 	spec {
 		backend {
 			service_name = "app1"
 			service_port = 443
+		}
+		rule {
+			host = "server.domain.com"
+			http {
+				path {
+					backend {
+						service_name = "app2"
+						service_port = 80
+					}
+					path_regex = "/.*"
+				}
+			}
 		}
 	}
 }`, name)
@@ -147,126 +180,51 @@ func testAccKubernetesIngressConfig_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_ingress" "test" {
 	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			Different = "1234"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelThree = "three"
-		}
 		name = "%s"
 	}
 	spec {
-		port {
-			port = 8081
-			target_port = 80
+		backend {
+			service_name = "svc"
+			service_port = 8443
 		}
 	}
 }`, name)
 }
 
-func testAccKubernetesIngressConfig_loadBalancer(name string) string {
+func testAccKubernetesIngressConfig_TLS(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
 	}
 	spec {
-		external_name = "ext-name-%s"
-		external_ips = ["10.0.0.3", "10.0.0.4"]
-		load_balancer_source_ranges = ["10.0.0.5/32", "10.0.0.6/32"]
-		selector {
-			App = "MyApp"
+		backend {
+			service_name = "app1"
+			service_port = 443
 		}
-		session_affinity = "ClientIP"
-		port {
-			port = 8888
-			target_port = 80
+		tls {
+			hosts       = ["host1"]
+			secret_name = "super-sekret"
 		}
-		type = "LoadBalancer"
 	}
-}`, name, name)
+}`, name)
 }
 
-func testAccKubernetesIngressConfig_loadBalancer_modified(name string) string {
+func testAccKubernetesIngressConfig_TLS_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
 	}
 	spec {
-		external_name = "ext-name-modified-%s"
-		external_ips = ["10.0.0.4", "10.0.0.5"]
-		load_balancer_source_ranges = ["10.0.0.1/32", "10.0.0.2/32"]
-		selector {
-			App = "MyModifiedApp"
-			NewSelector = "NewValue"
+		backend {
+			service_name = "app1"
+			service_port = 443
 		}
-		session_affinity = "ClientIP"
-		port {
-			port = 9999
-			target_port = 81
-		}
-		type = "LoadBalancer"
-	}
-}`, name, name)
-}
-
-func testAccKubernetesIngressConfig_nodePort(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		external_name = "ext-name-%s"
-		external_ips = ["10.0.0.4", "10.0.0.5"]
-		load_balancer_ip = "12.0.0.125"
-		selector {
-			App = "MyApp"
-		}
-		session_affinity = "ClientIP"
-		port {
-			name = "first"
-			port = 10222
-			target_port = 22
-		}
-		port {
-			name = "second"
-			port = 10333
-			target_port = 33
-		}
-		type = "NodePort"
-	}
-}`, name, name)
-}
-
-func testAccKubernetesIngressConfig_externalName(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		type = "ExternalName"
-		external_name = "terraform.io"
-	}
-}
-`, name)
-}
-
-func testAccKubernetesIngressConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
-	metadata {
-		generate_name = "%s"
-	}
-	spec {
-		port {
-			port = 8080
-			target_port = 80
+		tls {
+			hosts       = ["host1", "host2"]
+			secret_name = "super-sekret"
 		}
 	}
-}`, prefix)
+}`, name)
 }

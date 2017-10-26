@@ -754,10 +754,10 @@
 			"revisionTime": "2016-08-03T19:07:31Z"
 		},
 		{
-			"checksumSHA1": "sKheT5xw89Tbu2Q071FQO27CVmE=",
+			"checksumSHA1": "a8Ge6pE7oxux9ZMZVAlyEeGzCng=",
 			"path": "github.com/juju/ratelimit",
-			"revision": "77ed1c8a01217656d2080ad51981f6e99adaa177",
-			"revisionTime": "2015-11-25T20:19:25Z"
+			"revision": "5b9ff866471762aa2ab2dced63c9fb6f53921342",
+			"revisionTime": "2017-05-23T01:21:41Z"
 		},
 		{
 			"checksumSHA1": "401nRca5/N7U0e+MD2RisEhoyQk=",

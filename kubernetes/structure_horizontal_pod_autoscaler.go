@@ -2,7 +2,7 @@ package kubernetes
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
-	api "k8s.io/kubernetes/pkg/apis/autoscaling/v1"
+	api "k8s.io/client-go/pkg/apis/autoscaling/v1"
 )
 
 func expandHorizontalPodAutoscalerSpec(in []interface{}) api.HorizontalPodAutoscalerSpec {

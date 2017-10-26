@@ -8,8 +8,8 @@ import (
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/pkg/apis/apps/v1beta1"
-	kubernetes "k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
+	kubernetes "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/pkg/apis/apps/v1beta1"
 )
 
 func TestAccKubernetesStatefulSet_basic(t *testing.T) {
@@ -60,7 +60,7 @@ func testAccCheckKubernetesStatefulSetExists(n string, obj *v1beta1.StatefulSet)
 
 		conn := testAccProvider.Meta().(*kubernetes.Clientset)
 
-		namespace, name := idParts(rs.Primary.ID)
+		namespace, name, _ := idParts(rs.Primary.ID)
 		out, err := conn.AppsV1beta1().StatefulSets(namespace).Get(name, meta_v1.GetOptions{})
 		if err != nil {
 			return err
@@ -77,7 +77,7 @@ func testAccCheckKubernetesStatefulSetDestroy(s *terraform.State) error {
 		if rs.Type != "kubernetes_stateful_set" {
 			continue
 		}
-		namespace, name := idParts(rs.Primary.ID)
+		namespace, name, _ := idParts(rs.Primary.ID)
 		resp, err := conn.AppsV1beta1().StatefulSets(namespace).Get(name, meta_v1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {

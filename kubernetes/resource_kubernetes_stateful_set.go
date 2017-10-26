@@ -9,8 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	"k8s.io/kubernetes/pkg/apis/apps/v1beta1"
-	kubernetes "k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
+	kubernetes "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/pkg/apis/apps/v1beta1"
 )
 
 func resourceKubernetesStatefulSet() *schema.Resource {

@@ -3,16 +3,13 @@ package kubernetes
 import (
 	"fmt"
 	"log"
-	"time"
 
-	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	api "k8s.io/kubernetes/pkg/api/v1"
-	"k8s.io/kubernetes/pkg/apis/extensions/v1beta1"
-	kubernetes "k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
+	kubernetes "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
 
 func resourceKubernetesIngress() *schema.Resource {
@@ -55,23 +52,25 @@ func resourceKubernetesIngress() *schema.Resource {
 									},
 									"http": {
 										Type:        schema.TypeList,
+										Required:    true,
 										MaxItems:    1,
 										Description: "http is a list of http selectors pointing to backends. In the example: http:///? -> backend where where parts of the url correspond to RFC 3986, this resource will be used to match against everything after the last '/' and before the first '?' or '#'.",
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"path": {
 													Type:        schema.TypeList,
+													Required:    true,
 													Description: "Path array of path regex associated with a backend. Incoming urls matching the path are forwarded to the backend.",
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
-															"path": {
+															"regex": {
 																Type:        schema.TypeString,
-																Description: "Path is an extended POSIX regex as defined by IEEE Std 1003.1, (i.e this follows the egrep/unix syntax, not the perl syntax) matched against the path of an incoming request. Currently it can contain characters disallowed from the conventional \"path\" part of a URL as defined by RFC 3986. Paths must begin with a '/'. If unspecified, the path defaults to a catch all sending traffic to the backend.",
+																Description: "path.regex is an extended POSIX regex as defined by IEEE Std 1003.1, (i.e this follows the egrep/unix syntax, not the perl syntax) matched against the path of an incoming request. Currently it can contain characters disallowed from the conventional \"path\" part of a URL as defined by RFC 3986. Paths must begin with a '/'. If unspecified, the path defaults to a catch all sending traffic to the backend.",
 																Required:    true,
 															},
 															"backend": {
 																Type:        schema.TypeList,
-																Description: "Backend defines the referenced service endpoint to which the traffic will be forwarded to.",
+																Description: "backend defines the referenced service endpoint to which the traffic will be forwarded to.",
 																MaxItems:    1,
 																Optional:    true,
 																Elem:        backendSpecFields(),
@@ -116,12 +115,12 @@ func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) e
 	conn := meta.(*kubernetes.Clientset)
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	ing := v1beta1.Ingress{
+	ing := &v1beta1.Ingress{
 		Spec: expandIngressSpec(d.Get("spec").([]interface{})),
 	}
 	ing.ObjectMeta = metadata
 	log.Printf("[INFO] Creating new ingress: %#v", ing)
-	out, err := conn.ExtensionsV1beta1().Ingresses(namespace).Create(ing)
+	out, err := conn.ExtensionsV1beta1().Ingresses(metadata.Namespace).Create(ing)
 	// out, err := conn.CoreV1().Services(metadata.Namespace).Create(&ing)
 	if err != nil {
 		return err
@@ -129,34 +128,34 @@ func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) e
 	log.Printf("[INFO] Submitted new service: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	if out.Spec.Type == api.ServiceTypeLoadBalancer {
-		log.Printf("[DEBUG] Waiting for load balancer to assign IP/hostname")
+	// if out.Spec.Type == api.ServiceTypeLoadBalancer {
+	// 	log.Printf("[DEBUG] Waiting for load balancer to assign IP/hostname")
 
-		err = resource.Retry(10*time.Minute, func() *resource.RetryError {
-			ing, err := conn.CoreV1().Services(out.Namespace).Get(out.Name, meta_v1.GetOptions{})
-			if err != nil {
-				log.Printf("[DEBUG] Received error: %#v", err)
-				return resource.NonRetryableError(err)
-			}
+	// 	err = resource.Retry(10*time.Minute, func() *resource.RetryError {
+	// 		ing, err := conn.CoreV1().Services(out.Namespace).Get(out.Name, meta_v1.GetOptions{})
+	// 		if err != nil {
+	// 			log.Printf("[DEBUG] Received error: %#v", err)
+	// 			return resource.NonRetryableError(err)
+	// 		}
 
-			lbIngress := ing.Status.LoadBalancer.Ingress
+	// 		lbIngress := ing.Status.LoadBalancer.Ingress
 
-			log.Printf("[INFO] Received service status: %#v", ing.Status)
-			if len(lbIngress) > 0 {
-				return nil
-			}
+	// 		log.Printf("[INFO] Received service status: %#v", ing.Status)
+	// 		if len(lbIngress) > 0 {
+	// 			return nil
+	// 		}
 
-			return resource.RetryableError(fmt.Errorf(
-				"Waiting for service %q to assign IP/hostname for a load balancer", d.Id()))
-		})
-		if err != nil {
-			lastWarnings, wErr := getLastWarningsForObject(conn, out.ObjectMeta, "Service", 3)
-			if wErr != nil {
-				return wErr
-			}
-			return fmt.Errorf("%s%s", err, stringifyEvents(lastWarnings))
-		}
-	}
+	// 		return resource.RetryableError(fmt.Errorf(
+	// 			"Waiting for service %q to assign IP/hostname for a load balancer", d.Id()))
+	// 	})
+	// 	if err != nil {
+	// 		lastWarnings, wErr := getLastWarningsForObject(conn, out.ObjectMeta, "Service", 3)
+	// 		if wErr != nil {
+	// 			return wErr
+	// 		}
+	// 		return fmt.Errorf("%s%s", err, stringifyEvents(lastWarnings))
+	// 	}
+	// }
 
 	return resourceKubernetesIngressRead(d, meta)
 }
@@ -170,7 +169,7 @@ func resourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) err
 	}
 
 	log.Printf("[INFO] Reading ingress %s", name)
-	ing, err := conn.CoreV1().Ingresses(namespace).Get(name, meta_v1.GetOptions{})
+	ing, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -209,7 +208,7 @@ func resourceKubernetesIngressUpdate(d *schema.ResourceData, meta interface{}) e
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating ingress %q: %v", name, string(data))
-	out, err := conn.CoreV1().Ingresses(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.ExtensionsV1beta1().Ingresses(namespace).Patch(name, pkgApi.JSONPatchType, data)
 	if err != nil {
 		return fmt.Errorf("Failed to update ingress: %s", err)
 	}
@@ -228,7 +227,7 @@ func resourceKubernetesIngressDelete(d *schema.ResourceData, meta interface{}) e
 	}
 
 	log.Printf("[INFO] Deleting ingress: %#v", name)
-	err = conn.CoreV1().Ingresses(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.ExtensionsV1beta1().Ingresses(namespace).Delete(name, &meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -248,7 +247,7 @@ func resourceKubernetesIngressExists(d *schema.ResourceData, meta interface{}) (
 	}
 
 	log.Printf("[INFO] Checking ingress %s", name)
-	_, err = conn.CoreV1().Ingresses(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.ExtensionsV1beta1().Ingresses(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

@@ -10,8 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	"k8s.io/kubernetes/pkg/apis/extensions/v1beta1"
-	kubernetes "k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
+	kubernetes "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
 
 func resourceKubernetesDeployment() *schema.Resource {
@@ -76,7 +76,7 @@ func resourceKubernetesDeployment() *schema.Resource {
 										Computed:    true,
 										Description: "Update strategy",
 									},
-									"rollingUpdate": {
+									"rolling_update": {
 										Type:        schema.TypeList,
 										Description: "rolling update",
 										Optional:    true,
@@ -84,13 +84,13 @@ func resourceKubernetesDeployment() *schema.Resource {
 										MaxItems:    1,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
-												"maxSurge": {
+												"max_surge": {
 													Type:        schema.TypeString,
 													Description: "max surge",
 													Optional:    true,
 													Default:     1,
 												},
-												"maxUnavailable": {
+												"max_unavailable": {
 													Type:        schema.TypeString,
 													Description: "max unavailable",
 													Optional:    true,

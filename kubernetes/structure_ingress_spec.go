@@ -4,14 +4,14 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"k8s.io/kubernetes/pkg/apis/extensions/v1beta1"
+	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
 
 // Flatteners
 func flattenIngressRule(in []v1beta1.IngressRule) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
-		rulePrefix := fmt.Sprintf("rule.%d.")
+		// rulePrefix := fmt.Sprintf("rule.%d.")
 		m := make(map[string]interface{})
 
 		m["host"] = n.Host
@@ -87,7 +87,7 @@ func expandIngressBackend(l []interface{}) *v1beta1.IngressBackend {
 		return &v1beta1.IngressBackend{}
 	}
 	in := l[0].(map[string]interface{})
-	obj := v1beta1.IngressBackend{}
+	obj := &v1beta1.IngressBackend{}
 
 	if v, ok := in["service_name"].(string); ok {
 		obj.ServiceName = v
@@ -96,6 +96,8 @@ func expandIngressBackend(l []interface{}) *v1beta1.IngressBackend {
 	if v, ok := in["service_port"].(int); ok {
 		obj.ServicePort = expandIntOrString(v)
 	}
+
+	return obj
 }
 
 // Patch Ops

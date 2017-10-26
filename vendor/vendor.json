@@ -916,28 +916,40 @@
             "revisionTime": "2017-01-17T13:00:17Z"
         },
         {
-            "checksumSHA1": "6dTGC5A1Y1xnv+JSi9z8S6JfnH0=",
+            "checksumSHA1": "JCqkH6veCcAx3BOrjXTOHew31d0=",
+            "path": "github.com/go-openapi/analysis",
+            "revision": "b44dc874b601d9e4e2f6e19140e794ba24bead3b",
+            "revisionTime": "2016-08-15T20:37:09Z"
+        },
+        {
+            "checksumSHA1": "Au2qpfa4VkYqoEUjkd+pAzyL2cc=",
             "path": "github.com/go-openapi/jsonpointer",
-            "revision": "779f45308c19820f1a69e9a4cd965f496e0da10f",
-            "revisionTime": "2017-01-02T17:42:23Z"
+            "revision": "46af16f9f7b149af66e5d1bd010e3574dc06de98",
+            "revisionTime": "2016-07-04T18:59:06Z"
         },
         {
-            "checksumSHA1": "YMNc0I/ifBw9TsnF13NTpIN9yu4=",
+            "checksumSHA1": "jzzeiYHpHiEhmBNVQlBFw5Knvh0=",
             "path": "github.com/go-openapi/jsonreference",
-            "revision": "36d33bfe519efae5632669801b180bf1a245da3b",
-            "revisionTime": "2016-11-05T16:21:50Z"
+            "revision": "13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272",
+            "revisionTime": "2016-07-04T19:01:45Z"
         },
         {
-            "checksumSHA1": "m4Hv3utLm095Tmjo0XfLQxTtzcc=",
+            "checksumSHA1": "q075Xkfl6NZBfoF8N07/Oym0648=",
+            "path": "github.com/go-openapi/loads",
+            "revision": "18441dfa706d924a39a030ee2c3b1d8d81917b38",
+            "revisionTime": "2016-07-04T18:54:40Z"
+        },
+        {
+            "checksumSHA1": "OMgtXCwRrMy7bXKt3HtY6BUFQrE=",
             "path": "github.com/go-openapi/spec",
-            "revision": "02fb9cd3430ed0581e0ceb4804d5d4b3cc702694",
-            "revisionTime": "2017-02-03T15:16:51Z"
+            "revision": "6aced65f8501fe1217321abf0749d354824ba2ff",
+            "revisionTime": "2016-08-08T14:25:27Z"
         },
         {
-            "checksumSHA1": "AmuDvoqYpodvT8mzy+IEnKg9HFg=",
+            "checksumSHA1": "HJAZo7zWKq0VG6GkftD9SIeeVNY=",
             "path": "github.com/go-openapi/swag",
-            "revision": "d5f8ebc3b1c55a4cf6489eeae7354f338cfe299e",
-            "revisionTime": "2017-01-29T22:26:39Z"
+            "revision": "1d0bd113de87027671077d3c71eb3ac5d7dbba72",
+            "revisionTime": "2016-07-04T19:16:24Z"
         },
         {
             "checksumSHA1": "6ZxSmrIx3Jd15aou16oG0HPylP4=",

@@ -30,7 +30,7 @@ func flattenDaemonSetStrategy(in v1beta1.DaemonSetUpdateStrategy) []interface{} 
 		att["type"] = in.Type
 	}
 	if in.RollingUpdate != nil {
-		att["rollingUpdate"] = flattenDaemonSetStrategyRollingUpdate(in.RollingUpdate)
+		att["rolling_update"] = flattenDaemonSetStrategyRollingUpdate(in.RollingUpdate)
 	}
 	return []interface{}{att}
 }
@@ -38,7 +38,7 @@ func flattenDaemonSetStrategy(in v1beta1.DaemonSetUpdateStrategy) []interface{} 
 func flattenDaemonSetStrategyRollingUpdate(in *v1beta1.RollingUpdateDaemonSet) []interface{} {
 	att := make(map[string]interface{})
 	if in.MaxUnavailable != nil {
-		att["maxUnavailable"] = in.MaxUnavailable.String()
+		att["max_unavailable"] = in.MaxUnavailable.String()
 	}
 	return []interface{}{att}
 }
@@ -81,7 +81,7 @@ func expandDaemonSetStrategy(p []interface{}) v1beta1.DaemonSetUpdateStrategy {
 	if v, ok := in["type"]; ok {
 		obj.Type = v1beta1.DaemonSetUpdateStrategyType(v.(string))
 	}
-	if v, ok := in["rollingUpdate"]; ok {
+	if v, ok := in["rolling_update"]; ok {
 		obj.RollingUpdate = expandRollingUpdateDaemonSet(v.([]interface{}))
 	}
 	return obj
@@ -94,7 +94,7 @@ func expandRollingUpdateDaemonSet(p []interface{}) *v1beta1.RollingUpdateDaemonS
 	}
 	in := p[0].(map[string]interface{})
 
-	if v, ok := in["maxUnavailable"]; ok {
+	if v, ok := in["max_unavailable"]; ok {
 		obj.MaxUnavailable = expandRollingUpdateDaemonSetIntOrString(v.(string))
 	}
 	return &obj

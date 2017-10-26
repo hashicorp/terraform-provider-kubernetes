@@ -44,6 +44,15 @@ func TestAccKubernetesPod_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.0.value_from.0.secret_key_ref.0.name", secretName),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.1.value_from.0.config_map_key_ref.0.name", configMapName),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env_from.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env_from.0.config_map_ref.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env_from.0.config_map_ref.0.name", fmt.Sprintf("%s-from", configMapName)),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env_from.0.config_map_ref.0.optional", "true"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env_from.0.prefix", "FROM_CM_"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env_from.1.secret_ref.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env_from.1.secret_ref.0.name", fmt.Sprintf("%s-from", secretName)),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env_from.1.secret_ref.0.optional", "false"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env_from.1.prefix", "FROM_S_"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.image", imageName1),
 				),
 			},
@@ -654,6 +663,17 @@ resource "kubernetes_secret" "test" {
   }
 }
 
+resource "kubernetes_secret" "test_from" {
+  metadata {
+    name = "%s-from"
+  }
+
+  data {
+    one = "first_from"
+    second = "second_from"
+  }
+}
+
 resource "kubernetes_config_map" "test" {
   metadata {
     name = "%s"
@@ -661,6 +681,17 @@ resource "kubernetes_config_map" "test" {
 
   data {
     one = "ONE"
+  }
+}
+
+resource "kubernetes_config_map" "test_from" {
+  metadata {
+    name = "%s-from"
+  }
+
+  data {
+    one = "ONE_FROM"
+	two = "TWO_FROM"
   }
 }
 
@@ -699,6 +730,21 @@ resource "kubernetes_pod" "test" {
           }
         },
       ]
+
+      env_from = [{
+        config_map_ref {
+          name = "${kubernetes_config_map.test_from.metadata.0.name}"
+          optional = true
+        }
+		prefix = "FROM_CM_"
+	}, {
+        secret_ref {
+          name = "${kubernetes_secret.test_from.metadata.0.name}"
+          optional = false
+        }
+		prefix = "FROM_S_"
+      }]
+
     }
     volume {
       name = "db"
@@ -708,7 +754,7 @@ resource "kubernetes_pod" "test" {
     }
   }
 }
-	`, secretName, configMapName, podName, imageName)
+	`, secretName, secretName, configMapName, configMapName, podName, imageName)
 }
 
 func testAccKubernetesPodConfigWithInitContainer(podName string, image string) string {

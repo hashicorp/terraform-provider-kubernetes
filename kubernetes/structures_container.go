@@ -169,6 +169,18 @@ func flattenProbe(in *v1.Probe) []interface{} {
 	return []interface{}{att}
 }
 
+func flattenConfigMapRef(in *v1.ConfigMapEnvSource) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.Name != "" {
+		att["name"] = in.Name
+	}
+	if in.Optional != nil {
+		att["optional"] = in.Optional
+	}
+	return []interface{}{att}
+}
+
 func flattenConfigMapKeyRef(in *v1.ConfigMapKeySelector) []interface{} {
 	att := make(map[string]interface{})
 
@@ -201,6 +213,18 @@ func flattenResourceFieldSelector(in *v1.ResourceFieldSelector) []interface{} {
 	}
 	if in.Resource != "" {
 		att["resource"] = in.Resource
+	}
+	return []interface{}{att}
+}
+
+func flattenSecretRef(in *v1.SecretEnvSource) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.Name != "" {
+		att["name"] = in.Name
+	}
+	if in.Optional != nil {
+		att["optional"] = in.Optional
 	}
 	return []interface{}{att}
 }
@@ -269,6 +293,25 @@ func flattenContainerEnvs(in []v1.EnvVar) []interface{} {
 		}
 		if v.ValueFrom != nil {
 			m["value_from"] = flattenValueFrom(v.ValueFrom)
+		}
+
+		att[i] = m
+	}
+	return att
+}
+
+func flattenContainerEnvFroms(in []v1.EnvFromSource) []interface{} {
+	att := make([]interface{}, len(in))
+	for i, v := range in {
+		m := map[string]interface{}{}
+		if v.ConfigMapRef != nil {
+			m["config_map_ref"] = flattenConfigMapRef(v.ConfigMapRef)
+		}
+		if v.Prefix != "" {
+			m["prefix"] = v.Prefix
+		}
+		if v.SecretRef != nil {
+			m["secret_ref"] = flattenSecretRef(v.SecretRef)
 		}
 
 		att[i] = m
@@ -350,6 +393,9 @@ func flattenContainers(in []v1.Container) ([]interface{}, error) {
 		}
 		if len(v.Env) > 0 {
 			c["env"] = flattenContainerEnvs(v.Env)
+		}
+		if len(v.EnvFrom) > 0 {
+			c["env_from"] = flattenContainerEnvFroms(v.EnvFrom)
 		}
 
 		if len(v.VolumeMounts) > 0 {

@@ -6,9 +6,10 @@ provider "kubernetes" {
 resource "kubernetes_ingress" "example" {
   metadata {
     name = "example"
-		annotations {
-			"ingress.kubernetes.io/rewrite-target" = "/"
-		}
+
+    annotations {
+      "ingress.kubernetes.io/rewrite-target" = "/"
+    }
   }
 
   spec {
@@ -19,9 +20,11 @@ resource "kubernetes_ingress" "example" {
 
     rule {
       host = "myminikube.info"
+
       http {
         path {
           path_regex = "/"
+
           backend {
             service_name = "echoserver"
             service_port = 8080
@@ -32,16 +35,20 @@ resource "kubernetes_ingress" "example" {
 
     rule {
       host = "cheeses.all"
+
       http {
         path {
           path_regex = "/stilton"
+
           backend {
             service_name = "stilton-cheese"
             service_port = 80
           }
         }
+
         path {
           path_regex = "/cheddar"
+
           backend {
             service_name = "cheddar"
             service_port = 80
@@ -54,7 +61,7 @@ resource "kubernetes_ingress" "example" {
 
 resource "kubernetes_service" "echoserver" {
   metadata {
-    name      = "echoserver"
+    name = "echoserver"
   }
 
   spec {
@@ -78,10 +85,12 @@ resource "kubernetes_deployment" "echoserver" {
     selector {
       app = "echoserver"
     }
+
     template {
       container {
-        name = "echoserver"
+        name  = "echoserver"
         image = "gcr.io/google_containers/echoserver:1.4"
+
         port {
           container_port = 8080
         }
@@ -97,10 +106,12 @@ resource "kubernetes_deployment" "cheddar" {
     selector {
       app = "cheddar"
     }
+
     template {
       container {
-        name = "cheddar"
+        name  = "cheddar"
         image = "errm/cheese:cheddar"
+
         port {
           container_port = 80
         }

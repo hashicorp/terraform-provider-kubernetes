@@ -34,7 +34,7 @@ func flattenDeploymentStrategy(in v1beta1.DeploymentStrategy) []interface{} {
 		att["type"] = in.Type
 	}
 	if in.RollingUpdate != nil {
-		att["rollingUpdate"] = flattenDeploymentStrategyRollingUpdate(in.RollingUpdate)
+		att["rolling_update"] = flattenDeploymentStrategyRollingUpdate(in.RollingUpdate)
 	}
 	return []interface{}{att}
 }
@@ -42,11 +42,12 @@ func flattenDeploymentStrategy(in v1beta1.DeploymentStrategy) []interface{} {
 func flattenDeploymentStrategyRollingUpdate(in *v1beta1.RollingUpdateDeployment) []interface{} {
 	att := make(map[string]interface{})
 	if in.MaxSurge != nil {
-		att["maxSurge"] = in.MaxSurge.String()
+		att["max_surge"] = in.MaxSurge.String()
 	}
 	if in.MaxUnavailable != nil {
-		att["maxUnavailable"] = in.MaxUnavailable.String()
+		att["max_unavailable"] = in.MaxUnavailable.String()
 	}
+
 	return []interface{}{att}
 }
 
@@ -86,7 +87,7 @@ func expandDeploymentStrategy(p []interface{}) v1beta1.DeploymentStrategy {
 	if v, ok := in["type"]; ok {
 		obj.Type = v1beta1.DeploymentStrategyType(v.(string))
 	}
-	if v, ok := in["rollingUpdate"]; ok {
+	if v, ok := in["rolling_update"]; ok {
 		obj.RollingUpdate = expandRollingUpdateDeployment(v.([]interface{}))
 	}
 	return obj
@@ -99,10 +100,10 @@ func expandRollingUpdateDeployment(p []interface{}) *v1beta1.RollingUpdateDeploy
 	}
 	in := p[0].(map[string]interface{})
 
-	if v, ok := in["maxSurge"]; ok {
+	if v, ok := in["max_surge"]; ok {
 		obj.MaxSurge = expandRollingUpdateDeploymentIntOrString(v.(string))
 	}
-	if v, ok := in["maxUnavailable"]; ok {
+	if v, ok := in["max_unavailable"]; ok {
 		obj.MaxUnavailable = expandRollingUpdateDeploymentIntOrString(v.(string))
 	}
 	return &obj

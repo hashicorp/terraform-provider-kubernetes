@@ -100,7 +100,8 @@ func expandStringSlice(s []interface{}) []string {
 
 func flattenMetadata(meta metav1.ObjectMeta) []map[string]interface{} {
 	m := make(map[string]interface{})
-	m["annotations"] = removeInternalKeys(meta.Annotations)
+	// m["annotations"] = removeInternalKeys(meta.Annotations)
+	m["annotations"] = meta.Annotations
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}

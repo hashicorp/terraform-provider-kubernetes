@@ -176,7 +176,7 @@ func flattenConfigMapRef(in *v1.ConfigMapEnvSource) []interface{} {
 		att["name"] = in.Name
 	}
 	if in.Optional != nil {
-		att["optional"] = in.Optional
+		att["optional"] = *in.Optional
 	}
 	return []interface{}{att}
 }
@@ -224,7 +224,7 @@ func flattenSecretRef(in *v1.SecretEnvSource) []interface{} {
 		att["name"] = in.Name
 	}
 	if in.Optional != nil {
-		att["optional"] = in.Optional
+		att["optional"] = *in.Optional
 	}
 	return []interface{}{att}
 }
@@ -846,8 +846,8 @@ func expandSecretRef(r []interface{}) (*v1.SecretEnvSource, error) {
 	if v, ok := in["name"].(string); ok {
 		obj.Name = v
 	}
-	if v, ok := in["optional"].(bool); ok {
-		obj.Optional = ptrToBool(v)
+	if v, ok := in["optional"]; ok {
+		obj.Optional = ptrToBool(v.(bool))
 	}
 
 	return obj, nil
@@ -915,8 +915,8 @@ func expandConfigMapRef(r []interface{}) (*v1.ConfigMapEnvSource, error) {
 	if v, ok := in["name"].(string); ok {
 		obj.Name = v
 	}
-	if v, ok := in["optional"].(bool); ok {
-		obj.Optional = ptrToBool(v)
+	if v, ok := in["optional"]; ok {
+		obj.Optional = ptrToBool(v.(bool))
 	}
 
 	return obj, nil

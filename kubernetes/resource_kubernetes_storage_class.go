@@ -101,7 +101,7 @@ func resourceKubernetesStorageClassRead(d *schema.ResourceData, meta interface{}
 		return err
 	}
 	log.Printf("[INFO] Received storage class: %#v", storageClass)
-	err = d.Set("metadata", flattenMetadata(storageClass.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(storageClass.ObjectMeta, d))
 	if err != nil {
 		return err
 	}

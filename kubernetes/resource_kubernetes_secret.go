@@ -83,7 +83,7 @@ func resourceKubernetesSecretRead(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	log.Printf("[INFO] Received secret: %#v", secret)
-	err = d.Set("metadata", flattenMetadata(secret.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(secret.ObjectMeta, d))
 	if err != nil {
 		return err
 	}

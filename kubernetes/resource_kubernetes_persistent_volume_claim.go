@@ -124,7 +124,7 @@ func resourceKubernetesPersistentVolumeClaimRead(d *schema.ResourceData, meta in
 		return err
 	}
 	log.Printf("[INFO] Received persistent volume claim: %#v", claim)
-	err = d.Set("metadata", flattenMetadata(claim.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(claim.ObjectMeta, d))
 	if err != nil {
 		return err
 	}

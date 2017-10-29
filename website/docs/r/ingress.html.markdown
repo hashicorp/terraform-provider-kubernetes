@@ -168,3 +168,16 @@ The following arguments are supported:
 
 * `ip` - IP which is set for load-balancer ingress points that are IP based (typically GCE or OpenStack load-balancers)
 * `hostname` - Hostname which is set for load-balancer ingress points that are DNS based (typically AWS load-balancers)
+
+## Import
+
+Ingress can be imported using its namespace and name:
+
+```
+terraform import kubernetes_ingress.<TERRAFORM_RESOURCE_NAME> <KUBE_NAMESPACE>/<KUBE_INGRESS_NAME>
+```
+
+e.g.
+```
+$ terraform import kubernetes_ingress.example default/terraform-name
+```

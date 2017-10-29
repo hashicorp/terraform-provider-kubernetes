@@ -120,7 +120,7 @@ func resourceKubernetesHorizontalPodAutoscalerRead(d *schema.ResourceData, meta 
 		return err
 	}
 	log.Printf("[INFO] Received horizontal pod autoscaler: %#v", svc)
-	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta, d))
 	if err != nil {
 		return err
 	}

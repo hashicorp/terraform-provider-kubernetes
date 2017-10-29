@@ -101,6 +101,47 @@ func TestAccKubernetesIngress_TLS(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesIngress_InternalKey(t *testing.T) {
+	var conf api.Ingress
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_ingress.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesIngressDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressConfig_internalKey(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.annotations.kubernetes.io/ingress-anno", "one"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.labels.kubernetes.io/ingress-label", "one"),
+				),
+			},
+			{
+				Config: testAccKubernetesIngressConfig_internalKey_removed(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.name", name),
+					resource.TestCheckNoResourceAttr("kubernetes_ingress.test", "metadata.0.annotations.kubernetes.io/ingress-anno"),
+					resource.TestCheckNoResourceAttr("kubernetes_ingress.test", "metadata.0.labels.kubernetes.io/ingress-label"),
+				),
+			},
+			{
+				Config: testAccKubernetesIngressConfig_internalKey(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.annotations.kubernetes.io/ingress-anno", "one"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.labels.kubernetes.io/ingress-label", "one"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesIngressDestroy(s *terraform.State) error {
 	conn := testAccProvider.Meta().(*kubernetes.Clientset)
 
@@ -215,6 +256,62 @@ func testAccKubernetesIngressConfig_TLS_modified(name string) string {
 resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
+	}
+	spec {
+		backend {
+			service_name = "app1"
+			service_port = 443
+		}
+		tls {
+			hosts       = ["host1", "host2"]
+			secret_name = "super-sekret"
+		}
+	}
+}`, name)
+}
+
+func testAccKubernetesIngressConfig_internalKey(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_ingress" "test" {
+	metadata {
+		name = "%s"
+		
+		annotations {
+			"kubernetes.io/ingress-anno" = "one"
+			TestAnnotationTwo = "two"
+		}
+		labels {
+			"kubernetes.io/ingress-label" = "one"
+			TestLabelTwo = "two"
+			TestLabelThree = "three"
+		}
+	}
+	spec {
+		backend {
+			service_name = "app1"
+			service_port = 443
+		}
+		tls {
+			hosts       = ["host1", "host2"]
+			secret_name = "super-sekret"
+		}
+	}
+}`, name)
+}
+
+func testAccKubernetesIngressConfig_internalKey_removed(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_ingress" "test" {
+	metadata {
+		name = "%s"
+		
+		annotations {
+			TestAnnotationTwo = "two"
+		}
+		labels {
+			TestLabelTwo = "two"
+			TestLabelThree = "three"
+		}
 	}
 	spec {
 		backend {

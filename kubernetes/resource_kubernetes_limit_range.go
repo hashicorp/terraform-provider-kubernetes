@@ -117,7 +117,7 @@ func resourceKubernetesLimitRangeRead(d *schema.ResourceData, meta interface{}) 
 	}
 	log.Printf("[INFO] Received limit range: %#v", limitRange)
 
-	err = d.Set("metadata", flattenMetadata(limitRange.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(limitRange.ObjectMeta, d))
 	if err != nil {
 		return err
 	}

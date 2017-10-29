@@ -67,7 +67,7 @@ func resourceKubernetesConfigMapRead(d *schema.ResourceData, meta interface{}) e
 		return err
 	}
 	log.Printf("[INFO] Received config map: %#v", cfgMap)
-	err = d.Set("metadata", flattenMetadata(cfgMap.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(cfgMap.ObjectMeta, d))
 	if err != nil {
 		return err
 	}

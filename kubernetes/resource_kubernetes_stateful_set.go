@@ -129,7 +129,7 @@ func resourceKubernetesStatefulSetRead(d *schema.ResourceData, meta interface{})
 	}
 	log.Printf("[INFO] Received statefulSet: %#v", statefulSet)
 
-	err = d.Set("metadata", flattenMetadata(statefulSet.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(statefulSet.ObjectMeta, d))
 	if err != nil {
 		return err
 	}

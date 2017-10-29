@@ -136,7 +136,7 @@ func resourceKubernetesJobRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	err = d.Set("metadata", flattenMetadata(job.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(job.ObjectMeta, d))
 	if err != nil {
 		return err
 	}

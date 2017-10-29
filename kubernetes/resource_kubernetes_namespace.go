@@ -60,7 +60,7 @@ func resourceKubernetesNamespaceRead(d *schema.ResourceData, meta interface{}) e
 		return err
 	}
 	log.Printf("[INFO] Received namespace: %#v", namespace)
-	err = d.Set("metadata", flattenMetadata(namespace.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(namespace.ObjectMeta, d))
 	if err != nil {
 		return err
 	}

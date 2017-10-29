@@ -212,7 +212,7 @@ func resourceKubernetesServiceRead(d *schema.ResourceData, meta interface{}) err
 		return err
 	}
 	log.Printf("[INFO] Received service: %#v", svc)
-	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta, d))
 	if err != nil {
 		return err
 	}

@@ -259,6 +259,9 @@ func flattenPersistentVolumeSpec(in v1.PersistentVolumeSpec) []interface{} {
 	if in.PersistentVolumeReclaimPolicy != "" {
 		att["persistent_volume_reclaim_policy"] = in.PersistentVolumeReclaimPolicy
 	}
+	if in.StorageClassName != "" {
+		att["storage_class_name"] = in.StorageClassName
+	}
 	return []interface{}{att}
 }
 
@@ -653,6 +656,9 @@ func expandPersistentVolumeSpec(l []interface{}) (v1.PersistentVolumeSpec, error
 	if v, ok := in["persistent_volume_reclaim_policy"].(string); ok {
 		obj.PersistentVolumeReclaimPolicy = v1.PersistentVolumeReclaimPolicy(v)
 	}
+	if v, ok := in["storage_class_name"].(string); ok {
+		obj.StorageClassName = v
+	}
 	return obj, nil
 }
 
@@ -771,6 +777,13 @@ func patchPersistentVolumeSpec(pathPrefix, prefix string, d *schema.ResourceData
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/persistentVolumeReclaimPolicy",
 			Value: v1.PersistentVolumeReclaimPolicy(v),
+		})
+	}
+	if d.HasChange(prefix + "storage_class_name") {
+		v := d.Get(prefix + "storage_class_name").(string)
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "/storageClassName",
+			Value: v1.StorageClassName(v),
 		})
 	}
 

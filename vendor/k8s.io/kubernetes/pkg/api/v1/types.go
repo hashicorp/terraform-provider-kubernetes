@@ -498,6 +498,9 @@ type PersistentVolumeSpec struct {
 // PersistentVolumeReclaimPolicy describes a policy for end-of-life maintenance of persistent volumes.
 type PersistentVolumeReclaimPolicy string
 
+// Name of StorageClass to which this persistent volume belongs.
+type StorageClassName string
+
 const (
 	// PersistentVolumeReclaimRecycle means the volume will be recycled back into the pool of unbound persistent volumes on release from its claim.
 	// The volume plugin must support Recycling.

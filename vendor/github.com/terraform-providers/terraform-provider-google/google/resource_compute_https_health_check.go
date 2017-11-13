@@ -14,6 +14,9 @@ func resourceComputeHttpsHealthCheck() *schema.Resource {
 		Read:   resourceComputeHttpsHealthCheckRead,
 		Delete: resourceComputeHttpsHealthCheckDelete,
 		Update: resourceComputeHttpsHealthCheckUpdate,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
@@ -130,7 +133,7 @@ func resourceComputeHttpsHealthCheckCreate(d *schema.ResourceData, meta interfac
 	// It probably maybe worked, so store the ID now
 	d.SetId(hchk.Name)
 
-	err = computeOperationWaitGlobal(config, op, project, "Creating Https Health Check")
+	err = computeOperationWait(config.clientCompute, op, project, "Creating Https Health Check")
 	if err != nil {
 		return err
 	}
@@ -186,7 +189,7 @@ func resourceComputeHttpsHealthCheckUpdate(d *schema.ResourceData, meta interfac
 	// It probably maybe worked, so store the ID now
 	d.SetId(hchk.Name)
 
-	err = computeOperationWaitGlobal(config, op, project, "Updating Https Health Check")
+	err = computeOperationWait(config.clientCompute, op, project, "Updating Https Health Check")
 	if err != nil {
 		return err
 	}
@@ -208,10 +211,12 @@ func resourceComputeHttpsHealthCheckRead(d *schema.ResourceData, meta interface{
 		return handleNotFoundError(err, d, fmt.Sprintf("HTTPS Health Check %q", d.Get("name").(string)))
 	}
 
+	d.Set("name", hchk.Name)
+	d.Set("description", hchk.Description)
 	d.Set("host", hchk.Host)
 	d.Set("request_path", hchk.RequestPath)
 	d.Set("check_interval_sec", hchk.CheckIntervalSec)
-	d.Set("health_threshold", hchk.HealthyThreshold)
+	d.Set("healthy_threshold", hchk.HealthyThreshold)
 	d.Set("port", hchk.Port)
 	d.Set("timeout_sec", hchk.TimeoutSec)
 	d.Set("unhealthy_threshold", hchk.UnhealthyThreshold)
@@ -235,7 +240,7 @@ func resourceComputeHttpsHealthCheckDelete(d *schema.ResourceData, meta interfac
 		return fmt.Errorf("Error deleting HttpsHealthCheck: %s", err)
 	}
 
-	err = computeOperationWaitGlobal(config, op, project, "Deleting Https Health Check")
+	err = computeOperationWait(config.clientCompute, op, project, "Deleting Https Health Check")
 	if err != nil {
 		return err
 	}

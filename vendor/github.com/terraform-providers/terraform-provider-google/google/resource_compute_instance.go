@@ -1,14 +1,34 @@
 package google
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"strings"
 
+	"regexp"
+
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/mitchellh/hashstructure"
+	computeBeta "google.golang.org/api/compute/v0.beta"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
 )
+
+var InstanceBaseApiVersion = v1
+var InstanceVersionedFeatures = []Feature{
+	{
+		Version: v0beta,
+		Item:    "guest_accelerator",
+	},
+	{
+		Version: v0beta,
+		Item:    "min_cpu_platform",
+	},
+}
 
 func stringScopeHashcode(v interface{}) int {
 	v = canonicalizeServiceScope(v.(string))
@@ -22,14 +42,106 @@ func resourceComputeInstance() *schema.Resource {
 		Update: resourceComputeInstanceUpdate,
 		Delete: resourceComputeInstanceDelete,
 
-		SchemaVersion: 2,
+		SchemaVersion: 6,
 		MigrateState:  resourceComputeInstanceMigrateState,
 
 		Schema: map[string]*schema.Schema{
+			"boot_disk": &schema.Schema{
+				Type:     schema.TypeList,
+				Required: true,
+				ForceNew: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"auto_delete": &schema.Schema{
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  true,
+							ForceNew: true,
+						},
+
+						"device_name": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+							Computed: true,
+							ForceNew: true,
+						},
+
+						"disk_encryption_key_raw": &schema.Schema{
+							Type:      schema.TypeString,
+							Optional:  true,
+							ForceNew:  true,
+							Sensitive: true,
+						},
+
+						"disk_encryption_key_sha256": &schema.Schema{
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+
+						"initialize_params": &schema.Schema{
+							Type:     schema.TypeList,
+							Optional: true,
+							ForceNew: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"size": &schema.Schema{
+										Type:         schema.TypeInt,
+										Optional:     true,
+										ForceNew:     true,
+										ValidateFunc: validation.IntAtLeast(1),
+									},
+
+									"type": &schema.Schema{
+										Type:         schema.TypeString,
+										Optional:     true,
+										ForceNew:     true,
+										ValidateFunc: validation.StringInSlice([]string{"pd-standard", "pd-ssd"}, false),
+									},
+
+									"image": &schema.Schema{
+										Type:     schema.TypeString,
+										Optional: true,
+										ForceNew: true,
+									},
+								},
+							},
+						},
+
+						"source": &schema.Schema{
+							Type:             schema.TypeString,
+							Optional:         true,
+							Computed:         true,
+							ForceNew:         true,
+							ConflictsWith:    []string{"boot_disk.initialize_params"},
+							DiffSuppressFunc: linkDiffSuppress,
+						},
+					},
+				},
+			},
+
+			"scratch_disk": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				ForceNew: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"interface": &schema.Schema{
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "SCSI",
+							ValidateFunc: validation.StringInSlice([]string{"SCSI", "NVME"}, false),
+						},
+					},
+				},
+			},
+
 			"disk": &schema.Schema{
 				Type:     schema.TypeList,
 				Optional: true,
 				ForceNew: true,
+				Removed:  "Use boot_disk, scratch_disk, and attached_disk instead",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						// TODO(mitchellh): one of image or disk is required
@@ -91,17 +203,15 @@ func resourceComputeInstance() *schema.Resource {
 				},
 			},
 
-			// Preferred way of adding persistent disks to an instance.
-			// Use this instead of `disk` when possible.
 			"attached_disk": &schema.Schema{
 				Type:     schema.TypeList,
 				Optional: true,
-				ForceNew: true, // TODO(danawillow): Remove this, support attaching/detaching
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"source": &schema.Schema{
-							Type:     schema.TypeString,
-							Required: true,
+							Type:             schema.TypeString,
+							Required:         true,
+							DiffSuppressFunc: linkDiffSuppress,
 						},
 
 						"device_name": &schema.Schema{
@@ -114,7 +224,6 @@ func resourceComputeInstance() *schema.Resource {
 							Type:      schema.TypeString,
 							Optional:  true,
 							Sensitive: true,
-							ForceNew:  true,
 						},
 
 						"disk_encryption_key_sha256": &schema.Schema{
@@ -135,6 +244,11 @@ func resourceComputeInstance() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
+			},
+
+			"instance_id": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 
 			"zone": &schema.Schema{
@@ -175,25 +289,30 @@ func resourceComputeInstance() *schema.Resource {
 
 			"network_interface": &schema.Schema{
 				Type:     schema.TypeList,
-				Optional: true,
+				Required: true,
 				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"network": &schema.Schema{
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:             schema.TypeString,
+							Optional:         true,
+							Computed:         true,
+							ForceNew:         true,
+							DiffSuppressFunc: compareSelfLinkOrResourceName,
 						},
 
 						"subnetwork": &schema.Schema{
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:             schema.TypeString,
+							Optional:         true,
+							Computed:         true,
+							ForceNew:         true,
+							DiffSuppressFunc: compareSelfLinkOrResourceName,
 						},
 
 						"subnetwork_project": &schema.Schema{
 							Type:     schema.TypeString,
 							Optional: true,
+							Computed: true,
 							ForceNew: true,
 						},
 
@@ -226,15 +345,36 @@ func resourceComputeInstance() *schema.Resource {
 								},
 							},
 						},
+
+						"alias_ip_range": &schema.Schema{
+							Type:     schema.TypeList,
+							Optional: true,
+							ForceNew: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"ip_cidr_range": &schema.Schema{
+										Type:             schema.TypeString,
+										Required:         true,
+										ForceNew:         true,
+										DiffSuppressFunc: ipCidrRangeDiffSuppress,
+									},
+									"subnetwork_range_name": &schema.Schema{
+										Type:     schema.TypeString,
+										Optional: true,
+										ForceNew: true,
+									},
+								},
+							},
+						},
 					},
 				},
 			},
 
 			"network": &schema.Schema{
-				Type:       schema.TypeList,
-				Optional:   true,
-				ForceNew:   true,
-				Deprecated: "Please use network_interface",
+				Type:     schema.TypeList,
+				Optional: true,
+				ForceNew: true,
+				Removed:  "Please use network_interface",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"source": &schema.Schema{
@@ -280,22 +420,28 @@ func resourceComputeInstance() *schema.Resource {
 
 			"scheduling": &schema.Schema{
 				Type:     schema.TypeList,
+				MaxItems: 1,
 				Optional: true,
+				Computed: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"on_host_maintenance": &schema.Schema{
 							Type:     schema.TypeString,
 							Optional: true,
+							Computed: true,
 						},
 
 						"automatic_restart": &schema.Schema{
 							Type:     schema.TypeBool,
 							Optional: true,
+							Default:  true,
 						},
 
 						"preemptible": &schema.Schema{
 							Type:     schema.TypeBool,
 							Optional: true,
+							Default:  false,
+							ForceNew: true,
 						},
 					},
 				},
@@ -331,6 +477,38 @@ func resourceComputeInstance() *schema.Resource {
 				},
 			},
 
+			"guest_accelerator": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				ForceNew: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"count": &schema.Schema{
+							Type:     schema.TypeInt,
+							Required: true,
+							ForceNew: true,
+						},
+						"type": &schema.Schema{
+							Type:             schema.TypeString,
+							Required:         true,
+							ForceNew:         true,
+							DiffSuppressFunc: linkDiffSuppress,
+						},
+					},
+				},
+			},
+
+			"cpu_platform": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			"min_cpu_platform": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
+
 			"tags": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -339,6 +517,18 @@ func resourceComputeInstance() *schema.Resource {
 			},
 
 			"tags_fingerprint": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			"labels": &schema.Schema{
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Set:      schema.HashString,
+			},
+
+			"label_fingerprint": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -352,22 +542,41 @@ func resourceComputeInstance() *schema.Resource {
 	}
 }
 
-func getInstance(config *Config, d *schema.ResourceData) (*compute.Instance, error) {
+func getInstance(config *Config, d *schema.ResourceData) (*computeBeta.Instance, error) {
+	computeApiVersion := getComputeApiVersion(d, InstanceBaseApiVersion, InstanceVersionedFeatures)
 	project, err := getProject(d, config)
 	if err != nil {
 		return nil, err
 	}
 
-	instance, err := config.clientCompute.Instances.Get(
-		project, d.Get("zone").(string), d.Id()).Do()
-	if err != nil {
-		return nil, handleNotFoundError(err, d, fmt.Sprintf("Instance %s", d.Get("name").(string)))
+	zone := d.Get("zone").(string)
+	instance := &computeBeta.Instance{}
+	switch computeApiVersion {
+	case v1:
+		instanceV1, err := config.clientCompute.Instances.Get(
+			project, zone, d.Id()).Do()
+		if err != nil {
+			return nil, handleNotFoundError(err, d, fmt.Sprintf("Instance %s", d.Get("name").(string)))
+		}
+
+		err = Convert(instanceV1, instance)
+		if err != nil {
+			return nil, err
+		}
+	case v0beta:
+		var err error
+		instance, err = config.clientComputeBeta.Instances.Get(
+			project, zone, d.Id()).Do()
+		if err != nil {
+			return nil, handleNotFoundError(err, d, fmt.Sprintf("Instance %s", d.Get("name").(string)))
+		}
 	}
 
 	return instance, nil
 }
 
 func resourceComputeInstanceCreate(d *schema.ResourceData, meta interface{}) error {
+	computeApiVersion := getComputeApiVersion(d, InstanceBaseApiVersion, InstanceVersionedFeatures)
 	config := meta.(*Config)
 
 	project, err := getProject(d, config)
@@ -395,229 +604,84 @@ func resourceComputeInstanceCreate(d *schema.ResourceData, meta interface{}) err
 	}
 
 	// Build up the list of disks
-	disksCount := d.Get("disk.#").(int)
+
+	disks := []*computeBeta.AttachedDisk{}
+	bootDisk, err := expandBootDisk(d, config, zone, project)
+	if err != nil {
+		return err
+	}
+	disks = append(disks, bootDisk)
+
+	if _, hasScratchDisk := d.GetOk("scratch_disk"); hasScratchDisk {
+		scratchDisks, err := expandScratchDisks(d, config, zone, project)
+		if err != nil {
+			return err
+		}
+		disks = append(disks, scratchDisks...)
+	}
+
 	attachedDisksCount := d.Get("attached_disk.#").(int)
-	if disksCount+attachedDisksCount == 0 {
-		return fmt.Errorf("At least one disk or attached_disk must be set")
-	}
-	disks := make([]*compute.AttachedDisk, 0, disksCount+attachedDisksCount)
-	for i := 0; i < disksCount; i++ {
-		prefix := fmt.Sprintf("disk.%d", i)
-
-		// var sourceLink string
-
-		// Build the disk
-		var disk compute.AttachedDisk
-		disk.Type = "PERSISTENT"
-		disk.Mode = "READ_WRITE"
-		disk.Boot = i == 0
-		disk.AutoDelete = d.Get(prefix + ".auto_delete").(bool)
-
-		if _, ok := d.GetOk(prefix + ".disk"); ok {
-			if _, ok := d.GetOk(prefix + ".type"); ok {
-				return fmt.Errorf(
-					"Error: cannot define both disk and type.")
-			}
-		}
-
-		hasSource := false
-		// Load up the disk for this disk if specified
-		if v, ok := d.GetOk(prefix + ".disk"); ok {
-			diskName := v.(string)
-			diskData, err := config.clientCompute.Disks.Get(
-				project, zone.Name, diskName).Do()
-			if err != nil {
-				return fmt.Errorf(
-					"Error loading disk '%s': %s",
-					diskName, err)
-			}
-
-			disk.Source = diskData.SelfLink
-			hasSource = true
-		} else {
-			// Create a new disk
-			disk.InitializeParams = &compute.AttachedDiskInitializeParams{}
-		}
-
-		if v, ok := d.GetOk(prefix + ".scratch"); ok {
-			if v.(bool) {
-				disk.Type = "SCRATCH"
-			}
-		}
-
-		// Load up the image for this disk if specified
-		if v, ok := d.GetOk(prefix + ".image"); ok && !hasSource {
-			imageName := v.(string)
-
-			imageUrl, err := resolveImage(config, imageName)
-			if err != nil {
-				return fmt.Errorf(
-					"Error resolving image name '%s': %s",
-					imageName, err)
-			}
-
-			disk.InitializeParams.SourceImage = imageUrl
-		} else if ok && hasSource {
-			return fmt.Errorf("Cannot specify disk image when referencing an existing disk")
-		}
-
-		if v, ok := d.GetOk(prefix + ".type"); ok && !hasSource {
-			diskTypeName := v.(string)
-			diskType, err := readDiskType(config, zone, diskTypeName)
-			if err != nil {
-				return fmt.Errorf(
-					"Error loading disk type '%s': %s",
-					diskTypeName, err)
-			}
-
-			disk.InitializeParams.DiskType = diskType.SelfLink
-		} else if ok && hasSource {
-			return fmt.Errorf("Cannot specify disk type when referencing an existing disk")
-		}
-
-		if v, ok := d.GetOk(prefix + ".size"); ok && !hasSource {
-			diskSizeGb := v.(int)
-			disk.InitializeParams.DiskSizeGb = int64(diskSizeGb)
-		} else if ok && hasSource {
-			return fmt.Errorf("Cannot specify disk size when referencing an existing disk")
-		}
-
-		if v, ok := d.GetOk(prefix + ".device_name"); ok {
-			disk.DeviceName = v.(string)
-		}
-
-		if v, ok := d.GetOk(prefix + ".disk_encryption_key_raw"); ok {
-			disk.DiskEncryptionKey = &compute.CustomerEncryptionKey{}
-			disk.DiskEncryptionKey.RawKey = v.(string)
-		}
-
-		disks = append(disks, &disk)
-	}
 
 	for i := 0; i < attachedDisksCount; i++ {
-		prefix := fmt.Sprintf("attached_disk.%d", i)
-		disk := compute.AttachedDisk{
-			Source:     d.Get(prefix + ".source").(string),
-			AutoDelete: false, // Don't allow autodelete; let terraform handle disk deletion
+		diskConfig := d.Get(fmt.Sprintf("attached_disk.%d", i)).(map[string]interface{})
+		disk, err := expandAttachedDisk(diskConfig, d, config)
+		if err != nil {
+			return err
 		}
 
-		disk.Boot = i == 0 && disksCount == 0 // TODO(danawillow): This is super hacky, let's just add a boot field.
-
-		if v, ok := d.GetOk(prefix + ".device_name"); ok {
-			disk.DeviceName = v.(string)
-		}
-
-		if v, ok := d.GetOk(prefix + ".disk_encryption_key_raw"); ok {
-			disk.DiskEncryptionKey = &compute.CustomerEncryptionKey{
-				RawKey: v.(string),
-			}
-		}
-
-		disks = append(disks, &disk)
+		disks = append(disks, disk)
 	}
 
-	networksCount := d.Get("network.#").(int)
+	// Build up the list of networkInterfaces
 	networkInterfacesCount := d.Get("network_interface.#").(int)
+	networkInterfaces := make([]*computeBeta.NetworkInterface, 0, networkInterfacesCount)
+	for i := 0; i < networkInterfacesCount; i++ {
+		prefix := fmt.Sprintf("network_interface.%d", i)
+		// Load up the name of this network_interface
+		networkName := d.Get(prefix + ".network").(string)
+		subnetworkName := d.Get(prefix + ".subnetwork").(string)
+		address := d.Get(prefix + ".address").(string)
+		var networkLink, subnetworkLink string
 
-	if networksCount > 0 && networkInterfacesCount > 0 {
-		return fmt.Errorf("Error: cannot define both networks and network_interfaces.")
-	}
-	if networksCount == 0 && networkInterfacesCount == 0 {
-		return fmt.Errorf("Error: Must define at least one network_interface.")
-	}
-
-	var networkInterfaces []*compute.NetworkInterface
-
-	if networksCount > 0 {
-		// TODO: Delete this block when removing network { }
-		// Build up the list of networkInterfaces
-		networkInterfaces = make([]*compute.NetworkInterface, 0, networksCount)
-		for i := 0; i < networksCount; i++ {
-			prefix := fmt.Sprintf("network.%d", i)
-			// Load up the name of this network
-			networkName := d.Get(prefix + ".source").(string)
-			network, err := config.clientCompute.Networks.Get(
-				project, networkName).Do()
+		if networkName != "" && subnetworkName != "" {
+			return fmt.Errorf("Cannot specify both network and subnetwork values.")
+		} else if networkName != "" {
+			networkLink, err = getNetworkLink(d, config, prefix+".network")
 			if err != nil {
 				return fmt.Errorf(
-					"Error loading network '%s': %s",
+					"Error referencing network '%s': %s",
 					networkName, err)
 			}
-
-			// Build the networkInterface
-			var iface compute.NetworkInterface
-			iface.AccessConfigs = []*compute.AccessConfig{
-				&compute.AccessConfig{
-					Type:  "ONE_TO_ONE_NAT",
-					NatIP: d.Get(prefix + ".address").(string),
-				},
+		} else {
+			subnetworkLink, err = getSubnetworkLink(d, config, prefix+".subnetwork", prefix+".subnetwork_project", "zone")
+			if err != nil {
+				return err
 			}
-			iface.Network = network.SelfLink
-
-			networkInterfaces = append(networkInterfaces, &iface)
 		}
-	}
 
-	if networkInterfacesCount > 0 {
-		// Build up the list of networkInterfaces
-		networkInterfaces = make([]*compute.NetworkInterface, 0, networkInterfacesCount)
-		for i := 0; i < networkInterfacesCount; i++ {
-			prefix := fmt.Sprintf("network_interface.%d", i)
-			// Load up the name of this network_interface
-			networkName := d.Get(prefix + ".network").(string)
-			subnetworkName := d.Get(prefix + ".subnetwork").(string)
-			subnetworkProject := d.Get(prefix + ".subnetwork_project").(string)
-			address := d.Get(prefix + ".address").(string)
-			var networkLink, subnetworkLink string
+		// Build the networkInterface
+		var iface computeBeta.NetworkInterface
+		iface.Network = networkLink
+		iface.Subnetwork = subnetworkLink
+		iface.NetworkIP = address
+		iface.AliasIpRanges = expandAliasIpRanges(d.Get(prefix + ".alias_ip_range").([]interface{}))
 
-			if networkName != "" && subnetworkName != "" {
-				return fmt.Errorf("Cannot specify both network and subnetwork values.")
-			} else if networkName != "" {
-				networkLink, err = getNetworkLink(d, config, prefix+".network")
-				if err != nil {
-					return fmt.Errorf(
-						"Error referencing network '%s': %s",
-						networkName, err)
-				}
-
-			} else {
-				region := getRegionFromZone(d.Get("zone").(string))
-				if subnetworkProject == "" {
-					subnetworkProject = project
-				}
-				subnetwork, err := config.clientCompute.Subnetworks.Get(
-					subnetworkProject, region, subnetworkName).Do()
-				if err != nil {
-					return fmt.Errorf(
-						"Error referencing subnetwork '%s' in region '%s': %s",
-						subnetworkName, region, err)
-				}
-				subnetworkLink = subnetwork.SelfLink
+		// Handle access_config structs
+		accessConfigsCount := d.Get(prefix + ".access_config.#").(int)
+		iface.AccessConfigs = make([]*computeBeta.AccessConfig, accessConfigsCount)
+		for j := 0; j < accessConfigsCount; j++ {
+			acPrefix := fmt.Sprintf("%s.access_config.%d", prefix, j)
+			iface.AccessConfigs[j] = &computeBeta.AccessConfig{
+				Type:  "ONE_TO_ONE_NAT",
+				NatIP: d.Get(acPrefix + ".nat_ip").(string),
 			}
-
-			// Build the networkInterface
-			var iface compute.NetworkInterface
-			iface.Network = networkLink
-			iface.Subnetwork = subnetworkLink
-			iface.NetworkIP = address
-
-			// Handle access_config structs
-			accessConfigsCount := d.Get(prefix + ".access_config.#").(int)
-			iface.AccessConfigs = make([]*compute.AccessConfig, accessConfigsCount)
-			for j := 0; j < accessConfigsCount; j++ {
-				acPrefix := fmt.Sprintf("%s.access_config.%d", prefix, j)
-				iface.AccessConfigs[j] = &compute.AccessConfig{
-					Type:  "ONE_TO_ONE_NAT",
-					NatIP: d.Get(acPrefix + ".nat_ip").(string),
-				}
-			}
-
-			networkInterfaces = append(networkInterfaces, &iface)
 		}
+
+		networkInterfaces = append(networkInterfaces, &iface)
 	}
 
 	serviceAccountsCount := d.Get("service_account.#").(int)
-	serviceAccounts := make([]*compute.ServiceAccount, 0, serviceAccountsCount)
+	serviceAccounts := make([]*computeBeta.ServiceAccount, 0, serviceAccountsCount)
 	for i := 0; i < serviceAccountsCount; i++ {
 		prefix := fmt.Sprintf("service_account.%d", i)
 
@@ -632,7 +696,7 @@ func resourceComputeInstanceCreate(d *schema.ResourceData, meta interface{}) err
 			email = v.(string)
 		}
 
-		serviceAccount := &compute.ServiceAccount{
+		serviceAccount := &computeBeta.ServiceAccount{
 			Email:  email,
 			Scopes: scopes,
 		}
@@ -641,7 +705,7 @@ func resourceComputeInstanceCreate(d *schema.ResourceData, meta interface{}) err
 	}
 
 	prefix := "scheduling.0"
-	scheduling := &compute.Scheduling{}
+	scheduling := &computeBeta.Scheduling{}
 
 	if val, ok := d.GetOk(prefix + ".automatic_restart"); ok {
 		scheduling.AutomaticRestart = googleapi.Bool(val.(bool))
@@ -654,6 +718,7 @@ func resourceComputeInstanceCreate(d *schema.ResourceData, meta interface{}) err
 	if val, ok := d.GetOk(prefix + ".on_host_maintenance"); ok {
 		scheduling.OnHostMaintenance = val.(string)
 	}
+	scheduling.ForceSendFields = []string{"AutomaticRestart", "Preemptible"}
 
 	// Read create timeout
 	var createTimeout int
@@ -661,13 +726,13 @@ func resourceComputeInstanceCreate(d *schema.ResourceData, meta interface{}) err
 		createTimeout = v.(int)
 	}
 
-	metadata, err := resourceInstanceMetadata(d)
+	metadata, err := resourceBetaInstanceMetadata(d)
 	if err != nil {
 		return fmt.Errorf("Error creating metadata: %s", err)
 	}
 
 	// Create the instance information
-	instance := compute.Instance{
+	instance := computeBeta.Instance{
 		CanIpForward:      d.Get("can_ip_forward").(bool),
 		Description:       d.Get("description").(string),
 		Disks:             disks,
@@ -675,14 +740,31 @@ func resourceComputeInstanceCreate(d *schema.ResourceData, meta interface{}) err
 		Metadata:          metadata,
 		Name:              d.Get("name").(string),
 		NetworkInterfaces: networkInterfaces,
-		Tags:              resourceInstanceTags(d),
+		Tags:              resourceBetaInstanceTags(d),
+		Labels:            expandLabels(d),
 		ServiceAccounts:   serviceAccounts,
+		GuestAccelerators: expandGuestAccelerators(zone.Name, d.Get("guest_accelerator").([]interface{})),
+		MinCpuPlatform:    d.Get("min_cpu_platform").(string),
 		Scheduling:        scheduling,
 	}
 
 	log.Printf("[INFO] Requesting instance creation")
-	op, err := config.clientCompute.Instances.Insert(
-		project, zone.Name, &instance).Do()
+	var op interface{}
+	switch computeApiVersion {
+	case v1:
+		instanceV1 := &compute.Instance{}
+		err = Convert(instance, instanceV1)
+		if err != nil {
+			return err
+		}
+
+		op, err = config.clientCompute.Instances.Insert(
+			project, zone.Name, instanceV1).Do()
+	case v0beta:
+		op, err = config.clientComputeBeta.Instances.Insert(
+			project, zone.Name, &instance).Do()
+	}
+
 	if err != nil {
 		return fmt.Errorf("Error creating instance: %s", err)
 	}
@@ -691,7 +773,7 @@ func resourceComputeInstanceCreate(d *schema.ResourceData, meta interface{}) err
 	d.SetId(instance.Name)
 
 	// Wait for the operation to complete
-	waitErr := computeOperationWaitZoneTime(config, op, project, zone.Name, createTimeout, "instance to create")
+	waitErr := computeSharedOperationWaitTime(config.clientCompute, op, project, createTimeout, "instance to create")
 	if waitErr != nil {
 		// The resource didn't actually create
 		d.SetId("")
@@ -709,17 +791,25 @@ func resourceComputeInstanceRead(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	// Synch metadata
-	md := instance.Metadata
+	md := flattenBetaMetadata(instance.Metadata)
 
-	_md := MetadataFormatSchema(d.Get("metadata").(map[string]interface{}), md)
-
-	if script, scriptExists := d.GetOk("metadata_startup_script"); scriptExists {
-		d.Set("metadata_startup_script", script)
-		delete(_md, "startup-script")
+	if _, scriptExists := d.GetOk("metadata_startup_script"); scriptExists {
+		d.Set("metadata_startup_script", md["startup-script"])
+		// Note that here we delete startup-script from our metadata list. This is to prevent storing the startup-script
+		// as a value in the metadata since the config specifically tracks it under 'metadata_startup_script'
+		delete(md, "startup-script")
 	}
 
-	if err = d.Set("metadata", _md); err != nil {
+	existingMetadata := d.Get("metadata").(map[string]interface{})
+
+	// Delete any keys not explicitly set in our config file
+	for k := range md {
+		if _, ok := existingMetadata[k]; !ok {
+			delete(md, k)
+		}
+	}
+
+	if err = d.Set("metadata", md); err != nil {
 		return fmt.Errorf("Error setting metadata: %s", err)
 	}
 
@@ -732,92 +822,52 @@ func resourceComputeInstanceRead(d *schema.ResourceData, meta interface{}) error
 	// Set the service accounts
 	serviceAccounts := make([]map[string]interface{}, 0, 1)
 	for _, serviceAccount := range instance.ServiceAccounts {
-		scopes := make([]interface{}, len(serviceAccount.Scopes))
-		for i, scope := range serviceAccount.Scopes {
-			scopes[i] = scope
-		}
 		serviceAccounts = append(serviceAccounts, map[string]interface{}{
 			"email":  serviceAccount.Email,
-			"scopes": schema.NewSet(stringScopeHashcode, scopes),
+			"scopes": schema.NewSet(stringScopeHashcode, convertStringArrToInterface(serviceAccount.Scopes)),
 		})
 	}
 	d.Set("service_account", serviceAccounts)
-
-	networksCount := d.Get("network.#").(int)
-	networkInterfacesCount := d.Get("network_interface.#").(int)
-
-	if networksCount > 0 && networkInterfacesCount > 0 {
-		return fmt.Errorf("Error: cannot define both networks and network_interfaces.")
-	}
-	if networksCount == 0 && networkInterfacesCount == 0 {
-		return fmt.Errorf("Error: Must define at least one network_interface.")
-	}
 
 	// Set the networks
 	// Use the first external IP found for the default connection info.
 	externalIP := ""
 	internalIP := ""
-	networks := make([]map[string]interface{}, 0, 1)
-	if networksCount > 0 {
-		// TODO: Remove this when realizing deprecation of .network
-		for i, iface := range instance.NetworkInterfaces {
-			var natIP string
-			for _, config := range iface.AccessConfigs {
-				if config.Type == "ONE_TO_ONE_NAT" {
-					natIP = config.NatIP
-					break
-				}
-			}
-
-			if externalIP == "" && natIP != "" {
-				externalIP = natIP
-			}
-
-			network := make(map[string]interface{})
-			network["name"] = iface.Name
-			network["external_address"] = natIP
-			network["internal_address"] = iface.NetworkIP
-			network["source"] = d.Get(fmt.Sprintf("network.%d.source", i))
-			networks = append(networks, network)
-		}
-	}
-	d.Set("network", networks)
 
 	networkInterfaces := make([]map[string]interface{}, 0, 1)
-	if networkInterfacesCount > 0 {
-		for i, iface := range instance.NetworkInterfaces {
-			// The first non-empty ip is left in natIP
-			var natIP string
-			accessConfigs := make(
-				[]map[string]interface{}, 0, len(iface.AccessConfigs))
-			for j, config := range iface.AccessConfigs {
-				accessConfigs = append(accessConfigs, map[string]interface{}{
-					"nat_ip":          d.Get(fmt.Sprintf("network_interface.%d.access_config.%d.nat_ip", i, j)),
-					"assigned_nat_ip": config.NatIP,
-				})
-
-				if natIP == "" {
-					natIP = config.NatIP
-				}
-			}
-
-			if externalIP == "" {
-				externalIP = natIP
-			}
-
-			if internalIP == "" {
-				internalIP = iface.NetworkIP
-			}
-
-			networkInterfaces = append(networkInterfaces, map[string]interface{}{
-				"name":               iface.Name,
-				"address":            iface.NetworkIP,
-				"network":            d.Get(fmt.Sprintf("network_interface.%d.network", i)),
-				"subnetwork":         d.Get(fmt.Sprintf("network_interface.%d.subnetwork", i)),
-				"subnetwork_project": d.Get(fmt.Sprintf("network_interface.%d.subnetwork_project", i)),
-				"access_config":      accessConfigs,
+	for i, iface := range instance.NetworkInterfaces {
+		// The first non-empty ip is left in natIP
+		var natIP string
+		accessConfigs := make(
+			[]map[string]interface{}, 0, len(iface.AccessConfigs))
+		for j, config := range iface.AccessConfigs {
+			accessConfigs = append(accessConfigs, map[string]interface{}{
+				"nat_ip":          d.Get(fmt.Sprintf("network_interface.%d.access_config.%d.nat_ip", i, j)),
+				"assigned_nat_ip": config.NatIP,
 			})
+
+			if natIP == "" {
+				natIP = config.NatIP
+			}
 		}
+
+		if externalIP == "" {
+			externalIP = natIP
+		}
+
+		if internalIP == "" {
+			internalIP = iface.NetworkIP
+		}
+
+		networkInterfaces = append(networkInterfaces, map[string]interface{}{
+			"name":               iface.Name,
+			"address":            iface.NetworkIP,
+			"network":            iface.Network,
+			"subnetwork":         iface.Subnetwork,
+			"subnetwork_project": getProjectFromSubnetworkLink(iface.Subnetwork),
+			"access_config":      accessConfigs,
+			"alias_ip_range":     flattenAliasIpRange(iface.AliasIpRanges),
+		})
 	}
 	d.Set("network_interface", networkInterfaces)
 
@@ -845,56 +895,67 @@ func resourceComputeInstanceRead(d *schema.ResourceData, meta interface{}) error
 		d.Set("tags_fingerprint", instance.Tags.Fingerprint)
 	}
 
-	disksCount := d.Get("disk.#").(int)
+	if len(instance.Labels) > 0 {
+		d.Set("labels", instance.Labels)
+	}
+
+	if instance.LabelFingerprint != "" {
+		d.Set("label_fingerprint", instance.LabelFingerprint)
+	}
+
 	attachedDisksCount := d.Get("attached_disk.#").(int)
-	disks := make([]map[string]interface{}, 0, disksCount)
-	attachedDisks := make([]map[string]interface{}, 0, attachedDisksCount)
-
-	if expectedDisks := disksCount + attachedDisksCount; len(instance.Disks) != expectedDisks {
-		return fmt.Errorf("Expected %d disks, API returned %d", expectedDisks, len(instance.Disks))
-	}
-
-	attachedDiskSources := make(map[string]struct{}, attachedDisksCount)
+	attachedDiskSources := make(map[string]int, attachedDisksCount)
 	for i := 0; i < attachedDisksCount; i++ {
-		attachedDiskSources[d.Get(fmt.Sprintf("attached_disk.%d.source", i)).(string)] = struct{}{}
+		source, err := ParseDiskFieldValue(d.Get(fmt.Sprintf("attached_disk.%d.source", i)).(string), d, config)
+		if err != nil {
+			return err
+		}
+		attachedDiskSources[source.RelativeLink()] = i
 	}
 
-	dIndex := 0
-	adIndex := 0
+	sIndex := 0
+	attachedDisks := make([]map[string]interface{}, attachedDisksCount)
+	scratchDisks := []map[string]interface{}{}
+	extraAttachedDisks := []map[string]interface{}{}
 	for _, disk := range instance.Disks {
-		if _, ok := attachedDiskSources[disk.Source]; !ok {
-			di := map[string]interface{}{
-				"disk":                    d.Get(fmt.Sprintf("disk.%d.disk", dIndex)),
-				"image":                   d.Get(fmt.Sprintf("disk.%d.image", dIndex)),
-				"type":                    d.Get(fmt.Sprintf("disk.%d.type", dIndex)),
-				"scratch":                 d.Get(fmt.Sprintf("disk.%d.scratch", dIndex)),
-				"auto_delete":             d.Get(fmt.Sprintf("disk.%d.auto_delete", dIndex)),
-				"size":                    d.Get(fmt.Sprintf("disk.%d.size", dIndex)),
-				"device_name":             d.Get(fmt.Sprintf("disk.%d.device_name", dIndex)),
-				"disk_encryption_key_raw": d.Get(fmt.Sprintf("disk.%d.disk_encryption_key_raw", dIndex)),
-			}
-			if disk.DiskEncryptionKey != nil && disk.DiskEncryptionKey.Sha256 != "" {
-				di["disk_encryption_key_sha256"] = disk.DiskEncryptionKey.Sha256
-			}
-			disks = append(disks, di)
-			dIndex++
+		if disk.Boot {
+			d.Set("boot_disk", flattenBootDisk(d, disk))
+		} else if disk.Type == "SCRATCH" {
+			scratchDisks = append(scratchDisks, flattenScratchDisk(disk))
+			sIndex++
 		} else {
+			source, err := ParseDiskFieldValue(disk.Source, d, config)
+			if err != nil {
+				return err
+			}
+			adIndex, inConfig := attachedDiskSources[source.RelativeLink()]
 			di := map[string]interface{}{
-				"source":                  disk.Source,
-				"device_name":             disk.DeviceName,
-				"disk_encryption_key_raw": d.Get(fmt.Sprintf("attached_disk.%d.disk_encryption_key_raw", adIndex)),
+				"source":      disk.Source,
+				"device_name": disk.DeviceName,
 			}
-			if disk.DiskEncryptionKey != nil && disk.DiskEncryptionKey.Sha256 != "" {
-				di["disk_encryption_key_sha256"] = disk.DiskEncryptionKey.Sha256
+			if key := disk.DiskEncryptionKey; key != nil {
+				if inConfig {
+					di["disk_encryption_key_raw"] = d.Get(fmt.Sprintf("attached_disk.%d.disk_encryption_key_raw", adIndex))
+				}
+				di["disk_encryption_key_sha256"] = key.Sha256
 			}
-			attachedDisks = append(attachedDisks, di)
-			adIndex++
+			if inConfig {
+				attachedDisks[adIndex] = di
+			} else {
+				extraAttachedDisks = append(extraAttachedDisks, di)
+			}
 		}
 	}
-	d.Set("disk", disks)
-	d.Set("attached_disk", attachedDisks)
+	attachedDisks = append(attachedDisks, extraAttachedDisks...)
 
-	d.Set("self_link", instance.SelfLink)
+	d.Set("attached_disk", attachedDisks)
+	d.Set("scratch_disk", scratchDisks)
+	d.Set("scheduling", flattenBetaScheduling(instance.Scheduling))
+	d.Set("guest_accelerator", flattenGuestAccelerators(instance.Zone, instance.GuestAccelerators))
+	d.Set("cpu_platform", instance.CpuPlatform)
+	d.Set("min_cpu_platform", instance.MinCpuPlatform)
+	d.Set("self_link", ConvertSelfLinkToV1(instance.SelfLink))
+	d.Set("instance_id", fmt.Sprintf("%d", instance.Id))
 	d.SetId(instance.Name)
 
 	return nil
@@ -938,18 +999,25 @@ func resourceComputeInstanceUpdate(d *schema.ResourceData, meta interface{}) err
 
 			md := instance.Metadata
 
-			MetadataUpdate(o.(map[string]interface{}), n.(map[string]interface{}), md)
+			BetaMetadataUpdate(o.(map[string]interface{}), n.(map[string]interface{}), md)
 
 			if err != nil {
 				return fmt.Errorf("Error updating metadata: %s", err)
 			}
+
+			mdV1 := &compute.Metadata{}
+			err = Convert(md, mdV1)
+			if err != nil {
+				return err
+			}
+
 			op, err := config.clientCompute.Instances.SetMetadata(
-				project, zone, d.Id(), md).Do()
+				project, zone, d.Id(), mdV1).Do()
 			if err != nil {
 				return fmt.Errorf("Error updating metadata: %s", err)
 			}
 
-			opErr := computeOperationWaitZone(config, op, project, zone, "metadata to update")
+			opErr := computeOperationWait(config.clientCompute, op, project, "metadata to update")
 			if opErr != nil {
 				return opErr
 			}
@@ -969,12 +1037,30 @@ func resourceComputeInstanceUpdate(d *schema.ResourceData, meta interface{}) err
 			return fmt.Errorf("Error updating tags: %s", err)
 		}
 
-		opErr := computeOperationWaitZone(config, op, project, zone, "tags to update")
+		opErr := computeOperationWait(config.clientCompute, op, project, "tags to update")
 		if opErr != nil {
 			return opErr
 		}
 
 		d.SetPartial("tags")
+	}
+
+	if d.HasChange("labels") {
+		labels := expandLabels(d)
+		labelFingerprint := d.Get("label_fingerprint").(string)
+		req := compute.InstancesSetLabelsRequest{Labels: labels, LabelFingerprint: labelFingerprint}
+
+		op, err := config.clientCompute.Instances.SetLabels(project, zone, d.Id(), &req).Do()
+		if err != nil {
+			return fmt.Errorf("Error updating labels: %s", err)
+		}
+
+		opErr := computeOperationWait(config.clientCompute, op, project, "labels to update")
+		if opErr != nil {
+			return opErr
+		}
+
+		d.SetPartial("labels")
 	}
 
 	if d.HasChange("scheduling") {
@@ -984,14 +1070,13 @@ func resourceComputeInstanceUpdate(d *schema.ResourceData, meta interface{}) err
 		if val, ok := d.GetOk(prefix + ".automatic_restart"); ok {
 			scheduling.AutomaticRestart = googleapi.Bool(val.(bool))
 		}
-
 		if val, ok := d.GetOk(prefix + ".preemptible"); ok {
 			scheduling.Preemptible = val.(bool)
 		}
-
 		if val, ok := d.GetOk(prefix + ".on_host_maintenance"); ok {
 			scheduling.OnHostMaintenance = val.(string)
 		}
+		scheduling.ForceSendFields = []string{"AutomaticRestart", "Preemptible"}
 
 		op, err := config.clientCompute.Instances.SetScheduling(project,
 			zone, d.Id(), scheduling).Do()
@@ -1000,8 +1085,7 @@ func resourceComputeInstanceUpdate(d *schema.ResourceData, meta interface{}) err
 			return fmt.Errorf("Error updating scheduling policy: %s", err)
 		}
 
-		opErr := computeOperationWaitZone(config, op, project, zone,
-			"scheduling policy update")
+		opErr := computeOperationWait(config.clientCompute, op, project, "scheduling policy update")
 		if opErr != nil {
 			return opErr
 		}
@@ -1010,72 +1094,187 @@ func resourceComputeInstanceUpdate(d *schema.ResourceData, meta interface{}) err
 	}
 
 	networkInterfacesCount := d.Get("network_interface.#").(int)
-	if networkInterfacesCount > 0 {
+	// Sanity check
+	if networkInterfacesCount != len(instance.NetworkInterfaces) {
+		return fmt.Errorf("Instance had unexpected number of network interfaces: %d", len(instance.NetworkInterfaces))
+	}
+	for i := 0; i < networkInterfacesCount; i++ {
+		prefix := fmt.Sprintf("network_interface.%d", i)
+		instNetworkInterface := instance.NetworkInterfaces[i]
+		networkName := d.Get(prefix + ".name").(string)
+
+		// TODO: This sanity check is broken by #929, disabled for now (by forcing the equality)
+		networkName = instNetworkInterface.Name
 		// Sanity check
-		if networkInterfacesCount != len(instance.NetworkInterfaces) {
-			return fmt.Errorf("Instance had unexpected number of network interfaces: %d", len(instance.NetworkInterfaces))
+		if networkName != instNetworkInterface.Name {
+			return fmt.Errorf("Instance networkInterface had unexpected name: %s", instNetworkInterface.Name)
 		}
-		for i := 0; i < networkInterfacesCount; i++ {
-			prefix := fmt.Sprintf("network_interface.%d", i)
-			instNetworkInterface := instance.NetworkInterfaces[i]
-			networkName := d.Get(prefix + ".name").(string)
 
-			// TODO: This sanity check is broken by #929, disabled for now (by forcing the equality)
-			networkName = instNetworkInterface.Name
-			// Sanity check
-			if networkName != instNetworkInterface.Name {
-				return fmt.Errorf("Instance networkInterface had unexpected name: %s", instNetworkInterface.Name)
+		if d.HasChange(prefix + ".access_config") {
+
+			// TODO: This code deletes then recreates accessConfigs.  This is bad because it may
+			// leave the machine inaccessible from either ip if the creation part fails (network
+			// timeout etc).  However right now there is a GCE limit of 1 accessConfig so it is
+			// the only way to do it.  In future this should be revised to only change what is
+			// necessary, and also add before removing.
+
+			// Delete any accessConfig that currently exists in instNetworkInterface
+			for _, ac := range instNetworkInterface.AccessConfigs {
+				op, err := config.clientCompute.Instances.DeleteAccessConfig(
+					project, zone, d.Id(), ac.Name, networkName).Do()
+				if err != nil {
+					return fmt.Errorf("Error deleting old access_config: %s", err)
+				}
+				opErr := computeOperationWait(config.clientCompute, op, project, "old access_config to delete")
+				if opErr != nil {
+					return opErr
+				}
 			}
 
-			if d.HasChange(prefix + ".access_config") {
-
-				// TODO: This code deletes then recreates accessConfigs.  This is bad because it may
-				// leave the machine inaccessible from either ip if the creation part fails (network
-				// timeout etc).  However right now there is a GCE limit of 1 accessConfig so it is
-				// the only way to do it.  In future this should be revised to only change what is
-				// necessary, and also add before removing.
-
-				// Delete any accessConfig that currently exists in instNetworkInterface
-				for _, ac := range instNetworkInterface.AccessConfigs {
-					op, err := config.clientCompute.Instances.DeleteAccessConfig(
-						project, zone, d.Id(), ac.Name, networkName).Do()
-					if err != nil {
-						return fmt.Errorf("Error deleting old access_config: %s", err)
-					}
-					opErr := computeOperationWaitZone(config, op, project, zone,
-						"old access_config to delete")
-					if opErr != nil {
-						return opErr
-					}
+			// Create new ones
+			accessConfigsCount := d.Get(prefix + ".access_config.#").(int)
+			for j := 0; j < accessConfigsCount; j++ {
+				acPrefix := fmt.Sprintf("%s.access_config.%d", prefix, j)
+				ac := &compute.AccessConfig{
+					Type:  "ONE_TO_ONE_NAT",
+					NatIP: d.Get(acPrefix + ".nat_ip").(string),
 				}
-
-				// Create new ones
-				accessConfigsCount := d.Get(prefix + ".access_config.#").(int)
-				for j := 0; j < accessConfigsCount; j++ {
-					acPrefix := fmt.Sprintf("%s.access_config.%d", prefix, j)
-					ac := &compute.AccessConfig{
-						Type:  "ONE_TO_ONE_NAT",
-						NatIP: d.Get(acPrefix + ".nat_ip").(string),
-					}
-					op, err := config.clientCompute.Instances.AddAccessConfig(
-						project, zone, d.Id(), networkName, ac).Do()
-					if err != nil {
-						return fmt.Errorf("Error adding new access_config: %s", err)
-					}
-					opErr := computeOperationWaitZone(config, op, project, zone,
-						"new access_config to add")
-					if opErr != nil {
-						return opErr
-					}
+				op, err := config.clientCompute.Instances.AddAccessConfig(
+					project, zone, d.Id(), networkName, ac).Do()
+				if err != nil {
+					return fmt.Errorf("Error adding new access_config: %s", err)
+				}
+				opErr := computeOperationWait(config.clientCompute, op, project, "new access_config to add")
+				if opErr != nil {
+					return opErr
 				}
 			}
 		}
+		d.SetPartial("network_interface")
+	}
+
+	if d.HasChange("attached_disk") {
+		o, n := d.GetChange("attached_disk")
+
+		// Keep track of disks currently in the instance. Because the google_compute_disk resource
+		// can detach disks, it's possible that there are fewer disks currently attached than there
+		// were at the time we ran terraform plan.
+		currDisks := map[string]struct{}{}
+		for _, disk := range instance.Disks {
+			if !disk.Boot && disk.Type != "SCRATCH" {
+				currDisks[disk.DeviceName] = struct{}{}
+			}
+		}
+
+		// Keep track of disks currently in state.
+		// Since changing any field within the disk needs to detach+reattach it,
+		// keep track of the hash of the full disk.
+		oDisks := map[uint64]string{}
+		for _, disk := range o.([]interface{}) {
+			diskConfig := disk.(map[string]interface{})
+			computeDisk, err := expandAttachedDisk(diskConfig, d, config)
+			if err != nil {
+				return err
+			}
+			hash, err := hashstructure.Hash(*computeDisk, nil)
+			if err != nil {
+				return err
+			}
+			if _, ok := currDisks[computeDisk.DeviceName]; ok {
+				oDisks[hash] = computeDisk.DeviceName
+			}
+		}
+
+		// Keep track of new config's disks.
+		// Since changing any field within the disk needs to detach+reattach it,
+		// keep track of the hash of the full disk.
+		// If a disk with a certain hash is only in the new config, it should be attached.
+		nDisks := map[uint64]struct{}{}
+		var attach []*compute.AttachedDisk
+		for _, disk := range n.([]interface{}) {
+			diskConfig := disk.(map[string]interface{})
+			computeDisk, err := expandAttachedDisk(diskConfig, d, config)
+			if err != nil {
+				return err
+			}
+			hash, err := hashstructure.Hash(*computeDisk, nil)
+			if err != nil {
+				return err
+			}
+			nDisks[hash] = struct{}{}
+
+			if _, ok := oDisks[hash]; !ok {
+				computeDiskV1 := &compute.AttachedDisk{}
+				err = Convert(computeDisk, computeDiskV1)
+				if err != nil {
+					return err
+				}
+				attach = append(attach, computeDiskV1)
+			}
+		}
+
+		// If a source is only in the old config, it should be detached.
+		// Detach the old disks.
+		for hash, deviceName := range oDisks {
+			if _, ok := nDisks[hash]; !ok {
+				op, err := config.clientCompute.Instances.DetachDisk(project, zone, instance.Name, deviceName).Do()
+				if err != nil {
+					return errwrap.Wrapf("Error detaching disk: %s", err)
+				}
+
+				opErr := computeOperationWait(config.clientCompute, op, project, "detaching disk")
+				if opErr != nil {
+					return opErr
+				}
+				log.Printf("[DEBUG] Successfully detached disk %s", deviceName)
+			}
+		}
+
+		// Attach the new disks
+		for _, disk := range attach {
+			op, err := config.clientCompute.Instances.AttachDisk(project, zone, instance.Name, disk).Do()
+			if err != nil {
+				return errwrap.Wrapf("Error attaching disk : {{err}}", err)
+			}
+
+			opErr := computeOperationWait(config.clientCompute, op, project, "attaching disk")
+			if opErr != nil {
+				return opErr
+			}
+			log.Printf("[DEBUG] Successfully attached disk %s", disk.Source)
+		}
+
+		d.SetPartial("attached_disk")
 	}
 
 	// We made it, disable partial mode
 	d.Partial(false)
 
 	return resourceComputeInstanceRead(d, meta)
+}
+
+func expandAttachedDisk(diskConfig map[string]interface{}, d *schema.ResourceData, meta interface{}) (*computeBeta.AttachedDisk, error) {
+	config := meta.(*Config)
+
+	source, err := ParseDiskFieldValue(diskConfig["source"].(string), d, config)
+	if err != nil {
+		return nil, err
+	}
+
+	disk := &computeBeta.AttachedDisk{
+		Source: source.RelativeLink(),
+	}
+
+	if v, ok := diskConfig["device_name"]; ok {
+		disk.DeviceName = v.(string)
+	}
+
+	if v, ok := diskConfig["disk_encryption_key_raw"]; ok {
+		disk.DiskEncryptionKey = &computeBeta.CustomerEncryptionKey{
+			RawKey: v.(string),
+		}
+	}
+	return disk, nil
 }
 
 func resourceComputeInstanceDelete(d *schema.ResourceData, meta interface{}) error {
@@ -1094,7 +1293,7 @@ func resourceComputeInstanceDelete(d *schema.ResourceData, meta interface{}) err
 	}
 
 	// Wait for the operation to complete
-	opErr := computeOperationWaitZone(config, op, project, zone, "instance to delete")
+	opErr := computeOperationWait(config.clientCompute, op, project, "instance to delete")
 	if opErr != nil {
 		return opErr
 	}
@@ -1127,6 +1326,30 @@ func resourceInstanceMetadata(d *schema.ResourceData) (*compute.Metadata, error)
 	return m, nil
 }
 
+func resourceBetaInstanceMetadata(d *schema.ResourceData) (*computeBeta.Metadata, error) {
+	m := &computeBeta.Metadata{}
+	mdMap := d.Get("metadata").(map[string]interface{})
+	if v, ok := d.GetOk("metadata_startup_script"); ok && v.(string) != "" {
+		mdMap["startup-script"] = v
+	}
+	if len(mdMap) > 0 {
+		m.Items = make([]*computeBeta.MetadataItems, 0, len(mdMap))
+		for key, val := range mdMap {
+			v := val.(string)
+			m.Items = append(m.Items, &computeBeta.MetadataItems{
+				Key:   key,
+				Value: &v,
+			})
+		}
+
+		// Set the fingerprint. If the metadata has never been set before
+		// then this will just be blank.
+		m.Fingerprint = d.Get("metadata_fingerprint").(string)
+	}
+
+	return m, nil
+}
+
 func resourceInstanceTags(d *schema.ResourceData) *compute.Tags {
 	// Calculate the tags
 	var tags *compute.Tags
@@ -1142,4 +1365,216 @@ func resourceInstanceTags(d *schema.ResourceData) *compute.Tags {
 	}
 
 	return tags
+}
+
+func resourceBetaInstanceTags(d *schema.ResourceData) *computeBeta.Tags {
+	// Calculate the tags
+	var tags *computeBeta.Tags
+	if v := d.Get("tags"); v != nil {
+		vs := v.(*schema.Set)
+		tags = new(computeBeta.Tags)
+		tags.Items = make([]string, vs.Len())
+		for i, v := range vs.List() {
+			tags.Items[i] = v.(string)
+		}
+
+		tags.Fingerprint = d.Get("tags_fingerprint").(string)
+	}
+
+	return tags
+}
+
+func expandBootDisk(d *schema.ResourceData, config *Config, zone *compute.Zone, project string) (*computeBeta.AttachedDisk, error) {
+	disk := &computeBeta.AttachedDisk{
+		AutoDelete: d.Get("boot_disk.0.auto_delete").(bool),
+		Boot:       true,
+	}
+
+	if v, ok := d.GetOk("boot_disk.0.device_name"); ok {
+		disk.DeviceName = v.(string)
+	}
+
+	if v, ok := d.GetOk("boot_disk.0.disk_encryption_key_raw"); ok {
+		disk.DiskEncryptionKey = &computeBeta.CustomerEncryptionKey{
+			RawKey: v.(string),
+		}
+	}
+
+	if v, ok := d.GetOk("boot_disk.0.source"); ok {
+		source, err := ParseDiskFieldValue(v.(string), d, config)
+		if err != nil {
+			return nil, err
+		}
+		disk.Source = source.RelativeLink()
+	}
+
+	if _, ok := d.GetOk("boot_disk.0.initialize_params"); ok {
+		disk.InitializeParams = &computeBeta.AttachedDiskInitializeParams{}
+
+		if v, ok := d.GetOk("boot_disk.0.initialize_params.0.size"); ok {
+			disk.InitializeParams.DiskSizeGb = int64(v.(int))
+		}
+
+		if v, ok := d.GetOk("boot_disk.0.initialize_params.0.type"); ok {
+			diskTypeName := v.(string)
+			diskType, err := readDiskType(config, zone, project, diskTypeName)
+			if err != nil {
+				return nil, fmt.Errorf("Error loading disk type '%s': %s", diskTypeName, err)
+			}
+			disk.InitializeParams.DiskType = diskType.SelfLink
+		}
+
+		if v, ok := d.GetOk("boot_disk.0.initialize_params.0.image"); ok {
+			imageName := v.(string)
+			imageUrl, err := resolveImage(config, project, imageName)
+			if err != nil {
+				return nil, fmt.Errorf("Error resolving image name '%s': %s", imageName, err)
+			}
+
+			disk.InitializeParams.SourceImage = imageUrl
+		}
+	}
+
+	return disk, nil
+}
+
+func flattenBootDisk(d *schema.ResourceData, disk *computeBeta.AttachedDisk) []map[string]interface{} {
+	result := map[string]interface{}{
+		"auto_delete": disk.AutoDelete,
+		"device_name": disk.DeviceName,
+		"source":      disk.Source,
+		// disk_encryption_key_raw is not returned from the API, so copy it from what the user
+		// originally specified to avoid diffs.
+		"disk_encryption_key_raw": d.Get("boot_disk.0.disk_encryption_key_raw"),
+	}
+	if disk.DiskEncryptionKey != nil {
+		result["disk_encryption_key_sha256"] = disk.DiskEncryptionKey.Sha256
+	}
+	if _, ok := d.GetOk("boot_disk.0.initialize_params.#"); ok {
+		// initialize_params is not returned from the API, so copy it from what the user
+		// originally specified to avoid diffs.
+		m := d.Get("boot_disk.0.initialize_params")
+		result["initialize_params"] = m
+	}
+
+	return []map[string]interface{}{result}
+}
+
+func expandScratchDisks(d *schema.ResourceData, config *Config, zone *compute.Zone, project string) ([]*computeBeta.AttachedDisk, error) {
+	diskType, err := readDiskType(config, zone, project, "local-ssd")
+	if err != nil {
+		return nil, fmt.Errorf("Error loading disk type 'local-ssd': %s", err)
+	}
+
+	n := d.Get("scratch_disk.#").(int)
+	scratchDisks := make([]*computeBeta.AttachedDisk, 0, n)
+	for i := 0; i < n; i++ {
+		scratchDisks = append(scratchDisks, &computeBeta.AttachedDisk{
+			AutoDelete: true,
+			Type:       "SCRATCH",
+			Interface:  d.Get(fmt.Sprintf("scratch_disk.%d.interface", i)).(string),
+			InitializeParams: &computeBeta.AttachedDiskInitializeParams{
+				DiskType: diskType.SelfLink,
+			},
+		})
+	}
+
+	return scratchDisks, nil
+}
+
+func flattenScratchDisk(disk *computeBeta.AttachedDisk) map[string]interface{} {
+	result := map[string]interface{}{
+		"interface": disk.Interface,
+	}
+	return result
+}
+
+func expandGuestAccelerators(zone string, configs []interface{}) []*computeBeta.AcceleratorConfig {
+	guestAccelerators := make([]*computeBeta.AcceleratorConfig, 0, len(configs))
+	for _, raw := range configs {
+		data := raw.(map[string]interface{})
+		guestAccelerators = append(guestAccelerators, &computeBeta.AcceleratorConfig{
+			AcceleratorCount: int64(data["count"].(int)),
+			AcceleratorType:  createAcceleratorPartialUrl(zone, data["type"].(string)),
+		})
+	}
+
+	return guestAccelerators
+}
+
+func expandAliasIpRanges(ranges []interface{}) []*computeBeta.AliasIpRange {
+	ipRanges := make([]*computeBeta.AliasIpRange, 0, len(ranges))
+	for _, raw := range ranges {
+		data := raw.(map[string]interface{})
+		ipRanges = append(ipRanges, &computeBeta.AliasIpRange{
+			IpCidrRange:         data["ip_cidr_range"].(string),
+			SubnetworkRangeName: data["subnetwork_range_name"].(string),
+		})
+	}
+	return ipRanges
+}
+
+func flattenGuestAccelerators(zone string, accelerators []*computeBeta.AcceleratorConfig) []map[string]interface{} {
+	acceleratorsSchema := make([]map[string]interface{}, 0, len(accelerators))
+	for _, accelerator := range accelerators {
+		acceleratorsSchema = append(acceleratorsSchema, map[string]interface{}{
+			"count": accelerator.AcceleratorCount,
+			"type":  accelerator.AcceleratorType,
+		})
+	}
+	return acceleratorsSchema
+}
+
+func flattenBetaMetadata(metadata *computeBeta.Metadata) map[string]string {
+	metadataMap := make(map[string]string)
+	for _, item := range metadata.Items {
+		metadataMap[item.Key] = *item.Value
+	}
+	return metadataMap
+}
+
+func flattenBetaScheduling(scheduling *computeBeta.Scheduling) []map[string]interface{} {
+	result := make([]map[string]interface{}, 0, 1)
+	schedulingMap := map[string]interface{}{
+		"on_host_maintenance": scheduling.OnHostMaintenance,
+		"preemptible":         scheduling.Preemptible,
+	}
+	if scheduling.AutomaticRestart != nil {
+		schedulingMap["automatic_restart"] = *scheduling.AutomaticRestart
+	}
+	result = append(result, schedulingMap)
+	return result
+}
+
+func flattenAliasIpRange(ranges []*computeBeta.AliasIpRange) []map[string]interface{} {
+	rangesSchema := make([]map[string]interface{}, 0, len(ranges))
+	for _, ipRange := range ranges {
+		rangesSchema = append(rangesSchema, map[string]interface{}{
+			"ip_cidr_range":         ipRange.IpCidrRange,
+			"subnetwork_range_name": ipRange.SubnetworkRangeName,
+		})
+	}
+	return rangesSchema
+}
+
+func getProjectFromSubnetworkLink(subnetwork string) string {
+	r := regexp.MustCompile(SubnetworkLinkRegex)
+	if !r.MatchString(subnetwork) {
+		return ""
+	}
+
+	return r.FindStringSubmatch(subnetwork)[1]
+}
+
+func hash256(raw string) (string, error) {
+	decoded, err := base64.StdEncoding.DecodeString(raw)
+	if err != nil {
+		return "", err
+	}
+	h := sha256.Sum256(decoded)
+	return base64.StdEncoding.EncodeToString(h[:]), nil
+}
+
+func createAcceleratorPartialUrl(zone, accelerator string) string {
+	return fmt.Sprintf("zones/%s/acceleratorTypes/%s", zone, accelerator)
 }

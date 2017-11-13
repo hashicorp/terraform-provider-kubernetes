@@ -5,8 +5,15 @@ import (
 	"log"
 	"strconv"
 
+	"regexp"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"google.golang.org/api/compute/v1"
+)
+
+const (
+	sslCertificateRegex             = "projects/(.+)/global/sslCertificates/(.+)$"
+	canonicalSslCertificateTemplate = "https://www.googleapis.com/compute/v1/projects/%s/global/sslCertificates/%s"
 )
 
 func resourceComputeTargetHttpsProxy() *schema.Resource {
@@ -26,7 +33,11 @@ func resourceComputeTargetHttpsProxy() *schema.Resource {
 			"ssl_certificates": &schema.Schema{
 				Type:     schema.TypeList,
 				Required: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
+				Elem: &schema.Schema{
+					Type:         schema.TypeString,
+					ValidateFunc: validateRegexp(sslCertificateRegex),
+					StateFunc:    toCanonicalSslCertificate,
+				},
 			},
 
 			"url_map": &schema.Schema{
@@ -45,7 +56,7 @@ func resourceComputeTargetHttpsProxy() *schema.Resource {
 				Computed: true,
 			},
 
-			"id": &schema.Schema{
+			"proxy_id": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -91,7 +102,7 @@ func resourceComputeTargetHttpsProxyCreate(d *schema.ResourceData, meta interfac
 		return fmt.Errorf("Error creating TargetHttpsProxy: %s", err)
 	}
 
-	err = computeOperationWaitGlobal(config, op, project, "Creating Target Https Proxy")
+	err = computeOperationWait(config.clientCompute, op, project, "Creating Target Https Proxy")
 	if err != nil {
 		return err
 	}
@@ -120,7 +131,7 @@ func resourceComputeTargetHttpsProxyUpdate(d *schema.ResourceData, meta interfac
 			return fmt.Errorf("Error updating Target HTTPS proxy URL map: %s", err)
 		}
 
-		err = computeOperationWaitGlobal(config, op, project, "Updating Target Https Proxy URL Map")
+		err = computeOperationWait(config.clientCompute, op, project, "Updating Target Https Proxy URL Map")
 		if err != nil {
 			return err
 		}
@@ -129,51 +140,9 @@ func resourceComputeTargetHttpsProxyUpdate(d *schema.ResourceData, meta interfac
 	}
 
 	if d.HasChange("ssl_certificates") {
-		proxy, err := config.clientCompute.TargetHttpsProxies.Get(
-			project, d.Id()).Do()
-
-		_old, _new := d.GetChange("ssl_certificates")
-		_oldCerts := _old.([]interface{})
-		_newCerts := _new.([]interface{})
-		current := proxy.SslCertificates
-
-		_oldMap := make(map[string]bool)
-		_newMap := make(map[string]bool)
-
-		for _, v := range _oldCerts {
-			_oldMap[v.(string)] = true
-		}
-
-		for _, v := range _newCerts {
-			_newMap[v.(string)] = true
-		}
-
-		sslCertificates := make([]string, 0)
-		// Only modify certificates in one of our old or new states
-		for _, v := range current {
-			_, okOld := _oldMap[v]
-			_, okNew := _newMap[v]
-
-			// we deleted the certificate
-			if okOld && !okNew {
-				continue
-			}
-
-			sslCertificates = append(sslCertificates, v)
-
-			// Keep track of the fact that we have added this certificate
-			if okNew {
-				delete(_newMap, v)
-			}
-		}
-
-		// Add fresh certificates
-		for k, _ := range _newMap {
-			sslCertificates = append(sslCertificates, k)
-		}
-
+		certs := convertStringArr(d.Get("ssl_certificates").([]interface{}))
 		cert_ref := &compute.TargetHttpsProxiesSetSslCertificatesRequest{
-			SslCertificates: sslCertificates,
+			SslCertificates: certs,
 		}
 		op, err := config.clientCompute.TargetHttpsProxies.SetSslCertificates(
 			project, d.Id(), cert_ref).Do()
@@ -181,7 +150,7 @@ func resourceComputeTargetHttpsProxyUpdate(d *schema.ResourceData, meta interfac
 			return fmt.Errorf("Error updating Target Https Proxy SSL Certificates: %s", err)
 		}
 
-		err = computeOperationWaitGlobal(config, op, project, "Updating Target Https Proxy SSL certificates")
+		err = computeOperationWait(config.clientCompute, op, project, "Updating Target Https Proxy SSL certificates")
 		if err != nil {
 			return err
 		}
@@ -208,26 +177,9 @@ func resourceComputeTargetHttpsProxyRead(d *schema.ResourceData, meta interface{
 		return handleNotFoundError(err, d, fmt.Sprintf("Target HTTPS proxy %q", d.Get("name").(string)))
 	}
 
-	_certs := d.Get("ssl_certificates").([]interface{})
-	current := proxy.SslCertificates
-
-	_certMap := make(map[string]bool)
-	_newCerts := make([]interface{}, 0)
-
-	for _, v := range _certs {
-		_certMap[v.(string)] = true
-	}
-
-	// Store intersection of server certificates and user defined certificates
-	for _, v := range current {
-		if _, ok := _certMap[v]; ok {
-			_newCerts = append(_newCerts, v)
-		}
-	}
-
-	d.Set("ssl_certificates", _newCerts)
+	d.Set("ssl_certificates", proxy.SslCertificates)
+	d.Set("proxy_id", strconv.FormatUint(proxy.Id, 10))
 	d.Set("self_link", proxy.SelfLink)
-	d.Set("id", strconv.FormatUint(proxy.Id, 10))
 
 	return nil
 }
@@ -248,11 +200,18 @@ func resourceComputeTargetHttpsProxyDelete(d *schema.ResourceData, meta interfac
 		return fmt.Errorf("Error deleting TargetHttpsProxy: %s", err)
 	}
 
-	err = computeOperationWaitGlobal(config, op, project, "Deleting Target Https Proxy")
+	err = computeOperationWait(config.clientCompute, op, project, "Deleting Target Https Proxy")
 	if err != nil {
 		return err
 	}
 
 	d.SetId("")
 	return nil
+}
+
+func toCanonicalSslCertificate(v interface{}) string {
+	value := v.(string)
+	m := regexp.MustCompile(sslCertificateRegex).FindStringSubmatch(value)
+
+	return fmt.Sprintf(canonicalSslCertificateTemplate, m[1], m[2])
 }

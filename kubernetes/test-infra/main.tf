@@ -14,10 +14,15 @@ resource "random_id" "password" {
   byte_length = 16
 }
 
+# See https://cloud.google.com/container-engine/supported-versions
+variable "kubernetes_version" {}
+
 resource "google_container_cluster" "primary" {
   name = "tf-acc-test-${random_id.cluster_name.hex}"
   zone = "${data.google_compute_zones.available.names[0]}"
   initial_node_count = 3
+  node_version = "${var.kubernetes_version}"
+  min_master_version = "${var.kubernetes_version}"
 
   additional_zones = [
     "${data.google_compute_zones.available.names[1]}"

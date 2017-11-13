@@ -1309,10 +1309,10 @@
 			"revisionTime": "2017-09-30T00:03:24Z"
 		},
 		{
-			"checksumSHA1": "JksB1IWVrsqNUtATRcJoUsYu+kc=",
+			"checksumSHA1": "ySd75Dknb+UV+RCkjX6ZuikRWjQ=",
 			"path": "google.golang.org/api/cloudresourcemanager/v2beta1",
-			"revision": "a0c31fb0028e0111b942a29b9fc2e9235202c48b",
-			"revisionTime": "2017-11-10T22:16:33Z"
+			"revision": "6d17a978cb363067e40a571c7cd7ddc010af35b0",
+			"revisionTime": "2017-09-12T00:03:44Z"
 		},
 		{
 			"checksumSHA1": "ykWlk3gnT+uhWt+foqAgj1CftPk=",

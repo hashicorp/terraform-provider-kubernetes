@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	api "k8s.io/kubernetes/pkg/api/v1"
+	api "k8s.io/client-go/pkg/api/v1"
 )
 
 func idParts(id string) (string, string, error) {

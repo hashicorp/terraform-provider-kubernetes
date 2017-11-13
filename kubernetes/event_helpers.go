@@ -7,8 +7,8 @@ import (
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	api "k8s.io/kubernetes/pkg/api/v1"
-	kubernetes "k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
+	kubernetes "k8s.io/client-go/kubernetes"
+	api "k8s.io/client-go/pkg/api/v1"
 )
 
 func getLastWarningsForObject(conn *kubernetes.Clientset, metadata meta_v1.ObjectMeta, kind string, limit int) ([]api.Event, error) {

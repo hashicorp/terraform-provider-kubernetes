@@ -11,8 +11,8 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	api "k8s.io/kubernetes/pkg/api/v1"
-	kubernetes "k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
+	kubernetes "k8s.io/client-go/kubernetes"
+	api "k8s.io/client-go/pkg/api/v1"
 )
 
 func TestAccKubernetesService_basic(t *testing.T) {

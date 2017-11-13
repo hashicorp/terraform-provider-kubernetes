@@ -8,11 +8,17 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
+const computeImageCreateTimeoutDefault = 4
+
 func resourceComputeImage() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceComputeImageCreate,
 		Read:   resourceComputeImageRead,
+		Update: resourceComputeImageUpdate,
 		Delete: resourceComputeImageDelete,
+		Importer: &schema.ResourceImporter{
+			State: resourceComputeImageImportState,
+		},
 
 		Schema: map[string]*schema.Schema{
 			// TODO(cblecker): one of source_disk or raw_disk is required
@@ -25,7 +31,8 @@ func resourceComputeImage() *schema.Resource {
 
 			"description": &schema.Schema{
 				Type:     schema.TypeString,
-				Computed: true,
+				Optional: true,
+				ForceNew: true,
 			},
 
 			"family": &schema.Schema{
@@ -81,8 +88,19 @@ func resourceComputeImage() *schema.Resource {
 			"create_timeout": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
-				Default:  4,
-				ForceNew: true,
+				Default:  computeImageCreateTimeoutDefault,
+			},
+
+			"labels": &schema.Schema{
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Set:      schema.HashString,
+			},
+
+			"label_fingerprint": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 		},
 	}
@@ -128,6 +146,10 @@ func resourceComputeImageCreate(d *schema.ResourceData, meta interface{}) error 
 		image.RawDisk = imageRawDisk
 	}
 
+	if _, ok := d.GetOk("labels"); ok {
+		image.Labels = expandLabels(d)
+	}
+
 	// Read create timeout
 	var createTimeout int
 	if v, ok := d.GetOk("create_timeout"); ok {
@@ -144,7 +166,7 @@ func resourceComputeImageCreate(d *schema.ResourceData, meta interface{}) error 
 	// Store the ID
 	d.SetId(image.Name)
 
-	err = computeOperationWaitGlobalTime(config, op, project, "Creating Image", createTimeout)
+	err = computeOperationWaitTime(config.clientCompute, op, project, "Creating Image", createTimeout)
 	if err != nil {
 		return err
 	}
@@ -166,8 +188,67 @@ func resourceComputeImageRead(d *schema.ResourceData, meta interface{}) error {
 		return handleNotFoundError(err, d, fmt.Sprintf("Image %q", d.Get("name").(string)))
 	}
 
-	d.Set("self_link", image.SelfLink)
+	if image.SourceDisk != "" {
+		d.Set("source_disk", image.SourceDisk)
+	} else if image.RawDisk != nil {
+		// `raw_disk.*.source` is only used at image creation but is not returned when calling Get.
+		// `raw_disk.*.sha1` is not supported, the value is simply discarded by the server.
+		// Leaving `raw_disk` to current state value.
+	} else {
+		return fmt.Errorf("Either raw_disk or source_disk configuration is required.")
+	}
 
+	d.Set("name", image.Name)
+	d.Set("description", image.Description)
+	d.Set("family", image.Family)
+	d.Set("self_link", image.SelfLink)
+	d.Set("labels", image.Labels)
+	d.Set("label_fingerprint", image.LabelFingerprint)
+
+	return nil
+}
+
+func resourceComputeImageUpdate(d *schema.ResourceData, meta interface{}) error {
+	config := meta.(*Config)
+
+	project, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
+
+	// Technically we are only updating one attribute, but setting d.Partial here makes it easier to add updates later
+	d.Partial(true)
+
+	if d.HasChange("labels") {
+		labels := expandLabels(d)
+		labelFingerprint := d.Get("label_fingerprint").(string)
+		setLabelsRequest := compute.GlobalSetLabelsRequest{
+			LabelFingerprint: labelFingerprint,
+			Labels:           labels,
+			ForceSendFields:  []string{"Labels"},
+		}
+
+		op, err := config.clientCompute.Images.SetLabels(project, d.Id(), &setLabelsRequest).Do()
+		if err != nil {
+			return err
+		}
+
+		d.SetPartial("labels")
+
+		err = computeOperationWaitTime(config.clientCompute, op, project, "Setting labels", 4)
+		if err != nil {
+			return err
+		}
+		// Perform a read to see the new label_fingerprint value
+		image, err := config.clientCompute.Images.Get(project, d.Id()).Do()
+		if err != nil {
+			return err
+		}
+		d.Set("label_fingerprint", image.LabelFingerprint)
+		d.SetPartial("label_fingerprint")
+	}
+
+	d.Partial(false)
 	return nil
 }
 
@@ -187,11 +268,21 @@ func resourceComputeImageDelete(d *schema.ResourceData, meta interface{}) error 
 		return fmt.Errorf("Error deleting image: %s", err)
 	}
 
-	err = computeOperationWaitGlobal(config, op, project, "Deleting image")
+	err = computeOperationWait(config.clientCompute, op, project, "Deleting image")
 	if err != nil {
 		return err
 	}
 
 	d.SetId("")
 	return nil
+}
+
+func resourceComputeImageImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	// `create_timeout` field is specific to this Terraform resource implementation. Thus, this value cannot be
+	// imported from the Google Cloud REST API.
+	// Setting to default value otherwise Terraform requires a ForceNew to change the resource to match the
+	// default `create_timeout`.
+	d.Set("create_timeout", computeImageCreateTimeoutDefault)
+
+	return []*schema.ResourceData{d}, nil
 }

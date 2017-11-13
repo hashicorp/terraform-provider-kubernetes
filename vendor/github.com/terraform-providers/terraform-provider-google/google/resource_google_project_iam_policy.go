@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/terraform/helper/schema"
 	"google.golang.org/api/cloudresourcemanager/v1"
 )
@@ -20,7 +22,7 @@ func resourceGoogleProjectIamPolicy() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"project": &schema.Schema{
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 				ForceNew: true,
 			},
 			"policy_data": &schema.Schema{
@@ -29,8 +31,9 @@ func resourceGoogleProjectIamPolicy() *schema.Resource {
 				DiffSuppressFunc: jsonPolicyDiffSuppress,
 			},
 			"authoritative": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:       schema.TypeBool,
+				Optional:   true,
+				Deprecated: "Use google_project_iam_policy_binding and google_project_iam_policy_member instead.",
 			},
 			"etag": &schema.Schema{
 				Type:     schema.TypeString,
@@ -41,8 +44,9 @@ func resourceGoogleProjectIamPolicy() *schema.Resource {
 				Computed: true,
 			},
 			"disable_project": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
+				Deprecated: "This will be removed with the authoritative field. Use lifecycle.prevent_destroy instead.",
+				Type:       schema.TypeBool,
+				Optional:   true,
 			},
 		},
 	}
@@ -50,7 +54,10 @@ func resourceGoogleProjectIamPolicy() *schema.Resource {
 
 func resourceGoogleProjectIamPolicyCreate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
-	pid := d.Get("project").(string)
+	pid, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
 	// Get the policy in the template
 	p, err := getResourceIamPolicy(d)
 	if err != nil {
@@ -100,7 +107,10 @@ func resourceGoogleProjectIamPolicyCreate(d *schema.ResourceData, meta interface
 func resourceGoogleProjectIamPolicyRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG]: Reading google_project_iam_policy")
 	config := meta.(*Config)
-	pid := d.Get("project").(string)
+	pid, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
 
 	p, err := getProjectIamPolicy(pid, config)
 	if err != nil {
@@ -134,7 +144,10 @@ func resourceGoogleProjectIamPolicyRead(d *schema.ResourceData, meta interface{}
 func resourceGoogleProjectIamPolicyUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG]: Updating google_project_iam_policy")
 	config := meta.(*Config)
-	pid := d.Get("project").(string)
+	pid, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
 
 	// Get the policy in the template
 	p, err := getResourceIamPolicy(d)
@@ -198,7 +211,10 @@ func resourceGoogleProjectIamPolicyUpdate(d *schema.ResourceData, meta interface
 func resourceGoogleProjectIamPolicyDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG]: Deleting google_project_iam_policy")
 	config := meta.(*Config)
-	pid := d.Get("project").(string)
+	pid, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
 
 	// Get the existing IAM policy from the API
 	ep, err := getProjectIamPolicy(pid, config)
@@ -257,7 +273,7 @@ func setProjectIamPolicy(policy *cloudresourcemanager.Policy, config *Config, pi
 		&cloudresourcemanager.SetIamPolicyRequest{Policy: policy}).Do()
 
 	if err != nil {
-		return fmt.Errorf("Error applying IAM policy for project %q. Policy is %#v, error is %s", pid, policy, err)
+		return errwrap.Wrapf(fmt.Sprintf("Error applying IAM policy for project %q. Policy is %#v, error is {{err}}", pid, policy), err)
 	}
 	return nil
 }
@@ -416,4 +432,41 @@ func (b sortableBindings) Swap(i, j int) {
 }
 func (b sortableBindings) Less(i, j int) bool {
 	return b[i].Role < b[j].Role
+}
+
+type iamPolicyModifyFunc func(p *cloudresourcemanager.Policy) error
+
+func projectIamPolicyReadModifyWrite(d *schema.ResourceData, config *Config, pid string, modify iamPolicyModifyFunc) error {
+	for {
+		backoff := time.Second
+		log.Printf("[DEBUG]: Retrieving policy for project %q\n", pid)
+		p, err := getProjectIamPolicy(pid, config)
+		if err != nil {
+			return err
+		}
+		log.Printf("[DEBUG]: Retrieved policy for project %q: %+v\n", pid, p)
+
+		err = modify(p)
+		if err != nil {
+			return err
+		}
+
+		log.Printf("[DEBUG]: Setting policy for project %q to %+v\n", pid, p)
+		err = setProjectIamPolicy(p, config, pid)
+		if err == nil {
+			break
+		}
+		if isConflictError(err) {
+			log.Printf("[DEBUG]: Concurrent policy changes, restarting read-modify-write after %s\n", backoff)
+			time.Sleep(backoff)
+			backoff = backoff * 2
+			if backoff > 30*time.Second {
+				return fmt.Errorf("Error applying IAM policy to project %q: too many concurrent policy changes.\n", pid)
+			}
+			continue
+		}
+		return fmt.Errorf("Error applying IAM policy to project: %v", err)
+	}
+	log.Printf("[DEBUG]: Set policy for project %q\n", pid)
+	return nil
 }

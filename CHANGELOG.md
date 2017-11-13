@@ -1,12 +1,12 @@
-## 1.0.1 (Unreleased)
+## 1.0.1 (November 13, 2017)
 
 BUG FIXES:
 
-* resource/pod: Avoid crash in reading `spec.container.security_context` `capability` [GH-53]
-* resource/replication_controller: Avoid crash in reading `template.container.security_context` `capability` [GH-53]
-* resource/service: Make spec.port.target_port optional [GH-69]
-* resource/pod: Fix `mode` conversion in `config_map` volume items [GH-83]
-* resource/replication_controller: Fix `mode` conversion in `config_map` volume items [GH-83]
+* resource/pod: Avoid crash in reading `spec.container.security_context` `capability` ([#53](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/53))
+* resource/replication_controller: Avoid crash in reading `template.container.security_context` `capability` ([#53](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/53))
+* resource/service: Make spec.port.target_port optional ([#69](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/69))
+* resource/pod: Fix `mode` conversion in `config_map` volume items ([#83](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/83))
+* resource/replication_controller: Fix `mode` conversion in `config_map` volume items ([#83](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/83))
 
 ## 1.0.0 (August 18, 2017)
 

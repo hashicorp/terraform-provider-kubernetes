@@ -1,4 +1,9 @@
 ## 1.1.0 (Unreleased)
+
+NOTES:
+
+* provider: Client library updated to support Kubernetes `1.7`
+
 ## 1.0.1 (November 13, 2017)
 
 BUG FIXES:

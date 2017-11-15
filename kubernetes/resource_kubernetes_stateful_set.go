@@ -72,6 +72,7 @@ func resourceKubernetesStatefulSetCreate(d *schema.ResourceData, meta interface{
 	if err != nil {
 		return err
 	}
+	spec.Template.ObjectMeta.Annotations = metadata.Annotations
 
 	//use name as label and selector if not set
 	if metadata.Name == "" {

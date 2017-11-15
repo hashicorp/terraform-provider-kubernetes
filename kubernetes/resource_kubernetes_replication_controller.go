@@ -81,6 +81,7 @@ func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta 
 	if err != nil {
 		return err
 	}
+	spec.Template.ObjectMeta.Annotations = metadata.Annotations
 
 	rc := api.ReplicationController{
 		ObjectMeta: metadata,

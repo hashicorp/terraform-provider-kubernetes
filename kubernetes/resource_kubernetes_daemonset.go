@@ -114,6 +114,7 @@ func resourceKubernetesDaemonSetCreate(d *schema.ResourceData, meta interface{})
 	if err != nil {
 		return err
 	}
+	spec.Template.ObjectMeta.Annotations = metadata.Annotations
 
 	daemonset := v1beta1.DaemonSet{
 		ObjectMeta: metadata,

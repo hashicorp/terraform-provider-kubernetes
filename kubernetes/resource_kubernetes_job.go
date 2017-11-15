@@ -47,6 +47,7 @@ func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error
 	if err != nil {
 		return err
 	}
+	spec.Template.ObjectMeta.Annotations = metadata.Annotations
 
 	job := batchv1.Job{
 		ObjectMeta: metadata,

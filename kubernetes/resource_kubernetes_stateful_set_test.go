@@ -51,6 +51,39 @@ func TestAccKubernetesStatefulSet_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesStatefulSet_pvcTemplate(t *testing.T) {
+	var sset v1beta1.StatefulSet
+
+	statefulSetName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	imageName1 := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesStatefulSetDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStatefulSetConfig_pvcTemplate(statefulSetName, imageName1),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetExists("kubernetes_stateful_set.test", &sset),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.name", statefulSetName),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.labels.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.labels.app", "one"),
+					resource.TestCheckResourceAttrSet("kubernetes_stateful_set.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_stateful_set.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_stateful_set.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_stateful_set.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.service_name", statefulSetName),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.container.0.image", imageName1),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.container.0.image", imageName1),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "volume_claim_templates.#", "1"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesStatefulSetExists(n string, obj *v1beta1.StatefulSet) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
@@ -110,6 +143,49 @@ resource "kubernetes_stateful_set" "test" {
         name  = "tf-acc-test"
       }
     }
+  }
+}
+`, name, name, image)
+}
+
+func testAccKubernetesStatefulSetConfig_pvcTemplate(name, image string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_stateful_set" "test" {
+  metadata {
+		name = "%s"
+		labels {
+			app = "one"
+		}
+  }
+  spec {
+    replicas = 2
+    selector {
+      app = "one"
+    }
+    service_name = "%s"
+    template {
+      container {
+        image = "%s"
+        name  = "tf-acc-test"
+      }
+    }
+
+		volume_claim_templates {
+			metadata {
+				name = "pvc"
+				annotations {
+					"volume.alpha.kubernetes.io/storage-class" =  "anything"
+				}
+			}
+			spec {
+				access_modes = ["ReadWriteOnce"]
+				resources {
+					requests {
+						storage = "2Gi"
+					}
+				}
+			}
+		}
   }
 }
 `, name, name, image)

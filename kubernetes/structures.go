@@ -110,6 +110,24 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData) []map[strin
 	return []map[string]interface{}{m}
 }
 
+func flattenSubMetadata(meta metav1.ObjectMeta) []map[string]interface{} {
+	m := make(map[string]interface{})
+
+	m["annotations"] = meta.Annotations
+	m["labels"] = meta.Labels
+	m["name"] = meta.Name
+	m["resource_version"] = meta.ResourceVersion
+	m["self_link"] = meta.SelfLink
+	m["uid"] = fmt.Sprintf("%v", meta.UID)
+	m["generation"] = meta.Generation
+
+	if meta.Namespace != "" {
+		m["namespace"] = meta.Namespace
+	}
+
+	return []map[string]interface{}{m}
+}
+
 func removeInternalKeys(m map[string]string, d map[string]interface{}) map[string]string {
 	for k, _ := range m {
 		if isInternalKey(k) && !isKeyInMap(k, d) {

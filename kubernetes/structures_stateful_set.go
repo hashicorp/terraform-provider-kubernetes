@@ -21,6 +21,15 @@ func flattenStatefulSetSpec(in v1beta1.StatefulSetSpec) ([]interface{}, error) {
 	}
 	att["template"] = podSpec
 
+	volClaimTemplates := make([]map[string]interface{}, len(in.VolumeClaimTemplates), len(in.VolumeClaimTemplates))
+	for i, claim := range in.VolumeClaimTemplates {
+		claimState := make(map[string]interface{})
+		claimState["metadata"] = flattenSubMetadata(claim.ObjectMeta)
+		claimState["spec"] = flattenPersistentVolumeClaimSpec(claim.Spec)
+		volClaimTemplates[i] = claimState
+	}
+	att["volume_claim_templates"] = volClaimTemplates
+
 	return []interface{}{att}, nil
 }
 
@@ -41,6 +50,21 @@ func expandStatefulSetSpec(statefulSet []interface{}) (v1beta1.StatefulSetSpec, 
 	if err != nil {
 		return obj, err
 	}
+
+	volClaimTemplates := in["volume_claim_templates"].([]interface{})
+	pvcTemplates := make([]v1.PersistentVolumeClaim, len(volClaimTemplates), len(volClaimTemplates))
+	for i, claimTemplateRaw := range volClaimTemplates {
+		claimTemplateConfig := claimTemplateRaw.(map[string]interface{})
+		metadata := expandMetadata(claimTemplateConfig["metadata"].([]interface{}))
+		pvcSpec, _ := expandPersistentVolumeClaimSpec(claimTemplateConfig["spec"].([]interface{}))
+		claim := v1.PersistentVolumeClaim{
+			ObjectMeta: metadata,
+			Spec:       pvcSpec,
+		}
+		pvcTemplates[i] = claim
+	}
+	obj.VolumeClaimTemplates = pvcTemplates
+
 	obj.Template = v1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: obj.Selector.MatchLabels,

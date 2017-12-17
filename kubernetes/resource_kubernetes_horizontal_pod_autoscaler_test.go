@@ -7,9 +7,9 @@ import (
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	api "k8s.io/api/autoscaling/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetes "k8s.io/client-go/kubernetes"
-	api "k8s.io/client-go/pkg/apis/autoscaling/v1"
 )
 
 func TestAccKubernetesHorizontalPodAutoscaler_basic(t *testing.T) {

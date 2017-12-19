@@ -72,6 +72,14 @@ func expandStringMap(m map[string]interface{}) map[string]string {
 	return result
 }
 
+func expandStringMapToByteMap(m map[string]interface{}) map[string][]byte {
+	result := make(map[string][]byte)
+	for k, v := range m {
+		result[k] = []byte(v.(string))
+	}
+	return result
+}
+
 func expandStringSlice(s []interface{}) []string {
 	result := make([]string, len(s), len(s))
 	for k, v := range s {

@@ -55,7 +55,7 @@ The following arguments are supported:
 
 * `data` - (Optional) A map of the secret data.
 * `metadata` - (Required) Standard secret's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata
-* `type` - (Optional) The secret type. Defaults to `Opaque`. More info: https://github.com/kubernetes/community/blob/master/contributors/design-proposals/secrets.md#proposed-design
+* `type` - (Optional) The secret type. Defaults to `Opaque`. More info: https://github.com/kubernetes/community/blob/master/contributors/design-proposals/auth/secrets.md#proposed-design
 
 ## Nested Blocks
 

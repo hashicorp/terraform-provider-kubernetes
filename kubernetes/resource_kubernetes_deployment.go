@@ -3,10 +3,12 @@ package kubernetes
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/terraform"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
@@ -24,6 +26,8 @@ func resourceKubernetesDeployment() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		SchemaVersion: 1,
+		MigrateState:  resourceKubernetesDeploymentStateUpgrader,
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -32,11 +36,12 @@ func resourceKubernetesDeployment() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
+			"metadata": namespacedMetadataSchema("deployment", true),
 			"name": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
+				Removed:  "To better match the Kubernetes API, the name attribute should be configured under the metadata block. Please update your Terraform configuration.",
 			},
-			"metadata": namespacedMetadataSchema("deployment", true),
 			"spec": {
 				Type:        schema.TypeList,
 				Description: "Spec defines the specification of the desired behavior of the deployment. More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#spec-and-status",
@@ -104,11 +109,38 @@ func resourceKubernetesDeployment() *schema.Resource {
 						},
 						"template": {
 							Type:        schema.TypeList,
-							Description: "Describes the pod that will be created if insufficient replicas are detected. This takes precedence over a TemplateRef. More info: http://kubernetes.io/docs/user-guide/replication-controller#pod-template",
+							Description: "Template describes the pods that will be created.",
 							Required:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
-								Schema: podSpecFields(true),
+								Schema: map[string]*schema.Schema{
+									"metadata": metadataSchema("deploymentSpec", true),
+									"spec": &schema.Schema{
+										Type:        schema.TypeList,
+										Description: "Template describes the pods that will be created.",
+										Required:    true,
+										MaxItems:    1,
+										Elem: &schema.Resource{
+											Schema: podSpecFields(true),
+										},
+									},
+									"active_deadline_seconds":          relocatedAttribute("active_deadline_seconds"),
+									"container":                        relocatedAttribute("container"),
+									"dns_policy":                       relocatedAttribute("dns_policy"),
+									"host_ipc":                         relocatedAttribute("host_ipc"),
+									"host_network":                     relocatedAttribute("host_network"),
+									"host_pid":                         relocatedAttribute("host_pid"),
+									"hostname":                         relocatedAttribute("hostname"),
+									"node_name":                        relocatedAttribute("node_name"),
+									"node_selector":                    relocatedAttribute("node_selector"),
+									"restart_policy":                   relocatedAttribute("restart_policy"),
+									"security_context":                 relocatedAttribute("security_context"),
+									"service_account_name":             relocatedAttribute("service_account_name"),
+									"automount_service_account_token":  relocatedAttribute("automount_service_account_token"),
+									"subdomain":                        relocatedAttribute("subdomain"),
+									"termination_grace_period_seconds": relocatedAttribute("termination_grace_period_seconds"),
+									"volume": relocatedAttribute("volume"),
+								},
 							},
 						},
 					},
@@ -116,6 +148,15 @@ func resourceKubernetesDeployment() *schema.Resource {
 			},
 		},
 	}
+}
+
+func relocatedAttribute(name string) *schema.Schema {
+	s := &schema.Schema{
+		Type:     schema.TypeString,
+		Optional: true,
+		Removed:  fmt.Sprintf("%s has been relocated to deployment/spec/template/spec/%s. Please update your Terraform config.", name, name),
+	}
+	return s
 }
 
 func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}) error {
@@ -126,20 +167,8 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 	if err != nil {
 		return err
 	}
-	spec.Template.ObjectMeta.Annotations = metadata.Annotations
-
-	//use name as label and selector if not set
-	if metadata.Name == "" {
-		metadata.Name = d.Get("name").(string)
-	}
 	if metadata.Namespace == "" {
 		metadata.Namespace = "default"
-	}
-	if len(spec.Selector.MatchLabels) == 0 {
-		spec.Selector.MatchLabels = map[string]string{
-			"app": d.Get("name").(string),
-		}
-		spec.Template.ObjectMeta.Labels = spec.Selector.MatchLabels
 	}
 
 	deployment := v1beta1.Deployment{
@@ -189,7 +218,7 @@ func resourceKubernetesDeploymentRead(d *schema.ResourceData, meta interface{}) 
 		return err
 	}
 
-	spec, err := flattenDeploymentSpec(deployment.Spec)
+	spec, err := flattenDeploymentSpec(deployment.Spec, d)
 	if err != nil {
 		return err
 	}
@@ -273,7 +302,7 @@ func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}
 		return err
 	}
 
-	log.Printf("[INFO] Replication controller %s deleted", name)
+	log.Printf("[INFO] Deployment %s deleted", name)
 
 	d.SetId("")
 	return nil
@@ -312,4 +341,72 @@ func waitForDeploymentReplicasFunc(conn *kubernetes.Clientset, ns, name string) 
 		return resource.RetryableError(fmt.Errorf("Waiting for %d replicas of %q to be scheduled (%d)",
 			desiredReplicas, deployment.GetName(), deployment.Status.Replicas))
 	}
+}
+
+func resourceKubernetesDeploymentStateUpgrader(
+	v int, is *terraform.InstanceState, meta interface{}) (*terraform.InstanceState, error) {
+	if is.Empty() {
+		log.Println("[DEBUG] Empty InstanceState; nothing to migrate.")
+		return is, nil
+	}
+
+	var err error
+
+	switch v {
+	case 0:
+		log.Println("[INFO] Found Kubernetes Deployment State v0; migrating to v1")
+		is, err = migrateStateV0toV1(is)
+		if err != nil {
+			return is, err
+		}
+
+	default:
+		return is, fmt.Errorf("Unexpected schema version: %d", v)
+	}
+
+	return is, err
+}
+
+// This deployment resource originally had the podSpec directly below spec.template level
+// This migration moves the state to spec.template.spec match the Kubernetes documented structure
+func migrateStateV0toV1(is *terraform.InstanceState) (*terraform.InstanceState, error) {
+	log.Printf("[DEBUG] Attributes before migration: %#v", is.Attributes)
+
+	newTemplate := make(map[string]string)
+
+	for k, v := range is.Attributes {
+		log.Println("[DEBUG] - checking attribute for state upgrade: ", k, v)
+		if strings.HasPrefix(k, "name") {
+			// don't clobber an existing metadata.0.name value
+			if _, ok := is.Attributes["metadata.0.name"]; ok {
+				continue
+			}
+
+			newK := "metadata.0.name"
+
+			newTemplate[newK] = v
+			log.Printf("[DEBUG] moved attribute %s -> %s ", k, newK)
+			delete(is.Attributes, k)
+
+		} else if !strings.HasPrefix(k, "spec.0.template") {
+			continue
+
+		} else if strings.HasPrefix(k, "spec.0.template.0.spec") || strings.HasPrefix(k, "spec.0.template.0.metadata") {
+			continue
+
+		} else {
+			newK := strings.Replace(k, "spec.0.template.0", "spec.0.template.0.spec.0", 1)
+
+			newTemplate[newK] = v
+			log.Printf("[DEBUG] moved attribute %s -> %s ", k, newK)
+			delete(is.Attributes, k)
+		}
+	}
+
+	for k, v := range newTemplate {
+		is.Attributes[k] = v
+	}
+
+	log.Printf("[DEBUG] Attributes after migration: %#v", is.Attributes)
+	return is, nil
 }

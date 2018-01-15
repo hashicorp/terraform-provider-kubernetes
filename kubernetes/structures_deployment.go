@@ -3,13 +3,14 @@ package kubernetes
 import (
 	"strconv"
 
+	"github.com/hashicorp/terraform/helper/schema"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
 
-func flattenDeploymentSpec(in v1beta1.DeploymentSpec) ([]interface{}, error) {
+func flattenDeploymentSpec(in v1beta1.DeploymentSpec, d *schema.ResourceData) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	att["min_ready_seconds"] = in.MinReadySeconds
 
@@ -19,11 +20,16 @@ func flattenDeploymentSpec(in v1beta1.DeploymentSpec) ([]interface{}, error) {
 
 	att["selector"] = in.Selector.MatchLabels
 	att["strategy"] = flattenDeploymentStrategy(in.Strategy)
+
+	templateMetadata := flattenMetadata(in.Template.ObjectMeta, d)
 	podSpec, err := flattenPodSpec(in.Template.Spec)
 	if err != nil {
 		return nil, err
 	}
-	att["template"] = podSpec
+	template := make(map[string]interface{})
+	template["metadata"] = templateMetadata
+	template["spec"] = podSpec
+	att["template"] = []interface{}{template}
 
 	return []interface{}{att}, nil
 }
@@ -63,15 +69,21 @@ func expandDeploymentSpec(deployment []interface{}) (v1beta1.DeploymentSpec, err
 		MatchLabels: expandStringMap(in["selector"].(map[string]interface{})),
 	}
 	obj.Strategy = expandDeploymentStrategy(in["strategy"].([]interface{}))
-	podSpec, err := expandPodSpec(in["template"].([]interface{}))
-	if err != nil {
-		return obj, err
-	}
-	obj.Template = v1.PodTemplateSpec{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: obj.Selector.MatchLabels,
-		},
-		Spec: podSpec,
+
+	for _, v := range in["template"].([]interface{}) {
+		template := v.(map[string]interface{})
+		podSpec, err := expandPodSpec(template["spec"].([]interface{}))
+		if err != nil {
+			return obj, err
+		}
+		obj.Template = v1.PodTemplateSpec{
+			Spec: podSpec,
+		}
+
+		if metaCfg, ok := template["metadata"]; ok {
+			metadata := expandMetadata(metaCfg.([]interface{}))
+			obj.Template.ObjectMeta = metadata
+		}
 	}
 
 	return obj, nil

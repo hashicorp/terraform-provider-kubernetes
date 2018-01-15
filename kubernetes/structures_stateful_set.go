@@ -1,12 +1,15 @@
 package kubernetes
 
 import (
+	"fmt"
+
+	"github.com/hashicorp/terraform/helper/schema"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/apis/apps/v1beta1"
 )
 
-func flattenStatefulSetSpec(in v1beta1.StatefulSetSpec) ([]interface{}, error) {
+func flattenStatefulSetSpec(in v1beta1.StatefulSetSpec, d *schema.ResourceData) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
 	if in.Replicas != nil {
@@ -24,7 +27,7 @@ func flattenStatefulSetSpec(in v1beta1.StatefulSetSpec) ([]interface{}, error) {
 	volClaimTemplates := make([]map[string]interface{}, len(in.VolumeClaimTemplates), len(in.VolumeClaimTemplates))
 	for i, claim := range in.VolumeClaimTemplates {
 		claimState := make(map[string]interface{})
-		claimState["metadata"] = flattenSubMetadata(claim.ObjectMeta)
+		claimState["metadata"] = flattenSubMetadata(claim.ObjectMeta, d, fmt.Sprintf("spec.0.volume_claim_templates.%d", i))
 		claimState["spec"] = flattenPersistentVolumeClaimSpec(claim.Spec)
 		volClaimTemplates[i] = claimState
 	}

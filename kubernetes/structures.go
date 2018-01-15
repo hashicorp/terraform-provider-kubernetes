@@ -3,10 +3,12 @@ package kubernetes
 import (
 	"encoding/base64"
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/mitchellh/copystructure"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	api "k8s.io/client-go/pkg/api/v1"
@@ -110,10 +112,11 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData) []map[strin
 	return []map[string]interface{}{m}
 }
 
-func flattenSubMetadata(meta metav1.ObjectMeta) []map[string]interface{} {
+func flattenSubMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, prefix string) []map[string]interface{} {
 	m := make(map[string]interface{})
 
-	m["annotations"] = meta.Annotations
+	configAnnotations := d.Get(prefix + ".metadata.0.annotations").(map[string]interface{})
+	m["annotations"] = removeInternalKeys(meta.Annotations, configAnnotations)
 	m["labels"] = meta.Labels
 	m["name"] = meta.Name
 	m["resource_version"] = meta.ResourceVersion
@@ -129,12 +132,15 @@ func flattenSubMetadata(meta metav1.ObjectMeta) []map[string]interface{} {
 }
 
 func removeInternalKeys(m map[string]string, d map[string]interface{}) map[string]string {
+	copied, _ := copystructure.Copy(m)
+	newMap := copied.(map[string]string)
 	for k, _ := range m {
 		if isInternalKey(k) && !isKeyInMap(k, d) {
-			delete(m, k)
+			log.Printf("[DEBUG] removing %s", k)
+			delete(newMap, k)
 		}
 	}
-	return m
+	return newMap
 }
 
 func isKeyInMap(key string, d map[string]interface{}) bool {
@@ -151,7 +157,8 @@ func isKeyInMap(key string, d map[string]interface{}) bool {
 
 func isInternalKey(annotationKey string) bool {
 	u, err := url.Parse("//" + annotationKey)
-	if err == nil && strings.HasSuffix(u.Hostname(), "kubernetes.io") {
+	if err == nil && strings.Contains(u.Hostname(), "kubernetes.io") {
+		log.Printf("[DEBUG] %s is internal key", annotationKey)
 		return true
 	}
 

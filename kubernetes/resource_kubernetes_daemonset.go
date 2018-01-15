@@ -208,7 +208,7 @@ func resourceKubernetesDaemonSetDelete(d *schema.ResourceData, meta interface{})
 	falseVar := false
 	conn.DaemonSets(namespace).Delete(name, &metav1.DeleteOptions{OrphanDependents: &falseVar})
 
-	log.Printf("[INFO] Replication controller %s deleted", name)
+	log.Printf("[INFO] DaemonSet %s deleted", name)
 
 	d.SetId("")
 	return nil

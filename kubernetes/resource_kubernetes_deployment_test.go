@@ -155,6 +155,27 @@ func TestAccKubernetesDeployment_with_template_metadata(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDeployment_initContainer(t *testing.T) {
+	var conf v1beta1.Deployment
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_deployment.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentWithInitContainer(name, "nginx:1.7.8"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.init_container.0.image", "alpine"),
+				),
+			},
+		},
+	})
+}
+
 func pause() resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		time.Sleep(1 * time.Minute)
@@ -385,6 +406,43 @@ resource "kubernetes_deployment" "test" {
 				}
 			}
 			spec {
+				container {
+					image = "%s"
+					name  = "containername"
+				}
+			}
+    }
+  }
+}
+`, depName, imageName)
+}
+
+func testAccKubernetesDeploymentWithInitContainer(depName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_deployment" "test" {
+  metadata {
+    name = "%s"
+    labels {
+			foo = "bar"
+    }
+  }
+
+  spec {
+    selector {
+			foo = "bar"
+		}
+    template {
+			metadata {
+				labels {
+					foo = "bar"
+				}
+			}
+			spec {
+				init_container {
+					name = "hello"
+					image = "alpine"
+					command = ["echo", "'hello'"]
+				}
 				container {
 					image = "%s"
 					name  = "containername"

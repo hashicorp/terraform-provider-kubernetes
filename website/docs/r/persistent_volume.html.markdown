@@ -50,6 +50,7 @@ The following arguments are supported:
 * `capacity` - (Required) A description of the persistent volume's resources and capacity. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#capacity
 * `persistent_volume_reclaim_policy` - (Optional) What happens to a persistent volume when released from its claim. Valid options are Retain (default) and Recycle. Recycling must be supported by the volume plugin underlying this persistent volume. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#recycling-policy
 * `persistent_volume_source` - (Required) The specification of a persistent volume.
+* `storage_class_name` - (Optional) The name of the persistent volume's storage class. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class
 
 ### `persistent_volume_source`
 

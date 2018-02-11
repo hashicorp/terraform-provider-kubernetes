@@ -150,6 +150,17 @@ func validateDNSPolicy(value interface{}, key string) (ws []string, es []error) 
 	return
 }
 
+func validateDeploymentStrategyType(value interface{}, key string) (ws []string, es []error) {
+	v := value.(string)
+	switch v {
+	case "Recreate", "RollingUpdate":
+		return
+	default:
+		es = append(es, fmt.Errorf("%s must be one of Recreate or RollingUpdate ", key))
+	}
+	return
+}
+
 func validateRestartPolicy(value interface{}, key string) (ws []string, es []error) {
 	v := value.(string)
 	switch v {

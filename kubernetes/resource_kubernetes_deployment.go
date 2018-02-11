@@ -87,7 +87,7 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 	return resourceKubernetesReplicationControllerRead(d, meta)
 }
 
-func resourceKubernetesReplicationControllerRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesDeploymentRead(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
 	namespace, name, err := idParts(d.Id())
@@ -121,7 +121,7 @@ func resourceKubernetesReplicationControllerRead(d *schema.ResourceData, meta in
 	return nil
 }
 
-func resourceKubernetesReplicationControllerUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesDeploymentUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
 	namespace, name, err := idParts(d.Id())
@@ -162,7 +162,7 @@ func resourceKubernetesReplicationControllerUpdate(d *schema.ResourceData, meta 
 	return resourceKubernetesReplicationControllerRead(d, meta)
 }
 
-func resourceKubernetesReplicationControllerDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
 	namespace, name, err := idParts(d.Id())
@@ -205,7 +205,7 @@ func resourceKubernetesReplicationControllerDelete(d *schema.ResourceData, meta 
 	return nil
 }
 
-func resourceKubernetesReplicationControllerExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesDeploymentExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn := meta.(*kubernetes.Clientset)
 
 	namespace, name, err := idParts(d.Id())
@@ -224,7 +224,7 @@ func resourceKubernetesReplicationControllerExists(d *schema.ResourceData, meta 
 	return true, err
 }
 
-func waitForDesiredReplicasFunc(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
+func waitForDeploymentFunc(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
 	return func() *resource.RetryError {
 		rc, err := conn.CoreV1().ReplicationControllers(ns).Get(name, metav1.GetOptions{})
 		if err != nil {

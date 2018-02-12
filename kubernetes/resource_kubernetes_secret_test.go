@@ -25,6 +25,28 @@ func TestAccKubernetesSecret_basic(t *testing.T) {
 		CheckDestroy:  testAccCheckKubernetesSecretDestroy,
 		Steps: []resource.TestStep{
 			{
+				Config: testAccKubernetesSecretConfig_emptyData(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.annotations.%", "2"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.annotations.TestAnnotationOne", "one"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
+					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.labels.%", "3"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.labels.TestLabelOne", "one"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.labels.TestLabelTwo", "two"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.labels.TestLabelThree", "three"),
+					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelTwo": "two", "TestLabelThree": "three"}),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "0"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "type", "Opaque"),
+				),
+			},
+			{
 				Config: testAccKubernetesSecretConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
@@ -248,6 +270,25 @@ func testAccCheckKubernetesSecretExists(n string, obj *api.Secret) resource.Test
 		*obj = *out
 		return nil
 	}
+}
+
+func testAccKubernetesSecretConfig_emptyData(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_secret" "test" {
+	metadata {
+		annotations {
+			TestAnnotationOne = "one"
+			TestAnnotationTwo = "two"
+		}
+		labels {
+			TestLabelOne = "one"
+			TestLabelTwo = "two"
+			TestLabelThree = "three"
+		}
+		name = "%s"
+	}
+	data {}
+}`, name)
 }
 
 func testAccKubernetesSecretConfig_basic(name string) string {

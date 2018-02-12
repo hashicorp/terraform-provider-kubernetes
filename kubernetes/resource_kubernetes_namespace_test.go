@@ -32,6 +32,22 @@ func TestAccKubernetesNamespace_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.name", nsName),
+					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.uid"),
+				),
+			},
+			{
+				Config: testAccKubernetesNamespaceConfig_addLabels(nsName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesNamespaceExists("kubernetes_namespace.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.annotations.%", "2"),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.annotations.TestAnnotationOne", "one"),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
+					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
 					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.labels.TestLabelTwo", "two"),
@@ -259,6 +275,19 @@ func testAccCheckKubernetesNamespaceExists(n string, obj *api.Namespace) resourc
 }
 
 func testAccKubernetesNamespaceConfig_basic(nsName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_namespace" "test" {
+	metadata {
+		annotations {
+			TestAnnotationOne = "one"
+			TestAnnotationTwo = "two"
+		}
+		name = "%s"
+	}
+}`, nsName)
+}
+
+func testAccKubernetesNamespaceConfig_addLabels(nsName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
 	metadata {

@@ -66,6 +66,7 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 													Type:        schema.TypeString,
 													Description: networkPolicyPortProtocolDoc,
 													Optional:    true,
+													Default:     "TCP",
 												},
 											},
 										},

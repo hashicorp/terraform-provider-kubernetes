@@ -280,7 +280,6 @@ resource "kubernetes_network_policy" "test" {
         ports = [
           {
             port     = "http"
-            protocol = "TCP"
           },
           {
             port     = "8125"

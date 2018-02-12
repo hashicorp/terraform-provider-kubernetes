@@ -145,13 +145,13 @@ func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData
 	ops := make([]PatchOperation, 0, 0)
 	if d.HasChange(keyPrefix + "ingress") {
 		ops = append(ops, &ReplaceOperation{
-			Path:  pathPrefix + "ingress",
-			Value: expandLabelSelector(d.Get(keyPrefix + "ingress").([]interface{})),
+			Path:  pathPrefix + "/ingress",
+			Value: expandNetworkPolicyIngress(d.Get(keyPrefix + "ingress").([]interface{})),
 		})
 	}
 	if d.HasChange(keyPrefix + "pod_selector") {
 		ops = append(ops, &ReplaceOperation{
-			Path:  pathPrefix + "podSelector",
+			Path:  pathPrefix + "/podSelector",
 			Value: expandLabelSelector(d.Get(keyPrefix + "pod_selector").([]interface{})),
 		})
 	}

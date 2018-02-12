@@ -19,7 +19,7 @@ resource "kubernetes_storage_class" "example" {
   metadata {
     name = "terraform-example"
   }
-  provisioner = "kubernetes.io/gce-pd"
+  storage_provisioner = "kubernetes.io/gce-pd"
   parameters {
   	type = "pd-standard"
   }

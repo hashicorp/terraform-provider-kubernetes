@@ -103,12 +103,11 @@ func TestDiffStringMap(t *testing.T) {
 			},
 			ExpectedOps: []PatchOperation{
 				&AddOperation{
-					Path:  "/parent/one",
-					Value: "111",
-				},
-				&AddOperation{
-					Path:  "/parent/two",
-					Value: "222",
+					Path: "/parent",
+					Value: map[string]interface{}{
+						"one": "111",
+						"two": "222",
+					},
 				},
 			},
 		},

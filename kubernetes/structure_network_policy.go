@@ -48,7 +48,7 @@ func flattenNetworkPolicyIngressPorts(in []v1.NetworkPolicyPort) []interface{} {
 			}
 		}
 		if port.Protocol != nil {
-			m["protocol"] = *port.Protocol
+			m["protocol"] = string(*port.Protocol)
 		}
 		att[i] = m
 	}

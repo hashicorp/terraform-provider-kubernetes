@@ -116,7 +116,7 @@ func resourceKubernetesStorageClassDelete(d *schema.ResourceData, meta interface
 		return err
 	}
 
-	log.Printf("[INFO] Config map %s deleted", name)
+	log.Printf("[INFO] Storage class %s deleted", name)
 
 	d.SetId("")
 	return nil

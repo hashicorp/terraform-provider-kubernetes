@@ -133,7 +133,7 @@ func expandNetworkPolicyIngressFrom(l []interface{}) []v1.NetworkPolicyPeer {
 			obj[i].NamespaceSelector = expandLabelSelector(v)
 		}
 		if v, ok := in["pod_selector"].([]interface{}); ok && len(v) > 0 {
-			obj[i].NamespaceSelector = expandLabelSelector(v)
+			obj[i].PodSelector = expandLabelSelector(v)
 		}
 	}
 	return obj

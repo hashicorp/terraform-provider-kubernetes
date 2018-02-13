@@ -124,6 +124,24 @@ func flattenFCVolumeSource(in *v1.FCVolumeSource) []interface{} {
 	return []interface{}{att}
 }
 
+func flattenFlexPersistentVolumeSource(in *v1.FlexPersistentVolumeSource) []interface{} {
+	att := make(map[string]interface{})
+	att["driver"] = in.Driver
+	if in.FSType != "" {
+		att["fs_type"] = in.FSType
+	}
+	if in.SecretRef != nil {
+		att["secret_ref"] = flattenSecretReference(in.SecretRef)
+	}
+	if in.ReadOnly != false {
+		att["read_only"] = in.ReadOnly
+	}
+	if len(in.Options) > 0 {
+		att["options"] = in.Options
+	}
+	return []interface{}{att}
+}
+
 func flattenFlexVolumeSource(in *v1.FlexVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["driver"] = in.Driver
@@ -288,7 +306,7 @@ func flattenPersistentVolumeSource(in v1.PersistentVolumeSource) []interface{} {
 		att["flocker"] = flattenFlockerVolumeSource(in.Flocker)
 	}
 	if in.FlexVolume != nil {
-		att["flex_volume"] = flattenFlexVolumeSource(in.FlexVolume)
+		att["flex_volume"] = flattenFlexPersistentVolumeSource(in.FlexVolume)
 	}
 	if in.AzureFile != nil {
 		att["azure_file"] = flattenAzureFilePersistentVolumeSource(in.AzureFile)
@@ -570,6 +588,29 @@ func expandFCVolumeSource(l []interface{}) *v1.FCVolumeSource {
 	return obj
 }
 
+func expandFlexPersistentVolumeSource(l []interface{}) *v1.FlexPersistentVolumeSource {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.FlexPersistentVolumeSource{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.FlexPersistentVolumeSource{
+		Driver: in["driver"].(string),
+	}
+	if v, ok := in["fs_type"].(string); ok {
+		obj.FSType = v
+	}
+	if v, ok := in["secret_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.SecretRef = expandSecretReference(v)
+	}
+	if v, ok := in["read_only"].(bool); ok {
+		obj.ReadOnly = v
+	}
+	if v, ok := in["options"].(map[string]interface{}); ok && len(v) > 0 {
+		obj.Options = expandStringMap(v)
+	}
+	return obj
+}
+
 func expandFlexVolumeSource(l []interface{}) *v1.FlexVolumeSource {
 	if len(l) == 0 || l[0] == nil {
 		return &v1.FlexVolumeSource{}
@@ -778,7 +819,7 @@ func expandPersistentVolumeSource(l []interface{}) v1.PersistentVolumeSource {
 		obj.Flocker = expandFlockerVolumeSource(v)
 	}
 	if v, ok := in["flex_volume"].([]interface{}); ok && len(v) > 0 {
-		obj.FlexVolume = expandFlexVolumeSource(v)
+		obj.FlexVolume = expandFlexPersistentVolumeSource(v)
 	}
 	if v, ok := in["azure_file"].([]interface{}); ok && len(v) > 0 {
 		obj.AzureFile = expandAzureFilePersistentVolumeSource(v)

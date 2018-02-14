@@ -5,11 +5,11 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	api "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	api "k8s.io/client-go/pkg/apis/networking/v1"
 )
 
 // Use generated swagger docs from kubernetes' client-go to avoid copy/pasting them here

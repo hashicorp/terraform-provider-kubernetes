@@ -13,10 +13,14 @@ import (
 func flattenNetworkPolicySpec(in v1.NetworkPolicySpec) []interface{} {
 	att := make(map[string]interface{})
 	att["ingress"] = flattenNetworkPolicyIngress(in.Ingress)
+	att["egress"] = flattenNetworkPolicyEgress(in.Egress)
 	if len(in.PodSelector.MatchExpressions) > 0 || len(in.PodSelector.MatchLabels) > 0 {
 		att["pod_selector"] = flattenLabelSelector(&in.PodSelector)
 	} else {
 		att["pod_selector"] = []interface{}{make(map[string]interface{})}
+	}
+	if len(in.PolicyTypes) > 0 {
+		att["policy_types"] = in.PolicyTypes
 	}
 	return []interface{}{att}
 }
@@ -26,17 +30,32 @@ func flattenNetworkPolicyIngress(in []v1.NetworkPolicyIngressRule) []interface{}
 	for i, ingress := range in {
 		m := make(map[string]interface{})
 		if ingress.Ports != nil && len(ingress.Ports) > 0 {
-			m["ports"] = flattenNetworkPolicyIngressPorts(ingress.Ports)
+			m["ports"] = flattenNetworkPolicyPorts(ingress.Ports)
 		}
 		if ingress.From != nil && len(ingress.From) > 0 {
-			m["from"] = flattenNetworkPolicyIngressFrom(ingress.From)
+			m["from"] = flattenNetworkPolicyPeer(ingress.From)
 		}
 		att[i] = m
 	}
 	return att
 }
 
-func flattenNetworkPolicyIngressPorts(in []v1.NetworkPolicyPort) []interface{} {
+func flattenNetworkPolicyEgress(in []v1.NetworkPolicyEgressRule) []interface{} {
+	att := make([]interface{}, len(in), len(in))
+	for i, egress := range in {
+		m := make(map[string]interface{})
+		if egress.Ports != nil && len(egress.Ports) > 0 {
+			m["ports"] = flattenNetworkPolicyPorts(egress.Ports)
+		}
+		if egress.To != nil && len(egress.To) > 0 {
+			m["to"] = flattenNetworkPolicyPeer(egress.To)
+		}
+		att[i] = m
+	}
+	return att
+}
+
+func flattenNetworkPolicyPorts(in []v1.NetworkPolicyPort) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, port := range in {
 		m := make(map[string]interface{})
@@ -55,19 +74,33 @@ func flattenNetworkPolicyIngressPorts(in []v1.NetworkPolicyPort) []interface{} {
 	return att
 }
 
-func flattenNetworkPolicyIngressFrom(in []v1.NetworkPolicyPeer) []interface{} {
+func flattenNetworkPolicyPeer(in []v1.NetworkPolicyPeer) []interface{} {
 	att := make([]interface{}, len(in), len(in))
-	for i, from := range in {
+	for i, peer := range in {
 		m := make(map[string]interface{})
-		if from.NamespaceSelector != nil {
-			m["namespace_selector"] = flattenLabelSelector(from.NamespaceSelector)
+		if peer.IPBlock != nil {
+			m["ip_block"] = flattenIPBlock(peer.IPBlock)
 		}
-		if from.PodSelector != nil {
-			m["pod_selector"] = flattenLabelSelector(from.PodSelector)
+		if peer.NamespaceSelector != nil {
+			m["namespace_selector"] = flattenLabelSelector(peer.NamespaceSelector)
+		}
+		if peer.PodSelector != nil {
+			m["pod_selector"] = flattenLabelSelector(peer.PodSelector)
 		}
 		att[i] = m
 	}
 	return att
+}
+
+func flattenIPBlock(in *v1.IPBlock) []interface{} {
+	att := make(map[string]interface{})
+	if in.CIDR != "" {
+		att["cidr"] = in.CIDR
+	}
+	if len(in.Except) > 0 {
+		att["except"] = in.Except
+	}
+	return []interface{}{att}
 }
 
 // Expanders
@@ -92,17 +125,34 @@ func expandNetworkPolicyIngress(l []interface{}) []v1.NetworkPolicyIngressRule {
 			in := ingress.(map[string]interface{})
 			obj[i] = v1.NetworkPolicyIngressRule{}
 			if v, ok := in["ports"].([]interface{}); ok && len(v) > 0 {
-				obj[i].Ports = expandNetworkPolicyIngressPorts(v)
+				obj[i].Ports = expandNetworkPolicyPorts(v)
 			}
 			if v, ok := in["from"].([]interface{}); ok && len(v) > 0 {
-				obj[i].From = expandNetworkPolicyIngressFrom(v)
+				obj[i].From = expandNetworkPolicyPeer(v)
 			}
 		}
 	}
 	return obj
 }
 
-func expandNetworkPolicyIngressPorts(l []interface{}) []v1.NetworkPolicyPort {
+func expandNetworkPolicyEgress(l []interface{}) []v1.NetworkPolicyEgressRule {
+	obj := make([]v1.NetworkPolicyEgressRule, len(l), len(l))
+	for i, ingress := range l {
+		if ingress != nil {
+			in := ingress.(map[string]interface{})
+			obj[i] = v1.NetworkPolicyEgressRule{}
+			if v, ok := in["ports"].([]interface{}); ok && len(v) > 0 {
+				obj[i].Ports = expandNetworkPolicyPorts(v)
+			}
+			if v, ok := in["to"].([]interface{}); ok && len(v) > 0 {
+				obj[i].To = expandNetworkPolicyPeer(v)
+			}
+		}
+	}
+	return obj
+}
+
+func expandNetworkPolicyPorts(l []interface{}) []v1.NetworkPolicyPort {
 	obj := make([]v1.NetworkPolicyPort, len(l), len(l))
 	for i, port := range l {
 		in := port.(map[string]interface{})
@@ -125,10 +175,13 @@ func expandNetworkPolicyIngressPorts(l []interface{}) []v1.NetworkPolicyPort {
 	return obj
 }
 
-func expandNetworkPolicyIngressFrom(l []interface{}) []v1.NetworkPolicyPeer {
+func expandNetworkPolicyPeer(l []interface{}) []v1.NetworkPolicyPeer {
 	obj := make([]v1.NetworkPolicyPeer, len(l), len(l))
-	for i, from := range l {
-		in := from.(map[string]interface{})
+	for i, peer := range l {
+		in := peer.(map[string]interface{})
+		if v, ok := in["ip_block"].([]interface{}); ok && len(v) > 0 {
+			obj[i].IPBlock = expandIPBlock(v)
+		}
 		if v, ok := in["namespace_selector"].([]interface{}); ok && len(v) > 0 {
 			obj[i].NamespaceSelector = expandLabelSelector(v)
 		}
@@ -139,20 +192,65 @@ func expandNetworkPolicyIngressFrom(l []interface{}) []v1.NetworkPolicyPeer {
 	return obj
 }
 
+func expandIPBlock(l []interface{}) *v1.IPBlock {
+	obj := &v1.IPBlock{}
+	if len(l) == 0 || l[0] == nil {
+		return &v1.IPBlock{}
+	}
+	in := l[0].(map[string]interface{})
+	if v, ok := in["cidr"].(string); ok && v != "" {
+		obj.CIDR = v
+	}
+	if v, ok := in["except"].([]interface{}); ok && len(v) > 0 {
+		obj.Except = expandStringSlice(v)
+	}
+	return obj
+}
+
 // Patchers
 
 func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData) PatchOperations {
 	ops := make([]PatchOperation, 0, 0)
 	if d.HasChange(keyPrefix + "ingress") {
-		ops = append(ops, &ReplaceOperation{
-			Path:  pathPrefix + "/ingress",
-			Value: expandNetworkPolicyIngress(d.Get(keyPrefix + "ingress").([]interface{})),
-		})
+		oldV, _ := d.GetChange(keyPrefix + "ingress")
+		ingress := expandNetworkPolicyIngress(d.Get(keyPrefix + "ingress").([]interface{}))
+		if len(oldV.([]interface{})) == 0 {
+			ops = append(ops, &AddOperation{
+				Path:  pathPrefix + "/ingress",
+				Value: ingress,
+			})
+		} else {
+			ops = append(ops, &ReplaceOperation{
+				Path:  pathPrefix + "/ingress",
+				Value: ingress,
+			})
+		}
+	}
+	if d.HasChange(keyPrefix + "egress") {
+		oldV, _ := d.GetChange(keyPrefix + "egress")
+		egress := expandNetworkPolicyEgress(d.Get(keyPrefix + "egress").([]interface{}))
+		if len(oldV.([]interface{})) == 0 {
+			ops = append(ops, &AddOperation{
+				Path:  pathPrefix + "/egress",
+				Value: egress,
+			})
+		} else {
+			ops = append(ops, &ReplaceOperation{
+				Path:  pathPrefix + "/egress",
+				Value: egress,
+			})
+		}
 	}
 	if d.HasChange(keyPrefix + "pod_selector") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/podSelector",
 			Value: expandLabelSelector(d.Get(keyPrefix + "pod_selector").([]interface{})),
+		})
+	}
+	if d.HasChange(keyPrefix + "policy_types") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "/policyTypes",
+			Value: expandStringSlice(d.Get(keyPrefix + "policy_types").([]interface{})),
 		})
 	}
 	return ops

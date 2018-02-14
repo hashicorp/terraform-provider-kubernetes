@@ -17,12 +17,19 @@ var (
 	networkPolicySpecDoc                  = api.NetworkPolicy{}.SwaggerDoc()["spec"]
 	networkPolicySpecIngressDoc           = api.NetworkPolicySpec{}.SwaggerDoc()["ingress"]
 	networkPolicyIngressRulePortsDoc      = api.NetworkPolicyIngressRule{}.SwaggerDoc()["ports"]
+	networkPolicyIngressRuleFromDoc       = api.NetworkPolicyIngressRule{}.SwaggerDoc()["from"]
+	networkPolicySpecEgressDoc            = api.NetworkPolicySpec{}.SwaggerDoc()["egress"]
+	networkPolicyEgressRulePortsDoc       = api.NetworkPolicyEgressRule{}.SwaggerDoc()["ports"]
+	networkPolicyEgressRuleToDoc          = api.NetworkPolicyEgressRule{}.SwaggerDoc()["to"]
 	networkPolicyPortPortDoc              = api.NetworkPolicyPort{}.SwaggerDoc()["port"]
 	networkPolicyPortProtocolDoc          = api.NetworkPolicyPort{}.SwaggerDoc()["protocol"]
-	networkPolicyIngressRuleFromDoc       = api.NetworkPolicyIngressRule{}.SwaggerDoc()["from"]
+	networkPolicyPeerIpBlockDoc           = api.NetworkPolicyPeer{}.SwaggerDoc()["ipBlock"]
+	ipBlockCidrDoc                        = api.IPBlock{}.SwaggerDoc()["cidr"]
+	ipBlockExceptDoc                      = api.IPBlock{}.SwaggerDoc()["except"]
 	networkPolicyPeerNamespaceSelectorDoc = api.NetworkPolicyPeer{}.SwaggerDoc()["namespaceSelector"]
 	networkPolicyPeerPodSelectorDoc       = api.NetworkPolicyPeer{}.SwaggerDoc()["podSelector"]
 	networkPolicySpecPodSelectorDoc       = api.NetworkPolicySpec{}.SwaggerDoc()["podSelector"]
+	networkPolicySpecPolicyTypesDoc       = api.NetworkPolicySpec{}.SwaggerDoc()["policyTypes"]
 )
 
 func resourceKubernetesNetworkPolicy() *schema.Resource {
@@ -77,6 +84,104 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 										Optional:    true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
+												"ip_block": {
+													Type:        schema.TypeList,
+													Description: networkPolicyPeerIpBlockDoc,
+													Optional:    true,
+													MaxItems:    1,
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"cidr": {
+																Type:        schema.TypeString,
+																Description: ipBlockCidrDoc,
+																Optional:    true,
+															},
+															"except": {
+																Type:        schema.TypeList,
+																Description: ipBlockExceptDoc,
+																Optional:    true,
+																Elem:        &schema.Schema{Type: schema.TypeString},
+															},
+														},
+													},
+												},
+												"namespace_selector": {
+													Type:        schema.TypeList,
+													Description: networkPolicyPeerNamespaceSelectorDoc,
+													Optional:    true,
+													MaxItems:    1,
+													Elem: &schema.Resource{
+														Schema: labelSelectorFields(),
+													},
+												},
+												"pod_selector": {
+													Type:        schema.TypeList,
+													Description: networkPolicyPeerPodSelectorDoc,
+													Optional:    true,
+													MaxItems:    1,
+													Elem: &schema.Resource{
+														Schema: labelSelectorFields(),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						"egress": {
+							Type:        schema.TypeList,
+							Description: networkPolicySpecEgressDoc,
+							Optional:    true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"ports": {
+										Type:        schema.TypeList,
+										Description: networkPolicyEgressRulePortsDoc,
+										Optional:    true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"port": {
+													Type:        schema.TypeString,
+													Description: networkPolicyPortPortDoc,
+													Optional:    true,
+												},
+												"protocol": {
+													Type:        schema.TypeString,
+													Description: networkPolicyPortProtocolDoc,
+													Optional:    true,
+													Default:     "TCP",
+												},
+											},
+										},
+									},
+									"to": {
+										Type:        schema.TypeList,
+										Description: networkPolicyEgressRuleToDoc,
+										Optional:    true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"ip_block": {
+													Type:        schema.TypeList,
+													Description: networkPolicyPeerIpBlockDoc,
+													Optional:    true,
+													MaxItems:    1,
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"cidr": {
+																Type:        schema.TypeString,
+																Description: ipBlockCidrDoc,
+																Optional:    true,
+															},
+															"except": {
+																Type:        schema.TypeList,
+																Description: ipBlockExceptDoc,
+																Optional:    true,
+																Elem:        &schema.Schema{Type: schema.TypeString},
+															},
+														},
+													},
+												},
 												"namespace_selector": {
 													Type:        schema.TypeList,
 													Description: networkPolicyPeerNamespaceSelectorDoc,
@@ -109,6 +214,14 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: labelSelectorFields(),
 							},
+						},
+						"policy_types": {
+							Type:        schema.TypeList,
+							Description: networkPolicySpecPolicyTypesDoc,
+							Optional:    true,
+							MaxItems:    2,
+							Computed:    true,
+							Elem:        &schema.Schema{Type: schema.TypeString},
 						},
 					},
 				},

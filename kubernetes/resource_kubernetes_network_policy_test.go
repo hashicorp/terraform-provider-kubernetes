@@ -127,10 +127,68 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.0.protocol", "TCP"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.1.port", "statsd"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.1.protocol", "UDP"),
-					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.namespace_selector.#", "0"),
-					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.0.match_labels.app", "myapp"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.ip_block.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.ip_block.0.cidr", "10.0.0.0/8"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.ip_block.0.except.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.ip_block.0.except.0", "10.0.0.0/24"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.ip_block.0.except.1", "10.0.1.0/24"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.1.ip_block.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.1.namespace_selector.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.1.pod_selector.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.1.pod_selector.0.match_labels.app", "myapp"),
+				),
+			},
+			{
+				Config: testAccKubernetesNetworkPolicyConfig_specModified3(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesNetworkPolicyExists("kubernetes_network_policy.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "0"),
+					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.%", "0"),
+					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_expressions.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_expressions.0.key", "name"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_expressions.0.operator", "In"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_expressions.0.values.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_expressions.0.values.1742479128", "webfront"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_expressions.0.values.2902841359", "api"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.0.port", "http"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.0.protocol", "TCP"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.1.port", "statsd"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.1.protocol", "UDP"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.ip_block.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.ip_block.0.cidr", "10.0.0.0/8"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.ip_block.0.except.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.ip_block.0.except.0", "10.0.0.0/24"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.ip_block.0.except.1", "10.0.1.0/24"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.1.ip_block.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.1.namespace_selector.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.1.pod_selector.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.1.pod_selector.0.match_labels.app", "myapp"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.ports.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.ports.0.port", "statsd"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.ports.0.protocol", "UDP"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.to.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.to.0.ip_block.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.to.0.ip_block.0.cidr", "10.0.0.0/8"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.to.0.ip_block.0.except.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.to.0.ip_block.0.except.0", "10.0.0.0/24"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.to.0.ip_block.0.except.1", "10.0.1.0/24"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.to.0.pod_selector.#", "0"),
 				),
 			},
 		},
@@ -335,10 +393,97 @@ resource "kubernetes_network_policy" "test" {
 
         from = [
           {
+			ip_block {
+              cidr = "10.0.0.0/8"
+              except = [
+                "10.0.0.0/24",
+                "10.0.1.0/24",
+              ]
+            }
+          },
+          {
             pod_selector {
               match_labels = {
                 app = "myapp"
               }
+            }
+          },
+        ]
+      },
+    ]
+  }
+}
+	`, name)
+}
+
+func testAccKubernetesNetworkPolicyConfig_specModified3(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_network_policy" "test" {
+  metadata {
+    name      = "%s"
+    namespace = "default"
+  }
+
+  spec {
+    pod_selector {
+      match_expressions {
+        key      = "name"
+        operator = "In"
+        values   = ["webfront", "api"]
+      }
+    }
+
+    ingress = [
+      {
+        ports = [
+          {
+            port     = "http"
+            protocol = "TCP"
+          },
+          {
+            port     = "statsd"
+            protocol = "UDP"
+          },
+        ]
+
+        from = [
+          {
+			ip_block {
+              cidr = "10.0.0.0/8"
+              except = [
+                "10.0.0.0/24",
+                "10.0.1.0/24",
+              ]
+            }
+          },
+          {
+            pod_selector {
+              match_labels = {
+                app = "myapp"
+              }
+            }
+          },
+        ]
+      },
+    ]
+
+    egress = [
+      {
+        ports = [
+          {
+            port     = "statsd"
+            protocol = "UDP"
+          },
+        ]
+
+        to = [
+          {
+			ip_block {
+              cidr = "10.0.0.0/8"
+              except = [
+                "10.0.0.0/24",
+                "10.0.1.0/24",
+              ]
             }
           },
         ]

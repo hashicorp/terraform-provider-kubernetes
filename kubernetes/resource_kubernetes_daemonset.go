@@ -3,9 +3,11 @@ package kubernetes
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/terraform"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
@@ -23,6 +25,8 @@ func resourceKubernetesDaemonSet() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		SchemaVersion: 1,
+		MigrateState:  resourceKubernetesDaemonSetStateUpgrader,
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -92,11 +96,39 @@ func resourceKubernetesDaemonSet() *schema.Resource {
 						},
 						"template": {
 							Type:        schema.TypeList,
-							Description: "Describes the pod that will be created if insufficient replicas are detected. This takes precedence over a TemplateRef. More info: http://kubernetes.io/docs/user-guide/replication-controller#pod-template",
+							Description: "Template describes the pods that will be created.",
 							Required:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
-								Schema: podSpecFields(false),
+								Schema: map[string]*schema.Schema{
+									"metadata": metadataSchema("daemonsetSpec", true),
+									"spec": &schema.Schema{
+										Type:        schema.TypeList,
+										Description: "Spec describes the pods that will be created.",
+										Required:    true,
+										MaxItems:    1,
+										Elem: &schema.Resource{
+											Schema: podSpecFields(false),
+										},
+									},
+									"active_deadline_seconds":          relocatedAttribute("active_deadline_seconds"),
+									"container":                        relocatedAttribute("container"),
+									"dns_policy":                       relocatedAttribute("dns_policy"),
+									"host_ipc":                         relocatedAttribute("host_ipc"),
+									"host_network":                     relocatedAttribute("host_network"),
+									"host_pid":                         relocatedAttribute("host_pid"),
+									"hostname":                         relocatedAttribute("hostname"),
+									"init_container":                   relocatedAttribute("init_container"),
+									"node_name":                        relocatedAttribute("node_name"),
+									"node_selector":                    relocatedAttribute("node_selector"),
+									"restart_policy":                   relocatedAttribute("restart_policy"),
+									"security_context":                 relocatedAttribute("security_context"),
+									"service_account_name":             relocatedAttribute("service_account_name"),
+									"automount_service_account_token":  relocatedAttribute("automount_service_account_token"),
+									"subdomain":                        relocatedAttribute("subdomain"),
+									"termination_grace_period_seconds": relocatedAttribute("termination_grace_period_seconds"),
+									"volume": relocatedAttribute("volume"),
+								},
 							},
 						},
 					},
@@ -114,7 +146,9 @@ func resourceKubernetesDaemonSetCreate(d *schema.ResourceData, meta interface{})
 	if err != nil {
 		return err
 	}
-	spec.Template.ObjectMeta.Annotations = metadata.Annotations
+	if metadata.Namespace == "" {
+		metadata.Namespace = "default"
+	}
 
 	daemonset := v1beta1.DaemonSet{
 		ObjectMeta: metadata,
@@ -151,7 +185,7 @@ func resourceKubernetesDaemonSetRead(d *schema.ResourceData, meta interface{}) e
 		return err
 	}
 
-	spec, err := flattenDaemonSetSpec(daemonset.Spec)
+	spec, err := flattenDaemonSetSpec(daemonset.Spec, d)
 	if err != nil {
 		return err
 	}
@@ -227,4 +261,72 @@ func resourceKubernetesDaemonSetExists(d *schema.ResourceData, meta interface{})
 		log.Printf("[DEBUG] Received error: %#v", err)
 	}
 	return true, err
+}
+
+func resourceKubernetesDaemonSetStateUpgrader(
+	v int, is *terraform.InstanceState, meta interface{}) (*terraform.InstanceState, error) {
+	if is.Empty() {
+		log.Println("[DEBUG] Empty InstanceState; nothing to migrate.")
+		return is, nil
+	}
+
+	var err error
+
+	switch v {
+	case 0:
+		log.Println("[INFO] Found Kubernetes DaemonSet State v0; migrating to v1")
+		is, err = migrateDaemonSetStateV0toV1(is)
+		if err != nil {
+			return is, err
+		}
+
+	default:
+		return is, fmt.Errorf("Unexpected schema version: %d", v)
+	}
+
+	return is, err
+}
+
+// This deployment resource originally had the podSpec directly below spec.template level
+// This migration moves the state to spec.template.spec match the Kubernetes documented structure
+func migrateDaemonSetStateV0toV1(is *terraform.InstanceState) (*terraform.InstanceState, error) {
+	log.Printf("[DEBUG] Attributes before migration: %#v", is.Attributes)
+
+	newTemplate := make(map[string]string)
+
+	for k, v := range is.Attributes {
+		log.Println("[DEBUG] - checking attribute for state upgrade: ", k, v)
+		if strings.HasPrefix(k, "name") {
+			// don't clobber an existing metadata.0.name value
+			if _, ok := is.Attributes["metadata.0.name"]; ok {
+				continue
+			}
+
+			newK := "metadata.0.name"
+
+			newTemplate[newK] = v
+			log.Printf("[DEBUG] moved attribute %s -> %s ", k, newK)
+			delete(is.Attributes, k)
+
+		} else if !strings.HasPrefix(k, "spec.0.template") {
+			continue
+
+		} else if strings.HasPrefix(k, "spec.0.template.0.spec") || strings.HasPrefix(k, "spec.0.template.0.metadata") {
+			continue
+
+		} else {
+			newK := strings.Replace(k, "spec.0.template.0", "spec.0.template.0.spec.0", 1)
+
+			newTemplate[newK] = v
+			log.Printf("[DEBUG] moved attribute %s -> %s ", k, newK)
+			delete(is.Attributes, k)
+		}
+	}
+
+	for k, v := range newTemplate {
+		is.Attributes[k] = v
+	}
+
+	log.Printf("[DEBUG] Attributes after migration: %#v", is.Attributes)
+	return is, nil
 }

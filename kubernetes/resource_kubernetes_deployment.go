@@ -131,6 +131,7 @@ func resourceKubernetesDeployment() *schema.Resource {
 									"host_network":                     relocatedAttribute("host_network"),
 									"host_pid":                         relocatedAttribute("host_pid"),
 									"hostname":                         relocatedAttribute("hostname"),
+									"init_container":                   relocatedAttribute("init_container"),
 									"node_name":                        relocatedAttribute("node_name"),
 									"node_selector":                    relocatedAttribute("node_selector"),
 									"restart_policy":                   relocatedAttribute("restart_policy"),
@@ -154,7 +155,7 @@ func relocatedAttribute(name string) *schema.Schema {
 	s := &schema.Schema{
 		Type:     schema.TypeString,
 		Optional: true,
-		Removed:  fmt.Sprintf("%s has been relocated to deployment/spec/template/spec/%s. Please update your Terraform config.", name, name),
+		Removed:  fmt.Sprintf("%s has been relocated to [resource]/spec/template/spec/%s. Please update your Terraform config.", name, name),
 	}
 	return s
 }

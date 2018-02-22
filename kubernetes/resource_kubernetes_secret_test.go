@@ -189,6 +189,34 @@ func TestAccKubernetesSecret_importGeneratedName(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesSecret_binaryData(t *testing.T) {
+	var conf api.Secret
+	prefix := "tf-acc-test-gen-"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_secret.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesSecretDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesSecretConfig_binaryData(prefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "1"),
+				),
+			},
+			{
+				Config: testAccKubernetesSecretConfig_binaryData2(prefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "2"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckSecretData(m *api.Secret, expected map[string]string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(m.Data) == 0 {
@@ -326,6 +354,31 @@ resource "kubernetes_secret" "test" {
 	data {
 		one = "first"
 		two = "second"
+	}
+}`, prefix)
+}
+
+func testAccKubernetesSecretConfig_binaryData(prefix string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_secret" "test" {
+	metadata {
+		generate_name = "%s"
+	}
+	data {
+		one = "${file("./test-fixtures/binary.data")}"
+	}
+}`, prefix)
+}
+
+func testAccKubernetesSecretConfig_binaryData2(prefix string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_secret" "test" {
+	metadata {
+		generate_name = "%s"
+	}
+	data {
+		one = "${file("./test-fixtures/binary2.data")}"
+		two = "${file("./test-fixtures/binary.data")}"
 	}
 }`, prefix)
 }

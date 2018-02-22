@@ -49,7 +49,7 @@ func resourceKubernetesSecretCreate(d *schema.ResourceData, meta interface{}) er
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	secret := api.Secret{
 		ObjectMeta: metadata,
-		StringData: expandStringMap(d.Get("data").(map[string]interface{})),
+		Data:       expandStringMapToByteMap(d.Get("data").(map[string]interface{})),
 	}
 
 	if v, ok := d.GetOk("type"); ok {

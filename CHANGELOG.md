@@ -4,6 +4,10 @@ NOTES:
 
 * provider: Client library updated to support Kubernetes `1.7`
 
+BUG FIXES:
+
+* resource/kubernetes_secret: Prevent binary data corruption [GH-103]
+
 ## 1.0.1 (November 13, 2017)
 
 BUG FIXES:

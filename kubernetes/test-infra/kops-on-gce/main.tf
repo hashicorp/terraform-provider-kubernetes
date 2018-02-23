@@ -62,3 +62,7 @@ EOF
 output "cluster_name" {
   value = "${local.cluster_name}"
 }
+
+output "google_zone" {
+  value = "${data.google_compute_zones.available.names[0]}"
+}

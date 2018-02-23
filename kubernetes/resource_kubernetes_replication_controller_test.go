@@ -83,9 +83,10 @@ func TestAccKubernetesReplicationController_importBasic(t *testing.T) {
 				Config: testAccKubernetesReplicationControllerConfig_basic(name),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})
@@ -134,9 +135,10 @@ func TestAccKubernetesReplicationController_importGeneratedName(t *testing.T) {
 				Config: testAccKubernetesReplicationControllerConfig_generatedName(prefix),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})

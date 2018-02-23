@@ -190,9 +190,10 @@ func TestAccKubernetesResourceQuota_importBasic(t *testing.T) {
 				Config: testAccKubernetesResourceQuotaConfig_basic(name),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})

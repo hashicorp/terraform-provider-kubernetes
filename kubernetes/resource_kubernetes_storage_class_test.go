@@ -108,9 +108,10 @@ func TestAccKubernetesStorageClass_importBasic(t *testing.T) {
 			},
 
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})
@@ -160,9 +161,10 @@ func TestAccKubernetesStorageClass_importGeneratedName(t *testing.T) {
 			},
 
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})

@@ -232,7 +232,7 @@ func flattenGitRepoVolumeSource(in *v1.GitRepoVolumeSource) []interface{} {
 func flattenDownwardAPIVolumeSource(in *v1.DownwardAPIVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	if in.DefaultMode != nil {
-		att["default_mode"] = in.DefaultMode
+		att["default_mode"] = int(*in.DefaultMode)
 	}
 	if len(in.Items) > 0 {
 		att["items"] = flattenDownwardAPIVolumeFile(in.Items)

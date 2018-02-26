@@ -41,7 +41,7 @@ func TestAccKubernetesPersistentVolumeClaim_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1254135962", "ReadWriteMany"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
@@ -91,7 +91,7 @@ func TestAccKubernetesPersistentVolumeClaim_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1254135962", "ReadWriteMany"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
@@ -184,7 +184,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1254135962", "ReadWriteMany"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
@@ -207,7 +207,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1254135962", "ReadWriteMany"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
@@ -248,7 +248,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T
 // 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.self_link"),
 // 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
 // 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-// 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1254135962", "ReadWriteMany"),
+// 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
 // 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
 // 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
 // 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
@@ -286,7 +286,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T
 // 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.self_link"),
 // 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
 // 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-// 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1254135962", "ReadWriteMany"),
+// 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
 // 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
 // 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
 // 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
@@ -333,7 +333,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeUpdate(t *testing.
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1254135962", "ReadWriteMany"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
@@ -357,7 +357,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeUpdate(t *testing.
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1254135962", "ReadWriteMany"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
@@ -403,7 +403,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_storageClass(t *testing.
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1254135962", "ReadWriteMany"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
@@ -430,7 +430,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_storageClass(t *testing.
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1254135962", "ReadWriteMany"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
@@ -529,7 +529,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 		name = "%s"
 	}
 	spec {
-		access_modes = ["ReadWriteMany"]
+		access_modes = ["ReadWriteOnce"]
 		resources {
 			requests {
 				storage = "5Gi"
@@ -564,7 +564,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 		name = "%s"
 	}
 	spec {
-		access_modes = ["ReadWriteMany"]
+		access_modes = ["ReadWriteOnce"]
 		resources {
 			requests {
 				storage = "5Gi"
@@ -593,7 +593,7 @@ resource "kubernetes_persistent_volume" "test" {
 		capacity {
 			storage = "10Gi"
 		}
-		access_modes = ["ReadWriteMany"]
+		access_modes = ["ReadWriteOnce"]
 		persistent_volume_source {
 			gce_persistent_disk {
 				pd_name = "${google_compute_disk.test.name}"
@@ -615,7 +615,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 		name = "%s"
 	}
 	spec {
-		access_modes = ["ReadWriteMany"]
+		access_modes = ["ReadWriteOnce"]
 		resources {
 			requests {
 				storage = "5Gi"
@@ -637,7 +637,7 @@ resource "kubernetes_persistent_volume" "test" {
 		capacity {
 			storage = "10Gi"
 		}
-		access_modes = ["ReadWriteMany"]
+		access_modes = ["ReadWriteOnce"]
 		persistent_volume_source {
 			gce_persistent_disk {
 				pd_name = "${google_compute_disk.test.name}"
@@ -659,7 +659,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 		name = "%s"
 	}
 	spec {
-		access_modes = ["ReadWriteMany"]
+		access_modes = ["ReadWriteOnce"]
 		resources {
 			requests {
 				storage = "5Gi"
@@ -681,7 +681,7 @@ resource "kubernetes_persistent_volume" "test2" {
 		capacity {
 			storage = "10Gi"
 		}
-		access_modes = ["ReadWriteMany"]
+		access_modes = ["ReadWriteOnce"]
 		persistent_volume_source {
 			gce_persistent_disk {
 				pd_name = "${google_compute_disk.test.name}"
@@ -703,7 +703,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 		name = "%s"
 	}
 	spec {
-		access_modes = ["ReadWriteMany"]
+		access_modes = ["ReadWriteOnce"]
 		resources {
 			requests {
 				storage = "5Gi"
@@ -728,7 +728,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 // 		capacity {
 // 			storage = "10Gi"
 // 		}
-// 		access_modes = ["ReadWriteMany"]
+// 		access_modes = ["ReadWriteOnce"]
 // 		persistent_volume_source {
 // 			gce_persistent_disk {
 // 				pd_name = "test123"
@@ -742,7 +742,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 // 		name = "%s"
 // 	}
 // 	spec {
-// 		access_modes = ["ReadWriteMany"]
+// 		access_modes = ["ReadWriteOnce"]
 // 		resources {
 // 			requests {
 // 				storage = "5Gi"
@@ -771,7 +771,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 // 		capacity {
 // 			storage = "10Gi"
 // 		}
-// 		access_modes = ["ReadWriteMany"]
+// 		access_modes = ["ReadWriteOnce"]
 // 		persistent_volume_source {
 // 			gce_persistent_disk {
 // 				pd_name = "test123"
@@ -785,7 +785,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 // 		name = "%s"
 // 	}
 // 	spec {
-// 		access_modes = ["ReadWriteMany"]
+// 		access_modes = ["ReadWriteOnce"]
 // 		resources {
 // 			requests {
 // 				storage = "5Gi"
@@ -813,7 +813,7 @@ resource "kubernetes_persistent_volume" "test" {
 		capacity {
 			storage = "%s"
 		}
-		access_modes = ["ReadWriteMany"]
+		access_modes = ["ReadWriteOnce"]
 		persistent_volume_source {
 			gce_persistent_disk {
 				pd_name = "${google_compute_disk.test.name}"
@@ -835,7 +835,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 		name = "%s"
 	}
 	spec {
-		access_modes = ["ReadWriteMany"]
+		access_modes = ["ReadWriteOnce"]
 		resources {
 			requests {
 				storage = "5Gi"
@@ -864,7 +864,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 		name = "%s"
 	}
 	spec {
-		access_modes = ["ReadWriteMany"]
+		access_modes = ["ReadWriteOnce"]
 		resources {
 			requests {
 				storage = "5Gi"
@@ -903,7 +903,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 		name = "%s"
 	}
 	spec {
-		access_modes = ["ReadWriteMany"]
+		access_modes = ["ReadWriteOnce"]
 		resources {
 			requests {
 				storage = "5Gi"

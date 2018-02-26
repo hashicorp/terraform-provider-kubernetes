@@ -7,10 +7,12 @@ NOTES:
 IMPROVEMENTS:
 
 * resource/kubernetes_persistent_volume_claim: Improve event log polling for warnings [GH-125]
+* resource/kubernetes_persistent_volume: Add support for `storage_class_name` [GH-111]
 
 BUG FIXES:
 
 * resource/kubernetes_secret: Prevent binary data corruption [GH-103]
+* resource/kubernetes_persistent_volume: Update `persistent_volume_reclaim_policy` correctly [GH-111]
 
 ## 1.0.1 (November 13, 2017)
 

@@ -594,6 +594,7 @@ resource "kubernetes_persistent_volume" "test" {
 			storage = "10Gi"
 		}
 		access_modes = ["ReadWriteOnce"]
+		storage_class_name = "standard"
 		persistent_volume_source {
 			gce_persistent_disk {
 				pd_name = "${google_compute_disk.test.name}"
@@ -616,6 +617,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 	}
 	spec {
 		access_modes = ["ReadWriteOnce"]
+		storage_class_name = "standard"
 		resources {
 			requests {
 				storage = "5Gi"
@@ -638,6 +640,7 @@ resource "kubernetes_persistent_volume" "test" {
 			storage = "10Gi"
 		}
 		access_modes = ["ReadWriteOnce"]
+		storage_class_name = "standard"
 		persistent_volume_source {
 			gce_persistent_disk {
 				pd_name = "${google_compute_disk.test.name}"
@@ -660,6 +663,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 	}
 	spec {
 		access_modes = ["ReadWriteOnce"]
+		storage_class_name = "standard"
 		resources {
 			requests {
 				storage = "5Gi"
@@ -682,6 +686,7 @@ resource "kubernetes_persistent_volume" "test2" {
 			storage = "10Gi"
 		}
 		access_modes = ["ReadWriteOnce"]
+		storage_class_name = "standard"
 		persistent_volume_source {
 			gce_persistent_disk {
 				pd_name = "${google_compute_disk.test.name}"
@@ -704,6 +709,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 	}
 	spec {
 		access_modes = ["ReadWriteOnce"]
+		storage_class_name = "standard"
 		resources {
 			requests {
 				storage = "5Gi"
@@ -814,6 +820,7 @@ resource "kubernetes_persistent_volume" "test" {
 			storage = "%s"
 		}
 		access_modes = ["ReadWriteOnce"]
+		storage_class_name = "standard"
 		persistent_volume_source {
 			gce_persistent_disk {
 				pd_name = "${google_compute_disk.test.name}"
@@ -836,6 +843,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 	}
 	spec {
 		access_modes = ["ReadWriteOnce"]
+		storage_class_name = "standard"
 		resources {
 			requests {
 				storage = "5Gi"

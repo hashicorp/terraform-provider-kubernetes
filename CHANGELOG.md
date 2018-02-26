@@ -4,6 +4,10 @@ NOTES:
 
 * provider: Client library updated to support Kubernetes `1.7`
 
+IMPROVEMENTS:
+
+* resource/kubernetes_persistent_volume_claim: Improve event log polling for warnings [GH-125]
+
 BUG FIXES:
 
 * resource/kubernetes_secret: Prevent binary data corruption [GH-103]

@@ -190,10 +190,23 @@ func resourceKubernetesPersistentVolumeClaimCreate(d *schema.ResourceData, meta 
 		}
 		_, err = stateConf.WaitForState()
 		if err != nil {
-			lastWarnings, wErr := getLastWarningsForObject(conn, out.ObjectMeta, "PersistentVolumeClaim", 3)
+			var lastWarnings []api.Event
+			var wErr error
+
+			lastWarnings, wErr = getLastWarningsForObject(conn, out.ObjectMeta, "PersistentVolumeClaim", 3)
 			if wErr != nil {
 				return wErr
 			}
+
+			if len(lastWarnings) == 0 {
+				lastWarnings, wErr = getLastWarningsForObject(conn, meta_v1.ObjectMeta{
+					Name: out.Spec.VolumeName,
+				}, "PersistentVolume", 3)
+				if wErr != nil {
+					return wErr
+				}
+			}
+
 			return fmt.Errorf("%s%s", err, stringifyEvents(lastWarnings))
 		}
 	}

@@ -12,11 +12,15 @@ import (
 )
 
 func getLastWarningsForObject(conn *kubernetes.Clientset, metadata meta_v1.ObjectMeta, kind string, limit int) ([]api.Event, error) {
-	fs := fields.Set(map[string]string{
-		"involvedObject.name":      metadata.Name,
-		"involvedObject.namespace": metadata.Namespace,
-		"involvedObject.kind":      kind,
-	}).String()
+	m := map[string]string{
+		"involvedObject.name": metadata.Name,
+		"involvedObject.kind": kind,
+	}
+	if metadata.Namespace != "" {
+		m["involvedObject.namespace"] = metadata.Namespace
+	}
+
+	fs := fields.Set(m).String()
 	log.Printf("[DEBUG] Looking up events via this selector: %q", fs)
 	out, err := conn.CoreV1().Events(metadata.Namespace).List(meta_v1.ListOptions{
 		FieldSelector: fs,
@@ -61,7 +65,9 @@ func getLastWarningsForObject(conn *kubernetes.Clientset, metadata meta_v1.Objec
 func stringifyEvents(events []api.Event) string {
 	var output string
 	for _, e := range events {
-		output += fmt.Sprintf("\n   * %s: %s", e.Reason, e.Message)
+		output += fmt.Sprintf("\n   * %s (%s): %s: %s",
+			e.InvolvedObject.Name, e.InvolvedObject.Kind,
+			e.Reason, e.Message)
 	}
 	return output
 }

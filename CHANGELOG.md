@@ -13,6 +13,7 @@ BUG FIXES:
 
 * resource/kubernetes_secret: Prevent binary data corruption [GH-103]
 * resource/kubernetes_persistent_volume: Update `persistent_volume_reclaim_policy` correctly [GH-111]
+* resource/kubernetes_service: Update external_ips correctly on K8S 1.8+ [GH-127]
 
 ## 1.0.1 (November 13, 2017)
 

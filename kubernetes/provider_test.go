@@ -185,6 +185,13 @@ func skipIfNoGoogleCloudSettingsFound(t *testing.T) {
 	}
 }
 
+func skipIfNoAwsSettingsFound(t *testing.T) {
+	if os.Getenv("AWS_DEFAULT_REGION") == "" || os.Getenv("AWS_ZONE") == "" || os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
+		t.Skip("The environment variables AWS_DEFAULT_REGION, AWS_ZONE, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY" +
+			" must be set to run AWS tests - skipping")
+	}
+}
+
 func skipIfNoLoadBalancersAvailable(t *testing.T) {
 	// TODO: Support AWS ELBs
 	isInGke, err := isRunningInGke()

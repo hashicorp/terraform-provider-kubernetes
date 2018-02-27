@@ -236,7 +236,14 @@ func resourceKubernetesServiceUpdate(d *schema.ResourceData, meta interface{}) e
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("spec") {
-		diffOps := patchServiceSpec("spec.0.", "/spec/", d)
+		serverVersion, err := conn.ServerVersion()
+		if err != nil {
+			return err
+		}
+		diffOps, err := patchServiceSpec("spec.0.", "/spec/", d, serverVersion)
+		if err != nil {
+			return err
+		}
 		ops = append(ops, diffOps...)
 	}
 	data, err := ops.MarshalJSON()

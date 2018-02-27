@@ -1,8 +1,10 @@
 package kubernetes
 
 import (
+	gversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform/helper/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/pkg/api/v1"
 )
 
@@ -141,7 +143,7 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 
 // Patch Ops
 
-func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData) PatchOperations {
+func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *version.Info) (PatchOperations, error) {
 	ops := make([]PatchOperation, 0, 0)
 	if d.HasChange(keyPrefix + "selector") {
 		ops = append(ops, &ReplaceOperation{
@@ -180,11 +182,18 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData) Patc
 		})
 	}
 	if d.HasChange(keyPrefix + "external_ips") {
-		// If we haven't done this the deprecated field would have priority
-		ops = append(ops, &ReplaceOperation{
-			Path:  pathPrefix + "deprecatedPublicIPs",
-			Value: nil,
-		})
+		k8sVersion, err := gversion.NewVersion(v.String())
+		if err != nil {
+			return nil, err
+		}
+		v1_8_0, _ := gversion.NewVersion("1.8.0")
+		if k8sVersion.LessThan(v1_8_0) {
+			// If we haven't done this the deprecated field would have priority
+			ops = append(ops, &ReplaceOperation{
+				Path:  pathPrefix + "deprecatedPublicIPs",
+				Value: nil,
+			})
+		}
 
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "externalIPs",
@@ -197,5 +206,5 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData) Patc
 			Value: d.Get(keyPrefix + "external_name").(string),
 		})
 	}
-	return ops
+	return ops, nil
 }

@@ -242,7 +242,7 @@ func TestAccKubernetesPersistentVolume_storageClass(t *testing.T) {
 	zone := os.Getenv("GOOGLE_ZONE")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
+		PreCheck:      func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
 		IDRefreshName: "kubernetes_persistent_volume.test",
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,

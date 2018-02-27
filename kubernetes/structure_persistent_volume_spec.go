@@ -826,12 +826,19 @@ func patchPersistentVolumeSource(pathPrefix, prefix string, d *schema.ResourceDa
 
 	if d.HasChange(prefix + "host_path") {
 		oldIn, newIn := d.GetChange(prefix + "host_path")
-		if v, ok := newIn.([]interface{}); ok && len(v) > 0 {
+		oldV, oldOk := oldIn.([]interface{})
+		newV, newOk := newIn.([]interface{})
+		if oldOk && len(oldV) > 0 && newOk && len(newV) > 0 {
 			ops = append(ops, &ReplaceOperation{
 				Path:  pathPrefix + "/hostPath",
-				Value: expandHostPathVolumeSource(v),
+				Value: expandHostPathVolumeSource(newV),
 			})
-		} else if v, ok := oldIn.([]interface{}); ok && len(v) > 0 {
+		} else if newOk && len(newV) > 0 {
+			ops = append(ops, &AddOperation{
+				Path:  pathPrefix + "/hostPath",
+				Value: expandHostPathVolumeSource(newV),
+			})
+		} else {
 			ops = append(ops, &RemoveOperation{Path: pathPrefix + "/hostPath"})
 		}
 	}

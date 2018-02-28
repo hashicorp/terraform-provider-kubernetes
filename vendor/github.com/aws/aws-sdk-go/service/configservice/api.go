@@ -6582,19 +6582,16 @@ const (
 
 const (
 	// ConfigurationItemStatusOk is a ConfigurationItemStatus enum value
-	ConfigurationItemStatusOk = "OK"
+	ConfigurationItemStatusOk = "Ok"
 
-	// ConfigurationItemStatusResourceDiscovered is a ConfigurationItemStatus enum value
-	ConfigurationItemStatusResourceDiscovered = "ResourceDiscovered"
+	// ConfigurationItemStatusFailed is a ConfigurationItemStatus enum value
+	ConfigurationItemStatusFailed = "Failed"
 
-	// ConfigurationItemStatusResourceNotRecorded is a ConfigurationItemStatus enum value
-	ConfigurationItemStatusResourceNotRecorded = "ResourceNotRecorded"
+	// ConfigurationItemStatusDiscovered is a ConfigurationItemStatus enum value
+	ConfigurationItemStatusDiscovered = "Discovered"
 
-	// ConfigurationItemStatusResourceDeleted is a ConfigurationItemStatus enum value
-	ConfigurationItemStatusResourceDeleted = "ResourceDeleted"
-
-	// ConfigurationItemStatusResourceDeletedNotRecorded is a ConfigurationItemStatus enum value
-	ConfigurationItemStatusResourceDeletedNotRecorded = "ResourceDeletedNotRecorded"
+	// ConfigurationItemStatusDeleted is a ConfigurationItemStatus enum value
+	ConfigurationItemStatusDeleted = "Deleted"
 )
 
 const (

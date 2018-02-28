@@ -79,7 +79,9 @@ resource "kubernetes_service" "echoserver" {
 }
 
 resource "kubernetes_deployment" "echoserver" {
-  name = "echoserver"
+  metadata {
+    name = "echoserver"
+  }
 
   spec {
     selector {
@@ -87,12 +89,20 @@ resource "kubernetes_deployment" "echoserver" {
     }
 
     template {
-      container {
-        name  = "echoserver"
-        image = "gcr.io/google_containers/echoserver:1.4"
+      metadata {
+        labels {
+          app = "echoserver"
+        }
+      }
 
-        port {
-          container_port = 8080
+      spec {
+        container {
+          name  = "echoserver"
+          image = "gcr.io/google_containers/echoserver:1.4"
+
+          port {
+            container_port = 8080
+          }
         }
       }
     }
@@ -100,7 +110,9 @@ resource "kubernetes_deployment" "echoserver" {
 }
 
 resource "kubernetes_deployment" "cheddar" {
-  name = "cheddar-cheese"
+  metadata {
+    name = "cheddar-cheese"
+  }
 
   spec {
     selector {
@@ -108,12 +120,20 @@ resource "kubernetes_deployment" "cheddar" {
     }
 
     template {
-      container {
-        name  = "cheddar"
-        image = "errm/cheese:cheddar"
+      metadata {
+        labels {
+          app = "cheddar"
+        }
+      }
 
-        port {
-          container_port = 80
+      spec {
+        container {
+          name  = "cheddar"
+          image = "errm/cheese:cheddar"
+
+          port {
+            container_port = 80
+          }
         }
       }
     }

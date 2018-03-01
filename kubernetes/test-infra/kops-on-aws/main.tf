@@ -65,3 +65,7 @@ EOF
 output "cluster_name" {
   value = "${local.cluster_name}"
 }
+
+output "availability_zone" {
+  value = "${data.aws_availability_zones.available.names[0]}"
+}

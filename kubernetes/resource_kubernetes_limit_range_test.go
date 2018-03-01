@@ -109,6 +109,36 @@ func TestAccKubernetesLimitRange_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesLimitRange_empty(t *testing.T) {
+	var conf api.LimitRange
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_limit_range.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesLimitRangeDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesLimitRangeConfig_empty(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesLimitRangeExists("kubernetes_limit_range.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_limit_range.test", "metadata.0.annotations.%", "0"),
+					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
+					resource.TestCheckResourceAttr("kubernetes_limit_range.test", "metadata.0.labels.%", "0"),
+					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
+					resource.TestCheckResourceAttr("kubernetes_limit_range.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_limit_range.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_limit_range.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_limit_range.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_limit_range.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_limit_range.test", "spec.#", "0"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesLimitRange_generatedName(t *testing.T) {
 	var conf api.LimitRange
 	prefix := "tf-acc-test-"
@@ -303,6 +333,16 @@ func testAccCheckKubernetesLimitRangeExists(n string, obj *api.LimitRange) resou
 		*obj = *out
 		return nil
 	}
+}
+
+func testAccKubernetesLimitRangeConfig_empty(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_limit_range" "test" {
+	metadata {
+		name = "%s"
+	}
+}
+`, name)
 }
 
 func testAccKubernetesLimitRangeConfig_basic(name string) string {

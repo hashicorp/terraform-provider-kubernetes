@@ -379,6 +379,10 @@ func expandLimitRangeSpec(s []interface{}, isNew bool) (api.LimitRangeSpec, erro
 }
 
 func flattenLimitRangeSpec(in api.LimitRangeSpec) []interface{} {
+	if len(in.Limits) == 0 {
+		return []interface{}{}
+	}
+
 	out := make([]interface{}, 1)
 	limits := make([]interface{}, len(in.Limits), len(in.Limits))
 

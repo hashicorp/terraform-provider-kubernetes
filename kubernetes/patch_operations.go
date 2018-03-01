@@ -12,6 +12,15 @@ func diffStringMap(pathPrefix string, oldV, newV map[string]interface{}) PatchOp
 
 	pathPrefix = strings.TrimRight(pathPrefix, "/")
 
+	// If old value was empty, just create the object
+	if len(oldV) == 0 {
+		ops = append(ops, &AddOperation{
+			Path:  pathPrefix,
+			Value: newV,
+		})
+		return ops
+	}
+
 	// This is suboptimal for adding whole new map from scratch
 	// or deleting the whole map, but it's actually intention.
 	// There may be some other map items managed outside of TF

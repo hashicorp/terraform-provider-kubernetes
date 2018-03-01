@@ -17,6 +17,7 @@ BUG FIXES:
 * resource/kubernetes_*: Fix adding labels/annotations to resources when those were empty [GH-116]
 * resource/kubernetes_config_map: Fix adding `data` when it was empty [GH-116]
 * resource/kubernetes_secret: Fix adding `data` when it was empty [GH-116]
+* resource/kubernetes_limit_range: Avoid spurious diff when spec is empty [GH-132]
 
 ## 1.0.1 (November 13, 2017)
 

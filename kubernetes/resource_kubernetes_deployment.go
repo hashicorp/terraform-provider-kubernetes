@@ -298,7 +298,10 @@ func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}
 		return err
 	}
 
-	err = conn.ExtensionsV1beta1().Deployments(namespace).Delete(name, &metav1.DeleteOptions{})
+	policy := metav1.DeletePropagationForeground
+	err = conn.ExtensionsV1beta1().Deployments(namespace).Delete(name, &metav1.DeleteOptions{
+		PropagationPolicy: &policy,
+	})
 	if err != nil {
 		return err
 	}

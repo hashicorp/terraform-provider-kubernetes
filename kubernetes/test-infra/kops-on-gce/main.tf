@@ -51,6 +51,7 @@ EOF
   provisioner "local-exec" {
     when = "destroy"
     command = <<EOF
+export TMP_CREDS_PATH=${local.tmp_creds_location}
 export CLUSTER_NAME=${local.cluster_name}
 export BUCKET_NAME=${local.bucket_name}
 ./kops-delete.sh

@@ -15,6 +15,7 @@ BUG FIXES:
 * resource/kubernetes_persistent_volume: Update `persistent_volume_reclaim_policy` correctly [GH-111]
 * resource/kubernetes_service: Update external_ips correctly on K8S 1.8+ [GH-127]
 * resource/kubernetes_*: Fix adding labels/annotations to resources when those were empty [GH-116]
+* resource/kubernetes_*: Treat non-string label values as invalid [GH-135]
 * resource/kubernetes_config_map: Fix adding `data` when it was empty [GH-116]
 * resource/kubernetes_secret: Fix adding `data` when it was empty [GH-116]
 * resource/kubernetes_limit_range: Avoid spurious diff when spec is empty [GH-132]

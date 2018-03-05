@@ -16,23 +16,8 @@ kops create cluster --cloud=aws \
   --yes
 
 EXIT_CODE=$?
-
 if [ $EXIT_CODE == 0 ]; then
-  RETRIES=1
-  while [ 1 ]; do
-    kops validate cluster --state=s3://${BUCKET_NAME}
-    if [ $? == 0 ]; then
-      break
-    fi
-
-    sleep 5
-    echo "Retrying validation... ($RETRIES)"
-    ((RETRIES++))
-    if [ $RETRIES -gt 120 ]; then
-      echo "Bailing out after 120 retries"
-      break
-    fi
-  done
+  ../kops-waiter.sh 120
 else
   exit $EXIT_CODE
 fi

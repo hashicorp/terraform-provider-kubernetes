@@ -138,10 +138,17 @@ resource "kubernetes_stateful_set" "test" {
     }
     service_name = "%s"
     template {
-      container {
-        image = "%s"
-        name  = "tf-acc-test"
-      }
+			metadata {
+				labels {
+					app = "one"
+				}
+			}
+			spec {
+				container {
+					image = "%s"
+					name  = "tf-acc-test"
+				}
+			}
     }
   }
 }
@@ -164,10 +171,12 @@ resource "kubernetes_stateful_set" "test" {
     }
     service_name = "%s"
     template {
-      container {
-        image = "%s"
-        name  = "tf-acc-test"
-      }
+			spec {
+				container {
+					image = "%s"
+					name  = "tf-acc-test"
+				}
+			}
     }
 
 		volume_claim_templates {

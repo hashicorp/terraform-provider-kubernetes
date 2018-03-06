@@ -37,14 +37,14 @@ func TestAccKubernetesStatefulSet_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_stateful_set.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_stateful_set.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.service_name", statefulSetName),
-					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.container.0.image", imageName1),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.image", imageName1),
 				),
 			},
 			{
 				Config: testAccKubernetesStatefulSetConfig_basic(statefulSetName, imageName2),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetExists("kubernetes_stateful_set.test", &sset),
-					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.container.0.image", imageName2),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.image", imageName2),
 				),
 			},
 		},
@@ -68,16 +68,15 @@ func TestAccKubernetesStatefulSet_pvcTemplate(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetExists("kubernetes_stateful_set.test", &sset),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.name", statefulSetName),
-					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.labels.%", "1"),
-					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.labels.app", "one"),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.labels.%", "0"),
 					resource.TestCheckResourceAttrSet("kubernetes_stateful_set.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_stateful_set.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_stateful_set.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_stateful_set.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.service_name", statefulSetName),
-					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.container.0.image", imageName1),
-					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.container.0.image", imageName1),
-					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "volume_claim_templates.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.image", imageName1),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.image", imageName1),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.volume_claim_templates.#", "1"),
 				),
 			},
 		},
@@ -160,9 +159,6 @@ func testAccKubernetesStatefulSetConfig_pvcTemplate(name, image string) string {
 resource "kubernetes_stateful_set" "test" {
   metadata {
 		name = "%s"
-		labels {
-			app = "one"
-		}
   }
   spec {
     replicas = 2
@@ -171,6 +167,11 @@ resource "kubernetes_stateful_set" "test" {
     }
     service_name = "%s"
     template {
+			metadata {
+				labels {
+					app = "one"
+				}
+			}
 			spec {
 				container {
 					image = "%s"

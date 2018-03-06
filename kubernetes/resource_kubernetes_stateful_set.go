@@ -204,6 +204,19 @@ func resourceKubernetesStatefulSetRead(d *schema.ResourceData, meta interface{})
 	}
 	log.Printf("[INFO] Received statefulSet: %#v", statefulSet)
 
+	// If there are NO metadata labels defined in the top level resource,
+	// but there are some defined at the Deployment->Spec->Template->Metadata
+	// levle, the Kubernetes API will copy these to the top level.
+	// This will cause a perpetual diff for Terraform and break tests.
+	// We'll try to handle this situation by removing labels from the top
+	// level metadata if this described scenario is true
+	topLevelMetadata := expandMetadata(d.Get("metadata").([]interface{}))
+	if len(topLevelMetadata.Labels) == 0 && len(statefulSet.ObjectMeta.Labels) > 0 {
+		specMetadata := expandMetadata(d.Get("spec.0.template.0.metadata").([]interface{}))
+		for k := range specMetadata.Labels {
+			delete(statefulSet.ObjectMeta.Labels, k)
+		}
+	}
 	err = d.Set("metadata", flattenMetadata(statefulSet.ObjectMeta, d))
 	if err != nil {
 		return err

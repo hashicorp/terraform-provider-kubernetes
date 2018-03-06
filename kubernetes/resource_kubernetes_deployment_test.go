@@ -175,6 +175,26 @@ func TestAccKubernetesDeployment_initContainer(t *testing.T) {
 		},
 	})
 }
+func TestAccKubernetesDeployment_noTopLevelLabels(t *testing.T) {
+	var conf v1beta1.Deployment
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_deployment.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentWithNoTopLevelLabels(name, "nginx:1.7.8"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.#", "0"),
+				),
+			},
+		},
+	})
+}
 
 func pause() resource.TestCheckFunc {
 	return func(s *terraform.State) error {
@@ -443,6 +463,35 @@ resource "kubernetes_deployment" "test" {
 					image = "alpine"
 					command = ["echo", "'hello'"]
 				}
+				container {
+					image = "%s"
+					name  = "containername"
+				}
+			}
+    }
+  }
+}
+`, depName, imageName)
+}
+
+func testAccKubernetesDeploymentWithNoTopLevelLabels(depName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_deployment" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    selector {
+			foo = "bar"
+		}
+    template {
+			metadata {
+				labels {
+					foo = "bar"
+				}
+			}
+			spec {
 				container {
 					image = "%s"
 					name  = "containername"

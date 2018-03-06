@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform/helper/resource"
@@ -145,6 +146,36 @@ func resourceKubernetesPodRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
+	// if the Pod has automount_service_account_token = true, then the backend
+	// will automatically add an extra Volume + VolumeMount to the pod for the
+	// service account token
+	// We remove it here before flattening the PodSpec to avoid a TF diff
+	volumeConfig, _ := expandVolumes(d.Get("spec.0.volume").([]interface{}))
+	if *pod.Spec.AutomountServiceAccountToken && len(volumeConfig) != len(pod.Spec.Volumes) {
+		tokenVolumeName := ""
+		vIndex := -1
+		// there is a mismatch, loop over real volumes to find the token
+		for i, v := range pod.Spec.Volumes {
+			if strings.Contains(v.Name, fmt.Sprintf("%s-token-", pod.Spec.ServiceAccountName)) {
+				log.Printf("[INFO] found automounted token Volume [%s]", v.Name)
+				tokenVolumeName = v.Name
+				vIndex = i
+			}
+		}
+		if vIndex > -1 {
+			// remove Volume
+			log.Print("[INFO] removing automounted token Volume from spec")
+			pod.Spec.Volumes = append(pod.Spec.Volumes[:vIndex], pod.Spec.Volumes[vIndex+1:]...)
+		}
+
+		for ci, c := range pod.Spec.Containers {
+			pod.Spec.Containers[ci] = removeTokenVolumeMount(c, tokenVolumeName)
+		}
+		for ci, c := range pod.Spec.InitContainers {
+			pod.Spec.Containers[ci] = removeTokenVolumeMount(c, tokenVolumeName)
+		}
+	}
+
 	podSpec, err := flattenPodSpec(pod.Spec)
 	if err != nil {
 		return err
@@ -212,4 +243,19 @@ func resourceKubernetesPodExists(d *schema.ResourceData, meta interface{}) (bool
 		log.Printf("[DEBUG] Received error: %#v", err)
 	}
 	return true, err
+}
+
+func removeTokenVolumeMount(c api.Container, tokenName string) api.Container {
+	vmIndex := -1
+	for vi, v := range c.VolumeMounts {
+		if v.Name == tokenName {
+			vmIndex = vi
+		}
+	}
+	if vmIndex > -1 {
+		// remove VolumeMount from container
+		log.Print("[INFO] removing automounted token VolumeMount from spec")
+		c.VolumeMounts = append(c.VolumeMounts[:vmIndex], c.VolumeMounts[vmIndex+1:]...)
+	}
+	return c
 }

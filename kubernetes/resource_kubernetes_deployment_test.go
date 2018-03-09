@@ -87,6 +87,32 @@ func TestAccKubernetesDeployment_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_deployment.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.9"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.paused", "true"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.progress_deadline_seconds", "30"),
+				),
+			},
+			{
+				Config: testAccKubernetesDeploymentConfig_basic(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.%", "2"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationOne", "one"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
+					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.%", "3"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.TestLabelOne", "one"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.TestLabelTwo", "two"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.TestLabelThree", "three"),
+					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelTwo": "two", "TestLabelThree": "three"}),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_deployment.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_deployment.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_deployment.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_deployment.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.8"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.paused", "false"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.progress_deadline_seconds", "600"),
 				),
 			},
 		},
@@ -189,7 +215,7 @@ func TestAccKubernetesDeployment_noTopLevelLabels(t *testing.T) {
 				Config: testAccKubernetesDeploymentWithNoTopLevelLabels(name, "nginx:1.7.8"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.%", "0"),
 				),
 			},
 		},
@@ -337,6 +363,8 @@ resource "kubernetes_deployment" "test" {
     name = "%s"
   }
   spec {
+		paused = true
+		progress_deadline_seconds = "30"
     selector {
       TestLabelOne = "one"
       TestLabelTwo = "two"

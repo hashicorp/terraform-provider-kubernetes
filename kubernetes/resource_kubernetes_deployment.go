@@ -26,7 +26,7 @@ func resourceKubernetesDeployment() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		SchemaVersion: 1,
+		SchemaVersion: 2,
 		MigrateState:  resourceKubernetesDeploymentStateUpgrader,
 
 		Timeouts: &schema.ResourceTimeout{
@@ -54,6 +54,18 @@ func resourceKubernetesDeployment() *schema.Resource {
 							Description: "Minimum number of seconds for which a newly created pod should be ready without any of its container crashing, for it to be considered available. Defaults to 0 (pod will be considered available as soon as it is ready)",
 							Optional:    true,
 							Default:     0,
+						},
+						"paused": {
+							Type:        schema.TypeBool,
+							Description: "Indicates that the deployment is paused.",
+							Optional:    true,
+							Default:     false,
+						},
+						"progress_deadline_seconds": {
+							Type:        schema.TypeInt,
+							Description: "The maximum time in seconds for a deployment to make progress before it is considered to be failed. The deployment controller will continue to process failed deployments and a condition with a ProgressDeadlineExceeded reason will be surfaced in the deployment status. Note that progress will not be estimated during the time a deployment is paused. Defaults to 600s.",
+							Optional:    true,
+							Default:     600,
 						},
 						"replicas": {
 							Type:        schema.TypeInt,
@@ -365,9 +377,9 @@ func resourceKubernetesDeploymentStateUpgrader(
 	case 0:
 		log.Println("[INFO] Found Kubernetes Deployment State v0; migrating to v1")
 		is, err = migrateStateV0toV1(is)
-		if err != nil {
-			return is, err
-		}
+	case 1:
+		log.Println("[INFO] Found Kubernetes Deployment State v1; migrating to v2")
+		is, err = migrateStateV1toV2(is)
 
 	default:
 		return is, fmt.Errorf("Unexpected schema version: %d", v)
@@ -415,6 +427,17 @@ func migrateStateV0toV1(is *terraform.InstanceState) (*terraform.InstanceState, 
 	for k, v := range newTemplate {
 		is.Attributes[k] = v
 	}
+
+	log.Printf("[DEBUG] Attributes after migration: %#v", is.Attributes)
+	return is, nil
+}
+
+// Add schema fields: paused, progress_deadline_seconds
+func migrateStateV1toV2(is *terraform.InstanceState) (*terraform.InstanceState, error) {
+	log.Printf("[DEBUG] Attributes before migration: %#v", is.Attributes)
+
+	is.Attributes["spec.0.paused"] = "false"
+	is.Attributes["spec.0.progress_deadline_seconds"] = "600"
 
 	log.Printf("[DEBUG] Attributes after migration: %#v", is.Attributes)
 	return is, nil

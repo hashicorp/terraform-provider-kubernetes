@@ -12,7 +12,12 @@ import (
 
 func flattenDeploymentSpec(in v1beta1.DeploymentSpec, d *schema.ResourceData) ([]interface{}, error) {
 	att := make(map[string]interface{})
+
 	att["min_ready_seconds"] = in.MinReadySeconds
+	att["paused"] = in.Paused
+	if in.ProgressDeadlineSeconds != nil {
+		att["progress_deadline_seconds"] = int(*in.ProgressDeadlineSeconds)
+	}
 
 	if in.Replicas != nil {
 		att["replicas"] = *in.Replicas
@@ -63,8 +68,18 @@ func expandDeploymentSpec(deployment []interface{}) (v1beta1.DeploymentSpec, err
 		return obj, nil
 	}
 	in := deployment[0].(map[string]interface{})
+
 	obj.MinReadySeconds = int32(in["min_ready_seconds"].(int))
+	obj.Paused = in["paused"].(bool)
+	if in["progress_deadline_seconds"].(int) > 0 {
+		obj.ProgressDeadlineSeconds = ptrToInt32(int32(in["progress_deadline_seconds"].(int)))
+	}
 	obj.Replicas = ptrToInt32(int32(in["replicas"].(int)))
+
+	if in["revision_history_limit"] != nil {
+		obj.RevisionHistoryLimit = ptrToInt32(int32(in["revision_history_limit"].(int)))
+	}
+
 	obj.Selector = &metav1.LabelSelector{
 		MatchLabels: expandStringMap(in["selector"].(map[string]interface{})),
 	}

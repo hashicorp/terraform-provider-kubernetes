@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pkgApi "k8s.io/apimachinery/pkg/types"
 	kubernetes "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
@@ -138,13 +137,11 @@ func resourceKubernetesDaemonSet() *schema.Resource {
 	}
 }
 
-func resourceKubernetesDaemonSetCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
-
+func buildDaemonSetObject(d *schema.ResourceData) (*v1beta1.DaemonSet, error) {
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandDaemonSetSpec(d.Get("spec").([]interface{}))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if metadata.Namespace == "" {
 		metadata.Namespace = "default"
@@ -155,8 +152,19 @@ func resourceKubernetesDaemonSetCreate(d *schema.ResourceData, meta interface{})
 		Spec:       spec,
 	}
 
+	return &daemonset, err
+}
+
+func resourceKubernetesDaemonSetCreate(d *schema.ResourceData, meta interface{}) error {
+	conn := meta.(*kubernetes.Clientset)
+
+	daemonset, err := buildDaemonSetObject(d)
+	if err != nil {
+		return err
+	}
+
 	log.Printf("[INFO] Creating new daemonset: %#v", daemonset)
-	out, err := conn.DaemonSets(metadata.Namespace).Create(&daemonset)
+	out, err := conn.DaemonSets(daemonset.ObjectMeta.Namespace).Create(daemonset)
 	if err != nil {
 		return fmt.Errorf("Failed to create daemonset: %s", err)
 	}
@@ -180,6 +188,12 @@ func resourceKubernetesDaemonSetRead(d *schema.ResourceData, meta interface{}) e
 	}
 	log.Printf("[INFO] Received daemonset: %#v", daemonset)
 
+	daemonset.ObjectMeta.Labels = reconcileTopLevelLabels(
+		daemonset.ObjectMeta.Labels,
+		expandMetadata(d.Get("metadata").([]interface{})),
+		expandMetadata(d.Get("spec.0.template.0.metadata").([]interface{})),
+	)
+
 	err = d.Set("metadata", flattenMetadata(daemonset.ObjectMeta, d))
 	if err != nil {
 		return err
@@ -200,28 +214,15 @@ func resourceKubernetesDaemonSetRead(d *schema.ResourceData, meta interface{}) e
 
 func resourceKubernetesDaemonSetUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
-
 	namespace, name, err := idParts(d.Id())
 
-	ops := patchMetadata("metadata.0.", "/metadata/", d)
-
-	if d.HasChange("spec") {
-		spec, err := expandDaemonSetSpec(d.Get("spec").([]interface{}))
-		if err != nil {
-			return err
-		}
-
-		ops = append(ops, &ReplaceOperation{
-			Path:  "/spec",
-			Value: spec,
-		})
-	}
-	data, err := ops.MarshalJSON()
+	daemonset, err := buildDaemonSetObject(d)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return err
 	}
-	log.Printf("[INFO] Updating daemonset %q: %v", name, string(data))
-	out, err := conn.DaemonSets(namespace).Patch(name, pkgApi.JSONPatchType, data)
+
+	log.Printf("[INFO] Updating daemonset: %q", name)
+	out, err := conn.DaemonSets(namespace).Update(daemonset)
 	if err != nil {
 		return fmt.Errorf("Failed to update daemonset: %s", err)
 	}

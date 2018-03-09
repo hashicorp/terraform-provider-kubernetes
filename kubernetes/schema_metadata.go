@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func metadataFields(objectName string) map[string]*schema.Schema {
@@ -117,4 +118,21 @@ func namespacedMetadataSchema(objectName string, generatableName bool) *schema.S
 			Schema: fields,
 		},
 	}
+}
+
+// reconcileTopLevelLabels removes metadata labels added to top level
+// automatically by Kubernetes.
+// If there are NO metadata labels defined in the top level resource,
+// but there are some defined at the [Resource]->Spec->Template->Metadata
+// level, the Kubernetes API will copy these to the top level.
+// This will cause a perpetual diff for Terraform and break tests.
+// We'll try to handle this situation by removing labels from the top
+// level metadata if this described scenario is true
+func reconcileTopLevelLabels(topLevelLabels map[string]string, topMeta, specMeta metav1.ObjectMeta) map[string]string {
+	if len(topMeta.Labels) == 0 && len(topLevelLabels) > 0 {
+		for k := range specMeta.Labels {
+			delete(topLevelLabels, k)
+		}
+	}
+	return topLevelLabels
 }

@@ -105,9 +105,10 @@ func TestAccKubernetesDaemonSet_importBasic(t *testing.T) {
 				Config: testAccKubernetesDaemonSetConfig_basic(name),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})
@@ -188,7 +189,7 @@ func TestAccKubernetesDaemonSet_noTopLevelLabels(t *testing.T) {
 				Config: testAccKubernetesDaemonSetWithNoTopLevelLabels(name, "nginx:1.7.8"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.%", "0"),
 				),
 			},
 		},

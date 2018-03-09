@@ -83,7 +83,7 @@ func jobSpecFields() map[string]*schema.Schema {
 			Required:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: podSpecFields(true),
+				Schema: podSpecFields(false),
 			},
 		},
 	}

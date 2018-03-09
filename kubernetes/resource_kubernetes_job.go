@@ -15,10 +15,10 @@ import (
 )
 
 func resourceKubernetesJob() *schema.Resource {
-	return &schema.Resource{
+	s := &schema.Resource{
 		Create: resourceKubernetesJobCreate,
 		Read:   resourceKubernetesJobRead,
-		Update: resourceKubernetesJobUpdate,
+		// Update: resourceKubernetesJobUpdate,
 		Delete: resourceKubernetesJobDelete,
 		Exists: resourceKubernetesJobExists,
 		Importer: &schema.ResourceImporter{
@@ -30,6 +30,7 @@ func resourceKubernetesJob() *schema.Resource {
 				Type:        schema.TypeList,
 				Description: "Spec of the job owned by the cluster",
 				Required:    true,
+				ForceNew:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: jobSpecFields(),
@@ -37,6 +38,11 @@ func resourceKubernetesJob() *schema.Resource {
 			},
 		},
 	}
+	s.Schema["spec"].Elem.(*schema.Resource).
+		Schema["template"].Elem.(*schema.Resource).
+		Schema["restart_policy"].Default = "OnFailure"
+
+	return s
 }
 
 func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error {
@@ -77,11 +83,20 @@ func resourceKubernetesJobUpdate(d *schema.ResourceData, meta interface{}) error
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("spec") {
-		specOps, err := patchJobSpec("/spec", "spec.0.", d)
+		// specOps, err := patchJobSpec("/spec", "spec.0.", d)
+		// if err != nil {
+		// 	return err
+		// }
+		// ops = append(ops, specOps...)
+
+		spec, err := expandJobSpec(d.Get("spec").([]interface{}))
 		if err != nil {
 			return err
 		}
-		ops = append(ops, specOps...)
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/spec",
+			Value: spec,
+		})
 	}
 
 	data, err := ops.MarshalJSON()
@@ -89,9 +104,22 @@ func resourceKubernetesJobUpdate(d *schema.ResourceData, meta interface{}) error
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 
-	log.Printf("[INFO] Updating job %s: %s", d.Id(), ops)
+	// metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	// spec, err := expandJobSpec(d.Get("spec").([]interface{}))
+	// if err != nil {
+	// 	return err
+	// }
+	// spec.Template.ObjectMeta.Annotations = metadata.Annotations
+
+	// job := batchv1.Job{
+	// 	ObjectMeta: metadata,
+	// 	Spec:       spec,
+	// }
+
+	log.Printf("[INFO] Updating job %s: %#v", d.Id(), ops)
 
 	out, err := conn.BatchV1().Jobs(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	// out, err := conn.BatchV1().Jobs(namespace).Update(&job)
 	if err != nil {
 		return err
 	}

@@ -113,6 +113,7 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_cluster_role":              resourceKubernetesClusterRole(),
 			"kubernetes_cluster_role_binding":      resourceKubernetesClusterRoleBinding(),
 			"kubernetes_config_map":                resourceKubernetesConfigMap(),
+			"kubernetes_cron_job":                  resourceKubernetesCronJob(),
 			"kubernetes_daemonset":                 resourceKubernetesDaemonSet(),
 			"kubernetes_deployment":                resourceKubernetesDeployment(),
 			"kubernetes_endpoints":                 resourceKubernetesEndpoints(),

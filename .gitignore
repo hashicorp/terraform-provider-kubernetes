@@ -31,4 +31,4 @@ website/vendor
 !command/test-fixtures/**/*.tfstate
 !command/test-fixtures/**/.terraform/
 
-scripts/runtests.sh
+scripts/runtests*.sh

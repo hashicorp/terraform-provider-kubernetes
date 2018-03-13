@@ -9,11 +9,7 @@ import (
 func flattenCronJobSpec(in v1beta1.CronJobSpec) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
-	if in.Schedule != "" {
-		att["schedule"] = in.Schedule
-	} else {
-		return nil, errors.New("You need to define a schedule.")
-	}
+	att["schedule"] = in.Schedule
 
 	jobSpec, err := flattenJobSpec(in.JobTemplate.Spec)
 	if err != nil {
@@ -33,11 +29,7 @@ func expandCronJobSpec(j []interface{}) (v1beta1.CronJobSpec, error) {
 
 	in := j[0].(map[string]interface{})
 
-	if v, ok := in["schedule"].(string); ok && len(v) > 0 {
-		obj.Schedule = *ptrToString(string(v))
-	} else {
-		return obj, errors.New("You need to define a schedule.")
-	}
+	obj.Schedule = in["schedule"].(string)
 
 	podSpec, err := expandJobSpec(in["job_template"].([]interface{}))
 	if err != nil {

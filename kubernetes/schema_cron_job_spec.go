@@ -8,7 +8,7 @@ func cronJobSpecFields() map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
 		"schedule": {
 			Type:         schema.TypeString,
-			Optional:     true,
+			Required:    true,
 			//ValidateFunc: validate, TODO: validate cron syntax..
 			Description:  "Cron format string, e.g. 0 * * * * or @hourly, as schedule time of its jobs to be created and executed.",
 		},

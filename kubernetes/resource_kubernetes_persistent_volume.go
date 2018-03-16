@@ -65,6 +65,12 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Description: "A description of the persistent volume's class. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class",
 							Optional:    true,
 						},
+						"mount_options": {
+							Type:        schema.TypeList,
+							Description: "A list of mount options, e.g. ['ro', 'soft']. Not validated - mount will simply fail if one is invalid. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#mount-options",
+							Elem:        schema.TypeString,
+							Optional:    true,
+						},
 					},
 				},
 			},

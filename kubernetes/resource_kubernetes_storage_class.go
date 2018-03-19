@@ -5,11 +5,11 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	api "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	kubernetes "k8s.io/client-go/kubernetes"
-	api "k8s.io/client-go/pkg/apis/storage/v1"
 )
 
 func resourceKubernetesStorageClass() *schema.Resource {

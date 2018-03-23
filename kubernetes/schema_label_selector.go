@@ -5,7 +5,7 @@ import (
 )
 
 func labelSelectorFields() map[string]*schema.Schema {
-	s := map[string]*schema.Schema{
+	return map[string]*schema.Schema{
 		"match_expressions": {
 			Type:        schema.TypeList,
 			Description: "A list of label selector requirements. The requirements are ANDed.",
@@ -43,6 +43,4 @@ func labelSelectorFields() map[string]*schema.Schema {
 			ForceNew:    true,
 		},
 	}
-
-	return s
 }

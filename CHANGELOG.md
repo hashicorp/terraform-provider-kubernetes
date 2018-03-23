@@ -1,4 +1,4 @@
-## 1.1.0 (Unreleased)
+## 1.1.0 (March 23, 2018)
 
 NOTES:
 
@@ -6,22 +6,22 @@ NOTES:
 
 IMPROVEMENTS:
 
-* resource/kubernetes_persistent_volume_claim: Improve event log polling for warnings [GH-125]
-* resource/kubernetes_persistent_volume: Add support for `storage_class_name` [GH-111]
+* resource/kubernetes_persistent_volume_claim: Improve event log polling for warnings ([#125](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/125))
+* resource/kubernetes_persistent_volume: Add support for `storage_class_name` ([#111](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/111))
 
 BUG FIXES:
 
-* resource/kubernetes_secret: Prevent binary data corruption [GH-103]
-* resource/kubernetes_persistent_volume: Update `persistent_volume_reclaim_policy` correctly [GH-111]
-* resource/kubernetes_service: Update external_ips correctly on K8S 1.8+ [GH-127]
-* resource/kubernetes_*: Fix adding labels/annotations to resources when those were empty [GH-116]
-* resource/kubernetes_*: Treat non-string label values as invalid [GH-135]
-* resource/kubernetes_config_map: Fix adding `data` when it was empty [GH-116]
-* resource/kubernetes_secret: Fix adding `data` when it was empty [GH-116]
-* resource/kubernetes_limit_range: Avoid spurious diff when spec is empty [GH-132]
-* resource/kubernetes_persistent_volume: Use correct operation when updating `persistent_volume_source` (`1.8`) [GH-133]
-* resource/kubernetes_persistent_volume: Mark persistent_volume_source as ForceNew on `1.9+` [GH-139]
-* resource/kubernetes_pod: Bump deletion timeout to 5 mins [GH-136]
+* resource/kubernetes_secret: Prevent binary data corruption ([#103](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/103))
+* resource/kubernetes_persistent_volume: Update `persistent_volume_reclaim_policy` correctly ([#111](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/111))
+* resource/kubernetes_service: Update external_ips correctly on K8S 1.8+ ([#127](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/127))
+* resource/kubernetes_*: Fix adding labels/annotations to resources when those were empty ([#116](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/116))
+* resource/kubernetes_*: Treat non-string label values as invalid ([#135](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/135))
+* resource/kubernetes_config_map: Fix adding `data` when it was empty ([#116](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/116))
+* resource/kubernetes_secret: Fix adding `data` when it was empty ([#116](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/116))
+* resource/kubernetes_limit_range: Avoid spurious diff when spec is empty ([#132](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/132))
+* resource/kubernetes_persistent_volume: Use correct operation when updating `persistent_volume_source` (`1.8`) ([#133](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/133))
+* resource/kubernetes_persistent_volume: Mark persistent_volume_source as ForceNew on `1.9+` ([#139](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/139))
+* resource/kubernetes_pod: Bump deletion timeout to 5 mins ([#136](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/136))
 
 ## 1.0.1 (November 13, 2017)
 

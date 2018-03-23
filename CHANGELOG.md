@@ -20,6 +20,7 @@ BUG FIXES:
 * resource/kubernetes_secret: Fix adding `data` when it was empty [GH-116]
 * resource/kubernetes_limit_range: Avoid spurious diff when spec is empty [GH-132]
 * resource/kubernetes_persistent_volume: Use correct operation when updating `persistent_volume_source` (`1.8`) [GH-133]
+* resource/kubernetes_persistent_volume: Mark persistent_volume_source as ForceNew on `1.9+` [GH-139]
 * resource/kubernetes_pod: Bump deletion timeout to 5 mins [GH-136]
 
 ## 1.0.1 (November 13, 2017)

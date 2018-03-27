@@ -73,6 +73,12 @@ func resourceKubernetesDeployment() *schema.Resource {
 							Optional:    true,
 							Default:     1,
 						},
+						"revision_history_limit": {
+							Type:        schema.TypeInt,
+							Description: "The number of old ReplicaSets to retain to allow rollback. Defaults to 10.",
+							Optional:    true,
+							Default:     10,
+						},
 						"selector": {
 							Type:        schema.TypeMap,
 							Description: "A label query over pods that should match the Replicas count. If Selector is empty, it is defaulted to the labels present on the Pod template. Label keys and values that must match in order to be controlled by this deployment, if empty defaulted to labels on Pod template. More info: http://kubernetes.io/docs/user-guide/labels#label-selectors",

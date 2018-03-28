@@ -89,6 +89,7 @@ func TestAccKubernetesDeployment_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.paused", "true"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.progress_deadline_seconds", "30"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.revision_history_limit", "4"),
 				),
 			},
 			{
@@ -364,7 +365,8 @@ resource "kubernetes_deployment" "test" {
   }
   spec {
 		paused = true
-		progress_deadline_seconds = "30"
+		progress_deadline_seconds = 30
+		revision_history_limit = 4
     selector {
       TestLabelOne = "one"
       TestLabelTwo = "two"

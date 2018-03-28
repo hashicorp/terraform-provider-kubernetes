@@ -17,10 +17,20 @@ func flattenDeploymentSpec(in v1beta1.DeploymentSpec, d *schema.ResourceData) ([
 	att["paused"] = in.Paused
 	if in.ProgressDeadlineSeconds != nil {
 		att["progress_deadline_seconds"] = int(*in.ProgressDeadlineSeconds)
+	} else {
+		// nil pointer means the this is set to the default value (600)
+		att["progress_deadline_seconds"] = 600
 	}
 
 	if in.Replicas != nil {
 		att["replicas"] = *in.Replicas
+	}
+
+	if in.RevisionHistoryLimit != nil {
+		att["revision_history_limit"] = *in.RevisionHistoryLimit
+	} else {
+		// nil pointer means the this is set to the default value (10)
+		att["revision_history_limit"] = 10
 	}
 
 	att["selector"] = in.Selector.MatchLabels

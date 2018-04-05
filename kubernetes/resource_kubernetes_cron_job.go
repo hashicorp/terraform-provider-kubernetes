@@ -129,7 +129,10 @@ func resourceKubernetesCronJobRead(d *schema.ResourceData, meta interface{}) err
 			delete(labels, "cron-job-name")
 		}
 
-		labels = job.Spec.JobTemplate.Spec.Selector.MatchLabels
+		if job.Spec.JobTemplate.Spec.Selector != nil &&
+			job.Spec.JobTemplate.Spec.Selector.MatchLabels != nil {
+			labels = job.Spec.JobTemplate.Spec.Selector.MatchLabels
+		}
 
 		if _, ok := labels["controller-uid"]; ok {
 			delete(labels, "controller-uid")

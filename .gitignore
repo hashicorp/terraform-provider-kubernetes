@@ -32,3 +32,6 @@ website/vendor
 !command/test-fixtures/**/.terraform/
 
 scripts/runtests*.sh
+
+dist/*
+build/*

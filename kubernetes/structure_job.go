@@ -2,8 +2,8 @@ package kubernetes
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
-	"k8s.io/client-go/pkg/api/v1"
-	batchv1 "k8s.io/client-go/pkg/apis/batch/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	"k8s.io/api/core/v1"
 )
 
 func flattenJobSpec(in batchv1.JobSpec) ([]interface{}, error) {

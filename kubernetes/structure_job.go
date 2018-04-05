@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"github.com/hashicorp/terraform/helper/schema"
 	batchv1 "k8s.io/api/batch/v1"
-	"k8s.io/api/core/v1"
 )
 
 func flattenJobSpec(in batchv1.JobSpec) ([]interface{}, error) {
@@ -28,8 +27,18 @@ func flattenJobSpec(in batchv1.JobSpec) ([]interface{}, error) {
 	if in.Selector != nil {
 		att["selector"] = flattenLabelSelector(in.Selector)
 	}
+	// Remove server-generated labels
+	labels := in.Template.ObjectMeta.Labels
 
-	podSpec, err := flattenPodSpec(in.Template.Spec)
+	if _, ok := labels["controller-uid"]; ok {
+		delete(labels, "controller-uid")
+	}
+
+	if _, ok := labels["job-name"]; ok {
+		delete(labels, "job-name")
+	}
+
+	podSpec, err := flattenPodTemplateSpec(in.Template)
 	if err != nil {
 		return nil, err
 	}
@@ -67,14 +76,11 @@ func expandJobSpec(j []interface{}) (batchv1.JobSpec, error) {
 		obj.Selector = expandLabelSelector(v)
 	}
 
-	podSpec, err := expandPodSpec(in["template"].([]interface{}))
+	template, err := expandPodTemplate(in["template"].([]interface{}))
 	if err != nil {
 		return obj, err
 	}
-
-	obj.Template = v1.PodTemplateSpec{
-		Spec: podSpec,
-	}
+	obj.Template = *template
 
 	return obj, nil
 }
@@ -83,7 +89,6 @@ func patchJobSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOpera
 	ops := make([]PatchOperation, 0)
 
 	if d.HasChange(prefix + "active_deadline_seconds") {
-
 		v := d.Get(prefix + "active_deadline_seconds").(int)
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/activeDeadlineSeconds",

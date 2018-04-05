@@ -38,9 +38,6 @@ func resourceKubernetesJob() *schema.Resource {
 			},
 		},
 	}
-	s.Schema["spec"].Elem.(*schema.Resource).
-		Schema["template"].Elem.(*schema.Resource).
-		Schema["restart_policy"].Default = "OnFailure"
 
 	return s
 }

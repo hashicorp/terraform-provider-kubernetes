@@ -54,10 +54,7 @@ The following arguments are supported:
 [Timeouts](/docs/configuration/resources.html#timeouts) configuration options:
 
 - `create` - (Default `5 minutes`) Used for Creating Pods.
-- `read` - (Default `5 minutes`) Used for Reading Pods.
-- `update` - (Default `5 minutes`) Used for Updating Pods.
 - `delete` - (Default `5 minutes`) Used for Destroying Pods.
-- `default` - (Default `5 minutes`) Default timeout.
 
 #### Attributes
 

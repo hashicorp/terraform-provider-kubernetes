@@ -26,11 +26,8 @@ func resourceKubernetesPod() *schema.Resource {
 		},
 
 		Timeouts: &schema.ResourceTimeout{
-			Create:  schema.DefaultTimeout(5 * time.Minute),
-			Read:    schema.DefaultTimeout(5 * time.Minute),
-			Update:  schema.DefaultTimeout(5 * time.Minute),
-			Delete:  schema.DefaultTimeout(5 * time.Minute),
-			Default: schema.DefaultTimeout(5 * time.Minute),
+			Create: schema.DefaultTimeout(5 * time.Minute),
+			Delete: schema.DefaultTimeout(5 * time.Minute),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -76,7 +73,7 @@ func resourceKubernetesPodCreate(d *schema.ResourceData, meta interface{}) error
 	stateConf := &resource.StateChangeConf{
 		Target:  []string{"Running"},
 		Pending: []string{"Pending"},
-		Timeout: 5 * time.Minute,
+		Timeout: d.Timeout(schema.TimeoutCreate),
 		Refresh: func() (interface{}, string, error) {
 			out, err := conn.CoreV1().Pods(metadata.Namespace).Get(metadata.Name, metav1.GetOptions{})
 			if err != nil {
@@ -183,7 +180,7 @@ func resourceKubernetesPodDelete(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	err = resource.Retry(5*time.Minute, func() *resource.RetryError {
+	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		out, err := conn.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {

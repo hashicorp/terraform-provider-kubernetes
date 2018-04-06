@@ -31,8 +31,7 @@ func validateAnnotations(value interface{}, key string) (ws []string, es []error
 
 func validateName(value interface{}, key string) (ws []string, es []error) {
 	v := value.(string)
-
-	errors := apiValidation.NameIsDNSLabel(v, false)
+	errors := apiValidation.NameIsDNSSubdomain(v, false)
 	if len(errors) > 0 {
 		for _, err := range errors {
 			es = append(es, fmt.Errorf("%s %s", key, err))

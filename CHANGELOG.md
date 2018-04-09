@@ -1,4 +1,9 @@
 ## 1.2.0 (Unreleased)
+
+IMPROVEMENTS:
+
+* resource/kubernetes_pod: Add timeout to pod resource create and delete [GH-151]
+
 ## 1.1.0 (March 23, 2018)
 
 NOTES:

@@ -48,6 +48,14 @@ The following arguments are supported:
 * `name` - (Optional) Name of the pod, must be unique. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names
 * `namespace` - (Optional) Namespace defines the space within which name of the pod must be unique.
 
+### Timeouts
+
+`kubernetes_pod` provides the following
+[Timeouts](/docs/configuration/resources.html#timeouts) configuration options:
+
+- `create` - (Default `5 minutes`) Used for Creating Pods.
+- `delete` - (Default `5 minutes`) Used for Destroying Pods.
+
 #### Attributes
 
 * `generation` - A sequence number representing a specific generation of the desired state.

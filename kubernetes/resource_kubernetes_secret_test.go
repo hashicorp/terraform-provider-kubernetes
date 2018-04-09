@@ -326,12 +326,6 @@ resource "kubernetes_secret" "test" {
 	metadata {
 	  name = "dot.test"
 	}
-  
-	data {
-	  ".start" = "foo"
-	  "mid.dle" = "foo"
-	  "end." = "foo"
-	}
   }  
 `
 

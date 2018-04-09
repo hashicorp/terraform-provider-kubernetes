@@ -137,6 +137,25 @@ func TestAccKubernetesSecret_basic(t *testing.T) {
 	})
 }
 
+func TestAccKuberNetesSecret_dotInName(t *testing.T) {
+	var conf api.Secret
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesSecretDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesSecretConfig_dotInSecretName,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.name", "dot.test"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesSecret_importBasic(t *testing.T) {
 	resourceName := "kubernetes_secret.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -301,6 +320,14 @@ func testAccCheckKubernetesSecretExists(n string, obj *api.Secret) resource.Test
 		return nil
 	}
 }
+
+const testAccKubernetesSecretConfig_dotInSecretName = `
+resource "kubernetes_secret" "test" {
+	metadata {
+	  name = "dot.test"
+	}
+  }  
+`
 
 func testAccKubernetesSecretConfig_emptyData(name string) string {
 	return fmt.Sprintf(`

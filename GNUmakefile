@@ -1,5 +1,6 @@
 TEST?=$$(go list ./... |grep -v 'vendor')
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
+TARGETS=darwin linux windows
 
 default: build
 
@@ -7,9 +8,9 @@ build: fmtcheck
 	go install
 
 test: fmtcheck
-	go test -i $(TEST) || exit 1
+	go test -v -i $(TEST) || exit 1
 	echo $(TEST) | \
-		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
+		xargs -t -n4 go test -v $(TESTARGS) -timeout=30s -parallel=4
 
 testacc: fmtcheck
 	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
@@ -43,5 +44,11 @@ test-compile:
 	fi
 	go test -c $(TEST) $(TESTARGS)
 
-.PHONY: build test testacc vet fmt fmtcheck errcheck vendor-status test-compile
+targets: $(TARGETS)
+
+$(TARGETS):
+	GOOS=$@ GOARCH=amd64 go build -o "dist/$@/terraform-provider-kubernetes_${TRAVIS_TAG}_x4"
+	zip -j dist/terraform-provider-kubernetes_${TRAVIS_TAG}_$@_amd64.zip dist/$@/terraform-provider-kubernetes_${TRAVIS_TAG}_x4
+
+.PHONY: build test testacc vet fmt fmtcheck errcheck vendor-status test-compile targets $(TARGETS)
 

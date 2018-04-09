@@ -21,10 +21,6 @@ func validateAnnotations(value interface{}, key string) (ws []string, es []error
 				es = append(es, fmt.Errorf("%s (%q) %s", key, k, e))
 			}
 		}
-
-		if isInternalKey(k) {
-			es = append(es, fmt.Errorf("%s: %q is internal Kubernetes annotation", key, k))
-		}
 	}
 	return
 }
@@ -32,7 +28,7 @@ func validateAnnotations(value interface{}, key string) (ws []string, es []error
 func validateName(value interface{}, key string) (ws []string, es []error) {
 	v := value.(string)
 
-	errors := apiValidation.NameIsDNSLabel(v, false)
+	errors := utilValidation.IsQualifiedName(v)
 	if len(errors) > 0 {
 		for _, err := range errors {
 			es = append(es, fmt.Errorf("%s %s", key, err))

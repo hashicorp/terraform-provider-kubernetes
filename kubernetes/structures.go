@@ -3,10 +3,12 @@ package kubernetes
 import (
 	"encoding/base64"
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/mitchellh/copystructure"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	api "k8s.io/client-go/pkg/api/v1"
@@ -83,18 +85,24 @@ func expandStringMapToByteMap(m map[string]interface{}) map[string][]byte {
 func expandStringSlice(s []interface{}) []string {
 	result := make([]string, len(s), len(s))
 	for k, v := range s {
-		result[k] = v.(string)
+		if v != nil {
+			result[k] = v.(string)
+		} else {
+			result[k] = ""
+		}
 	}
 	return result
 }
 
-func flattenMetadata(meta metav1.ObjectMeta) []map[string]interface{} {
+func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData) []map[string]interface{} {
 	m := make(map[string]interface{})
-	m["annotations"] = removeInternalKeys(meta.Annotations)
+	configAnnotations := d.Get("metadata.0.annotations").(map[string]interface{})
+	m["annotations"] = removeInternalKeys(meta.Annotations, configAnnotations)
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}
-	m["labels"] = removeInternalKeys(meta.Labels)
+	configLabels := d.Get("metadata.0.labels").(map[string]interface{})
+	m["labels"] = removeInternalKeys(meta.Labels, configLabels)
 	m["name"] = meta.Name
 	m["resource_version"] = meta.ResourceVersion
 	m["self_link"] = meta.SelfLink
@@ -108,18 +116,53 @@ func flattenMetadata(meta metav1.ObjectMeta) []map[string]interface{} {
 	return []map[string]interface{}{m}
 }
 
-func removeInternalKeys(m map[string]string) map[string]string {
+func flattenSubMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, prefix string) []map[string]interface{} {
+	m := make(map[string]interface{})
+
+	configAnnotations := d.Get(prefix + ".metadata.0.annotations").(map[string]interface{})
+	m["annotations"] = removeInternalKeys(meta.Annotations, configAnnotations)
+	m["labels"] = meta.Labels
+	m["name"] = meta.Name
+	m["resource_version"] = meta.ResourceVersion
+	m["self_link"] = meta.SelfLink
+	m["uid"] = fmt.Sprintf("%v", meta.UID)
+	m["generation"] = meta.Generation
+
+	if meta.Namespace != "" {
+		m["namespace"] = meta.Namespace
+	}
+
+	return []map[string]interface{}{m}
+}
+
+func removeInternalKeys(m map[string]string, d map[string]interface{}) map[string]string {
+	copied, _ := copystructure.Copy(m)
+	newMap := copied.(map[string]string)
 	for k, _ := range m {
-		if isInternalKey(k) {
-			delete(m, k)
+		if isInternalKey(k) && !isKeyInMap(k, d) {
+			log.Printf("[DEBUG] removing %s", k)
+			delete(newMap, k)
 		}
 	}
-	return m
+	return newMap
+}
+
+func isKeyInMap(key string, d map[string]interface{}) bool {
+	if d == nil {
+		return false
+	}
+	for k := range d {
+		if k == key {
+			return true
+		}
+	}
+	return false
 }
 
 func isInternalKey(annotationKey string) bool {
 	u, err := url.Parse("//" + annotationKey)
-	if err == nil && strings.HasSuffix(u.Hostname(), "kubernetes.io") {
+	if err == nil && strings.Contains(u.Hostname(), "kubernetes.io") {
+		log.Printf("[DEBUG] %s is internal key", annotationKey)
 		return true
 	}
 

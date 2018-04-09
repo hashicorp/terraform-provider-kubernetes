@@ -67,6 +67,14 @@ func podSpecFields(isUpdatable bool) map[string]*schema.Schema {
 				},
 			},
 		},
+		"init_container": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Description: "List of initialization containers belonging to the pod. Init containers are executed in order prior to containers being started. If any init container fails, the pod is considered to have failed and is handled according to its restartPolicy. The name for an init container or normal container must be unique among all containers. Init containers may not have Lifecycle actions, Readiness probes, or Liveness probes. The resourceRequirements of an init container are taken into account during scheduling by finding the highest request/limit for each resource type, and then using the max of of that value or the sum of the normal containers. Limits are applied to init containers in a similar fashion. Init containers cannot currently be added or removed. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/",
+			Elem: &schema.Resource{
+				Schema: containerFields(isUpdatable),
+			},
+		},
 		"node_name": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -131,6 +139,12 @@ func podSpecFields(isUpdatable bool) map[string]*schema.Schema {
 			Optional:    true,
 			Computed:    true,
 			Description: "ServiceAccountName is the name of the ServiceAccount to use to run this pod. More info: http://releases.k8s.io/HEAD/docs/design/service_accounts.md.",
+		},
+		"automount_service_account_token": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     true,
+			Description: "In version 1.6+, you can also opt out of automounting API credentials for a particular pod",
 		},
 		"subdomain": {
 			Type:        schema.TypeString,

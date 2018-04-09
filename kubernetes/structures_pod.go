@@ -31,6 +31,12 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	}
 	att["image_pull_secrets"] = flattenLocalObjectReferenceArray(in.ImagePullSecrets)
 
+	initContainers, err := flattenContainers(in.InitContainers)
+	if err != nil {
+		return nil, err
+	}
+	att["init_container"] = initContainers
+
 	if in.NodeName != "" {
 		att["node_name"] = in.NodeName
 	}
@@ -47,6 +53,11 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	if in.ServiceAccountName != "" {
 		att["service_account_name"] = in.ServiceAccountName
 	}
+
+	if in.AutomountServiceAccountToken != nil {
+		att["automount_service_account_token"] = *in.AutomountServiceAccountToken
+	}
+
 	if in.Subdomain != "" {
 		att["subdomain"] = in.Subdomain
 	}
@@ -221,7 +232,7 @@ func flattenGitRepoVolumeSource(in *v1.GitRepoVolumeSource) []interface{} {
 func flattenDownwardAPIVolumeSource(in *v1.DownwardAPIVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	if in.DefaultMode != nil {
-		att["default_mode"] = in.DefaultMode
+		att["default_mode"] = int(*in.DefaultMode)
 	}
 	if len(in.Items) > 0 {
 		att["items"] = flattenDownwardAPIVolumeFile(in.Items)
@@ -261,7 +272,7 @@ func flattenConfigMapVolumeSource(in *v1.ConfigMapVolumeSource) []interface{} {
 		for i, v := range in.Items {
 			m := map[string]interface{}{}
 			m["key"] = v.Key
-			m["mode"] = *v.Mode
+			m["mode"] = int(*v.Mode)
 			m["path"] = v.Path
 			items[i] = m
 		}
@@ -280,7 +291,7 @@ func flattenEmptyDirVolumeSource(in *v1.EmptyDirVolumeSource) []interface{} {
 func flattenSecretVolumeSource(in *v1.SecretVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	if in.DefaultMode != nil {
-		att["default_mode"] = *in.DefaultMode
+		att["default_mode"] = int(*in.DefaultMode)
 	}
 	if in.SecretName != "" {
 		att["secret_name"] = in.SecretName
@@ -350,6 +361,14 @@ func expandPodSpec(p []interface{}) (v1.PodSpec, error) {
 		obj.ImagePullSecrets = cs
 	}
 
+	if v, ok := in["init_container"].([]interface{}); ok && len(v) > 0 {
+		cs, err := expandContainers(v)
+		if err != nil {
+			return obj, err
+		}
+		obj.InitContainers = cs
+	}
+
 	if v, ok := in["node_name"]; ok {
 		obj.NodeName = v.(string)
 	}
@@ -374,6 +393,10 @@ func expandPodSpec(p []interface{}) (v1.PodSpec, error) {
 
 	if v, ok := in["service_account_name"].(string); ok {
 		obj.ServiceAccountName = v
+	}
+
+	if v, ok := in["automount_service_account_token"]; ok {
+		obj.AutomountServiceAccountToken = ptrToBool(v.(bool))
 	}
 
 	if v, ok := in["subdomain"].(string); ok {

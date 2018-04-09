@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func metadataFields(objectName string) map[string]*schema.Schema {
@@ -68,10 +69,17 @@ func metadataSchema(objectName string, generatableName bool) *schema.Schema {
 		fields["name"].ConflictsWith = []string{"metadata.generate_name"}
 	}
 
+	metadataRequired := true
+	switch objectName {
+	case "deploymentSpec":
+		metadataRequired = false
+	}
+
 	return &schema.Schema{
 		Type:        schema.TypeList,
 		Description: fmt.Sprintf("Standard %s's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata", objectName),
-		Required:    true,
+		Required:    metadataRequired,
+		Optional:    !metadataRequired,
 		MaxItems:    1,
 		Elem: &schema.Resource{
 			Schema: fields,
@@ -103,10 +111,28 @@ func namespacedMetadataSchema(objectName string, generatableName bool) *schema.S
 	return &schema.Schema{
 		Type:        schema.TypeList,
 		Description: fmt.Sprintf("Standard %s's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata", objectName),
-		Required:    true,
+		Optional:    true,
+		Computed:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{
 			Schema: fields,
 		},
 	}
+}
+
+// reconcileTopLevelLabels removes metadata labels added to top level
+// automatically by Kubernetes.
+// If there are NO metadata labels defined in the top level resource,
+// but there are some defined at the [Resource]->Spec->Template->Metadata
+// level, the Kubernetes API will copy these to the top level.
+// This will cause a perpetual diff for Terraform and break tests.
+// We'll try to handle this situation by removing labels from the top
+// level metadata if this described scenario is true
+func reconcileTopLevelLabels(topLevelLabels map[string]string, topMeta, specMeta metav1.ObjectMeta) map[string]string {
+	if len(topMeta.Labels) == 0 && len(topLevelLabels) > 0 {
+		for k := range specMeta.Labels {
+			delete(topLevelLabels, k)
+		}
+	}
+	return topLevelLabels
 }

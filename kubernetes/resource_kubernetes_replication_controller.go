@@ -81,8 +81,7 @@ func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta 
 	if err != nil {
 		return err
 	}
-
-	spec.Template.Spec.AutomountServiceAccountToken = ptrToBool(false)
+	spec.Template.ObjectMeta.Annotations = metadata.Annotations
 
 	rc := api.ReplicationController{
 		ObjectMeta: metadata,
@@ -130,7 +129,7 @@ func resourceKubernetesReplicationControllerRead(d *schema.ResourceData, meta in
 	}
 	log.Printf("[INFO] Received replication controller: %#v", rc)
 
-	err = d.Set("metadata", flattenMetadata(rc.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(rc.ObjectMeta, d))
 	if err != nil {
 		return err
 	}

@@ -4,6 +4,10 @@ IMPROVEMENTS:
 
 * resource/kubernetes_pod: Add timeout to pod resource create and delete [GH-151]
 
+BUG FIXES:
+
+* name label: All name labels will now allow DNS1123 subdomain format ex: `my.label123` [GH-152]
+
 ## 1.1.0 (March 23, 2018)
 
 NOTES:

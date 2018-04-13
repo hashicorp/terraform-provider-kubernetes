@@ -10,10 +10,6 @@ import (
 
 // Flatteners
 
-func flattenIntOrString(in intstr.IntOrString) int {
-	return in.IntValue()
-}
-
 func flattenServicePort(in []v1.ServicePort) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
@@ -21,7 +17,7 @@ func flattenServicePort(in []v1.ServicePort) []interface{} {
 		m["name"] = n.Name
 		m["protocol"] = string(n.Protocol)
 		m["port"] = int(n.Port)
-		m["target_port"] = flattenIntOrString(n.TargetPort)
+		m["target_port"] = n.TargetPort.String()
 		m["node_port"] = int(n.NodePort)
 
 		att[i] = m
@@ -76,10 +72,6 @@ func flattenLoadBalancerIngress(in []v1.LoadBalancerIngress) []interface{} {
 
 // Expanders
 
-func expandIntOrString(in int) intstr.IntOrString {
-	return intstr.FromInt(in)
-}
-
 func expandServicePort(l []interface{}) []v1.ServicePort {
 	if len(l) == 0 || l[0] == nil {
 		return []v1.ServicePort{}
@@ -89,7 +81,7 @@ func expandServicePort(l []interface{}) []v1.ServicePort {
 		cfg := n.(map[string]interface{})
 		obj[i] = v1.ServicePort{
 			Port:       int32(cfg["port"].(int)),
-			TargetPort: expandIntOrString(cfg["target_port"].(int)),
+			TargetPort: intstr.Parse(cfg["target_port"].(string)),
 		}
 		if v, ok := cfg["name"].(string); ok {
 			obj[i].Name = v

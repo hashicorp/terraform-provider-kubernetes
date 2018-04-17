@@ -275,6 +275,33 @@ func TestAccKubernetesService_noTargetPort(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesService_stringTargetPort(t *testing.T) {
+	var conf api.Service
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
+		IDRefreshName: "kubernetes_service.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesServiceDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesServiceConfig_stringTargetPort(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceExists("kubernetes_service.test", &conf),
+					testAccCheckServicePorts(&conf, []api.ServicePort{
+						{
+							Port:       int32(8080),
+							Protocol:   api.ProtocolTCP,
+							TargetPort: intstr.FromString("http-server"),
+						},
+					}),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesService_externalName(t *testing.T) {
 	var conf api.Service
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -573,6 +600,35 @@ resource "kubernetes_service" "test" {
 		type = "NodePort"
 	}
 }`, name, name)
+}
+
+func testAccKubernetesServiceConfig_stringTargetPort(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service" "test" {
+	metadata {
+	  name = "%s"
+
+	  labels {
+		app  = "helloweb"
+		tier = "frontend"
+	  }
+	}
+  
+	spec {
+	  type = "LoadBalancer"
+  
+	  selector {
+		app  = "helloweb"
+		tier = "frontend"
+	  }
+  
+	  port {
+		port        = 8080
+		target_port = "http-server"
+	  }
+	}
+  }
+`, name)
 }
 
 func testAccKubernetesServiceConfig_noTargetPort(name string) string {

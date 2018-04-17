@@ -8,6 +8,7 @@ BUG FIXES:
 
 * name label: All name labels will now allow DNS1123 subdomain format ex: `my.label123` [GH-152]
 * resource/kubernetes_service: Switch targetPort to string [GH-154]
+* resource/kubernetes_pod: env var value change forces new pod [GH-155]
 
 ## 1.1.0 (March 23, 2018)
 

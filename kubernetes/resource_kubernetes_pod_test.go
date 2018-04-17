@@ -57,7 +57,7 @@ func TestAccKubernetesPod_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPod_updateForceNew(t *testing.T) {
+func TestAccKubernetesPod_updateArgsForceNew(t *testing.T) {
 	var conf api.Pod
 
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -102,6 +102,58 @@ func TestAccKubernetesPod_updateForceNew(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.args.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.args.0", "-listen=:80"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.args.1", "-text='after modification'"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.name", "containername"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPod_updateEnvForceNew(t *testing.T) {
+	var conf api.Pod
+
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	imageName := "hashicorp/http-echo:latest"
+	envBefore := "bar"
+	envAfter := "baz"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodConfigEnvUpdate(podName, imageName, envBefore),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "metadata.0.name", podName),
+					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.0.name", "foo"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.0.value", "bar"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.name", "containername"),
+				),
+			},
+			{
+				Config: testAccKubernetesPodConfigEnvUpdate(podName, imageName, envAfter),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "metadata.0.name", podName),
+					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.0.name", "foo"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.0.value", "baz"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.name", "containername"),
 				),
 			},
@@ -1028,4 +1080,25 @@ resource "kubernetes_pod" "test" {
   }
 }
 `, podName, imageName, args)
+}
+
+func testAccKubernetesPodConfigEnvUpdate(podName, imageName, val string) string {
+	return fmt.Sprintf(`
+		resource "kubernetes_pod" "test" {
+			metadata {
+				name = "%s"
+			}
+		
+			spec {
+				container {
+					image = "%s"
+					name  = "containername"
+					env {
+						name = "foo"
+						value = "%s"
+					}
+				}
+			}
+		}
+		`, podName, imageName, val)
 }

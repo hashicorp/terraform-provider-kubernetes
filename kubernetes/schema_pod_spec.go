@@ -17,7 +17,16 @@ func podSpecFields(isUpdatable bool) map[string]*schema.Schema {
 			Optional:    true,
 			Description: "List of containers belonging to the pod. Containers cannot currently be added or removed. There must be at least one container in a Pod. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/containers",
 			Elem: &schema.Resource{
-				Schema: containerFields(isUpdatable),
+				Schema: containerFields(isUpdatable, false),
+			},
+		},
+		"init_container": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			ForceNew:    true,
+			Description: "List of init containers belonging to the pod. Init containers always run to completion and each must complete succesfully before the next is started. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/",
+			Elem: &schema.Resource{
+				Schema: containerFields(isUpdatable, true),
 			},
 		},
 		"dns_policy": {

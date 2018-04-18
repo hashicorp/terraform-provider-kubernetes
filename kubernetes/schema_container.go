@@ -194,7 +194,7 @@ func volumeMountFields() map[string]*schema.Schema {
 	}
 }
 
-func containerFields(isUpdatable bool) map[string]*schema.Schema {
+func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
 		"args": {
 			Type:        schema.TypeList,
@@ -477,8 +477,8 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 
 	if !isUpdatable {
 		for k, _ := range s {
-			if k == "image" {
-				// This field is always updatable
+			if k == "image" && !isInitContainer {
+				// this field is updatable for non-init containers
 				continue
 			}
 			s[k].ForceNew = true

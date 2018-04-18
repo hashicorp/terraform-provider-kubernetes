@@ -70,6 +70,34 @@ func TestAccKubernetesReplicationController_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesReplicationController_initContainer(t *testing.T) {
+	var conf api.ReplicationController
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_replication_controller.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesReplicationControllerDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesReplicationControllerConfig_initContainer(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.image", "busybox"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.name", "install"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.command.0", "wget"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.command.1", "-O"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.command.2", "/work-dir/index.html"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.command.3", "http://kubernetes.io"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.volume_mount.0.name", "workdir"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.volume_mount.0.mount_path", "/work-dir"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesReplicationController_importBasic(t *testing.T) {
 	resourceName := "kubernetes_replication_controller.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -467,6 +495,59 @@ resource "kubernetes_replication_controller" "test" {
   }
 }
 `, name)
+}
+
+func testAccKubernetesReplicationControllerConfig_initContainer(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_replication_controller" "test" {
+	metadata {
+		annotations {
+			TestAnnotationOne = "one"
+			TestAnnotationTwo = "two"
+		}
+		labels {
+			TestLabelOne = "one"
+			TestLabelTwo = "two"
+			TestLabelThree = "three"
+		}
+		name = "%s"
+	}
+	spec {
+		replicas = 1000 # This is intentionally high to exercise the waiter
+		selector {
+			TestLabelOne = "one"
+			TestLabelTwo = "two"
+			TestLabelThree = "three"
+		}
+		template {
+			container {
+				name = "nginx"
+				image = "nginx"
+				port {
+					container_port = 80
+				}
+				volume_mount {
+					name = "workdir"
+					mount_path = "/usr/share/nginx/html"
+				}
+			}
+			init_container {
+				name = "install"
+				image = "busybox"
+				command = ["wget", "-O", "/work-dir/index.html", "http://kubernetes.io"]
+				volume_mount {
+					name = "workdir"
+					mount_path = "/work-dir"
+				}
+			}
+			dns_policy = "Default"
+			volume {
+				name = "workdir"
+				empty_dir {}
+			}
+		}
+	}
+}`, name)
 }
 
 func testAccKubernetesReplicationControllerConfig_modified(name string) string {

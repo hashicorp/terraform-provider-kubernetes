@@ -3,6 +3,7 @@
 IMPROVEMENTS:
 
 * resource/kubernetes_pod: Add timeout to pod resource create and delete [GH-151]
+* resource/kubernetes_pod: Add support for init containers [GH-156]
 
 BUG FIXES:
 

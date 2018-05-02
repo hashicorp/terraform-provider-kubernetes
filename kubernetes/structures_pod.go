@@ -14,11 +14,18 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	if in.ActiveDeadlineSeconds != nil {
 		att["active_deadline_seconds"] = *in.ActiveDeadlineSeconds
 	}
+
 	containers, err := flattenContainers(in.Containers)
 	if err != nil {
 		return nil, err
 	}
 	att["container"] = containers
+
+	initContainers, err := flattenContainers(in.InitContainers)
+	if err != nil {
+		return nil, err
+	}
+	att["init_container"] = initContainers
 
 	att["dns_policy"] = in.DNSPolicy
 
@@ -323,6 +330,14 @@ func expandPodSpec(p []interface{}) (v1.PodSpec, error) {
 			return obj, err
 		}
 		obj.Containers = cs
+	}
+
+	if v, ok := in["init_container"].([]interface{}); ok && len(v) > 0 {
+		cs, err := expandContainers(v)
+		if err != nil {
+			return obj, err
+		}
+		obj.InitContainers = cs
 	}
 
 	if v, ok := in["dns_policy"].(string); ok {

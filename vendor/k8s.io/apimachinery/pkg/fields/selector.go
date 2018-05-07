@@ -50,6 +50,24 @@ type Selector interface {
 
 	// String returns a human readable string that represents this selector.
 	String() string
+
+	// Make a deep copy of the selector.
+	DeepCopySelector() Selector
+}
+
+type nothingSelector struct{}
+
+func (n nothingSelector) Matches(_ Fields) bool                                      { return false }
+func (n nothingSelector) Empty() bool                                                { return false }
+func (n nothingSelector) String() string                                             { return "" }
+func (n nothingSelector) Requirements() Requirements                                 { return nil }
+func (n nothingSelector) DeepCopySelector() Selector                                 { return n }
+func (n nothingSelector) RequiresExactMatch(field string) (value string, found bool) { return "", false }
+func (n nothingSelector) Transform(fn TransformFunc) (Selector, error)               { return n, nil }
+
+// Nothing returns a selector that matches no fields
+func Nothing() Selector {
+	return nothingSelector{}
 }
 
 // Everything returns a selector that matches all fields.
@@ -99,6 +117,15 @@ func (t *hasTerm) String() string {
 	return fmt.Sprintf("%v=%v", t.field, EscapeValue(t.value))
 }
 
+func (t *hasTerm) DeepCopySelector() Selector {
+	if t == nil {
+		return nil
+	}
+	out := new(hasTerm)
+	*out = *t
+	return out
+}
+
 type notHasTerm struct {
 	field, value string
 }
@@ -136,6 +163,15 @@ func (t *notHasTerm) Requirements() Requirements {
 
 func (t *notHasTerm) String() string {
 	return fmt.Sprintf("%v!=%v", t.field, EscapeValue(t.value))
+}
+
+func (t *notHasTerm) DeepCopySelector() Selector {
+	if t == nil {
+		return nil
+	}
+	out := new(notHasTerm)
+	*out = *t
+	return out
 }
 
 type andTerm []Selector
@@ -205,6 +241,17 @@ func (t andTerm) String() string {
 		terms = append(terms, q.String())
 	}
 	return strings.Join(terms, ",")
+}
+
+func (t andTerm) DeepCopySelector() Selector {
+	if t == nil {
+		return nil
+	}
+	out := make([]Selector, len(t))
+	for i := range t {
+		out[i] = t[i].DeepCopySelector()
+	}
+	return andTerm(out)
 }
 
 // SelectorFromSet returns a Selector which will match exactly the given Set. A
@@ -364,7 +411,7 @@ const (
 var termOperators = []string{notEqualOperator, doubleEqualOperator, equalOperator}
 
 // splitTerm returns the lhs, operator, and rhs parsed from the given term, along with an indicator of whether the parse was successful.
-// no escaping of special characters is supported in the lhs value, so the first occurance of a recognized operator is used as the split point.
+// no escaping of special characters is supported in the lhs value, so the first occurrence of a recognized operator is used as the split point.
 // the literal rhs is returned, and the caller is responsible for applying any desired unescaping.
 func splitTerm(term string) (lhs, op, rhs string, ok bool) {
 	for i := range term {
@@ -415,6 +462,12 @@ func parseSelector(selector string, fn TransformFunc) (Selector, error) {
 // Cannot return an error.
 func OneTermEqualSelector(k, v string) Selector {
 	return &hasTerm{field: k, value: v}
+}
+
+// OneTermNotEqualSelector returns an object that matches objects where one field/field does not equal one value.
+// Cannot return an error.
+func OneTermNotEqualSelector(k, v string) Selector {
+	return &notHasTerm{field: k, value: v}
 }
 
 // AndSelectors creates a selector that is the logical AND of all the given selectors

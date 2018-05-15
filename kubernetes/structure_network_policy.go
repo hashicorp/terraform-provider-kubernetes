@@ -114,6 +114,9 @@ func expandNetworkPolicySpec(l []interface{}) v1.NetworkPolicySpec {
 		if v, ok := in["ingress"].([]interface{}); ok && len(v) > 0 {
 			obj.Ingress = expandNetworkPolicyIngress(v)
 		}
+		if v, ok := in["egress"].([]interface{}); ok && len(v) > 0 {
+			obj.Egress = expandNetworkPolicyEgress(v)
+		}
 	}
 	return obj
 }

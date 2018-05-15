@@ -42,6 +42,8 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.0", "Ingress"),
 				),
 			},
 			{
@@ -65,6 +67,8 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.0", "Ingress"),
 				),
 			},
 			{
@@ -98,6 +102,8 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.namespace_selector.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.namespace_selector.0.match_labels.name", "default"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.0", "Ingress"),
 				),
 			},
 			{
@@ -138,6 +144,8 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.1.namespace_selector.#", "0"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.1.pod_selector.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.1.pod_selector.0.match_labels.app", "myapp"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.0", "Ingress"),
 				),
 			},
 			{
@@ -189,6 +197,9 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.to.0.ip_block.0.except.0", "10.0.0.0/24"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.to.0.ip_block.0.except.1", "10.0.1.0/24"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.to.0.pod_selector.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.0", "Ingress"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.1", "Egress"),
 				),
 			},
 		},
@@ -254,6 +265,9 @@ func TestAccKubernetesNetworkPolicy_withEgressAtCreation(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.to.0.ip_block.0.except.0", "10.0.0.0/24"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.to.0.ip_block.0.except.1", "10.0.1.0/24"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.egress.0.to.0.pod_selector.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.0", "Ingress"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.1", "Egress"),
 				),
 			},
 		},
@@ -349,6 +363,8 @@ resource "kubernetes_network_policy" "test" {
 
   spec {
     pod_selector {}
+
+	policy_types = [ "Ingress" ]
   }
 }
 `, name)
@@ -376,6 +392,7 @@ resource "kubernetes_network_policy" "test" {
   spec {
     pod_selector = {}
     ingress      = []
+	policy_types = [ "Ingress" ]
   }
 }
 `, name)
@@ -421,6 +438,8 @@ resource "kubernetes_network_policy" "test" {
         ]
       },
     ]
+
+	policy_types = [ "Ingress" ]
   }
 }
 	`, name)
@@ -476,6 +495,8 @@ resource "kubernetes_network_policy" "test" {
         ]
       },
     ]
+
+	policy_types = [ "Ingress" ]
   }
 }
 	`, name)
@@ -554,6 +575,8 @@ resource "kubernetes_network_policy" "test" {
         ]
       },
     ]
+
+	policy_types = [ "Ingress", "Egress" ]
   }
 }
 	`, name)

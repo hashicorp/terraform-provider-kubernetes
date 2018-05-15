@@ -117,6 +117,7 @@ func expandNetworkPolicySpec(l []interface{}) v1.NetworkPolicySpec {
 		if v, ok := in["egress"].([]interface{}); ok && len(v) > 0 {
 			obj.Egress = expandNetworkPolicyEgress(v)
 		}
+		obj.PolicyTypes = expandNetworkPolicyTypes(in["policy_types"].([]interface{}))
 	}
 	return obj
 }
@@ -140,9 +141,9 @@ func expandNetworkPolicyIngress(l []interface{}) []v1.NetworkPolicyIngressRule {
 
 func expandNetworkPolicyEgress(l []interface{}) []v1.NetworkPolicyEgressRule {
 	obj := make([]v1.NetworkPolicyEgressRule, len(l), len(l))
-	for i, ingress := range l {
-		if ingress != nil {
-			in := ingress.(map[string]interface{})
+	for i, egress := range l {
+		if egress != nil {
+			in := egress.(map[string]interface{})
 			obj[i] = v1.NetworkPolicyEgressRule{}
 			if v, ok := in["ports"].([]interface{}); ok && len(v) > 0 {
 				obj[i].Ports = expandNetworkPolicyPorts(v)
@@ -210,6 +211,14 @@ func expandIPBlock(l []interface{}) *v1.IPBlock {
 	return obj
 }
 
+func expandNetworkPolicyTypes(l []interface{}) []v1.PolicyType {
+	obj := make([]v1.PolicyType, 0, 0)
+	for _, policyType := range l {
+		obj = append(obj, v1.PolicyType(policyType.(string)))
+	}
+	return obj
+}
+
 // Patchers
 
 func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData) PatchOperations {
@@ -253,7 +262,7 @@ func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData
 	if d.HasChange(keyPrefix + "policy_types") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/policyTypes",
-			Value: expandStringSlice(d.Get(keyPrefix + "policy_types").([]interface{})),
+			Value: expandNetworkPolicyTypes(d.Get(keyPrefix + "policy_types").([]interface{})),
 		})
 	}
 	return ops

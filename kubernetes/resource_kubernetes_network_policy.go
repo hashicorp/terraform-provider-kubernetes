@@ -215,12 +215,17 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 								Schema: labelSelectorFields(),
 							},
 						},
+						// The policy_types property is made required because the default value is only evaluated server side on resource creation.
+						// During the initial creation, a default value is determined and stored, then PolicyTypes is no longer considered unset,
+						// it will stick to that value on further updates unless explicitly overridden.
+						// Leaving the policy_types property optional here would prevent further updates adding egress rules after the initial resource creation
+						// without egress rules nor policy types from working as expected as PolicyTypes will stick to Ingress server side.
 						"policy_types": {
 							Type:        schema.TypeList,
 							Description: networkPolicySpecPolicyTypesDoc,
-							Optional:    true,
+							Required:    true,
+							MinItems:    1,
 							MaxItems:    2,
-							Computed:    true,
 							Elem:        &schema.Schema{Type: schema.TypeString},
 						},
 					},

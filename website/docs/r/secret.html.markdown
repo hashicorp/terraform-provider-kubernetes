@@ -42,10 +42,10 @@ resource "kubernetes_secret" "example" {
   }
 
   data {
-    ".dockercfg" = "${file("${path.module}/.docker/config.json")}"
+    ".dockerconfigjson" = "${file("${path.module}/.docker/config.json")}"
   }
 
-  type = "kubernetes.io/dockercfg"
+  type = "kubernetes.io/dockerconfigjson"
 }
 ```
 

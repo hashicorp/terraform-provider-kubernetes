@@ -11,6 +11,7 @@ BUG FIXES:
 * resource/kubernetes_service: Switch targetPort to string [GH-154]
 * data/kubernetes_service: Switch targetPort to string [GH-159]
 * resource/kubernetes_pod: env var value change forces new pod [GH-155]
+* Fix example in docs for an image pull secret [GH-165]
 
 ## 1.1.0 (March 23, 2018)
 

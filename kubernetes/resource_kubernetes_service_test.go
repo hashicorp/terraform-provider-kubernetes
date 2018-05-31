@@ -591,6 +591,7 @@ resource "kubernetes_service" "test" {
     }
 
     type = "LoadBalancer"
+    load_balancer_ip = "100.24.12.6" // New line added
   }
 }
 `, name, name)

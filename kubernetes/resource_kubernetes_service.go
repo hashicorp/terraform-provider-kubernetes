@@ -10,7 +10,6 @@ import (
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pkgApi "k8s.io/apimachinery/pkg/types"
 	kubernetes "k8s.io/client-go/kubernetes"
 )
 
@@ -235,35 +234,30 @@ func resourceKubernetesServiceRead(d *schema.ResourceData, meta interface{}) err
 func resourceKubernetesServiceUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, name, err := idParts(d.Id())
+	namespace, _, err := idParts(d.Id())
 	if err != nil {
 		return err
 	}
 
-	ops := patchMetadata("metadata.0.", "/metadata/", d)
-	if d.HasChange("spec") {
-		serverVersion, err := conn.ServerVersion()
-		if err != nil {
-			return err
-		}
-		diffOps, err := patchServiceSpec("spec.0.", "/spec/", d, serverVersion)
-		if err != nil {
-			return err
-		}
-		ops = append(ops, diffOps...)
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	spec := expandServiceSpec(d.Get("spec").([]interface{}))
+
+	if metadata.Namespace == "" {
+		metadata.Namespace = "default"
 	}
-	data, err := ops.MarshalJSON()
-	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+
+	service := &api.Service{
+		ObjectMeta: metadata,
+		Spec:       spec,
 	}
-	log.Printf("[INFO] Updating service %q: %v", name, string(data))
-	out, err := conn.CoreV1().Services(namespace).Patch(name, pkgApi.JSONPatchType, data)
+
+	out, err := conn.CoreV1().Services(namespace).Update(service)
 	if err != nil {
 		return fmt.Errorf("Failed to update service: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated service: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
 
+	d.SetId(buildId(out.ObjectMeta))
 	return resourceKubernetesServiceRead(d, meta)
 }
 

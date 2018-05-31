@@ -50,6 +50,9 @@ func expandMetadata(in []interface{}) metav1.ObjectMeta {
 	if v, ok := m["namespace"]; ok {
 		meta.Namespace = v.(string)
 	}
+	if v, ok := m["resource_version"]; ok {
+		meta.ResourceVersion = v.(string)
+	}
 
 	return meta
 }

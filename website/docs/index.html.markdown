@@ -65,19 +65,30 @@ Read [more about `kubectl` in the official docs](https://kubernetes.io/docs/user
 
 ### Statically defined credentials
 
-The other way is **statically** define all the credentials:
+The other way is **statically** define TLS certificate credentials:
 
 ```hcl
 provider "kubernetes" {
-  host     = "https://104.196.242.174"
-  username = "ClusterMaster"
-  password = "MindTheGap"
+  host = "https://104.196.242.174"
 
   client_certificate     = "${file("~/.kube/client-cert.pem")}"
   client_key             = "${file("~/.kube/client-key.pem")}"
   cluster_ca_certificate = "${file("~/.kube/cluster-ca-cert.pem")}"
 }
 ```
+
+or username and password (HTTP Basic Authorization):
+
+```hcl
+provider "kubernetes" {
+  host = "https://104.196.242.174"
+
+  client_certificate     = "${file("~/.kube/client-cert.pem")}"
+  client_key             = "${file("~/.kube/client-key.pem")}"
+  cluster_ca_certificate = "${file("~/.kube/cluster-ca-cert.pem")}"
+}
+```
+
 
 If you have **both** valid configuration in a config file and static configuration, the static one is used as override.
 i.e. any static field will override its counterpart loaded from the config.

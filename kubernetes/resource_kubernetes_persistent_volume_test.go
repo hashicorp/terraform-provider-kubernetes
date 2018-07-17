@@ -19,6 +19,10 @@ func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 	diskName := fmt.Sprintf("tf-acc-test-disk-%s", randString)
 
+	// By default, this is the name of the automatically created
+	// StorageClass in Kubernetes
+	defaultStorageClassName := "standard"
+
 	region := os.Getenv("GOOGLE_REGION")
 	zone := os.Getenv("GOOGLE_ZONE")
 
@@ -58,6 +62,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.gce_persistent_disk.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.gce_persistent_disk.0.pd_name", diskName),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.storage_class_name", defaultStorageClassName),
 				),
 			},
 			{

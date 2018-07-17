@@ -101,8 +101,9 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 						},
 						"storage_class_name": {
 							Type:        schema.TypeString,
-							Description: "A description of the persistent volume's class. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class",
+							Description: "The name of the persistent volume's storage class. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class",
 							Optional:    true,
+							Computed:    true,
 						},
 					},
 				},

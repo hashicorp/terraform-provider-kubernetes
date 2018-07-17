@@ -110,6 +110,7 @@ resource "kubernetes_job" "test" {
 	}
 	spec {
 		parallelism = 2
+		backoff_limit = 4
 		template {
 			metadata {
 				labels {
@@ -136,6 +137,7 @@ resource "kubernetes_job" "test" {
 	}
 	spec {
 		parallelism = 2
+		backoff_limit = 6
 		template {
 			spec {
 				container {

@@ -12,6 +12,10 @@ func flattenJobSpec(in batchv1.JobSpec) ([]interface{}, error) {
 		att["active_deadline_seconds"] = *in.ActiveDeadlineSeconds
 	}
 
+	if in.BackoffLimit != nil {
+		att["backoff_limit"] = *in.BackoffLimit
+	}
+
 	if in.Completions != nil {
 		att["completions"] = *in.Completions
 	}
@@ -58,6 +62,10 @@ func expandJobSpec(j []interface{}) (batchv1.JobSpec, error) {
 
 	if v, ok := in["active_deadline_seconds"].(int); ok && v > 0 {
 		obj.ActiveDeadlineSeconds = ptrToInt64(int64(v))
+	}
+
+	if v, ok := in["backoff_limit"].(int); ok && v != 6 {
+		obj.BackoffLimit = ptrToInt32(int32(v))
 	}
 
 	if v, ok := in["completions"].(int); ok && v > 0 {

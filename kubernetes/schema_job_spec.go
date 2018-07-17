@@ -12,6 +12,12 @@ func jobSpecFields() map[string]*schema.Schema {
 			ValidateFunc: validatePositiveInteger,
 			Description:  "Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.",
 		},
+		"backoff_limit": {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			ValidateFunc: validatePositiveInteger,
+			Description:  "Specifies the number of retries before marking this job failed. Defaults to 6",
+		},
 		"completions": {
 			Type:         schema.TypeInt,
 			Optional:     true,

@@ -24,13 +24,13 @@ func flattenCronJobSpec(in v1beta1.CronJobSpec) ([]interface{}, error) {
 	att["job_template"] = jobTemplate
 
 	if in.StartingDeadlineSeconds != nil {
-		att["starting_deadline_seconds"] = int(*in.StartingDeadlineSeconds)
+		att["starting_deadline_seconds"] = int64(*in.StartingDeadlineSeconds)
 	} else {
 		att["starting_deadline_seconds"] = 0
 	}
 
 	if in.SuccessfulJobsHistoryLimit != nil {
-		att["successful_jobs_history_limit"] = int(*in.SuccessfulJobsHistoryLimit)
+		att["successful_jobs_history_limit"] = int32(*in.SuccessfulJobsHistoryLimit)
 	} else {
 		att["successful_jobs_history_limit"] = 3
 	}
@@ -81,7 +81,7 @@ func expandCronJobSpec(j []interface{}) (v1beta1.CronJobSpec, error) {
 	}
 
 	if v, ok := in["successful_jobs_history_limit"].(int); ok && v != 3 {
-		obj.StartingDeadlineSeconds = ptrToInt64(int64(v))
+		obj.SuccessfulJobsHistoryLimit = ptrToInt32(int32(v))
 	}
 
 	if v, ok := in["suspend"].(bool); ok {

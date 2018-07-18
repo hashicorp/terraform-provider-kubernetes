@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform/helper/schema"
 	"k8s.io/api/batch/v1beta1"
 )
 
@@ -108,10 +107,4 @@ func expandJobTemplate(in []interface{}) (v1beta1.JobTemplateSpec, error) {
 	}
 
 	return obj, nil
-}
-
-func patchCronJobSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOperations, error) {
-	ops := make([]PatchOperation, 0)
-
-	return ops, nil
 }

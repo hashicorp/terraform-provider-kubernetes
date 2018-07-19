@@ -60,17 +60,26 @@ provider block completely empty.
 provider "kubernetes" {}
 ```
 
-If you wish to configure the provider statically you can do so
+If you wish to configure the provider statically you can do so by providing TLS certificates:
 
 ```hcl
 provider "kubernetes" {
-  host     = "https://104.196.242.174"
-  username = "ClusterMaster"
-  password = "MindTheGap"
+  host = "https://104.196.242.174"
 
   client_certificate     = "${file("~/.kube/client-cert.pem")}"
   client_key             = "${file("~/.kube/client-key.pem")}"
   cluster_ca_certificate = "${file("~/.kube/cluster-ca-cert.pem")}"
+}
+```
+
+or by providing username and password (HTTP Basic Authorization):
+
+```hcl
+provider "kubernetes" {
+  host = "https://104.196.242.174"
+
+  username = "ClusterMaster"
+  password = "MindTheGap"
 }
 ```
 

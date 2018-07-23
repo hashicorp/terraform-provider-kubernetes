@@ -9,7 +9,9 @@
 Maintainers
 -----------
 
-This provider plugin is maintained by the Terraform team at [HashiCorp](https://www.hashicorp.com/).
+We are [actively looking for a Software Engineer](https://www.hashicorp.com/jobs/1185127)
+to work full-time in the Terraform team at [HashiCorp](https://www.hashicorp.com/)
+to maintain this provider.
 
 ## Requirements
 

@@ -1,17 +1,17 @@
-## 1.2.0 (Unreleased)
+## 1.2.0 (August 15, 2018)
 
 IMPROVEMENTS:
 
-* resource/kubernetes_pod: Add timeout to pod resource create and delete [GH-151]
-* resource/kubernetes_pod: Add support for init containers [GH-156]
+* resource/kubernetes_pod: Add timeout to pod resource create and delete ([#151](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/151))
+* resource/kubernetes_pod: Add support for init containers ([#156](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/156))
 
 BUG FIXES:
 
-* name label: All name labels will now allow DNS1123 subdomain format ex: `my.label123` [GH-152]
-* resource/kubernetes_service: Switch targetPort to string [GH-154]
-* data/kubernetes_service: Switch targetPort to string [GH-159]
-* resource/kubernetes_pod: env var value change forces new pod [GH-155]
-* Fix example in docs for an image pull secret [GH-165]
+* name label: All name labels will now allow DNS1123 subdomain format ex: `my.label123` ([#152](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/152))
+* resource/kubernetes_service: Switch targetPort to string ([#154](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/154))
+* data/kubernetes_service: Switch targetPort to string ([#159](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/159))
+* resource/kubernetes_pod: env var value change forces new pod ([#155](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/155))
+* Fix example in docs for an image pull secret ([#165](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/165))
 
 ## 1.1.0 (March 23, 2018)
 

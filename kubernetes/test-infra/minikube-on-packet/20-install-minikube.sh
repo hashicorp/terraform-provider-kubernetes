@@ -13,3 +13,5 @@ curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/miniku
 minikube version
 minikube config set WantReportErrorPrompt false
 minikube config set vm-driver kvm2
+minikube config set cpus $(($(lscpu -p | grep -cv '#') / 2))
+minikube config set memory $(($(free --mega -tw | grep Mem: | cut -d' ' -f12) / 2))

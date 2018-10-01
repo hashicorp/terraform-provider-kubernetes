@@ -11,9 +11,9 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
 	"github.com/terraform-providers/terraform-provider-google/google"
+	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetes "k8s.io/client-go/kubernetes"
-	api "k8s.io/client-go/pkg/api/v1"
 )
 
 var testAccProviders map[string]terraform.ResourceProvider

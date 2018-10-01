@@ -75,8 +75,8 @@ resource "packet_device" "minikube" {
       user        = "root"
       private_key = "${tls_private_key.ssh.private_key_pem}"
     }
-    source      = "${path.module}/10-install-virtualbox.sh"
-    destination = "/tmp/10-install-virtualbox.sh"
+    source      = "${path.module}/10-install-kvm.sh"
+    destination = "/tmp/10-install-kvm.sh"
   }
   provisioner "file" {
     connection {
@@ -95,13 +95,13 @@ resource "packet_device" "minikube" {
       private_key = "${tls_private_key.ssh.private_key_pem}"
     }
     inline = [
-      "chmod a+x /tmp/10-install-virtualbox.sh && chmod a+x /tmp/20-install-minikube.sh",
-      "/tmp/10-install-virtualbox.sh | tee /var/log/provisioning-10-virtualbox.log",
+      "chmod a+x /tmp/10-install-kvm.sh && chmod a+x /tmp/20-install-minikube.sh",
+      "/tmp/10-install-kvm.sh | tee /var/log/provisioning-11-kvm.log",
       "/tmp/20-install-minikube.sh | tee /var/log/provisioning-20-minikube.log",
-      "minikube start --kubernetes-version=v${var.kubernetes_version}",
+      "/usr/local/bin/minikube start --kubernetes-version=v${var.kubernetes_version}",
       # Extract certs so they can be transfered back to client
       "mkdir -p /tmp/${var.dotminikube_path}",
-      "minikube ip | tr -d \"\n\" > /tmp/client/local-ip.txt",
+      "/usr/local/bin/minikube ip | tr -d \"\n\" > /tmp/client/local-ip.txt",
       "cp -r ~/.minikube/{ca.crt,client.crt,client.key} /tmp/${var.dotminikube_path}/",
     ]
   }

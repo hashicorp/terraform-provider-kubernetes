@@ -5,9 +5,11 @@ import (
 	"log"
 	"regexp"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
 )
 
 func dataSourceAwsAmiIds() *schema.Resource {
@@ -26,7 +28,7 @@ func dataSourceAwsAmiIds() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				ForceNew:     true,
-				ValidateFunc: validateNameRegex,
+				ValidateFunc: validation.ValidateRegexp,
 			},
 			"owners": {
 				Type:     schema.TypeList,
@@ -68,6 +70,27 @@ func dataSourceAwsAmiIdsRead(d *schema.ResourceData, meta interface{}) error {
 
 		if len(o) > 0 {
 			params.Owners = o
+		}
+	}
+
+	// Deprecated: pre-2.0.0 warning logging
+	if !ownersOk {
+		log.Print("[WARN] The \"owners\" argument will become required in the next major version.")
+		log.Print("[WARN] Documentation can be found at: https://www.terraform.io/docs/providers/aws/d/ami.html#owners")
+
+		missingOwnerFilter := true
+
+		if filtersOk {
+			for _, filter := range params.Filters {
+				if aws.StringValue(filter.Name) == "owner-alias" || aws.StringValue(filter.Name) == "owner-id" {
+					missingOwnerFilter = false
+					break
+				}
+			}
+		}
+
+		if missingOwnerFilter {
+			log.Print("[WARN] Potential security issue: missing \"owners\" filtering for AMI. Check AMI to ensure it came from trusted source.")
 		}
 	}
 

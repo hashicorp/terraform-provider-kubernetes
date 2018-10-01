@@ -6,9 +6,11 @@ import (
 	"log"
 	"regexp"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
 )
 
 func dataSourceAwsAmi() *schema.Resource {
@@ -27,7 +29,7 @@ func dataSourceAwsAmi() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				ForceNew:     true,
-				ValidateFunc: validateNameRegex,
+				ValidateFunc: validation.ValidateRegexp,
 			},
 			"most_recent": {
 				Type:     schema.TypeBool,
@@ -199,6 +201,27 @@ func dataSourceAwsAmiRead(d *schema.ResourceData, meta interface{}) error {
 
 		if len(o) > 0 {
 			params.Owners = o
+		}
+	}
+
+	// Deprecated: pre-2.0.0 warning logging
+	if !ownersOk {
+		log.Print("[WARN] The \"owners\" argument will become required in the next major version.")
+		log.Print("[WARN] Documentation can be found at: https://www.terraform.io/docs/providers/aws/d/ami.html#owners")
+
+		missingOwnerFilter := true
+
+		if filtersOk {
+			for _, filter := range params.Filters {
+				if aws.StringValue(filter.Name) == "owner-alias" || aws.StringValue(filter.Name) == "owner-id" {
+					missingOwnerFilter = false
+					break
+				}
+			}
+		}
+
+		if missingOwnerFilter {
+			log.Print("[WARN] Potential security issue: missing \"owners\" filtering for AMI. Check AMI to ensure it came from trusted source.")
 		}
 	}
 
@@ -431,15 +454,4 @@ func amiProductCodesHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["product_code_id"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["product_code_type"].(string)))
 	return hashcode.String(buf.String())
-}
-
-func validateNameRegex(v interface{}, k string) (ws []string, errors []error) {
-	value := v.(string)
-
-	if _, err := regexp.Compile(value); err != nil {
-		errors = append(errors, fmt.Errorf(
-			"%q contains an invalid regular expression: %s",
-			k, err))
-	}
-	return
 }

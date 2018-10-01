@@ -4,7 +4,7 @@ services:
 - docker
 language: go
 go:
-- 1.9
+- 1.11
 
 install:
 # This script is used by the Travis build to install a cookie for
@@ -15,6 +15,7 @@ install:
 - go get github.com/kardianos/govendor
 
 script:
+- govendor sync
 - make test
 - make vendor-status
 - make vet

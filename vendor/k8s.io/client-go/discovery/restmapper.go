@@ -18,6 +18,7 @@ package discovery
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -38,7 +39,7 @@ type APIGroupResources struct {
 
 // NewRESTMapper returns a PriorityRESTMapper based on the discovered
 // groups and resources passed in.
-func NewRESTMapper(groupResources []*APIGroupResources, versionInterfaces meta.VersionInterfacesFunc) meta.RESTMapper {
+func NewRESTMapper(groupResources []*APIGroupResources) meta.RESTMapper {
 	unionMapper := meta.MultiRESTMapper{}
 
 	var groupPriority []string
@@ -49,6 +50,7 @@ func NewRESTMapper(groupResources []*APIGroupResources, versionInterfaces meta.V
 	for _, group := range groupResources {
 		groupPriority = append(groupPriority, group.Group.Name)
 
+		// Make sure the preferred version comes first
 		if len(group.Group.PreferredVersion.Version) != 0 {
 			preferred := group.Group.PreferredVersion.Version
 			if _, ok := group.VersionedResources[preferred]; ok {
@@ -72,16 +74,43 @@ func NewRESTMapper(groupResources []*APIGroupResources, versionInterfaces meta.V
 				continue
 			}
 
+			// Add non-preferred versions after the preferred version, in case there are resources that only exist in those versions
+			if discoveryVersion.Version != group.Group.PreferredVersion.Version {
+				resourcePriority = append(resourcePriority, schema.GroupVersionResource{
+					Group:    group.Group.Name,
+					Version:  discoveryVersion.Version,
+					Resource: meta.AnyResource,
+				})
+
+				kindPriority = append(kindPriority, schema.GroupVersionKind{
+					Group:   group.Group.Name,
+					Version: discoveryVersion.Version,
+					Kind:    meta.AnyKind,
+				})
+			}
+
 			gv := schema.GroupVersion{Group: group.Group.Name, Version: discoveryVersion.Version}
-			versionMapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{gv}, versionInterfaces)
+			versionMapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{gv})
 
 			for _, resource := range resources {
 				scope := meta.RESTScopeNamespace
 				if !resource.Namespaced {
 					scope = meta.RESTScopeRoot
 				}
-				versionMapper.Add(gv.WithKind(resource.Kind), scope)
-				// TODO only do this if it supports listing
+
+				// this is for legacy resources and servers which don't list singular forms.  For those we must still guess.
+				if len(resource.SingularName) == 0 {
+					versionMapper.Add(gv.WithKind(resource.Kind), scope)
+					// TODO this is producing unsafe guesses that don't actually work, but it matches previous behavior
+					versionMapper.Add(gv.WithKind(resource.Kind+"List"), scope)
+					continue
+				}
+
+				plural := gv.WithResource(resource.Name)
+				singular := gv.WithResource(resource.SingularName)
+				versionMapper.AddSpecific(gv.WithKind(resource.Kind), plural, singular, scope)
+				versionMapper.AddSpecific(gv.WithKind(strings.ToLower(resource.Kind)), plural, singular, scope)
+				// TODO this is producing unsafe guesses that don't actually work, but it matches previous behavior
 				versionMapper.Add(gv.WithKind(resource.Kind+"List"), scope)
 			}
 			// TODO why is this type not in discovery (at least for "v1")
@@ -115,7 +144,10 @@ func NewRESTMapper(groupResources []*APIGroupResources, versionInterfaces meta.V
 func GetAPIGroupResources(cl DiscoveryInterface) ([]*APIGroupResources, error) {
 	apiGroups, err := cl.ServerGroups()
 	if err != nil {
-		return nil, err
+		if apiGroups == nil || len(apiGroups.Groups) == 0 {
+			return nil, err
+		}
+		// TODO track the errors and update callers to handle partial errors.
 	}
 	var result []*APIGroupResources
 	for _, group := range apiGroups.Groups {
@@ -128,7 +160,9 @@ func GetAPIGroupResources(cl DiscoveryInterface) ([]*APIGroupResources, error) {
 			if err != nil {
 				// continue as best we can
 				// TODO track the errors and update callers to handle partial errors.
-				continue
+				if resources == nil || len(resources.APIResources) == 0 {
+					continue
+				}
 			}
 			groupResources.VersionedResources[version.Version] = resources.APIResources
 		}
@@ -141,19 +175,17 @@ func GetAPIGroupResources(cl DiscoveryInterface) ([]*APIGroupResources, error) {
 // initialization of the RESTMapper until the first mapping is
 // requested.
 type DeferredDiscoveryRESTMapper struct {
-	initMu           sync.Mutex
-	delegate         meta.RESTMapper
-	cl               CachedDiscoveryInterface
-	versionInterface meta.VersionInterfacesFunc
+	initMu   sync.Mutex
+	delegate meta.RESTMapper
+	cl       CachedDiscoveryInterface
 }
 
 // NewDeferredDiscoveryRESTMapper returns a
 // DeferredDiscoveryRESTMapper that will lazily query the provided
 // client for discovery information to do REST mappings.
-func NewDeferredDiscoveryRESTMapper(cl CachedDiscoveryInterface, versionInterface meta.VersionInterfacesFunc) *DeferredDiscoveryRESTMapper {
+func NewDeferredDiscoveryRESTMapper(cl CachedDiscoveryInterface) *DeferredDiscoveryRESTMapper {
 	return &DeferredDiscoveryRESTMapper{
-		cl:               cl,
-		versionInterface: versionInterface,
+		cl: cl,
 	}
 }
 
@@ -170,7 +202,7 @@ func (d *DeferredDiscoveryRESTMapper) getDelegate() (meta.RESTMapper, error) {
 		return nil, err
 	}
 
-	d.delegate = NewRESTMapper(groupResources, d.versionInterface)
+	d.delegate = NewRESTMapper(groupResources)
 	return d.delegate, err
 }
 

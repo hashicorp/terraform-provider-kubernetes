@@ -63,7 +63,7 @@ func resourceKubernetesReplicationController() *schema.Resource {
 							Required:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
-								Schema: podSpecFields(true),
+								Schema: replicationControllerTemplateFieldSpec(),
 							},
 						},
 					},
@@ -71,6 +71,33 @@ func resourceKubernetesReplicationController() *schema.Resource {
 			},
 		},
 	}
+}
+
+func replicationControllerTemplateFieldSpec() map[string]*schema.Schema {
+	metadata := namespacedMetadataSchema("replication controller's template", true)
+	// TODO: make this required once the legacy fields are removed
+	metadata.Required = false
+	metadata.Optional = true
+
+	templateFields := map[string]*schema.Schema{
+		"metadata": metadata,
+		"spec": {
+			Type:        schema.TypeList,
+			Description: "Spec of the pods managed by the replication controller",
+			Optional:    true, // TODO: make this required once the legacy fields are removed
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: podSpecFields(false, false, true),
+			},
+		},
+	}
+
+	// Merge deprecated fields
+	for k, v := range podSpecFields(true, true, true) {
+		templateFields[k] = v
+	}
+
+	return templateFields
 }
 
 func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta interface{}) error {

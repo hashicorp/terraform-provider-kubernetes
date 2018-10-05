@@ -1,8 +1,8 @@
 package kubernetes
 
 import (
+	"github.com/imdario/mergo"
 	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec) ([]interface{}, error) {
@@ -14,11 +14,34 @@ func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec) ([]interf
 	}
 
 	att["selector"] = in.Selector
-	podSpec, err := flattenPodSpec(in.Template.Spec)
+
+	if in.Template != nil {
+		template, err := flattenReplicationControllerTemplate(*in.Template)
+		if err != nil {
+			return nil, err
+		}
+		att["template"] = template
+	}
+
+	return []interface{}{att}, nil
+}
+
+func flattenReplicationControllerTemplate(in v1.PodTemplateSpec) ([]interface{}, error) {
+	att := make(map[string]interface{})
+
+	podSpec, err := flattenPodSpec(in.Spec)
 	if err != nil {
 		return nil, err
 	}
-	att["template"] = podSpec
+
+	// Put the pod spec directly at the base template field to support deprecated fields
+	att = podSpec[0].(map[string]interface{})
+
+	// Also put the pod spec in the new spec field
+	att["spec"] = podSpec[0].(map[string]interface{})
+
+	// HINT: use diffSuppressFunc for labels automatically added from selector?
+	att["metadata"] = flattenMetadata(in.ObjectMeta)
 
 	return []interface{}{att}, nil
 }
@@ -32,16 +55,52 @@ func expandReplicationControllerSpec(rc []interface{}) (*v1.ReplicationControlle
 	obj.MinReadySeconds = int32(in["min_ready_seconds"].(int))
 	obj.Replicas = ptrToInt32(int32(in["replicas"].(int)))
 	obj.Selector = expandStringMap(in["selector"].(map[string]interface{}))
-	podSpec, err := expandPodSpec(in["template"].([]interface{}))
+
+	template, err := expandReplicationControllerTemplate(in["template"].([]interface{}), obj.Selector)
 	if err != nil {
 		return obj, err
 	}
-	obj.Template = &v1.PodTemplateSpec{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: obj.Selector,
-		},
-		Spec: *podSpec,
+
+	obj.Template = template
+
+	return obj, nil
+}
+
+func expandReplicationControllerTemplate(rct []interface{}, selector map[string]string) (*v1.PodTemplateSpec, error) {
+	obj := &v1.PodTemplateSpec{}
+	in := rct[0].(map[string]interface{})
+
+	// Get user defined metadata
+	metadata := expandMetadata(in["metadata"].([]interface{}))
+
+	// Add or merge labels from selector to ensure proper selection of pods by the replication controller
+	if metadata.Labels == nil {
+		metadata.Labels = selector
+	} else {
+		for k, v := range selector {
+			metadata.Labels[k] = v
+		}
 	}
+	obj.ObjectMeta = metadata
+
+	// Get pod spec from deprecated fields
+	podSpecDeprecated, err := expandPodSpec(rct)
+	if err != nil {
+		return obj, err
+	}
+
+	// Get pod spec from new fields
+	podSpec, err := expandPodSpec(in["spec"].([]interface{}))
+	if err != nil {
+		return obj, err
+	}
+
+	// Merge them overriding the deprecated ones by the new ones
+	if err = mergo.MergeWithOverwrite(&podSpecDeprecated, podSpec); err != nil {
+		return obj, err
+	}
+
+	obj.Spec = *podSpecDeprecated
 
 	return obj, nil
 }

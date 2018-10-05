@@ -477,7 +477,7 @@ resource "kubernetes_network_policy" "test" {
 
         from = [
           {
-			ip_block {
+            ip_block {
               cidr = "10.0.0.0/8"
               except = [
                 "10.0.0.0/24",
@@ -534,7 +534,7 @@ resource "kubernetes_network_policy" "test" {
 
         from = [
           {
-			ip_block {
+            ip_block {
               cidr = "10.0.0.0/8"
               except = [
                 "10.0.0.0/24",
@@ -564,7 +564,7 @@ resource "kubernetes_network_policy" "test" {
 
         to = [
           {
-			ip_block {
+            ip_block {
               cidr = "10.0.0.0/8"
               except = [
                 "10.0.0.0/24",

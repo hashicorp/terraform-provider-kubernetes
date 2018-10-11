@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
-
 	"k8s.io/apimachinery/pkg/api/resource"
 	apiValidation "k8s.io/apimachinery/pkg/api/validation"
 	utilValidation "k8s.io/apimachinery/pkg/util/validation"
@@ -210,4 +209,9 @@ func validateAttributeValueIsIn(validValues []string) schema.SchemaValidateFunc 
 		return
 
 	}
+}
+
+func validateStatefulSetUpdateStrategy(value interface{}, key string) (ws []string, es []error) {
+	//TODO: implement
+	return nil, nil
 }

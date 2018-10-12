@@ -15,6 +15,10 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["active_deadline_seconds"] = *in.ActiveDeadlineSeconds
 	}
 
+	if in.Affinity != nil {
+		att["affinity"] = flattenAffinity(in.Affinity)
+	}
+
 	containers, err := flattenContainers(in.Containers)
 	if err != nil {
 		return nil, err
@@ -320,6 +324,14 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 
 	if v, ok := in["active_deadline_seconds"].(int); ok && v > 0 {
 		obj.ActiveDeadlineSeconds = ptrToInt64(int64(v))
+	}
+
+	if v, ok := in["affinity"].([]interface{}); ok && len(v) > 0 {
+		a, err := expandAffinity(v)
+		if err != nil {
+			return obj, err
+		}
+		obj.Affinity = a
 	}
 
 	if v, ok := in["container"].([]interface{}); ok && len(v) > 0 {

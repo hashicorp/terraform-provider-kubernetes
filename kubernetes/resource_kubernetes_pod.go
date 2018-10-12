@@ -34,7 +34,7 @@ func resourceKubernetesPod() *schema.Resource {
 			"metadata": namespacedMetadataSchema("pod", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: "Spec of the pod owned by the cluster",
+				Description: "Specification of the desired behavior of the pod.",
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{

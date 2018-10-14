@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	api "k8s.io/kubernetes/pkg/apis/rbac/v1"
+	api "k8s.io/api/rbac/v1"
 )
 
 func expandRBACRoleRef(in interface{}) api.RoleRef {

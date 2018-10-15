@@ -33,8 +33,13 @@ func expandMetadata(in []interface{}) metav1.ObjectMeta {
 	}
 	m := in[0].(map[string]interface{})
 
-	meta.Annotations = expandStringMap(m["annotations"].(map[string]interface{}))
-	meta.Labels = expandStringMap(m["labels"].(map[string]interface{}))
+	if v, ok := m["annotations"].(map[string]interface{}); ok && len(v) > 0 {
+		meta.Annotations = expandStringMap(m["annotations"].(map[string]interface{}))
+	}
+
+	if v, ok := m["labels"].(map[string]interface{}); ok && len(v) > 0 {
+		meta.Labels = expandStringMap(m["labels"].(map[string]interface{}))
+	}
 
 	if v, ok := m["generate_name"]; ok {
 		meta.GenerateName = v.(string)

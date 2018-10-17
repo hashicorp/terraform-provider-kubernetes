@@ -92,6 +92,7 @@ The following arguments are supported:
 * `args` - (Optional) Arguments to the entrypoint. The docker image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/containers#containers-and-commands
 * `command` - (Optional) Entrypoint array. Not executed within a shell. The docker image's ENTRYPOINT is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/containers#containers-and-commands
 * `env` - (Optional) List of environment variables to set in the container. Cannot be updated.
+* `env_from` - (Optional) List of sources to populate environment variables in the container. The keys defined within a source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the container is starting. When a key exists in multiple sources, the value associated with the last source will take precedence. Values defined by an Env with a duplicate key will take precedence. Cannot be updated.
 * `image` - (Optional) Docker image name. More info: http://kubernetes.io/docs/user-guide/images
 * `image_pull_policy` - (Optional) Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/images#updating-images
 * `lifecycle` - (Optional) Actions that the management system should take in response to container lifecycle events
@@ -169,6 +170,13 @@ The following arguments are supported:
 * `items` - (Optional) If unspecified, each key-value pair in the Data field of the referenced ConfigMap will be projected into the volume as a file whose name is the key and content is the value. If specified, the listed keys will be projected into the specified paths, and unlisted keys will not be present. If a key is specified which is not present in the ConfigMap, the volume setup will error. Paths must be relative and may not contain the '..' path or start with '..'.
 * `name` - (Optional) Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names
 
+### `config_map_ref`
+
+#### Arguments
+
+* `name` - (Required) Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names
+* `optional` - (Optional) Specify whether the ConfigMap must be defined
+
 ### `config_map_key_ref`
 
 #### Arguments
@@ -196,6 +204,14 @@ The following arguments are supported:
 * `name` - (Required) Name of the environment variable. Must be a C_IDENTIFIER
 * `value` - (Optional) Variable references $(VAR_NAME) are expanded using the previous defined environment variables in the container and any service environment variables. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Defaults to "".
 * `value_from` - (Optional) Source for the environment variable's value
+
+### `env_from`
+
+#### Arguments
+
+* `config_map_ref` - (Optional) The ConfigMap to select from
+* `prefix` - (Optional) An optional identifer to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER..
+* `secret_ref` - (Optional) The Secret to select from
 
 ### `exec`
 
@@ -464,6 +480,13 @@ The `items` block supports the following:
 * `key` - (Required) The key to project.
 * `mode` - (Optional) Mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used.
 * `path` - (Required) The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.
+
+### `secret_ref`
+
+#### Arguments
+
+* `name` - (Required) Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names
+* `optional` - (Optional) Specify whether the Secret must be defined
 
 ### `secret_key_ref`
 

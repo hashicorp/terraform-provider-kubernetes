@@ -319,6 +319,61 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 				},
 			},
 		},
+		"env_from": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			ForceNew:    true,
+			Description: "List of sources to populate environment variables in the container. The keys defined within a source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the container is starting. When a key exists in multiple sources, the value associated with the last source will take precedence. Values defined by an Env with a duplicate key will take precedence. Cannot be updated.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"config_map_ref": {
+						Type:        schema.TypeList,
+						Optional:    true,
+						MaxItems:    1,
+						Description: "The ConfigMap to select from",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"name": {
+									Type:        schema.TypeString,
+									Required:    true,
+									Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+								},
+								"optional": {
+									Type:        schema.TypeBool,
+									Optional:    true,
+									Description: "Specify whether the ConfigMap must be defined",
+								},
+							},
+						},
+					},
+					"prefix": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "An optional identifer to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.",
+					},
+					"secret_ref": {
+						Type:        schema.TypeList,
+						Optional:    true,
+						MaxItems:    1,
+						Description: "The Secret to select from",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"name": {
+									Type:        schema.TypeString,
+									Required:    true,
+									Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+								},
+								"optional": {
+									Type:        schema.TypeBool,
+									Optional:    true,
+									Description: "Specify whether the Secret must be defined",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 		"image": {
 			Type:        schema.TypeString,
 			Optional:    true,

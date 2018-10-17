@@ -61,6 +61,7 @@ func TestAccKubernetesClusterRoleBinding(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "subject.1.namespace", "kube-system"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "subject.1.name", "default"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "subject.1.kind", "ServiceAccount"),
+					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "subject.1.api_group", ""),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "subject.2.api_group", "rbac.authorization.k8s.io"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "subject.2.name", "system:masters"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "subject.2.kind", "Group"),
@@ -168,6 +169,7 @@ resource "kubernetes_cluster_role_binding" "test" {
 	subject {
 		kind = "ServiceAccount"
 		name = "default"
+		api_group = ""
 		namespace = "kube-system"
 	}
 	subject {

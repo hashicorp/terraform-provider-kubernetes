@@ -81,6 +81,7 @@ func flattenPodAffinityTerms(in []v1.PodAffinityTerm) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
+		m["namespaces"] = newStringSet(schema.HashString, n.Namespaces)
 		m["topology_key"] = n.TopologyKey
 		if n.LabelSelector != nil {
 			m["label_selector"] = flattenLabelSelector(n.LabelSelector)

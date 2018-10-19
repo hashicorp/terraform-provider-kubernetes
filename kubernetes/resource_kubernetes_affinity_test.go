@@ -136,7 +136,8 @@ func TestAccKubernetesPod_with_pod_affinity_with_preferred_during_scheduling_ign
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_affinity.0.preferred_during_scheduling_ignored_during_execution.0.pod_affinity_term.0.label_selector.0.match_expressions.0.values.1996459178", "bar"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_affinity.0.preferred_during_scheduling_ignored_during_execution.0.pod_affinity_term.0.label_selector.0.match_expressions.0.values.2356372769", "foo"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_affinity.0.preferred_during_scheduling_ignored_during_execution.0.pod_affinity_term.0.label_selector.0.match_labels.%", "0"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_affinity.0.preferred_during_scheduling_ignored_during_execution.0.pod_affinity_term.0.namespaces.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_affinity.0.preferred_during_scheduling_ignored_during_execution.0.pod_affinity_term.0.namespaces.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_affinity.0.preferred_during_scheduling_ignored_during_execution.0.pod_affinity_term.0.namespaces.3814588639", "default"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_affinity.0.preferred_during_scheduling_ignored_during_execution.0.pod_affinity_term.0.topology_key", "kubernetes.io/hostname"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_affinity.0.preferred_during_scheduling_ignored_during_execution.0.weight", "100"),
 				),
@@ -343,6 +344,7 @@ func testAccKubernetesPodConfigWithPodAffinityWithPreferredDuringSchedulingIgnor
 									values = ["foo", "bar"]
 								}
 							}
+              namespaces = ["default"]
 							topology_key = "kubernetes.io/hostname"
 						}
 					}

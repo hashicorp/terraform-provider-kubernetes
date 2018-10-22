@@ -219,7 +219,7 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 		<-limiter
 
 		// Query the deployment to get a status update.
-		dply, err := conn.AppsV1().Deployments(metadata.Namespace).Get(deployment.Name, metav1.GetOptions{})
+		dply, err := conn.AppsV1().Deployments(metadata.Namespace).Get(out.Name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

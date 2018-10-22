@@ -61,15 +61,19 @@ func expandDeploymentSpec(deployment []interface{}) (appsv1.DeploymentSpec, erro
 		obj.Strategy = expandDeploymentStrategy(v)
 	}
 
-	obj.Template = expandPodTemplate(in["template"].([]interface{}))
+	template, err := expandPodTemplate(in["template"].([]interface{}))
+	if err != nil {
+		return obj, err
+	}
+	obj.Template = template
 
 	return obj, nil
 }
 
-func expandPodTemplate(l []interface{}) corev1.PodTemplateSpec {
+func expandPodTemplate(l []interface{}) (corev1.PodTemplateSpec, error) {
 	obj := corev1.PodTemplateSpec{}
 	if len(l) == 0 || l[0] == nil {
-		return obj
+		return obj, nil
 	}
 	in := l[0].(map[string]interface{})
 
@@ -78,11 +82,11 @@ func expandPodTemplate(l []interface{}) corev1.PodTemplateSpec {
 	if v, ok := in["spec"].([]interface{}); ok && len(v) > 0 {
 		podSpec, err := expandPodSpec(in["spec"].([]interface{}))
 		if err != nil {
-			return obj
+			return obj, err
 		}
 		obj.Spec = podSpec
 	}
-	return obj
+	return obj, nil
 }
 
 func expandDeploymentStrategy(l []interface{}) appsv1.DeploymentStrategy {

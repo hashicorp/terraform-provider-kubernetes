@@ -209,47 +209,16 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 
 	d.SetId(buildId(out.ObjectMeta))
 
-	log.Printf("[INFO] Submitted new deployment: %#v", out)
-
 	log.Printf("[DEBUG] Waiting for deployment %s to schedule %d replicas", d.Id(), *out.Spec.Replicas)
 
-	limiter := time.Tick(time.Second * 15)
-
-	for {
-		<-limiter
-
-		// Query the deployment to get a status update.
-		dply, err := conn.AppsV1().Deployments(metadata.Namespace).Get(out.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		if dply.Generation <= dply.Status.ObservedGeneration {
-			cond := GetDeploymentCondition(dply.Status, appsv1.DeploymentProgressing)
-			if cond != nil && cond.Reason == TimedOutReason {
-				return fmt.Errorf("Deployment exceeded its progress deadline")
-			}
-
-			if dply.Status.UpdatedReplicas < *dply.Spec.Replicas {
-				log.Printf("[DEBUG] Waiting for rollout to finish: %d out of %d new replicas have been updated...", dply.Status.UpdatedReplicas, dply.Spec.Replicas)
-				continue
-			}
-
-			if dply.Status.Replicas > dply.Status.UpdatedReplicas {
-				log.Printf("[DEBUG] Waiting for rollout to finish: %d old replicas are pending termination...", dply.Status.Replicas-dply.Status.UpdatedReplicas)
-				continue
-			}
-
-			if dply.Status.AvailableReplicas < dply.Status.UpdatedReplicas {
-				log.Printf("[DEBUG] Waiting for rollout to finish: %d of %d updated replicas are available...", dply.Status.AvailableReplicas, dply.Status.UpdatedReplicas)
-				continue
-			}
-
-			break
-		}
+	// 10 mins should be sufficient for scheduling ~10k replicas
+	err = resource.Retry(d.Timeout(schema.TimeoutCreate),
+		waitForDeploymentReplicasFunc(conn, out.GetNamespace(), out.GetName()))
+	if err != nil {
+		return err
 	}
 
-	log.Printf("[INFO] Deployment complete")
+	log.Printf("[INFO] Submitted new deployment: %#v", out)
 
 	return resourceKubernetesDeploymentRead(d, meta)
 }
@@ -379,4 +348,35 @@ func GetDeploymentCondition(status appsv1.DeploymentStatus, condType appsv1.Depl
 		}
 	}
 	return nil
+}
+
+func waitForDeploymentReplicasFunc(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
+	return func() *resource.RetryError {
+		// Query the deployment to get a status update.
+		dply, err := conn.AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
+		if err != nil {
+			return resource.NonRetryableError(err)
+		}
+
+		if dply.Generation <= dply.Status.ObservedGeneration {
+			cond := GetDeploymentCondition(dply.Status, appsv1.DeploymentProgressing)
+			if cond != nil && cond.Reason == TimedOutReason {
+				err := fmt.Errorf("Deployment exceeded its progress deadline")
+				return resource.NonRetryableError(err)
+			}
+
+			if dply.Status.UpdatedReplicas < *dply.Spec.Replicas {
+				return resource.RetryableError(fmt.Errorf("Waiting for rollout to finish: %d out of %d new replicas have been updated...", dply.Status.UpdatedReplicas, dply.Spec.Replicas))
+			}
+
+			if dply.Status.Replicas > dply.Status.UpdatedReplicas {
+				return resource.RetryableError(fmt.Errorf("Waiting for rollout to finish: %d old replicas are pending termination...", dply.Status.Replicas-dply.Status.UpdatedReplicas))
+			}
+
+			if dply.Status.AvailableReplicas < dply.Status.UpdatedReplicas {
+				return resource.RetryableError(fmt.Errorf("Waiting for rollout to finish: %d of %d updated replicas are available...", dply.Status.AvailableReplicas, dply.Status.UpdatedReplicas))
+			}
+		}
+		return nil
+	}
 }

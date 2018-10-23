@@ -459,7 +459,7 @@ func testAccKubernetesDeploymentConfig_basic(name string) string {
 			name = "%s"
 		}
 		spec {
-			replicas = 10 # This is intentionally high to exercise the waiter
+			replicas = 1000 # This is intentionally high to exercise the waiter
 			selector {
 				match_labels {
 					TestLabelOne   = "one"
@@ -503,7 +503,7 @@ func testAccKubernetesDeploymentConfig_initContainer(name string) string {
 			name = "%s"
 		}
 		spec {
-			replicas = 10 # This is intentionally high to exercise the waiter
+			replicas = 1000 # This is intentionally high to exercise the waiter
 			selector {
 				match_labels {
 					TestLabelOne   = "one"

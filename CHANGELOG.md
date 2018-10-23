@@ -1,14 +1,14 @@
-## 1.3.0 (Unreleased)
+## 1.3.0 (October 23, 2018)
 
 FEATURES:
 
-* **New Resource:** `kubernetes_cluster_role_binding` [GH-73]
-* **New Resource:** `kubernetes_deployment` [GH-101]
+* **New Resource:** `kubernetes_cluster_role_binding` ([#73](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/73))
+* **New Resource:** `kubernetes_deployment` ([#101](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/101))
 
 IMPROVEMENTS:
 
-* Update Kubernetes client library to 1.10 [GH-162]
-* Add support for `env_from` on container definitions [GH-82]
+* Update Kubernetes client library to 1.10 ([#162](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/162))
+* Add support for `env_from` on container definitions ([#82](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/82))
 
 ## 1.2.0 (August 15, 2018)
 

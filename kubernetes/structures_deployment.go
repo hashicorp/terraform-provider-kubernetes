@@ -14,12 +14,26 @@ func flattenDeploymentSpec(in appsv1.DeploymentSpec) ([]interface{}, error) {
 		att["replicas"] = *in.Replicas
 	}
 
-	att["selector"] = in.Selector
+	if in.ProgressDeadlineSeconds != nil {
+		att["progress_deadline_seconds"] = *in.ProgressDeadlineSeconds
+	}
+
+	if in.RevisionHistoryLimit != nil {
+		att["revision_history_limit"] = *in.RevisionHistoryLimit
+	}
+
+	if in.Selector != nil {
+		att["selector"] = flattenLabelSelector(in.Selector)
+	}
+
 	podSpec, err := flattenPodSpec(in.Template.Spec)
 	if err != nil {
 		return nil, err
 	}
-	att["template"] = podSpec
+	template := make(map[string]interface{})
+	template["spec"] = podSpec
+	template["metadata"] = flattenMetadata(in.Template.ObjectMeta)
+	att["template"] = []interface{}{template}
 
 	return []interface{}{att}, nil
 }
@@ -47,16 +61,31 @@ func expandDeploymentSpec(deployment []interface{}) (appsv1.DeploymentSpec, erro
 		obj.Strategy = expandDeploymentStrategy(v)
 	}
 
-	podSpec, err := expandPodSpec(in["template"].([]interface{}))
+	template, err := expandPodTemplate(in["template"].([]interface{}))
 	if err != nil {
 		return obj, err
 	}
+	obj.Template = template
 
-	obj.Template = corev1.PodTemplateSpec{
-		ObjectMeta: expandMetadata(in["template"].([]interface{})),
-		Spec:       podSpec,
+	return obj, nil
+}
+
+func expandPodTemplate(l []interface{}) (corev1.PodTemplateSpec, error) {
+	obj := corev1.PodTemplateSpec{}
+	if len(l) == 0 || l[0] == nil {
+		return obj, nil
 	}
+	in := l[0].(map[string]interface{})
 
+	obj.ObjectMeta = expandMetadata(in["metadata"].([]interface{}))
+
+	if v, ok := in["spec"].([]interface{}); ok && len(v) > 0 {
+		podSpec, err := expandPodSpec(in["spec"].([]interface{}))
+		if err != nil {
+			return obj, err
+		}
+		obj.Spec = podSpec
+	}
 	return obj, nil
 }
 

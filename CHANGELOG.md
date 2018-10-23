@@ -1,4 +1,15 @@
 ## 1.3.0 (Unreleased)
+
+FEATURES:
+
+* **New Resource:** `kubernetes_cluster_role_binding` [GH-73]
+* **New Resource:** `kubernetes_deployment` [GH-101]
+
+IMPROVEMENTS:
+
+* Update Kubernetes client library to 1.10 [GH-162]
+* Add support for `env_from` on container definitions [GH-82]
+
 ## 1.2.0 (August 15, 2018)
 
 IMPROVEMENTS:

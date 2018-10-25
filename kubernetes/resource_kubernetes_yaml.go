@@ -11,10 +11,13 @@ import (
 	k8meta "k8s.io/apimachinery/pkg/api/meta"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	meta_v1beta1 "k8s.io/apimachinery/pkg/apis/meta/v1beta1"
+	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
+
+	"k8s.io/apimachinery/pkg/runtime"
 	kubernetes "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	kubectlcmd "k8s.io/kubernetes/pkg/kubectl/cmd"
+	// kubectlcmd "k8s.io/kubernetes/pkg/kubectl/cmd"
 	// "k8s.io/client-go/pkg/api"
 	// api "k8s.io/api/core/v1"
 )
@@ -55,23 +58,44 @@ func resourceKubernetesYAML() *schema.Resource {
 func resourceKubernetesYAMLCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[INFO] Creating Resource kubernetes_yaml")
 
-	conn := meta.(*kubernetes.Clientset)
-	restClient := conn.Core().RESTClient()
+	// conn := meta.(*kubernetes.Clientset)
 
 	// Check we can decode the yaml
 	yaml := d.Get("yaml_body").(string)
-	metaObj, err := getResourceMetaObjFromYaml(yaml)
-
-	log.Printf("[INFO] Resource: '%+v'", metaObj)
-
-	// Does that resource already exist in Kubernetes
-	_, exists, err := getResourceFromMetaObj(restClient, metaObj)
+	metaObj, obj, err := getResourceMetaObjFromYaml(yaml)
 	if err != nil {
 		return err
 	}
-	if exists {
-		log.Printf("[INFO] Resource already present in cluster: %#v", metaObj)
+
+	log.Printf("[INFO] Resource: '%+v'", metaObj)
+
+	// // Does that resource already exist in Kubernetes
+	// _, exists, err := getResourceFromMetaObj(restClient, metaObj)
+	// if err != nil {
+	// 	return err
+	// }
+	// if exists {
+	// 	log.Printf("[INFO] Resource already present in cluster: %#v", metaObj)
+	// }
+
+	gv := metaObj.TypeMeta.GroupVersionKind().GroupVersion()
+	gConfig.APIPath = "/apis"
+	gConfig.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
+	gConfig.GroupVersion = &gv
+	log.Printf("[INFO] !!!! Error: '%+v'", gConfig)
+
+	restClient, err := rest.RESTClientFor(gConfig)
+	if err != nil {
+		return err
 	}
+	res := restClient.Put().Namespace(metaObj.Namespace).Body(obj).Resource(metaObj.TypeMeta.Kind).Do()
+	if res.Error() != nil {
+		log.Printf("[INFO] !!!! Error: '%+v'", metaObj)
+
+		return res.Error()
+	}
+
+	log.Printf("[INFO] !!!!!! Resource already present in cluster: %#v", res)
 
 	return resourceKubernetesYAMLRead(d, meta)
 }
@@ -103,7 +127,7 @@ func resourceKubernetesYAMLExists(d *schema.ResourceData, meta interface{}) (boo
 	restClient := conn.Core().RESTClient()
 
 	yaml := d.Get("yaml").(string)
-	metaObj, err := getResourceMetaObjFromYaml(yaml)
+	metaObj, _, err := getResourceMetaObjFromYaml(yaml)
 	if err != nil {
 		return false, err
 	}
@@ -130,17 +154,17 @@ func getResourceFromMetaObj(client rest.Interface, metaObj *meta_v1beta1.Partial
 	return res, true, err
 }
 
-func getResourceMetaObjFromYaml(yaml string) (*meta_v1beta1.PartialObjectMetadata, error) {
+func getResourceMetaObjFromYaml(yaml string) (*meta_v1beta1.PartialObjectMetadata, runtime.Object, error) {
 	decoder := scheme.Codecs.UniversalDeserializer()
 	obj, _, err := decoder.Decode([]byte(yaml), nil, nil)
 	if err != nil {
 		log.Printf("[INFO] Error parsing type: %#v", err)
-		return nil, err
+		return nil, nil, err
 	}
 	metaObj := k8meta.AsPartialObjectMetadata(obj.(meta_v1.Object))
 	typeMeta, err := k8meta.TypeAccessor(obj)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	metaObj.TypeMeta = meta_v1.TypeMeta{
 		APIVersion: typeMeta.GetAPIVersion(),
@@ -149,6 +173,6 @@ func getResourceMetaObjFromYaml(yaml string) (*meta_v1beta1.PartialObjectMetadat
 	if metaObj.Namespace == "" {
 		metaObj.Namespace = "default"
 	}
-	return metaObj, nil
+	return metaObj, obj, nil
 
 }

@@ -130,6 +130,8 @@ func Provider() terraform.ResourceProvider {
 	}
 }
 
+var gConfig *restclient.Config
+
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	var cfg *restclient.Config
@@ -178,6 +180,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to configure: %s", err)
 	}
+
+	gConfig = cfg
 
 	return k, nil
 }

@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	// "bytes"
 	"fmt"
 	"log"
 
@@ -9,9 +8,8 @@ import (
 	k8meta "k8s.io/apimachinery/pkg/api/meta"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	meta_v1beta1 "k8s.io/apimachinery/pkg/apis/meta/v1beta1"
-	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
-
 	"k8s.io/apimachinery/pkg/runtime"
+	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 )
@@ -34,7 +32,7 @@ func resourceKubernetesYAML() *schema.Resource {
 			// we need the update function specified.
 			d.ForceNew("yaml_body")
 
-			// Get the UID of the K8s resource as it was when we created it.
+			// Get the UID of the K8s resource as it was when the `resourceKubernetesYAMLCreate` func completed.
 			createdAtUID := d.Get("uid").(string)
 			// Get the UID of the K8s resource as it currently is in the cluster.
 			UID, exists := d.Get("live_uid").(string)
@@ -42,7 +40,7 @@ func resourceKubernetesYAML() *schema.Resource {
 				return nil
 			}
 
-			// Get the ResourceVersion of the K8s resource as it was when we created it.
+			// Get the ResourceVersion of the K8s resource as it was when the `resourceKubernetesYAMLCreate` func completed.
 			createdAtResourceVersion := d.Get("resource_version").(string)
 			// Get it as it currently is in the cluster
 			resourceVersion, exists := d.Get("live_resource_version").(string)
@@ -92,24 +90,26 @@ func resourceKubernetesYAML() *schema.Resource {
 }
 
 func resourceKubernetesYAMLCreate(d *schema.ResourceData, meta interface{}) error {
-	log.Printf("[INFO] Creating Resource kubernetes_yaml")
-
 	yaml := d.Get("yaml_body").(string)
+
+	// Create a client to talk to the resource API based on the APIVersion and Kind
+	// defined in the YAML
 	client, absPath, rawObj, err := getRestClientFromYaml(yaml, meta.(KubeProvider))
 	if err != nil {
-		log.Printf("[INFO] !!!! Error creating client: '%+v'", err)
-		return err
+		return fmt.Errorf("failed to create kuberentes rest client for resource: %+v", err)
 	}
 	metaObj := &meta_v1beta1.PartialObjectMetadata{}
 
-	res := client.Post().AbsPath(absPath["POST"]).Body(rawObj).Do().Into(metaObj)
-	if res != nil {
-		log.Printf("[INFO] !!!! Error creating resource: '%+v'", res.Error())
-		return res
+	// Create the resource in Kubernetes
+	err = client.Post().AbsPath(absPath["POST"]).Body(rawObj).Do().Into(metaObj)
+	if err != nil {
+		return fmt.Errorf("failed to create resource in kuberentes: %+v", err)
 	}
 
-	d.SetId(metaObj.GetSelfLink() + "/" + metaObj.ResourceVersion)
-
+	d.SetId(metaObj.GetSelfLink())
+	// Capture the UID and Resource_version at time of creation
+	// this allows us to diff these against the actual values
+	// read in by the 'resourceKubernetesYAMLRead'
 	d.Set("uid", metaObj.UID)
 	d.Set("resource_version", metaObj.ResourceVersion)
 
@@ -119,25 +119,27 @@ func resourceKubernetesYAMLCreate(d *schema.ResourceData, meta interface{}) erro
 func resourceKubernetesYAMLRead(d *schema.ResourceData, meta interface{}) error {
 	yaml := d.Get("yaml_body").(string)
 
+	// Create a client to talk to the resource API based on the APIVersion and Kind
+	// defined in the YAML
 	client, absPaths, _, err := getRestClientFromYaml(yaml, meta.(KubeProvider))
 	if err != nil {
-		log.Printf("[INFO] !!!! Error creating client: '%+v'", err)
-		return err
+		return fmt.Errorf("failed to create kuberentes rest client for resource: %+v", err)
 	}
 
+	// Get the resource from Kubernetes
 	metaObjLive, exists, err := getResourceFromK8s(client, absPaths)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get resource '%s' from kubernetes: %+v", metaObjLive.SelfLink, err)
 	}
 	if !exists {
-		fmt.Errorf("resource reading didn't exist, unexpected")
+		return fmt.Errorf("resource '%s' reading didn't exist", metaObjLive.SelfLink)
 	}
 
 	if metaObjLive.UID == "" {
 		return fmt.Errorf("Failed to parse item and get UUID: %+v", metaObjLive)
 	}
 
-	log.Printf("[INFO] !!!! READ updating computed fields")
+	// Capture the UID and Resource_version from the cluster at the current time
 	d.Set("live_uid", metaObjLive.UID)
 	d.Set("live_resource_version", metaObjLive.ResourceVersion)
 
@@ -149,14 +151,13 @@ func resourceKubernetesYAMLDelete(d *schema.ResourceData, meta interface{}) erro
 
 	client, absPaths, _, err := getRestClientFromYaml(yaml, meta.(KubeProvider))
 	if err != nil {
-		log.Printf("[INFO] !!!! Error creating client: '%+v'", err)
-		return err
+		return fmt.Errorf("failed to create kuberentes rest client for resource: %+v", err)
 	}
 
-	res := client.Delete().AbsPath(absPaths["GET"]).Do()
-	if res.Error() != nil {
-		log.Printf("[INFO] !!!! Error creating resource: '%+v'", res.Error())
-		return res.Error()
+	metaObj := &meta_v1beta1.PartialObjectMetadata{}
+	err = client.Delete().AbsPath(absPaths["DELETE"]).Do().Into(metaObj)
+	if err != nil {
+		return fmt.Errorf("failed to delete kuberentes resource '%s': %+v", metaObj.SelfLink, err)
 	}
 
 	// Success remove it from state
@@ -174,28 +175,20 @@ func resourceKubernetesYAMLUpdate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func resourceKubernetesYAMLExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	log.Printf("[INFO] !!!! EXISTS called")
-
 	yaml := d.Get("yaml_body").(string)
 
 	client, absPaths, _, err := getRestClientFromYaml(yaml, meta.(KubeProvider))
 	if err != nil {
-		log.Printf("[INFO] !!!! Error creating client: '%+v'", err)
-		return false, err
+		return false, fmt.Errorf("failed to create kuberentes rest client for resource: %+v", err)
 	}
-	log.Printf("[INFO] !!!! EXISTS - GOT client")
 
-	_, exists, err := getResourceFromK8s(client, absPaths)
+	metaObj, exists, err := getResourceFromK8s(client, absPaths)
 	if err != nil {
-		log.Printf("[INFO] !!!! EXISTS - ERROR GETTING RESOURCE")
-
-		return false, err
+		return false, fmt.Errorf("failed to get resource '%s' from kubernetes: %+v", metaObj.SelfLink, err)
 	}
 	if exists {
-		log.Printf("[INFO] !!!! WE THINK IT EXISTS")
 		return true, nil
 	}
-	log.Printf("[INFO] !!!! EXISTS - RETURNED FALSE")
 	return false, nil
 }
 
@@ -230,6 +223,8 @@ func getRestClientFromYaml(yaml string, provider KubeProvider) (*rest.RESTClient
 	if err != nil {
 		return nil, absPaths, nil, err
 	}
+
+	// Use the k8s Discovery service to find all valid APIs for this cluster
 	clientSet, config := provider()
 	discovery := clientSet.Discovery()
 	resources, err := discovery.ServerResources()
@@ -237,39 +232,46 @@ func getRestClientFromYaml(yaml string, provider KubeProvider) (*rest.RESTClient
 		return nil, absPaths, nil, err
 	}
 
-	apiResource, exists := getAPIResourceFromServer(resources, metaObj)
-	log.Printf("[INFO] Is Resource Valid: '%+v'", exists)
+	// Validate that the APIVersion provided in the YAML is valid for this cluster
+	apiResource, exists := checkAPIResourceIsPresent(resources, metaObj)
 	if !exists {
 		return nil, absPaths, nil, fmt.Errorf("resource provided in yaml isn't valid for cluster, check the APIVersion and Kind fields are valid")
 	}
 
-	log.Printf("[INFO] Resource: '%+v'", metaObj.TypeMeta.GroupVersionKind().GroupVersion())
-
+	// Create rest config for the correct API based
+	// on the YAML input
 	gv := metaObj.TypeMeta.GroupVersionKind().GroupVersion()
-	log.Printf("[INFO] !!!! GroupVersion Kind: %#v", gv)
-
 	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
 	config.APIPath = "/apis"
 	config.GroupVersion = &gv
-	log.Printf("[INFO] !!!! Build config")
 
 	restClient, err := rest.RESTClientFor(&config)
 	if err != nil {
 		return nil, absPaths, nil, err
 	}
 
+	// To simplify usage of the client in each of the users of this func
+	// we build up the correct AbsPaths to use with the rest client
+	// this centralises logic around namespaced vs non-namespaced resources
+	// leaving CRUD operations to simply select the right AbsPath to use
+	// Note: This uses the APIResource information from the server to correctly
+	// 			construct the URL for any supported resource on the server and isn't limited
+	// 			to those present in the typed client.
 	if apiResource.Namespaced {
 		absPaths["GET"] = fmt.Sprintf("/apis/%s/namespaces/%s/%s/%s", gv.String(), metaObj.Namespace, apiResource.Name, metaObj.Name)
+		absPaths["DELETE"] = fmt.Sprintf("/apis/%s/namespaces/%s/%s/%s", gv.String(), metaObj.Namespace, apiResource.Name, metaObj.Name)
 		absPaths["POST"] = fmt.Sprintf("/apis/%s/namespaces/%s/%s/", gv.String(), metaObj.Namespace, apiResource.Name)
 	} else {
 		absPaths["GET"] = fmt.Sprintf("/apis/%s/%s/%s", gv.String(), apiResource.Name, metaObj.Name)
+		absPaths["DELETE"] = fmt.Sprintf("/apis/%s/%s/%s", gv.String(), apiResource.Name, metaObj.Name)
 		absPaths["POST"] = fmt.Sprintf("/apis/%s/%s/", gv.String(), apiResource.Name)
 	}
-	log.Printf("[INFO] !!!! PATH: %#v", absPaths)
 
 	return restClient, absPaths, rawObj, nil
 }
 
+// getResourceMetaObjFromYaml Uses the UniversalDeserializer to deserialize
+// the yaml provided into a k8s runtime.Object
 func getResourceMetaObjFromYaml(yaml string) (*meta_v1beta1.PartialObjectMetadata, runtime.Object, error) {
 	decoder := scheme.Codecs.UniversalDeserializer()
 	obj, _, err := decoder.Decode([]byte(yaml), nil, nil)
@@ -285,7 +287,10 @@ func getResourceMetaObjFromYaml(yaml string) (*meta_v1beta1.PartialObjectMetadat
 
 }
 
-func getAPIResourceFromServer(available []*meta_v1.APIResourceList, resource *meta_v1beta1.PartialObjectMetadata) (*meta_v1.APIResource, bool) {
+// checkAPIResourceIsPresent Loops through a list of available APIResources and
+// checks there is a resource for the APIVersion and Kind defined in the 'resource'
+// if found it returns true and the APIResource which matched
+func checkAPIResourceIsPresent(available []*meta_v1.APIResourceList, resource *meta_v1beta1.PartialObjectMetadata) (*meta_v1.APIResource, bool) {
 	for _, rList := range available {
 		if rList == nil {
 			continue
@@ -300,6 +305,9 @@ func getAPIResourceFromServer(available []*meta_v1.APIResourceList, resource *me
 	return nil, false
 }
 
+// runtimeObjToMetaObj Gets a subset of the full object information
+// just enough to construct the API Calls needed and detect any changes
+// made to the object in the cluster (UID & ResourceVersion)
 func runtimeObjToMetaObj(obj runtime.Object) (*meta_v1beta1.PartialObjectMetadata, error) {
 	metaObj := k8meta.AsPartialObjectMetadata(obj.(meta_v1.Object))
 	typeMeta, err := k8meta.TypeAccessor(obj)

@@ -96,14 +96,14 @@ func resourceKubernetesYAMLCreate(d *schema.ResourceData, meta interface{}) erro
 	// defined in the YAML
 	client, absPath, rawObj, err := getRestClientFromYaml(yaml, meta.(KubeProvider))
 	if err != nil {
-		return fmt.Errorf("failed to create kuberentes rest client for resource: %+v", err)
+		return fmt.Errorf("failed to create kubernetes rest client for resource: %+v", err)
 	}
 	metaObj := &meta_v1beta1.PartialObjectMetadata{}
 
 	// Create the resource in Kubernetes
 	err = client.Post().AbsPath(absPath["POST"]).Body(rawObj).Do().Into(metaObj)
 	if err != nil {
-		return fmt.Errorf("failed to create resource in kuberentes: %+v", err)
+		return fmt.Errorf("failed to create resource in kubernetes: %+v", err)
 	}
 
 	d.SetId(metaObj.GetSelfLink())
@@ -123,7 +123,7 @@ func resourceKubernetesYAMLRead(d *schema.ResourceData, meta interface{}) error 
 	// defined in the YAML
 	client, absPaths, _, err := getRestClientFromYaml(yaml, meta.(KubeProvider))
 	if err != nil {
-		return fmt.Errorf("failed to create kuberentes rest client for resource: %+v", err)
+		return fmt.Errorf("failed to create kubernetes rest client for resource: %+v", err)
 	}
 
 	// Get the resource from Kubernetes
@@ -151,13 +151,13 @@ func resourceKubernetesYAMLDelete(d *schema.ResourceData, meta interface{}) erro
 
 	client, absPaths, _, err := getRestClientFromYaml(yaml, meta.(KubeProvider))
 	if err != nil {
-		return fmt.Errorf("failed to create kuberentes rest client for resource: %+v", err)
+		return fmt.Errorf("failed to create kubernetes rest client for resource: %+v", err)
 	}
 
 	metaObj := &meta_v1beta1.PartialObjectMetadata{}
 	err = client.Delete().AbsPath(absPaths["DELETE"]).Do().Into(metaObj)
 	if err != nil {
-		return fmt.Errorf("failed to delete kuberentes resource '%s': %+v", metaObj.SelfLink, err)
+		return fmt.Errorf("failed to delete kubernetes resource '%s': %+v", metaObj.SelfLink, err)
 	}
 
 	// Success remove it from state
@@ -179,7 +179,7 @@ func resourceKubernetesYAMLExists(d *schema.ResourceData, meta interface{}) (boo
 
 	client, absPaths, _, err := getRestClientFromYaml(yaml, meta.(KubeProvider))
 	if err != nil {
-		return false, fmt.Errorf("failed to create kuberentes rest client for resource: %+v", err)
+		return false, fmt.Errorf("failed to create kubernetes rest client for resource: %+v", err)
 	}
 
 	metaObj, exists, err := getResourceFromK8s(client, absPaths)

@@ -22,24 +22,70 @@ func resourceKubernetesYAML() *schema.Resource {
 		Read:   resourceKubernetesYAMLRead,
 		Exists: resourceKubernetesYAMLExists,
 		Delete: resourceKubernetesYAMLDelete,
+		Update: resourceKubernetesYAMLUpdate,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		CustomizeDiff: func(d *schema.ResourceDiff, meta interface{}) error {
+			// Enable force new on yaml_body field.
+			// This can't be done in the schema as it will fail internal validation
+			// as all fields would be 'ForceNew' so no 'Update' func is needed.
+			// but as we manually trigger an update in this compare function
+			// we need the update function specified.
+			d.ForceNew("yaml_body")
+
+			// Get the UID of the K8s resource as it was when we created it.
+			createdAtUID := d.Get("uid").(string)
+			// Get the UID of the K8s resource as it currently is in the cluster.
+			UID, exists := d.Get("live_uid").(string)
+			if !exists {
+				return nil
+			}
+
+			// Get the ResourceVersion of the K8s resource as it was when we created it.
+			createdAtResourceVersion := d.Get("resource_version").(string)
+			// Get it as it currently is in the cluster
+			resourceVersion, exists := d.Get("live_resource_version").(string)
+			if !exists {
+				return nil
+			}
+
+			// If either UID or ResourceVersion differ between the current state and the cluster
+			// trigger an update on the resource to get back in sync
+			if UID != createdAtUID {
+				log.Printf("[CUSTOMDIFF] DETECTED %s vs %s - %s vs %s", UID, createdAtUID)
+				d.SetNewComputed("uid")
+				return nil
+			}
+
+			if resourceVersion != createdAtResourceVersion {
+				log.Printf("[CUSTOMDIFF] DETECTED %s vs %s", resourceVersion, createdAtResourceVersion)
+				d.SetNewComputed("resource_version")
+				return nil
+			}
+
+			return nil
+		},
 		Schema: map[string]*schema.Schema{
-			"uuid": {
+			"uid": {
 				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
+				Computed: true,
 			},
 			"resource_version": {
 				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
+				Computed: true,
+			},
+			"live_uid": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"live_resource_version": {
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 			"yaml_body": {
 				Type:     schema.TypeString,
 				Required: true,
-				ForceNew: true,
 			},
 		},
 	}
@@ -62,7 +108,10 @@ func resourceKubernetesYAMLCreate(d *schema.ResourceData, meta interface{}) erro
 		return res
 	}
 
-	d.SetId(metaObj.GetSelfLink())
+	d.SetId(metaObj.GetSelfLink() + "/" + metaObj.ResourceVersion)
+
+	d.Set("uid", metaObj.UID)
+	d.Set("resource_version", metaObj.ResourceVersion)
 
 	return resourceKubernetesYAMLRead(d, meta)
 }
@@ -84,14 +133,13 @@ func resourceKubernetesYAMLRead(d *schema.ResourceData, meta interface{}) error 
 		fmt.Errorf("resource reading didn't exist, unexpected")
 	}
 
-	log.Printf("[INFO] !!!! META: '%+v'", metaObjLive)
-
 	if metaObjLive.UID == "" {
 		return fmt.Errorf("Failed to parse item and get UUID: %+v", metaObjLive)
 	}
 
-	d.Set("uuid", metaObjLive.UID)
-	d.Set("resource_version", metaObjLive.ResourceVersion)
+	log.Printf("[INFO] !!!! READ updating computed fields")
+	d.Set("live_uid", metaObjLive.UID)
+	d.Set("live_resource_version", metaObjLive.ResourceVersion)
 
 	return nil
 }
@@ -115,6 +163,14 @@ func resourceKubernetesYAMLDelete(d *schema.ResourceData, meta interface{}) erro
 	d.SetId("")
 
 	return nil
+}
+
+func resourceKubernetesYAMLUpdate(d *schema.ResourceData, meta interface{}) error {
+	err := resourceKubernetesYAMLDelete(d, meta)
+	if err != nil {
+		return err
+	}
+	return resourceKubernetesYAMLCreate(d, meta)
 }
 
 func resourceKubernetesYAMLExists(d *schema.ResourceData, meta interface{}) (bool, error) {

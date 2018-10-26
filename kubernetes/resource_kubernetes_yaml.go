@@ -6,8 +6,6 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	// k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	// meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8meta "k8s.io/apimachinery/pkg/api/meta"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	meta_v1beta1 "k8s.io/apimachinery/pkg/apis/meta/v1beta1"
@@ -16,9 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	// kubectlcmd "k8s.io/kubernetes/pkg/kubectl/cmd"
-	// "k8s.io/client-go/pkg/api"
-	// api "k8s.io/api/core/v1"
 )
 
 func resourceKubernetesYAML() *schema.Resource {
@@ -26,7 +21,6 @@ func resourceKubernetesYAML() *schema.Resource {
 		Create: resourceKubernetesYAMLCreate,
 		Read:   resourceKubernetesYAMLRead,
 		Exists: resourceKubernetesYAMLExists,
-		Update: resourceKubernetesYAMLUpdate,
 		Delete: resourceKubernetesYAMLDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
@@ -34,21 +28,18 @@ func resourceKubernetesYAML() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"uuid": {
 				Type:     schema.TypeString,
-				Computed: true,
+				Optional: true,
+				ForceNew: true,
 			},
-			"version": {
+			"resource_version": {
 				Type:     schema.TypeString,
-				Computed: true,
+				Optional: true,
+				ForceNew: true,
 			},
 			"yaml_body": {
 				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-
-			"outputs": {
-				Type:     schema.TypeMap,
-				Computed: true,
+				Required: true,
+				ForceNew: true,
 			},
 		},
 	}
@@ -63,96 +54,137 @@ func resourceKubernetesYAMLCreate(d *schema.ResourceData, meta interface{}) erro
 		log.Printf("[INFO] !!!! Error creating client: '%+v'", err)
 		return err
 	}
+	metaObj := &meta_v1beta1.PartialObjectMetadata{}
 
-	pathMap := *absPath
-	res := client.Post().AbsPath(pathMap["POST"]).Body(rawObj).Do()
-	if res.Error() != nil {
+	res := client.Post().AbsPath(absPath["POST"]).Body(rawObj).Do().Into(metaObj)
+	if res != nil {
 		log.Printf("[INFO] !!!! Error creating resource: '%+v'", res.Error())
-
-		return res.Error()
+		return res
 	}
 
-	// log.Printf("[INFO] !!!!!! Resource created in cluster: %#v", res)
+	d.SetId(metaObj.GetSelfLink())
 
 	return resourceKubernetesYAMLRead(d, meta)
 }
 
 func resourceKubernetesYAMLRead(d *schema.ResourceData, meta interface{}) error {
-	// conn, _ := meta.(KubeProvider)()
-	// restClient := conn.Core().RESTClient()
+	yaml := d.Get("yaml_body").(string)
 
-	//todo: return resource
+	client, absPaths, _, err := getRestClientFromYaml(yaml, meta.(KubeProvider))
+	if err != nil {
+		log.Printf("[INFO] !!!! Error creating client: '%+v'", err)
+		return err
+	}
+
+	metaObjLive, exists, err := getResourceFromK8s(client, absPaths)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		fmt.Errorf("resource reading didn't exist, unexpected")
+	}
+
+	log.Printf("[INFO] !!!! META: '%+v'", metaObjLive)
+
+	if metaObjLive.UID == "" {
+		return fmt.Errorf("Failed to parse item and get UUID: %+v", metaObjLive)
+	}
+
+	d.Set("uuid", metaObjLive.UID)
+	d.Set("resource_version", metaObjLive.ResourceVersion)
 
 	return nil
 }
 
-func resourceKubernetesYAMLUpdate(d *schema.ResourceData, meta interface{}) error {
-	// conn, _ := meta.(KubeProvider)()
-
-	return resourceKubernetesSecretRead(d, meta)
-}
-
 func resourceKubernetesYAMLDelete(d *schema.ResourceData, meta interface{}) error {
-	// conn, _ := meta.(KubeProvider)()
+	yaml := d.Get("yaml_body").(string)
+
+	client, absPaths, _, err := getRestClientFromYaml(yaml, meta.(KubeProvider))
+	if err != nil {
+		log.Printf("[INFO] !!!! Error creating client: '%+v'", err)
+		return err
+	}
+
+	res := client.Delete().AbsPath(absPaths["GET"]).Do()
+	if res.Error() != nil {
+		log.Printf("[INFO] !!!! Error creating resource: '%+v'", res.Error())
+		return res.Error()
+	}
+
+	// Success remove it from state
+	d.SetId("")
 
 	return nil
 }
 
 func resourceKubernetesYAMLExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	log.Printf("[INFO] Checking Resource exists kubernetes_yaml")
-	// conn, _ := meta.(KubeProvider)()
+	log.Printf("[INFO] !!!! EXISTS called")
 
-	// yaml := d.Get("yaml").(string)
-	// metaObj, _, err := getResourceMetaObjFromYaml(yaml)
-	// if err != nil {
-	// 	return false, err
-	// }
-	// _, exists, err := getResourceFromMetaObj(restClient, "bob", metaObj)
+	yaml := d.Get("yaml_body").(string)
 
+	client, absPaths, _, err := getRestClientFromYaml(yaml, meta.(KubeProvider))
+	if err != nil {
+		log.Printf("[INFO] !!!! Error creating client: '%+v'", err)
+		return false, err
+	}
+	log.Printf("[INFO] !!!! EXISTS - GOT client")
+
+	_, exists, err := getResourceFromK8s(client, absPaths)
+	if err != nil {
+		log.Printf("[INFO] !!!! EXISTS - ERROR GETTING RESOURCE")
+
+		return false, err
+	}
+	if exists {
+		log.Printf("[INFO] !!!! WE THINK IT EXISTS")
+		return true, nil
+	}
+	log.Printf("[INFO] !!!! EXISTS - RETURNED FALSE")
 	return false, nil
 }
 
-func getResourceFromMetaObj(client rest.Interface, metaObj *meta_v1beta1.PartialObjectMetadata) (*meta_v1beta1.PartialObjectMetadata, bool, error) {
-	result := client.Get().Do()
+func getResourceFromK8s(client rest.Interface, absPaths map[string]string) (*meta_v1beta1.PartialObjectMetadata, bool, error) {
+	result := client.Get().AbsPath(absPaths["GET"]).Do()
 
-	response, err := result.Get()
-	if err != nil && err.Error() == "the server could not find the requested resource" {
+	var statusCode int
+	result.StatusCode(&statusCode)
+	// Resource doesn't exist
+	if statusCode != 200 {
 		return nil, false, nil
-	} else if err != nil {
-		return nil, false, err
 	}
 
-	typeMeta, err := k8meta.TypeAccessor(response)
+	// Another error occured
+	response, err := result.Get()
 	if err != nil {
 		return nil, false, err
 	}
-	metaObj.TypeMeta = meta_v1.TypeMeta{
-		APIVersion: typeMeta.GetAPIVersion(),
-		Kind:       typeMeta.GetKind(),
-	}
-	if metaObj.Namespace == "" {
-		metaObj.Namespace = "default"
+
+	// Get the metadata we need
+	metaObj, err := runtimeObjToMetaObj(response)
+	if err != nil {
+		return nil, true, err
 	}
 
 	return metaObj, true, err
 }
 
-func getRestClientFromYaml(yaml string, provider KubeProvider) (*rest.RESTClient, *map[string]string, runtime.Object, error) {
+func getRestClientFromYaml(yaml string, provider KubeProvider) (*rest.RESTClient, map[string]string, runtime.Object, error) {
+	absPaths := map[string]string{}
 	metaObj, rawObj, err := getResourceMetaObjFromYaml(yaml)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, absPaths, nil, err
 	}
 	clientSet, config := provider()
 	discovery := clientSet.Discovery()
 	resources, err := discovery.ServerResources()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, absPaths, nil, err
 	}
 
 	apiResource, exists := getAPIResourceFromServer(resources, metaObj)
 	log.Printf("[INFO] Is Resource Valid: '%+v'", exists)
 	if !exists {
-		return nil, nil, nil, fmt.Errorf("resource provided in yaml isn't valid for cluster, check the APIVersion and Kind fields are valid")
+		return nil, absPaths, nil, fmt.Errorf("resource provided in yaml isn't valid for cluster, check the APIVersion and Kind fields are valid")
 	}
 
 	log.Printf("[INFO] Resource: '%+v'", metaObj.TypeMeta.GroupVersionKind().GroupVersion())
@@ -167,10 +199,9 @@ func getRestClientFromYaml(yaml string, provider KubeProvider) (*rest.RESTClient
 
 	restClient, err := rest.RESTClientFor(&config)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, absPaths, nil, err
 	}
 
-	absPaths := map[string]string{}
 	if apiResource.Namespaced {
 		absPaths["GET"] = fmt.Sprintf("/apis/%s/namespaces/%s/%s/%s", gv.String(), metaObj.Namespace, apiResource.Name, metaObj.Name)
 		absPaths["POST"] = fmt.Sprintf("/apis/%s/namespaces/%s/%s/", gv.String(), metaObj.Namespace, apiResource.Name)
@@ -180,7 +211,7 @@ func getRestClientFromYaml(yaml string, provider KubeProvider) (*rest.RESTClient
 	}
 	log.Printf("[INFO] !!!! PATH: %#v", absPaths)
 
-	return restClient, &absPaths, rawObj, nil
+	return restClient, absPaths, rawObj, nil
 }
 
 func getResourceMetaObjFromYaml(yaml string) (*meta_v1beta1.PartialObjectMetadata, runtime.Object, error) {
@@ -190,17 +221,9 @@ func getResourceMetaObjFromYaml(yaml string) (*meta_v1beta1.PartialObjectMetadat
 		log.Printf("[INFO] Error parsing type: %#v", err)
 		return nil, nil, err
 	}
-	metaObj := k8meta.AsPartialObjectMetadata(obj.(meta_v1.Object))
-	typeMeta, err := k8meta.TypeAccessor(obj)
+	metaObj, err := runtimeObjToMetaObj(obj)
 	if err != nil {
 		return nil, nil, err
-	}
-	metaObj.TypeMeta = meta_v1.TypeMeta{
-		APIVersion: typeMeta.GetAPIVersion(),
-		Kind:       typeMeta.GetKind(),
-	}
-	if metaObj.Namespace == "" {
-		metaObj.Namespace = "default"
 	}
 	return metaObj, obj, nil
 
@@ -219,4 +242,20 @@ func getAPIResourceFromServer(available []*meta_v1.APIResourceList, resource *me
 		}
 	}
 	return nil, false
+}
+
+func runtimeObjToMetaObj(obj runtime.Object) (*meta_v1beta1.PartialObjectMetadata, error) {
+	metaObj := k8meta.AsPartialObjectMetadata(obj.(meta_v1.Object))
+	typeMeta, err := k8meta.TypeAccessor(obj)
+	if err != nil {
+		return nil, err
+	}
+	metaObj.TypeMeta = meta_v1.TypeMeta{
+		APIVersion: typeMeta.GetAPIVersion(),
+		Kind:       typeMeta.GetKind(),
+	}
+	if metaObj.Namespace == "" {
+		metaObj.Namespace = "default"
+	}
+	return metaObj, nil
 }

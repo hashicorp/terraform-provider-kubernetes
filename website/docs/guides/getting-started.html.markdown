@@ -12,7 +12,7 @@ description: |-
 
 ## Kubernetes
 
-[Kubernetes](https://kubernetes.io/) (K8S) is an open-source workload scheduler
+[Kubernetes]([Kubernetes reference](https://kubernetes.io/) (K8S) is an open-source workload scheduler)
 with focus on containerized applications.
 
 There are at least 2 steps involved in scheduling your first container
@@ -106,7 +106,7 @@ commands will detect it and remind you to do so if necessary.
 
 ## Scheduling a Simple Application
 
-The main object in any Kubernetes application is [a Pod](https://kubernetes.io/docs/concepts/workloads/pods/pod/#what-is-a-pod).
+The main object in any Kubernetes application is [a Pod]([Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/pods/pod/#what-is-a-pod)).
 Pod consists of one or more containers that are placed
 on cluster nodes based on CPU or memory availability.
 
@@ -142,7 +142,7 @@ resource "kubernetes_pod" "nginx" {
 }
 ```
 
-The simplest way to expose your application to users is via [Service](https://kubernetes.io/docs/concepts/services-networking/service/).
+The simplest way to expose your application to users is via [Service]([Kubernetes reference](https://kubernetes.io/docs/concepts/services-networking/service)/).
 Service is capable of provisioning a load-balancer in some cloud providers
 and managing the relationship between pods and that load balancer
 as new pods are launched and others die for any reason.
@@ -355,7 +355,7 @@ lb_ip = 35.197.9.247
 You may now enter that IP address to your favourite browser
 and you should see the nginx welcome page.
 
-The [Kubernetes UI](https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/)
+The [Kubernetes UI]([Kubernetes reference](https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard)/)
 provides another way to check both the pod and the service there
 once they're scheduled.
 

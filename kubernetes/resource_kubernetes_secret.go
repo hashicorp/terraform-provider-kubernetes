@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesSecret() *schema.Resource {
@@ -44,7 +43,7 @@ func resourceKubernetesSecret() *schema.Resource {
 }
 
 func resourceKubernetesSecretCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	secret := api.Secret{
@@ -69,7 +68,7 @@ func resourceKubernetesSecretCreate(d *schema.ResourceData, meta interface{}) er
 }
 
 func resourceKubernetesSecretRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -95,7 +94,7 @@ func resourceKubernetesSecretRead(d *schema.ResourceData, meta interface{}) erro
 }
 
 func resourceKubernetesSecretUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -132,7 +131,7 @@ func resourceKubernetesSecretUpdate(d *schema.ResourceData, meta interface{}) er
 }
 
 func resourceKubernetesSecretDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -153,7 +152,7 @@ func resourceKubernetesSecretDelete(d *schema.ResourceData, meta interface{}) er
 }
 
 func resourceKubernetesSecretExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

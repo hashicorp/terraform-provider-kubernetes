@@ -130,7 +130,8 @@ func Provider() terraform.ResourceProvider {
 	}
 }
 
-var gConfig *restclient.Config
+// KubeProvider func to return client and config to work with K8s API
+type KubeProvider func() (*kubernetes.Clientset, restclient.Config)
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
@@ -181,9 +182,14 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, fmt.Errorf("Failed to configure: %s", err)
 	}
 
-	gConfig = cfg
+	var meta KubeProvider
+	meta = func() (*kubernetes.Clientset, restclient.Config) {
+		// Defref config to create a shallow copy, allowing each func
+		// to manipulate the state without affecting another func
+		return k, *cfg
+	}
 
-	return k, nil
+	return meta, nil
 }
 
 func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {

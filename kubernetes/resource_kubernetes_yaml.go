@@ -2,7 +2,7 @@ package kubernetes
 
 import (
 	// "bytes"
-	// "fmt"
+	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
@@ -14,7 +14,6 @@ import (
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	kubernetes "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	// kubectlcmd "k8s.io/kubernetes/pkg/kubectl/cmd"
@@ -64,8 +63,8 @@ func resourceKubernetesYAMLCreate(d *schema.ResourceData, meta interface{}) erro
 	if err != nil {
 		return err
 	}
-	conn := meta.(*kubernetes.Clientset)
-	discovery := conn.Discovery()
+	clientSet, config := meta.(KubeProvider)()
+	discovery := clientSet.Discovery()
 	resources, err := discovery.ServerResources()
 	if err != nil {
 		return err
@@ -73,36 +72,36 @@ func resourceKubernetesYAMLCreate(d *schema.ResourceData, meta interface{}) erro
 
 	r, exists := getAPIResourceFromServer(resources, metaObj)
 	log.Printf("[INFO] Is Resource Valid: '%+v'", exists)
-	if exists {
-		log.Printf("[INFO] Resource Name '%#v'", r.Name)
+	if !exists {
+		return fmt.Errorf("resource provided in yaml isn't valid for cluster, check the APIVersion and Kind fields are valid")
 	}
 
 	log.Printf("[INFO] Resource: '%+v'", metaObj.TypeMeta.GroupVersionKind().GroupVersion())
 
 	gv := metaObj.TypeMeta.GroupVersionKind().GroupVersion()
 	log.Printf("[INFO] !!!! GroupVersion Kind: %#v", gv)
-	gConfig.APIPath = "/apis"
-	gConfig.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
-	gConfig.GroupVersion = &gv
+	config.APIPath = "/apis"
+	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
+	config.GroupVersion = &gv
 	log.Printf("[INFO] !!!! Build config")
 
-	restClient, err := rest.RESTClientFor(gConfig)
+	restClient, err := rest.RESTClientFor(&config)
 	if err != nil {
 		return err
 	}
 
-	// Does that resource already exist in Kubernetes
-	_, exists, err = getResourceFromMetaObj(restClient, r.Name, metaObj)
-	if err != nil {
-		return err
-	}
-	if exists {
-		log.Printf("[INFO] Resource IS present in cluster: %#v", metaObj)
-	} else {
-		log.Printf("[INFO] Resource NOT present in cluster: %#v", metaObj)
-	}
+	// // Does that resource already exist in Kubernetes
+	// _, exists, err = getResourceFromMetaObj(restClient, r.Name, metaObj)
+	// if err != nil {
+	// 	return err
+	// }
+	// if exists {
+	// 	log.Printf("[INFO] Resource IS present in cluster: %#v", metaObj)
+	// } else {
+	// 	log.Printf("[INFO] Resource NOT present in cluster: %#v", metaObj)
+	// }
 
-	res := restClient.Put().Namespace(metaObj.Namespace).Body(obj).Resource(r.Name).Do()
+	res := restClient.Post().Namespace(metaObj.Namespace).Body(obj).Resource(r.Name).Do()
 	if res.Error() != nil {
 		log.Printf("[INFO] !!!! Error: '%+v'", metaObj)
 
@@ -115,7 +114,7 @@ func resourceKubernetesYAMLCreate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func resourceKubernetesYAMLRead(d *schema.ResourceData, meta interface{}) error {
-	// conn := meta.(*kubernetes.Clientset)
+	// conn, _ := meta.(KubeProvider)()
 	// restClient := conn.Core().RESTClient()
 
 	//todo: return resource
@@ -124,20 +123,20 @@ func resourceKubernetesYAMLRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func resourceKubernetesYAMLUpdate(d *schema.ResourceData, meta interface{}) error {
-	// conn := meta.(*kubernetes.Clientset)
+	// conn, _ := meta.(KubeProvider)()
 
 	return resourceKubernetesSecretRead(d, meta)
 }
 
 func resourceKubernetesYAMLDelete(d *schema.ResourceData, meta interface{}) error {
-	// conn := meta.(*kubernetes.Clientset)
+	// conn, _ := meta.(KubeProvider)()
 
 	return nil
 }
 
 func resourceKubernetesYAMLExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	log.Printf("[INFO] Checking Resource exists kubernetes_yaml")
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 	restClient := conn.Core().RESTClient()
 
 	yaml := d.Get("yaml").(string)
@@ -215,7 +214,6 @@ func getAPIResourceFromServer(available []*meta_v1.APIResourceList, resource *me
 		}
 		group := rList.GroupVersion
 		for _, r := range rList.APIResources {
-			log.Printf("[INFO] CHECKING %s %s HAVE: %s %s", r.Kind, group, resource.Kind, resource.APIVersion)
 			if group == resource.TypeMeta.APIVersion && r.Kind == resource.Kind {
 				return &r, true
 			}

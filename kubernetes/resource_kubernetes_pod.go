@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesPod() *schema.Resource {
@@ -45,7 +44,7 @@ func resourceKubernetesPod() *schema.Resource {
 	}
 }
 func resourceKubernetesPodCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandPodSpec(d.Get("spec").([]interface{}))
@@ -100,7 +99,7 @@ func resourceKubernetesPodCreate(d *schema.ResourceData, meta interface{}) error
 }
 
 func resourceKubernetesPodUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -133,7 +132,7 @@ func resourceKubernetesPodUpdate(d *schema.ResourceData, meta interface{}) error
 }
 
 func resourceKubernetesPodRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -167,7 +166,7 @@ func resourceKubernetesPodRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceKubernetesPodDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -204,7 +203,7 @@ func resourceKubernetesPodDelete(d *schema.ResourceData, meta interface{}) error
 }
 
 func resourceKubernetesPodExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

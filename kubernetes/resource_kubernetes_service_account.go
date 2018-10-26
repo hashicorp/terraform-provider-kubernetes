@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesServiceAccount() *schema.Resource {
@@ -65,7 +64,7 @@ func resourceKubernetesServiceAccount() *schema.Resource {
 }
 
 func resourceKubernetesServiceAccountCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svcAcc := api.ServiceAccount{
@@ -126,7 +125,7 @@ func diffObjectReferences(origOrs []api.ObjectReference, ors []api.ObjectReferen
 }
 
 func resourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -156,7 +155,7 @@ func resourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interface
 }
 
 func resourceKubernetesServiceAccountUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -196,7 +195,7 @@ func resourceKubernetesServiceAccountUpdate(d *schema.ResourceData, meta interfa
 }
 
 func resourceKubernetesServiceAccountDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -216,7 +215,7 @@ func resourceKubernetesServiceAccountDelete(d *schema.ResourceData, meta interfa
 }
 
 func resourceKubernetesServiceAccountExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

@@ -247,7 +247,7 @@ func getFirstNode() (api.Node, error) {
 	if meta == nil {
 		return api.Node{}, errors.New("Provider not initialized, unable to get cluster node")
 	}
-	conn := meta.(*kubernetes.Clientset)
+	conn, _ := meta.(KubeProvider)()
 	resp, err := conn.CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
 		return api.Node{}, err

@@ -58,44 +58,58 @@ func resourceKubernetesYAML() *schema.Resource {
 func resourceKubernetesYAMLCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[INFO] Creating Resource kubernetes_yaml")
 
-	// conn := meta.(*kubernetes.Clientset)
-
 	// Check we can decode the yaml
 	yaml := d.Get("yaml_body").(string)
 	metaObj, obj, err := getResourceMetaObjFromYaml(yaml)
 	if err != nil {
 		return err
 	}
+	conn := meta.(*kubernetes.Clientset)
+	discovery := conn.Discovery()
+	resources, err := discovery.ServerResources()
+	if err != nil {
+		return err
+	}
 
-	log.Printf("[INFO] Resource: '%+v'", metaObj)
+	r, exists := getAPIResourceFromServer(resources, metaObj)
+	log.Printf("[INFO] Is Resource Valid: '%+v'", exists)
+	if exists {
+		log.Printf("[INFO] Resource Name '%#v'", r.Name)
+	}
 
-	// // Does that resource already exist in Kubernetes
-	// _, exists, err := getResourceFromMetaObj(restClient, metaObj)
-	// if err != nil {
-	// 	return err
-	// }
-	// if exists {
-	// 	log.Printf("[INFO] Resource already present in cluster: %#v", metaObj)
-	// }
+	log.Printf("[INFO] Resource: '%+v'", metaObj.TypeMeta.GroupVersionKind().GroupVersion())
 
 	gv := metaObj.TypeMeta.GroupVersionKind().GroupVersion()
+	log.Printf("[INFO] !!!! GroupVersion Kind: %#v", gv)
 	gConfig.APIPath = "/apis"
 	gConfig.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
 	gConfig.GroupVersion = &gv
-	log.Printf("[INFO] !!!! Error: '%+v'", gConfig)
+	log.Printf("[INFO] !!!! Build config")
 
 	restClient, err := rest.RESTClientFor(gConfig)
 	if err != nil {
 		return err
 	}
-	res := restClient.Put().Namespace(metaObj.Namespace).Body(obj).Resource(metaObj.TypeMeta.Kind).Do()
+
+	// Does that resource already exist in Kubernetes
+	_, exists, err = getResourceFromMetaObj(restClient, r.Name, metaObj)
+	if err != nil {
+		return err
+	}
+	if exists {
+		log.Printf("[INFO] Resource IS present in cluster: %#v", metaObj)
+	} else {
+		log.Printf("[INFO] Resource NOT present in cluster: %#v", metaObj)
+	}
+
+	res := restClient.Put().Namespace(metaObj.Namespace).Body(obj).Resource(r.Name).Do()
 	if res.Error() != nil {
 		log.Printf("[INFO] !!!! Error: '%+v'", metaObj)
 
 		return res.Error()
 	}
 
-	log.Printf("[INFO] !!!!!! Resource already present in cluster: %#v", res)
+	log.Printf("[INFO] !!!!!! Resource created in cluster: %#v", res)
 
 	return resourceKubernetesYAMLRead(d, meta)
 }
@@ -131,16 +145,21 @@ func resourceKubernetesYAMLExists(d *schema.ResourceData, meta interface{}) (boo
 	if err != nil {
 		return false, err
 	}
-	_, exists, err := getResourceFromMetaObj(restClient, metaObj)
+	_, exists, err := getResourceFromMetaObj(restClient, "bob", metaObj)
 
 	return exists, err
 }
 
-func getResourceFromMetaObj(client rest.Interface, metaObj *meta_v1beta1.PartialObjectMetadata) (meta_v1.Object, bool, error) {
+func getResourceFromMetaObj(client rest.Interface, resource string, metaObj *meta_v1beta1.PartialObjectMetadata) (*meta_v1beta1.PartialObjectMetadata, bool, error) {
+	// name, err := k8meta.DefaultRESTMapper{}.ResourceFor(metaObj.GetObjectKind().GroupVersionKind().GroupKind().)
+	// if err != nil {
+	// 	return nil, false, err
+	// }
+
 	result := client.
 		Get().
 		Namespace(metaObj.GetNamespace()).
-		Resource(metaObj.TypeMeta.Kind).
+		Resource(resource).
 		Name(metaObj.GetName()).
 		Do()
 
@@ -150,8 +169,20 @@ func getResourceFromMetaObj(client rest.Interface, metaObj *meta_v1beta1.Partial
 	} else if err != nil {
 		return nil, false, err
 	}
-	res, err := k8meta.Accessor(response.(meta_v1.Object))
-	return res, true, err
+
+	typeMeta, err := k8meta.TypeAccessor(response)
+	if err != nil {
+		return nil, false, err
+	}
+	metaObj.TypeMeta = meta_v1.TypeMeta{
+		APIVersion: typeMeta.GetAPIVersion(),
+		Kind:       typeMeta.GetKind(),
+	}
+	if metaObj.Namespace == "" {
+		metaObj.Namespace = "default"
+	}
+
+	return metaObj, true, err
 }
 
 func getResourceMetaObjFromYaml(yaml string) (*meta_v1beta1.PartialObjectMetadata, runtime.Object, error) {
@@ -175,4 +206,20 @@ func getResourceMetaObjFromYaml(yaml string) (*meta_v1beta1.PartialObjectMetadat
 	}
 	return metaObj, obj, nil
 
+}
+
+func getAPIResourceFromServer(available []*meta_v1.APIResourceList, resource *meta_v1beta1.PartialObjectMetadata) (*meta_v1.APIResource, bool) {
+	for _, rList := range available {
+		if rList == nil {
+			continue
+		}
+		group := rList.GroupVersion
+		for _, r := range rList.APIResources {
+			log.Printf("[INFO] CHECKING %s %s HAVE: %s %s", r.Kind, group, resource.Kind, resource.APIVersion)
+			if group == resource.TypeMeta.APIVersion && r.Kind == resource.Kind {
+				return &r, true
+			}
+		}
+	}
+	return nil, false
 }

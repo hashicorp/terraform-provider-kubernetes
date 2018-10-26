@@ -30,3 +30,4 @@ website/vendor
 # Test exclusions
 !command/test-fixtures/**/*.tfstate
 !command/test-fixtures/**/.terraform/
+**/terraform-provider-kubernetes

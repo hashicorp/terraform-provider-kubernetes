@@ -57,58 +57,22 @@ func resourceKubernetesYAML() *schema.Resource {
 func resourceKubernetesYAMLCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[INFO] Creating Resource kubernetes_yaml")
 
-	// Check we can decode the yaml
 	yaml := d.Get("yaml_body").(string)
-	metaObj, obj, err := getResourceMetaObjFromYaml(yaml)
+	client, absPath, rawObj, err := getRestClientFromYaml(yaml, meta.(KubeProvider))
 	if err != nil {
-		return err
-	}
-	clientSet, config := meta.(KubeProvider)()
-	discovery := clientSet.Discovery()
-	resources, err := discovery.ServerResources()
-	if err != nil {
+		log.Printf("[INFO] !!!! Error creating client: '%+v'", err)
 		return err
 	}
 
-	r, exists := getAPIResourceFromServer(resources, metaObj)
-	log.Printf("[INFO] Is Resource Valid: '%+v'", exists)
-	if !exists {
-		return fmt.Errorf("resource provided in yaml isn't valid for cluster, check the APIVersion and Kind fields are valid")
-	}
-
-	log.Printf("[INFO] Resource: '%+v'", metaObj.TypeMeta.GroupVersionKind().GroupVersion())
-
-	gv := metaObj.TypeMeta.GroupVersionKind().GroupVersion()
-	log.Printf("[INFO] !!!! GroupVersion Kind: %#v", gv)
-	config.APIPath = "/apis"
-	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
-	config.GroupVersion = &gv
-	log.Printf("[INFO] !!!! Build config")
-
-	restClient, err := rest.RESTClientFor(&config)
-	if err != nil {
-		return err
-	}
-
-	// // Does that resource already exist in Kubernetes
-	// _, exists, err = getResourceFromMetaObj(restClient, r.Name, metaObj)
-	// if err != nil {
-	// 	return err
-	// }
-	// if exists {
-	// 	log.Printf("[INFO] Resource IS present in cluster: %#v", metaObj)
-	// } else {
-	// 	log.Printf("[INFO] Resource NOT present in cluster: %#v", metaObj)
-	// }
-
-	res := restClient.Post().Namespace(metaObj.Namespace).Body(obj).Resource(r.Name).Do()
+	pathMap := *absPath
+	res := client.Post().AbsPath(pathMap["POST"]).Body(rawObj).Do()
 	if res.Error() != nil {
-		log.Printf("[INFO] !!!! Error: '%+v'", metaObj)
+		log.Printf("[INFO] !!!! Error creating resource: '%+v'", res.Error())
 
 		return res.Error()
 	}
 
-	log.Printf("[INFO] !!!!!! Resource created in cluster: %#v", res)
+	// log.Printf("[INFO] !!!!!! Resource created in cluster: %#v", res)
 
 	return resourceKubernetesYAMLRead(d, meta)
 }
@@ -136,31 +100,20 @@ func resourceKubernetesYAMLDelete(d *schema.ResourceData, meta interface{}) erro
 
 func resourceKubernetesYAMLExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	log.Printf("[INFO] Checking Resource exists kubernetes_yaml")
-	conn, _ := meta.(KubeProvider)()
-	restClient := conn.Core().RESTClient()
+	// conn, _ := meta.(KubeProvider)()
 
-	yaml := d.Get("yaml").(string)
-	metaObj, _, err := getResourceMetaObjFromYaml(yaml)
-	if err != nil {
-		return false, err
-	}
-	_, exists, err := getResourceFromMetaObj(restClient, "bob", metaObj)
+	// yaml := d.Get("yaml").(string)
+	// metaObj, _, err := getResourceMetaObjFromYaml(yaml)
+	// if err != nil {
+	// 	return false, err
+	// }
+	// _, exists, err := getResourceFromMetaObj(restClient, "bob", metaObj)
 
-	return exists, err
+	return false, nil
 }
 
-func getResourceFromMetaObj(client rest.Interface, resource string, metaObj *meta_v1beta1.PartialObjectMetadata) (*meta_v1beta1.PartialObjectMetadata, bool, error) {
-	// name, err := k8meta.DefaultRESTMapper{}.ResourceFor(metaObj.GetObjectKind().GroupVersionKind().GroupKind().)
-	// if err != nil {
-	// 	return nil, false, err
-	// }
-
-	result := client.
-		Get().
-		Namespace(metaObj.GetNamespace()).
-		Resource(resource).
-		Name(metaObj.GetName()).
-		Do()
+func getResourceFromMetaObj(client rest.Interface, metaObj *meta_v1beta1.PartialObjectMetadata) (*meta_v1beta1.PartialObjectMetadata, bool, error) {
+	result := client.Get().Do()
 
 	response, err := result.Get()
 	if err != nil && err.Error() == "the server could not find the requested resource" {
@@ -182,6 +135,52 @@ func getResourceFromMetaObj(client rest.Interface, resource string, metaObj *met
 	}
 
 	return metaObj, true, err
+}
+
+func getRestClientFromYaml(yaml string, provider KubeProvider) (*rest.RESTClient, *map[string]string, runtime.Object, error) {
+	metaObj, rawObj, err := getResourceMetaObjFromYaml(yaml)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	clientSet, config := provider()
+	discovery := clientSet.Discovery()
+	resources, err := discovery.ServerResources()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	apiResource, exists := getAPIResourceFromServer(resources, metaObj)
+	log.Printf("[INFO] Is Resource Valid: '%+v'", exists)
+	if !exists {
+		return nil, nil, nil, fmt.Errorf("resource provided in yaml isn't valid for cluster, check the APIVersion and Kind fields are valid")
+	}
+
+	log.Printf("[INFO] Resource: '%+v'", metaObj.TypeMeta.GroupVersionKind().GroupVersion())
+
+	gv := metaObj.TypeMeta.GroupVersionKind().GroupVersion()
+	log.Printf("[INFO] !!!! GroupVersion Kind: %#v", gv)
+
+	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
+	config.APIPath = "/apis"
+	config.GroupVersion = &gv
+	log.Printf("[INFO] !!!! Build config")
+
+	restClient, err := rest.RESTClientFor(&config)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	absPaths := map[string]string{}
+	if apiResource.Namespaced {
+		absPaths["GET"] = fmt.Sprintf("/apis/%s/namespaces/%s/%s/%s", gv.String(), metaObj.Namespace, apiResource.Name, metaObj.Name)
+		absPaths["POST"] = fmt.Sprintf("/apis/%s/namespaces/%s/%s/", gv.String(), metaObj.Namespace, apiResource.Name)
+	} else {
+		absPaths["GET"] = fmt.Sprintf("/apis/%s/%s/%s", gv.String(), apiResource.Name, metaObj.Name)
+		absPaths["POST"] = fmt.Sprintf("/apis/%s/%s/", gv.String(), apiResource.Name)
+	}
+	log.Printf("[INFO] !!!! PATH: %#v", absPaths)
+
+	return restClient, &absPaths, rawObj, nil
 }
 
 func getResourceMetaObjFromYaml(yaml string) (*meta_v1beta1.PartialObjectMetadata, runtime.Object, error) {

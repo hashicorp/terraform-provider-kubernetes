@@ -51,7 +51,7 @@ func resourceKubernetesYAML() *schema.Resource {
 			// If either UID or ResourceVersion differ between the current state and the cluster
 			// trigger an update on the resource to get back in sync
 			if UID != createdAtUID {
-				log.Printf("[CUSTOMDIFF] DETECTED %s vs %s - %s vs %s", UID, createdAtUID)
+				log.Printf("[CUSTOMDIFF] DETECTED %s vs %s", UID, createdAtUID)
 				d.SetNewComputed("uid")
 				return nil
 			}

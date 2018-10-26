@@ -13,7 +13,6 @@ import (
 	"github.com/terraform-providers/terraform-provider-google/google"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 var testAccProviders map[string]terraform.ResourceProvider

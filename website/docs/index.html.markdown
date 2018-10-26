@@ -30,8 +30,8 @@ resource "kubernetes_namespace" "example" {
 ## Kubernetes versions
 
 Both backward and forward compatibility with Kubernetes API is mostly defined
-by the [official K8S Go library]([Kubernetes reference](https://github.com/kubernetes/kubernetes) (prior to `1.1` release))
-and [client Go library]([Kubernetes reference](https://github.com/kubernetes/client-go) which we ship with Terraform).
+by the [official K8S Go library](https://github.com/kubernetes/kubernetes) (prior to `1.1` release)
+and [client Go library](https://github.com/kubernetes/client-go) which we ship with Terraform.
 Below are versions of the library bundled with given versions of Terraform.
 
 * Terraform `<= 0.9.6` (prior to provider split) - Kubernetes `1.5.4`
@@ -61,7 +61,7 @@ kubectl config set-context default-system \
 kubectl config use-context default-system
 ```
 
-Read [more about `kubectl` in the official docs]([Kubernetes reference](https://kubernetes.io/docs/user-guide/kubectl-overview)/).
+Read [more about `kubectl` in the official docs](https://kubernetes.io/docs/user-guide/kubectl-overview/).
 
 ### Statically defined credentials
 

@@ -32,7 +32,7 @@ The following arguments are supported:
 
 * `metadata` - (Required) Standard storage class's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata)
 * `parameters` - (Optional) The parameters for the provisioner that should create volumes of this storage class.
-	Read more about [available parameters]([Kubernetes reference](https://kubernetes.io/docs/concepts/storage/storage-classes/#parameters)).
+	Read more about [available parameters](https://kubernetes.io/docs/concepts/storage/storage-classes/#parameters).
 * `storage_provisioner` - (Required) Indicates the type of the provisioner
 
 ## Nested Blocks

@@ -12,7 +12,7 @@ description: |-
 
 ## Kubernetes
 
-[Kubernetes](https://kubernetes.io/) (K8S) is an open-source workload scheduler
+[Kubernetes](https://kubernetes.io/) (K8S) is an open-source workload scheduler 
 with focus on containerized applications.
 
 There are at least 2 steps involved in scheduling your first container

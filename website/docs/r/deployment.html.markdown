@@ -1,29 +1,60 @@
 ---
 layout: "kubernetes"
-page_title: "Kubernetes: kubernetes_pod"
-sidebar_current: "docs-kubernetes-resource-pod"
+page_title: "Kubernetes: kubernetes_deployment"
+sidebar_current: "docs-kubernetes-resource-deployment"
 description: |-
-  A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context.
+  A Deployment ensures that a specified number of pod “replicas” are running at any one time. In other words, a Deployment makes sure that a pod or homogeneous set of pods are always up and available. If there are too many pods, it will kill some. If there are too few, the Deployment will start more.
 ---
 
-# kubernetes_pod
+# kubernetes_deployment
 
-A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context.
+A Deployment ensures that a specified number of pod “replicas” are running at any one time. In other words, a Deployment makes sure that a pod or homogeneous set of pods are always up and available. If there are too many pods, it will kill some. If there are too few, the Deployment will start more.
 
-Read more at [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/pods/pod)/
 
 ## Example Usage
 
 ```hcl
-resource "kubernetes_pod" "test" {
+resource "kubernetes_deployment" "example" {
   metadata {
     name = "terraform-example"
+    labels {
+      test = "MyExampleApp"
+    }
   }
 
   spec {
-    container {
-      image = "nginx:1.7.9"
-      name  = "example"
+    replicas = 3
+
+    selector {
+      match_labels {
+        test = "MyExampleApp"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          test = "MyExampleApp"
+        }
+      }
+
+      spec {
+        container {
+          image = "nginx:1.7.8"
+          name  = "example"
+
+          resources{
+            limits{
+              cpu    = "0.5"
+              memory = "512Mi"
+            }
+            requests{
+              cpu    = "250m"
+              memory = "50Mi"
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -33,8 +64,8 @@ resource "kubernetes_pod" "test" {
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard pod's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata)
-* `spec` - (Required) Spec of the pod owned by the cluster
+* `metadata` - (Required) Standard deployment's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata)
+* `spec` - (Required) Spec defines the specification of the desired behavior of the deployment. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#spec-and-status)
 
 ## Nested Blocks
 
@@ -42,28 +73,54 @@ The following arguments are supported:
 
 #### Arguments
 
-* `annotations` - (Optional) An unstructured key value map stored with the pod that may be used to store arbitrary metadata. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/annotations)
+* `annotations` - (Optional) An unstructured key value map stored with the deployment that may be used to store arbitrary metadata. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/annotations)
 * `generate_name` - (Optional) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#idempotency)
-* `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the pod. May match selectors of replication controllers and services. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
-* `name` - (Optional) Name of the pod, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
-* `namespace` - (Optional) Namespace defines the space within which name of the pod must be unique.
-
-### Timeouts
-
-`kubernetes_pod` provides the following
-[Timeouts](/docs/configuration/resources.html#timeouts) configuration options:
-
-- `create` - (Default `5 minutes`) Used for Creating Pods.
-- `delete` - (Default `5 minutes`) Used for Destroying Pods.
+* `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the deployment. **Must match `selector`**. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
+* `name` - (Optional) Name of the deployment, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+* `namespace` - (Optional) Namespace defines the space within which name of the deployment must be unique.
 
 #### Attributes
 
 * `generation` - A sequence number representing a specific generation of the desired state.
-* `resource_version` - An opaque value that represents the internal version of this pod that can be used by clients to determine when pod has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#concurrency-control-and-consistency)
-* `self_link` - A URL representing this pod.
-* `uid` - The unique in time and space value for this pod. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
+* `resource_version` - An opaque value that represents the internal version of this deployment that can be used by clients to determine when deployment has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#concurrency-control-and-consistency)
+* `self_link` - A URL representing this deployment.
+* `uid` - The unique in time and space value for this deployment. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
 ### `spec`
+
+#### Arguments
+
+* `min_ready_seconds` - (Optional) Minimum number of seconds for which a newly created pod should be ready without any of its container crashing, for it to be considered available. Defaults to 0 (pod will be considered available as soon as it is ready)
+* `paused` - (Optional) Indicates that the deployment is paused.
+* `progress_deadline_seconds` - (Optional) The maximum time in seconds for a deployment to make progress before it is considered to be failed. The deployment controller will continue to process failed deployments and a condition with a ProgressDeadlineExceeded reason will be surfaced in the deployment status. Note that progress will not be estimated during the time a deployment is paused. Defaults to 600s.
+* `replicas` - (Optional) The number of desired replicas. Defaults to 1. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#scaling-a-deployment)
+* `revision_history_limit` - (Optional) The number of old ReplicaSets to retain to allow rollback. This is a pointer to distinguish between explicit zero and not specified. Defaults to 10.
+* `strategy` - (Optional) The deployment strategy to use to replace existing pods with new ones.
+* `selector` - (Required) A label query over pods that should match the Replicas count. Label keys and values that must match in order to be controlled by this deployment. **Must match labels (`metadata.0.labels`)**. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels#label-selectors)
+* `template` - (Required) Describes the pod that will be created if insufficient replicas are detected. This takes precedence over a TemplateRef. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#pod-template)
+
+### `strategy`
+
+#### Arguments
+
+* `type` - Type of deployment. Can be 'Recreate' or 'RollingUpdate'. Default is RollingUpdate.
+* `rolling_update` - Rolling update config params. Present only if DeploymentStrategyType = RollingUpdate.
+
+### `rolling_update`
+
+#### Arguments
+
+* `max_surge` - The maximum number of pods that can be scheduled above the desired number of pods. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). This can not be 0 if MaxUnavailable is 0. Absolute number is calculated from percentage by rounding up. Defaults to 25%. Example: when this is set to 30%, the new RC can be scaled up immediately when the rolling update starts, such that the total number of old and new pods do not exceed 130% of desired pods. Once old pods have been killed, new RC can be scaled up further, ensuring that total number of pods running at any time during the update is atmost 130% of desired pods.
+* `max_unavailable` - The maximum number of pods that can be unavailable during the update. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). Absolute number is calculated from percentage by rounding down. This can not be 0 if MaxSurge is 0. Defaults to 25%. Example: when this is set to 30%, the old RC can be scaled down to 70% of desired pods immediately when the rolling update starts. Once new pods are ready, old RC can be scaled down further, followed by scaling up the new RC, ensuring that the total number of pods available at all times during the update is at least 70% of desired pods.
+
+### `template`
+
+#### Arguments
+
+* `metadata` - (Required) Standard object's metadata. For more info see https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+* `spec` - (Required) Specification of the desired behavior of the pod. For more info see https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
+
+### template `spec`
 
 #### Arguments
 
@@ -475,7 +532,7 @@ The following arguments are supported:
 * `optional` - (Optional) Specify whether the Secret or it's keys must be defined.
 * `secret_name` - (Optional) Name of the secret in the pod's namespace to use. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#secrets)
 
-The `items` block supports the following:
+The `items` block supports:
 
 * `key` - (Required) The key to project.
 * `mode` - (Optional) Mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used.
@@ -571,10 +628,18 @@ The `items` block supports the following:
 * `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
 * `volume_path` - (Required) Path that identifies vSphere volume vmdk
 
+## Timeouts
+
+The following [Timeout](/docs/configuration/resources.html#timeouts) configuration options are available:
+
+- `create` - (Default `10 minutes`) Used for creating new controller
+- `update` - (Default `10 minutes`) Used for updating a controller
+- `delete` - (Default `10 minutes`) Used for destroying a controller
+
 ## Import
 
-Pod can be imported using the namespace and name, e.g.
+Deployment can be imported using the namespace and name, e.g.
 
 ```
-$ terraform import kubernetes_pod.example default/terraform-example
+$ terraform import kubernetes_deployment.example default/terraform-example
 ```

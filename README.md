@@ -6,12 +6,6 @@
 
 <img src="https://cdn.rawgit.com/hashicorp/terraform-website/master/content/source/assets/images/logo-hashicorp.svg" width="600px">
 
-Maintainers
------------
-
-We are [actively looking for a Software Engineer](https://www.hashicorp.com/jobs/1185127)
-to work full-time in the Terraform team at [HashiCorp](https://www.hashicorp.com/)
-to maintain this provider.
 
 ## Requirements
 

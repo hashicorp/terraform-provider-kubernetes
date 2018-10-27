@@ -56,6 +56,12 @@ func resourceKubernetesServiceAccount() *schema.Resource {
 					},
 				},
 			},
+			"automount_service_account_token": {
+				Type:        schema.TypeBool,
+				Description: "True to enable automatic mounting of the service account token",
+				Optional:    true,
+				Default:     false,
+			},
 			"default_secret_name": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -69,7 +75,7 @@ func resourceKubernetesServiceAccountCreate(d *schema.ResourceData, meta interfa
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svcAcc := api.ServiceAccount{
-		AutomountServiceAccountToken: ptrToBool(false),
+		AutomountServiceAccountToken: ptrToBool(d.Get("automount_service_account_token").(bool)),
 		ObjectMeta:                   metadata,
 		ImagePullSecrets:             expandLocalObjectReferenceArray(d.Get("image_pull_secret").(*schema.Set).List()),
 		Secrets:                      expandServiceAccountSecrets(d.Get("secret").(*schema.Set).List(), ""),

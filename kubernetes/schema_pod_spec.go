@@ -40,35 +40,35 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			},
 		},
 		"dns_policy": {
-			Type:     schema.TypeString,
-			Optional: true,
-			Computed: isComputed,
-			//Default:     "ClusterFirst"
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    isComputed,
+			DefaultFunc: defaultIfNotComputed(isComputed, "ClusterFirst"),
 			Description: "Set DNS policy for containers within the pod. One of 'ClusterFirst' or 'Default'. Defaults to 'ClusterFirst'.",
 			Deprecated:  deprecatedMessage,
 		},
 		"host_ipc": {
-			Type:     schema.TypeBool,
-			Optional: true,
-			Computed: isComputed,
-			//Default:     false,
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    isComputed,
+			DefaultFunc: defaultIfNotComputed(isComputed, false),
 			Description: "Use the host's ipc namespace. Optional: Default to false.",
 			Deprecated:  deprecatedMessage,
 		},
 		"host_network": {
-			Type:     schema.TypeBool,
-			Optional: true,
-			Computed: isComputed,
-			//Default:     false,
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    isComputed,
+			DefaultFunc: defaultIfNotComputed(isComputed, false),
 			Description: "Host networking requested for this pod. Use the host's network namespace. If this option is set, the ports that will be used must be specified.",
 			Deprecated:  deprecatedMessage,
 		},
 
 		"host_pid": {
-			Type:     schema.TypeBool,
-			Optional: true,
-			Computed: isComputed,
-			//Default:     false,
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    isComputed,
+			DefaultFunc: defaultIfNotComputed(isComputed, false),
 			Description: "Use the host's pid namespace.",
 			Deprecated:  deprecatedMessage,
 		},
@@ -111,10 +111,10 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Deprecated:  deprecatedMessage,
 		},
 		"restart_policy": {
-			Type:     schema.TypeString,
-			Optional: true,
-			Computed: isComputed,
-			//Default:     "Always",
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    isComputed,
+			DefaultFunc: defaultIfNotComputed(isComputed, "Always"),
 			Description: "Restart policy for all containers within the pod. One of Always, OnFailure, Never. More info: http://kubernetes.io/docs/user-guide/pod-states#restartpolicy.",
 			Deprecated:  deprecatedMessage,
 		},
@@ -177,10 +177,10 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Deprecated:  deprecatedMessage,
 		},
 		"termination_grace_period_seconds": {
-			Type:     schema.TypeInt,
-			Optional: true,
-			Computed: isComputed,
-			//Default:      30,
+			Type:         schema.TypeInt,
+			Optional:     true,
+			Computed:     isComputed,
+			DefaultFunc:  defaultIfNotComputed(isComputed, 30),
 			ValidateFunc: validateTerminationGracePeriodSeconds,
 			Description:  "Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request. Value must be non-negative integer. The value zero indicates delete immediately. If this value is nil, the default grace period will be used instead. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Set this value longer than the expected cleanup time for your process.",
 			Deprecated:   deprecatedMessage,
@@ -211,6 +211,16 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 	}
 
 	return s
+}
+
+func defaultIfNotComputed(isComputed bool, defaultValue interface{}) schema.SchemaDefaultFunc {
+	return func() (interface{}, error) {
+		if isComputed {
+			return nil, nil
+		}
+
+		return defaultValue, nil
+	}
 }
 
 func volumeSchema() *schema.Resource {

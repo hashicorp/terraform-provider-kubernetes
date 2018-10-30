@@ -117,12 +117,20 @@ func resourceKubernetesYAMLCreate(d *schema.ResourceData, meta interface{}) erro
 	if err != nil {
 		return fmt.Errorf("failed to create kubernetes rest client for resource: %+v", err)
 	}
-	metaObj := &meta_v1beta1.PartialObjectMetadata{}
-
 	// Create the resource in Kubernetes
-	err = client.Post().AbsPath(absPath["POST"]).Body(rawObj).Do().Into(metaObj)
+	response := client.Post().AbsPath(absPath["POST"]).Body(rawObj).Do()
+	if response.Error() != nil {
+		return fmt.Errorf("failed to create resource in kubernetes: %+v", response.Error())
+	}
+
+	// Another error occured
+	result, err := response.Get()
 	if err != nil {
-		return fmt.Errorf("failed to create resource in kubernetes: %+v", err)
+		return err
+	}
+	metaObj, err := runtimeObjToMetaObj(result)
+	if err != nil {
+		return err
 	}
 
 	d.SetId(metaObj.GetSelfLink())
@@ -131,11 +139,12 @@ func resourceKubernetesYAMLCreate(d *schema.ResourceData, meta interface{}) erro
 	// read in by the 'resourceKubernetesYAMLRead'
 	d.Set("uid", metaObj.UID)
 	d.Set("resource_version", metaObj.ResourceVersion)
-	// stringcomparison, err := compareObjs(rawObj, metaObj)
-	// if err != nil {
-	// 	return err
-	// }
-	// d.Set("yaml_incluster", stringcomparison)
+	builder := strings.Builder{}
+	err = compareObjs(rawObj, result, &builder)
+	if err != nil {
+		return err
+	}
+	d.Set("yaml_incluster", builder.String())
 
 	return resourceKubernetesYAMLRead(d, meta)
 }

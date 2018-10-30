@@ -1,11 +1,12 @@
 package kubernetes
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"reflect"
 	"strings"
-	// "unsafe"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	k8meta "k8s.io/apimachinery/pkg/api/meta"
@@ -63,8 +64,8 @@ func resourceKubernetesYAML() *schema.Resource {
 			if resourceVersion != createdAtResourceVersion {
 				log.Printf("[CUSTOMDIFF] DETECTED RESOURCE VERSION %s vs %s", resourceVersion, createdAtResourceVersion)
 				// Check that the fields specified in our YAML for diff against cluster representation
-				stateYaml := d.Get("yaml_incluster")
-				liveStateYaml := d.Get("live_yaml_incluster")
+				stateYaml := d.Get("yaml_incluster").(string)
+				liveStateYaml := d.Get("live_yaml_incluster").(string)
 				if stateYaml != liveStateYaml {
 					log.Printf("[CUSTOMDIFF] DETECTED YAML STATE %s vs %s", stateYaml, liveStateYaml)
 					d.SetNewComputed("yaml_incluster")
@@ -144,7 +145,7 @@ func resourceKubernetesYAMLCreate(d *schema.ResourceData, meta interface{}) erro
 	if err != nil {
 		return err
 	}
-	d.Set("yaml_incluster", builder.String())
+	d.Set("yaml_incluster", getMD5Hash(builder.String()))
 
 	return resourceKubernetesYAMLRead(d, meta)
 }
@@ -181,7 +182,7 @@ func resourceKubernetesYAMLRead(d *schema.ResourceData, meta interface{}) error 
 	if err != nil {
 		return err
 	}
-	d.Set("live_yaml_incluster", builder.String())
+	d.Set("live_yaml_incluster", getMD5Hash(builder.String()))
 
 	return nil
 }
@@ -282,13 +283,20 @@ func getRestClientFromYaml(yaml string, provider KubeProvider) (*rest.RESTClient
 	// on the YAML input
 	gv := metaObj.TypeMeta.GroupVersionKind().GroupVersion()
 	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
-	config.APIPath = "/apis"
 	config.GroupVersion = &gv
+
+	config.APIPath = "apis"
+	// Handle special case for coreapis
+	if gv.String() == "v1" {
+		config.APIPath = "api"
+	}
 
 	restClient, err := rest.RESTClientFor(&config)
 	if err != nil {
 		return nil, absPaths, nil, err
 	}
+
+	log.Printf("[REST CREATE] GroupVersion: %#v", gv.String())
 
 	// To simplify usage of the client in each of the users of this func
 	// we build up the correct AbsPaths to use with the rest client
@@ -298,13 +306,13 @@ func getRestClientFromYaml(yaml string, provider KubeProvider) (*rest.RESTClient
 	// 			construct the URL for any supported resource on the server and isn't limited
 	// 			to those present in the typed client.
 	if apiResource.Namespaced {
-		absPaths["GET"] = fmt.Sprintf("/apis/%s/namespaces/%s/%s/%s", gv.String(), metaObj.Namespace, apiResource.Name, metaObj.Name)
-		absPaths["DELETE"] = fmt.Sprintf("/apis/%s/namespaces/%s/%s/%s", gv.String(), metaObj.Namespace, apiResource.Name, metaObj.Name)
-		absPaths["POST"] = fmt.Sprintf("/apis/%s/namespaces/%s/%s/", gv.String(), metaObj.Namespace, apiResource.Name)
+		absPaths["GET"] = fmt.Sprintf("/%s/%s/namespaces/%s/%s/%s", config.APIPath, gv.String(), metaObj.Namespace, apiResource.Name, metaObj.Name)
+		absPaths["DELETE"] = fmt.Sprintf("/%s/%s/namespaces/%s/%s/%s", config.APIPath, gv.String(), metaObj.Namespace, apiResource.Name, metaObj.Name)
+		absPaths["POST"] = fmt.Sprintf("/%s/%s/namespaces/%s/%s/", config.APIPath, gv.String(), metaObj.Namespace, apiResource.Name)
 	} else {
-		absPaths["GET"] = fmt.Sprintf("/apis/%s/%s/%s", gv.String(), apiResource.Name, metaObj.Name)
-		absPaths["DELETE"] = fmt.Sprintf("/apis/%s/%s/%s", gv.String(), apiResource.Name, metaObj.Name)
-		absPaths["POST"] = fmt.Sprintf("/apis/%s/%s/", gv.String(), apiResource.Name)
+		absPaths["GET"] = fmt.Sprintf("/%s/%s/%s/%s", config.APIPath, gv.String(), apiResource.Name, metaObj.Name)
+		absPaths["DELETE"] = fmt.Sprintf("/%s/%s/%s/%s", config.APIPath, gv.String(), apiResource.Name, metaObj.Name)
+		absPaths["POST"] = fmt.Sprintf("/%s/%s/%s/", config.APIPath, gv.String(), apiResource.Name)
 	}
 
 	return restClient, absPaths, rawObj, nil
@@ -380,10 +388,14 @@ func compareObjs(original, returned interface{}, builder *strings.Builder) error
 }
 
 var skipFields = map[string]bool{
-	"Status":          true,
-	"Finalizers":      true,
-	"Initializers":    true,
-	"OwnerReferences": true,
+	"Status":            true,
+	"Finalizers":        true,
+	"Initializers":      true,
+	"OwnerReferences":   true,
+	"CreationTimestamp": true,
+	"Generation":        true,
+	"ResourceVersion":   true,
+	"UID":               true,
 }
 
 func compareObjsInternal(originalObj, returnedObj reflect.Value, builder *strings.Builder) error {
@@ -406,16 +418,20 @@ func compareObjsInternal(originalObj, returnedObj reflect.Value, builder *string
 		for iR := 0; iR < returnedObjType.NumField(); iR++ {
 			returnedField := returnedObjType.Field(iR)
 
+			// Check we're comparing the right field
 			if returnedField.Name != originalField.Name {
 				log.Printf("[COMPARE] Skipping: %#v %#v", returnedField, originalField)
 				continue
 			}
 
+			// Skip any fields we want to ignore
 			if _, exists := skipFields[returnedField.Name]; exists {
 				log.Printf("[COMPARE] Skipping as in SkipFields: %#v %#v", returnedField, originalField)
 				continue
 			}
 
+			// Get the value of the field and pull value
+			// out if the field is a ptr
 			originalValue := originalObj.Field(iO)
 			if originalValue.Kind() == reflect.Ptr {
 				if originalValue.IsNil() {
@@ -435,6 +451,7 @@ func compareObjsInternal(originalObj, returnedObj reflect.Value, builder *string
 
 			log.Printf("[COMPARE] Found matching field: %#v, %#v", returnedField.Name, returnedValue.Type().Kind().String())
 
+			// Recurse into the struct to compare it's fields
 			if returnedValue.Type().Kind() == reflect.Struct {
 				log.Printf("[COMPARE] Found struct recurrsing: %#v", returnedField)
 
@@ -445,7 +462,7 @@ func compareObjsInternal(originalObj, returnedObj reflect.Value, builder *string
 				continue
 			}
 
-			// Handle different type comparisons and skip unneeded fields
+			// Skip unneeded fields
 			k := returnedValue.Kind()
 			switch k {
 			case reflect.String:
@@ -516,4 +533,10 @@ func compareObjsInternal(originalObj, returnedObj reflect.Value, builder *string
 	}
 
 	return nil
+}
+
+func getMD5Hash(text string) string {
+	hash := md5.Sum([]byte(text))
+	return hex.EncodeToString(hash[:])
+	return text
 }

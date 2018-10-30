@@ -3,11 +3,15 @@ package kubernetes
 import (
 	"fmt"
 	"log"
+	"reflect"
+	"strings"
+	// "unsafe"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	k8meta "k8s.io/apimachinery/pkg/api/meta"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	meta_v1beta1 "k8s.io/apimachinery/pkg/apis/meta/v1beta1"
+	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -57,8 +61,15 @@ func resourceKubernetesYAML() *schema.Resource {
 			}
 
 			if resourceVersion != createdAtResourceVersion {
-				log.Printf("[CUSTOMDIFF] DETECTED %s vs %s", resourceVersion, createdAtResourceVersion)
-				d.SetNewComputed("resource_version")
+				log.Printf("[CUSTOMDIFF] DETECTED RESOURCE VERSION %s vs %s", resourceVersion, createdAtResourceVersion)
+				// Check that the fields specified in our YAML for diff against cluster representation
+				stateYaml := d.Get("yaml_incluster")
+				liveStateYaml := d.Get("live_yaml_incluster")
+				if stateYaml != liveStateYaml {
+					log.Printf("[CUSTOMDIFF] DETECTED YAML STATE %s vs %s", stateYaml, liveStateYaml)
+					d.SetNewComputed("yaml_incluster")
+
+				}
 				return nil
 			}
 
@@ -78,6 +89,14 @@ func resourceKubernetesYAML() *schema.Resource {
 				Computed: true,
 			},
 			"live_resource_version": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"yaml_incluster": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"live_yaml_incluster": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -112,6 +131,11 @@ func resourceKubernetesYAMLCreate(d *schema.ResourceData, meta interface{}) erro
 	// read in by the 'resourceKubernetesYAMLRead'
 	d.Set("uid", metaObj.UID)
 	d.Set("resource_version", metaObj.ResourceVersion)
+	// stringcomparison, err := compareObjs(rawObj, metaObj)
+	// if err != nil {
+	// 	return err
+	// }
+	// d.Set("yaml_incluster", stringcomparison)
 
 	return resourceKubernetesYAMLRead(d, meta)
 }
@@ -121,13 +145,13 @@ func resourceKubernetesYAMLRead(d *schema.ResourceData, meta interface{}) error 
 
 	// Create a client to talk to the resource API based on the APIVersion and Kind
 	// defined in the YAML
-	client, absPaths, _, err := getRestClientFromYaml(yaml, meta.(KubeProvider))
+	client, absPaths, rawObj, err := getRestClientFromYaml(yaml, meta.(KubeProvider))
 	if err != nil {
 		return fmt.Errorf("failed to create kubernetes rest client for resource: %+v", err)
 	}
 
 	// Get the resource from Kubernetes
-	metaObjLive, exists, err := getResourceFromK8s(client, absPaths)
+	metaObjLive, rawObjLive, exists, err := getResourceFromK8s(client, absPaths)
 	if err != nil {
 		return fmt.Errorf("failed to get resource '%s' from kubernetes: %+v", metaObjLive.SelfLink, err)
 	}
@@ -142,6 +166,13 @@ func resourceKubernetesYAMLRead(d *schema.ResourceData, meta interface{}) error 
 	// Capture the UID and Resource_version from the cluster at the current time
 	d.Set("live_uid", metaObjLive.UID)
 	d.Set("live_resource_version", metaObjLive.ResourceVersion)
+
+	builder := strings.Builder{}
+	err = compareObjs(rawObj, rawObjLive, &builder)
+	if err != nil {
+		return err
+	}
+	d.Set("live_yaml_incluster", builder.String())
 
 	return nil
 }
@@ -182,7 +213,7 @@ func resourceKubernetesYAMLExists(d *schema.ResourceData, meta interface{}) (boo
 		return false, fmt.Errorf("failed to create kubernetes rest client for resource: %+v", err)
 	}
 
-	metaObj, exists, err := getResourceFromK8s(client, absPaths)
+	metaObj, _, exists, err := getResourceFromK8s(client, absPaths)
 	if err != nil {
 		return false, fmt.Errorf("failed to get resource '%s' from kubernetes: %+v", metaObj.SelfLink, err)
 	}
@@ -192,29 +223,29 @@ func resourceKubernetesYAMLExists(d *schema.ResourceData, meta interface{}) (boo
 	return false, nil
 }
 
-func getResourceFromK8s(client rest.Interface, absPaths map[string]string) (*meta_v1beta1.PartialObjectMetadata, bool, error) {
+func getResourceFromK8s(client rest.Interface, absPaths map[string]string) (*meta_v1beta1.PartialObjectMetadata, runtime.Object, bool, error) {
 	result := client.Get().AbsPath(absPaths["GET"]).Do()
 
 	var statusCode int
 	result.StatusCode(&statusCode)
 	// Resource doesn't exist
 	if statusCode != 200 {
-		return nil, false, nil
+		return nil, nil, false, nil
 	}
 
 	// Another error occured
 	response, err := result.Get()
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 
 	// Get the metadata we need
 	metaObj, err := runtimeObjToMetaObj(response)
 	if err != nil {
-		return nil, true, err
+		return nil, nil, true, err
 	}
 
-	return metaObj, true, err
+	return metaObj, response, true, err
 }
 
 func getRestClientFromYaml(yaml string, provider KubeProvider) (*rest.RESTClient, map[string]string, runtime.Object, error) {
@@ -322,4 +353,158 @@ func runtimeObjToMetaObj(obj runtime.Object) (*meta_v1beta1.PartialObjectMetadat
 		metaObj.Namespace = "default"
 	}
 	return metaObj, nil
+}
+
+func compareObjs(original, returned interface{}, builder *strings.Builder) error {
+	// Check originalObj is valid
+	originalObj, err := conversion.EnforcePtr(original)
+	if err != nil {
+		return err
+	}
+
+	// Check returnedObj is valid
+	returnedObj, err := conversion.EnforcePtr(returned)
+	if err != nil {
+		return err
+	}
+	return compareObjsInternal(originalObj, returnedObj, builder)
+}
+
+var skipFields = map[string]bool{
+	"Status":          true,
+	"Finalizers":      true,
+	"Initializers":    true,
+	"OwnerReferences": true,
+}
+
+func compareObjsInternal(originalObj, returnedObj reflect.Value, builder *strings.Builder) error {
+	originalObType := originalObj.Type()
+	if originalObType.Kind() != reflect.Struct {
+		return fmt.Errorf("expected struct, but got %v: %v", originalObj.Kind(), originalObj)
+	}
+
+	returnedObjType := returnedObj.Type()
+	if returnedObjType.Kind() != reflect.Struct {
+		return fmt.Errorf("expected struct, but got %v: %v", returnedObj.Kind(), returnedObj)
+	}
+
+	// Loop through all fields on the original Obj
+	// for each field on the original get it's value on the returned obj
+	// and use this to build a hash
+	for iO := 0; iO < originalObType.NumField(); iO++ {
+		originalField := originalObType.Field(iO)
+
+		for iR := 0; iR < returnedObjType.NumField(); iR++ {
+			returnedField := returnedObjType.Field(iR)
+
+			if returnedField.Name != originalField.Name {
+				log.Printf("[COMPARE] Skipping: %#v %#v", returnedField, originalField)
+				continue
+			}
+
+			if _, exists := skipFields[returnedField.Name]; exists {
+				log.Printf("[COMPARE] Skipping as in SkipFields: %#v %#v", returnedField, originalField)
+				continue
+			}
+
+			originalValue := originalObj.Field(iO)
+			if originalValue.Kind() == reflect.Ptr {
+				if originalValue.IsNil() {
+					log.Printf("[COMPARE] Skipping as is nil ptr: %#v %#v", returnedField, originalField)
+					continue
+				}
+				originalValue = originalValue.Elem()
+			}
+			returnedValue := returnedObj.Field(iO)
+			if returnedValue.Kind() == reflect.Ptr {
+				if returnedValue.IsNil() {
+					log.Printf("[COMPARE] Skipping as is nil ptr: %#v %#v", returnedField, originalField)
+					continue
+				}
+				returnedValue = returnedValue.Elem()
+			}
+
+			log.Printf("[COMPARE] Found matching field: %#v, %#v", returnedField.Name, returnedValue.Type().Kind().String())
+
+			if returnedValue.Type().Kind() == reflect.Struct {
+				log.Printf("[COMPARE] Found struct recurrsing: %#v", returnedField)
+
+				err := compareObjsInternal(originalValue, returnedValue, builder)
+				if err != nil {
+					return err
+				}
+				continue
+			}
+
+			// Handle different type comparisons and skip unneeded fields
+			k := returnedValue.Kind()
+			switch k {
+			case reflect.String:
+				if returnedValue.String() == "" {
+					log.Printf("[COMPARE] Skipping empty string value: %#v %#v", returnedField, originalField)
+					continue
+				}
+			case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.Interface, reflect.Slice:
+
+				// We can check if these are nil
+				if returnedValue.IsNil() {
+					log.Printf("[COMPARE] Skipping nil value: %#v %#v", returnedField, originalField)
+					continue
+				}
+			}
+
+			// We can do a more detailed comparison on map fields
+			if k == reflect.Map {
+				log.Printf("[COMPARE] Comparing map: %#v %#v", returnedField, originalField)
+
+				returnedKeys := returnedValue.MapKeys()
+				originalKeys := originalValue.MapKeys()
+
+				for _, oKey := range originalKeys {
+					for _, rKey := range returnedKeys {
+						if oKey.String() == rKey.String() {
+							rValue := returnedValue.MapIndex(rKey)
+
+							log.Printf("[COMPARE] Found matching map value. Writing to string builder: %s->%#v", returnedField.Name, returnedValue.Interface())
+							builder.WriteString(fmt.Sprintf("fieldName:%s,keyName:%s,fieldValue:%v", returnedField.Name, oKey.String(), rValue.Interface()))
+						}
+					}
+				}
+
+				return nil
+			}
+
+			// We can do a more detailed comparison for arrays too
+			if k == reflect.Slice {
+				log.Printf("[COMPARE] Comparing slice: %#v %#v", returnedField, originalField)
+
+				oSliceLen := originalValue.Len()
+				rSliceLen := returnedValue.Len()
+				if rSliceLen < oSliceLen {
+					//Todo: what do we do here?
+					panic("wrong size")
+				}
+
+				for i := 0; i < oSliceLen; i++ {
+					log.Printf("[COMPARE] Recurse for Array/slice item: %#v %#v", returnedField, originalField)
+
+					err := compareObjsInternal(originalValue.Index(i), returnedValue.Index(i), builder)
+					if err != nil {
+						return err
+					}
+				}
+
+				return nil
+			}
+
+			if returnedValue.CanInterface() {
+				log.Printf("[COMPARE] Found value writing to string builder: %s->%#v  (%#v)", returnedField.Name, returnedValue.Interface(), returnedValue.Kind().String())
+				builder.WriteString(fmt.Sprintf("fieldName:%s,fieldValue:%v", returnedField.Name, returnedValue.Interface()))
+			} else {
+				log.Printf("[COMPARE] Found unsettable field :(: %#v", returnedField.Name)
+			}
+		}
+	}
+
+	return nil
 }

@@ -73,13 +73,9 @@ func expandReplicationControllerTemplate(rct []interface{}, selector map[string]
 	// Get user defined metadata
 	metadata := expandMetadata(in["metadata"].([]interface{}))
 
-	// Add or merge labels from selector to ensure proper selection of pods by the replication controller
+	// Add labels from selector to ensure proper selection of pods by the replication controller for deprecated use case
 	if metadata.Labels == nil {
 		metadata.Labels = selector
-	} else {
-		for k, v := range selector {
-			metadata.Labels[k] = v
-		}
 	}
 	obj.ObjectMeta = metadata
 

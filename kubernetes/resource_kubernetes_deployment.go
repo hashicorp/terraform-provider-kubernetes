@@ -77,7 +77,7 @@ func resourceKubernetesDeployment() *schema.Resource {
 						},
 						"selector": {
 							Type:        schema.TypeList,
-							Description: "A label query over volumes to consider for binding.",
+							Description: "A label query over pods that should match the Replicas count.",
 							Optional:    true,
 							ForceNew:    true,
 							MaxItems:    1,

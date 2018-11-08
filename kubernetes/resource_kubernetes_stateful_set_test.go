@@ -41,6 +41,34 @@ func TestAccKubernetesStatefulSet_basic(t *testing.T) {
 		},
 	})
 }
+
+func TestAccKubernetesStatefulSet_update(t *testing.T) {
+	var conf api.StatefulSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_stateful_set.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesStatefulSetDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStatefulSetConfigBasic(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetExists("kubernetes_stateful_set.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.name", name),
+				),
+			},
+			{
+				Config: testAccKubernetesStatefulSetConfigUpdated(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetExists("kubernetes_stateful_set.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.name", name),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesStatefulSetDestroy(s *terraform.State) error {
 	conn := testAccProvider.Meta().(*kubernetes.Clientset)
 
@@ -92,70 +120,144 @@ func testAccKubernetesStatefulSetConfigBasic(name string) string {
 	return fmt.Sprintf(`
 	resource "kubernetes_stateful_set" "test" {
 		metadata {
-		  annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		  }
-	  
-		  labels {
-			TestLabelOne   = "one"
-			TestLabelTwo   = "two"
-			TestLabelThree = "three"
-		  }
-	  
-		  name = "%s"
+			annotations {
+				TestAnnotationOne = "one"
+				TestAnnotationTwo = "two"
+			}
+	
+			labels {
+				TestLabelOne   = "one"
+				TestLabelTwo   = "two"
+				TestLabelThree = "three"
+			}
+	
+			name = "%s"
 		}
-	  
+	
 		spec {
-		  service_name = "ss-test-service"
-		  replicas     = 2
-	  
-		  selector {
+			service_name = "ss-test-service"
+			replicas     = 1
+	
+			selector {
 				match_labels {
 					app = "ss-test"
 				}
-		  }
-	  
-		  template {
-			metadata {
-			  labels {
-				app = "ss-test"
-			  }
 			}
-	  
-			spec {
-			  container {
-				name  = "ss-test"
-				image = "k8s.gcr.io/pause:latest"
-	  
-				port {
-				  container_port = "80"
-				  name           = "web"
+	
+			template {
+				metadata {
+					labels {
+						app = "ss-test"
+					}
 				}
-	  
-				volume_mount {
-				  name       = "workdir"
-				  mount_path = "/work-dir"
+	
+				spec {
+					container {
+						name  = "ss-test"
+						image = "k8s.gcr.io/pause:latest"
+	
+						port {
+							container_port = "80"
+							name           = "web"
+						}
+	
+						volume_mount {
+							name       = "workdir"
+							mount_path = "/work-dir"
+						}
+					}
 				}
-			  }
 			}
-		  }
-	  
-		  volume_claim_template {
-			metadata {
-			  name = "ss-test"
-			}
-	  
-			spec {
-			  access_modes = ["ReadWriteOnce"]
-	  
-			  resources {
-				requests {
-				  storage = "1Gi"
+	
+			volume_claim_template {
+				metadata {
+					name = "ss-test"
 				}
-			  }
+	
+				spec {
+					access_modes = ["ReadWriteOnce"]
+	
+					resources {
+						requests {
+							storage = "1Gi"
+						}
+					}
+				}
 			}
-		  }
 		}
-	  }`, name)
+	}`, name)
+}
+
+func testAccKubernetesStatefulSetConfigUpdated(name string) string {
+	return fmt.Sprintf(`
+	resource "kubernetes_stateful_set" "test" {
+		metadata {
+			annotations {
+				TestAnnotationOne = "one"
+				TestAnnotationTwo = "two"
+			}
+	
+			labels {
+				TestLabelOne   = "one"
+				TestLabelTwo   = "two"
+				TestLabelThree = "three"
+			}
+	
+			name = "%s"
+		}
+	
+		spec {
+			service_name = "ss-test-service"
+			replicas     = 1
+	
+			selector {
+				match_labels {
+					app = "ss-test"
+					layer = "ss-test-layer"
+				}
+			}
+	
+			template {
+				metadata {
+					labels {
+						app = "ss-test"
+						layer = "ss-test-layer"
+					}
+				}
+	
+				spec {
+					container {
+						name  = "ss-test"
+						image = "k8s.gcr.io/pause:latest"
+	
+						port {
+							container_port = "80"
+							name           = "web"
+						}
+	
+						volume_mount {
+							name       = "workdir"
+							mount_path = "/work-dir"
+						}
+					}
+				}
+			}
+	
+			volume_claim_template {
+				metadata {
+					name = "ss-test"
+				}
+	
+				spec {
+					access_modes = ["ReadWriteOnce"]
+	
+					resources {
+						requests {
+							storage = "1Gi"
+						}
+					}
+				}
+			}
+		}
+	}`, name)
 }

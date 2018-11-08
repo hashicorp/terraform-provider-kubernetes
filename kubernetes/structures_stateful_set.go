@@ -63,7 +63,7 @@ func expandStatefulSetSpec(s []interface{}) (v1.StatefulSetSpec, error) {
 			return obj, nil
 		}
 		for _, pvc := range v {
-			p, err := expandPersistenVolumeClaim(pvc.([]interface{}))
+			p, err := expandPersistenVolumeClaim(pvc.(map[string]interface{}))
 			if err != nil {
 				return obj, err
 			}
@@ -73,13 +73,12 @@ func expandStatefulSetSpec(s []interface{}) (v1.StatefulSetSpec, error) {
 	return obj, nil
 }
 
-func expandPersistenVolumeClaim(p []interface{}) (corev1.PersistentVolumeClaim, error) {
-	if len(p) == 0 || p[0] == nil {
+func expandPersistenVolumeClaim(p map[string]interface{}) (corev1.PersistentVolumeClaim, error) {
+	if len(p) == 0 {
 		return corev1.PersistentVolumeClaim{}, nil
 	}
-	in := p[0].(map[string]interface{})
-	metadata := expandMetadata(in["metadata"].([]interface{}))
-	spec, err := expandPersistentVolumeClaimSpec(in["spec"].([]interface{}))
+	metadata := expandMetadata(p["metadata"].([]interface{}))
+	spec, err := expandPersistentVolumeClaimSpec(p["spec"].([]interface{}))
 	if err != nil {
 		return corev1.PersistentVolumeClaim{}, err
 	}
@@ -181,7 +180,7 @@ func flattenPodTemplateSpec(t corev1.PodTemplateSpec) ([]interface{}, error) {
 }
 
 func flattenPersistentVolumeClaim(in []corev1.PersistentVolumeClaim) []interface{} {
-	pvcs := make([]interface{}, len(in))
+	pvcs := make([]interface{}, 0, len(in))
 
 	for _, pvc := range in {
 		p := make(map[string]interface{})
@@ -190,4 +189,107 @@ func flattenPersistentVolumeClaim(in []corev1.PersistentVolumeClaim) []interface
 		pvcs = append(pvcs, p)
 	}
 	return pvcs
+}
+
+// Patchers
+
+func patchStatefulSetSpec(d *schema.ResourceData) (PatchOperations, error) {
+	ops := PatchOperations{}
+	if d.HasChange("spec.0.pod_management_policy") {
+		oldV, newV := d.GetChange("pod_management_policy")
+		o := oldV.(string)
+		n := newV.(string)
+		if len(o) != 0 && len(n) == 0 {
+			ops = append(ops, &RemoveOperation{
+				Path: "/spec/pod_management_policy",
+			})
+		} else {
+			ops = append(ops, &ReplaceOperation{
+				Path:  "/spec/pod_management_policy",
+				Value: n,
+			})
+		}
+	}
+	if d.HasChange("spec.0.replicas") {
+		if v, ok := d.GetOk("spec.0.replicas"); ok {
+			ops = append(ops, &ReplaceOperation{
+				Path:  "/spec/replicas",
+				Value: v.(int32),
+			})
+		}
+	}
+	if d.HasChange("spec.0.revision_history_limit") {
+		if v, ok := d.GetOk("spec.0.revision_history_limit"); ok {
+			ops = append(ops, &ReplaceOperation{
+				Path:  "/spec/revision_history_limit",
+				Value: v.(int32),
+			})
+		}
+	}
+	if d.HasChange("spec.0.selector") {
+		so, err := patchSelector("spec.0.selector.0.", "/spec/selector/", d)
+		if err != nil {
+			return ops, err
+		}
+		ops = append(ops, so...)
+	}
+	if d.HasChange("spec.0.service_name") {
+		oldV, newV := d.GetChange("spec.0.service_name")
+		o := oldV.(string)
+		n := newV.(string)
+		if len(o) != 0 && len(n) == 0 {
+			ops = append(ops, &RemoveOperation{
+				Path: "/spec/service_name",
+			})
+		} else {
+			ops = append(ops, &ReplaceOperation{
+				Path:  "/spec/service_name",
+				Value: n,
+			})
+		}
+	}
+	if d.HasChange("spec.0.template") {
+		t, err := patchPodTemplateSpec("spec.0.template.0.", "/spec/template/", d)
+		if err != nil {
+			return ops, err
+		}
+		ops = append(ops, t...)
+	}
+	return ops, nil
+}
+
+func patchSelector(keyPrefix, pathPrefix string, d *schema.ResourceData) (PatchOperations, error) {
+	ops := PatchOperations{}
+	if d.HasChange(keyPrefix + "match_expressions") {
+		me := d.Get(keyPrefix + "match_expressions")
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "match_expressions",
+			Value: me,
+		})
+	}
+	if d.HasChange(keyPrefix + "match_labels") {
+		oldV, newV := d.GetChange(keyPrefix + "match_labels")
+		diffOps := diffStringMap(pathPrefix+"match_labels",
+			oldV.(map[string]interface{}),
+			newV.(map[string]interface{}),
+		)
+		ops = append(ops, diffOps...)
+	}
+	return ops, nil
+}
+
+func patchPodTemplateSpec(keyPrefix, pathPrefix string, d *schema.ResourceData) (PatchOperations, error) {
+	ops := PatchOperations{}
+	if d.HasChange(keyPrefix + "metadata") {
+		m := patchMetadata(keyPrefix+"metadata.0.", pathPrefix+"metadata/", d)
+		ops = append(ops, m...)
+	}
+	if d.HasChange(keyPrefix + "spec") {
+		p, err := patchPodSpec(pathPrefix+"spec.0.", keyPrefix+"spec/", d)
+		if err != nil {
+			return ops, err
+		}
+		ops = append(ops, p...)
+	}
+	return ops, nil
 }

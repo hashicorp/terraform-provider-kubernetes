@@ -24,13 +24,14 @@ func resourceKubernetesStatefulSet() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("config map", true),
+			"metadata": namespacedMetadataSchema("stateful set", true),
 			"spec": {
 				Type:        schema.TypeList,
 				Description: "Spec defines the desired identities of pods in this set.",
 				Required:    true,
 				MaxItems:    1,
 				MinItems:    1,
+				ForceNew:    true,
 				Elem: &schema.Resource{
 					Schema: statefulSetSpecFields(false),
 				},
@@ -125,22 +126,20 @@ func resourceKubernetesStatefulSetUpdate(d *schema.ResourceData, meta interface{
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("spec") {
-		spec, err := expandStatefulSetSpec(d.Get("spec").([]interface{}))
+		log.Println("[TRACE] StatefulSet.Spec has changes")
+		specPatch, err := patchStatefulSetSpec(d)
 		if err != nil {
 			return err
 		}
-		ops = append(ops, &ReplaceOperation{
-			Path:  "/spec",
-			Value: spec,
-		})
+		ops = append(ops, specPatch...)
 	}
 
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return fmt.Errorf("Failed to marshal update operations for StatefulSet: %s", err)
 	}
 	log.Printf("[INFO] Updating StatefulSet %q: %v", name, string(data))
-	out, err := conn.AppsV1().Deployments(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.AppsV1().StatefulSets(namespace).Patch(name, pkgApi.JSONPatchType, data)
 	if err != nil {
 		return fmt.Errorf("Failed to update StatefulSet: %s", err)
 	}

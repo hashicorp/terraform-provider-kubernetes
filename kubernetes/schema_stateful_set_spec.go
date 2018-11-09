@@ -11,6 +11,7 @@ func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Controls how pods are created during initial scale up, when replacing pods on nodes, or when scaling down.",
 			Optional:    true,
+			ForceNew:    true,
 			Computed:    true,
 			ValidateFunc: validation.StringInSlice([]string{
 				"OrderedReady",
@@ -26,6 +27,7 @@ func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
 		"revision_history_limit": {
 			Type:         schema.TypeInt,
 			Optional:     true,
+			ForceNew:     true,
 			Computed:     true,
 			ValidateFunc: validatePositiveInteger,
 			Description:  "The maximum number of revisions that will be maintained in the StatefulSet's revision history. The default value is 10.",
@@ -33,7 +35,6 @@ func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
 		"selector": {
 			Type:        schema.TypeList,
 			Description: "A label query over pods that should match the replica count. It must match the pod template's labels.",
-			Computed:    true,
 			Optional:    true,
 			ForceNew:    true,
 			MaxItems:    1,
@@ -45,6 +46,7 @@ func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "The name of the service that governs this StatefulSet. This service must exist before the StatefulSet, and is responsible for the network identity of the set.",
 			Required:    true,
+			ForceNew:    true,
 		},
 		"template": {
 			Type:        schema.TypeList,
@@ -65,6 +67,10 @@ func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Indicates the type of the StatefulSet update strategy. Default is RollingUpdate",
 						Required:    true,
+						ValidateFunc: validation.StringInSlice([]string{
+							"RollingUpdate",
+							"OnDelete",
+						}, true),
 					},
 					"rolling_update": {
 						Type:        schema.TypeList,
@@ -87,6 +93,7 @@ func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
 		"volume_claim_template": {
 			Type:        schema.TypeList,
 			Optional:    true,
+			ForceNew:    true,
 			Description: "A list of claims that pods are allowed to reference. Every claim in this list must have at least one matching (by name) volumeMount in one container in the template.",
 			Elem: &schema.Resource{
 				Schema: persistentVolumeClaimFields(),

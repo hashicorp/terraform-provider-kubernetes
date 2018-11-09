@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
@@ -22,11 +23,11 @@ func expandStatefulSetSpec(s []interface{}) (v1.StatefulSetSpec, error) {
 		obj.PodManagementPolicy = v1.PodManagementPolicyType(v)
 	}
 
-	if v, ok := in["replicas"].(int32); ok && v > 0 {
+	if v, ok := in["replicas"].(int); ok && v > 0 {
 		obj.Replicas = ptrToInt32(int32(v))
 	}
 
-	if v, ok := in["revision_history_limit"].(int32); ok {
+	if v, ok := in["revision_history_limit"].(int); ok {
 		obj.RevisionHistoryLimit = ptrToInt32(int32(v))
 	}
 
@@ -38,17 +39,12 @@ func expandStatefulSetSpec(s []interface{}) (v1.StatefulSetSpec, error) {
 		obj.ServiceName = v
 	}
 
-	if v, ok := in["update_strategy"].(map[string]interface{}); ok {
-		ust := v1.StatefulSetUpdateStrategy{}
-		ust.Type = v["type"].(v1.StatefulSetUpdateStrategyType)
-		if r, ok := v["rolling_update"].(map[string]interface{}); ok {
-			s := v1.RollingUpdateStatefulSetStrategy{}
-			if p, ok := r["partition"].(int32); ok {
-				s.Partition = ptrToInt32(int32(p))
-			}
-			ust.RollingUpdate = &s
+	if v, ok := in["update_strategy"].([]interface{}); ok {
+		us, err := expandStatefulSetSpecUpdateStrategy(v)
+		if err != nil {
+			return obj, err
 		}
-		obj.UpdateStrategy = ust
+		obj.UpdateStrategy = us
 	}
 
 	template, err := expandPodTemplate(in["template"].([]interface{}))
@@ -71,6 +67,32 @@ func expandStatefulSetSpec(s []interface{}) (v1.StatefulSetSpec, error) {
 		}
 	}
 	return obj, nil
+}
+func expandStatefulSetSpecUpdateStrategy(s []interface{}) (v1.StatefulSetUpdateStrategy, error) {
+	ust := v1.StatefulSetUpdateStrategy{}
+	if len(s) == 0 {
+		return ust, nil
+	}
+	if us, ok := s[0].(map[string]interface{}); ok {
+		t := us["type"].(string)
+		ust.Type = v1.StatefulSetUpdateStrategyType(t)
+		if ru, ok := us["rolling_update"].([]interface{}); ok {
+			log.Printf("[DEBUG] StatefulSet.UpdateStrategy.RollingUpdate: %#v", ru)
+			if len(ru) > 0 {
+				u := v1.RollingUpdateStatefulSetStrategy{}
+				if r, ok := ru[0].(map[string]interface{}); ok {
+					log.Printf("[DEBUG] StatefulSet.UpdateStrategy.RollingUpdate: %#v", r)
+					if p, ok := r["partition"].(int); ok {
+						log.Printf("[DEBUG] StatefulSet.UpdateStrategy.RollingUpdate.Partition: %#v", p)
+						u.Partition = ptrToInt32(int32(p))
+					}
+				}
+				ust.RollingUpdate = &u
+			}
+		}
+	}
+	log.Printf("[DEBUG] StatefulSetSpec.UpdateStrategy: %#v", ust)
+	return ust, nil
 }
 
 func expandPersistenVolumeClaim(p map[string]interface{}) (corev1.PersistentVolumeClaim, error) {
@@ -162,6 +184,7 @@ func flattenStatefulSetSpec(spec v1.StatefulSetSpec) ([]interface{}, error) {
 	}
 	att["template"] = template
 	att["volume_claim_template"] = flattenPersistentVolumeClaim(spec.VolumeClaimTemplates)
+	att["update_strategy"] = flattenStatefulSetSpecUpdateStrategy(spec.UpdateStrategy)
 
 	return []interface{}{att}, nil
 }
@@ -191,105 +214,143 @@ func flattenPersistentVolumeClaim(in []corev1.PersistentVolumeClaim) []interface
 	return pvcs
 }
 
+func flattenStatefulSetSpecUpdateStrategy(s v1.StatefulSetUpdateStrategy) []interface{} {
+	att := make(map[string]interface{})
+
+	att["type"] = s.Type
+	if s.RollingUpdate != nil {
+		ru := make(map[string]interface{})
+		if s.RollingUpdate.Partition != nil {
+			ru["partition"] = *s.RollingUpdate.Partition
+		}
+		att["rolling_update"] = []interface{}{ru}
+	}
+	return []interface{}{att}
+}
+
 // Patchers
 
 func patchStatefulSetSpec(d *schema.ResourceData) (PatchOperations, error) {
 	ops := PatchOperations{}
-	if d.HasChange("spec.0.pod_management_policy") {
-		oldV, newV := d.GetChange("pod_management_policy")
-		o := oldV.(string)
-		n := newV.(string)
-		if len(o) != 0 && len(n) == 0 {
-			ops = append(ops, &RemoveOperation{
-				Path: "/spec/pod_management_policy",
-			})
-		} else {
-			ops = append(ops, &ReplaceOperation{
-				Path:  "/spec/pod_management_policy",
-				Value: n,
-			})
-		}
-	}
+
 	if d.HasChange("spec.0.replicas") {
-		if v, ok := d.GetOk("spec.0.replicas"); ok {
+		log.Printf("[TRACE] StatefulSet.Spec.Replicas has changes")
+		if v, ok := d.Get("spec.0.replicas").(int); ok {
 			ops = append(ops, &ReplaceOperation{
 				Path:  "/spec/replicas",
-				Value: v.(int32),
+				Value: v,
 			})
 		}
 	}
-	if d.HasChange("spec.0.revision_history_limit") {
-		if v, ok := d.GetOk("spec.0.revision_history_limit"); ok {
-			ops = append(ops, &ReplaceOperation{
-				Path:  "/spec/revision_history_limit",
-				Value: v.(int32),
-			})
-		}
-	}
-	if d.HasChange("spec.0.selector") {
-		so, err := patchSelector("spec.0.selector.0.", "/spec/selector/", d)
-		if err != nil {
-			return ops, err
-		}
-		ops = append(ops, so...)
-	}
-	if d.HasChange("spec.0.service_name") {
-		oldV, newV := d.GetChange("spec.0.service_name")
-		o := oldV.(string)
-		n := newV.(string)
-		if len(o) != 0 && len(n) == 0 {
-			ops = append(ops, &RemoveOperation{
-				Path: "/spec/service_name",
-			})
-		} else {
-			ops = append(ops, &ReplaceOperation{
-				Path:  "/spec/service_name",
-				Value: n,
-			})
-		}
-	}
+
 	if d.HasChange("spec.0.template") {
+		log.Printf("[TRACE] StatefulSet.Spec.Template has changes")
 		t, err := patchPodTemplateSpec("spec.0.template.0.", "/spec/template/", d)
 		if err != nil {
 			return ops, err
 		}
 		ops = append(ops, t...)
 	}
-	return ops, nil
-}
 
-func patchSelector(keyPrefix, pathPrefix string, d *schema.ResourceData) (PatchOperations, error) {
-	ops := PatchOperations{}
-	if d.HasChange(keyPrefix + "match_expressions") {
-		me := d.Get(keyPrefix + "match_expressions")
-		ops = append(ops, &ReplaceOperation{
-			Path:  pathPrefix + "match_expressions",
-			Value: me,
-		})
-	}
-	if d.HasChange(keyPrefix + "match_labels") {
-		oldV, newV := d.GetChange(keyPrefix + "match_labels")
-		diffOps := diffStringMap(pathPrefix+"match_labels",
-			oldV.(map[string]interface{}),
-			newV.(map[string]interface{}),
-		)
-		ops = append(ops, diffOps...)
+	if d.HasChange("spec.0.update_strategy") {
+		log.Printf("[TRACE] StatefulSet.Spec.UpdateStrategy has changes")
+		u, err := patchUpdateStrategy("spec.0.update_strategy.0.", "/spec/updateStrategy/", d)
+		if err != nil {
+			return ops, err
+		}
+		ops = append(ops, u...)
 	}
 	return ops, nil
 }
 
 func patchPodTemplateSpec(keyPrefix, pathPrefix string, d *schema.ResourceData) (PatchOperations, error) {
 	ops := PatchOperations{}
+
 	if d.HasChange(keyPrefix + "metadata") {
+		log.Printf("[TRACE] StatefulSet.Spec.Template.Metadata has changes")
 		m := patchMetadata(keyPrefix+"metadata.0.", pathPrefix+"metadata/", d)
 		ops = append(ops, m...)
 	}
+
 	if d.HasChange(keyPrefix + "spec") {
+		log.Printf("[TRACE] StatefulSet.Spec.Template.Spec has changes")
 		p, err := patchPodSpec(pathPrefix+"spec.0.", keyPrefix+"spec/", d)
 		if err != nil {
 			return ops, err
 		}
 		ops = append(ops, p...)
+	}
+
+	return ops, nil
+}
+
+func patchUpdateStrategy(keyPrefix, pathPrefix string, d *schema.ResourceData) (PatchOperations, error) {
+	ops := PatchOperations{}
+
+	if d.HasChange(keyPrefix + "type") {
+		log.Printf("[TRACE] StatefulSet.Spec.UpdateStrategy.Type has changes")
+		oldV, newV := d.GetChange(keyPrefix + "type")
+		o := oldV.(string)
+		n := newV.(string)
+		if len(o) != 0 && len(n) == 0 {
+			return ops, fmt.Errorf("Spec.UpdateStrategy.Type cannot be empty")
+		}
+		if len(o) == 0 && len(n) != 0 {
+			ops = append(ops, &AddOperation{
+				Path:  pathPrefix + "type",
+				Value: n,
+			})
+		} else {
+			ops = append(ops, &ReplaceOperation{
+				Path:  pathPrefix + "type",
+				Value: n,
+			})
+		}
+	}
+
+	if d.HasChange(keyPrefix + "rolling_update") {
+		o, n := d.GetChange(keyPrefix + "rolling_update")
+		log.Printf("[TRACE] StatefulSet.Spec.UpdateStrategy.RollingUpdate has changes: %#v | %#v", o, n)
+
+		if len(o.([]interface{})) > 0 && len(n.([]interface{})) == 0 {
+			ops = append(ops, &RemoveOperation{
+				Path: pathPrefix + "rollingUpdate",
+			})
+		}
+
+		if len(o.([]interface{})) == 0 && len(n.([]interface{})) > 0 {
+			ops = append(ops, &AddOperation{
+				Path:  pathPrefix + "rollingUpdate",
+				Value: struct{}{},
+			})
+			ops = append(ops, &AddOperation{
+				Path:  pathPrefix + "rollingUpdate/partition",
+				Value: d.Get(keyPrefix + "rolling_update.0.partition").(int),
+			})
+		}
+
+		if len(o.([]interface{})) > 0 && len(n.([]interface{})) > 0 {
+			r, err := patchUpdateStrategyRollingUpdate(keyPrefix+"rolling_update.0.", pathPrefix+"rollingUpdate/", d)
+			if err != nil {
+				return ops, err
+			}
+			ops = append(ops, r...)
+		}
+	}
+
+	return ops, nil
+}
+
+func patchUpdateStrategyRollingUpdate(keyPrefix, pathPrefix string, d *schema.ResourceData) (PatchOperations, error) {
+	ops := PatchOperations{}
+	if d.HasChange(keyPrefix + "partition") {
+		log.Printf("[TRACE] StatefulSet.Spec.UpdateStrategy.RollingUpdate.Partition has changes")
+		if p, ok := d.Get(keyPrefix + "partition").(int); ok {
+			ops = append(ops, &ReplaceOperation{
+				Path:  pathPrefix + "partition",
+				Value: p,
+			})
+		}
 	}
 	return ops, nil
 }

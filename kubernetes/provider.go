@@ -109,6 +109,7 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
+			"kubernetes_cluster_role_binding":      resourceKubernetesClusterRoleBinding(),
 			"kubernetes_config_map":                resourceKubernetesConfigMap(),
 			"kubernetes_deployment":                resourceKubernetesDeployment(),
 			"kubernetes_horizontal_pod_autoscaler": resourceKubernetesHorizontalPodAutoscaler(),
@@ -122,9 +123,8 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_secret":                    resourceKubernetesSecret(),
 			"kubernetes_service":                   resourceKubernetesService(),
 			"kubernetes_service_account":           resourceKubernetesServiceAccount(),
-			"kubernetes_storage_class":             resourceKubernetesStorageClass(),
-			"kubernetes_cluster_role_binding":      resourceKubernetesClusterRoleBinding(),
 			"kubernetes_stateful_set":              resourceKubernetesStatefulSet(),
+			"kubernetes_storage_class":             resourceKubernetesStorageClass(),
 		},
 		ConfigureFunc: providerConfigure,
 	}

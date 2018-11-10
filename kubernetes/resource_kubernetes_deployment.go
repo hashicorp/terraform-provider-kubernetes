@@ -256,7 +256,7 @@ func resourceKubernetesDeploymentUpdate(d *schema.ResourceData, meta interface{}
 	log.Printf("[INFO] Submitted updated deployment: %#v", out)
 
 	err = resource.Retry(d.Timeout(schema.TimeoutUpdate),
-		waitForDesiredReplicasFunc(conn, namespace, name))
+		waitForDeploymentReplicasFunc(conn, namespace, name))
 	if err != nil {
 		return err
 	}

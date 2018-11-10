@@ -395,6 +395,48 @@ func TestAccKubernetesDeployment_with_empty_dir_volume(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDeploymentUpdate_basic(t *testing.T) {
+	var conf api.Deployment
+
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentConfig_basic(rcName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf),
+					// Not to be changed
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationOne", "one"),
+					// To be removed
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
+					// To be added
+					resource.TestCheckNoResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.Different"),
+					// To be changed
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.8"),
+				),
+			},
+			{
+				Config: testAccKubernetesDeploymentConfig_modified(rcName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf),
+					// Unchanged
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationOne", "one"),
+					// Removed
+					resource.TestCheckNoResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationTwo"),
+					// Added
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.Different", "1234"),
+					// Changed
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.9"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesDeploymentDestroy(s *terraform.State) error {
 	conn := testAccProvider.Meta().(*kubernetes.Clientset)
 
@@ -523,11 +565,11 @@ func testAccKubernetesDeploymentConfig_initContainer(name string) string {
 					container {
 						name  = "nginx"
 						image = "nginx"
-	
+
 						port {
 							container_port = 80
 						}
-	
+
 						volume_mount {
 							name       = "workdir"
 							mount_path = "/usr/share/nginx/html"
@@ -537,7 +579,7 @@ func testAccKubernetesDeploymentConfig_initContainer(name string) string {
 						name    = "install"
 						image   = "busybox"
 						command = ["wget", "-O", "/work-dir/index.html", "http://kubernetes.io"]
-	
+
 						volume_mount {
 							name       = "workdir"
 							mount_path = "/work-dir"
@@ -715,7 +757,7 @@ func testAccKubernetesDeploymentConfigWithLivenessProbeUsingHTTPGet(rcName, imag
 	resource "kubernetes_deployment" "test" {
 		metadata {
 			name = "%s"
-	
+
 			labels {
 				Test = "TfAcceptanceTest"
 			}
@@ -890,7 +932,7 @@ func testAccKubernetesDeploymentConfigWithVolumeMounts(secretName, rcName, image
 			one = "first"
 		}
 	}
-	
+
 	resource "kubernetes_deployment" "test" {
 		metadata {
 			name = "%s"

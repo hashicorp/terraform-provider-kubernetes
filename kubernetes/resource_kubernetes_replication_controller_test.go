@@ -41,8 +41,8 @@ func TestAccKubernetesReplicationController_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_replication_controller.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_replication_controller.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_replication_controller.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.image", "nginx:1.7.8"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.name", "tf-acc-test"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.8"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
 				),
 			},
 			{
@@ -62,8 +62,8 @@ func TestAccKubernetesReplicationController_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_replication_controller.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_replication_controller.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_replication_controller.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.image", "nginx:1.7.9"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.name", "tf-acc-test"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.9"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
 				),
 			},
 		},
@@ -84,14 +84,14 @@ func TestAccKubernetesReplicationController_initContainer(t *testing.T) {
 				Config: testAccKubernetesReplicationControllerConfig_initContainer(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.image", "busybox"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.name", "install"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.command.0", "wget"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.command.1", "-O"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.command.2", "/work-dir/index.html"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.command.3", "http://kubernetes.io"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.volume_mount.0.name", "workdir"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.init_container.0.volume_mount.0.mount_path", "/work-dir"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.init_container.0.image", "busybox"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.init_container.0.name", "install"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.init_container.0.command.0", "wget"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.init_container.0.command.1", "-O"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.init_container.0.command.2", "/work-dir/index.html"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.init_container.0.command.3", "http://kubernetes.io"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.init_container.0.volume_mount.0.name", "workdir"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.init_container.0.volume_mount.0.mount_path", "/work-dir"),
 				),
 			},
 		},
@@ -187,11 +187,11 @@ func TestAccKubernetesReplicationController_with_security_context(t *testing.T) 
 				Config: testAccKubernetesReplicationControllerConfigWithSecurityContext(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.security_context.0.fs_group", "100"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.security_context.0.run_as_non_root", "true"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.security_context.0.run_as_user", "101"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.security_context.0.supplemental_groups.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.security_context.0.supplemental_groups.988695518", "101"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.fs_group", "100"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.run_as_non_root", "true"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.run_as_user", "101"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.supplemental_groups.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.supplemental_groups.988695518", "101"),
 				),
 			},
 		},
@@ -213,14 +213,14 @@ func TestAccKubernetesReplicationController_with_container_liveness_probe_using_
 				Config: testAccKubernetesReplicationControllerConfigWithLivenessProbeUsingExec(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.args.#", "3"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.0.exec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.0.exec.0.command.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.0.exec.0.command.0", "cat"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.0.exec.0.command.1", "/tmp/healthy"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.0.failure_threshold", "3"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.0.initial_delay_seconds", "5"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.args.#", "3"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.0.exec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.0.exec.0.command.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.0.exec.0.command.0", "cat"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.0.exec.0.command.1", "/tmp/healthy"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.0.failure_threshold", "3"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.0.initial_delay_seconds", "5"),
 				),
 			},
 		},
@@ -242,15 +242,15 @@ func TestAccKubernetesReplicationController_with_container_liveness_probe_using_
 				Config: testAccKubernetesReplicationControllerConfigWithLivenessProbeUsingHTTPGet(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.args.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.0.http_get.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.0.http_get.0.path", "/healthz"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.0.http_get.0.port", "8080"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.0.http_get.0.http_header.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.0.http_get.0.http_header.0.name", "X-Custom-Header"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.0.http_get.0.http_header.0.value", "Awesome"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.0.initial_delay_seconds", "3"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.args.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.0.http_get.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.0.http_get.0.path", "/healthz"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.0.http_get.0.port", "8080"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.0.http_get.0.http_header.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.0.http_get.0.http_header.0.name", "X-Custom-Header"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.0.http_get.0.http_header.0.value", "Awesome"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.0.initial_delay_seconds", "3"),
 				),
 			},
 		},
@@ -272,10 +272,10 @@ func TestAccKubernetesReplicationController_with_container_liveness_probe_using_
 				Config: testAccKubernetesReplicationControllerConfigWithLivenessProbeUsingTCP(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.args.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.0.tcp_socket.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.liveness_probe.0.tcp_socket.0.port", "8080"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.args.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.0.tcp_socket.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.liveness_probe.0.tcp_socket.0.port", "8080"),
 				),
 			},
 		},
@@ -297,16 +297,16 @@ func TestAccKubernetesReplicationController_with_container_lifecycle(t *testing.
 				Config: testAccKubernetesReplicationControllerConfigWithLifeCycle(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.lifecycle.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.lifecycle.0.post_start.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.lifecycle.0.post_start.0.exec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.lifecycle.0.post_start.0.exec.0.command.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.lifecycle.0.post_start.0.exec.0.command.0", "ls"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.lifecycle.0.post_start.0.exec.0.command.1", "-al"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.lifecycle.0.pre_stop.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.lifecycle.0.pre_stop.0.exec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.lifecycle.0.pre_stop.0.exec.0.command.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.lifecycle.0.pre_stop.0.exec.0.command.0", "date"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.lifecycle.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.lifecycle.0.post_start.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.lifecycle.0.post_start.0.exec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.lifecycle.0.post_start.0.exec.0.command.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.lifecycle.0.post_start.0.exec.0.command.0", "ls"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.lifecycle.0.post_start.0.exec.0.command.1", "-al"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.lifecycle.0.pre_stop.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.lifecycle.0.pre_stop.0.exec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.lifecycle.0.pre_stop.0.exec.0.command.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.lifecycle.0.pre_stop.0.exec.0.command.0", "date"),
 				),
 			},
 		},
@@ -328,7 +328,7 @@ func TestAccKubernetesReplicationController_with_container_security_context(t *t
 				Config: testAccKubernetesReplicationControllerConfigWithContainerSecurityContext(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.security_context.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.security_context.#", "1"),
 				),
 			},
 		},
@@ -352,12 +352,12 @@ func TestAccKubernetesReplicationController_with_volume_mount(t *testing.T) {
 				Config: testAccKubernetesReplicationControllerConfigWithVolumeMounts(secretName, rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.volume_mount.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.volume_mount.0.mount_path", "/tmp/my_path"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.volume_mount.0.name", "db"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.volume_mount.0.read_only", "false"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.volume_mount.0.sub_path", ""),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.volume_mount.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.mount_path", "/tmp/my_path"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.name", "db"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.read_only", "false"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.sub_path", ""),
 				),
 			},
 		},
@@ -380,11 +380,11 @@ func TestAccKubernetesReplicationController_with_resource_requirements(t *testin
 				Config: testAccKubernetesReplicationControllerConfigWithResourceRequirements(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.resources.0.requests.0.memory", "50Mi"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.resources.0.requests.0.cpu", "250m"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.resources.0.limits.0.memory", "512Mi"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.resources.0.limits.0.cpu", "500m"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.resources.0.requests.0.memory", "50Mi"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.resources.0.requests.0.cpu", "250m"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.resources.0.limits.0.memory", "512Mi"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.resources.0.limits.0.cpu", "500m"),
 				),
 			},
 		},
@@ -406,11 +406,11 @@ func TestAccKubernetesReplicationController_with_empty_dir_volume(t *testing.T) 
 				Config: testAccKubernetesReplicationControllerConfigWithEmptyDirVolumes(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.volume_mount.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.volume_mount.0.mount_path", "/cache"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.volume_mount.0.name", "cache-volume"),
-					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.volume.0.empty_dir.0.medium", "Memory"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.volume_mount.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.mount_path", "/cache"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.name", "cache-volume"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.volume.0.empty_dir.0.medium", "Memory"),
 				),
 			},
 		},
@@ -493,9 +493,11 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
-      container {
-        image = "nginx:1.7.8"
-        name  = "tf-acc-test"
+      spec {
+        container {
+          image = "nginx:1.7.8"
+          name  = "tf-acc-test"
+        }
       }
     }
   }
@@ -531,36 +533,38 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
-      container {
-        name  = "nginx"
-        image = "nginx"
+      spec {
+        container {
+          name  = "nginx"
+          image = "nginx"
 
-        port {
-          container_port = 80
+          port {
+            container_port = 80
+          }
+
+          volume_mount {
+            name       = "workdir"
+            mount_path = "/usr/share/nginx/html"
+          }
         }
 
-        volume_mount {
-          name       = "workdir"
-          mount_path = "/usr/share/nginx/html"
+        init_container {
+          name    = "install"
+          image   = "busybox"
+          command = ["wget", "-O", "/work-dir/index.html", "http://kubernetes.io"]
+
+          volume_mount {
+            name       = "workdir"
+            mount_path = "/work-dir"
+          }
         }
-      }
 
-      init_container {
-        name    = "install"
-        image   = "busybox"
-        command = ["wget", "-O", "/work-dir/index.html", "http://kubernetes.io"]
+        dns_policy = "Default"
 
-        volume_mount {
-          name       = "workdir"
-          mount_path = "/work-dir"
+        volume {
+          name      = "workdir"
+          empty_dir = {}
         }
-      }
-
-      dns_policy = "Default"
-
-      volume {
-        name      = "workdir"
-        empty_dir = {}
       }
     }
   }
@@ -593,9 +597,11 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
-      container {
-        image = "nginx:1.7.9"
-        name  = "tf-acc-test"
+      spec {
+        container {
+          image = "nginx:1.7.9"
+          name  = "tf-acc-test"
+        }
       }
     }
   }
@@ -624,9 +630,11 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
-      container {
-        image = "nginx:1.7.9"
-        name  = "tf-acc-test"
+      spec {
+        container {
+          image = "nginx:1.7.9"
+          name  = "tf-acc-test"
+        }
       }
     }
   }
@@ -651,16 +659,18 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
-      security_context {
-        fs_group            = 100
-        run_as_non_root     = true
-        run_as_user         = 101
-        supplemental_groups = [101]
-      }
+      spec {
+        security_context {
+          fs_group            = 100
+          run_as_non_root     = true
+          run_as_user         = 101
+          supplemental_groups = [101]
+        }
 
-      container {
-        image = "%s"
-        name  = "containername"
+        container {
+          image = "%s"
+          name  = "containername"
+        }
       }
     }
   }
@@ -685,18 +695,20 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
-      container {
-        image = "%s"
-        name  = "containername"
-        args  = ["/bin/sh", "-c", "touch /tmp/healthy; sleep 300; rm -rf /tmp/healthy; sleep 600"]
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+          args  = ["/bin/sh", "-c", "touch /tmp/healthy; sleep 300; rm -rf /tmp/healthy; sleep 600"]
 
-        liveness_probe {
-          exec {
-            command = ["cat", "/tmp/healthy"]
+          liveness_probe {
+            exec {
+              command = ["cat", "/tmp/healthy"]
+            }
+
+            initial_delay_seconds = 5
+            period_seconds        = 5
           }
-
-          initial_delay_seconds = 5
-          period_seconds        = 5
         }
       }
     }
@@ -722,24 +734,26 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
-      container {
-        image = "%s"
-        name  = "containername"
-        args  = ["/server"]
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+          args  = ["/server"]
 
-        liveness_probe {
-          http_get {
-            path = "/healthz"
-            port = 8080
+          liveness_probe {
+            http_get {
+              path = "/healthz"
+              port = 8080
 
-            http_header {
-              name  = "X-Custom-Header"
-              value = "Awesome"
+              http_header {
+                name  = "X-Custom-Header"
+                value = "Awesome"
+              }
             }
-          }
 
-          initial_delay_seconds = 3
-          period_seconds        = 3
+            initial_delay_seconds = 3
+            period_seconds        = 3
+          }
         }
       }
     }
@@ -765,18 +779,20 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
-      container {
-        image = "%s"
-        name  = "containername"
-        args  = ["/server"]
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+          args  = ["/server"]
 
-        liveness_probe {
-          tcp_socket {
-            port = 8080
+          liveness_probe {
+            tcp_socket {
+              port = 8080
+            }
+
+            initial_delay_seconds = 3
+            period_seconds        = 3
           }
-
-          initial_delay_seconds = 3
-          period_seconds        = 3
         }
       }
     }
@@ -802,21 +818,23 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
-      container {
-        image = "%s"
-        name  = "containername"
-        args  = ["/server"]
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+          args  = ["/server"]
 
-        lifecycle {
-          post_start {
-            exec {
-              command = ["ls", "-al"]
+          lifecycle {
+            post_start {
+              exec {
+                command = ["ls", "-al"]
+              }
             }
-          }
 
-          pre_stop {
-            exec {
-              command = ["date"]
+            pre_stop {
+              exec {
+                command = ["date"]
+              }
             }
           }
         }
@@ -844,16 +862,18 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
-      container {
-        image = "%s"
-        name  = "containername"
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
 
-        security_context {
-          privileged  = true
-          run_as_user = 1
+          security_context {
+            privileged  = true
+            run_as_user = 1
 
-          se_linux_options {
-            level = "s0:c123,c456"
+            se_linux_options {
+              level = "s0:c123,c456"
+            }
           }
         }
       }
@@ -890,21 +910,23 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
-      container {
-        image = "%s"
-        name  = "containername"
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
 
-        volume_mount {
-          mount_path = "/tmp/my_path"
-          name       = "db"
+          volume_mount {
+            mount_path = "/tmp/my_path"
+            name       = "db"
+          }
         }
-      }
 
-      volume {
-        name = "db"
+        volume {
+          name = "db"
 
-        secret = {
-          secret_name = "${kubernetes_secret.test.metadata.0.name}"
+          secret = {
+            secret_name = "${kubernetes_secret.test.metadata.0.name}"
+          }
         }
       }
     }
@@ -930,19 +952,21 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
-      container {
-        image = "%s"
-        name  = "containername"
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
 
-        resources {
-          limits {
-            cpu    = "0.5"
-            memory = "512Mi"
-          }
+          resources {
+            limits {
+              cpu    = "0.5"
+              memory = "512Mi"
+            }
 
-          requests {
-            cpu    = "250m"
-            memory = "50Mi"
+            requests {
+              cpu    = "250m"
+              memory = "50Mi"
+            }
           }
         }
       }
@@ -969,21 +993,23 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
-      container {
-        image = "%s"
-        name  = "containername"
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
 
-        volume_mount {
-          mount_path = "/cache"
-          name       = "cache-volume"
+          volume_mount {
+            mount_path = "/cache"
+            name       = "cache-volume"
+          }
         }
-      }
 
-      volume {
-        name = "cache-volume"
+        volume {
+          name = "cache-volume"
 
-        empty_dir = {
-          medium = "Memory"
+          empty_dir = {
+            medium = "Memory"
+          }
         }
       }
     }

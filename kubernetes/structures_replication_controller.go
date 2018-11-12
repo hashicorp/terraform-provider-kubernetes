@@ -65,15 +65,12 @@ func expandReplicationControllerTemplate(rct []interface{}, selector map[string]
 	in := rct[0].(map[string]interface{})
 
 	// Get user defined metadata
-	metadata := expandMetadata(in["metadata"].([]interface{}))
-
-	// Add labels from selector to ensure proper selection of pods by the replication controller for deprecated use case
-	if metadata.Labels == nil {
-		metadata.Labels = selector
-	}
-	obj.ObjectMeta = metadata
+	obj.ObjectMeta = expandMetadata(in["metadata"].([]interface{}))
 
 	if useDeprecatedSpecFields {
+		// Add labels from selector to ensure proper selection of pods by the replication controller for deprecated use case
+		obj.ObjectMeta.Labels = selector
+
 		// Get pod spec from deprecated fields
 		podSpecDeprecated, err := expandPodSpec(rct)
 		if err != nil {

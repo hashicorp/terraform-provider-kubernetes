@@ -43,6 +43,8 @@ func TestAccKubernetesReplicationController_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_replication_controller.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.8"),
 					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.metadata.0.annotations.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.metadata.0.annotations.TestAnnotationFive", "five"),
 				),
 			},
 			{
@@ -64,6 +66,8 @@ func TestAccKubernetesReplicationController_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_replication_controller.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.9"),
 					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.metadata.0.annotations.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.metadata.0.annotations.TestAnnotationSix", "six"),
 				),
 			},
 		},
@@ -493,6 +497,17 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
+      metadata {
+        labels {
+          TestLabelOne   = "one"
+          TestLabelTwo   = "two"
+          TestLabelThree = "three"
+        }
+
+        annotations {
+          TestAnnotationFive = "five"
+        }
+      }
       spec {
         container {
           image = "nginx:1.7.8"
@@ -533,6 +548,13 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
+      metadata {
+        labels {
+          TestLabelOne   = "one"
+          TestLabelTwo   = "two"
+          TestLabelThree = "three"
+        }
+      }
       spec {
         container {
           name  = "nginx"
@@ -597,6 +619,17 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
+      metadata {
+        labels {
+          TestLabelOne   = "one"
+          TestLabelTwo   = "two"
+          TestLabelThree = "three"
+        }
+
+        annotations {
+          TestAnnotationSix = "six"
+        }
+      }
       spec {
         container {
           image = "nginx:1.7.9"
@@ -630,6 +663,14 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
+      metadata {
+        labels {
+          TestLabelOne   = "one"
+          TestLabelTwo   = "two"
+          TestLabelThree = "three"
+        }
+      }
+
       spec {
         container {
           image = "nginx:1.7.9"
@@ -659,6 +700,12 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
       spec {
         security_context {
           fs_group            = 100
@@ -695,6 +742,12 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
       spec {
         container {
           image = "%s"
@@ -734,6 +787,12 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
       spec {
         container {
           image = "%s"
@@ -779,6 +838,12 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
       spec {
         container {
           image = "%s"
@@ -818,6 +883,12 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
       spec {
         container {
           image = "%s"
@@ -862,6 +933,12 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
       spec {
         container {
           image = "%s"
@@ -910,6 +987,12 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
       spec {
         container {
           image = "%s"
@@ -952,6 +1035,12 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
       spec {
         container {
           image = "%s"
@@ -993,6 +1082,12 @@ resource "kubernetes_replication_controller" "test" {
     }
 
     template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
       spec {
         container {
           image = "%s"

@@ -94,8 +94,9 @@ func replicationControllerTemplateFieldSpec() map[string]*schema.Schema {
 		},
 	}
 
-	// Merge deprecated fields
+	// Merge deprecated fields and mark them conflicting with the ones to avoid complex mixed use-cases
 	for k, v := range podSpecFields(true, true, true) {
+		v.ConflictsWith = []string{"spec.0.template.0.spec"}
 		templateFields[k] = v
 	}
 

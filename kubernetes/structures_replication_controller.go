@@ -13,35 +13,26 @@ func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec) ([]interf
 		att["replicas"] = *in.Replicas
 	}
 
-	att["selector"] = in.Selector
+	if in.Selector != nil {
+		att["selector"] = in.Selector
+	}
 
 	if in.Template != nil {
-		template, err := flattenReplicationControllerTemplate(*in.Template)
+		podSpec, err := flattenPodSpec(in.Template.Spec)
 		if err != nil {
 			return nil, err
 		}
-		att["template"] = template
+		template := make(map[string]interface{})
+		template["spec"] = podSpec
+		template["metadata"] = flattenMetadata(in.Template.ObjectMeta)
+
+		// Merge deprecated fields
+		for k, v := range podSpec[0].(map[string]interface{}) {
+			template[k] = v
+		}
+
+		att["template"] = []interface{}{template}
 	}
-
-	return []interface{}{att}, nil
-}
-
-func flattenReplicationControllerTemplate(in v1.PodTemplateSpec) ([]interface{}, error) {
-	att := make(map[string]interface{})
-
-	podSpec, err := flattenPodSpec(in.Spec)
-	if err != nil {
-		return nil, err
-	}
-
-	// Put the pod spec directly at the base template field to support deprecated fields
-	att = podSpec[0].(map[string]interface{})
-
-	// Also put the pod spec in the new spec field
-	att["spec"] = podSpec[0].(map[string]interface{})
-
-	// HINT: use diffSuppressFunc for labels automatically added from selector?
-	att["metadata"] = flattenMetadata(in.ObjectMeta)
 
 	return []interface{}{att}, nil
 }
@@ -79,24 +70,24 @@ func expandReplicationControllerTemplate(rct []interface{}, selector map[string]
 	}
 	obj.ObjectMeta = metadata
 
-	// Get pod spec from deprecated fields
-	podSpecDeprecated, err := expandPodSpec(rct)
-	if err != nil {
-		return obj, err
-	}
-
 	// Get pod spec from new fields
 	podSpec, err := expandPodSpec(in["spec"].([]interface{}))
 	if err != nil {
 		return obj, err
 	}
 
-	// Merge them overriding the deprecated ones by the new ones
-	if err = mergo.MergeWithOverwrite(&podSpecDeprecated, podSpec); err != nil {
+	// Get pod spec from deprecated fields
+	podSpecDeprecated, err := expandPodSpec(rct)
+	if err != nil {
 		return obj, err
 	}
 
-	obj.Spec = *podSpecDeprecated
+	// Merge them overriding the new ones by the deprecated ones
+	if err := mergo.MergeWithOverwrite(&podSpec, podSpecDeprecated); err != nil {
+		return obj, err
+	}
+
+	obj.Spec = *podSpec
 
 	return obj, nil
 }

@@ -76,6 +76,7 @@ func resourceKubernetesReplicationController() *schema.Resource {
 func replicationControllerTemplateFieldSpec() map[string]*schema.Schema {
 	metadata := namespacedMetadataSchema("replication controller's template", true)
 	// TODO: make this required once the legacy fields are removed
+	metadata.Computed = true
 	metadata.Required = false
 	metadata.Optional = true
 
@@ -85,6 +86,7 @@ func replicationControllerTemplateFieldSpec() map[string]*schema.Schema {
 			Type:        schema.TypeList,
 			Description: "Spec of the pods managed by the replication controller",
 			Optional:    true, // TODO: make this required once the legacy fields are removed
+			Computed:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: podSpecFields(false, false, true),

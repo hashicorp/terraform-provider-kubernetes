@@ -1,11 +1,10 @@
 package kubernetes
 
 import (
-	"github.com/imdario/mergo"
 	"k8s.io/api/core/v1"
 )
 
-func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec) ([]interface{}, error) {
+func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec, useDeprecatedSpecFields bool) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	att["min_ready_seconds"] = in.MinReadySeconds
 
@@ -23,12 +22,16 @@ func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec) ([]interf
 			return nil, err
 		}
 		template := make(map[string]interface{})
-		template["spec"] = podSpec
-		template["metadata"] = flattenMetadata(in.Template.ObjectMeta)
 
-		// Merge deprecated fields
-		for k, v := range podSpec[0].(map[string]interface{}) {
-			template[k] = v
+		if useDeprecatedSpecFields {
+			// Use deprecated fields
+			for k, v := range podSpec[0].(map[string]interface{}) {
+				template[k] = v
+			}
+		} else {
+			// Use new fields
+			template["spec"] = podSpec
+			template["metadata"] = flattenMetadata(in.Template.ObjectMeta)
 		}
 
 		att["template"] = []interface{}{template}
@@ -37,7 +40,7 @@ func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec) ([]interf
 	return []interface{}{att}, nil
 }
 
-func expandReplicationControllerSpec(rc []interface{}) (*v1.ReplicationControllerSpec, error) {
+func expandReplicationControllerSpec(rc []interface{}, useDeprecatedSpecFields bool) (*v1.ReplicationControllerSpec, error) {
 	obj := &v1.ReplicationControllerSpec{}
 	if len(rc) == 0 || rc[0] == nil {
 		return obj, nil
@@ -47,7 +50,7 @@ func expandReplicationControllerSpec(rc []interface{}) (*v1.ReplicationControlle
 	obj.Replicas = ptrToInt32(int32(in["replicas"].(int)))
 	obj.Selector = expandStringMap(in["selector"].(map[string]interface{}))
 
-	template, err := expandReplicationControllerTemplate(in["template"].([]interface{}), obj.Selector)
+	template, err := expandReplicationControllerTemplate(in["template"].([]interface{}), obj.Selector, useDeprecatedSpecFields)
 	if err != nil {
 		return obj, err
 	}
@@ -57,7 +60,7 @@ func expandReplicationControllerSpec(rc []interface{}) (*v1.ReplicationControlle
 	return obj, nil
 }
 
-func expandReplicationControllerTemplate(rct []interface{}, selector map[string]string) (*v1.PodTemplateSpec, error) {
+func expandReplicationControllerTemplate(rct []interface{}, selector map[string]string, useDeprecatedSpecFields bool) (*v1.PodTemplateSpec, error) {
 	obj := &v1.PodTemplateSpec{}
 	in := rct[0].(map[string]interface{})
 
@@ -70,24 +73,21 @@ func expandReplicationControllerTemplate(rct []interface{}, selector map[string]
 	}
 	obj.ObjectMeta = metadata
 
-	// Get pod spec from new fields
-	podSpec, err := expandPodSpec(in["spec"].([]interface{}))
-	if err != nil {
-		return obj, err
+	if useDeprecatedSpecFields {
+		// Get pod spec from deprecated fields
+		podSpecDeprecated, err := expandPodSpec(rct)
+		if err != nil {
+			return obj, err
+		}
+		obj.Spec = *podSpecDeprecated
+	} else {
+		// Get pod spec from new fields
+		podSpec, err := expandPodSpec(in["spec"].([]interface{}))
+		if err != nil {
+			return obj, err
+		}
+		obj.Spec = *podSpec
 	}
-
-	// Get pod spec from deprecated fields
-	podSpecDeprecated, err := expandPodSpec(rct)
-	if err != nil {
-		return obj, err
-	}
-
-	// Merge them overriding the new ones by the deprecated ones
-	if err := mergo.MergeWithOverwrite(&podSpec, podSpecDeprecated); err != nil {
-		return obj, err
-	}
-
-	obj.Spec = *podSpec
 
 	return obj, nil
 }

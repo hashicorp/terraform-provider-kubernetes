@@ -107,7 +107,11 @@ func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta 
 	conn := meta.(*kubernetes.Clientset)
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}))
+
+	// Check which replication controller template spec fields are used
+	_, deprecatedSpecFieldsExist := d.GetOkExists("spec.0.template.0.container.0.name")
+
+	spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}), deprecatedSpecFieldsExist)
 	if err != nil {
 		return err
 	}
@@ -165,7 +169,10 @@ func resourceKubernetesReplicationControllerRead(d *schema.ResourceData, meta in
 		return err
 	}
 
-	spec, err := flattenReplicationControllerSpec(rc.Spec)
+	// Check which replication controller template spec fields are used
+	_, deprecatedSpecFieldsExist := d.GetOkExists("spec.0.template.0.container.0.name")
+
+	spec, err := flattenReplicationControllerSpec(rc.Spec, deprecatedSpecFieldsExist)
 	if err != nil {
 		return err
 	}
@@ -189,7 +196,10 @@ func resourceKubernetesReplicationControllerUpdate(d *schema.ResourceData, meta 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("spec") {
-		spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}))
+		// Check which replication controller template spec fields are used
+		_, deprecatedSpecFieldsExist := d.GetOkExists("spec.0.template.0.container.0.name")
+
+		spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}), deprecatedSpecFieldsExist)
 		if err != nil {
 			return err
 		}

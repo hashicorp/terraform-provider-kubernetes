@@ -5,12 +5,12 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	"k8s.io/api/core/v1"
 	api "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	kubernetes "k8s.io/client-go/kubernetes"
-	"k8s.io/api/core/v1"
 )
 
 func resourceKubernetesStorageClass() *schema.Resource {
@@ -54,8 +54,8 @@ func resourceKubernetesStorageClassCreate(d *schema.ResourceData, meta interface
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	reclaimPolicy := v1.PersistentVolumeReclaimPolicy(d.Get("reclaim_policy").(string))
 	storageClass := api.StorageClass{
-		ObjectMeta:  metadata,
-		Provisioner: d.Get("storage_provisioner").(string),
+		ObjectMeta:    metadata,
+		Provisioner:   d.Get("storage_provisioner").(string),
 		ReclaimPolicy: &reclaimPolicy,
 	}
 

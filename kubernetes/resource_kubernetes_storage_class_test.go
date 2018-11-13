@@ -43,6 +43,7 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_storage_class.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_storage_class.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "storage_provisioner", "kubernetes.io/gce-pd"),
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "reclaim_policy", "Delete"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.type", "pd-ssd"),
 					testAccCheckStorageClassParameters(&conf, map[string]string{"type": "pd-ssd"}),
@@ -66,6 +67,7 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_storage_class.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_storage_class.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "storage_provisioner", "kubernetes.io/gce-pd"),
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "reclaim_policy", "Retain"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.type", "pd-standard"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.zones", "us-west1-a,us-west1-b"),
@@ -86,6 +88,7 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_storage_class.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_storage_class.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "storage_provisioner", "kubernetes.io/gce-pd"),
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "reclaim_policy", "Delete"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.%", "0"),
 					testAccCheckStorageClassParameters(&conf, map[string]string{}),
 				),
@@ -237,6 +240,7 @@ resource "kubernetes_storage_class" "test" {
 		name = "%s"
 	}
 	storage_provisioner = "kubernetes.io/gce-pd"
+	reclaim_policy = "Delete"
 	parameters {
 		type = "pd-ssd"
 	}
@@ -258,6 +262,7 @@ resource "kubernetes_storage_class" "test" {
 		name = "%s"
 	}
 	storage_provisioner = "kubernetes.io/gce-pd"
+	reclaim_policy = "Retain"
 	parameters {
 		type = "pd-standard"
 		zones = "us-west1-a,us-west1-b"

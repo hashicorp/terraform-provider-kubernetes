@@ -20,6 +20,7 @@ resource "kubernetes_storage_class" "example" {
     name = "terraform-example"
   }
   storage_provisioner = "kubernetes.io/gce-pd"
+  reclaim_policy = "Retain"
   parameters {
   	type = "pd-standard"
   }
@@ -34,6 +35,7 @@ The following arguments are supported:
 * `parameters` - (Optional) The parameters for the provisioner that should create volumes of this storage class.
 	Read more about [available parameters](https://kubernetes.io/docs/concepts/storage/storage-classes/#parameters).
 * `storage_provisioner` - (Required) Indicates the type of the provisioner
+* `reclaim_policy` - (Optional) Indicates the reclaim policy to use.  If no reclaimPolicy is specified when a StorageClass object is created, it will default to Delete.
 
 ## Nested Blocks
 

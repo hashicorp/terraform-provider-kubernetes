@@ -53,3 +53,4 @@ The following attributes are exported:
 * `parameters` - The parameters for the provisioner that creates volume of this storage class.
 	Read more about [available parameters](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#parameters).
 * `storage_provisioner` - Indicates the type of the provisioner this storage class represents
+* `reclaim_policy` - Indicates the reclaim policy used.

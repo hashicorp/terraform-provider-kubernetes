@@ -21,6 +21,7 @@ func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
 		"replicas": {
 			Type:         schema.TypeInt,
 			Optional:     true,
+			Default:      1,
 			Description:  "The desired number of replicas of the given Template, in the sense that they are instantiations of the same Template. Value must be a positive integer.",
 			ValidateFunc: validatePositiveInteger,
 		},

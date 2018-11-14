@@ -34,6 +34,9 @@ func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec, useDeprec
 			template["metadata"] = flattenMetadata(in.Template.ObjectMeta)
 		}
 
+		// TODO: Add conditional logic that returns an error if both the old and new attributes are not defined to preserve the Required property of the spec fields.
+		// cf. https://www.terraform.io/docs/extend/best-practices/deprecations.html#renaming-a-required-attribute
+
 		att["template"] = []interface{}{template}
 	}
 

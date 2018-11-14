@@ -96,11 +96,17 @@ func replicationControllerTemplateFieldSpec() map[string]*schema.Schema {
 
 	// Merge deprecated fields and mark them conflicting with the ones to avoid complex mixed use-cases
 	for k, v := range podSpecFields(true, true, true) {
-		v.ConflictsWith = []string{"spec.0.template.0.spec"}
+		v.ConflictsWith = []string{"spec.0.template.0.spec", "spec.0.template.0.metadata"}
 		templateFields[k] = v
 	}
 
 	return templateFields
+}
+
+func useDeprecatedSpecFields(d *schema.ResourceData) (deprecatedSpecFieldsExist bool) {
+	// Check which replication controller template spec fields are used
+	_, deprecatedSpecFieldsExist = d.GetOk("spec.0.template.0.container.0.name")
+	return
 }
 
 func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta interface{}) error {
@@ -108,10 +114,7 @@ func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta 
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
-	// Check which replication controller template spec fields are used
-	_, deprecatedSpecFieldsExist := d.GetOkExists("spec.0.template.0.container.0.name")
-
-	spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}), deprecatedSpecFieldsExist)
+	spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}), useDeprecatedSpecFields(d))
 	if err != nil {
 		return err
 	}
@@ -169,10 +172,7 @@ func resourceKubernetesReplicationControllerRead(d *schema.ResourceData, meta in
 		return err
 	}
 
-	// Check which replication controller template spec fields are used
-	_, deprecatedSpecFieldsExist := d.GetOkExists("spec.0.template.0.container.0.name")
-
-	spec, err := flattenReplicationControllerSpec(rc.Spec, deprecatedSpecFieldsExist)
+	spec, err := flattenReplicationControllerSpec(rc.Spec, useDeprecatedSpecFields(d))
 	if err != nil {
 		return err
 	}
@@ -196,10 +196,7 @@ func resourceKubernetesReplicationControllerUpdate(d *schema.ResourceData, meta 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("spec") {
-		// Check which replication controller template spec fields are used
-		_, deprecatedSpecFieldsExist := d.GetOkExists("spec.0.template.0.container.0.name")
-
-		spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}), deprecatedSpecFieldsExist)
+		spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}), useDeprecatedSpecFields(d))
 		if err != nil {
 			return err
 		}

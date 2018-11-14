@@ -19,6 +19,11 @@ func dataSourceKubernetesStorageClass() *schema.Resource {
 				Description: "Indicates the type of the provisioner",
 				Computed:    true,
 			},
+			"reclaim_policy": {
+				Type:        schema.TypeString,
+				Description: "Indicates the type of the reclaim policy",
+				Computed:    true,
+			},
 		},
 	}
 }

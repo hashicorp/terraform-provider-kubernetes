@@ -108,10 +108,9 @@ func TestAccKubernetesReplicationController_deprecated_importBasic(t *testing.T)
 				Config: testAccKubernetesReplicationControllerConfig_deprecated_basic(name),
 			},
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: false,
 			},
 		},
 	})
@@ -160,10 +159,9 @@ func TestAccKubernetesReplicationController_deprecated_importGeneratedName(t *te
 				Config: testAccKubernetesReplicationControllerConfig_deprecated_generatedName(prefix),
 			},
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: false,
 			},
 		},
 	})

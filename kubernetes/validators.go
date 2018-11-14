@@ -210,8 +210,3 @@ func validateAttributeValueIsIn(validValues []string) schema.SchemaValidateFunc 
 
 	}
 }
-
-func validateStatefulSetUpdateStrategy(value interface{}, key string) (ws []string, es []error) {
-	//TODO: implement
-	return nil, nil
-}

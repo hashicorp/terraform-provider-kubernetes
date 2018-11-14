@@ -157,7 +157,7 @@ func TestAccKubernetesReplicationController_deprecated_importGeneratedName(t *te
 		CheckDestroy: testAccCheckKubernetesReplicationControllerDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesReplicationControllerConfig_generatedName(prefix),
+				Config: testAccKubernetesReplicationControllerConfig_deprecated_generatedName(prefix),
 			},
 			{
 				ResourceName:            resourceName,

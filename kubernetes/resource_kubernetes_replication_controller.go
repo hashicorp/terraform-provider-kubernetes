@@ -105,7 +105,7 @@ func replicationControllerTemplateFieldSpec() map[string]*schema.Schema {
 
 func useDeprecatedSpecFields(d *schema.ResourceData) (deprecatedSpecFieldsExist bool) {
 	// Check which replication controller template spec fields are used
-	_, deprecatedSpecFieldsExist = d.GetOk("spec.0.template.0.container.0.name")
+	_, deprecatedSpecFieldsExist = d.GetOkExists("spec.0.template.0.container.0.name")
 	return
 }
 

@@ -79,7 +79,7 @@ func resourceKubernetesStatefulSetExists(d *schema.ResourceData, meta interface{
 	log.Printf("[INFO] Checking StatefulSet %s", name)
 	_, err = conn.AppsV1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if errors.IsNotFound(err) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)
@@ -98,8 +98,14 @@ func resourceKubernetesStatefulSetRead(d *schema.ResourceData, meta interface{})
 	log.Printf("[INFO] Reading stateful set %s", id)
 	statefulSet, err := conn.AppsV1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
-		log.Printf("[DEBUG] Error reading stateful set: %#v", err)
-		return err
+		switch {
+		case errors.IsNotFound(err):
+			d.SetId("")
+			return nil
+		default:
+			log.Printf("[DEBUG] Error reading stateful set: %#v", err)
+			return err
+		}
 	}
 	log.Printf("[INFO] Received stateful set: %#v", statefulSet)
 	err = d.Set("metadata", flattenMetadata(statefulSet.ObjectMeta))
@@ -179,6 +185,5 @@ func resourceKubernetesStatefulSetDelete(d *schema.ResourceData, meta interface{
 
 	log.Printf("[INFO] StatefulSet %s deleted", name)
 
-	d.SetId("")
 	return nil
 }

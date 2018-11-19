@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	api "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,9 +42,9 @@ func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.labels.TestLabelTwo", "two"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.labels.TestLabelThree", "three"),
 					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{
-						"TestLabelOne":                             "one",
-						"TestLabelTwo":                             "two",
-						"TestLabelThree":                           "three",
+						"TestLabelOne":   "one",
+						"TestLabelTwo":   "two",
+						"TestLabelThree": "three",
 						"failure-domain.beta.kubernetes.io/region": region,
 						"failure-domain.beta.kubernetes.io/zone":   zone,
 					}),
@@ -73,9 +74,9 @@ func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.labels.TestLabelTwo", "two"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.labels.TestLabelThree", "three"),
 					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{
-						"TestLabelOne":                             "one",
-						"TestLabelTwo":                             "two",
-						"TestLabelThree":                           "three",
+						"TestLabelOne":   "one",
+						"TestLabelTwo":   "two",
+						"TestLabelThree": "three",
 						"failure-domain.beta.kubernetes.io/region": region,
 						"failure-domain.beta.kubernetes.io/zone":   zone,
 					}),
@@ -127,9 +128,9 @@ func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.labels.TestLabelTwo", "two"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.labels.TestLabelThree", "three"),
 					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{
-						"TestLabelOne":                             "one",
-						"TestLabelTwo":                             "two",
-						"TestLabelThree":                           "three",
+						"TestLabelOne":   "one",
+						"TestLabelTwo":   "two",
+						"TestLabelThree": "three",
 						"failure-domain.beta.kubernetes.io/region": region,
 						"failure-domain.beta.kubernetes.io/zone":   zone,
 					}),
@@ -159,9 +160,9 @@ func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.labels.TestLabelTwo", "two"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.labels.TestLabelThree", "three"),
 					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{
-						"TestLabelOne":                             "one",
-						"TestLabelTwo":                             "two",
-						"TestLabelThree":                           "three",
+						"TestLabelOne":   "one",
+						"TestLabelTwo":   "two",
+						"TestLabelThree": "three",
 						"failure-domain.beta.kubernetes.io/region": region,
 						"failure-domain.beta.kubernetes.io/zone":   zone,
 					}),
@@ -421,6 +422,39 @@ func TestAccKubernetesPersistentVolume_storageClass(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.access_modes.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.access_modes.1254135962", "ReadWriteMany"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.storage_class_name", secondStorageClassName),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPersistentVolume_nodeAffinity(t *testing.T) {
+	var conf api.PersistentVolume
+	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	name := fmt.Sprintf("tf-acc-test-%s", randString)
+
+	selectorLabel := fmt.Sprintf("tf-acc-test-na-label-%s", randString)
+	selectorValue := fmt.Sprintf("tf-acc-test-na-value-%s", randString)
+	selectorValueHash := schema.HashString(selectorValue)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_persistent_volume.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPersistentVolumeConfig_nodeAffinity(name, selectorLabel, selectorValue),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions.0.key", selectorLabel),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions.0.operator", "In"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions.0.values.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", fmt.Sprintf("spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions.0.values.%d", selectorValueHash), selectorValue),
 				),
 			},
 		},
@@ -742,4 +776,35 @@ resource "kubernetes_storage_class" "test2" {
 	}
 }
 `, name, refName, diskName, zone, storageClassName, storageClassName2)
+}
+
+func testAccKubernetesPersistentVolumeConfig_nodeAffinity(name, selectorLabel, selectorValue string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_persistent_volume" "test" {
+	metadata {
+		name = "%s"
+	}
+	spec {
+		capacity {
+			storage = "2Gi"
+		}
+		access_modes = ["ReadWriteMany"]
+		persistent_volume_source {
+      host_path {
+        path = "/mnt/local-volume"
+      }
+		}
+    node_affinity {
+      required {
+        node_selector_term {
+          match_expressions = [{
+            key = "%s"
+            operator = "In"
+            values = ["%s"]
+          }]
+        }
+      }
+    }
+	}
+}`, name, selectorLabel, selectorValue)
 }

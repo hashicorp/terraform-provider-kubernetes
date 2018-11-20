@@ -10,7 +10,7 @@ func podTemplateFields(isUpdatable bool) map[string]*schema.Schema {
 		"spec": {
 			Type:        schema.TypeList,
 			Description: "Spec of the pods owned by the stateful set",
-			Required:    true,
+			Optional:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: podSpecFields(false),

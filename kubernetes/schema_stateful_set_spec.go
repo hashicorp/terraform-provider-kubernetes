@@ -36,7 +36,7 @@ func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
 		"selector": {
 			Type:        schema.TypeList,
 			Description: "A label query over pods that should match the replica count. It must match the pod template's labels.",
-			Optional:    true,
+			Required:    true,
 			ForceNew:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
@@ -67,7 +67,7 @@ func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
 					"type": {
 						Type:        schema.TypeString,
 						Description: "Indicates the type of the StatefulSet update strategy. Default is RollingUpdate",
-						Required:    true,
+						Optional:    true,
 						ValidateFunc: validation.StringInSlice([]string{
 							"RollingUpdate",
 							"OnDelete",

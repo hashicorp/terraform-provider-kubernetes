@@ -243,11 +243,11 @@ The following arguments are supported:
 
 * `revision_history_limit` - (Optional)  The maximum number of revisions that will be maintained in the StatefulSet's revision history. The revision history consists of all revisions not represented by a currently applied StatefulSetSpec version. The default value is 10.
 
-* `selector` - A label query over pods that should match the replica count. **It must match the pod template's labels.** More info: [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors)
+* `selector` - (Required) A label query over pods that should match the replica count. **It must match the pod template's labels.** More info: [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors)
 
-* `service_name` - The name of the service that governs this StatefulSet. This service must exist before the StatefulSet, and is responsible for the network identity of the set. Pods get DNS/hostnames that follow the pattern: pod-specific-string.serviceName.default.svc.cluster.local where "pod-specific-string" is managed by the StatefulSet controller.
+* `service_name` - (Required) The name of the service that governs this StatefulSet. This service must exist before the StatefulSet, and is responsible for the network identity of the set. Pods get DNS/hostnames that follow the pattern: pod-specific-string.serviceName.default.svc.cluster.local where "pod-specific-string" is managed by the StatefulSet controller.
 
-* `template` - The object that describes the pod that will be created if insufficient replicas are detected. Each pod stamped out by the StatefulSet will fulfill this Template, but have a unique identity from the rest of the StatefulSet.
+* `template` - (Required) The object that describes the pod that will be created if insufficient replicas are detected. Each pod stamped out by the StatefulSet will fulfill this Template, but have a unique identity from the rest of the StatefulSet.
 
 * `update_strategy` - (Optional) Indicates the StatefulSet update strategy that will be employed to update Pods in the StatefulSet when a revision is made to Template.
 
@@ -257,9 +257,9 @@ The following arguments are supported:
 
 #### Arguments
 
-* `metadata` - Standard object's metadata. More info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata)
+* `metadata` - (Required) Standard object's metadata. More info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata)
 
-* `spec` - Specification of the desired behavior of the pod. More info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status)
+* `spec` - (Optional) Specification of the desired behavior of the pod. More info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status)
 
 ## Nested Blocks
 
@@ -277,7 +277,7 @@ Please see the [Pod resource](pod.html#spec-1) for reference.
 
 #### Arguments
 
-* `type` - Indicates the type of the StatefulSetUpdateStrategy. There are two valid update strategies, RollingUpdate and OnDelete. Default is RollingUpdate.
+* `type` - (Optional) Indicates the type of the StatefulSetUpdateStrategy. There are two valid update strategies, RollingUpdate and OnDelete. Default is RollingUpdate.
 
 * `rolling_update` - (Optional) The RollingUpdate update strategy will update all Pods in a StatefulSet, in reverse ordinal order, while respecting the StatefulSet guarantees.
 
@@ -286,7 +286,7 @@ Please see the [Pod resource](pod.html#spec-1) for reference.
 
 #### Arguments
 
-* `partition` - Indicates the ordinal at which the StatefulSet should be partitioned. You can perform a phased roll out (e.g. a linear, geometric, or exponential roll out) using a partitioned rolling update in a similar manner to how you rolled out a canary. To perform a phased roll out, set the partition to the ordinal at which you want the controller to pause the update. By setting the partition to 0, you allow the StatefulSet controller to continue the update process. Default value is 0.
+* `partition` - (Optional) Indicates the ordinal at which the StatefulSet should be partitioned. You can perform a phased roll out (e.g. a linear, geometric, or exponential roll out) using a partitioned rolling update in a similar manner to how you rolled out a canary. To perform a phased roll out, set the partition to the ordinal at which you want the controller to pause the update. By setting the partition to 0, you allow the StatefulSet controller to continue the update process. Default value is 0.
 
 ## Nested Blocks
 

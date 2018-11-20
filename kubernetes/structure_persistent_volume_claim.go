@@ -1,8 +1,11 @@
 package kubernetes
 
 import (
+	"errors"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Flatteners
@@ -35,6 +38,28 @@ func flattenResourceRequirements(in v1.ResourceRequirements) []interface{} {
 }
 
 // Expanders
+
+func expandPersistenVolumeClaim(p map[string]interface{}) (corev1.PersistentVolumeClaim, error) {
+	pvc := corev1.PersistentVolumeClaim{}
+	if len(p) == 0 {
+		return pvc, nil
+	}
+	m, ok := p["metadata"].([]interface{})
+	if !ok {
+		return pvc, errors.New("persistent_volume_claim: failed to unroll 'metadata'")
+	}
+	pvc.ObjectMeta = expandMetadata(m)
+	s, ok := p["spec"].([]interface{})
+	if !ok {
+		return pvc, errors.New("persistent_volume_claim: failed to unroll 'spec'")
+	}
+	spec, err := expandPersistentVolumeClaimSpec(s)
+	if err != nil {
+		return pvc, err
+	}
+	pvc.Spec = spec
+	return pvc, nil
+}
 
 func expandPersistentVolumeClaimSpec(l []interface{}) (v1.PersistentVolumeClaimSpec, error) {
 	if len(l) == 0 || l[0] == nil {

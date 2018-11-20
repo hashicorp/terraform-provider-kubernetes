@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -73,42 +74,34 @@ func expandStatefulSetSpecUpdateStrategy(s []interface{}) (v1.StatefulSetUpdateS
 	if len(s) == 0 {
 		return ust, nil
 	}
-	if us, ok := s[0].(map[string]interface{}); ok {
-		t := us["type"].(string)
-		ust.Type = v1.StatefulSetUpdateStrategyType(t)
-		if ru, ok := us["rolling_update"].([]interface{}); ok {
-			log.Printf("[DEBUG] StatefulSet.UpdateStrategy.RollingUpdate: %#v", ru)
-			if len(ru) > 0 {
-				u := v1.RollingUpdateStatefulSetStrategy{}
-				if r, ok := ru[0].(map[string]interface{}); ok {
-					log.Printf("[DEBUG] StatefulSet.UpdateStrategy.RollingUpdate: %#v", r)
-					if p, ok := r["partition"].(int); ok {
-						log.Printf("[DEBUG] StatefulSet.UpdateStrategy.RollingUpdate.Partition: %#v", p)
-						u.Partition = ptrToInt32(int32(p))
-					}
-				}
-				ust.RollingUpdate = &u
-			}
+	us, ok := s[0].(map[string]interface{})
+	if !ok {
+		return ust, errors.New("failed to expand 'spec.update_strategy'")
+	}
+	t, ok := us["type"].(string)
+	if !ok {
+		return ust, errors.New("failed to expand 'spec.update_strategy.type'")
+	}
+	ust.Type = v1.StatefulSetUpdateStrategyType(t)
+	ru, ok := us["rolling_update"].([]interface{})
+	if !ok {
+		return ust, errors.New("failed to unroll 'spec.update_strategy.rolling_update'")
+	}
+	if len(ru) > 0 {
+		u := v1.RollingUpdateStatefulSetStrategy{}
+		r, ok := ru[0].(map[string]interface{})
+		if !ok {
+			return ust, errors.New("failed to expand 'spec.update_strategy.rolling_update'")
 		}
+		p, ok := r["partition"].(int)
+		if !ok {
+			return ust, errors.New("failed to expand 'spec.update_strategy.rolling_update.partition'")
+		}
+		u.Partition = ptrToInt32(int32(p))
+		ust.RollingUpdate = &u
 	}
-	log.Printf("[DEBUG] StatefulSetSpec.UpdateStrategy: %#v", ust)
+	log.Printf("[DEBUG] Expanded StatefulSet.Spec.UpdateStrategy: %#v", ust)
 	return ust, nil
-}
-
-func expandPersistenVolumeClaim(p map[string]interface{}) (corev1.PersistentVolumeClaim, error) {
-	if len(p) == 0 {
-		return corev1.PersistentVolumeClaim{}, nil
-	}
-	metadata := expandMetadata(p["metadata"].([]interface{}))
-	spec, err := expandPersistentVolumeClaimSpec(p["spec"].([]interface{}))
-	if err != nil {
-		return corev1.PersistentVolumeClaim{}, err
-	}
-	pvc := corev1.PersistentVolumeClaim{
-		ObjectMeta: metadata,
-		Spec:       spec,
-	}
-	return pvc, nil
 }
 
 func expandStatefulSetSelectors(s []interface{}) (metav1.LabelSelector, error) {

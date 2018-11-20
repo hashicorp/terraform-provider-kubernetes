@@ -39,19 +39,15 @@ func resourceKubernetesPersistentVolumeClaim() *schema.Resource {
 func resourceKubernetesPersistentVolumeClaimCreate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	spec, err := expandPersistentVolumeClaimSpec(d.Get("spec").([]interface{}))
+	claim, err := expandPersistenVolumeClaim(map[string]interface{}{
+		"metadata": d.Get("metadata"),
+		"spec":     d.Get("spec"),
+	})
 	if err != nil {
 		return err
 	}
-
-	claim := api.PersistentVolumeClaim{
-		ObjectMeta: metadata,
-		Spec:       spec,
-	}
-
 	log.Printf("[INFO] Creating new persistent volume claim: %#v", claim)
-	out, err := conn.CoreV1().PersistentVolumeClaims(metadata.Namespace).Create(&claim)
+	out, err := conn.CoreV1().PersistentVolumeClaims(claim.Namespace).Create(&claim)
 	if err != nil {
 		return err
 	}
@@ -66,7 +62,7 @@ func resourceKubernetesPersistentVolumeClaimCreate(d *schema.ResourceData, meta 
 			Pending: []string{"Pending"},
 			Timeout: d.Timeout(schema.TimeoutCreate),
 			Refresh: func() (interface{}, string, error) {
-				out, err := conn.CoreV1().PersistentVolumeClaims(metadata.Namespace).Get(name, meta_v1.GetOptions{})
+				out, err := conn.CoreV1().PersistentVolumeClaims(claim.Namespace).Get(name, meta_v1.GetOptions{})
 				if err != nil {
 					log.Printf("[ERROR] Received error: %#v", err)
 					return out, "", err

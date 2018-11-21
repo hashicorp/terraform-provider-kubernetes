@@ -33,7 +33,7 @@ resource "kubernetes_pod" "test" {
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard pod's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata)
+* `metadata` - (Required) Standard pod's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#metadata)
 * `spec` - (Required) Spec of the pod owned by the cluster
 
 ## Nested Blocks
@@ -43,7 +43,7 @@ The following arguments are supported:
 #### Arguments
 
 * `annotations` - (Optional) An unstructured key value map stored with the pod that may be used to store arbitrary metadata. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/annotations)
-* `generate_name` - (Optional) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#idempotency)
+* `generate_name` - (Optional) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#idempotency)
 * `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the pod. May match selectors of replication controllers and services. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
 * `name` - (Optional) Name of the pod, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 * `namespace` - (Optional) Namespace defines the space within which name of the pod must be unique.
@@ -59,7 +59,7 @@ The following arguments are supported:
 #### Attributes
 
 * `generation` - A sequence number representing a specific generation of the desired state.
-* `resource_version` - An opaque value that represents the internal version of this pod that can be used by clients to determine when pod has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#concurrency-control-and-consistency)
+* `resource_version` - An opaque value that represents the internal version of this pod that can be used by clients to determine when pod has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#concurrency-control-and-consistency)
 * `self_link` - A URL representing this pod.
 * `uid` - The unique in time and space value for this pod. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 

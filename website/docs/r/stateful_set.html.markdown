@@ -211,8 +211,8 @@ resource "kubernetes_stateful_set" "prometheus" {
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard Kubernetes object metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata)
-* `spec` - (Required) Spec defines the specification of the desired behavior of the stateful set. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#spec-and-status)
+* `metadata` - (Required) Standard Kubernetes object metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#metadata)
+* `spec` - (Required) Spec defines the specification of the desired behavior of the stateful set. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#spec-and-status)
 
 ## Nested Blocks
 
@@ -221,7 +221,7 @@ The following arguments are supported:
 #### Arguments
 
 * `annotations` - (Optional) An unstructured key value map stored with the stateful set that may be used to store arbitrary metadata. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/annotations)
-* `generate_name` - (Optional) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#idempotency)
+* `generate_name` - (Optional) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#idempotency)
 * `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the stateful set. **Must match `selector`**. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
 * `name` - (Optional) Name of the stateful set, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 * `namespace` - (Optional) Namespace defines the space within which name of the stateful set must be unique.
@@ -229,7 +229,7 @@ The following arguments are supported:
 #### Attributes
 
 * `generation` - A sequence number representing a specific generation of the desired state.
-* `resource_version` - An opaque value that represents the internal version of this stateful set that can be used by clients to determine when stateful set has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#concurrency-control-and-consistency)
+* `resource_version` - An opaque value that represents the internal version of this stateful set that can be used by clients to determine when stateful set has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#concurrency-control-and-consistency)
 * `self_link` - A URL representing this stateful set.
 * `uid` - The unique in time and space value for this stateful set. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
@@ -237,19 +237,21 @@ The following arguments are supported:
 
 #### Arguments
 
-* `pod_management_policy` - (Optional) podManagementPolicy controls how pods are created during initial scale up, when replacing pods on nodes, or when scaling down. The default policy is `OrderedReady`, where pods are created in increasing order (pod-0, then pod-1, etc) and the controller will wait until each pod is ready before continuing. When scaling down, the pods are removed in the opposite order. The alternative policy is `Parallel` which will create pods in parallel to match the desired scale without waiting, and on scale down will delete all pods at once.
+* `pod_management_policy` - (Optional) podManagementPolicy controls how pods are created during initial scale up, when replacing pods on nodes, or when scaling down. The default policy is `OrderedReady`, where pods are created in increasing order (pod-0, then pod-1, etc) and the controller will wait until each pod is ready before continuing. When scaling down, the pods are removed in the opposite order. The alternative policy is `Parallel` which will create pods in parallel to match the desired scale without waiting, and on scale down will delete all pods at once. *Changing this forces a new resource to be created.*
 
 * `replicas` - (Optional) The desired number of replicas of the given Template. These are replicas in the sense that they are instantiations of the same Template, but individual replicas also have a consistent identity. If unspecified, defaults to 1.
 
-* `revision_history_limit` - (Optional)  The maximum number of revisions that will be maintained in the StatefulSet's revision history. The revision history consists of all revisions not represented by a currently applied StatefulSetSpec version. The default value is 10.
+* `revision_history_limit` - (Optional)  The maximum number of revisions that will be maintained in the StatefulSet's revision history. The revision history consists of all revisions not represented by a currently applied StatefulSetSpec version. The default value is 10. *Changing this forces a new resource to be created.*
 
-* `selector` - (Required) A label query over pods that should match the replica count. **It must match the pod template's labels.** More info: [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors)
+* `selector` - (Required) A label query over pods that should match the replica count. **It must match the pod template's labels.** *Changing this forces a new resource to be created.* More info: [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors)
 
-* `service_name` - (Required) The name of the service that governs this StatefulSet. This service must exist before the StatefulSet, and is responsible for the network identity of the set. Pods get DNS/hostnames that follow the pattern: pod-specific-string.serviceName.default.svc.cluster.local where "pod-specific-string" is managed by the StatefulSet controller.
+* `service_name` - (Required) The name of the service that governs this StatefulSet. This service must exist before the StatefulSet, and is responsible for the network identity of the set. Pods get DNS/hostnames that follow the pattern: pod-specific-string.serviceName.default.svc.cluster.local where "pod-specific-string" is managed by the StatefulSet controller. *Changing this forces a new resource to be created.*
 
 * `template` - (Required) The object that describes the pod that will be created if insufficient replicas are detected. Each pod stamped out by the StatefulSet will fulfill this Template, but have a unique identity from the rest of the StatefulSet.
 
 * `update_strategy` - (Optional) Indicates the StatefulSet update strategy that will be employed to update Pods in the StatefulSet when a revision is made to Template.
+
+* `volume_claim_template` - (Optional) A list of volume claims that pods are allowed to reference. A claim in this list takes precedence over any volumes in the template, with the same name. *Changing this forces a new resource to be created.*
 
 ## Nested Blocks
 
@@ -277,7 +279,7 @@ Please see the [Pod resource](pod.html#spec-1) for reference.
 
 #### Arguments
 
-* `type` - (Optional) Indicates the type of the StatefulSetUpdateStrategy. There are two valid update strategies, RollingUpdate and OnDelete. Default is RollingUpdate.
+* `type` - (Optional) Indicates the type of the StatefulSetUpdateStrategy. There are two valid update strategies, RollingUpdate and OnDelete. Default is `RollingUpdate`.
 
 * `rolling_update` - (Optional) The RollingUpdate update strategy will update all Pods in a StatefulSet, in reverse ordinal order, while respecting the StatefulSet guarantees.
 
@@ -286,7 +288,7 @@ Please see the [Pod resource](pod.html#spec-1) for reference.
 
 #### Arguments
 
-* `partition` - (Optional) Indicates the ordinal at which the StatefulSet should be partitioned. You can perform a phased roll out (e.g. a linear, geometric, or exponential roll out) using a partitioned rolling update in a similar manner to how you rolled out a canary. To perform a phased roll out, set the partition to the ordinal at which you want the controller to pause the update. By setting the partition to 0, you allow the StatefulSet controller to continue the update process. Default value is 0.
+* `partition` - (Optional) Indicates the ordinal at which the StatefulSet should be partitioned. You can perform a phased roll out (e.g. a linear, geometric, or exponential roll out) using a partitioned rolling update in a similar manner to how you rolled out a canary. To perform a phased roll out, set the partition to the ordinal at which you want the controller to pause the update. By setting the partition to 0, you allow the StatefulSet controller to continue the update process. Default value is `0`.
 
 ## Nested Blocks
 

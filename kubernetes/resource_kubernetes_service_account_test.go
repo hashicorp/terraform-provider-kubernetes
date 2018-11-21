@@ -469,9 +469,53 @@ func testAccKubernetesServiceAccountConfig_automount(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service_account" "test" {
 	metadata {
+		annotations {
+			TestAnnotationOne = "one"
+			TestAnnotationTwo = "two"
+		}
+		labels {
+			TestLabelOne = "one"
+			TestLabelTwo = "two"
+			TestLabelThree = "three"
+		}
 		name = "%s"
 	}
-
+	secret {
+		name = "${kubernetes_secret.one.metadata.0.name}"
+	}
+	secret {
+		name = "${kubernetes_secret.two.metadata.0.name}"
+	}
+	image_pull_secret {
+		name = "${kubernetes_secret.three.metadata.0.name}"
+	}
+	image_pull_secret {
+		name = "${kubernetes_secret.four.metadata.0.name}"
+	}
 	automount_service_account_token = true
-}`, name)
+}
+
+resource "kubernetes_secret" "one" {
+	metadata {
+		name = "%s-one"
+	}
+}
+
+resource "kubernetes_secret" "two" {
+	metadata {
+		name = "%s-two"
+	}
+}
+
+resource "kubernetes_secret" "three" {
+	metadata {
+		name = "%s-three"
+	}
+}
+
+resource "kubernetes_secret" "four" {
+	metadata {
+		name = "%s-four"
+	}
+}`, name, name, name, name, name)
 }

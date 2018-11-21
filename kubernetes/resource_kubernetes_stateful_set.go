@@ -100,9 +100,7 @@ func resourceKubernetesStatefulSetRead(d *schema.ResourceData, meta interface{})
 	if err != nil {
 		switch {
 		case errors.IsNotFound(err):
-			log.Printf("[DEBUG] Stateful Set %w was not found in Namespace %q - removing from state!", namespace, name
-		)
-			log.Printf("[DEBUG] Stateful Set %w was not found in Namespace %q - removing from state!", namespace, name)
+			log.Printf("[DEBUG] Stateful Set %q was not found in Namespace %q - removing from state!", namespace, name)
 			d.SetId("")
 			return nil
 		default:

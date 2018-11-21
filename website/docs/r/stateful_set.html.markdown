@@ -120,7 +120,7 @@ resource "kubernetes_stateful_set" "prometheus" {
           ]
 
           port {
-            container_port = "9090"
+            container_port = 9090
           }
 
           resources {
@@ -149,21 +149,21 @@ resource "kubernetes_stateful_set" "prometheus" {
           readiness_probe {
             http_get {
               path = "/-/ready"
-              port = "9090"
+              port = 9090
             }
 
-            initial_delay_seconds = "30"
-            timeout_seconds       = "30"
+            initial_delay_seconds = 30
+            timeout_seconds       = 30
           }
 
           liveness_probe {
             http_get {
               path = "/-/healthy"
-              port = "9090"
+              port = 9090
             }
 
-            initial_delay_seconds = "30"
-            timeout_seconds       = "30"
+            initial_delay_seconds = 30
+            timeout_seconds       = 30
           }
         }
 

@@ -121,7 +121,7 @@ func resourceKubernetesStatefulSetRead(d *schema.ResourceData, meta interface{})
 	}
 	err = d.Set("spec", sss)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error setting `spec`: %+v", err)
 	}
 	return nil
 }

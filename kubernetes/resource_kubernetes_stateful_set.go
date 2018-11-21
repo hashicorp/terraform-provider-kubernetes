@@ -117,7 +117,7 @@ func resourceKubernetesStatefulSetRead(d *schema.ResourceData, meta interface{})
 	}
 	sss, err := flattenStatefulSetSpec(statefulSet.Spec)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error flattening `spec`: %+v", err)
 	}
 	err = d.Set("spec", sss)
 	if err != nil {

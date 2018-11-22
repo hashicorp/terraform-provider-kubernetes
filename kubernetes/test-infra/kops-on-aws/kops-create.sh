@@ -3,7 +3,6 @@ export NODE_SIZE=t2.small
 export MASTER_SIZE=t2.medium
 export KOPS_STATE_STORE="s3://${BUCKET_NAME}"
 
-aws s3api create-bucket --acl=private --bucket $BUCKET_NAME && \
 kops create cluster --cloud=aws \
   --name=$CLUSTER_NAME \
   --state=$KOPS_STATE_STORE \

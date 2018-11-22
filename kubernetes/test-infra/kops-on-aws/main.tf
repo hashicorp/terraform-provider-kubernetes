@@ -1,4 +1,4 @@
-provider "aws" { }
+provider "aws" {}
 
 variable "route53_zone" {
   type = "string"
@@ -9,12 +9,12 @@ variable "kubernetes_version" {
 }
 
 variable "s3_bucket_prefix" {
-  type = "string"
+  type    = "string"
   default = "kops-tfacc"
 }
 
 variable "private_ssh_key_filename" {
-  type = "string"
+  type    = "string"
   default = "id_rsa"
 }
 
@@ -23,8 +23,8 @@ resource "random_id" "name" {
 }
 
 locals {
-  cluster_name = "${random_id.name.hex}.kops.${var.route53_zone}"
-  bucket_name = "${var.s3_bucket_prefix}-${random_id.name.hex}"
+  cluster_name            = "${random_id.name.hex}.kops.${var.route53_zone}"
+  bucket_name             = "${var.s3_bucket_prefix}-${random_id.name.hex}"
   public_ssh_key_location = "${path.module}/${var.private_ssh_key_filename}.pub"
 }
 
@@ -35,15 +35,28 @@ data "http" "ipinfo" {
 }
 
 resource "tls_private_key" "ssh" {
-  algorithm   = "RSA"
+  algorithm = "RSA"
+}
+
+resource "aws_s3_bucket" "kops_state_store" {
+  bucket        = "${local.bucket_name}"
+  acl           = "private"
+  force_destroy = true
+
+  tags {
+    Usage     = "kops_state_store"
+    BelongsTo = "${local.cluster_name}"
+  }
 }
 
 resource "null_resource" "kops" {
+  depends_on = ["aws_s3_bucket.kops_state_store"]
+
   provisioner "local-exec" {
     command = <<EOF
 ssh-keygen -P "" -t rsa -f ./${var.private_ssh_key_filename}
 export CLUSTER_NAME=${local.cluster_name}
-export BUCKET_NAME=${local.bucket_name}
+export BUCKET_NAME=${aws_s3_bucket.kops_state_store.bucket}
 export KUBERNETES_VERSION=${var.kubernetes_version}
 export IP_ADDRESS=${chomp(data.http.ipinfo.body)}
 export ZONES=${data.aws_availability_zones.available.names[0]}
@@ -54,6 +67,7 @@ EOF
 
   provisioner "local-exec" {
     when = "destroy"
+
     command = <<EOF
 export CLUSTER_NAME=${local.cluster_name}
 export BUCKET_NAME=${local.bucket_name}

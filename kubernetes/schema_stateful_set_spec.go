@@ -16,7 +16,7 @@ func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
 			ValidateFunc: validation.StringInSlice([]string{
 				"OrderedReady",
 				"Parallel",
-			}, true),
+			}, false),
 		},
 		"replicas": {
 			Type:         schema.TypeInt,
@@ -68,10 +68,11 @@ func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Indicates the type of the StatefulSet update strategy. Default is RollingUpdate",
 						Optional:    true,
+						Default:     "RollingUpdate",
 						ValidateFunc: validation.StringInSlice([]string{
 							"RollingUpdate",
 							"OnDelete",
-						}, true),
+						}, false),
 					},
 					"rolling_update": {
 						Type:        schema.TypeList,

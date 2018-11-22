@@ -1,6 +1,9 @@
 package kubernetes
 
-import "github.com/hashicorp/terraform/helper/schema"
+import (
+	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
+)
 
 func persistentVolumeClaimFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
@@ -25,8 +28,15 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 			Description: "A set of the desired access modes the volume should have. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes-1",
 			Required:    true,
 			ForceNew:    true,
-			Elem:        &schema.Schema{Type: schema.TypeString},
-			Set:         schema.HashString,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+				ValidateFunc: validation.StringInSlice([]string{
+					"ReadWriteOnce",
+					"ReadOnlyMany",
+					"ReadWriteMany",
+				}, false),
+			},
+			Set: schema.HashString,
 		},
 		"resources": {
 			Type:        schema.TypeList,

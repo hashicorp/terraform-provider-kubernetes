@@ -93,7 +93,7 @@ func resourceKubernetesStatefulSetRead(d *schema.ResourceData, meta interface{})
 	id := d.Id()
 	namespace, name, err := idParts(id)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error parsing resource ID: %#v", err)
 	}
 	log.Printf("[INFO] Reading stateful set %s", id)
 	statefulSet, err := conn.AppsV1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
@@ -109,8 +109,7 @@ func resourceKubernetesStatefulSetRead(d *schema.ResourceData, meta interface{})
 		}
 	}
 	log.Printf("[INFO] Received stateful set: %#v", statefulSet)
-	err = d.Set("metadata", flattenMetadata(statefulSet.ObjectMeta))
-	if err != nil {
+	if d.Set("metadata", flattenMetadata(statefulSet.ObjectMeta)) != nil {
 		return fmt.Errorf("Error setting `metadata`: %+v", err)
 	}
 	sss, err := flattenStatefulSetSpec(statefulSet.Spec)
@@ -128,7 +127,7 @@ func resourceKubernetesStatefulSetUpdate(d *schema.ResourceData, meta interface{
 	conn := meta.(*kubernetes.Clientset)
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return fmt.Errorf("Error parsing resource ID: %#v", err)
 	}
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
@@ -160,7 +159,7 @@ func resourceKubernetesStatefulSetDelete(d *schema.ResourceData, meta interface{
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return fmt.Errorf("Error parsing resource ID: %#v", err)
 	}
 	log.Printf("[INFO] Deleting StatefulSet: %#v", name)
 	err = conn.AppsV1().StatefulSets(namespace).Delete(name, nil)
@@ -170,10 +169,12 @@ func resourceKubernetesStatefulSetDelete(d *schema.ResourceData, meta interface{
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		out, err := conn.AppsV1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
-			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+			switch {
+			case errors.IsNotFound(err):
 				return nil
+			default:
+				return resource.NonRetryableError(err)
 			}
-			return resource.NonRetryableError(err)
 		}
 
 		log.Printf("[DEBUG] Current state of StatefulSet: %#v", out.Status.Conditions)

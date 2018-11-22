@@ -34,7 +34,7 @@ func flattenDeploymentSpec(in appsv1.DeploymentSpec) ([]interface{}, error) {
 	}
 	template := make(map[string]interface{})
 	template["spec"] = podSpec
-	template["metadata"] = flattenMetadata(in.Template.ObjectMeta)
+	template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d, "spec.0.template.0.")
 	att["template"] = []interface{}{template}
 
 	return []interface{}{att}, nil

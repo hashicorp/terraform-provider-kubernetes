@@ -109,9 +109,13 @@ func expandStringSlice(s []interface{}) []string {
 	return result
 }
 
-func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData) []interface{} {
+func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, metaPrefix ...string) []interface{} {
 	m := make(map[string]interface{})
-	configAnnotations := d.Get("metadata.0.annotations").(map[string]interface{})
+	prefix := ""
+	if len(metaPrefix) > 0 {
+		prefix = metaPrefix[0]
+	}
+	configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
 	m["annotations"] = removeInternalKeys(meta.Annotations, configAnnotations)
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName

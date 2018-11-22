@@ -185,7 +185,7 @@ func flattenStatefulSetSpec(spec v1.StatefulSetSpec) ([]interface{}, error) {
 func flattenPodTemplateSpec(t corev1.PodTemplateSpec) ([]interface{}, error) {
 	template := make(map[string]interface{})
 
-	template["metadata"] = flattenMetadata(t.ObjectMeta)
+	template["metadata"] = flattenMetadata(t.ObjectMeta, d, "spec.0.template.0.")
 	spec, err := flattenPodSpec(t.Spec)
 	if err != nil {
 		return []interface{}{template}, err

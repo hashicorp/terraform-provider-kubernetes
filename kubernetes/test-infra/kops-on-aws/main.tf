@@ -39,8 +39,9 @@ resource "tls_private_key" "ssh" {
 }
 
 resource "aws_s3_bucket" "kops_state_store" {
-  bucket = "${local.bucket_name}"
-  acl    = "private"
+  bucket        = "${local.bucket_name}"
+  acl           = "private"
+  force_destroy = true
 
   tags {
     Usage     = "kops_state_store"

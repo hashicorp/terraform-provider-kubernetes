@@ -119,6 +119,7 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_pod":                       resourceKubernetesPod(),
 			"kubernetes_replication_controller":    resourceKubernetesReplicationController(),
 			"kubernetes_resource_quota":            resourceKubernetesResourceQuota(),
+			"kubernetes_role":                      resourceKubernetesRole(),
 			"kubernetes_secret":                    resourceKubernetesSecret(),
 			"kubernetes_service":                   resourceKubernetesService(),
 			"kubernetes_service_account":           resourceKubernetesServiceAccount(),

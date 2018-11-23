@@ -46,12 +46,12 @@ func expandPersistenVolumeClaim(p map[string]interface{}) (corev1.PersistentVolu
 	}
 	m, ok := p["metadata"].([]interface{})
 	if !ok {
-		return pvc, errors.New("persistent_volume_claim: failed to unroll 'metadata'")
+		return pvc, errors.New("persistent_volume_claim: failed to expand 'metadata'")
 	}
 	pvc.ObjectMeta = expandMetadata(m)
 	s, ok := p["spec"].([]interface{})
 	if !ok {
-		return pvc, errors.New("persistent_volume_claim: failed to unroll 'spec'")
+		return pvc, errors.New("persistent_volume_claim: failed to expand 'spec'")
 	}
 	spec, err := expandPersistentVolumeClaimSpec(s)
 	if err != nil {

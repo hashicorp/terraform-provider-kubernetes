@@ -839,18 +839,18 @@ func expandPersistentVolumeSource(l []interface{}) v1.PersistentVolumeSource {
 	return obj
 }
 
-func expandPersistentVolumeSpec(l []interface{}) (v1.PersistentVolumeSpec, error) {
+func expandPersistentVolumeSpec(l []interface{}) (*v1.PersistentVolumeSpec, error) {
+	obj := &v1.PersistentVolumeSpec{}
 	if len(l) == 0 || l[0] == nil {
-		return v1.PersistentVolumeSpec{}, nil
+		return obj, nil
 	}
 	in := l[0].(map[string]interface{})
-	obj := v1.PersistentVolumeSpec{}
 	if v, ok := in["capacity"].(map[string]interface{}); ok && len(v) > 0 {
-		var err error
-		obj.Capacity, err = expandMapToResourceList(v)
+		c, err := expandMapToResourceList(v)
 		if err != nil {
 			return obj, err
 		}
+		obj.Capacity = *c
 	}
 	if v, ok := in["persistent_volume_source"].([]interface{}); ok && len(v) > 0 {
 		obj.PersistentVolumeSource = expandPersistentVolumeSource(v)

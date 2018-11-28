@@ -23,8 +23,8 @@ func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec) ([]interf
 	return []interface{}{att}, nil
 }
 
-func expandReplicationControllerSpec(rc []interface{}) (v1.ReplicationControllerSpec, error) {
-	obj := v1.ReplicationControllerSpec{}
+func expandReplicationControllerSpec(rc []interface{}) (*v1.ReplicationControllerSpec, error) {
+	obj := &v1.ReplicationControllerSpec{}
 	if len(rc) == 0 || rc[0] == nil {
 		return obj, nil
 	}
@@ -40,7 +40,7 @@ func expandReplicationControllerSpec(rc []interface{}) (v1.ReplicationController
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: obj.Selector,
 		},
-		Spec: podSpec,
+		Spec: *podSpec,
 	}
 
 	return obj, nil

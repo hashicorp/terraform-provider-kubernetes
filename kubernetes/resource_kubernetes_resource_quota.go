@@ -66,7 +66,7 @@ func resourceKubernetesResourceQuotaCreate(d *schema.ResourceData, meta interfac
 	}
 	resQuota := api.ResourceQuota{
 		ObjectMeta: metadata,
-		Spec:       spec,
+		Spec:       *spec,
 	}
 	log.Printf("[INFO] Creating new resource quota: %#v", resQuota)
 	out, err := conn.CoreV1().ResourceQuotas(metadata.Namespace).Create(&resQuota)
@@ -140,17 +140,16 @@ func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interfac
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
-	var spec api.ResourceQuotaSpec
+	var spec *api.ResourceQuotaSpec
 	waitForChangedSpec := false
 	if d.HasChange("spec") {
-		var err error
-		spec, err = expandResourceQuotaSpec(d.Get("spec").([]interface{}))
+		spec, err := expandResourceQuotaSpec(d.Get("spec").([]interface{}))
 		if err != nil {
 			return err
 		}
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/spec",
-			Value: spec,
+			Value: *spec,
 		})
 		waitForChangedSpec = true
 	}

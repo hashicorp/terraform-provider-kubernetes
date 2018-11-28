@@ -85,9 +85,14 @@ func resourceKubernetesHorizontalPodAutoscalerCreate(d *schema.ResourceData, met
 	conn := meta.(*kubernetes.Clientset)
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	spec, err := expandHorizontalPodAutoscalerSpec(d.Get("spec").([]interface{}))
+	if err != nil {
+		return err
+	}
+
 	svc := api.HorizontalPodAutoscaler{
 		ObjectMeta: metadata,
-		Spec:       expandHorizontalPodAutoscalerSpec(d.Get("spec").([]interface{})),
+		Spec:       *spec,
 	}
 	log.Printf("[INFO] Creating new horizontal pod autoscaler: %#v", svc)
 	out, err := conn.AutoscalingV1().HorizontalPodAutoscalers(metadata.Namespace).Create(&svc)

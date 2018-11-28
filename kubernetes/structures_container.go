@@ -434,17 +434,20 @@ func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 		if v, ok := ctr["resources"].([]interface{}); ok && len(v) > 0 {
 
 			var err error
-			cs[i].Resources, err = expandContainerResourceRequirements(v)
+			crr, err := expandContainerResourceRequirements(v)
 			if err != nil {
 				return cs, err
 			}
+			cs[i].Resources = *crr
 		}
 
 		if v, ok := ctr["port"].([]interface{}); ok && len(v) > 0 {
-			var err error
-			cs[i].Ports, err = expandContainerPort(v)
+			cp, err := expandContainerPort(v)
 			if err != nil {
 				return cs, err
+			}
+			for _, p := range cp {
+				cs[i].Ports = append(cs[i].Ports, *p)
 			}
 		}
 		if v, ok := ctr["env"].([]interface{}); ok && len(v) > 0 {
@@ -763,11 +766,11 @@ func expandContainerEnvFrom(in []interface{}) ([]v1.EnvFromSource, error) {
 	return envFroms, nil
 }
 
-func expandContainerPort(in []interface{}) ([]v1.ContainerPort, error) {
+func expandContainerPort(in []interface{}) ([]*v1.ContainerPort, error) {
+	ports := make([]*v1.ContainerPort, len(in))
 	if len(in) == 0 {
-		return []v1.ContainerPort{}, nil
+		return ports, nil
 	}
-	ports := make([]v1.ContainerPort, len(in))
 	for i, c := range in {
 		p := c.(map[string]interface{})
 		if containerPort, ok := p["container_port"]; ok {
@@ -922,14 +925,14 @@ func expandConfigMapRef(r []interface{}) (*v1.ConfigMapEnvSource, error) {
 	return obj, nil
 }
 
-func expandContainerResourceRequirements(l []interface{}) (v1.ResourceRequirements, error) {
+func expandContainerResourceRequirements(l []interface{}) (*v1.ResourceRequirements, error) {
+	obj := &v1.ResourceRequirements{}
 	if len(l) == 0 || l[0] == nil {
-		return v1.ResourceRequirements{}, nil
+		return obj, nil
 	}
 	in := l[0].(map[string]interface{})
-	obj := v1.ResourceRequirements{}
 
-	fn := func(in []interface{}) (v1.ResourceList, error) {
+	fn := func(in []interface{}) (*v1.ResourceList, error) {
 		for _, c := range in {
 			p := c.(map[string]interface{})
 			if p["cpu"] == "" {
@@ -938,24 +941,29 @@ func expandContainerResourceRequirements(l []interface{}) (v1.ResourceRequiremen
 			if p["memory"] == "" {
 				delete(p, "memory")
 			}
-			return expandMapToResourceList(p)
+			rl, err := expandMapToResourceList(p)
+			if err != nil {
+				return rl, err
+			}
+			return rl, nil
 		}
 		return nil, nil
 	}
 
-	var err error
 	if v, ok := in["limits"].([]interface{}); ok && len(v) > 0 {
-		obj.Limits, err = fn(v)
+		rl, err := fn(v)
 		if err != nil {
 			return obj, err
 		}
+		obj.Limits = *rl
 	}
 
 	if v, ok := in["requests"].([]interface{}); ok && len(v) > 0 {
-		obj.Requests, err = fn(v)
+		rq, err := fn(v)
 		if err != nil {
 			return obj, err
 		}
+		obj.Requests = *rq
 	}
 
 	return obj, nil

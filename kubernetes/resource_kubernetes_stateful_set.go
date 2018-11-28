@@ -49,7 +49,7 @@ func resourceKubernetesStatefulSetCreate(d *schema.ResourceData, meta interface{
 	}
 	statefulSet := api.StatefulSet{
 		ObjectMeta: metadata,
-		Spec:       spec,
+		Spec:       *spec,
 	}
 	log.Printf("[INFO] Creating new StatefulSet: %#v", statefulSet)
 

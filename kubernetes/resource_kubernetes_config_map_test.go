@@ -249,84 +249,99 @@ func testAccCheckKubernetesConfigMapExists(n string, obj *api.ConfigMap) resourc
 func testAccKubernetesConfigMapConfig_nodata(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_config_map" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	data {}
-}`, name)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  data {}
+}
+`, name)
 }
 
 func testAccKubernetesConfigMapConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_config_map" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	data {
-		one = "first"
-		two = "second"
-	}
-}`, name)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  data {
+    one = "first"
+    two = "second"
+  }
+}
+`, name)
 }
 
 func testAccKubernetesConfigMapConfig_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_config_map" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			Different = "1234"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	data {
-		one = "first"
-		two = "second"
-		nine = "ninth"
-	}
-}`, name)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      Different         = "1234"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  data {
+    one  = "first"
+    two  = "second"
+    nine = "ninth"
+  }
+}
+`, name)
 }
 
 func testAccKubernetesConfigMapConfig_noData(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_config_map" "test" {
-	metadata {
-		name = "%s"
-	}
-}`, name)
+  metadata {
+    name = "%s"
+  }
+}
+`, name)
 }
 
 func testAccKubernetesConfigMapConfig_generatedName(prefix string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_config_map" "test" {
-	metadata {
-		generate_name = "%s"
-	}
-	data {
-		one = "first"
-		two = "second"
-	}
-}`, prefix)
+  metadata {
+    generate_name = "%s"
+  }
+
+  data {
+    one = "first"
+    two = "second"
+  }
+}
+`, prefix)
 }

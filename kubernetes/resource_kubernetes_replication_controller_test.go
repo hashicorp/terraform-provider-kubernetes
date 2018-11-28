@@ -472,20 +472,25 @@ resource "kubernetes_replication_controller" "test" {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
+
     labels {
-      TestLabelOne = "one"
-      TestLabelTwo = "two"
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
+
     name = "%s"
   }
+
   spec {
     replicas = 1000 # This is intentionally high to exercise the waiter
+
     selector {
-      TestLabelOne = "one"
-      TestLabelTwo = "two"
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
+
     template {
       container {
         image = "nginx:1.7.8"
@@ -500,54 +505,66 @@ resource "kubernetes_replication_controller" "test" {
 func testAccKubernetesReplicationControllerConfig_initContainer(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_replication_controller" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	spec {
-		replicas = 1000 # This is intentionally high to exercise the waiter
-		selector {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		template {
-			container {
-				name = "nginx"
-				image = "nginx"
-				port {
-					container_port = 80
-				}
-				volume_mount {
-					name = "workdir"
-					mount_path = "/usr/share/nginx/html"
-				}
-			}
-			init_container {
-				name = "install"
-				image = "busybox"
-				command = ["wget", "-O", "/work-dir/index.html", "http://kubernetes.io"]
-				volume_mount {
-					name = "workdir"
-					mount_path = "/work-dir"
-				}
-			}
-			dns_policy = "Default"
-			volume {
-				name = "workdir"
-				empty_dir {}
-			}
-		}
-	}
-}`, name)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    replicas = 1000 # This is intentionally high to exercise the waiter
+
+    selector {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    template {
+      container {
+        name  = "nginx"
+        image = "nginx"
+
+        port {
+          container_port = 80
+        }
+
+        volume_mount {
+          name       = "workdir"
+          mount_path = "/usr/share/nginx/html"
+        }
+      }
+
+      init_container {
+        name    = "install"
+        image   = "busybox"
+        command = ["wget", "-O", "/work-dir/index.html", "http://kubernetes.io"]
+
+        volume_mount {
+          name       = "workdir"
+          mount_path = "/work-dir"
+        }
+      }
+
+      dns_policy = "Default"
+
+      volume {
+        name      = "workdir"
+        empty_dir = {}
+      }
+    }
+  }
+}
+`, name)
 }
 
 func testAccKubernetesReplicationControllerConfig_modified(name string) string {
@@ -556,20 +573,24 @@ resource "kubernetes_replication_controller" "test" {
   metadata {
     annotations {
       TestAnnotationOne = "one"
-      Different = "1234"
+      Different         = "1234"
     }
+
     labels {
-      TestLabelOne = "one"
+      TestLabelOne   = "one"
       TestLabelThree = "three"
     }
+
     name = "%s"
   }
+
   spec {
     selector {
-      TestLabelOne = "one"
-      TestLabelTwo = "two"
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
+
     template {
       container {
         image = "nginx:1.7.9"
@@ -577,7 +598,8 @@ resource "kubernetes_replication_controller" "test" {
       }
     }
   }
-}`, name)
+}
+`, name)
 }
 
 func testAccKubernetesReplicationControllerConfig_generatedName(prefix string) string {
@@ -585,18 +607,21 @@ func testAccKubernetesReplicationControllerConfig_generatedName(prefix string) s
 resource "kubernetes_replication_controller" "test" {
   metadata {
     labels {
-      TestLabelOne = "one"
-      TestLabelTwo = "two"
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
+
     generate_name = "%s"
   }
+
   spec {
     selector {
-      TestLabelOne = "one"
-      TestLabelTwo = "two"
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
+
     template {
       container {
         image = "nginx:1.7.9"
@@ -604,7 +629,8 @@ resource "kubernetes_replication_controller" "test" {
       }
     }
   }
-}`, prefix)
+}
+`, prefix)
 }
 
 func testAccKubernetesReplicationControllerConfigWithSecurityContext(rcName, imageName string) string {
@@ -612,20 +638,24 @@ func testAccKubernetesReplicationControllerConfigWithSecurityContext(rcName, ima
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
+
     labels {
       Test = "TfAcceptanceTest"
     }
   }
+
   spec {
     selector {
       Test = "TfAcceptanceTest"
     }
+
     template {
       security_context {
         run_as_non_root     = true
         run_as_user         = 101
         supplemental_groups = [101]
       }
+
       container {
         image = "%s"
         name  = "containername"
@@ -633,7 +663,7 @@ resource "kubernetes_replication_controller" "test" {
     }
   }
 }
-	`, rcName, imageName)
+`, rcName, imageName)
 }
 
 func testAccKubernetesReplicationControllerConfigWithLivenessProbeUsingExec(rcName, imageName string) string {
@@ -641,14 +671,17 @@ func testAccKubernetesReplicationControllerConfigWithLivenessProbeUsingExec(rcNa
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
+
     labels {
       Test = "TfAcceptanceTest"
     }
   }
+
   spec {
     selector {
       Test = "TfAcceptanceTest"
     }
+
     template {
       container {
         image = "%s"
@@ -667,7 +700,7 @@ resource "kubernetes_replication_controller" "test" {
     }
   }
 }
-	`, rcName, imageName)
+`, rcName, imageName)
 }
 
 func testAccKubernetesReplicationControllerConfigWithLivenessProbeUsingHTTPGet(rcName, imageName string) string {
@@ -675,14 +708,17 @@ func testAccKubernetesReplicationControllerConfigWithLivenessProbeUsingHTTPGet(r
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
+
     labels {
       Test = "TfAcceptanceTest"
     }
   }
+
   spec {
     selector {
       Test = "TfAcceptanceTest"
     }
+
     template {
       container {
         image = "%s"
@@ -699,6 +735,7 @@ resource "kubernetes_replication_controller" "test" {
               value = "Awesome"
             }
           }
+
           initial_delay_seconds = 3
           period_seconds        = 3
         }
@@ -706,7 +743,7 @@ resource "kubernetes_replication_controller" "test" {
     }
   }
 }
-	`, rcName, imageName)
+`, rcName, imageName)
 }
 
 func testAccKubernetesReplicationControllerConfigWithLivenessProbeUsingTCP(rcName, imageName string) string {
@@ -714,14 +751,17 @@ func testAccKubernetesReplicationControllerConfigWithLivenessProbeUsingTCP(rcNam
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
+
     labels {
       Test = "TfAcceptanceTest"
     }
   }
+
   spec {
     selector {
       Test = "TfAcceptanceTest"
     }
+
     template {
       container {
         image = "%s"
@@ -740,7 +780,7 @@ resource "kubernetes_replication_controller" "test" {
     }
   }
 }
-	`, rcName, imageName)
+`, rcName, imageName)
 }
 
 func testAccKubernetesReplicationControllerConfigWithLifeCycle(rcName, imageName string) string {
@@ -748,14 +788,17 @@ func testAccKubernetesReplicationControllerConfigWithLifeCycle(rcName, imageName
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
+
     labels {
       Test = "TfAcceptanceTest"
     }
   }
+
   spec {
     selector {
       Test = "TfAcceptanceTest"
     }
+
     template {
       container {
         image = "%s"
@@ -768,6 +811,7 @@ resource "kubernetes_replication_controller" "test" {
               command = ["ls", "-al"]
             }
           }
+
           pre_stop {
             exec {
               command = ["date"]
@@ -778,8 +822,7 @@ resource "kubernetes_replication_controller" "test" {
     }
   }
 }
-
-	`, rcName, imageName)
+`, rcName, imageName)
 }
 
 func testAccKubernetesReplicationControllerConfigWithContainerSecurityContext(rcName, imageName string) string {
@@ -787,22 +830,26 @@ func testAccKubernetesReplicationControllerConfigWithContainerSecurityContext(rc
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
+
     labels {
       Test = "TfAcceptanceTest"
     }
   }
+
   spec {
     selector {
       Test = "TfAcceptanceTest"
     }
+
     template {
       container {
         image = "%s"
         name  = "containername"
-  
+
         security_context {
           privileged  = true
           run_as_user = 1
+
           se_linux_options {
             level = "s0:c123,c456"
           }
@@ -811,9 +858,7 @@ resource "kubernetes_replication_controller" "test" {
     }
   }
 }
-
-
-	`, rcName, imageName)
+`, rcName, imageName)
 }
 
 func testAccKubernetesReplicationControllerConfigWithVolumeMounts(secretName, rcName, imageName string) string {
@@ -831,6 +876,7 @@ resource "kubernetes_secret" "test" {
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
+
     labels {
       Test = "TfAcceptanceTest"
     }
@@ -840,17 +886,21 @@ resource "kubernetes_replication_controller" "test" {
     selector {
       Test = "TfAcceptanceTest"
     }
-  	template {
+
+    template {
       container {
         image = "%s"
         name  = "containername"
+
         volume_mount {
           mount_path = "/tmp/my_path"
-          name  = "db"
+          name       = "db"
         }
       }
+
       volume {
         name = "db"
+
         secret = {
           secret_name = "${kubernetes_secret.test.metadata.0.name}"
         }
@@ -858,7 +908,7 @@ resource "kubernetes_replication_controller" "test" {
     }
   }
 }
-	`, secretName, rcName, imageName)
+`, secretName, rcName, imageName)
 }
 
 func testAccKubernetesReplicationControllerConfigWithResourceRequirements(rcName, imageName string) string {
@@ -866,6 +916,7 @@ func testAccKubernetesReplicationControllerConfigWithResourceRequirements(rcName
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
+
     labels {
       Test = "TfAcceptanceTest"
     }
@@ -875,18 +926,20 @@ resource "kubernetes_replication_controller" "test" {
     selector {
       Test = "TfAcceptanceTest"
     }
-  	template {
+
+    template {
       container {
         image = "%s"
         name  = "containername"
 
-        resources{
-          limits{
-            cpu = "0.5"
+        resources {
+          limits {
+            cpu    = "0.5"
             memory = "512Mi"
           }
-          requests{
-            cpu = "250m"
+
+          requests {
+            cpu    = "250m"
             memory = "50Mi"
           }
         }
@@ -894,7 +947,7 @@ resource "kubernetes_replication_controller" "test" {
     }
   }
 }
-	`, rcName, imageName)
+`, rcName, imageName)
 }
 
 func testAccKubernetesReplicationControllerConfigWithEmptyDirVolumes(rcName, imageName string) string {
@@ -902,6 +955,7 @@ func testAccKubernetesReplicationControllerConfigWithEmptyDirVolumes(rcName, ima
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
+
     labels {
       Test = "TfAcceptanceTest"
     }
@@ -911,17 +965,21 @@ resource "kubernetes_replication_controller" "test" {
     selector {
       Test = "TfAcceptanceTest"
     }
+
     template {
       container {
         image = "%s"
         name  = "containername"
+
         volume_mount {
-          mount_path =  "/cache"
-          name = "cache-volume"
+          mount_path = "/cache"
+          name       = "cache-volume"
         }
       }
+
       volume {
         name = "cache-volume"
+
         empty_dir = {
           medium = "Memory"
         }

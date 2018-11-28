@@ -331,83 +331,83 @@ func testAccKubernetesStatefulSetChecksBasic(name string) resource.TestCheckFunc
 func testAccKubernetesStatefulSetConfigBasic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_stateful_set" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
 
-		labels {
-			TestLabelOne	 = "one"
-			TestLabelTwo	 = "two"
-			TestLabelThree = "three"
-		}
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
 
-		name = "%s"
-	}
+    name = "%s"
+  }
 
-	spec {
-		pod_management_policy	= "OrderedReady"
-		replicas							 = 1
-		revision_history_limit = 11
+  spec {
+    pod_management_policy  = "OrderedReady"
+    replicas               = 1
+    revision_history_limit = 11
 
-		selector {
-			match_labels {
-				app = "ss-test"
-			}
-		}
+    selector {
+      match_labels {
+        app = "ss-test"
+      }
+    }
 
-		service_name = "ss-test-service"
+    service_name = "ss-test-service"
 
-		template {
-			metadata {
-				labels {
-					app = "ss-test"
-				}
-			}
+    template {
+      metadata {
+        labels {
+          app = "ss-test"
+        }
+      }
 
-			spec {
-				container {
-					name	= "ss-test"
-					image = "k8s.gcr.io/pause:latest"
+      spec {
+        container {
+          name  = "ss-test"
+          image = "k8s.gcr.io/pause:latest"
 
-					port {
-						container_port = "80"
-						name					 = "web"
-					}
+          port {
+            container_port = "80"
+            name           = "web"
+          }
 
-					volume_mount {
-						name			 = "workdir"
-						mount_path = "/work-dir"
-					}
-				}
-			}
-		}
+          volume_mount {
+            name       = "workdir"
+            mount_path = "/work-dir"
+          }
+        }
+      }
+    }
 
-		update_strategy {
-			type = "RollingUpdate"
+    update_strategy {
+      type = "RollingUpdate"
 
-			rolling_update {
-				partition = 1
-			}
-		}
+      rolling_update {
+        partition = 1
+      }
+    }
 
-		volume_claim_template {
-			metadata {
-				name = "ss-test"
-			}
+    volume_claim_template {
+      metadata {
+        name = "ss-test"
+      }
 
-			spec {
-				access_modes = ["ReadWriteOnce"]
+      spec {
+        access_modes = ["ReadWriteOnce"]
 
-				resources {
-					requests {
-						storage = "1Gi"
-					}
-				}
-			}
-		}
-	}
+        resources {
+          requests {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
+  }
 }
 `, name)
 }
@@ -415,85 +415,85 @@ resource "kubernetes_stateful_set" "test" {
 func testAccKubernetesStatefulSetConfigUpdatedSelectorLabels(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_stateful_set" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
 
-		labels {
-			TestLabelOne   = "one"
-			TestLabelTwo   = "two"
-			TestLabelThree = "three"
-		}
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
 
-		name = "%s"
-	}
+    name = "%s"
+  }
 
-	spec {
-		pod_management_policy  = "OrderedReady"
-		replicas               = 1
-		revision_history_limit = 11
+  spec {
+    pod_management_policy  = "OrderedReady"
+    replicas               = 1
+    revision_history_limit = 11
 
-		selector {
-			match_labels {
-				app   = "ss-test"
-				layer = "ss-test-layer"
-			}
-		}
+    selector {
+      match_labels {
+        app   = "ss-test"
+        layer = "ss-test-layer"
+      }
+    }
 
-		service_name = "ss-test-service"
+    service_name = "ss-test-service"
 
-		template {
-			metadata {
-				labels {
-					app   = "ss-test"
-					layer = "ss-test-layer"
-				}
-			}
+    template {
+      metadata {
+        labels {
+          app   = "ss-test"
+          layer = "ss-test-layer"
+        }
+      }
 
-			spec {
-				container {
-					name  = "ss-test"
-					image = "k8s.gcr.io/pause:latest"
+      spec {
+        container {
+          name  = "ss-test"
+          image = "k8s.gcr.io/pause:latest"
 
-					port {
-						container_port = "80"
-						name           = "web"
-					}
+          port {
+            container_port = "80"
+            name           = "web"
+          }
 
-					volume_mount {
-						name       = "workdir"
-						mount_path = "/work-dir"
-					}
-				}
-			}
-		}
+          volume_mount {
+            name       = "workdir"
+            mount_path = "/work-dir"
+          }
+        }
+      }
+    }
 
-		update_strategy {
-			type = "RollingUpdate"
+    update_strategy {
+      type = "RollingUpdate"
 
-			rolling_update {
-				partition = 0
-			}
-		}
+      rolling_update {
+        partition = 0
+      }
+    }
 
-		volume_claim_template {
-			metadata {
-				name = "ss-test"
-			}
+    volume_claim_template {
+      metadata {
+        name = "ss-test"
+      }
 
-			spec {
-				access_modes = ["ReadWriteOnce"]
+      spec {
+        access_modes = ["ReadWriteOnce"]
 
-				resources {
-					requests {
-						storage = "1Gi"
-					}
-				}
-			}
-		}
-	}
+        resources {
+          requests {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
+  }
 }
 `, name)
 }
@@ -501,83 +501,83 @@ resource "kubernetes_stateful_set" "test" {
 func testAccKubernetesStatefulSetConfigUpdateReplicas(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_stateful_set" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
 
-		labels {
-			TestLabelOne   = "one"
-			TestLabelTwo   = "two"
-			TestLabelThree = "three"
-		}
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
 
-		name = "%s"
-	}
+    name = "%s"
+  }
 
-	spec {
-		pod_management_policy  = "OrderedReady"
-		replicas               = 5
-		revision_history_limit = 11
+  spec {
+    pod_management_policy  = "OrderedReady"
+    replicas               = 5
+    revision_history_limit = 11
 
-		selector {
-			match_labels {
-				app = "ss-test"
-			}
-		}
+    selector {
+      match_labels {
+        app = "ss-test"
+      }
+    }
 
-		service_name = "ss-test-service"
+    service_name = "ss-test-service"
 
-		template {
-			metadata {
-				labels {
-					app = "ss-test"
-				}
-			}
+    template {
+      metadata {
+        labels {
+          app = "ss-test"
+        }
+      }
 
-			spec {
-				container {
-					name  = "ss-test"
-					image = "k8s.gcr.io/pause:latest"
+      spec {
+        container {
+          name  = "ss-test"
+          image = "k8s.gcr.io/pause:latest"
 
-					port {
-						container_port = "80"
-						name           = "web"
-					}
+          port {
+            container_port = "80"
+            name           = "web"
+          }
 
-					volume_mount {
-						name       = "workdir"
-						mount_path = "/work-dir"
-					}
-				}
-			}
-		}
+          volume_mount {
+            name       = "workdir"
+            mount_path = "/work-dir"
+          }
+        }
+      }
+    }
 
-		update_strategy {
-			type = "RollingUpdate"
+    update_strategy {
+      type = "RollingUpdate"
 
-			rolling_update {
-				partition = 1
-			}
-		}
+      rolling_update {
+        partition = 1
+      }
+    }
 
-		volume_claim_template {
-			metadata {
-				name = "ss-test"
-			}
+    volume_claim_template {
+      metadata {
+        name = "ss-test"
+      }
 
-			spec {
-				access_modes = ["ReadWriteOnce"]
+      spec {
+        access_modes = ["ReadWriteOnce"]
 
-				resources {
-					requests {
-						storage = "1Gi"
-					}
-				}
-			}
-		}
-	}
+        resources {
+          requests {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
+  }
 }
 `, name)
 }
@@ -585,252 +585,252 @@ resource "kubernetes_stateful_set" "test" {
 func testAccKubernetesStatefulSetConfigUpdateTemplateContainerPort(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_stateful_set" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
 
-		labels {
-			TestLabelOne   = "one"
-			TestLabelTwo   = "two"
-			TestLabelThree = "three"
-		}
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
 
-		name = "%s"
-	}
+    name = "%s"
+  }
 
-	spec {
-		pod_management_policy  = "OrderedReady"
-		replicas               = 1
-		revision_history_limit = 11
+  spec {
+    pod_management_policy  = "OrderedReady"
+    replicas               = 1
+    revision_history_limit = 11
 
-		selector {
-			match_labels {
-				app = "ss-test"
-			}
-		}
+    selector {
+      match_labels {
+        app = "ss-test"
+      }
+    }
 
-		service_name = "ss-test-service"
+    service_name = "ss-test-service"
 
-		template {
-			metadata {
-				labels {
-					app = "ss-test"
-				}
-			}
+    template {
+      metadata {
+        labels {
+          app = "ss-test"
+        }
+      }
 
-			spec {
-				container {
-					name  = "ss-test"
-					image = "k8s.gcr.io/pause:latest"
+      spec {
+        container {
+          name  = "ss-test"
+          image = "k8s.gcr.io/pause:latest"
 
-					port {
-						container_port = "80"
-						name           = "web"
-					}
+          port {
+            container_port = "80"
+            name           = "web"
+          }
 
-					port {
-						container_port = "443"
-						name           = "secure"
-					}
+          port {
+            container_port = "443"
+            name           = "secure"
+          }
 
-					volume_mount {
-						name       = "workdir"
-						mount_path = "/work-dir"
-					}
-				}
-			}
-		}
+          volume_mount {
+            name       = "workdir"
+            mount_path = "/work-dir"
+          }
+        }
+      }
+    }
 
-		update_strategy {
-			type = "RollingUpdate"
+    update_strategy {
+      type = "RollingUpdate"
 
-			rolling_update {
-				partition = 1
-			}
-		}
+      rolling_update {
+        partition = 1
+      }
+    }
 
-		volume_claim_template {
-			metadata {
-				name = "ss-test"
-			}
+    volume_claim_template {
+      metadata {
+        name = "ss-test"
+      }
 
-			spec {
-				access_modes = ["ReadWriteOnce"]
+      spec {
+        access_modes = ["ReadWriteOnce"]
 
-				resources {
-					requests {
-						storage = "1Gi"
-					}
-				}
-			}
-		}
-	}
+        resources {
+          requests {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
+  }
 }
-	`, name)
+`, name)
 }
 
 func testAccKubernetesStatefulSetConfigRollingUpdatePartition(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_stateful_set" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
 
-		labels {
-			TestLabelOne   = "one"
-			TestLabelTwo   = "two"
-			TestLabelThree = "three"
-		}
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
 
-		name = "%s"
-	}
+    name = "%s"
+  }
 
-	spec {
-		pod_management_policy  = "OrderedReady"
-		replicas               = 1
-		revision_history_limit = 11
+  spec {
+    pod_management_policy  = "OrderedReady"
+    replicas               = 1
+    revision_history_limit = 11
 
-		selector {
-			match_labels {
-				app = "ss-test"
-			}
-		}
+    selector {
+      match_labels {
+        app = "ss-test"
+      }
+    }
 
-		service_name = "ss-test-service"
+    service_name = "ss-test-service"
 
-		template {
-			metadata {
-				labels {
-					app = "ss-test"
-				}
-			}
+    template {
+      metadata {
+        labels {
+          app = "ss-test"
+        }
+      }
 
-			spec {
-				container {
-					name  = "ss-test"
-					image = "k8s.gcr.io/pause:latest"
+      spec {
+        container {
+          name  = "ss-test"
+          image = "k8s.gcr.io/pause:latest"
 
-					port {
-						container_port = "80"
-						name           = "web"
-					}
+          port {
+            container_port = "80"
+            name           = "web"
+          }
 
-					volume_mount {
-						name       = "workdir"
-						mount_path = "/work-dir"
-					}
-				}
-			}
-		}
+          volume_mount {
+            name       = "workdir"
+            mount_path = "/work-dir"
+          }
+        }
+      }
+    }
 
-		update_strategy {
-			type = "RollingUpdate"
+    update_strategy {
+      type = "RollingUpdate"
 
-			rolling_update {
-				partition = 2
-			}
-		}
+      rolling_update {
+        partition = 2
+      }
+    }
 
-		volume_claim_template {
-			metadata {
-				name = "ss-test"
-			}
+    volume_claim_template {
+      metadata {
+        name = "ss-test"
+      }
 
-			spec {
-				access_modes = ["ReadWriteOnce"]
+      spec {
+        access_modes = ["ReadWriteOnce"]
 
-				resources {
-					requests {
-						storage = "1Gi"
-					}
-				}
-			}
-		}
-	}
+        resources {
+          requests {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
+  }
 }
-	`, name)
+`, name)
 }
 
 func testAccKubernetesStatefulSetConfigUpdateStrategyOnDelete(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_stateful_set" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
 
-		labels {
-			TestLabelOne   = "one"
-			TestLabelTwo   = "two"
-			TestLabelThree = "three"
-		}
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
 
-		name = "%s"
-	}
+    name = "%s"
+  }
 
-	spec {
-		pod_management_policy  = "OrderedReady"
-		replicas               = 1
-		revision_history_limit = 11
+  spec {
+    pod_management_policy  = "OrderedReady"
+    replicas               = 1
+    revision_history_limit = 11
 
-		selector {
-			match_labels {
-				app = "ss-test"
-			}
-		}
+    selector {
+      match_labels {
+        app = "ss-test"
+      }
+    }
 
-		service_name = "ss-test-service"
+    service_name = "ss-test-service"
 
-		template {
-			metadata {
-				labels {
-					app = "ss-test"
-				}
-			}
+    template {
+      metadata {
+        labels {
+          app = "ss-test"
+        }
+      }
 
-			spec {
-				container {
-					name  = "ss-test"
-					image = "k8s.gcr.io/pause:latest"
+      spec {
+        container {
+          name  = "ss-test"
+          image = "k8s.gcr.io/pause:latest"
 
-					port {
-						container_port = "80"
-						name           = "web"
-					}
+          port {
+            container_port = "80"
+            name           = "web"
+          }
 
-					volume_mount {
-						name       = "workdir"
-						mount_path = "/work-dir"
-					}
-				}
-			}
-		}
+          volume_mount {
+            name       = "workdir"
+            mount_path = "/work-dir"
+          }
+        }
+      }
+    }
 
-		update_strategy {
-			type = "OnDelete"
-		}
+    update_strategy {
+      type = "OnDelete"
+    }
 
-		volume_claim_template {
-			metadata {
-				name = "ss-test"
-			}
+    volume_claim_template {
+      metadata {
+        name = "ss-test"
+      }
 
-			spec {
-				access_modes = ["ReadWriteOnce"]
+      spec {
+        access_modes = ["ReadWriteOnce"]
 
-				resources {
-					requests {
-						storage = "1Gi"
-					}
-				}
-			}
-		}
-	}
+        resources {
+          requests {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
+  }
 }
 `, name)
 }

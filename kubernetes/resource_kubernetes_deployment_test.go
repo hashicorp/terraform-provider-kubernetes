@@ -490,49 +490,56 @@ func testAccCheckKubernetesDeploymentExists(n string, obj *api.Deployment) resou
 func testAccKubernetesDeploymentConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_deployment" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne   = "one"
-			TestLabelTwo   = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	spec {
-		replicas = 300 # This is intentionally high to exercise the waiter
-		selector {
-			match_labels {
-				TestLabelOne   = "one"
-				TestLabelTwo   = "two"
-				TestLabelThree = "three"
-			}
-		}
-		template {
-			metadata {
-				labels {
-					TestLabelOne   = "one"
-					TestLabelTwo   = "two"
-					TestLabelThree = "three"
-				}
-			}
-			spec {
-				container {
-					image = "nginx:1.7.8"
-					name  = "tf-acc-test"
-					resources {
-						requests {
-							memory = "64Mi"
-							cpu = "50m"
-						}
-					}
-				}
-			}
-		}
-	}
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    replicas = 300 # This is intentionally high to exercise the waiter
+
+    selector {
+      match_labels {
+        TestLabelOne   = "one"
+        TestLabelTwo   = "two"
+        TestLabelThree = "three"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          TestLabelOne   = "one"
+          TestLabelTwo   = "two"
+          TestLabelThree = "three"
+        }
+      }
+
+      spec {
+        container {
+          image = "nginx:1.7.8"
+          name  = "tf-acc-test"
+
+          resources {
+            requests {
+              memory = "64Mi"
+              cpu    = "50m"
+            }
+          }
+        }
+      }
+    }
+  }
 }
 `, name)
 }
@@ -540,541 +547,627 @@ resource "kubernetes_deployment" "test" {
 func testAccKubernetesDeploymentConfig_initContainer(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_deployment" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne   = "one"
-			TestLabelTwo   = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	spec {
-		replicas = 300 # This is intentionally high to exercise the waiter
-		selector {
-			match_labels {
-				TestLabelOne   = "one"
-				TestLabelTwo   = "two"
-				TestLabelThree = "three"
-			}
-		}
-		template {
-			metadata {
-				labels {
-					TestLabelOne   = "one"
-					TestLabelTwo   = "two"
-					TestLabelThree = "three"
-				}
-			}
-			spec {
-				container {
-					name  = "nginx"
-					image = "nginx"
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
 
-					port {
-						container_port = 80
-					}
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
 
-					resources {
-						requests {
-							memory = "64Mi"
-							cpu = "50m"
-						}
-					}
+    name = "%s"
+  }
 
-					volume_mount {
-						name       = "workdir"
-						mount_path = "/usr/share/nginx/html"
-					}
-				}
-				init_container {
-					name    = "install"
-					image   = "busybox"
-					command = ["wget", "-O", "/work-dir/index.html", "http://kubernetes.io"]
+  spec {
+    replicas = 300 # This is intentionally high to exercise the waiter
 
-					resources {
-						requests {
-							memory = "64Mi"
-							cpu = "50m"
-						}
-					}
+    selector {
+      match_labels {
+        TestLabelOne   = "one"
+        TestLabelTwo   = "two"
+        TestLabelThree = "three"
+      }
+    }
 
-					volume_mount {
-						name       = "workdir"
-						mount_path = "/work-dir"
-					}
-				}
-				dns_policy = "Default"
-				volume {
-					name      = "workdir"
-					empty_dir = {}
-				}
-			}
-		}
-	}
-}`, name)
+    template {
+      metadata {
+        labels {
+          TestLabelOne   = "one"
+          TestLabelTwo   = "two"
+          TestLabelThree = "three"
+        }
+      }
+
+      spec {
+        container {
+          name  = "nginx"
+          image = "nginx"
+
+          port {
+            container_port = 80
+          }
+
+          resources {
+            requests {
+              memory = "64Mi"
+              cpu    = "50m"
+            }
+          }
+
+          volume_mount {
+            name       = "workdir"
+            mount_path = "/usr/share/nginx/html"
+          }
+        }
+
+        init_container {
+          name    = "install"
+          image   = "busybox"
+          command = ["wget", "-O", "/work-dir/index.html", "http://kubernetes.io"]
+
+          resources {
+            requests {
+              memory = "64Mi"
+              cpu    = "50m"
+            }
+          }
+
+          volume_mount {
+            name       = "workdir"
+            mount_path = "/work-dir"
+          }
+        }
+
+        dns_policy = "Default"
+
+        volume {
+          name      = "workdir"
+          empty_dir = {}
+        }
+      }
+    }
+  }
+}
+`, name)
 }
 
 func testAccKubernetesDeploymentConfig_modified(name string) string {
 	return fmt.Sprintf(`
-	resource "kubernetes_deployment" "test" {
-		metadata {
-			annotations {
-				TestAnnotationOne = "one"
-				Different         = "1234"
-			}
-			labels {
-				TestLabelOne   = "one"
-				TestLabelThree = "three"
-			}
-			name = "%s"
-		}
-		spec {
-			selector {
-				match_labels {
-					TestLabelOne   = "one"
-					TestLabelTwo   = "two"
-					TestLabelThree = "three"
-				}
-			}
-			template {
-				metadata {
-					labels {
-						TestLabelOne   = "one"
-						TestLabelTwo   = "two"
-						TestLabelThree = "three"
-					}
-				}
-				spec {
-					container {
-						image = "nginx:1.7.9"
-						name  = "tf-acc-test"
-					}
-				}
-			}
-		}
-	}`, name)
+resource "kubernetes_deployment" "test" {
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      Different         = "1234"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    selector {
+      match_labels {
+        TestLabelOne   = "one"
+        TestLabelTwo   = "two"
+        TestLabelThree = "three"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          TestLabelOne   = "one"
+          TestLabelTwo   = "two"
+          TestLabelThree = "three"
+        }
+      }
+
+      spec {
+        container {
+          image = "nginx:1.7.9"
+          name  = "tf-acc-test"
+        }
+      }
+    }
+  }
+}
+`, name)
 }
 
 func testAccKubernetesDeploymentConfig_generatedName(prefix string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_deployment" "test" {
-	metadata {
-		labels {
-			TestLabelOne   = "one"
-			TestLabelTwo   = "two"
-			TestLabelThree = "three"
-		}
-		generate_name = "%s"
-	}
-	spec {
-		selector {
-			match_labels {
-				TestLabelOne   = "one"
-				TestLabelTwo   = "two"
-				TestLabelThree = "three"
-			}
-		}
-		template {
-			metadata {
-				labels {
-					TestLabelOne   = "one"
-					TestLabelTwo   = "two"
-					TestLabelThree = "three"
-				}
-			}
-			spec {
-				container {
-					image = "nginx:1.7.9"
-					name  = "tf-acc-test"
-				}
-			}
-		}
-	}
-}`, prefix)
+  metadata {
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    generate_name = "%s"
+  }
+
+  spec {
+    selector {
+      match_labels {
+        TestLabelOne   = "one"
+        TestLabelTwo   = "two"
+        TestLabelThree = "three"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          TestLabelOne   = "one"
+          TestLabelTwo   = "two"
+          TestLabelThree = "three"
+        }
+      }
+
+      spec {
+        container {
+          image = "nginx:1.7.9"
+          name  = "tf-acc-test"
+        }
+      }
+    }
+  }
+}
+`, prefix)
 }
 
 func testAccKubernetesDeploymentConfigWithSecurityContext(rcName, imageName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_deployment" "test" {
-	metadata {
-		name = "%s"
-		labels {
-			Test = "TfAcceptanceTest"
-		}
-	}
-	spec {
-		selector {
-			match_labels {
-				Test = "TfAcceptanceTest"
-			}
-		}
-		template {
-			metadata {
-				labels {
-					Test = "TfAcceptanceTest"
-				}
-			}
-			spec {
-				security_context {
-					run_as_non_root     = true
-					run_as_user         = 101
-					supplemental_groups = [101]
-				}
-				container {
-					image = "%s"
-					name  = "containername"
-				}
-			}
-		}
-	}
-}`, rcName, imageName)
+  metadata {
+    name = "%s"
+
+    labels {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        security_context {
+          run_as_non_root     = true
+          run_as_user         = 101
+          supplemental_groups = [101]
+        }
+
+        container {
+          image = "%s"
+          name  = "containername"
+        }
+      }
+    }
+  }
+}
+`, rcName, imageName)
 }
 
 func testAccKubernetesDeploymentConfigWithLivenessProbeUsingExec(rcName, imageName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_deployment" "test" {
-	metadata {
-		name = "%s"
-		labels {
-			Test = "TfAcceptanceTest"
-		}
-	}
-	spec {
-		selector {
-			match_labels {
-				Test = "TfAcceptanceTest"
-			}
-		}
-		template {
-			metadata {
-				labels {
-					Test = "TfAcceptanceTest"
-				}
-			}
-			spec {
-				container {
-					image = "%s"
-					name  = "containername"
-					args  = ["/bin/sh", "-c", "touch /tmp/healthy; sleep 300; rm -rf /tmp/healthy; sleep 600"]
-					liveness_probe {
-						exec {
-							command = ["cat", "/tmp/healthy"]
-						}
-						initial_delay_seconds = 5
-						period_seconds        = 5
-					}
-				}
-			}
-		}
-	}
-}`, rcName, imageName)
+  metadata {
+    name = "%s"
+
+    labels {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+          args  = ["/bin/sh", "-c", "touch /tmp/healthy; sleep 300; rm -rf /tmp/healthy; sleep 600"]
+
+          liveness_probe {
+            exec {
+              command = ["cat", "/tmp/healthy"]
+            }
+
+            initial_delay_seconds = 5
+            period_seconds        = 5
+          }
+        }
+      }
+    }
+  }
+}
+`, rcName, imageName)
 }
 
 func testAccKubernetesDeploymentConfigWithLivenessProbeUsingHTTPGet(rcName, imageName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_deployment" "test" {
-	metadata {
-		name = "%s"
+  metadata {
+    name = "%s"
 
-		labels {
-			Test = "TfAcceptanceTest"
-		}
-	}
-	spec {
-		selector {
-			match_labels {
-				Test = "TfAcceptanceTest"
-			}
-		}
-		template {
-			metadata {
-				labels {
-					Test = "TfAcceptanceTest"
-				}
-			}
-			spec {
-				container {
-					image = "%s"
-					name  = "containername"
-					args  = ["/server"]
-					liveness_probe {
-						http_get {
-							path = "/healthz"
-							port = 8080
-							http_header {
-								name  = "X-Custom-Header"
-								value = "Awesome"
-							}
-						}
-						initial_delay_seconds = 3
-						period_seconds        = 3
-					}
-				}
-			}
-		}
-	}
-}`, rcName, imageName)
+    labels {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+          args  = ["/server"]
+
+          liveness_probe {
+            http_get {
+              path = "/healthz"
+              port = 8080
+
+              http_header {
+                name  = "X-Custom-Header"
+                value = "Awesome"
+              }
+            }
+
+            initial_delay_seconds = 3
+            period_seconds        = 3
+          }
+        }
+      }
+    }
+  }
+}
+`, rcName, imageName)
 }
 
 func testAccKubernetesDeploymentConfigWithLivenessProbeUsingTCP(rcName, imageName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_deployment" "test" {
-	metadata {
-		name = "%s"
-		labels {
-			Test = "TfAcceptanceTest"
-		}
-	}
-	spec {
-		selector {
-			match_labels {
-				Test = "TfAcceptanceTest"
-			}
-		}
-		template {
-			metadata {
-				labels {
-					Test = "TfAcceptanceTest"
-				}
-			}
-			spec {
-				container {
-					image = "%s"
-					name  = "containername"
-					args  = ["/server"]
-					liveness_probe {
-						tcp_socket {
-							port = 8080
-						}
-						initial_delay_seconds = 3
-						period_seconds        = 3
-					}
-				}
-			}
-		}
-	}
-}`, rcName, imageName)
+  metadata {
+    name = "%s"
+
+    labels {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+          args  = ["/server"]
+
+          liveness_probe {
+            tcp_socket {
+              port = 8080
+            }
+
+            initial_delay_seconds = 3
+            period_seconds        = 3
+          }
+        }
+      }
+    }
+  }
+}
+`, rcName, imageName)
 }
 
 func testAccKubernetesDeploymentConfigWithLifeCycle(rcName, imageName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_deployment" "test" {
-	metadata {
-		name = "%s"
-		labels {
-			Test = "TfAcceptanceTest"
-		}
-	}
-	spec {
-		selector {
-			match_labels {
-				Test = "TfAcceptanceTest"
-			}
-		}
-		template {
-			metadata {
-				labels {
-					Test = "TfAcceptanceTest"
-				}
-			}
-			spec {
-				container {
-					image = "%s"
-					name  = "containername"
-					args  = ["/server"]
-					lifecycle {
-						post_start {
-							exec {
-								command = ["ls", "-al"]
-							}
-						}
-						pre_stop {
-							exec {
-								command = ["date"]
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}`, rcName, imageName)
+  metadata {
+    name = "%s"
+
+    labels {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+          args  = ["/server"]
+
+          lifecycle {
+            post_start {
+              exec {
+                command = ["ls", "-al"]
+              }
+            }
+
+            pre_stop {
+              exec {
+                command = ["date"]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, rcName, imageName)
 }
 
 func testAccKubernetesDeploymentConfigWithContainerSecurityContext(rcName, imageName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_deployment" "test" {
-	metadata {
-		name = "%s"
-		labels {
-			Test = "TfAcceptanceTest"
-		}
-	}
-	spec {
-		selector {
-			match_labels {
-				Test = "TfAcceptanceTest"
-			}
-		}
-		template {
-			metadata {
-				labels {
-					Test = "TfAcceptanceTest"
-				}
-			}
-			spec {
-				container {
-					image = "%s"
-					name  = "containername"
-					security_context {
-						privileged  = true
-						run_as_user = 1
-						se_linux_options {
-							level = "s0:c123,c456"
-						}
-					}
-				}
-			}
-		}
-	}
-}`, rcName, imageName)
+  metadata {
+    name = "%s"
+
+    labels {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+
+          security_context {
+            privileged  = true
+            run_as_user = 1
+
+            se_linux_options {
+              level = "s0:c123,c456"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, rcName, imageName)
 }
 
 func testAccKubernetesDeploymentConfigWithVolumeMounts(secretName, rcName, imageName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_secret" "test" {
-	metadata {
-		name = "%s"
-	}
-	data {
-		one = "first"
-	}
+  metadata {
+    name = "%s"
+  }
+
+  data {
+    one = "first"
+  }
 }
 
 resource "kubernetes_deployment" "test" {
-	metadata {
-		name = "%s"
-		labels {
-			Test = "TfAcceptanceTest"
-		}
-	}
-	spec {
-		selector {
-			match_labels {
-				Test = "TfAcceptanceTest"
-			}
-		}
-		template {
-			metadata {
-				labels {
-					Test = "TfAcceptanceTest"
-				}
-			}
-			spec {
-				container {
-					image = "%s"
-					name  = "containername"
-					volume_mount {
-						mount_path = "/tmp/my_path"
-						name       = "db"
-					}
-				}
-				volume {
-					name = "db"
-					secret = {
-						secret_name = "${kubernetes_secret.test.metadata.0.name}"
-					}
-				}
-			}
-		}
-	}
-}`, secretName, rcName, imageName)
+  metadata {
+    name = "%s"
+
+    labels {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+
+          volume_mount {
+            mount_path = "/tmp/my_path"
+            name       = "db"
+          }
+        }
+
+        volume {
+          name = "db"
+
+          secret = {
+            secret_name = "${kubernetes_secret.test.metadata.0.name}"
+          }
+        }
+      }
+    }
+  }
+}
+`, secretName, rcName, imageName)
 }
 
 func testAccKubernetesDeploymentConfigWithResourceRequirements(rcName, imageName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_deployment" "test" {
-	metadata {
-		name = "%s"
-		labels {
-			Test = "TfAcceptanceTest"
-		}
-	}
-	spec {
-		selector {
-			match_labels {
-				Test = "TfAcceptanceTest"
-			}
-		}
-		template {
-			metadata {
-				labels {
-					Test = "TfAcceptanceTest"
-				}
-			}
-			spec {
-				container {
-					image = "%s"
-					name  = "containername"
-					resources {
-						limits {
-							cpu    = "0.5"
-							memory = "512Mi"
-						}
-						requests {
-							cpu    = "250m"
-							memory = "50Mi"
-						}
-					}
-				}
-			}
-		}
-	}
-}`, rcName, imageName)
+  metadata {
+    name = "%s"
+
+    labels {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+
+          resources {
+            limits {
+              cpu    = "0.5"
+              memory = "512Mi"
+            }
+
+            requests {
+              cpu    = "250m"
+              memory = "50Mi"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, rcName, imageName)
 }
 
 func testAccKubernetesDeploymentConfigWithEmptyDirVolumes(rcName, imageName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_deployment" "test" {
-	metadata {
-		name = "%s"
-		labels {
-			Test = "TfAcceptanceTest"
-		}
-	}
-	spec {
-		selector {
-			match_labels {
-				Test = "TfAcceptanceTest"
-			}
-		}
-		template {
-			metadata {
-				labels {
-					Test = "TfAcceptanceTest"
-				}
-			}
-			spec {
-				container {
-					image = "%s"
-					name  = "containername"
-					volume_mount {
-						mount_path = "/cache"
-						name       = "cache-volume"
-					}
-				}
-				volume {
-					name = "cache-volume"
-					empty_dir = {
-						medium = "Memory"
-					}
-				}
-			}
-		}
-	}
-}`, rcName, imageName)
+  metadata {
+    name = "%s"
+
+    labels {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+
+          volume_mount {
+            mount_path = "/cache"
+            name       = "cache-volume"
+          }
+        }
+
+        volume {
+          name = "cache-volume"
+
+          empty_dir = {
+            medium = "Memory"
+          }
+        }
+      }
+    }
+  }
+}
+`, rcName, imageName)
 }

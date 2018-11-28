@@ -468,29 +468,34 @@ func testAccCheckKubernetesPersistentVolumeExists(n string, obj *api.PersistentV
 func testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	spec {
-		capacity {
-			storage = "123Gi"
-		}
-		access_modes = ["ReadWriteOnce"]
-		persistent_volume_source {
-			gce_persistent_disk {
-				pd_name = "${google_compute_disk.test.name}"
-			}
-		}
-	}
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    capacity {
+      storage = "123Gi"
+    }
+
+    access_modes = ["ReadWriteOnce"]
+
+    persistent_volume_source {
+      gce_persistent_disk {
+        pd_name = "${google_compute_disk.test.name}"
+      }
+    }
+  }
 }
 
 resource "google_compute_disk" "test" {
@@ -498,7 +503,7 @@ resource "google_compute_disk" "test" {
   type  = "pd-ssd"
   zone  = "%s"
   image = "debian-8-jessie-v20170523"
-  size = 10
+  size  = 10
 }
 `, name, diskName, zone)
 }
@@ -506,31 +511,36 @@ resource "google_compute_disk" "test" {
 func testAccKubernetesPersistentVolumeConfig_googleCloud_modified(name, diskName, zone string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	spec {
-		capacity {
-			storage = "42Mi"
-		}
-		access_modes = ["ReadWriteOnce", "ReadOnlyMany"]
-		persistent_volume_source {
-			gce_persistent_disk {
-				fs_type = "ntfs"
-				pd_name = "${google_compute_disk.test.name}"
-				read_only = true
-			}
-		}
-	}
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    capacity {
+      storage = "42Mi"
+    }
+
+    access_modes = ["ReadWriteOnce", "ReadOnlyMany"]
+
+    persistent_volume_source {
+      gce_persistent_disk {
+        fs_type   = "ntfs"
+        pd_name   = "${google_compute_disk.test.name}"
+        read_only = true
+      }
+    }
+  }
 }
 
 resource "google_compute_disk" "test" {
@@ -538,7 +548,7 @@ resource "google_compute_disk" "test" {
   type  = "pd-ssd"
   zone  = "%s"
   image = "debian-8-jessie-v20170523"
-  size = 10
+  size  = 10
 }
 `, name, diskName, zone)
 }
@@ -546,20 +556,23 @@ resource "google_compute_disk" "test" {
 func testAccKubernetesPersistentVolumeConfig_googleCloud_volumeSource(name, diskName, zone string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		capacity {
-			storage = "123Gi"
-		}
-		access_modes = ["ReadWriteOnce"]
-		persistent_volume_source {
-			gce_persistent_disk {
-				pd_name = "${google_compute_disk.test.name}"
-			}
-		}
-	}
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    capacity {
+      storage = "123Gi"
+    }
+
+    access_modes = ["ReadWriteOnce"]
+
+    persistent_volume_source {
+      gce_persistent_disk {
+        pd_name = "${google_compute_disk.test.name}"
+      }
+    }
+  }
 }
 
 resource "google_compute_disk" "test" {
@@ -567,7 +580,7 @@ resource "google_compute_disk" "test" {
   type  = "pd-ssd"
   zone  = "%s"
   image = "debian-8-jessie-v20170523"
-  size = 12
+  size  = 12
 }
 `, name, diskName, zone)
 }
@@ -575,37 +588,43 @@ resource "google_compute_disk" "test" {
 func testAccKubernetesPersistentVolumeConfig_aws_basic(name, diskName, zone string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	spec {
-		capacity {
-			storage = "123Gi"
-		}
-		access_modes = ["ReadWriteOnce"]
-		persistent_volume_source {
-			aws_elastic_block_store {
-				volume_id = "${aws_ebs_volume.test.id}"
-			}
-		}
-	}
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    capacity {
+      storage = "123Gi"
+    }
+
+    access_modes = ["ReadWriteOnce"]
+
+    persistent_volume_source {
+      aws_elastic_block_store {
+        volume_id = "${aws_ebs_volume.test.id}"
+      }
+    }
+  }
 }
 
 resource "aws_ebs_volume" "test" {
-	availability_zone = "%s"
-	size = 10
-	tags {
-		Name = "%s"
-	}
+  availability_zone = "%s"
+  size              = 10
+
+  tags {
+    Name = "%s"
+  }
 }
 `, name, zone, diskName)
 }
@@ -613,40 +632,46 @@ resource "aws_ebs_volume" "test" {
 func testAccKubernetesPersistentVolumeConfig_aws_modified(name, diskName, zone string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	spec {
-		capacity {
-			storage = "42Mi"
-		}
-		access_modes = ["ReadWriteOnce"]
-		persistent_volume_source {
-			aws_elastic_block_store {
-				volume_id = "${aws_ebs_volume.test.id}"
-				fs_type = "io1"
-				partition = 1
-				read_only = true
-			}
-		}
-	}
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    capacity {
+      storage = "42Mi"
+    }
+
+    access_modes = ["ReadWriteOnce"]
+
+    persistent_volume_source {
+      aws_elastic_block_store {
+        volume_id = "${aws_ebs_volume.test.id}"
+        fs_type   = "io1"
+        partition = 1
+        read_only = true
+      }
+    }
+  }
 }
 
 resource "aws_ebs_volume" "test" {
-	availability_zone = "%s"
-	size = 10
-	tags {
-		Name = "%s"
-	}
+  availability_zone = "%s"
+  size              = 10
+
+  tags {
+    Name = "%s"
+  }
 }
 `, name, zone, diskName)
 }
@@ -654,64 +679,77 @@ resource "aws_ebs_volume" "test" {
 func testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, path string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		capacity {
-			storage = "123Gi"
-		}
-		access_modes = ["ReadWriteOnce"]
-		persistent_volume_source {
-			host_path {
-				path = "%s"
-			}
-		}
-	}
-}`, name, path)
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    capacity {
+      storage = "123Gi"
+    }
+
+    access_modes = ["ReadWriteOnce"]
+
+    persistent_volume_source {
+      host_path {
+        path = "%s"
+      }
+    }
+  }
+}
+`, name, path)
 }
 
 func testAccKubernetesPersistentVolumeConfig_cephFsSecretRef(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		capacity {
-			storage = "2Gi"
-		}
-		access_modes = ["ReadWriteMany"]
-		persistent_volume_source {
-			ceph_fs {
-				monitors = ["10.16.154.78:6789", "10.16.154.82:6789"]
-				secret_ref {
-					name = "ceph-secret"
-				}
-			}
-		}
-	}
-}`, name)
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    capacity {
+      storage = "2Gi"
+    }
+
+    access_modes = ["ReadWriteMany"]
+
+    persistent_volume_source {
+      ceph_fs {
+        monitors = ["10.16.154.78:6789", "10.16.154.82:6789"]
+
+        secret_ref {
+          name = "ceph-secret"
+        }
+      }
+    }
+  }
+}
+`, name)
 }
 
 func testAccKubernetesPersistentVolumeConfig_storageClass(name, diskName, storageClassName, storageClassName2, zone, refName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		capacity {
-			storage = "123Gi"
-		}
-		access_modes = ["ReadWriteMany"]
-		persistent_volume_source {
-			gce_persistent_disk {
-				pd_name = "${google_compute_disk.test.name}"
-			}
-		}
-		storage_class_name = "${kubernetes_storage_class.%s.metadata.0.name}"
-	}
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    capacity {
+      storage = "123Gi"
+    }
+
+    access_modes = ["ReadWriteMany"]
+
+    persistent_volume_source {
+      gce_persistent_disk {
+        pd_name = "${google_compute_disk.test.name}"
+      }
+    }
+
+    storage_class_name = "${kubernetes_storage_class.%s.metadata.0.name}"
+  }
 }
 
 resource "google_compute_disk" "test" {
@@ -719,27 +757,31 @@ resource "google_compute_disk" "test" {
   type  = "pd-ssd"
   zone  = "%s"
   image = "debian-8-jessie-v20170523"
-  size = 12
+  size  = 12
 }
 
 resource "kubernetes_storage_class" "test" {
-	metadata {
-		name = "%s"
-	}
-	storage_provisioner = "kubernetes.io/gce-pd"
-	parameters {
-		type = "pd-ssd"
-	}
+  metadata {
+    name = "%s"
+  }
+
+  storage_provisioner = "kubernetes.io/gce-pd"
+
+  parameters {
+    type = "pd-ssd"
+  }
 }
 
 resource "kubernetes_storage_class" "test2" {
-	metadata {
-		name = "%s"
-	}
-	storage_provisioner = "kubernetes.io/gce-pd"
-	parameters {
-		type = "pd-standard"
-	}
+  metadata {
+    name = "%s"
+  }
+
+  storage_provisioner = "kubernetes.io/gce-pd"
+
+  parameters {
+    type = "pd-standard"
+  }
 }
 `, name, refName, diskName, zone, storageClassName, storageClassName2)
 }

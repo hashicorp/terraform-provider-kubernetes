@@ -338,9 +338,9 @@ func testAccCheckKubernetesLimitRangeExists(n string, obj *api.LimitRange) resou
 func testAccKubernetesLimitRangeConfig_empty(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_limit_range" "test" {
-	metadata {
-		name = "%s"
-	}
+  metadata {
+    name = "%s"
+  }
 }
 `, name)
 }
@@ -348,32 +348,35 @@ resource "kubernetes_limit_range" "test" {
 func testAccKubernetesLimitRangeConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_limit_range" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelThree = "three"
-			TestLabelFour = "four"
-		}
-		name = "%s"
-	}
-	spec {
-		limit {
-			type = "Container"
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+    }
 
-			default {
-				cpu = "200m"
-				memory = "512M"
-			}
+    labels {
+      TestLabelOne   = "one"
+      TestLabelThree = "three"
+      TestLabelFour  = "four"
+    }
 
-			default_request {
-				cpu = "100m"
-				memory = "256M"
-			}
-		}
-	}
+    name = "%s"
+  }
+
+  spec {
+    limit {
+      type = "Container"
+
+      default {
+        cpu    = "200m"
+        memory = "512M"
+      }
+
+      default_request {
+        cpu    = "100m"
+        memory = "256M"
+      }
+    }
+  }
 }
 `, name)
 }
@@ -381,33 +384,36 @@ resource "kubernetes_limit_range" "test" {
 func testAccKubernetesLimitRangeConfig_metaModified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_limit_range" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	spec {
-		limit {
-			type = "Container"
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
 
-			default {
-				cpu = "200m"
-				memory = "512M"
-			}
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
 
-			default_request {
-				cpu = "100m"
-				memory = "256M"
-			}
-		}
-	}
+    name = "%s"
+  }
+
+  spec {
+    limit {
+      type = "Container"
+
+      default {
+        cpu    = "200m"
+        memory = "512M"
+      }
+
+      default_request {
+        cpu    = "100m"
+        memory = "256M"
+      }
+    }
+  }
 }
 `, name)
 }
@@ -415,28 +421,29 @@ resource "kubernetes_limit_range" "test" {
 func testAccKubernetesLimitRangeConfig_specModified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_limit_range" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		limit {
-			type = "Container"
+  metadata {
+    name = "%s"
+  }
 
-			default {
-				cpu = "200m"
-				memory = "1024M"
-			}
+  spec {
+    limit {
+      type = "Container"
 
-			max {
-				cpu = "500m"
-			}
+      default {
+        cpu    = "200m"
+        memory = "1024M"
+      }
 
-			min {
-				cpu = "10m"
-				memory = "10M"
-			}
-		}
-	}
+      max {
+        cpu = "500m"
+      }
+
+      min {
+        cpu    = "10m"
+        memory = "10M"
+      }
+    }
+  }
 }
 `, name)
 }
@@ -444,14 +451,15 @@ resource "kubernetes_limit_range" "test" {
 func testAccKubernetesLimitRangeConfig_generatedName(prefix string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_limit_range" "test" {
-	metadata {
-		generate_name = "%s"
-	}
-	spec {
-		limit {
-			type = "Pod"
-		}
-	}
+  metadata {
+    generate_name = "%s"
+  }
+
+  spec {
+    limit {
+      type = "Pod"
+    }
+  }
 }
 `, prefix)
 }
@@ -459,18 +467,20 @@ resource "kubernetes_limit_range" "test" {
 func testAccKubernetesLimitRangeConfig_typeChange(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_limit_range" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		limit {
-			type = "Container"
-			default {
-				cpu = "200m"
-				memory = "1024M"
-			}
-		}
-	}
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    limit {
+      type = "Container"
+
+      default {
+        cpu    = "200m"
+        memory = "1024M"
+      }
+    }
+  }
 }
 `, name)
 }
@@ -478,18 +488,20 @@ resource "kubernetes_limit_range" "test" {
 func testAccKubernetesLimitRangeConfig_typeChangeModified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_limit_range" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		limit {
-			type = "Pod"
-			min {
-				cpu = "200m"
-				memory = "1024M"
-			}
-		}
-	}
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    limit {
+      type = "Pod"
+
+      min {
+        cpu    = "200m"
+        memory = "1024M"
+      }
+    }
+  }
 }
 `, name)
 }
@@ -497,31 +509,37 @@ resource "kubernetes_limit_range" "test" {
 func testAccKubernetesLimitRangeConfig_multipleLimits(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_limit_range" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		limit {
-			type = "Pod"
-			max {
-				cpu = "200m"
-				memory = "1024M"
-			}
-		}
-		limit {
-			type = "PersistentVolumeClaim"
-			min {
-				storage = "24M"
-			}
-		}
-		limit {
-			type = "Container"
-			default {
-				cpu = "50m"
-				memory = "24M"
-			}
-		}
-	}
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    limit {
+      type = "Pod"
+
+      max {
+        cpu    = "200m"
+        memory = "1024M"
+      }
+    }
+
+    limit {
+      type = "PersistentVolumeClaim"
+
+      min {
+        storage = "24M"
+      }
+    }
+
+    limit {
+      type = "Container"
+
+      default {
+        cpu    = "50m"
+        memory = "24M"
+      }
+    }
+  }
 }
 `, name)
 }

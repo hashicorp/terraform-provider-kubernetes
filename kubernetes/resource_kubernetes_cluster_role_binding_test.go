@@ -134,48 +134,56 @@ func testAccCheckKubernetesClusterRoleBindingExists(n string, obj *api.ClusterRo
 func testAccKubernetesClusterRoleBindingConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_cluster_role_binding" "test" {
-	metadata {
-		name = "%s"
-	}
-	role_ref {
-		api_group = "rbac.authorization.k8s.io"
-		kind = "ClusterRole"
-		name = "cluster-admin"
-	}
-	subject {
-		kind = "User"
-		name = "notauser"
-		api_group = "rbac.authorization.k8s.io"
-	}
-}`, name)
+  metadata {
+    name = "%s"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
 }
 
 func testAccKubernetesClusterRoleBindingConfig_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_cluster_role_binding" "test" {
-	metadata {
-		name = "%s"
-	}
-	role_ref {
-		api_group = "rbac.authorization.k8s.io"
-		kind = "ClusterRole"
-		name = "cluster-admin"
-	}
-	subject {
-		kind = "User"
-		name = "notauser"
-		api_group = "rbac.authorization.k8s.io"
-	}
-	subject {
-		kind = "ServiceAccount"
-		name = "default"
-		api_group = ""
-		namespace = "kube-system"
-	}
-	subject {
-		kind = "Group"
-		name = "system:masters"
-		api_group = "rbac.authorization.k8s.io"
-	}
-}`, name)
+  metadata {
+    name = "%s"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "default"
+    api_group = ""
+    namespace = "kube-system"
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "system:masters"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
 }

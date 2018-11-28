@@ -328,105 +328,120 @@ func testAccCheckKubernetesNamespaceExists(n string, obj *api.Namespace) resourc
 func testAccKubernetesNamespaceConfig_basic(nsName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
-	metadata {
-		name = "%s"
-	}
-}`, nsName)
+  metadata {
+    name = "%s"
+  }
+}
+`, nsName)
 }
 
 func testAccKubernetesNamespaceConfig_addAnnotations(nsName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		name = "%s"
-	}
-}`, nsName)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    name = "%s"
+  }
+}
+`, nsName)
 }
 func testAccKubernetesNamespaceConfig_addLabels(nsName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-}`, nsName)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+}
+`, nsName)
 }
 
 func testAccKubernetesNamespaceConfig_smallerLists(nsName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			Different = "1234"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-}`, nsName)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      Different         = "1234"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+}
+`, nsName)
 }
 
 func testAccKubernetesNamespaceConfig_noLists(nsName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
-	metadata {
-		name = "%s"
-	}
-}`, nsName)
+  metadata {
+    name = "%s"
+  }
+}
+`, nsName)
 }
 
 func testAccKubernetesNamespaceConfig_generatedName(prefix string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
-	metadata {
-		generate_name = "%s"
-	}
-}`, prefix)
+  metadata {
+    generate_name = "%s"
+  }
+}
+`, prefix)
 }
 
 func testAccKubernetesNamespaceConfig_specialCharacters(nsName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
-	metadata {
-		annotations {
-			"myhost.co.uk/any-path" = "one"
-			"Different"             = "1234"
-		}
-		labels {
-			"myhost.co.uk/any-path" = "one"
-			"TestLabelThree"        = "three"
-		}
+  metadata {
+    annotations {
+      "myhost.co.uk/any-path" = "one"
+      "Different"             = "1234"
+    }
 
-		name = "%s"
-	}
-}`, nsName)
+    labels {
+      "myhost.co.uk/any-path" = "one"
+      "TestLabelThree"        = "three"
+    }
+
+    name = "%s"
+  }
+}
+`, nsName)
 }
 
 func testAccKubernetesNamespaceConfig_invalidLabelValueType(nsName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
-	metadata {
-		labels {
-			"first"   = "one"
-			"integer" = 2
-			"bool"    = true
-		}
-		name = "%s"
-	}
-}`, nsName)
+  metadata {
+    labels {
+      "first"   = "one"
+      "integer" = 2
+      "bool"    = true
+    }
+
+    name = "%s"
+  }
+}
+`, nsName)
 }

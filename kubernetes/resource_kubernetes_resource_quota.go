@@ -143,7 +143,7 @@ func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interfac
 	var spec *api.ResourceQuotaSpec
 	waitForChangedSpec := false
 	if d.HasChange("spec") {
-		spec, err := expandResourceQuotaSpec(d.Get("spec").([]interface{}))
+		spec, err = expandResourceQuotaSpec(d.Get("spec").([]interface{}))
 		if err != nil {
 			return err
 		}

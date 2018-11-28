@@ -773,6 +773,7 @@ func expandContainerPort(in []interface{}) ([]*v1.ContainerPort, error) {
 	}
 	for i, c := range in {
 		p := c.(map[string]interface{})
+		ports[i] = &v1.ContainerPort{}
 		if containerPort, ok := p["container_port"]; ok {
 			ports[i].ContainerPort = int32(containerPort.(int))
 		}

@@ -15,6 +15,15 @@ import (
 )
 
 func resourceKubernetesPersistentVolumeClaim() *schema.Resource {
+	fields := persistentVolumeClaimFields()
+	// The 'wait_until_bound' control attribute only makes sense in stand-alone PVCs,
+	// so adding it on top of the standard PVC fields which are re-usable for other resources.
+	fields["wait_until_bound"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Description: "Whether to wait for the claim to reach `Bound` state (to find volume in which to claim the space)",
+		Optional:    true,
+		Default:     true,
+	}
 	return &schema.Resource{
 		Create: resourceKubernetesPersistentVolumeClaimCreate,
 		Read:   resourceKubernetesPersistentVolumeClaimRead,
@@ -32,7 +41,7 @@ func resourceKubernetesPersistentVolumeClaim() *schema.Resource {
 			Create: schema.DefaultTimeout(5 * time.Minute),
 		},
 
-		Schema: persistentVolumeClaimFields(),
+		Schema: fields,
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgApi "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"log"
 )
@@ -72,7 +73,7 @@ func resourceKubernetesRoleCreate(d *schema.ResourceData, meta interface{}) erro
 
 	role := v1.Role{
 		ObjectMeta: metadata,
-		Rules:      rules,
+		Rules:      *rules,
 	}
 	log.Printf("[INFO] Creating new role: %#v", role)
 	out, err := conn.RbacV1().Roles(metadata.Namespace).Create(&role)
@@ -107,7 +108,7 @@ func resourceKubernetesRoleRead(d *schema.ResourceData, meta interface{}) error 
 		return err
 	}
 
-	err = d.Set("rule", flattenRules(role.Rules))
+	err = d.Set("rule", flattenRules(&role.Rules))
 	if err != nil {
 		return err
 	}
@@ -118,20 +119,27 @@ func resourceKubernetesRoleRead(d *schema.ResourceData, meta interface{}) error 
 func resourceKubernetesRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
-	namespace, _, err := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
 	if err != nil {
 		return err
 	}
 
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	rules := expandRules(d.Get("rule").([]interface{}))
+	ops := patchMetadata("metadata.0.", "/metadata/", d)
+	if d.HasChange("rule") {
+		rules := expandRules(d.Get("rule").([]interface{}))
 
-	role := v1.Role{
-		ObjectMeta: metadata,
-		Rules:      rules,
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/rules",
+			Value: rules,
+		})
 	}
 
-	out, err := conn.RbacV1().Roles(namespace).Update(&role)
+	data, err := ops.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("Failed to marshal update operations: %s", err)
+	}
+	log.Printf("[INFO] Updating role %q: %v", name, string(data))
+	out, err := conn.RbacV1().Roles(namespace).Patch(name, pkgApi.JSONPatchType, data)
 	if err != nil {
 		return fmt.Errorf("Failed to update role: %s", err)
 	}
@@ -157,7 +165,6 @@ func resourceKubernetesRoleDelete(d *schema.ResourceData, meta interface{}) erro
 
 	log.Printf("[INFO] Role %s deleted", name)
 
-	d.SetId("")
 	return nil
 }
 
@@ -172,7 +179,7 @@ func resourceKubernetesRoleExists(d *schema.ResourceData, meta interface{}) (boo
 	log.Printf("[INFO] Checking role %s", name)
 	_, err = conn.RbacV1().Roles(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if errors.IsNotFound(err) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)
@@ -180,7 +187,7 @@ func resourceKubernetesRoleExists(d *schema.ResourceData, meta interface{}) (boo
 	return true, err
 }
 
-func expandRules(rules []interface{}) []v1.PolicyRule {
+func expandRules(rules []interface{}) *[]v1.PolicyRule {
 	var objects []v1.PolicyRule
 
 	for _, rule := range rules {
@@ -201,12 +208,12 @@ func expandRules(rules []interface{}) []v1.PolicyRule {
 		objects = append(objects, obj)
 	}
 
-	return objects
+	return &objects
 }
 
-func flattenRules(in []v1.PolicyRule) []interface{} {
+func flattenRules(in *[]v1.PolicyRule) []interface{} {
 	var flattened []interface{}
-	for _, rule := range in {
+	for _, rule := range *in {
 		att := make(map[string]interface{})
 		if len(rule.APIGroups) > 0 {
 			att["api_groups"] = newStringSet(schema.HashString, rule.APIGroups)

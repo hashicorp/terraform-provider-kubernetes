@@ -40,7 +40,7 @@ resource "kubernetes_role" "example" {
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard replication controller's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata)
+* `metadata` - (Required) Standard role's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata)
 * `rule` - (Required) List of rules that define the set of permissions for this role. For more info see [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)
 
 ## Nested Blocks
@@ -49,18 +49,18 @@ The following arguments are supported:
 
 #### Arguments
 
-* `annotations` - (Optional) An unstructured key value map stored with the replication controller that may be used to store arbitrary metadata. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/annotations)
+* `annotations` - (Optional) An unstructured key value map stored with the role that may be used to store arbitrary metadata. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/annotations)
 * `generate_name` - (Optional) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#idempotency)
-* `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the replication controller. **Must match `selector`**. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
-* `name` - (Optional) Name of the replication controller, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
-* `namespace` - (Optional) Namespace defines the space within which name of the replication controller must be unique.
+* `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the role. **Must match `selector`**. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
+* `name` - (Optional) Name of the role, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+* `namespace` - (Optional) Namespace defines the space within which name of the role must be unique.
 
 #### Attributes
 
 * `generation` - A sequence number representing a specific generation of the desired state.
-* `resource_version` - An opaque value that represents the internal version of this replication controller that can be used by clients to determine when replication controller has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#concurrency-control-and-consistency)
-* `self_link` - A URL representing this replication controller.
-* `uid` - The unique in time and space value for this replication controller. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
+* `resource_version` - An opaque value that represents the internal version of this role that can be used by clients to determine when role has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#concurrency-control-and-consistency)
+* `self_link` - A URL representing this role.
+* `uid` - The unique in time and space value for this role. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
 ### `rule`
 
@@ -73,7 +73,7 @@ The following arguments are supported:
 
 ## Import
 
-Replication Controller can be imported using the namespace and name, e.g.
+Role can be imported using the namespace and name, e.g.
 
 ```
 $ terraform import kubernetes_role.example default/terraform-example

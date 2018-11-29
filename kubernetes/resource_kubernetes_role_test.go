@@ -131,65 +131,76 @@ func TestAccKubernetesRole_generatedName(t *testing.T) {
 func testAccKubernetesRoleConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_role" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	rule {
-		api_groups = [""]
-		resources = ["pods"]
-		verbs = ["get", "list", "watch"]
-		resource_names = ["foo"]
-	}
-	rule {
-		api_groups = ["apps"]
-		resources = ["deployments"]
-		verbs = ["get", "list"]
-	}
-}`, name)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  rule {
+    api_groups     = [""]
+    resources      = ["pods"]
+    verbs          = ["get", "list", "watch"]
+    resource_names = ["foo"]
+  }
+
+  rule {
+    api_groups = ["apps"]
+    resources  = ["deployments"]
+    verbs      = ["get", "list"]
+  }
+}
+`, name)
 }
 
 func testAccKubernetesRoleConfig_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_role" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			Different = "1234"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	rule {
-		api_groups = ["batch"]
-		resources = ["jobs"]
-		verbs = ["watch"]
-	}
-}`, name)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      Different         = "1234"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  rule {
+    api_groups = ["batch"]
+    resources  = ["jobs"]
+    verbs      = ["watch"]
+  }
+}
+`, name)
 }
 func testAccKubernetesRoleConfig_generatedName(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_role" "test" {
-	metadata {
-		generate_name = "%s"
-	}
-	rule {
-		api_groups = ["batch"]
-		resources = ["jobs"]
-		verbs = ["watch"]
-	}
-}`, name)
+  metadata {
+    generate_name = "%s"
+  }
+
+  rule {
+    api_groups = ["batch"]
+    resources  = ["jobs"]
+    verbs      = ["watch"]
+  }
+}
+`, name)
 }
 
 func testAccCheckKubernetesRoleExists(n string, obj *api.Role) resource.TestCheckFunc {

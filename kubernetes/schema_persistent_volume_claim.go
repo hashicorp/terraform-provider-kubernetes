@@ -18,12 +18,6 @@ func persistentVolumeClaimFields() map[string]*schema.Schema {
 				Schema: persistentVolumeClaimSpecFields(),
 			},
 		},
-		"wait_until_bound": {
-			Type:        schema.TypeBool,
-			Description: "Whether to wait for the claim to reach `Bound` state (to find volume in which to claim the space)",
-			Optional:    true,
-			Default:     true,
-		},
 	}
 }
 

@@ -1,5 +1,19 @@
 ## 1.5.0 (Unreleased)
 ## 1.4.0 (November 29, 2018)
+
+FEATURES:
+
+* **New Resource:** `kubernetes_stateful_set` ([#100](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/100))
+
+IMPROVEMENTS:
+
+* `resource/kubernetes_storage_class`: Add ReclaimPolicy attribute
+* `resource/kubernetes_service_account`: Allow automount service account token
+
+BUG FIXES:
+
+* Fix waiting for Deployment rollout status ([#210](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/210))
+
 ## 1.3.0 (October 23, 2018)
 
 FEATURES:

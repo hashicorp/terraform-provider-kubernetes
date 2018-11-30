@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	"errors"
+
 	"k8s.io/api/core/v1"
 )
 
@@ -33,9 +35,6 @@ func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec, useDeprec
 			template["spec"] = podSpec
 			template["metadata"] = flattenMetadata(in.Template.ObjectMeta)
 		}
-
-		// TODO: Add conditional logic that returns an error if both the old and new attributes are not defined to preserve the Required property of the spec fields.
-		// cf. https://www.terraform.io/docs/extend/best-practices/deprecations.html#renaming-a-required-attribute
 
 		att["template"] = []interface{}{template}
 	}
@@ -78,9 +77,16 @@ func expandReplicationControllerTemplate(rct []interface{}, selector map[string]
 		obj.Spec = *podSpecDeprecated
 	} else {
 		in := rct[0].(map[string]interface{})
+		metadata := in["metadata"].([]interface{})
+
+		// Return an error if new spec fields are used but no metadata is defined to preserve the Required property of the metadata field
+		// cf. https://www.terraform.io/docs/extend/best-practices/deprecations.html#renaming-a-required-attribute
+		if len(metadata) < 1 {
+			return obj, errors.New("`spec.template.metadata` is Required when new 'spec.template.spec' fields are used.")
+		}
 
 		// Get user defined metadata
-		obj.ObjectMeta = expandMetadata(in["metadata"].([]interface{}))
+		obj.ObjectMeta = expandMetadata(metadata)
 
 		// Get pod spec from new fields
 		podSpec, err := expandPodSpec(in["spec"].([]interface{}))

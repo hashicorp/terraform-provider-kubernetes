@@ -420,20 +420,25 @@ resource "kubernetes_replication_controller" "test" {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
+
     labels {
-      TestLabelOne = "one"
-      TestLabelTwo = "two"
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
+
     name = "%s"
   }
+
   spec {
     replicas = 1000 # This is intentionally high to exercise the waiter
+
     selector {
-      TestLabelOne = "one"
-      TestLabelTwo = "two"
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
+
     template {
       container {
         image = "nginx:1.7.8"

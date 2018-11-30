@@ -508,6 +508,7 @@ resource "kubernetes_replication_controller" "test" {
           TestAnnotationFive = "five"
         }
       }
+
       spec {
         container {
           image = "nginx:1.7.8"
@@ -555,6 +556,7 @@ resource "kubernetes_replication_controller" "test" {
           TestLabelThree = "three"
         }
       }
+
       spec {
         container {
           name  = "nginx"
@@ -630,6 +632,7 @@ resource "kubernetes_replication_controller" "test" {
           TestAnnotationSix = "six"
         }
       }
+
       spec {
         container {
           image = "nginx:1.7.9"

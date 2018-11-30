@@ -313,8 +313,8 @@ func flattenSecretVolumeSource(in *v1.SecretVolumeSource) []interface{} {
 
 // Expanders
 
-func expandPodSpec(p []interface{}) (v1.PodSpec, error) {
-	obj := v1.PodSpec{}
+func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
+	obj := &v1.PodSpec{}
 	if len(p) == 0 || p[0] == nil {
 		return obj, nil
 	}

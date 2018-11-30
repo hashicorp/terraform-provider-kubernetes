@@ -13,8 +13,8 @@ import (
 
 // Expanders
 
-func expandStatefulSetSpec(s []interface{}) (v1.StatefulSetSpec, error) {
-	obj := v1.StatefulSetSpec{}
+func expandStatefulSetSpec(s []interface{}) (*v1.StatefulSetSpec, error) {
+	obj := &v1.StatefulSetSpec{}
 	if len(s) == 0 || s[0] == nil {
 		return obj, nil
 	}
@@ -45,14 +45,14 @@ func expandStatefulSetSpec(s []interface{}) (v1.StatefulSetSpec, error) {
 		if err != nil {
 			return obj, err
 		}
-		obj.UpdateStrategy = us
+		obj.UpdateStrategy = *us
 	}
 
 	template, err := expandPodTemplate(in["template"].([]interface{}))
 	if err != nil {
 		return obj, err
 	}
-	obj.Template = template
+	obj.Template = *template
 
 	if v, ok := in["volume_claim_template"].([]interface{}); ok {
 		obj.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{}
@@ -64,13 +64,13 @@ func expandStatefulSetSpec(s []interface{}) (v1.StatefulSetSpec, error) {
 			if err != nil {
 				return obj, err
 			}
-			obj.VolumeClaimTemplates = append(obj.VolumeClaimTemplates, p)
+			obj.VolumeClaimTemplates = append(obj.VolumeClaimTemplates, *p)
 		}
 	}
 	return obj, nil
 }
-func expandStatefulSetSpecUpdateStrategy(s []interface{}) (v1.StatefulSetUpdateStrategy, error) {
-	ust := v1.StatefulSetUpdateStrategy{}
+func expandStatefulSetSpecUpdateStrategy(s []interface{}) (*v1.StatefulSetUpdateStrategy, error) {
+	ust := &v1.StatefulSetUpdateStrategy{}
 	if len(s) == 0 {
 		return ust, nil
 	}
@@ -104,8 +104,8 @@ func expandStatefulSetSpecUpdateStrategy(s []interface{}) (v1.StatefulSetUpdateS
 	return ust, nil
 }
 
-func expandStatefulSetSelectors(s []interface{}) (metav1.LabelSelector, error) {
-	obj := metav1.LabelSelector{}
+func expandStatefulSetSelectors(s []interface{}) (*metav1.LabelSelector, error) {
+	obj := &metav1.LabelSelector{}
 	if len(s) == 0 || s[0] == nil {
 		return obj, nil
 	}

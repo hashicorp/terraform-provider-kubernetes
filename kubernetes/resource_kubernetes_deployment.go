@@ -198,7 +198,7 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 
 	deployment := appsv1.Deployment{
 		ObjectMeta: metadata,
-		Spec:       spec,
+		Spec:       *spec,
 	}
 
 	log.Printf("[INFO] Creating new deployment: %#v", deployment)

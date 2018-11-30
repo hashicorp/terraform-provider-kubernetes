@@ -57,7 +57,7 @@ func resourceKubernetesPodCreate(d *schema.ResourceData, meta interface{}) error
 
 	pod := api.Pod{
 		ObjectMeta: metadata,
-		Spec:       spec,
+		Spec:       *spec,
 	}
 
 	log.Printf("[INFO] Creating new pod: %#v", pod)

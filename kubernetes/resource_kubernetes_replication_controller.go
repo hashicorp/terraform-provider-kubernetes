@@ -86,7 +86,7 @@ func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta 
 
 	rc := api.ReplicationController{
 		ObjectMeta: metadata,
-		Spec:       spec,
+		Spec:       *spec,
 	}
 
 	log.Printf("[INFO] Creating new replication controller: %#v", rc)

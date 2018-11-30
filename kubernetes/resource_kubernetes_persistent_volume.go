@@ -121,7 +121,7 @@ func resourceKubernetesPersistentVolumeCreate(d *schema.ResourceData, meta inter
 	}
 	volume := api.PersistentVolume{
 		ObjectMeta: metadata,
-		Spec:       spec,
+		Spec:       *spec,
 	}
 
 	log.Printf("[INFO] Creating new persistent volume: %#v", volume)

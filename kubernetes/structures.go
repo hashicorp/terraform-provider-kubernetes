@@ -184,8 +184,8 @@ func flattenResourceList(l api.ResourceList) map[string]string {
 	return m
 }
 
-func expandMapToResourceList(m map[string]interface{}) (api.ResourceList, error) {
-	out := make(map[api.ResourceName]resource.Quantity)
+func expandMapToResourceList(m map[string]interface{}) (*api.ResourceList, error) {
+	out := make(api.ResourceList)
 	for stringKey, origValue := range m {
 		key := api.ResourceName(stringKey)
 		var value resource.Quantity
@@ -197,15 +197,15 @@ func expandMapToResourceList(m map[string]interface{}) (api.ResourceList, error)
 			var err error
 			value, err = resource.ParseQuantity(v)
 			if err != nil {
-				return out, err
+				return &out, err
 			}
 		} else {
-			return out, fmt.Errorf("Unexpected value type: %#v", origValue)
+			return &out, fmt.Errorf("Unexpected value type: %#v", origValue)
 		}
 
 		out[key] = value
 	}
-	return out, nil
+	return &out, nil
 }
 
 func flattenPersistentVolumeAccessModes(in []api.PersistentVolumeAccessMode) *schema.Set {
@@ -235,8 +235,8 @@ func flattenResourceQuotaSpec(in api.ResourceQuotaSpec) []interface{} {
 	return out
 }
 
-func expandResourceQuotaSpec(s []interface{}) (api.ResourceQuotaSpec, error) {
-	out := api.ResourceQuotaSpec{}
+func expandResourceQuotaSpec(s []interface{}) (*api.ResourceQuotaSpec, error) {
+	out := &api.ResourceQuotaSpec{}
 	if len(s) < 1 {
 		return out, nil
 	}
@@ -247,7 +247,7 @@ func expandResourceQuotaSpec(s []interface{}) (api.ResourceQuotaSpec, error) {
 		if err != nil {
 			return out, err
 		}
-		out.Hard = list
+		out.Hard = *list
 	}
 
 	if v, ok := m["scopes"]; ok {
@@ -310,8 +310,8 @@ func resourceListEquals(x, y api.ResourceList) bool {
 	return true
 }
 
-func expandLimitRangeSpec(s []interface{}, isNew bool) (api.LimitRangeSpec, error) {
-	out := api.LimitRangeSpec{}
+func expandLimitRangeSpec(s []interface{}, isNew bool) (*api.LimitRangeSpec, error) {
+	out := &api.LimitRangeSpec{}
 	if len(s) < 1 || s[0] == nil {
 		return out, nil
 	}
@@ -341,7 +341,7 @@ func expandLimitRangeSpec(s []interface{}, isNew bool) (api.LimitRangeSpec, erro
 					if err != nil {
 						return out, err
 					}
-					lrItem.DefaultRequest = el
+					lrItem.DefaultRequest = *el
 				}
 			}
 
@@ -350,28 +350,28 @@ func expandLimitRangeSpec(s []interface{}, isNew bool) (api.LimitRangeSpec, erro
 				if err != nil {
 					return out, err
 				}
-				lrItem.Default = el
+				lrItem.Default = *el
 			}
 			if v, ok := limit["max"]; ok {
 				el, err := expandMapToResourceList(v.(map[string]interface{}))
 				if err != nil {
 					return out, err
 				}
-				lrItem.Max = el
+				lrItem.Max = *el
 			}
 			if v, ok := limit["max_limit_request_ratio"]; ok {
 				el, err := expandMapToResourceList(v.(map[string]interface{}))
 				if err != nil {
 					return out, err
 				}
-				lrItem.MaxLimitRequestRatio = el
+				lrItem.MaxLimitRequestRatio = *el
 			}
 			if v, ok := limit["min"]; ok {
 				el, err := expandMapToResourceList(v.(map[string]interface{}))
 				if err != nil {
 					return out, err
 				}
-				lrItem.Min = el
+				lrItem.Min = *el
 			}
 
 			newLimits[i] = lrItem

@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	api "k8s.io/api/core/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetes "k8s.io/client-go/kubernetes"
 )
@@ -501,8 +503,21 @@ func TestAccKubernetesPersistentVolume_hostPath_nodeAffinity(t *testing.T) {
 	})
 }
 
+func waitForPersistenceVolumeDeleted(pvName string, poll, timeout time.Duration) error {
+	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	for start := time.Now(); time.Since(start) < timeout; time.Sleep(poll) {
+		_, err := conn.CoreV1().PersistentVolumes().Get(pvName, meta_v1.GetOptions{})
+		if err != nil && apierrs.IsNotFound(err) {
+			return nil
+		}
+	}
+	return fmt.Errorf("Persistent Volume still exists: %s", pvName)
+}
+
 func testAccCheckKubernetesPersistentVolumeDestroy(s *terraform.State) error {
 	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	timeout := 5 * time.Second
+	poll := 1 * time.Second
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_persistent_volume" {
@@ -512,7 +527,7 @@ func testAccCheckKubernetesPersistentVolumeDestroy(s *terraform.State) error {
 		resp, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
-				return fmt.Errorf("Persistent Volume still exists: %s", rs.Primary.ID)
+				return waitForPersistenceVolumeDeleted(name, poll, timeout)
 			}
 		}
 	}

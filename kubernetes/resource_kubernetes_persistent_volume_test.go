@@ -428,14 +428,18 @@ func TestAccKubernetesPersistentVolume_storageClass(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPersistentVolume_nodeAffinity(t *testing.T) {
+func TestAccKubernetesPersistentVolume_hostPath_nodeAffinity(t *testing.T) {
 	var conf api.PersistentVolume
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
-
 	selectorLabel := fmt.Sprintf("tf-acc-test-na-label-%s", randString)
 	selectorValue := fmt.Sprintf("tf-acc-test-na-value-%s", randString)
 	selectorValueHash := schema.HashString(selectorValue)
+
+	replacedRandString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	replacedSelectorLabel := fmt.Sprintf("tf-acc-test-na-label-%s", replacedRandString)
+	replacedSelectorValue := fmt.Sprintf("tf-acc-test-na-value-%s", replacedRandString)
+	replacedSelectorValueHash := schema.HashString(replacedSelectorValue)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -444,7 +448,43 @@ func TestAccKubernetesPersistentVolume_nodeAffinity(t *testing.T) {
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_nodeAffinity(name, selectorLabel, selectorValue),
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity_match(name, selectorLabel, selectorValue),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions.0.key", selectorLabel),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions.0.operator", "In"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions.0.values.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", fmt.Sprintf("spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions.0.values.%d", selectorValueHash), selectorValue),
+				),
+			},
+			{
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity_match(name, replacedSelectorLabel, replacedSelectorValue),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions.0.key", replacedSelectorLabel),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions.0.operator", "In"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions.0.values.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", fmt.Sprintf("spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions.0.values.%d", replacedSelectorValueHash), replacedSelectorValue),
+				),
+			},
+			{
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_withoutNodeAffinity(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.capacity.storage", "2Gi"),
+					resource.TestCheckNoResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity"),
+				),
+			},
+			{
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity_match(name, selectorLabel, selectorValue),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.#", "1"),
@@ -778,7 +818,7 @@ resource "kubernetes_storage_class" "test2" {
 `, name, refName, diskName, zone, storageClassName, storageClassName2)
 }
 
-func testAccKubernetesPersistentVolumeConfig_nodeAffinity(name, selectorLabel, selectorValue string) string {
+func testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity(name, nodeAffinity string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
 	metadata {
@@ -794,6 +834,13 @@ resource "kubernetes_persistent_volume" "test" {
         path = "/mnt/local-volume"
       }
 		}
+    %s
+	}
+}`, name, nodeAffinity)
+}
+
+func testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity_match(name, selectorLabel, selectorValue string) string {
+	nodeAffinity := fmt.Sprintf(`
     node_affinity {
       required {
         node_selector_term {
@@ -805,6 +852,10 @@ resource "kubernetes_persistent_volume" "test" {
         }
       }
     }
-	}
-}`, name, selectorLabel, selectorValue)
+  `, selectorLabel, selectorValue)
+	return testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity(name, nodeAffinity)
+}
+
+func testAccKubernetesPersistentVolumeConfig_hostPath_withoutNodeAffinity(name string) string {
+	return testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity(name, "")
 }

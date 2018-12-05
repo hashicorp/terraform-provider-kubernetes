@@ -12,6 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var permittedInternalAnnotations = map[string]bool{}
+
 func idParts(id string) (string, string, error) {
 	parts := strings.Split(id, "/")
 	if len(parts) != 2 {
@@ -123,9 +125,11 @@ func removeInternalKeys(m map[string]string) map[string]string {
 }
 
 func isInternalKey(annotationKey string) bool {
-	u, err := url.Parse("//" + annotationKey)
-	if err == nil && strings.HasSuffix(u.Hostname(), "kubernetes.io") {
-		return true
+	if permittedInternalAnnotations[annotationKey] != true {
+		u, err := url.Parse("//" + annotationKey)
+		if err == nil && strings.HasSuffix(u.Hostname(), "kubernetes.io") {
+			return true
+		}
 	}
 
 	return false

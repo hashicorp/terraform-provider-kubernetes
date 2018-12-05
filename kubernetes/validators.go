@@ -11,6 +11,18 @@ import (
 	utilValidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
+func addAnnotationToWhiteList(value interface{}, key string) (ws []string, es []error) {
+	errors := utilValidation.IsQualifiedName(strings.ToLower(value.(string)))
+	if len(errors) > 0 {
+		for _, e := range errors {
+			es = append(es, fmt.Errorf("invalid annotation key %s (%q) %s", key, value.(string), e))
+		}
+	} else {
+		permittedInternalAnnotations[value.(string)] = true
+	}
+	return
+}
+
 func validateAnnotations(value interface{}, key string) (ws []string, es []error) {
 	m := value.(map[string]interface{})
 	for k, _ := range m {

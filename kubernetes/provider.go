@@ -101,6 +101,13 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_LOAD_CONFIG_FILE", true),
 				Description: "Load local kubeconfig.",
 			},
+			"internal_annotations_whitelist": {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Description: "List of internal annotations to allow",
+				Elem:        &schema.Schema{Type: schema.TypeString, ValidateFunc: addAnnotationToWhiteList},
+				Set:         schema.HashString,
+			},
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -131,6 +138,13 @@ func Provider() terraform.ResourceProvider {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
+
+	if v, ok := d.GetOk("internal_annotations_whitelist"); ok {
+		vs := v.(*schema.Set).List()
+		for _, raw := range vs {
+			permittedInternalAnnotations[raw.(string)] = true
+		}
+	}
 
 	var cfg *restclient.Config
 	var err error

@@ -17,7 +17,9 @@ func TestIsInternalKey(t *testing.T) {
 		{"any.kubernetes.io", true},
 		{"kubernetes.io", true},
 		{"pv.kubernetes.io/any/path", true},
+		{"kubernetes.io/whitelist", false},
 	}
+	permittedInternalAnnotations["kubernetes.io/whitelist"] = true
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			isInternal := isInternalKey(tc.Key)

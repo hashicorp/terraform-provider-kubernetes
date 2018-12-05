@@ -92,6 +92,38 @@ provider "kubernetes" {
 If you have **both** valid configuration in a config file and static configuration, the static one is used as override.
 i.e. any static field will override its counterpart loaded from the config.
 
+### Allowing Internal Annotations
+
+The provider does not allow annotations that it considers internal to Kubernetes; that is, annotations that are in the `kubernetes.io` namespace.  For example, trying to use the annotation `storageclass.kubernetes.io/is-default-class` will cause the provider to generate an error similar to the following:
+
+```
+Error: module.web.kubernetes_service.website-service: metadata.0.annotations: "storageclass.kubernetes.io/is-default-class" is internal Kubernetes annotation
+``` 
+
+Because Kubernetes requires the use of annotations in the `kubernetes.io` namespace to configure SSL, storage, cloud load-balancing, and more, the provider supports the `internal_annotations_whitelist` argument to allow overriding this behavior.  For example:
+
+```hcl
+provider "kubernetes" {
+  internal_annotations_whitelist = [
+    "storageclass.kubernetes.io/is-default-class",
+  ]
+}
+
+resource "kubernetes_storage_class" "gp2" {
+  metadata {
+    name = "gp2"
+
+    annotations {
+      "storageclass.kubernetes.io/is-default-class" = "true"
+    }
+  }
+  storage_provisioner = "kubernetes.io/aws-ebs"
+  parameters {
+    type      = "gp2"
+    encrypted = "true"
+  }
+}
+```
 ## Argument Reference
 
 The following arguments are supported:
@@ -109,4 +141,4 @@ The following arguments are supported:
 * `config_context_cluster` - (Optional) Cluster context of the kube config (name of the kubeconfig cluster, `--cluster` flag in `kubectl`). Can be sourced from `KUBE_CTX_CLUSTER`.
 * `token` - (Optional) Token of your service account.  Can be sourced from `KUBE_TOKEN`.
 * `load_config_file` - (Optional) By default the local config (~/.kube/config) is loaded when you use this provider. This option at false disable this behaviour. Can be sourced from `KUBE_LOAD_CONFIG_FILE`.
-
+* `internal_annotations_whitelist` - (Optional) By default the use of internal annotations is not allowed.  This option specifies a list of internal annotations that should be allowed.

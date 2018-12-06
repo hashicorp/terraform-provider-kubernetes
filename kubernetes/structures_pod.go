@@ -76,6 +76,10 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["termination_grace_period_seconds"] = *in.TerminationGracePeriodSeconds
 	}
 
+	if len(in.Tolerations) > 0 {
+		att["tolerations"] = flattenTolerations(in.Tolerations)
+	}
+
 	if len(in.Volumes) > 0 {
 		v, err := flattenVolumes(in.Volumes)
 		if err != nil {
@@ -170,6 +174,31 @@ func flattenSeLinuxOptions(in *v1.SELinuxOptions) []interface{} {
 		att["level"] = in.Level
 	}
 	return []interface{}{att}
+}
+
+func flattenTolerations(tolerations []v1.Toleration) []interface{} {
+	att := make([]interface{}, len(tolerations))
+	for i, v := range tolerations {
+		obj := map[string]interface{}{}
+
+		if v.Effect != "" {
+			obj["effect"] = string(v.Effect)
+		}
+		if v.Key != "" {
+			obj["key"] = v.Key
+		}
+		if v.Operator != "" {
+			obj["operator"] = string(v.Operator)
+		}
+		if v.TolerationSeconds != nil {
+			obj["toleration_seconds"] = *v.TolerationSeconds
+		}
+		if v.Value != "" {
+			obj["value"] = v.Value
+		}
+		att[i] = obj
+	}
+	return att
 }
 
 func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
@@ -483,6 +512,10 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.TerminationGracePeriodSeconds = ptrToInt64(int64(v))
 	}
 
+	if v, ok := in["tolerations"].([]interface{}); ok && len(v) > 0 {
+		obj.Tolerations = expandTolerations(v)
+	}
+
 	if v, ok := in["volume"].([]interface{}); ok && len(v) > 0 {
 		cs, err := expandVolumes(v)
 		if err != nil {
@@ -763,6 +796,33 @@ func expandSecretVolumeSource(l []interface{}) (*v1.SecretVolumeSource, error) {
 	}
 
 	return obj, nil
+}
+
+func expandTolerations(tolerations []interface{}) []v1.Toleration {
+	if len(tolerations) == 0 {
+		return []v1.Toleration{}
+	}
+	ts := make([]v1.Toleration, len(tolerations))
+	for i, t := range tolerations {
+		m := t.(map[string]interface{})
+
+		if value, ok := m["effect"]; ok {
+			ts[i].Effect = v1.TaintEffect(value.(string))
+		}
+		if value, ok := m["key"]; ok {
+			ts[i].Key = value.(string)
+		}
+		if value, ok := m["operator"]; ok {
+			ts[i].Operator = v1.TolerationOperator(value.(string))
+		}
+		if value, ok := m["toleration_seconds"]; ok {
+			ts[i].TolerationSeconds = ptrToInt64(int64(value.(int)))
+		}
+		if value, ok := m["value"]; ok {
+			ts[i].Value = value.(string)
+		}
+	}
+	return ts
 }
 
 func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {

@@ -111,7 +111,7 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 													Optional:    true,
 													MaxItems:    1,
 													Elem: &schema.Resource{
-														Schema: labelSelectorFields(),
+														Schema: labelSelectorFields(true),
 													},
 												},
 												"pod_selector": {
@@ -120,7 +120,7 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 													Optional:    true,
 													MaxItems:    1,
 													Elem: &schema.Resource{
-														Schema: labelSelectorFields(),
+														Schema: labelSelectorFields(true),
 													},
 												},
 											},
@@ -188,7 +188,7 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 													Optional:    true,
 													MaxItems:    1,
 													Elem: &schema.Resource{
-														Schema: labelSelectorFields(),
+														Schema: labelSelectorFields(true),
 													},
 												},
 												"pod_selector": {
@@ -197,7 +197,7 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 													Optional:    true,
 													MaxItems:    1,
 													Elem: &schema.Resource{
-														Schema: labelSelectorFields(),
+														Schema: labelSelectorFields(true),
 													},
 												},
 											},
@@ -212,7 +212,7 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 							Required:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
-								Schema: labelSelectorFields(),
+								Schema: labelSelectorFields(true),
 							},
 						},
 						// The policy_types property is made required because the default value is only evaluated server side on resource creation.

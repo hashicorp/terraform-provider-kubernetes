@@ -30,6 +30,9 @@ func flattenContainerSecurityContext(in *v1.SecurityContext) []interface{} {
 	if in.ReadOnlyRootFilesystem != nil {
 		att["read_only_root_filesystem"] = *in.ReadOnlyRootFilesystem
 	}
+	if in.RunAsGroup != nil {
+		att["run_as_group"] = *in.RunAsGroup
+	}
 	if in.RunAsNonRoot != nil {
 		att["run_as_non_root"] = *in.RunAsNonRoot
 	}
@@ -553,6 +556,9 @@ func expandContainerSecurityContext(l []interface{}) *v1.SecurityContext {
 	}
 	if v, ok := in["read_only_root_filesystem"]; ok {
 		obj.ReadOnlyRootFilesystem = ptrToBool(v.(bool))
+	}
+	if v, ok := in["run_as_group"]; ok {
+		obj.RunAsGroup = ptrToInt64(int64(v.(int)))
 	}
 	if v, ok := in["run_as_non_root"]; ok {
 		obj.RunAsNonRoot = ptrToBool(v.(bool))

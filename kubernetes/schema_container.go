@@ -627,6 +627,11 @@ func securityContextSchema() *schema.Resource {
 			Default:     false,
 			Description: "Whether this container has a read-only root filesystem. Default is false.",
 		},
+		"run_as_group": {
+			Type:        schema.TypeInt,
+			Description: "The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
+			Optional:    true,
+		},
 		"run_as_non_root": {
 			Type:        schema.TypeBool,
 			Description: "Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does. If unset or false, no such validation will be performed. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",

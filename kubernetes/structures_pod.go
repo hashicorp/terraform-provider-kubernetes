@@ -127,6 +127,9 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	if in.FSGroup != nil {
 		att["fs_group"] = *in.FSGroup
 	}
+	if in.RunAsGroup != nil {
+		att["run_as_group"] = *in.RunAsGroup
+	}
 	if in.RunAsNonRoot != nil {
 		att["run_as_non_root"] = *in.RunAsNonRoot
 	}
@@ -528,6 +531,9 @@ func expandPodSecurityContext(l []interface{}) *v1.PodSecurityContext {
 	obj := &v1.PodSecurityContext{}
 	if v, ok := in["fs_group"].(int); ok {
 		obj.FSGroup = ptrToInt64(int64(v))
+	}
+	if v, ok := in["run_as_group"].(int); ok {
+		obj.RunAsGroup = ptrToInt64(int64(v))
 	}
 	if v, ok := in["run_as_non_root"].(bool); ok {
 		obj.RunAsNonRoot = ptrToBool(v)

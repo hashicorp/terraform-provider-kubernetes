@@ -205,6 +205,7 @@ func TestAccKubernetesReplicationController_with_security_context(t *testing.T) 
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.fs_group", "100"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.run_as_group", "100"),
 					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.run_as_non_root", "true"),
 					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.run_as_user", "101"),
 					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.supplemental_groups.#", "1"),
@@ -739,6 +740,7 @@ resource "kubernetes_replication_controller" "test" {
       spec {
         security_context {
           fs_group            = 100
+          run_as_group        = 100
           run_as_non_root     = true
           run_as_user         = 101
           supplemental_groups = [101]

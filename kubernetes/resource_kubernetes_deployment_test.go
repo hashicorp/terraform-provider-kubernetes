@@ -185,6 +185,7 @@ func TestAccKubernetesDeployment_with_security_context(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.fs_group", "100"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.run_as_group", "100"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.run_as_non_root", "true"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.run_as_user", "101"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.supplemental_groups.#", "1"),
@@ -340,6 +341,7 @@ func TestAccKubernetesDeployment_with_container_security_context(t *testing.T) {
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.capabilities.0.drop.0", "all"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.privileged", "true"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.read_only_root_filesystem", "true"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.run_as_group", "200"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.run_as_non_root", "true"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.run_as_user", "201"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.se_linux_options.#", "1"),
@@ -932,6 +934,7 @@ resource "kubernetes_deployment" "test" {
       spec {
         security_context {
           fs_group            = 100
+          run_as_group        = 100
           run_as_non_root     = true
           run_as_user         = 101
           supplemental_groups = [101]
@@ -1202,6 +1205,7 @@ resource "kubernetes_deployment" "test" {
 
             privileged                = true
             read_only_root_filesystem = true
+            run_as_group              = 200
             run_as_non_root           = true
             run_as_user               = 201
 

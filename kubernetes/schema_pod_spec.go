@@ -107,21 +107,13 @@ func podSpecFields(isUpdatable bool) map[string]*schema.Schema {
 					},
 					"run_as_non_root": {
 						Type:        schema.TypeBool,
-						Description: "Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does.",
+						Description: "Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does. If unset or false, no such validation will be performed. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
 						Optional:    true,
 					},
 					"run_as_user": {
 						Type:        schema.TypeInt,
-						Description: "The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified",
+						Description: "The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.",
 						Optional:    true,
-					},
-					"supplemental_groups": {
-						Type:        schema.TypeSet,
-						Description: "A list of groups applied to the first process run in each container, in addition to the container's primary GID. If unspecified, no groups will be added to any container.",
-						Optional:    true,
-						Elem: &schema.Schema{
-							Type: schema.TypeInt,
-						},
 					},
 					"se_linux_options": {
 						Type:        schema.TypeList,
@@ -130,6 +122,14 @@ func podSpecFields(isUpdatable bool) map[string]*schema.Schema {
 						MaxItems:    1,
 						Elem: &schema.Resource{
 							Schema: seLinuxOptionsField(),
+						},
+					},
+					"supplemental_groups": {
+						Type:        schema.TypeSet,
+						Description: "A list of groups applied to the first process run in each container, in addition to the container's primary GID. If unspecified, no groups will be added to any container.",
+						Optional:    true,
+						Elem: &schema.Schema{
+							Type: schema.TypeInt,
 						},
 					},
 				},

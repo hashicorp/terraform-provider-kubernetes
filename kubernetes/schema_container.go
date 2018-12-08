@@ -590,7 +590,7 @@ func securityContextSchema() *schema.Resource {
 		"allow_privilege_escalation": {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Default:     false,
+			Default:     true,
 			Description: `AllowPrivilegeEscalation controls whether a process can gain more privileges than its parent process. This bool directly controls if the no_new_privs flag will be set on the container process. AllowPrivilegeEscalation is true always when the container is: 1) run as Privileged 2) has CAP_SYS_ADMIN`,
 		},
 		"capabilities": {

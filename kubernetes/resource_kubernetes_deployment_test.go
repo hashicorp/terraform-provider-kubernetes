@@ -157,7 +157,7 @@ func TestAccKubernetesDeployment_with_security_context(t *testing.T) {
 	var conf api.Deployment
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := "nginx:1.7.9"
+	imageName := "redis:5.0.2"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -266,7 +266,7 @@ func TestAccKubernetesDeployment_with_container_lifecycle(t *testing.T) {
 	var conf api.Deployment
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "gcr.io/google_containers/busybox"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -297,7 +297,7 @@ func TestAccKubernetesDeployment_with_container_security_context(t *testing.T) {
 	var conf api.Deployment
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := "nginx:1.7.9"
+	imageName := "redis:5.0.2"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -944,7 +944,7 @@ resource "kubernetes_deployment" "test" {
         container {
           image = "%s"
           name  = "containername"
-          args  = ["/server"]
+          command = ["sleep", "60"]
 
           lifecycle {
             post_start {

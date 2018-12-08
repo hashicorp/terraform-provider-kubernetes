@@ -1028,8 +1028,9 @@ resource "kubernetes_deployment" "test" {
         }
 
         container {
-          image = "%s"
+          image = "gcr.io/google_containers/liveness"
           name  = "containername2"
+          args  = ["/server"]
 
           security_context {
             allow_privilege_escalation = true
@@ -1053,7 +1054,7 @@ resource "kubernetes_deployment" "test" {
     }
   }
 }
-`, rcName, imageName, imageName)
+`, rcName, imageName)
 }
 
 func testAccKubernetesDeploymentConfigWithVolumeMounts(secretName, rcName, imageName string) string {

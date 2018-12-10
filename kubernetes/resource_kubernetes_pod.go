@@ -53,8 +53,6 @@ func resourceKubernetesPodCreate(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	spec.AutomountServiceAccountToken = ptrToBool(false)
-
 	pod := api.Pod{
 		ObjectMeta: metadata,
 		Spec:       *spec,

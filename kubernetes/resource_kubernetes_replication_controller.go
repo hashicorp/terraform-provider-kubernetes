@@ -82,8 +82,6 @@ func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta 
 		return err
 	}
 
-	spec.Template.Spec.AutomountServiceAccountToken = ptrToBool(false)
-
 	rc := api.ReplicationController{
 		ObjectMeta: metadata,
 		Spec:       *spec,

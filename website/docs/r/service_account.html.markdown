@@ -50,6 +50,7 @@ The following arguments are supported:
 * `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the service account. May match selectors of replication controllers and services. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
 * `name` - (Optional) Name of the service account, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 * `namespace` - (Optional) Namespace defines the space within which name of the service account must be unique.
+* `automount_service_account_token` - (Optional) Boolean, `true` to enable automatic mounting of the service account token
 
 #### Attributes
 

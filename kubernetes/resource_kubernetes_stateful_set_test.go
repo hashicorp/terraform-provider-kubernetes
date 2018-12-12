@@ -61,6 +61,34 @@ func TestAccKubernetesStatefulSet_basic_idempotency(t *testing.T) {
 		},
 	})
 }
+
+func TestAccKubernetesStatefulSet_update_image(t *testing.T) {
+	var conf api.StatefulSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: statefulSetTestResourceName,
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesStatefulSetDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStatefulSetConfigBasic(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetExists(statefulSetTestResourceName, &conf),
+					testAccKubernetesStatefulSetChecksBasic(name),
+				),
+			},
+			{
+				Config: testAccKubernetesStatefulSetConfigUpdateImage(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetExists(statefulSetTestResourceName, &conf),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.container.0.image", "k8s.gcr.io/liveness:latest"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesStatefulSet_update_template_selector_labels(t *testing.T) {
 	var conf api.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -370,6 +398,90 @@ resource "kubernetes_stateful_set" "test" {
         container {
           name  = "ss-test"
           image = "k8s.gcr.io/pause:latest"
+
+          port {
+            container_port = "80"
+            name           = "web"
+          }
+
+          volume_mount {
+            name       = "workdir"
+            mount_path = "/work-dir"
+          }
+        }
+      }
+    }
+
+    update_strategy {
+      type = "RollingUpdate"
+
+      rolling_update {
+        partition = 1
+      }
+    }
+
+    volume_claim_template {
+      metadata {
+        name = "ss-test"
+      }
+
+      spec {
+        access_modes = ["ReadWriteOnce"]
+
+        resources {
+          requests {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
+  }
+}
+`, name)
+}
+
+func testAccKubernetesStatefulSetConfigUpdateImage(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_stateful_set" "test" {
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    pod_management_policy  = "OrderedReady"
+    replicas               = 1
+    revision_history_limit = 11
+
+    selector {
+      match_labels {
+        app = "ss-test"
+      }
+    }
+
+    service_name = "ss-test-service"
+
+    template {
+      metadata {
+        labels {
+          app = "ss-test"
+        }
+      }
+
+      spec {
+        container {
+          name  = "ss-test"
+          image = "k8s.gcr.io/liveness:latest"
 
           port {
             container_port = "80"

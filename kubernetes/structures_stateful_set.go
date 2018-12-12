@@ -267,7 +267,7 @@ func patchPodTemplateSpec(keyPrefix, pathPrefix string, d *schema.ResourceData) 
 
 	if d.HasChange(keyPrefix + "spec") {
 		log.Printf("[TRACE] StatefulSet.Spec.Template.Spec has changes")
-		p, err := patchPodSpec(pathPrefix+"spec.0.", keyPrefix+"spec/", d)
+		p, err := patchPodSpec(pathPrefix+"spec", keyPrefix+"spec.0.", d)
 		if err != nil {
 			return ops, err
 		}

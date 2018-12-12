@@ -74,18 +74,16 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 
 func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	att := make(map[string]interface{})
+
 	if in.FSGroup != nil {
 		att["fs_group"] = *in.FSGroup
 	}
-
 	if in.RunAsNonRoot != nil {
 		att["run_as_non_root"] = *in.RunAsNonRoot
 	}
-
 	if in.RunAsUser != nil {
 		att["run_as_user"] = *in.RunAsUser
 	}
-
 	if len(in.SupplementalGroups) > 0 {
 		att["supplemental_groups"] = newInt64Set(schema.HashSchema(&schema.Schema{
 			Type: schema.TypeInt,
@@ -424,12 +422,11 @@ func expandPodSecurityContext(l []interface{}) *v1.PodSecurityContext {
 	if v, ok := in["run_as_user"].(int); ok {
 		obj.RunAsUser = ptrToInt64(int64(v))
 	}
-	if v, ok := in["supplemental_groups"].(*schema.Set); ok {
-		obj.SupplementalGroups = schemaSetToInt64Array(v)
-	}
-
 	if v, ok := in["se_linux_options"].([]interface{}); ok && len(v) > 0 {
 		obj.SELinuxOptions = expandSeLinuxOptions(v)
+	}
+	if v, ok := in["supplemental_groups"].(*schema.Set); ok {
+		obj.SupplementalGroups = schemaSetToInt64Array(v)
 	}
 
 	return obj

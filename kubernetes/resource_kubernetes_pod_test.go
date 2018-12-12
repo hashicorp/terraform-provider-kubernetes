@@ -268,6 +268,7 @@ func TestAccKubernetesPod_with_pod_security_context(t *testing.T) {
 				Config: testAccKubernetesPodConfigWithSecurityContext(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.security_context.0.fs_group", "100"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.security_context.0.run_as_non_root", "true"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.security_context.0.run_as_user", "101"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.security_context.0.supplemental_groups.#", "1"),
@@ -822,6 +823,7 @@ resource "kubernetes_pod" "test" {
 
   spec {
     security_context {
+      fs_group            = 100
       run_as_non_root     = true
       run_as_user         = 101
       supplemental_groups = [101]

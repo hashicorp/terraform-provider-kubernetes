@@ -18,25 +18,26 @@ func flattenCapability(in []v1.Capability) []string {
 func flattenContainerSecurityContext(in *v1.SecurityContext) []interface{} {
 	att := make(map[string]interface{})
 
+	if in.AllowPrivilegeEscalation != nil {
+		att["allow_privilege_escalation"] = *in.AllowPrivilegeEscalation
+	}
+	if in.Capabilities != nil {
+		att["capabilities"] = flattenSecurityCapabilities(in.Capabilities)
+	}
 	if in.Privileged != nil {
 		att["privileged"] = *in.Privileged
 	}
 	if in.ReadOnlyRootFilesystem != nil {
 		att["read_only_root_filesystem"] = *in.ReadOnlyRootFilesystem
 	}
-
 	if in.RunAsNonRoot != nil {
 		att["run_as_non_root"] = *in.RunAsNonRoot
 	}
 	if in.RunAsUser != nil {
 		att["run_as_user"] = *in.RunAsUser
 	}
-
 	if in.SELinuxOptions != nil {
 		att["se_linux_options"] = flattenSeLinuxOptions(in.SELinuxOptions)
-	}
-	if in.Capabilities != nil {
-		att["capabilities"] = flattenSecurityCapabilities(in.Capabilities)
 	}
 	return []interface{}{att}
 
@@ -541,6 +542,12 @@ func expandContainerSecurityContext(l []interface{}) *v1.SecurityContext {
 	}
 	in := l[0].(map[string]interface{})
 	obj := v1.SecurityContext{}
+	if v, ok := in["allow_privilege_escalation"]; ok {
+		obj.AllowPrivilegeEscalation = ptrToBool(v.(bool))
+	}
+	if v, ok := in["capabilities"].([]interface{}); ok && len(v) > 0 {
+		obj.Capabilities = expandSecurityCapabilities(v)
+	}
 	if v, ok := in["privileged"]; ok {
 		obj.Privileged = ptrToBool(v.(bool))
 	}
@@ -555,9 +562,6 @@ func expandContainerSecurityContext(l []interface{}) *v1.SecurityContext {
 	}
 	if v, ok := in["se_linux_options"].([]interface{}); ok && len(v) > 0 {
 		obj.SELinuxOptions = expandSeLinuxOptions(v)
-	}
-	if v, ok := in["capabilities"].([]interface{}); ok && len(v) > 0 {
-		obj.Capabilities = expandSecurityCapabilities(v)
 	}
 
 	return &obj

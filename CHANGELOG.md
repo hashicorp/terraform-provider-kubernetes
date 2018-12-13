@@ -8,6 +8,10 @@ BUG FIXES:
 
 * `resource/kubernetes_stateful_set`: Fix updates of stateful set images ([#252](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/252))
 
+FEATURES:
+
+* **New Resource:** `kubernetes_network_policy` ([#118](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/118))
+
 ## 1.4.0 (November 29, 2018)
 
 FEATURES:

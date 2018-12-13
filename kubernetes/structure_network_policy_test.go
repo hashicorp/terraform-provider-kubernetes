@@ -4,14 +4,15 @@ import (
 	api "k8s.io/api/core/v1"
 	"k8s.io/api/networking/v1"
 
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"reflect"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 var (
-	protoTcp      = api.ProtocolTCP
-	protoUdp      = api.ProtocolUDP
+	protoTCP      = api.ProtocolTCP
+	protoUDP      = api.ProtocolUDP
 	portName      = intstr.FromString("http")
 	portNumerical = intstr.FromInt(8125)
 )
@@ -25,7 +26,7 @@ func TestFlattenNetworkPolicyIngressPorts(t *testing.T) {
 		{
 			[]v1.NetworkPolicyPort{{
 				Port:     &portName,
-				Protocol: &protoTcp,
+				Protocol: &protoTCP,
 			}},
 			[]interface{}{
 				map[string]interface{}{
@@ -47,7 +48,7 @@ func TestFlattenNetworkPolicyIngressPorts(t *testing.T) {
 		{
 			[]v1.NetworkPolicyPort{{
 				Port:     &portNumerical,
-				Protocol: &protoUdp,
+				Protocol: &protoUDP,
 			}},
 			[]interface{}{
 				map[string]interface{}{
@@ -90,7 +91,7 @@ func TestExpandNetworkPolicyIngressPorts(t *testing.T) {
 			},
 			[]v1.NetworkPolicyPort{{
 				Port:     &portName,
-				Protocol: &protoTcp,
+				Protocol: &protoTCP,
 			}},
 		},
 		{
@@ -112,7 +113,7 @@ func TestExpandNetworkPolicyIngressPorts(t *testing.T) {
 			},
 			[]v1.NetworkPolicyPort{{
 				Port:     &portNumerical,
-				Protocol: &protoUdp,
+				Protocol: &protoUDP,
 			}},
 		},
 		{
@@ -126,8 +127,8 @@ func TestExpandNetworkPolicyIngressPorts(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output := expandNetworkPolicyPorts(tc.Input)
-		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
+		output, _ := expandNetworkPolicyPorts(tc.Input)
+		if !reflect.DeepEqual(output, &tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)
 		}

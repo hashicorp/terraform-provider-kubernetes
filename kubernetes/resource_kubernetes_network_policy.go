@@ -239,9 +239,14 @@ func resourceKubernetesNetworkPolicyCreate(d *schema.ResourceData, meta interfac
 	conn := meta.(*kubernetes.Clientset)
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	spec, err := expandNetworkPolicySpec(d.Get("spec").([]interface{}))
+	if err != nil {
+		return err
+	}
+
 	svc := api.NetworkPolicy{
 		ObjectMeta: metadata,
-		Spec:       expandNetworkPolicySpec(d.Get("spec").([]interface{})),
+		Spec:       *spec,
 	}
 	log.Printf("[INFO] Creating new network policy: %#v", svc)
 	out, err := conn.NetworkingV1().NetworkPolicies(metadata.Namespace).Create(&svc)
@@ -294,8 +299,11 @@ func resourceKubernetesNetworkPolicyUpdate(d *schema.ResourceData, meta interfac
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("spec") {
-		diffOps := patchNetworkPolicySpec("spec.0.", "/spec", d)
-		ops = append(ops, diffOps...)
+		diffOps, err := patchNetworkPolicySpec("spec.0.", "/spec", d)
+		if err != nil {
+			return err
+		}
+		ops = append(ops, *diffOps...)
 	}
 	data, err := ops.MarshalJSON()
 	if err != nil {

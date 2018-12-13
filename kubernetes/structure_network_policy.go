@@ -1,11 +1,13 @@
 package kubernetes
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"strconv"
 )
 
 // Flatteners
@@ -105,127 +107,165 @@ func flattenIPBlock(in *v1.IPBlock) []interface{} {
 
 // Expanders
 
-func expandNetworkPolicySpec(l []interface{}) v1.NetworkPolicySpec {
-	// There must be exactly one spec element
-	obj := v1.NetworkPolicySpec{}
-	for _, spec := range l {
-		in := spec.(map[string]interface{})
-		obj.PodSelector = *expandLabelSelector(in["pod_selector"].([]interface{}))
-		if v, ok := in["ingress"].([]interface{}); ok && len(v) > 0 {
-			obj.Ingress = expandNetworkPolicyIngress(v)
-		}
-		if v, ok := in["egress"].([]interface{}); ok && len(v) > 0 {
-			obj.Egress = expandNetworkPolicyEgress(v)
-		}
-		obj.PolicyTypes = expandNetworkPolicyTypes(in["policy_types"].([]interface{}))
+func expandNetworkPolicySpec(in []interface{}) (*v1.NetworkPolicySpec, error) {
+	spec := v1.NetworkPolicySpec{}
+
+	if len(in) == 0 || in[0] == nil {
+		return nil, fmt.Errorf("failed to expand NetworkPolicy.Spec: null or empty input")
 	}
-	return obj
+
+	m := in[0].(map[string]interface{})
+	spec.PodSelector = *expandLabelSelector(m["pod_selector"].([]interface{}))
+	if v, ok := m["ingress"].([]interface{}); ok && len(v) > 0 {
+		ingress, err := expandNetworkPolicyIngress(v)
+		if err != nil {
+			return nil, err
+		}
+		spec.Ingress = *ingress
+	}
+	if v, ok := m["egress"].([]interface{}); ok && len(v) > 0 {
+		egress, err := expandNetworkPolicyEgress(v)
+		if err != nil {
+			return nil, err
+		}
+		spec.Egress = *egress
+	}
+	policyTypes, err := expandNetworkPolicyTypes(m["policy_types"].([]interface{}))
+	if err != nil {
+		return nil, err
+	}
+	spec.PolicyTypes = *policyTypes
+
+	return &spec, nil
 }
 
-func expandNetworkPolicyIngress(l []interface{}) []v1.NetworkPolicyIngressRule {
-	obj := make([]v1.NetworkPolicyIngressRule, len(l), len(l))
+func expandNetworkPolicyIngress(l []interface{}) (*[]v1.NetworkPolicyIngressRule, error) {
+	ingresses := make([]v1.NetworkPolicyIngressRule, len(l), len(l))
 	for i, ingress := range l {
 		if ingress != nil {
 			in := ingress.(map[string]interface{})
-			obj[i] = v1.NetworkPolicyIngressRule{}
+			ingresses[i] = v1.NetworkPolicyIngressRule{}
 			if v, ok := in["ports"].([]interface{}); ok && len(v) > 0 {
-				obj[i].Ports = expandNetworkPolicyPorts(v)
+				policyPorts, err := expandNetworkPolicyPorts(v)
+				if err != nil {
+					return nil, err
+				}
+				ingresses[i].Ports = *policyPorts
 			}
 			if v, ok := in["from"].([]interface{}); ok && len(v) > 0 {
-				obj[i].From = expandNetworkPolicyPeer(v)
+				policyPeers, err := expandNetworkPolicyPeer(v)
+				if err != nil {
+					return nil, err
+				}
+				ingresses[i].From = *policyPeers
 			}
 		}
 	}
-	return obj
+	return &ingresses, nil
 }
 
-func expandNetworkPolicyEgress(l []interface{}) []v1.NetworkPolicyEgressRule {
-	obj := make([]v1.NetworkPolicyEgressRule, len(l), len(l))
+func expandNetworkPolicyEgress(l []interface{}) (*[]v1.NetworkPolicyEgressRule, error) {
+	egresses := make([]v1.NetworkPolicyEgressRule, len(l), len(l))
 	for i, egress := range l {
 		if egress != nil {
 			in := egress.(map[string]interface{})
-			obj[i] = v1.NetworkPolicyEgressRule{}
+			egresses[i] = v1.NetworkPolicyEgressRule{}
 			if v, ok := in["ports"].([]interface{}); ok && len(v) > 0 {
-				obj[i].Ports = expandNetworkPolicyPorts(v)
+				policyPorts, err := expandNetworkPolicyPorts(v)
+				if err != nil {
+					return nil, err
+				}
+				egresses[i].Ports = *policyPorts
 			}
 			if v, ok := in["to"].([]interface{}); ok && len(v) > 0 {
-				obj[i].To = expandNetworkPolicyPeer(v)
+				policyPeers, err := expandNetworkPolicyPeer(v)
+				if err != nil {
+					return nil, err
+				}
+				egresses[i].To = *policyPeers
 			}
 		}
 	}
-	return obj
+	return &egresses, nil
 }
 
-func expandNetworkPolicyPorts(l []interface{}) []v1.NetworkPolicyPort {
-	obj := make([]v1.NetworkPolicyPort, len(l), len(l))
+func expandNetworkPolicyPorts(l []interface{}) (*[]v1.NetworkPolicyPort, error) {
+	policyPorts := make([]v1.NetworkPolicyPort, len(l), len(l))
 	for i, port := range l {
 		in := port.(map[string]interface{})
 		if in["port"] != nil && in["port"] != "" {
 			portStr := in["port"].(string)
 			if portInt, err := strconv.Atoi(portStr); err == nil && strconv.Itoa(portInt) == portStr {
 				v := intstr.FromInt(portInt)
-				obj[i].Port = &v
+				policyPorts[i].Port = &v
 			} else {
 				v := intstr.FromString(portStr)
-				obj[i].Port = &v
+				policyPorts[i].Port = &v
 			}
 		}
 		if in["protocol"] != nil && in["protocol"] != "" {
 			v := api.Protocol(in["protocol"].(string))
-			obj[i].Protocol = &v
+			policyPorts[i].Protocol = &v
 
 		}
 	}
-	return obj
+	return &policyPorts, nil
 }
 
-func expandNetworkPolicyPeer(l []interface{}) []v1.NetworkPolicyPeer {
-	obj := make([]v1.NetworkPolicyPeer, len(l), len(l))
+func expandNetworkPolicyPeer(l []interface{}) (*[]v1.NetworkPolicyPeer, error) {
+	policyPeers := make([]v1.NetworkPolicyPeer, len(l), len(l))
 	for i, peer := range l {
 		in := peer.(map[string]interface{})
 		if v, ok := in["ip_block"].([]interface{}); ok && len(v) > 0 {
-			obj[i].IPBlock = expandIPBlock(v)
+			ipBlock, err := expandIPBlock(v)
+			if err != nil {
+				return nil, err
+			}
+			policyPeers[i].IPBlock = ipBlock
 		}
 		if v, ok := in["namespace_selector"].([]interface{}); ok && len(v) > 0 {
-			obj[i].NamespaceSelector = expandLabelSelector(v)
+			policyPeers[i].NamespaceSelector = expandLabelSelector(v)
 		}
 		if v, ok := in["pod_selector"].([]interface{}); ok && len(v) > 0 {
-			obj[i].PodSelector = expandLabelSelector(v)
+			policyPeers[i].PodSelector = expandLabelSelector(v)
 		}
 	}
-	return obj
+	return &policyPeers, nil
 }
 
-func expandIPBlock(l []interface{}) *v1.IPBlock {
-	obj := &v1.IPBlock{}
+func expandIPBlock(l []interface{}) (*v1.IPBlock, error) {
+	ipBlock := v1.IPBlock{}
 	if len(l) == 0 || l[0] == nil {
-		return &v1.IPBlock{}
+		return nil, fmt.Errorf("failed to expand IPBlock: null or empty input")
 	}
 	in := l[0].(map[string]interface{})
 	if v, ok := in["cidr"].(string); ok && v != "" {
-		obj.CIDR = v
+		ipBlock.CIDR = v
 	}
 	if v, ok := in["except"].([]interface{}); ok && len(v) > 0 {
-		obj.Except = expandStringSlice(v)
+		ipBlock.Except = expandStringSlice(v)
 	}
-	return obj
+	return &ipBlock, nil
 }
 
-func expandNetworkPolicyTypes(l []interface{}) []v1.PolicyType {
-	obj := make([]v1.PolicyType, 0, 0)
+func expandNetworkPolicyTypes(l []interface{}) (*[]v1.PolicyType, error) {
+	policyTypes := make([]v1.PolicyType, 0, 0)
 	for _, policyType := range l {
-		obj = append(obj, v1.PolicyType(policyType.(string)))
+		policyTypes = append(policyTypes, v1.PolicyType(policyType.(string)))
 	}
-	return obj
+	return &policyTypes, nil
 }
 
 // Patchers
 
-func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData) PatchOperations {
-	ops := make([]PatchOperation, 0, 0)
+func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData) (*PatchOperations, error) {
+	ops := make(PatchOperations, 0, 0)
 	if d.HasChange(keyPrefix + "ingress") {
 		oldV, _ := d.GetChange(keyPrefix + "ingress")
-		ingress := expandNetworkPolicyIngress(d.Get(keyPrefix + "ingress").([]interface{}))
+		ingress, err := expandNetworkPolicyIngress(d.Get(keyPrefix + "ingress").([]interface{}))
+		if err != nil {
+			return nil, err
+		}
 		if len(oldV.([]interface{})) == 0 {
 			ops = append(ops, &AddOperation{
 				Path:  pathPrefix + "/ingress",
@@ -240,7 +280,10 @@ func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData
 	}
 	if d.HasChange(keyPrefix + "egress") {
 		oldV, _ := d.GetChange(keyPrefix + "egress")
-		egress := expandNetworkPolicyEgress(d.Get(keyPrefix + "egress").([]interface{}))
+		egress, err := expandNetworkPolicyEgress(d.Get(keyPrefix + "egress").([]interface{}))
+		if err != nil {
+			return nil, err
+		}
 		if len(oldV.([]interface{})) == 0 {
 			ops = append(ops, &AddOperation{
 				Path:  pathPrefix + "/egress",
@@ -260,10 +303,14 @@ func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData
 		})
 	}
 	if d.HasChange(keyPrefix + "policy_types") {
+		policyTypes, err := expandNetworkPolicyTypes(d.Get(keyPrefix + "policy_types").([]interface{}))
+		if err != nil {
+			return nil, err
+		}
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/policyTypes",
-			Value: expandNetworkPolicyTypes(d.Get(keyPrefix + "policy_types").([]interface{})),
+			Value: *policyTypes,
 		})
 	}
-	return ops
+	return &ops, nil
 }

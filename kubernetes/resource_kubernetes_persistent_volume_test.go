@@ -836,21 +836,21 @@ resource "kubernetes_storage_class" "test2" {
 func testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity(name, nodeAffinity string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		capacity {
-			storage = "2Gi"
-		}
-		access_modes = ["ReadWriteMany"]
-		persistent_volume_source {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    capacity {
+      storage = "2Gi"
+    }
+    access_modes = ["ReadWriteMany"]
+    persistent_volume_source {
       host_path {
         path = "/mnt/local-volume"
       }
-		}
+    }
     %s
-	}
+  }
 }`, name, nodeAffinity)
 }
 

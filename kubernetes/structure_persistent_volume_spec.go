@@ -1035,25 +1035,12 @@ func patchPersistentVolumeSpec(pathPrefix, prefix string, d *schema.ResourceData
 		}
 	}
 	if d.HasChange(prefix + "node_affinity") {
-		oldIn, newIn := d.GetChange(prefix + "node_affinity")
-		oldV, oldOk := oldIn.([]interface{})
-		newV, newOk := newIn.([]interface{})
-
-		if newOk && len(newV) > 0 {
-			if oldOk && len(oldV) > 0 {
-				ops = append(ops, &ReplaceOperation{
-					Path:  pathPrefix + "/node_affinity",
-					Value: expandVolumeNodeAffinity(newV),
-				})
-			} else {
-				ops = append(ops, &AddOperation{
-					Path:  pathPrefix + "/node_affinity",
-					Value: expandVolumeNodeAffinity(newV),
-				})
-			}
-		} else if oldOk && len(oldV) > 0 {
-			ops = append(ops, &RemoveOperation{Path: pathPrefix + "/node_affinity"})
-		}
+		v := d.Get(prefix + "node_affinity").([]interface{})
+		nodeAffinity := expandVolumeNodeAffinity(v)
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "/nodeAffinity",
+			Value: nodeAffinity,
+		})
 	}
 
 	return ops, nil

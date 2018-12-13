@@ -1,4 +1,9 @@
 ## 1.5.0 (Unreleased)
+
+IMPROVEMENTS:
+
+* `resource/kubernetes_deployment`, `resource/kubernetes_pod`, `resource/kubernetes_replication_controller`, `resource/kubernetes_stateful_set`: Add `allow_privilege_escalation` to container security contexts attributes ([#249](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/249))
+
 ## 1.4.0 (November 29, 2018)
 
 FEATURES:

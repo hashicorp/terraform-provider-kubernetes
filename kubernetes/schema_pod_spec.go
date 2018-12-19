@@ -29,9 +29,9 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Deprecated:   deprecatedMessage,
 		},
 		"automount_service_account_token": {
-			Type: schema.TypeBool,
-			Optional: true,
-			Default: false,
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
 			Description: "AutomountServiceAccountToken indicates whether a service account token should be automatically mounted.",
 		},
 		"container": {

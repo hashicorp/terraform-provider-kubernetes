@@ -21,7 +21,7 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	}
 
 	if in.AutomountServiceAccountToken != nil {
-		att["automount_service_account_token"] = in.AutomountServiceAccountToken
+		att["automount_service_account_token"] = *in.AutomountServiceAccountToken
 	}
 
 	containers, err := flattenContainers(in.Containers)

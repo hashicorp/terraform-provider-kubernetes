@@ -632,6 +632,30 @@ func TestAccKubernetesPod_gke_with_nodeSelector(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPod_config_with_automount_service_account_token(t *testing.T) {
+	var confPod api.Pod
+	var confSA api.ServiceAccount
+
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodConfigWithAutomountServiceAccountToken(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists("kubernetes_pod.test", &confPod),
+					testAccCheckKubernetesServiceAccountExists("kubernetes_service_account.test", &confSA),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.automount_service_account_token", "true"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesPodDestroy(s *terraform.State) error {
 	conn := testAccProvider.Meta().(*kubernetes.Clientset)
 
@@ -1413,4 +1437,36 @@ resource "kubernetes_pod" "test" {
   }
 }
 `, podName, imageName, val)
+}
+
+func testAccKubernetesPodConfigWithAutomountServiceAccountToken(podName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service_account" "test" {
+  metadata {
+    name = "foo"
+  }
+}
+
+resource "kubernetes_pod" "test" {
+  metadata {
+    labels {
+      app = "pod_label"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    service_account_name            = "foo"
+    automount_service_account_token = true
+
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+
+  depends_on = [ "kubernetes_service_account.test" ]
+}
+`, podName, imageName)
 }

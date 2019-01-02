@@ -24,7 +24,7 @@ func podSpecFields(isUpdatable bool) map[string]*schema.Schema {
 			Type:        schema.TypeList,
 			Optional:    true,
 			ForceNew:    true,
-			Description: "List of init containers belonging to the pod. Init containers always run to completion and each must complete succesfully before the next is started. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/",
+			Description: "List of init containers belonging to the pod. Init containers always run to completion and each must complete successfully before the next is started. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/",
 			Elem: &schema.Resource{
 				Schema: containerFields(isUpdatable, true),
 			},

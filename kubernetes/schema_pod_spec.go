@@ -44,7 +44,7 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Optional:    true,
 			Computed:    isComputed,
 			Default:     defaultIfNotComputed(isComputed, "ClusterFirst"),
-			Description: "Set DNS policy for containers within the pod. One of 'ClusterFirst' or 'Default'. Defaults to 'ClusterFirst'.",
+			Description: "Set DNS policy for containers within the pod. One of 'ClusterFirst', 'Default', 'ClusterFirstWithHostNet', or 'None'. Defaults to 'ClusterFirst'.",
 			Deprecated:  deprecatedMessage,
 		},
 		"host_aliases": {
@@ -66,6 +66,35 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 						Type:        schema.TypeString,
 						Required:    true,
 						Description: "IP address of the host file entry.",
+					},
+				},
+			},
+		},
+		"dns_config": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			MaxItems:    1,
+			Description: "DnsConfig holds pod-level DNS settings. Optional: Defaults to empty",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"nameservers": {
+						Type:        schema.TypeList,
+						Description: "A list of IP addresses that will be used as DNS servers for the Pod. There can be at most 3 IP addresses specified. When the Pod’s dnsPolicy is set to “None”, the list must contain at least one IP address, otherwise this property is optional. The servers listed will be combined to the base nameservers generated from the specified DNS policy with duplicate addresses removed.",
+						Optional:    true,
+						MaxItems:    3,
+						Elem:        &schema.Schema{Type: schema.TypeString},
+					},
+					"searches": {
+						Type:        schema.TypeList,
+						Description: "A list of DNS search domains for hostname lookup in the Pod. This property is optional. When specified, the provided list will be merged into the base search domain names generated from the chosen DNS policy. Duplicate domain names are removed. Kubernetes allows for at most 6 search domains.",
+						Optional:    true,
+						MaxItems:    6,
+						Elem:        &schema.Schema{Type: schema.TypeString},
+					},
+					"options": {
+						Type:        schema.TypeMap,
+						Description: "An optional list of objects where each object may have a name property (required) and a value property (optional). The contents in this property will be merged to the options generated from the specified DNS policy. Duplicate entries are removed.",
+						Optional:    true,
 					},
 				},
 			},

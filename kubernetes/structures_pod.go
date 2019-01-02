@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"k8s.io/api/core/v1"
@@ -28,6 +29,7 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	att["init_container"] = initContainers
 
 	att["dns_policy"] = in.DNSPolicy
+	att["dns_config"] = flattenPodDnsConfig(in.DNSConfig)
 
 	att["host_aliases"] = flattenHostaliases(in.HostAliases)
 
@@ -72,6 +74,32 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["volume"] = v
 	}
 	return []interface{}{att}, nil
+}
+
+func flattenPodDnsConfig(in *v1.PodDNSConfig) []interface{} {
+	att := make(map[string]interface{})
+
+	if len(in.Nameservers) > 0 {
+		att["nameservers"] = strings.Join(in.Nameservers, ",")
+	}
+	if len(in.Searches) > 0 {
+		att["searches"] = strings.Join(in.Searches, ",")
+	}
+	if len(in.Options) > 0 {
+		items := make([]interface{}, len(in.Options))
+		for i, v := range in.Options {
+			m := map[string]interface{}{}
+			m["name"] = v.Name
+			m["value"] = v.Value
+			items[i] = m
+		}
+		att["nameservers"] = items
+	}
+
+	if len(att) > 0 {
+		return []interface{}{att}
+	}
+	return []interface{}{}
 }
 
 func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {

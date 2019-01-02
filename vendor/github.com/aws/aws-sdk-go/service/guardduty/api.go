@@ -13,7 +13,7 @@ const opAcceptInvitation = "AcceptInvitation"
 // AcceptInvitationRequest generates a "aws/request.Request" representing the
 // client's request for the AcceptInvitation operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -95,7 +95,7 @@ const opArchiveFindings = "ArchiveFindings"
 // ArchiveFindingsRequest generates a "aws/request.Request" representing the
 // client's request for the ArchiveFindings operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -177,7 +177,7 @@ const opCreateDetector = "CreateDetector"
 // CreateDetectorRequest generates a "aws/request.Request" representing the
 // client's request for the CreateDetector operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -261,7 +261,7 @@ const opCreateIPSet = "CreateIPSet"
 // CreateIPSetRequest generates a "aws/request.Request" representing the
 // client's request for the CreateIPSet operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -344,7 +344,7 @@ const opCreateMembers = "CreateMembers"
 // CreateMembersRequest generates a "aws/request.Request" representing the
 // client's request for the CreateMembers operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -428,7 +428,7 @@ const opCreateSampleFindings = "CreateSampleFindings"
 // CreateSampleFindingsRequest generates a "aws/request.Request" representing the
 // client's request for the CreateSampleFindings operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -512,7 +512,7 @@ const opCreateThreatIntelSet = "CreateThreatIntelSet"
 // CreateThreatIntelSetRequest generates a "aws/request.Request" representing the
 // client's request for the CreateThreatIntelSet operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -595,7 +595,7 @@ const opDeclineInvitations = "DeclineInvitations"
 // DeclineInvitationsRequest generates a "aws/request.Request" representing the
 // client's request for the DeclineInvitations operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -678,7 +678,7 @@ const opDeleteDetector = "DeleteDetector"
 // DeleteDetectorRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteDetector operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -760,7 +760,7 @@ const opDeleteIPSet = "DeleteIPSet"
 // DeleteIPSetRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteIPSet operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -842,7 +842,7 @@ const opDeleteInvitations = "DeleteInvitations"
 // DeleteInvitationsRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteInvitations operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -925,7 +925,7 @@ const opDeleteMembers = "DeleteMembers"
 // DeleteMembersRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteMembers operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1008,7 +1008,7 @@ const opDeleteThreatIntelSet = "DeleteThreatIntelSet"
 // DeleteThreatIntelSetRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteThreatIntelSet operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1090,7 +1090,7 @@ const opDisassociateFromMasterAccount = "DisassociateFromMasterAccount"
 // DisassociateFromMasterAccountRequest generates a "aws/request.Request" representing the
 // client's request for the DisassociateFromMasterAccount operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1172,7 +1172,7 @@ const opDisassociateMembers = "DisassociateMembers"
 // DisassociateMembersRequest generates a "aws/request.Request" representing the
 // client's request for the DisassociateMembers operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1255,7 +1255,7 @@ const opGetDetector = "GetDetector"
 // GetDetectorRequest generates a "aws/request.Request" representing the
 // client's request for the GetDetector operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1337,7 +1337,7 @@ const opGetFindings = "GetFindings"
 // GetFindingsRequest generates a "aws/request.Request" representing the
 // client's request for the GetFindings operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1419,7 +1419,7 @@ const opGetFindingsStatistics = "GetFindingsStatistics"
 // GetFindingsStatisticsRequest generates a "aws/request.Request" representing the
 // client's request for the GetFindingsStatistics operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1501,7 +1501,7 @@ const opGetIPSet = "GetIPSet"
 // GetIPSetRequest generates a "aws/request.Request" representing the
 // client's request for the GetIPSet operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1583,7 +1583,7 @@ const opGetInvitationsCount = "GetInvitationsCount"
 // GetInvitationsCountRequest generates a "aws/request.Request" representing the
 // client's request for the GetInvitationsCount operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1666,7 +1666,7 @@ const opGetMasterAccount = "GetMasterAccount"
 // GetMasterAccountRequest generates a "aws/request.Request" representing the
 // client's request for the GetMasterAccount operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1749,7 +1749,7 @@ const opGetMembers = "GetMembers"
 // GetMembersRequest generates a "aws/request.Request" representing the
 // client's request for the GetMembers operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1832,7 +1832,7 @@ const opGetThreatIntelSet = "GetThreatIntelSet"
 // GetThreatIntelSetRequest generates a "aws/request.Request" representing the
 // client's request for the GetThreatIntelSet operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1914,7 +1914,7 @@ const opInviteMembers = "InviteMembers"
 // InviteMembersRequest generates a "aws/request.Request" representing the
 // client's request for the InviteMembers operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1999,7 +1999,7 @@ const opListDetectors = "ListDetectors"
 // ListDetectorsRequest generates a "aws/request.Request" representing the
 // client's request for the ListDetectors operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2137,7 +2137,7 @@ const opListFindings = "ListFindings"
 // ListFindingsRequest generates a "aws/request.Request" representing the
 // client's request for the ListFindings operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2275,7 +2275,7 @@ const opListIPSets = "ListIPSets"
 // ListIPSetsRequest generates a "aws/request.Request" representing the
 // client's request for the ListIPSets operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2413,7 +2413,7 @@ const opListInvitations = "ListInvitations"
 // ListInvitationsRequest generates a "aws/request.Request" representing the
 // client's request for the ListInvitations operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2552,7 +2552,7 @@ const opListMembers = "ListMembers"
 // ListMembersRequest generates a "aws/request.Request" representing the
 // client's request for the ListMembers operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2691,7 +2691,7 @@ const opListThreatIntelSets = "ListThreatIntelSets"
 // ListThreatIntelSetsRequest generates a "aws/request.Request" representing the
 // client's request for the ListThreatIntelSets operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2830,7 +2830,7 @@ const opStartMonitoringMembers = "StartMonitoringMembers"
 // StartMonitoringMembersRequest generates a "aws/request.Request" representing the
 // client's request for the StartMonitoringMembers operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2914,7 +2914,7 @@ const opStopMonitoringMembers = "StopMonitoringMembers"
 // StopMonitoringMembersRequest generates a "aws/request.Request" representing the
 // client's request for the StopMonitoringMembers operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2999,7 +2999,7 @@ const opUnarchiveFindings = "UnarchiveFindings"
 // UnarchiveFindingsRequest generates a "aws/request.Request" representing the
 // client's request for the UnarchiveFindings operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3081,7 +3081,7 @@ const opUpdateDetector = "UpdateDetector"
 // UpdateDetectorRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateDetector operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3163,7 +3163,7 @@ const opUpdateFindingsFeedback = "UpdateFindingsFeedback"
 // UpdateFindingsFeedbackRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateFindingsFeedback operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3245,7 +3245,7 @@ const opUpdateIPSet = "UpdateIPSet"
 // UpdateIPSetRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateIPSet operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3327,7 +3327,7 @@ const opUpdateThreatIntelSet = "UpdateThreatIntelSet"
 // UpdateThreatIntelSetRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateThreatIntelSet operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.

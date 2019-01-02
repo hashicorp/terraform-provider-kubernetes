@@ -25,7 +25,7 @@ type Parameter struct {
 	// If AllowUnknown is set then unknown values may be passed into this
 	// argument's slot in the implementation function. If not set, any
 	// unknown values will cause the function to immediately return
-	// an unkonwn value without calling the implementation function, thus
+	// an unknown value without calling the implementation function, thus
 	// freeing the function implementer from dealing with this case.
 	AllowUnknown bool
 

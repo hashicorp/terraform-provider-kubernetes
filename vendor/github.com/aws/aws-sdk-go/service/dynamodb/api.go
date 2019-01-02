@@ -18,7 +18,7 @@ const opBatchGetItem = "BatchGetItem"
 // BatchGetItemRequest generates a "aws/request.Request" representing the
 // client's request for the BatchGetItem operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -213,7 +213,7 @@ const opBatchWriteItem = "BatchWriteItem"
 // BatchWriteItemRequest generates a "aws/request.Request" representing the
 // client's request for the BatchWriteItem operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -376,7 +376,7 @@ const opCreateBackup = "CreateBackup"
 // CreateBackupRequest generates a "aws/request.Request" representing the
 // client's request for the CreateBackup operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -517,7 +517,7 @@ const opCreateGlobalTable = "CreateGlobalTable"
 // CreateGlobalTableRequest generates a "aws/request.Request" representing the
 // client's request for the CreateGlobalTable operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -635,7 +635,7 @@ const opCreateTable = "CreateTable"
 // CreateTableRequest generates a "aws/request.Request" representing the
 // client's request for the CreateTable operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -752,7 +752,7 @@ const opDeleteBackup = "DeleteBackup"
 // DeleteBackupRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteBackup operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -859,7 +859,7 @@ const opDeleteItem = "DeleteItem"
 // DeleteItemRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteItem operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -970,7 +970,7 @@ const opDeleteTable = "DeleteTable"
 // DeleteTableRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteTable operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1094,7 +1094,7 @@ const opDescribeBackup = "DescribeBackup"
 // DescribeBackupRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeBackup operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1178,7 +1178,7 @@ const opDescribeContinuousBackups = "DescribeContinuousBackups"
 // DescribeContinuousBackupsRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeContinuousBackups operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1265,7 +1265,7 @@ const opDescribeGlobalTable = "DescribeGlobalTable"
 // DescribeGlobalTableRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeGlobalTable operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1347,7 +1347,7 @@ const opDescribeLimits = "DescribeLimits"
 // DescribeLimitsRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeLimits operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1482,7 +1482,7 @@ const opDescribeTable = "DescribeTable"
 // DescribeTableRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeTable operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1573,7 +1573,7 @@ const opDescribeTimeToLive = "DescribeTimeToLive"
 // DescribeTimeToLiveRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeTimeToLive operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1656,7 +1656,7 @@ const opGetItem = "GetItem"
 // GetItemRequest generates a "aws/request.Request" representing the
 // client's request for the GetItem operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1754,7 +1754,7 @@ const opListBackups = "ListBackups"
 // ListBackupsRequest generates a "aws/request.Request" representing the
 // client's request for the ListBackups operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1841,7 +1841,7 @@ const opListGlobalTables = "ListGlobalTables"
 // ListGlobalTablesRequest generates a "aws/request.Request" representing the
 // client's request for the ListGlobalTables operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1920,7 +1920,7 @@ const opListTables = "ListTables"
 // ListTablesRequest generates a "aws/request.Request" representing the
 // client's request for the ListTables operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2057,7 +2057,7 @@ const opListTagsOfResource = "ListTagsOfResource"
 // ListTagsOfResourceRequest generates a "aws/request.Request" representing the
 // client's request for the ListTagsOfResource operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2144,7 +2144,7 @@ const opPutItem = "PutItem"
 // PutItemRequest generates a "aws/request.Request" representing the
 // client's request for the PutItem operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2285,7 +2285,7 @@ const opQuery = "Query"
 // QueryRequest generates a "aws/request.Request" representing the
 // client's request for the Query operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2479,7 +2479,7 @@ const opRestoreTableFromBackup = "RestoreTableFromBackup"
 // RestoreTableFromBackupRequest generates a "aws/request.Request" representing the
 // client's request for the RestoreTableFromBackup operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2607,7 +2607,7 @@ const opScan = "Scan"
 // ScanRequest generates a "aws/request.Request" representing the
 // client's request for the Scan operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2781,7 +2781,7 @@ const opTagResource = "TagResource"
 // TagResourceRequest generates a "aws/request.Request" representing the
 // client's request for the TagResource operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2896,7 +2896,7 @@ const opUntagResource = "UntagResource"
 // UntagResourceRequest generates a "aws/request.Request" representing the
 // client's request for the UntagResource operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3009,7 +3009,7 @@ const opUpdateGlobalTable = "UpdateGlobalTable"
 // UpdateGlobalTableRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateGlobalTable operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3109,7 +3109,7 @@ const opUpdateItem = "UpdateItem"
 // UpdateItemRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateItem operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3214,7 +3214,7 @@ const opUpdateTable = "UpdateTable"
 // UpdateTableRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateTable operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3338,7 +3338,7 @@ const opUpdateTimeToLive = "UpdateTimeToLive"
 // UpdateTimeToLiveRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateTimeToLive operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.

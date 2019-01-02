@@ -39,7 +39,7 @@ type AuthConfigurations struct {
 // for Docker API >= 1.19.
 type AuthConfigurations119 map[string]AuthConfiguration
 
-// dockerConfig represents a registry authentation configuration from the
+// dockerConfig represents a registry authentication configuration from the
 // .dockercfg file.
 type dockerConfig struct {
 	Auth  string `json:"auth"`

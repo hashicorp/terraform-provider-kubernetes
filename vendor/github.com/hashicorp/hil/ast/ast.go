@@ -31,7 +31,7 @@ func (p Pos) String() string {
 	}
 }
 
-// InitPos is an initiaial position value. This should be used as
+// InitPos is an initial position value. This should be used as
 // the starting position (presets the column and line to 1).
 var InitPos = Pos{Column: 1, Line: 1}
 

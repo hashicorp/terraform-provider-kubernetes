@@ -18,7 +18,7 @@ const opCancelKeyDeletion = "CancelKeyDeletion"
 // CancelKeyDeletionRequest generates a "aws/request.Request" representing the
 // client's request for the CancelKeyDeletion operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -124,7 +124,7 @@ const opCreateAlias = "CreateAlias"
 // CreateAliasRequest generates a "aws/request.Request" representing the
 // client's request for the CreateAlias operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -256,7 +256,7 @@ const opCreateGrant = "CreateGrant"
 // CreateGrantRequest generates a "aws/request.Request" representing the
 // client's request for the CreateGrant operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -373,7 +373,7 @@ const opCreateKey = "CreateKey"
 // CreateKeyRequest generates a "aws/request.Request" representing the
 // client's request for the CreateKey operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -488,7 +488,7 @@ const opDecrypt = "Decrypt"
 // DecryptRequest generates a "aws/request.Request" representing the
 // client's request for the Decrypt operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -615,7 +615,7 @@ const opDeleteAlias = "DeleteAlias"
 // DeleteAliasRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteAlias operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -723,7 +723,7 @@ const opDeleteImportedKeyMaterial = "DeleteImportedKeyMaterial"
 // DeleteImportedKeyMaterialRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteImportedKeyMaterial operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -838,7 +838,7 @@ const opDescribeKey = "DescribeKey"
 // DescribeKeyRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeKey operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -932,7 +932,7 @@ const opDisableKey = "DisableKey"
 // DisableKeyRequest generates a "aws/request.Request" representing the
 // client's request for the DisableKey operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1039,7 +1039,7 @@ const opDisableKeyRotation = "DisableKeyRotation"
 // DisableKeyRotationRequest generates a "aws/request.Request" representing the
 // client's request for the DisableKeyRotation operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1149,7 +1149,7 @@ const opEnableKey = "EnableKey"
 // EnableKeyRequest generates a "aws/request.Request" representing the
 // client's request for the EnableKey operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1257,7 +1257,7 @@ const opEnableKeyRotation = "EnableKeyRotation"
 // EnableKeyRotationRequest generates a "aws/request.Request" representing the
 // client's request for the EnableKeyRotation operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1367,7 +1367,7 @@ const opEncrypt = "Encrypt"
 // EncryptRequest generates a "aws/request.Request" representing the
 // client's request for the Encrypt operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1498,7 +1498,7 @@ const opGenerateDataKey = "GenerateDataKey"
 // GenerateDataKeyRequest generates a "aws/request.Request" representing the
 // client's request for the GenerateDataKey operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1652,7 +1652,7 @@ const opGenerateDataKeyWithoutPlaintext = "GenerateDataKeyWithoutPlaintext"
 // GenerateDataKeyWithoutPlaintextRequest generates a "aws/request.Request" representing the
 // client's request for the GenerateDataKeyWithoutPlaintext operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1778,7 +1778,7 @@ const opGenerateRandom = "GenerateRandom"
 // GenerateRandomRequest generates a "aws/request.Request" representing the
 // client's request for the GenerateRandom operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1866,7 +1866,7 @@ const opGetKeyPolicy = "GetKeyPolicy"
 // GetKeyPolicyRequest generates a "aws/request.Request" representing the
 // client's request for the GetKeyPolicy operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1966,7 +1966,7 @@ const opGetKeyRotationStatus = "GetKeyRotationStatus"
 // GetKeyRotationStatusRequest generates a "aws/request.Request" representing the
 // client's request for the GetKeyRotationStatus operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2073,7 +2073,7 @@ const opGetParametersForImport = "GetParametersForImport"
 // GetParametersForImportRequest generates a "aws/request.Request" representing the
 // client's request for the GetParametersForImport operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2192,7 +2192,7 @@ const opImportKeyMaterial = "ImportKeyMaterial"
 // ImportKeyMaterialRequest generates a "aws/request.Request" representing the
 // client's request for the ImportKeyMaterial operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2349,7 +2349,7 @@ const opListAliases = "ListAliases"
 // ListAliasesRequest generates a "aws/request.Request" representing the
 // client's request for the ListAliases operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2500,7 +2500,7 @@ const opListGrants = "ListGrants"
 // ListGrantsRequest generates a "aws/request.Request" representing the
 // client's request for the ListGrants operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2662,7 +2662,7 @@ const opListKeyPolicies = "ListKeyPolicies"
 // ListKeyPoliciesRequest generates a "aws/request.Request" representing the
 // client's request for the ListKeyPolicies operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2820,7 +2820,7 @@ const opListKeys = "ListKeys"
 // ListKeysRequest generates a "aws/request.Request" representing the
 // client's request for the ListKeys operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2965,7 +2965,7 @@ const opListResourceTags = "ListResourceTags"
 // ListResourceTagsRequest generates a "aws/request.Request" representing the
 // client's request for the ListResourceTags operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3058,7 +3058,7 @@ const opListRetirableGrants = "ListRetirableGrants"
 // ListRetirableGrantsRequest generates a "aws/request.Request" representing the
 // client's request for the ListRetirableGrants operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3157,7 +3157,7 @@ const opPutKeyPolicy = "PutKeyPolicy"
 // PutKeyPolicyRequest generates a "aws/request.Request" representing the
 // client's request for the PutKeyPolicy operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3275,7 +3275,7 @@ const opReEncrypt = "ReEncrypt"
 // ReEncryptRequest generates a "aws/request.Request" representing the
 // client's request for the ReEncrypt operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3402,7 +3402,7 @@ const opRetireGrant = "RetireGrant"
 // RetireGrantRequest generates a "aws/request.Request" representing the
 // client's request for the RetireGrant operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3524,7 +3524,7 @@ const opRevokeGrant = "RevokeGrant"
 // RevokeGrantRequest generates a "aws/request.Request" representing the
 // client's request for the RevokeGrant operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3632,7 +3632,7 @@ const opScheduleKeyDeletion = "ScheduleKeyDeletion"
 // ScheduleKeyDeletionRequest generates a "aws/request.Request" representing the
 // client's request for the ScheduleKeyDeletion operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3748,7 +3748,7 @@ const opTagResource = "TagResource"
 // TagResourceRequest generates a "aws/request.Request" representing the
 // client's request for the TagResource operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3867,7 +3867,7 @@ const opUntagResource = "UntagResource"
 // UntagResourceRequest generates a "aws/request.Request" representing the
 // client's request for the UntagResource operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3972,7 +3972,7 @@ const opUpdateAlias = "UpdateAlias"
 // UpdateAliasRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateAlias operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -4089,7 +4089,7 @@ const opUpdateKeyDescription = "UpdateKeyDescription"
 // UpdateKeyDescriptionRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateKeyDescription operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.

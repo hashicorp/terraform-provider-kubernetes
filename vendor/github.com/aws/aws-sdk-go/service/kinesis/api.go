@@ -18,7 +18,7 @@ const opAddTagsToStream = "AddTagsToStream"
 // AddTagsToStreamRequest generates a "aws/request.Request" representing the
 // client's request for the AddTagsToStream operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -118,7 +118,7 @@ const opCreateStream = "CreateStream"
 // CreateStreamRequest generates a "aws/request.Request" representing the
 // client's request for the CreateStream operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -246,7 +246,7 @@ const opDecreaseStreamRetentionPeriod = "DecreaseStreamRetentionPeriod"
 // DecreaseStreamRetentionPeriodRequest generates a "aws/request.Request" representing the
 // client's request for the DecreaseStreamRetentionPeriod operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -346,7 +346,7 @@ const opDeleteStream = "DeleteStream"
 // DeleteStreamRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteStream operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -451,7 +451,7 @@ const opDescribeLimits = "DescribeLimits"
 // DescribeLimitsRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeLimits operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -536,7 +536,7 @@ const opDescribeStream = "DescribeStream"
 // DescribeStreamRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeStream operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -694,7 +694,7 @@ const opDescribeStreamSummary = "DescribeStreamSummary"
 // DescribeStreamSummaryRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeStreamSummary operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -783,7 +783,7 @@ const opDisableEnhancedMonitoring = "DisableEnhancedMonitoring"
 // DisableEnhancedMonitoringRequest generates a "aws/request.Request" representing the
 // client's request for the DisableEnhancedMonitoring operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -875,7 +875,7 @@ const opEnableEnhancedMonitoring = "EnableEnhancedMonitoring"
 // EnableEnhancedMonitoringRequest generates a "aws/request.Request" representing the
 // client's request for the EnableEnhancedMonitoring operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -967,7 +967,7 @@ const opGetRecords = "GetRecords"
 // GetRecordsRequest generates a "aws/request.Request" representing the
 // client's request for the GetRecords operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1140,7 +1140,7 @@ const opGetShardIterator = "GetShardIterator"
 // GetShardIteratorRequest generates a "aws/request.Request" representing the
 // client's request for the GetShardIterator operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1270,7 +1270,7 @@ const opIncreaseStreamRetentionPeriod = "IncreaseStreamRetentionPeriod"
 // IncreaseStreamRetentionPeriodRequest generates a "aws/request.Request" representing the
 // client's request for the IncreaseStreamRetentionPeriod operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1374,7 +1374,7 @@ const opListShards = "ListShards"
 // ListShardsRequest generates a "aws/request.Request" representing the
 // client's request for the ListShards operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1476,7 +1476,7 @@ const opListStreams = "ListStreams"
 // ListStreamsRequest generates a "aws/request.Request" representing the
 // client's request for the ListStreams operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1627,7 +1627,7 @@ const opListTagsForStream = "ListTagsForStream"
 // ListTagsForStreamRequest generates a "aws/request.Request" representing the
 // client's request for the ListTagsForStream operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1716,7 +1716,7 @@ const opMergeShards = "MergeShards"
 // MergeShardsRequest generates a "aws/request.Request" representing the
 // client's request for the MergeShards operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1845,7 +1845,7 @@ const opPutRecord = "PutRecord"
 // PutRecordRequest generates a "aws/request.Request" representing the
 // client's request for the PutRecord operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2001,7 +2001,7 @@ const opPutRecords = "PutRecords"
 // PutRecordsRequest generates a "aws/request.Request" representing the
 // client's request for the PutRecords operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2177,7 +2177,7 @@ const opRemoveTagsFromStream = "RemoveTagsFromStream"
 // RemoveTagsFromStreamRequest generates a "aws/request.Request" representing the
 // client's request for the RemoveTagsFromStream operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2276,7 +2276,7 @@ const opSplitShard = "SplitShard"
 // SplitShardRequest generates a "aws/request.Request" representing the
 // client's request for the SplitShard operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2414,7 +2414,7 @@ const opStartStreamEncryption = "StartStreamEncryption"
 // StartStreamEncryptionRequest generates a "aws/request.Request" representing the
 // client's request for the StartStreamEncryption operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2552,7 +2552,7 @@ const opStopStreamEncryption = "StopStreamEncryption"
 // StopStreamEncryptionRequest generates a "aws/request.Request" representing the
 // client's request for the StopStreamEncryption operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2663,7 +2663,7 @@ const opUpdateShardCount = "UpdateShardCount"
 // UpdateShardCountRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateShardCount operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfuly.
+// successfully.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.

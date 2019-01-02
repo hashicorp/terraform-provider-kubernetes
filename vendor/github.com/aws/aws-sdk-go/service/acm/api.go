@@ -18,7 +18,7 @@ const opAddTagsToCertificate = "AddTagsToCertificate"
 // AddTagsToCertificateRequest generates a "aws/request.Request" representing the
 // client's request for the AddTagsToCertificate operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -126,7 +126,7 @@ const opDeleteCertificate = "DeleteCertificate"
 // DeleteCertificateRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteCertificate operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -223,7 +223,7 @@ const opDescribeCertificate = "DescribeCertificate"
 // DescribeCertificateRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeCertificate operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -306,7 +306,7 @@ const opGetCertificate = "GetCertificate"
 // GetCertificateRequest generates a "aws/request.Request" representing the
 // client's request for the GetCertificate operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -398,7 +398,7 @@ const opImportCertificate = "ImportCertificate"
 // ImportCertificateRequest generates a "aws/request.Request" representing the
 // client's request for the ImportCertificate operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -531,7 +531,7 @@ const opListCertificates = "ListCertificates"
 // ListCertificatesRequest generates a "aws/request.Request" representing the
 // client's request for the ListCertificates operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -663,7 +663,7 @@ const opListTagsForCertificate = "ListTagsForCertificate"
 // ListTagsForCertificateRequest generates a "aws/request.Request" representing the
 // client's request for the ListTagsForCertificate operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -749,7 +749,7 @@ const opRemoveTagsFromCertificate = "RemoveTagsFromCertificate"
 // RemoveTagsFromCertificateRequest generates a "aws/request.Request" representing the
 // client's request for the RemoveTagsFromCertificate operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -845,7 +845,7 @@ const opRequestCertificate = "RequestCertificate"
 // RequestCertificateRequest generates a "aws/request.Request" representing the
 // client's request for the RequestCertificate operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -944,7 +944,7 @@ const opResendValidationEmail = "ResendValidationEmail"
 // ResendValidationEmailRequest generates a "aws/request.Request" representing the
 // client's request for the ResendValidationEmail operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.

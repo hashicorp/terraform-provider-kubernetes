@@ -16,7 +16,7 @@ const opAllocateConnectionOnInterconnect = "AllocateConnectionOnInterconnect"
 // AllocateConnectionOnInterconnectRequest generates a "aws/request.Request" representing the
 // client's request for the AllocateConnectionOnInterconnect operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -110,7 +110,7 @@ const opAllocateHostedConnection = "AllocateHostedConnection"
 // AllocateHostedConnectionRequest generates a "aws/request.Request" representing the
 // client's request for the AllocateHostedConnection operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -200,7 +200,7 @@ const opAllocatePrivateVirtualInterface = "AllocatePrivateVirtualInterface"
 // AllocatePrivateVirtualInterfaceRequest generates a "aws/request.Request" representing the
 // client's request for the AllocatePrivateVirtualInterface operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -289,7 +289,7 @@ const opAllocatePublicVirtualInterface = "AllocatePublicVirtualInterface"
 // AllocatePublicVirtualInterfaceRequest generates a "aws/request.Request" representing the
 // client's request for the AllocatePublicVirtualInterface operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -385,7 +385,7 @@ const opAssociateConnectionWithLag = "AssociateConnectionWithLag"
 // AssociateConnectionWithLagRequest generates a "aws/request.Request" representing the
 // client's request for the AssociateConnectionWithLag operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -485,7 +485,7 @@ const opAssociateHostedConnection = "AssociateHostedConnection"
 // AssociateHostedConnectionRequest generates a "aws/request.Request" representing the
 // client's request for the AssociateHostedConnection operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -575,7 +575,7 @@ const opAssociateVirtualInterface = "AssociateVirtualInterface"
 // AssociateVirtualInterfaceRequest generates a "aws/request.Request" representing the
 // client's request for the AssociateVirtualInterface operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -673,7 +673,7 @@ const opConfirmConnection = "ConfirmConnection"
 // ConfirmConnectionRequest generates a "aws/request.Request" representing the
 // client's request for the ConfirmConnection operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -761,7 +761,7 @@ const opConfirmPrivateVirtualInterface = "ConfirmPrivateVirtualInterface"
 // ConfirmPrivateVirtualInterfaceRequest generates a "aws/request.Request" representing the
 // client's request for the ConfirmPrivateVirtualInterface operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -849,7 +849,7 @@ const opConfirmPublicVirtualInterface = "ConfirmPublicVirtualInterface"
 // ConfirmPublicVirtualInterfaceRequest generates a "aws/request.Request" representing the
 // client's request for the ConfirmPublicVirtualInterface operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -936,7 +936,7 @@ const opCreateBGPPeer = "CreateBGPPeer"
 // CreateBGPPeerRequest generates a "aws/request.Request" representing the
 // client's request for the CreateBGPPeer operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1032,7 +1032,7 @@ const opCreateConnection = "CreateConnection"
 // CreateConnectionRequest generates a "aws/request.Request" representing the
 // client's request for the CreateConnection operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1133,7 +1133,7 @@ const opCreateDirectConnectGateway = "CreateDirectConnectGateway"
 // CreateDirectConnectGatewayRequest generates a "aws/request.Request" representing the
 // client's request for the CreateDirectConnectGateway operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1224,7 +1224,7 @@ const opCreateDirectConnectGatewayAssociation = "CreateDirectConnectGatewayAssoc
 // CreateDirectConnectGatewayAssociationRequest generates a "aws/request.Request" representing the
 // client's request for the CreateDirectConnectGatewayAssociation operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1310,7 +1310,7 @@ const opCreateInterconnect = "CreateInterconnect"
 // CreateInterconnectRequest generates a "aws/request.Request" representing the
 // client's request for the CreateInterconnect operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1417,7 +1417,7 @@ const opCreateLag = "CreateLag"
 // CreateLagRequest generates a "aws/request.Request" representing the
 // client's request for the CreateLag operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1525,7 +1525,7 @@ const opCreatePrivateVirtualInterface = "CreatePrivateVirtualInterface"
 // CreatePrivateVirtualInterfaceRequest generates a "aws/request.Request" representing the
 // client's request for the CreatePrivateVirtualInterface operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1611,7 +1611,7 @@ const opCreatePublicVirtualInterface = "CreatePublicVirtualInterface"
 // CreatePublicVirtualInterfaceRequest generates a "aws/request.Request" representing the
 // client's request for the CreatePublicVirtualInterface operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1702,7 +1702,7 @@ const opDeleteBGPPeer = "DeleteBGPPeer"
 // DeleteBGPPeerRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteBGPPeer operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1788,7 +1788,7 @@ const opDeleteConnection = "DeleteConnection"
 // DeleteConnectionRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteConnection operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1877,7 +1877,7 @@ const opDeleteDirectConnectGateway = "DeleteDirectConnectGateway"
 // DeleteDirectConnectGatewayRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteDirectConnectGateway operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1963,7 +1963,7 @@ const opDeleteDirectConnectGatewayAssociation = "DeleteDirectConnectGatewayAssoc
 // DeleteDirectConnectGatewayAssociationRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteDirectConnectGatewayAssociation operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2048,7 +2048,7 @@ const opDeleteInterconnect = "DeleteInterconnect"
 // DeleteInterconnectRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteInterconnect operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2134,7 +2134,7 @@ const opDeleteLag = "DeleteLag"
 // DeleteLagRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteLag operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2219,7 +2219,7 @@ const opDeleteVirtualInterface = "DeleteVirtualInterface"
 // DeleteVirtualInterfaceRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteVirtualInterface operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2303,7 +2303,7 @@ const opDescribeConnectionLoa = "DescribeConnectionLoa"
 // DescribeConnectionLoaRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeConnectionLoa operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2398,7 +2398,7 @@ const opDescribeConnections = "DescribeConnections"
 // DescribeConnectionsRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeConnections operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2484,7 +2484,7 @@ const opDescribeConnectionsOnInterconnect = "DescribeConnectionsOnInterconnect"
 // DescribeConnectionsOnInterconnectRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeConnectionsOnInterconnect operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2575,7 +2575,7 @@ const opDescribeDirectConnectGatewayAssociations = "DescribeDirectConnectGateway
 // DescribeDirectConnectGatewayAssociationsRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeDirectConnectGatewayAssociations operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2665,7 +2665,7 @@ const opDescribeDirectConnectGatewayAttachments = "DescribeDirectConnectGatewayA
 // DescribeDirectConnectGatewayAttachmentsRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeDirectConnectGatewayAttachments operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2755,7 +2755,7 @@ const opDescribeDirectConnectGateways = "DescribeDirectConnectGateways"
 // DescribeDirectConnectGatewaysRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeDirectConnectGateways operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2843,7 +2843,7 @@ const opDescribeHostedConnections = "DescribeHostedConnections"
 // DescribeHostedConnectionsRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeHostedConnections operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -2930,7 +2930,7 @@ const opDescribeInterconnectLoa = "DescribeInterconnectLoa"
 // DescribeInterconnectLoaRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeInterconnectLoa operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3025,7 +3025,7 @@ const opDescribeInterconnects = "DescribeInterconnects"
 // DescribeInterconnectsRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeInterconnects operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3111,7 +3111,7 @@ const opDescribeLags = "DescribeLags"
 // DescribeLagsRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeLags operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3197,7 +3197,7 @@ const opDescribeLoa = "DescribeLoa"
 // DescribeLoaRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeLoa operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3288,7 +3288,7 @@ const opDescribeLocations = "DescribeLocations"
 // DescribeLocationsRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeLocations operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3374,7 +3374,7 @@ const opDescribeTags = "DescribeTags"
 // DescribeTagsRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeTags operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3458,7 +3458,7 @@ const opDescribeVirtualGateways = "DescribeVirtualGateways"
 // DescribeVirtualGatewaysRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeVirtualGateways operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3548,7 +3548,7 @@ const opDescribeVirtualInterfaces = "DescribeVirtualInterfaces"
 // DescribeVirtualInterfacesRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeVirtualInterfaces operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3639,7 +3639,7 @@ const opDisassociateConnectionFromLag = "DisassociateConnectionFromLag"
 // DisassociateConnectionFromLagRequest generates a "aws/request.Request" representing the
 // client's request for the DisassociateConnectionFromLag operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3733,7 +3733,7 @@ const opTagResource = "TagResource"
 // TagResourceRequest generates a "aws/request.Request" representing the
 // client's request for the TagResource operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3829,7 +3829,7 @@ const opUntagResource = "UntagResource"
 // UntagResourceRequest generates a "aws/request.Request" representing the
 // client's request for the UntagResource operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -3913,7 +3913,7 @@ const opUpdateLag = "UpdateLag"
 // UpdateLagRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateLag operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.

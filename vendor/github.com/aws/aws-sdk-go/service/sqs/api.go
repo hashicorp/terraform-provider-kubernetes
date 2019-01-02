@@ -17,7 +17,7 @@ const opAddPermission = "AddPermission"
 // AddPermissionRequest generates a "aws/request.Request" representing the
 // client's request for the AddPermission operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -120,7 +120,7 @@ const opChangeMessageVisibility = "ChangeMessageVisibility"
 // ChangeMessageVisibilityRequest generates a "aws/request.Request" representing the
 // client's request for the ChangeMessageVisibility operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -239,7 +239,7 @@ const opChangeMessageVisibilityBatch = "ChangeMessageVisibilityBatch"
 // ChangeMessageVisibilityBatchRequest generates a "aws/request.Request" representing the
 // client's request for the ChangeMessageVisibilityBatch operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -342,7 +342,7 @@ const opCreateQueue = "CreateQueue"
 // CreateQueueRequest generates a "aws/request.Request" representing the
 // client's request for the CreateQueue operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -466,7 +466,7 @@ const opDeleteMessage = "DeleteMessage"
 // DeleteMessageRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteMessage operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -569,7 +569,7 @@ const opDeleteMessageBatch = "DeleteMessageBatch"
 // DeleteMessageBatchRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteMessageBatch operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -671,7 +671,7 @@ const opDeleteQueue = "DeleteQueue"
 // DeleteQueueRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteQueue operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -759,7 +759,7 @@ const opGetQueueAttributes = "GetQueueAttributes"
 // GetQueueAttributesRequest generates a "aws/request.Request" representing the
 // client's request for the GetQueueAttributes operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -849,7 +849,7 @@ const opGetQueueUrl = "GetQueueUrl"
 // GetQueueUrlRequest generates a "aws/request.Request" representing the
 // client's request for the GetQueueUrl operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -935,7 +935,7 @@ const opListDeadLetterSourceQueues = "ListDeadLetterSourceQueues"
 // ListDeadLetterSourceQueuesRequest generates a "aws/request.Request" representing the
 // client's request for the ListDeadLetterSourceQueues operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1019,7 +1019,7 @@ const opListQueueTags = "ListQueueTags"
 // ListQueueTagsRequest generates a "aws/request.Request" representing the
 // client's request for the ListQueueTags operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1113,7 +1113,7 @@ const opListQueues = "ListQueues"
 // ListQueuesRequest generates a "aws/request.Request" representing the
 // client's request for the ListQueues operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1189,7 +1189,7 @@ const opPurgeQueue = "PurgeQueue"
 // PurgeQueueRequest generates a "aws/request.Request" representing the
 // client's request for the PurgeQueue operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1284,7 +1284,7 @@ const opReceiveMessage = "ReceiveMessage"
 // ReceiveMessageRequest generates a "aws/request.Request" representing the
 // client's request for the ReceiveMessage operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1412,7 +1412,7 @@ const opRemovePermission = "RemovePermission"
 // RemovePermissionRequest generates a "aws/request.Request" representing the
 // client's request for the RemovePermission operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1489,7 +1489,7 @@ const opSendMessage = "SendMessage"
 // SendMessageRequest generates a "aws/request.Request" representing the
 // client's request for the SendMessage operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1579,7 +1579,7 @@ const opSendMessageBatch = "SendMessageBatch"
 // SendMessageBatchRequest generates a "aws/request.Request" representing the
 // client's request for the SendMessageBatch operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1703,7 +1703,7 @@ const opSetQueueAttributes = "SetQueueAttributes"
 // SetQueueAttributesRequest generates a "aws/request.Request" representing the
 // client's request for the SetQueueAttributes operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1791,7 +1791,7 @@ const opTagQueue = "TagQueue"
 // TagQueueRequest generates a "aws/request.Request" representing the
 // client's request for the TagQueue operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1887,7 +1887,7 @@ const opUntagQueue = "UntagQueue"
 // UntagQueueRequest generates a "aws/request.Request" representing the
 // client's request for the UntagQueue operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.

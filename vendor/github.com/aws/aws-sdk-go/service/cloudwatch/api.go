@@ -18,7 +18,7 @@ const opDeleteAlarms = "DeleteAlarms"
 // DeleteAlarmsRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteAlarms operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -99,7 +99,7 @@ const opDeleteDashboards = "DeleteDashboards"
 // DeleteDashboardsRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteDashboards operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -185,7 +185,7 @@ const opDescribeAlarmHistory = "DescribeAlarmHistory"
 // DescribeAlarmHistoryRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeAlarmHistory operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -324,7 +324,7 @@ const opDescribeAlarms = "DescribeAlarms"
 // DescribeAlarmsRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeAlarms operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -461,7 +461,7 @@ const opDescribeAlarmsForMetric = "DescribeAlarmsForMetric"
 // DescribeAlarmsForMetricRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeAlarmsForMetric operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -536,7 +536,7 @@ const opDisableAlarmActions = "DisableAlarmActions"
 // DisableAlarmActionsRequest generates a "aws/request.Request" representing the
 // client's request for the DisableAlarmActions operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -613,7 +613,7 @@ const opEnableAlarmActions = "EnableAlarmActions"
 // EnableAlarmActionsRequest generates a "aws/request.Request" representing the
 // client's request for the EnableAlarmActions operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -689,7 +689,7 @@ const opGetDashboard = "GetDashboard"
 // GetDashboardRequest generates a "aws/request.Request" representing the
 // client's request for the GetDashboard operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -778,7 +778,7 @@ const opGetMetricStatistics = "GetMetricStatistics"
 // GetMetricStatisticsRequest generates a "aws/request.Request" representing the
 // client's request for the GetMetricStatistics operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -916,7 +916,7 @@ const opListDashboards = "ListDashboards"
 // ListDashboardsRequest generates a "aws/request.Request" representing the
 // client's request for the ListDashboards operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1000,7 +1000,7 @@ const opListMetrics = "ListMetrics"
 // ListMetricsRequest generates a "aws/request.Request" representing the
 // client's request for the ListMetrics operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1146,7 +1146,7 @@ const opPutDashboard = "PutDashboard"
 // PutDashboardRequest generates a "aws/request.Request" representing the
 // client's request for the PutDashboard operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1246,7 +1246,7 @@ const opPutMetricAlarm = "PutMetricAlarm"
 // PutMetricAlarmRequest generates a "aws/request.Request" representing the
 // client's request for the PutMetricAlarm operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1368,7 +1368,7 @@ const opPutMetricData = "PutMetricData"
 // PutMetricDataRequest generates a "aws/request.Request" representing the
 // client's request for the PutMetricData operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1486,7 +1486,7 @@ const opSetAlarmState = "SetAlarmState"
 // SetAlarmStateRequest generates a "aws/request.Request" representing the
 // client's request for the SetAlarmState operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.

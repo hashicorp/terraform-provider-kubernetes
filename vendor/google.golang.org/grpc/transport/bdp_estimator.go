@@ -70,7 +70,7 @@ type bdpEstimator struct {
 }
 
 // timesnap registers the time bdp ping was sent out so that
-// network rtt can be calculated when its ack is received.
+// network rtt can be calculated when its ack is recieved.
 // It is called (by controller) when the bdpPing is
 // being written on the wire.
 func (b *bdpEstimator) timesnap(d [8]byte) {

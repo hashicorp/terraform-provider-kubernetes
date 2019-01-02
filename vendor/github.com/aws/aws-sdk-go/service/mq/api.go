@@ -13,7 +13,7 @@ const opCreateBroker = "CreateBroker"
 // CreateBrokerRequest generates a "aws/request.Request" representing the
 // client's request for the CreateBroker operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -104,7 +104,7 @@ const opCreateConfiguration = "CreateConfiguration"
 // CreateConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the CreateConfiguration operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -194,7 +194,7 @@ const opCreateUser = "CreateUser"
 // CreateUserRequest generates a "aws/request.Request" representing the
 // client's request for the CreateUser operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -285,7 +285,7 @@ const opDeleteBroker = "DeleteBroker"
 // DeleteBrokerRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteBroker operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -373,7 +373,7 @@ const opDeleteUser = "DeleteUser"
 // DeleteUserRequest generates a "aws/request.Request" representing the
 // client's request for the DeleteUser operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -461,7 +461,7 @@ const opDescribeBroker = "DescribeBroker"
 // DescribeBrokerRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeBroker operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -549,7 +549,7 @@ const opDescribeConfiguration = "DescribeConfiguration"
 // DescribeConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeConfiguration operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -637,7 +637,7 @@ const opDescribeConfigurationRevision = "DescribeConfigurationRevision"
 // DescribeConfigurationRevisionRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeConfigurationRevision operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -725,7 +725,7 @@ const opDescribeUser = "DescribeUser"
 // DescribeUserRequest generates a "aws/request.Request" representing the
 // client's request for the DescribeUser operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -813,7 +813,7 @@ const opListBrokers = "ListBrokers"
 // ListBrokersRequest generates a "aws/request.Request" representing the
 // client's request for the ListBrokers operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -898,7 +898,7 @@ const opListConfigurationRevisions = "ListConfigurationRevisions"
 // ListConfigurationRevisionsRequest generates a "aws/request.Request" representing the
 // client's request for the ListConfigurationRevisions operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -986,7 +986,7 @@ const opListConfigurations = "ListConfigurations"
 // ListConfigurationsRequest generates a "aws/request.Request" representing the
 // client's request for the ListConfigurations operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1071,7 +1071,7 @@ const opListUsers = "ListUsers"
 // ListUsersRequest generates a "aws/request.Request" representing the
 // client's request for the ListUsers operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1159,7 +1159,7 @@ const opRebootBroker = "RebootBroker"
 // RebootBrokerRequest generates a "aws/request.Request" representing the
 // client's request for the RebootBroker operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1247,7 +1247,7 @@ const opUpdateBroker = "UpdateBroker"
 // UpdateBrokerRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateBroker operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1335,7 +1335,7 @@ const opUpdateConfiguration = "UpdateConfiguration"
 // UpdateConfigurationRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateConfiguration operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.
@@ -1426,7 +1426,7 @@ const opUpdateUser = "UpdateUser"
 // UpdateUserRequest generates a "aws/request.Request" representing the
 // client's request for the UpdateUser operation. The "output" return
 // value will be populated with the request's response once the request complets
-// successfully.
+// successfuly.
 //
 // Use "Send" method on the returned Request to send the API call to the service.
 // the "output" return value is not valid until after Send returns without error.

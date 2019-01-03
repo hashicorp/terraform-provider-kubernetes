@@ -1,11 +1,9 @@
 package kubernetes
 
 import (
-	"strconv"
-	"strings"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	"k8s.io/api/core/v1"
+	"strconv"
 )
 
 // Flatteners
@@ -29,7 +27,9 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	att["init_container"] = initContainers
 
 	att["dns_policy"] = in.DNSPolicy
-	att["dns_config"] = flattenPodDnsConfig(in.DNSConfig)
+	if in.DNSConfig != nil {
+		att["dns_config"] = flattenPodDnsConfig(in.DNSConfig)
+	}
 
 	att["host_ipc"] = in.HostIPC
 	att["host_network"] = in.HostNetwork
@@ -78,10 +78,10 @@ func flattenPodDnsConfig(in *v1.PodDNSConfig) []interface{} {
 	att := make(map[string]interface{})
 
 	if len(in.Nameservers) > 0 {
-		att["nameservers"] = strings.Join(in.Nameservers, ",")
+		att["nameservers"] = newStringSet(schema.HashString, in.Nameservers)
 	}
 	if len(in.Searches) > 0 {
-		att["searches"] = strings.Join(in.Searches, ",")
+		att["searches"] = newStringSet(schema.HashString, in.Searches)
 	}
 	if len(in.Options) > 0 {
 		items := make([]interface{}, len(in.Options))
@@ -91,7 +91,7 @@ func flattenPodDnsConfig(in *v1.PodDNSConfig) []interface{} {
 			m["value"] = v.Value
 			items[i] = m
 		}
-		att["nameservers"] = items
+		att["options"] = items
 	}
 
 	if len(att) > 0 {
@@ -370,6 +370,10 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.DNSPolicy = v1.DNSPolicy(v)
 	}
 
+	if v, ok := in["dns_config"].([]interface{}); ok && len(v) > 0 {
+		obj.DNSConfig = expandPodDnsConfig(v)
+	}
+
 	if v, ok := in["host_ipc"]; ok {
 		obj.HostIPC = v.(bool)
 	}
@@ -433,6 +437,25 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.Volumes = cs
 	}
 	return obj, nil
+}
+
+func expandPodDnsConfig(l []interface{}) *v1.PodDNSConfig {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.PodDNSConfig{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.PodDNSConfig{}
+	if v, ok := in["nameservers"].(*schema.Set); ok && v.Len() > 0 {
+		obj.Nameservers = sliceOfString(v.List())
+	}
+	if v, ok := in["searches"].(*schema.Set); ok && v.Len() > 0 {
+		obj.Searches = sliceOfString(v.List())
+	}
+	//TODO: Pretty sure this is incorrect
+	//if v, ok := in["options"]; ok {
+	//	obj.Options = v.([]v1.PodDNSConfigOption)
+	//}
+	return obj
 }
 
 func expandPodSecurityContext(l []interface{}) *v1.PodSecurityContext {

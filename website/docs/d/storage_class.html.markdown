@@ -54,3 +54,4 @@ The following attributes are exported:
 	Read more about [available parameters](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#parameters).
 * `storage_provisioner` - Indicates the type of the provisioner this storage class represents
 * `reclaim_policy` - Indicates the reclaim policy used.
+* `volume_binding_mode` - Indicates when volume binding and dynamic provisioning should occur.

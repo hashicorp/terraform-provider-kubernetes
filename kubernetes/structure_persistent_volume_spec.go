@@ -695,6 +695,17 @@ func expandHostPathVolumeSource(l []interface{}) *v1.HostPathVolumeSource {
 	return obj
 }
 
+func expandLocalVolumeSource(l []interface{}) *v1.LocalVolumeSource {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.LocalVolumeSource{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.LocalVolumeSource{
+		Path: in["path"].(string),
+	}
+	return obj
+}
+
 func expandISCSIVolumeSource(l []interface{}) *v1.ISCSIVolumeSource {
 	if len(l) == 0 || l[0] == nil {
 		return &v1.ISCSIVolumeSource{}
@@ -796,6 +807,9 @@ func expandPersistentVolumeSource(l []interface{}) v1.PersistentVolumeSource {
 	}
 	if v, ok := in["host_path"].([]interface{}); ok && len(v) > 0 {
 		obj.HostPath = expandHostPathVolumeSource(v)
+	}
+	if v, ok := in["local"].([]interface{}); ok && len(v) > 0 {
+		obj.Local = expandLocalVolumeSource(v)
 	}
 	if v, ok := in["glusterfs"].([]interface{}); ok && len(v) > 0 {
 		obj.Glusterfs = expandGlusterfsVolumeSource(v)

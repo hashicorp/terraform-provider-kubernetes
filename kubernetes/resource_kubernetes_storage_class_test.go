@@ -69,7 +69,7 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_storage_class.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "storage_provisioner", "kubernetes.io/gce-pd"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "reclaim_policy", "Retain"),
-					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "volume_binding_mode", "WaitForFirstConsumer")
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "volume_binding_mode", "WaitForFirstConsumer"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.type", "pd-standard"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.zones", "us-west1-a,us-west1-b"),

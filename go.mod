@@ -3,7 +3,6 @@ module github.com/terraform-providers/terraform-provider-kubernetes
 require (
 	cloud.google.com/go v0.34.0 // indirect
 	contrib.go.opencensus.io/exporter/ocagent v0.4.1 // indirect
-	contrib.go.opencensus.io/exporter/stackdriver v0.8.0 // indirect
 	github.com/Azure/go-autorest v11.2.8+incompatible // indirect
 	github.com/apparentlymart/go-cidr v1.0.0 // indirect
 	github.com/aws/aws-sdk-go v1.16.12 // indirect

@@ -28,6 +28,21 @@ func commonVolumeSources() map[string]*schema.Schema {
 				},
 			},
 		},
+		"local": {
+			Type:        schema.TypeList,
+			Description: "Represents a mounted local storage device such as a disk, partition or directory. Local volumes can only be used as a statically created PersistentVolume. Dynamic provisioning is not supported yet. More info: http://kubernetes.io/docs/user-guide/volumes#local",
+			Optional:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"path": {
+						Type:        schema.TypeString,
+						Description: "Path of the directory on the host. More info: http://kubernetes.io/docs/user-guide/volumes#local",
+						Optional:    true,
+					},
+				},
+			},
+		},
 		"aws_elastic_block_store": {
 			Type:        schema.TypeList,
 			Description: "Represents an AWS Disk resource that is attached to a kubelet's host machine and then exposed to the pod. More info: http://kubernetes.io/docs/user-guide/volumes#awselasticblockstore",

@@ -494,3 +494,56 @@ func expandServiceAccountSecrets(in []interface{}, defaultSecretName string) []a
 
 	return att
 }
+
+func flattenNodeSelectorRequirementList(in []api.NodeSelectorRequirement) []map[string]interface{} {
+	att := make([]map[string]interface{}, len(in))
+	for i, v := range in {
+		m := map[string]interface{}{}
+		m["key"] = v.Key
+		m["values"] = newStringSet(schema.HashString, v.Values)
+		m["operator"] = string(v.Operator)
+		att[i] = m
+	}
+	return att
+}
+
+func expandNodeSelectorRequirementList(in []interface{}) []api.NodeSelectorRequirement {
+	att := []api.NodeSelectorRequirement{}
+	if len(in) < 1 {
+		return att
+	}
+	att = make([]api.NodeSelectorRequirement, len(in))
+	for i, c := range in {
+		p := c.(map[string]interface{})
+		att[i].Key = p["key"].(string)
+		att[i].Operator = api.NodeSelectorOperator(p["operator"].(string))
+		att[i].Values = expandStringSlice(p["values"].(*schema.Set).List())
+	}
+	return att
+}
+
+func flattenNodeSelectorTerm(in api.NodeSelectorTerm) []interface{} {
+	att := make(map[string]interface{})
+	if len(in.MatchExpressions) > 0 {
+		att["match_expressions"] = flattenNodeSelectorRequirementList(in.MatchExpressions)
+	}
+	if len(in.MatchFields) > 0 {
+		att["match_fields"] = flattenNodeSelectorRequirementList(in.MatchFields)
+	}
+	return []interface{}{att}
+}
+
+func expandNodeSelectorTerm(l []interface{}) api.NodeSelectorTerm {
+	if len(l) == 0 || l[0] == nil {
+		return api.NodeSelectorTerm{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := api.NodeSelectorTerm{}
+	if v, ok := in["match_expressions"].([]interface{}); ok && len(v) > 0 {
+		obj.MatchExpressions = expandNodeSelectorRequirementList(v)
+	}
+	if v, ok := in["match_fields"].([]interface{}); ok && len(v) > 0 {
+		obj.MatchFields = expandNodeSelectorRequirementList(v)
+	}
+	return obj
+}

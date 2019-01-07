@@ -342,6 +342,9 @@ func flattenPersistentVolumeSpec(in v1.PersistentVolumeSpec) []interface{} {
 	if in.StorageClassName != "" {
 		att["storage_class_name"] = in.StorageClassName
 	}
+	if in.NodeAffinity != nil {
+		att["node_affinity"] = flattenVolumeNodeAffinity(in.NodeAffinity)
+	}
 	return []interface{}{att}
 }
 
@@ -864,6 +867,9 @@ func expandPersistentVolumeSpec(l []interface{}) (*v1.PersistentVolumeSpec, erro
 	if v, ok := in["storage_class_name"].(string); ok {
 		obj.StorageClassName = v
 	}
+	if v, ok := in["node_affinity"].([]interface{}); ok && len(v) > 0 {
+		obj.NodeAffinity = expandVolumeNodeAffinity(v)
+	}
 	return obj, nil
 }
 
@@ -1027,6 +1033,14 @@ func patchPersistentVolumeSpec(pathPrefix, prefix string, d *schema.ResourceData
 				Value: n.(string),
 			})
 		}
+	}
+	if d.HasChange(prefix + "node_affinity") {
+		v := d.Get(prefix + "node_affinity").([]interface{})
+		nodeAffinity := expandVolumeNodeAffinity(v)
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "/nodeAffinity",
+			Value: nodeAffinity,
+		})
 	}
 
 	return ops, nil
@@ -1410,4 +1424,36 @@ func patchPersistentVolumeSource(pathPrefix, prefix string, d *schema.ResourceDa
 	}
 
 	return ops
+}
+
+func flattenVolumeNodeAffinity(in *v1.VolumeNodeAffinity) []interface{} {
+	att := make(map[string]interface{})
+	nodeSelector := map[string]interface{}{
+		"node_selector_term": flattenNodeSelectorTerm(in.Required.NodeSelectorTerms[0]),
+	}
+	att["required"] = []interface{}{nodeSelector}
+	return []interface{}{att}
+}
+
+func expandVolumeNodeAffinity(l []interface{}) *v1.VolumeNodeAffinity {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.VolumeNodeAffinity{}
+	}
+	in := l[0].(map[string]interface{})
+	nodeSelectorList := in["required"].([]interface{})
+
+	if len(nodeSelectorList) == 0 || nodeSelectorList[0] == nil {
+		return &v1.VolumeNodeAffinity{}
+	}
+	nodeSelector := nodeSelectorList[0].(map[string]interface{})
+
+	if len(nodeSelector) == 0 || nodeSelectorList[0] == nil {
+		return &v1.VolumeNodeAffinity{}
+	}
+	obj := &v1.VolumeNodeAffinity{
+		Required: &v1.NodeSelector{
+			NodeSelectorTerms: []v1.NodeSelectorTerm{expandNodeSelectorTerm(nodeSelector["node_selector_term"].([]interface{}))},
+		},
+	}
+	return obj
 }

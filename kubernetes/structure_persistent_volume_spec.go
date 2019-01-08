@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/hashicorp/terraform/helper/schema"
 )
@@ -99,6 +99,18 @@ func flattenCephFSPersistentVolumeSource(in *v1.CephFSPersistentVolumeSource) []
 	return []interface{}{att}
 }
 
+func flattenCinderPersistentVolumeSource(in *v1.CinderPersistentVolumeSource) []interface{} {
+	att := make(map[string]interface{})
+	att["volume_id"] = in.VolumeID
+	if in.FSType != "" {
+		att["fs_type"] = in.FSType
+	}
+	if in.ReadOnly != false {
+		att["read_only"] = in.ReadOnly
+	}
+	return []interface{}{att}
+}
+
 func flattenCinderVolumeSource(in *v1.CinderVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["volume_id"] = in.VolumeID
@@ -176,6 +188,16 @@ func flattenGCEPersistentDiskVolumeSource(in *v1.GCEPersistentDiskVolumeSource) 
 	if in.Partition != 0 {
 		att["partition"] = in.Partition
 	}
+	if in.ReadOnly != false {
+		att["read_only"] = in.ReadOnly
+	}
+	return []interface{}{att}
+}
+
+func flattenGlusterfsPersistentVolumeSource(in *v1.GlusterfsPersistentVolumeSource) []interface{} {
+	att := make(map[string]interface{})
+	att["endpoints_name"] = in.EndpointsName
+	att["path"] = in.Path
 	if in.ReadOnly != false {
 		att["read_only"] = in.ReadOnly
 	}
@@ -291,7 +313,7 @@ func flattenPersistentVolumeSource(in v1.PersistentVolumeSource) []interface{} {
 		att["local"] = flattenLocalVolumeSource(in.Local)
 	}
 	if in.Glusterfs != nil {
-		att["glusterfs"] = flattenGlusterfsVolumeSource(in.Glusterfs)
+		att["glusterfs"] = flattenGlusterfsPersistentVolumeSource(in.Glusterfs)
 	}
 	if in.NFS != nil {
 		att["nfs"] = flattenNFSVolumeSource(in.NFS)
@@ -303,7 +325,7 @@ func flattenPersistentVolumeSource(in v1.PersistentVolumeSource) []interface{} {
 		att["iscsi"] = flattenISCSIPersistentVolumeSource(in.ISCSI)
 	}
 	if in.Cinder != nil {
-		att["cinder"] = flattenCinderVolumeSource(in.Cinder)
+		att["cinder"] = flattenCinderPersistentVolumeSource(in.Cinder)
 	}
 	if in.CephFS != nil {
 		att["ceph_fs"] = flattenCephFSPersistentVolumeSource(in.CephFS)
@@ -565,6 +587,23 @@ func expandCephFSPersistentVolumeSource(l []interface{}) *v1.CephFSPersistentVol
 	return obj
 }
 
+func expandCinderPersistentVolumeSource(l []interface{}) *v1.CinderPersistentVolumeSource {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.CinderPersistentVolumeSource{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.CinderPersistentVolumeSource{
+		VolumeID: in["volume_id"].(string),
+	}
+	if v, ok := in["fs_type"].(string); ok {
+		obj.FSType = v
+	}
+	if v, ok := in["read_only"].(bool); ok {
+		obj.ReadOnly = v
+	}
+	return obj
+}
+
 func expandCinderVolumeSource(l []interface{}) *v1.CinderVolumeSource {
 	if len(l) == 0 || l[0] == nil {
 		return &v1.CinderVolumeSource{}
@@ -671,6 +710,21 @@ func expandGCEPersistentDiskVolumeSource(l []interface{}) *v1.GCEPersistentDiskV
 	}
 	if v, ok := in["partition"].(int); ok {
 		obj.Partition = int32(v)
+	}
+	if v, ok := in["read_only"].(bool); ok {
+		obj.ReadOnly = v
+	}
+	return obj
+}
+
+func expandGlusterfsPersistentVolumeSource(l []interface{}) *v1.GlusterfsPersistentVolumeSource {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.GlusterfsPersistentVolumeSource{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.GlusterfsPersistentVolumeSource{
+		EndpointsName: in["endpoints_name"].(string),
+		Path:          in["path"].(string),
 	}
 	if v, ok := in["read_only"].(bool); ok {
 		obj.ReadOnly = v
@@ -821,7 +875,7 @@ func expandPersistentVolumeSource(l []interface{}) v1.PersistentVolumeSource {
 		obj.Local = expandLocalVolumeSource(v)
 	}
 	if v, ok := in["glusterfs"].([]interface{}); ok && len(v) > 0 {
-		obj.Glusterfs = expandGlusterfsVolumeSource(v)
+		obj.Glusterfs = expandGlusterfsPersistentVolumeSource(v)
 	}
 	if v, ok := in["nfs"].([]interface{}); ok && len(v) > 0 {
 		obj.NFS = expandNFSVolumeSource(v)
@@ -833,7 +887,7 @@ func expandPersistentVolumeSource(l []interface{}) v1.PersistentVolumeSource {
 		obj.ISCSI = expandISCSIPersistentVolumeSource(v)
 	}
 	if v, ok := in["cinder"].([]interface{}); ok && len(v) > 0 {
-		obj.Cinder = expandCinderVolumeSource(v)
+		obj.Cinder = expandCinderPersistentVolumeSource(v)
 	}
 	if v, ok := in["ceph_fs"].([]interface{}); ok && len(v) > 0 {
 		obj.CephFS = expandCephFSPersistentVolumeSource(v)

@@ -198,6 +198,12 @@ func flattenHostPathVolumeSource(in *v1.HostPathVolumeSource) []interface{} {
 	return []interface{}{att}
 }
 
+func flattenLocalVolumeSource(in *v1.LocalVolumeSource) []interface{} {
+	att := make(map[string]interface{})
+	att["path"] = in.Path
+	return []interface{}{att}
+}
+
 func flattenISCSIVolumeSource(in *v1.ISCSIVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	if in.TargetPortal != "" {
@@ -280,6 +286,9 @@ func flattenPersistentVolumeSource(in v1.PersistentVolumeSource) []interface{} {
 	}
 	if in.HostPath != nil {
 		att["host_path"] = flattenHostPathVolumeSource(in.HostPath)
+	}
+	if in.Local != nil {
+		att["local"] = flattenLocalVolumeSource(in.Local)
 	}
 	if in.Glusterfs != nil {
 		att["glusterfs"] = flattenGlusterfsVolumeSource(in.Glusterfs)

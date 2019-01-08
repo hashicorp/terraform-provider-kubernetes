@@ -864,14 +864,14 @@ resource "kubernetes_persistent_volume" "test" {
       local {
         path = "%s"
       }
-    }
+		}
 		node_affinity {
       required {
         node_selector_term {
           match_expressions = [{
-            key = "kubernetes.io/hostname"
+            key      = "kubernetes.io/hostname"
             operator = "In"
-            values = ["%s"]
+            values   = ["%s"]
           }]
         }
       }

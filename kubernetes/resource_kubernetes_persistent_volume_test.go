@@ -342,7 +342,7 @@ func TestAccKubernetesPersistentVolume_local_volumeSource(t *testing.T) {
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, "/first/path"),
+				Config: testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, "/first/path", "test-node"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
@@ -363,7 +363,7 @@ func TestAccKubernetesPersistentVolume_local_volumeSource(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, "/second/path"),
+				Config: testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, "/second/path", "test-node"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
@@ -846,7 +846,7 @@ resource "kubernetes_persistent_volume" "test" {
 `, name, path)
 }
 
-func testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, path string) string {
+func testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, path, hostname string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
   metadata {
@@ -865,9 +865,20 @@ resource "kubernetes_persistent_volume" "test" {
         path = "%s"
       }
     }
+		node_affinity {
+      required {
+        node_selector_term {
+          match_expressions = [{
+            key = "kubernetes.io/hostname"
+            operator = "In"
+            values = ["%s"]
+          }]
+        }
+      }
+    }
   }
 }
-`, name, path)
+`, name, path, hostname)
 }
 
 func testAccKubernetesPersistentVolumeConfig_cephFsSecretRef(name string) string {

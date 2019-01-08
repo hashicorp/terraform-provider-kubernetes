@@ -418,7 +418,7 @@ func testAccCheckServicePorts(svc *api.Service, expected []api.ServicePort) reso
 		ports := svc.Spec.Ports
 
 		// Ignore NodePorts as these are assigned randomly
-		for k, _ := range ports {
+		for k := range ports {
 			ports[k].NodePort = 0
 		}
 

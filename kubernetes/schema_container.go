@@ -531,7 +531,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 	}
 
 	if !isUpdatable {
-		for k, _ := range s {
+		for k := range s {
 			if k == "image" && !isInitContainer {
 				// this field is updatable for non-init containers
 				continue

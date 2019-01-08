@@ -26,7 +26,7 @@ func diffStringMap(pathPrefix string, oldV, newV map[string]interface{}) PatchOp
 	// There may be some other map items managed outside of TF
 	// and we don't want to touch these.
 
-	for k, _ := range oldV {
+	for k := range oldV {
 		if _, ok := newV[k]; ok {
 			continue
 		}

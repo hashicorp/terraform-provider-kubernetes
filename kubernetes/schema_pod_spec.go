@@ -163,7 +163,7 @@ func podSpecFields(isUpdatable bool) map[string]*schema.Schema {
 	}
 
 	if !isUpdatable {
-		for k, _ := range s {
+		for k := range s {
 			if k == "active_deadline_seconds" {
 				// This field is always updatable
 				continue

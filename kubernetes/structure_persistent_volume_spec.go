@@ -198,6 +198,12 @@ func flattenHostPathVolumeSource(in *v1.HostPathVolumeSource) []interface{} {
 	return []interface{}{att}
 }
 
+func flattenLocalVolumeSource(in *v1.LocalVolumeSource) []interface{} {
+	att := make(map[string]interface{})
+	att["path"] = in.Path
+	return []interface{}{att}
+}
+
 func flattenISCSIVolumeSource(in *v1.ISCSIVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	if in.TargetPortal != "" {
@@ -280,6 +286,9 @@ func flattenPersistentVolumeSource(in v1.PersistentVolumeSource) []interface{} {
 	}
 	if in.HostPath != nil {
 		att["host_path"] = flattenHostPathVolumeSource(in.HostPath)
+	}
+	if in.Local != nil {
+		att["local"] = flattenLocalVolumeSource(in.Local)
 	}
 	if in.Glusterfs != nil {
 		att["glusterfs"] = flattenGlusterfsVolumeSource(in.Glusterfs)
@@ -695,6 +704,17 @@ func expandHostPathVolumeSource(l []interface{}) *v1.HostPathVolumeSource {
 	return obj
 }
 
+func expandLocalVolumeSource(l []interface{}) *v1.LocalVolumeSource {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.LocalVolumeSource{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.LocalVolumeSource{
+		Path: in["path"].(string),
+	}
+	return obj
+}
+
 func expandISCSIVolumeSource(l []interface{}) *v1.ISCSIVolumeSource {
 	if len(l) == 0 || l[0] == nil {
 		return &v1.ISCSIVolumeSource{}
@@ -796,6 +816,9 @@ func expandPersistentVolumeSource(l []interface{}) v1.PersistentVolumeSource {
 	}
 	if v, ok := in["host_path"].([]interface{}); ok && len(v) > 0 {
 		obj.HostPath = expandHostPathVolumeSource(v)
+	}
+	if v, ok := in["local"].([]interface{}); ok && len(v) > 0 {
+		obj.Local = expandLocalVolumeSource(v)
 	}
 	if v, ok := in["glusterfs"].([]interface{}); ok && len(v) > 0 {
 		obj.Glusterfs = expandGlusterfsVolumeSource(v)

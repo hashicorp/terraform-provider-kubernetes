@@ -9,23 +9,39 @@ import (
 )
 
 const (
-	resolveImageProjectRegex = "[-_a-zA-Z0-9]*"
-	resolveImageFamilyRegex  = "[-_a-zA-Z0-9]*"
-	resolveImageImageRegex   = "[-_a-zA-Z0-9]*"
+	resolveImageFamilyRegex = "[-_a-zA-Z0-9]*"
+	resolveImageImageRegex  = "[-_a-zA-Z0-9]*"
 )
 
 var (
-	resolveImageProjectImage           = regexp.MustCompile(fmt.Sprintf("^projects/(%s)/global/images/(%s)$", resolveImageProjectRegex, resolveImageImageRegex))
-	resolveImageProjectFamily          = regexp.MustCompile(fmt.Sprintf("^projects/(%s)/global/images/family/(%s)$", resolveImageProjectRegex, resolveImageFamilyRegex))
+	resolveImageProjectImage           = regexp.MustCompile(fmt.Sprintf("projects/(%s)/global/images/(%s)$", ProjectRegex, resolveImageImageRegex))
+	resolveImageProjectFamily          = regexp.MustCompile(fmt.Sprintf("projects/(%s)/global/images/family/(%s)$", ProjectRegex, resolveImageFamilyRegex))
 	resolveImageGlobalImage            = regexp.MustCompile(fmt.Sprintf("^global/images/(%s)$", resolveImageImageRegex))
 	resolveImageGlobalFamily           = regexp.MustCompile(fmt.Sprintf("^global/images/family/(%s)$", resolveImageFamilyRegex))
 	resolveImageFamilyFamily           = regexp.MustCompile(fmt.Sprintf("^family/(%s)$", resolveImageFamilyRegex))
-	resolveImageProjectImageShorthand  = regexp.MustCompile(fmt.Sprintf("^(%s)/(%s)$", resolveImageProjectRegex, resolveImageImageRegex))
-	resolveImageProjectFamilyShorthand = regexp.MustCompile(fmt.Sprintf("^(%s)/(%s)$", resolveImageProjectRegex, resolveImageFamilyRegex))
+	resolveImageProjectImageShorthand  = regexp.MustCompile(fmt.Sprintf("^(%s)/(%s)$", ProjectRegex, resolveImageImageRegex))
+	resolveImageProjectFamilyShorthand = regexp.MustCompile(fmt.Sprintf("^(%s)/(%s)$", ProjectRegex, resolveImageFamilyRegex))
 	resolveImageFamily                 = regexp.MustCompile(fmt.Sprintf("^(%s)$", resolveImageFamilyRegex))
 	resolveImageImage                  = regexp.MustCompile(fmt.Sprintf("^(%s)$", resolveImageImageRegex))
-	resolveImageLink                   = regexp.MustCompile(fmt.Sprintf("^https://www.googleapis.com/compute/v1/projects/(%s)/global/images/(%s)", resolveImageProjectRegex, resolveImageImageRegex))
+	resolveImageLink                   = regexp.MustCompile(fmt.Sprintf("^https://www.googleapis.com/compute/[a-z0-9]+/projects/(%s)/global/images/(%s)", ProjectRegex, resolveImageImageRegex))
+
+	windowsSqlImage         = regexp.MustCompile("^sql-([0-9]{4})-([a-z]+)-windows-([0-9]{4})(?:-r([0-9]+))?-dc-v[0-9]+$")
+	canonicalUbuntuLtsImage = regexp.MustCompile("^ubuntu-(minimal-)?([0-9]+)-")
 )
+
+// built-in projects to look for images/families containing the string
+// on the left in
+var imageMap = map[string]string{
+	"centos":      "centos-cloud",
+	"coreos":      "coreos-cloud",
+	"debian":      "debian-cloud",
+	"opensuse":    "opensuse-cloud",
+	"rhel":        "rhel-cloud",
+	"sles":        "suse-cloud",
+	"ubuntu":      "ubuntu-os-cloud",
+	"windows":     "windows-cloud",
+	"windows-sql": "windows-sql-cloud",
+}
 
 func resolveImageImageExists(c *Config, project, name string) (bool, error) {
 	if _, err := c.clientCompute.Images.Get(project, name).Do(); err == nil {
@@ -68,18 +84,6 @@ func sanityTestRegexMatches(expected int, got []string, regexType, name string) 
 //    If not, check if it's a family in the current project. If it is, return it as global/images/family/{family}.
 //    If not, check if it could be a GCP-provided family, and if it exists. If it does, return it as projects/{project}/global/images/family/{family}
 func resolveImage(c *Config, project, name string) (string, error) {
-	// built-in projects to look for images/families containing the string
-	// on the left in
-	imageMap := map[string]string{
-		"centos":   "centos-cloud",
-		"coreos":   "coreos-cloud",
-		"debian":   "debian-cloud",
-		"opensuse": "opensuse-cloud",
-		"rhel":     "rhel-cloud",
-		"sles":     "suse-cloud",
-		"ubuntu":   "ubuntu-os-cloud",
-		"windows":  "windows-cloud",
-	}
 	var builtInProject string
 	for k, v := range imageMap {
 		if strings.Contains(name, k) {
@@ -191,4 +195,40 @@ func resolveImage(c *Config, project, name string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("Could not find image or family %s", name)
+}
+
+// resolvedImageSelfLink takes the output of resolveImage and coerces it into a self_link.
+// In the event that a global/images/IMAGE or global/images/family/FAMILY reference is
+// returned from resolveImage, providerProject will be used as the project for the self_link.
+func resolvedImageSelfLink(providerProject, name string) (string, error) {
+	switch {
+	case resolveImageLink.MatchString(name): // https://www.googleapis.com/compute/v1/projects/xyz/global/images/xyz
+		return name, nil
+	case resolveImageProjectImage.MatchString(name): // projects/xyz/global/images/xyz
+		res := resolveImageProjectImage.FindStringSubmatch(name)
+		if err := sanityTestRegexMatches(2, res, "project image", name); err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/images/%s", res[1], res[2]), nil
+	case resolveImageProjectFamily.MatchString(name): // projects/xyz/global/images/family/xyz
+		res := resolveImageProjectFamily.FindStringSubmatch(name)
+		if err := sanityTestRegexMatches(2, res, "project family", name); err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/images/family/%s", res[1], res[2]), nil
+	case resolveImageGlobalImage.MatchString(name): // global/images/xyz
+		res := resolveImageGlobalImage.FindStringSubmatch(name)
+		if err := sanityTestRegexMatches(1, res, "global image", name); err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/images/%s", providerProject, res[1]), nil
+	case resolveImageGlobalFamily.MatchString(name): // global/images/family/xyz
+		res := resolveImageGlobalFamily.FindStringSubmatch(name)
+		if err := sanityTestRegexMatches(1, res, "global family", name); err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/images/family/%s", providerProject, res[1]), nil
+	}
+	return "", fmt.Errorf("Could not expand image or family %q into a self_link", name)
+
 }

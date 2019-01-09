@@ -3,6 +3,7 @@ package google
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform/helper/schema"
 
@@ -16,7 +17,7 @@ func resourceSqlDatabase() *schema.Resource {
 		Update: resourceSqlDatabaseUpdate,
 		Delete: resourceSqlDatabaseDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			State: resourceSqlDatabaseImport,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -35,6 +36,7 @@ func resourceSqlDatabase() *schema.Resource {
 			"project": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 			},
 
@@ -54,6 +56,11 @@ func resourceSqlDatabase() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+		},
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(15 * time.Minute),
+			Update: schema.DefaultTimeout(10 * time.Minute),
+			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
 	}
 }
@@ -79,8 +86,12 @@ func resourceSqlDatabaseCreate(d *schema.ResourceData, meta interface{}) error {
 
 	mutexKV.Lock(instanceMutexKey(project, instance_name))
 	defer mutexKV.Unlock(instanceMutexKey(project, instance_name))
-	op, err := config.clientSqlAdmin.Databases.Insert(project, instance_name,
-		db).Do()
+
+	var op *sqladmin.Operation
+	err = retryTime(func() error {
+		op, err = config.clientSqlAdmin.Databases.Insert(project, instance_name, db).Do()
+		return err
+	}, 5 /* minutes */)
 
 	if err != nil {
 		return fmt.Errorf("Error, failed to insert "+
@@ -88,7 +99,7 @@ func resourceSqlDatabaseCreate(d *schema.ResourceData, meta interface{}) error {
 			instance_name, err)
 	}
 
-	err = sqladminOperationWait(config, op, project, "Insert Database")
+	err = sqladminOperationWaitTime(config, op, project, "Insert Database", int(d.Timeout(schema.TimeoutCreate).Minutes()))
 
 	if err != nil {
 		return fmt.Errorf("Error, failure waiting for insertion of %s "+
@@ -116,8 +127,11 @@ func resourceSqlDatabaseRead(d *schema.ResourceData, meta interface{}) error {
 	instance_name := s[0]
 	database_name := s[1]
 
-	db, err := config.clientSqlAdmin.Databases.Get(project, instance_name,
-		database_name).Do()
+	var db *sqladmin.Database
+	err = retryTime(func() error {
+		db, err = config.clientSqlAdmin.Databases.Get(project, instance_name, database_name).Do()
+		return err
+	}, 5 /* minutes */)
 
 	if err != nil {
 		return handleNotFoundError(err, d, fmt.Sprintf("SQL Database %q in instance %q", database_name, instance_name))
@@ -129,6 +143,7 @@ func resourceSqlDatabaseRead(d *schema.ResourceData, meta interface{}) error {
 	d.SetId(instance_name + ":" + database_name)
 	d.Set("charset", db.Charset)
 	d.Set("collation", db.Collation)
+	d.Set("project", project)
 
 	return nil
 }
@@ -153,8 +168,12 @@ func resourceSqlDatabaseUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	mutexKV.Lock(instanceMutexKey(project, instance_name))
 	defer mutexKV.Unlock(instanceMutexKey(project, instance_name))
-	op, err := config.clientSqlAdmin.Databases.Update(project, instance_name, database_name,
-		db).Do()
+
+	var op *sqladmin.Operation
+	err = retryTime(func() error {
+		op, err = config.clientSqlAdmin.Databases.Update(project, instance_name, database_name, db).Do()
+		return err
+	}, 5 /* minutes */)
 
 	if err != nil {
 		return fmt.Errorf("Error, failed to update "+
@@ -162,7 +181,7 @@ func resourceSqlDatabaseUpdate(d *schema.ResourceData, meta interface{}) error {
 			instance_name, err)
 	}
 
-	err = sqladminOperationWait(config, op, project, "Update Database")
+	err = sqladminOperationWaitTime(config, op, project, "Update Database", int(d.Timeout(schema.TimeoutUpdate).Minutes()))
 
 	if err != nil {
 		return fmt.Errorf("Error, failure waiting for update of %s "+
@@ -185,8 +204,12 @@ func resourceSqlDatabaseDelete(d *schema.ResourceData, meta interface{}) error {
 
 	mutexKV.Lock(instanceMutexKey(project, instance_name))
 	defer mutexKV.Unlock(instanceMutexKey(project, instance_name))
-	op, err := config.clientSqlAdmin.Databases.Delete(project, instance_name,
-		database_name).Do()
+
+	var op *sqladmin.Operation
+	err = retryTime(func() error {
+		op, err = config.clientSqlAdmin.Databases.Delete(project, instance_name, database_name).Do()
+		return err
+	}, 5 /* minutes */)
 
 	if err != nil {
 		return fmt.Errorf("Error, failed to delete"+
@@ -194,7 +217,7 @@ func resourceSqlDatabaseDelete(d *schema.ResourceData, meta interface{}) error {
 			instance_name, err)
 	}
 
-	err = sqladminOperationWait(config, op, project, "Delete Database")
+	err = sqladminOperationWaitTime(config, op, project, "Delete Database", int(d.Timeout(schema.TimeoutDelete).Minutes()))
 
 	if err != nil {
 		return fmt.Errorf("Error, failure waiting for deletion of %s "+
@@ -202,4 +225,24 @@ func resourceSqlDatabaseDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return nil
+}
+
+func resourceSqlDatabaseImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	config := meta.(*Config)
+	parseImportId([]string{
+		"projects/(?P<project>[^/]+)/instances/(?P<instance>[^/]+)/databases/(?P<name>[^/]+)",
+		"instances/(?P<instance>[^/]+)/databases/(?P<name>[^/]+)",
+		"(?P<project>[^/]+)/(?P<instance>[^/]+)/(?P<name>[^/]+)",
+		"(?P<instance>[^/]+)/(?P<name>[^/]+)",
+		"(?P<instance>[^/]+):(?P<name>[^/]+)",
+	}, d, config)
+
+	// Replace import id for the resource id
+	id, err := replaceVars(d, config, "{{instance}}:{{name}}")
+	if err != nil {
+		return nil, fmt.Errorf("Error constructing id: %s", err)
+	}
+	d.SetId(id)
+
+	return []*schema.ResourceData{d}, nil
 }

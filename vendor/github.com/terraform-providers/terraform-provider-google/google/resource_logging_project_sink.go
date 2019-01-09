@@ -16,12 +16,13 @@ func resourceLoggingProjectSink() *schema.Resource {
 		Update: resourceLoggingProjectSinkUpdate,
 		Schema: resourceLoggingSinkSchema(),
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			State: resourceLoggingSinkImportState("project"),
 		},
 	}
 	schm.Schema["project"] = &schema.Schema{
 		Type:     schema.TypeString,
 		Optional: true,
+		Computed: true,
 		ForceNew: true,
 	}
 	schm.Schema["unique_writer_identity"] = &schema.Schema{
@@ -57,11 +58,17 @@ func resourceLoggingProjectSinkCreate(d *schema.ResourceData, meta interface{}) 
 func resourceLoggingProjectSinkRead(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
+	project, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
+
 	sink, err := config.clientLogging.Projects.Sinks.Get(d.Id()).Do()
 	if err != nil {
 		return handleNotFoundError(err, d, fmt.Sprintf("Project Logging Sink %s", d.Get("name").(string)))
 	}
 
+	d.Set("project", project)
 	flattenResourceLoggingSink(d, sink)
 	if sink.WriterIdentity != nonUniqueWriterAccount {
 		d.Set("unique_writer_identity", true)
@@ -77,7 +84,8 @@ func resourceLoggingProjectSinkUpdate(d *schema.ResourceData, meta interface{}) 
 	sink := expandResourceLoggingSinkForUpdate(d)
 	uniqueWriterIdentity := d.Get("unique_writer_identity").(bool)
 
-	_, err := config.clientLogging.Projects.Sinks.Patch(d.Id(), sink).UniqueWriterIdentity(uniqueWriterIdentity).Do()
+	_, err := config.clientLogging.Projects.Sinks.Patch(d.Id(), sink).
+		UpdateMask(defaultLogSinkUpdateMask).UniqueWriterIdentity(uniqueWriterIdentity).Do()
 	if err != nil {
 		return err
 	}

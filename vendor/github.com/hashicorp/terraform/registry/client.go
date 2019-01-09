@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform/registry/regsrc"
 	"github.com/hashicorp/terraform/registry/response"
 	"github.com/hashicorp/terraform/svchost"
-	"github.com/hashicorp/terraform/svchost/auth"
 	"github.com/hashicorp/terraform/svchost/disco"
 	"github.com/hashicorp/terraform/version"
 )
@@ -37,18 +36,13 @@ type Client struct {
 	// services is a required *disco.Disco, which may have services and
 	// credentials pre-loaded.
 	services *disco.Disco
-
-	// Creds optionally provides credentials for communicating with service
-	// providers.
-	creds auth.CredentialsSource
 }
 
-func NewClient(services *disco.Disco, creds auth.CredentialsSource, client *http.Client) *Client {
+// NewClient returns a new initialized registry client.
+func NewClient(services *disco.Disco, client *http.Client) *Client {
 	if services == nil {
-		services = disco.NewDisco()
+		services = disco.New()
 	}
-
-	services.SetCredentialsSource(creds)
 
 	if client == nil {
 		client = httpclient.New()
@@ -60,20 +54,19 @@ func NewClient(services *disco.Disco, creds auth.CredentialsSource, client *http
 	return &Client{
 		client:   client,
 		services: services,
-		creds:    creds,
 	}
 }
 
-// Discover qeuries the host, and returns the url for the registry.
-func (c *Client) Discover(host svchost.Hostname) *url.URL {
-	service := c.services.DiscoverServiceURL(host, serviceID)
-	if service == nil {
-		return nil
+// Discover queries the host, and returns the url for the registry.
+func (c *Client) Discover(host svchost.Hostname) (*url.URL, error) {
+	service, err := c.services.DiscoverServiceURL(host, serviceID)
+	if err != nil {
+		return nil, err
 	}
 	if !strings.HasSuffix(service.Path, "/") {
 		service.Path += "/"
 	}
-	return service
+	return service, nil
 }
 
 // Versions queries the registry for a module, and returns the available versions.
@@ -83,9 +76,9 @@ func (c *Client) Versions(module *regsrc.Module) (*response.ModuleVersions, erro
 		return nil, err
 	}
 
-	service := c.Discover(host)
-	if service == nil {
-		return nil, fmt.Errorf("host %s does not provide Terraform modules", host)
+	service, err := c.Discover(host)
+	if err != nil {
+		return nil, err
 	}
 
 	p, err := url.Parse(path.Join(module.Module(), "versions"))
@@ -137,11 +130,7 @@ func (c *Client) Versions(module *regsrc.Module) (*response.ModuleVersions, erro
 }
 
 func (c *Client) addRequestCreds(host svchost.Hostname, req *http.Request) {
-	if c.creds == nil {
-		return
-	}
-
-	creds, err := c.creds.ForHost(host)
+	creds, err := c.services.CredentialsForHost(host)
 	if err != nil {
 		log.Printf("[WARN] Failed to get credentials for %s: %s (ignoring)", host, err)
 		return
@@ -160,9 +149,9 @@ func (c *Client) Location(module *regsrc.Module, version string) (string, error)
 		return "", err
 	}
 
-	service := c.Discover(host)
-	if service == nil {
-		return "", fmt.Errorf("host %s does not provide Terraform modules", host.ForDisplay())
+	service, err := c.Discover(host)
+	if err != nil {
+		return "", err
 	}
 
 	var p *url.URL

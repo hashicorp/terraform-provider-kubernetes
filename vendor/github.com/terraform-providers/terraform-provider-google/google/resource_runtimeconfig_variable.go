@@ -14,6 +14,10 @@ func resourceRuntimeconfigVariable() *schema.Resource {
 		Update: resourceRuntimeconfigVariableUpdate,
 		Delete: resourceRuntimeconfigVariableDelete,
 
+		Importer: &schema.ResourceImporter{
+			State: resourceRuntimeconfigVariableImport,
+		},
+
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
@@ -30,6 +34,7 @@ func resourceRuntimeconfigVariable() *schema.Resource {
 			"project": {
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 			},
 
@@ -71,15 +76,11 @@ func resourceRuntimeconfigVariableCreate(d *schema.ResourceData, meta interface{
 	}
 	d.SetId(createdVariable.Name)
 
-	return setRuntimeConfigVariableToResourceData(d, project, *createdVariable)
+	return setRuntimeConfigVariableToResourceData(d, *createdVariable)
 }
 
 func resourceRuntimeconfigVariableRead(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
-	project, err := getProject(d, config)
-	if err != nil {
-		return err
-	}
 
 	fullName := d.Id()
 	createdVariable, err := config.clientRuntimeconfig.Projects.Configs.Variables.Get(fullName).Do()
@@ -87,7 +88,7 @@ func resourceRuntimeconfigVariableRead(d *schema.ResourceData, meta interface{})
 		return err
 	}
 
-	return setRuntimeConfigVariableToResourceData(d, project, *createdVariable)
+	return setRuntimeConfigVariableToResourceData(d, *createdVariable)
 }
 
 func resourceRuntimeconfigVariableUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -111,7 +112,7 @@ func resourceRuntimeconfigVariableUpdate(d *schema.ResourceData, meta interface{
 		return err
 	}
 
-	return setRuntimeConfigVariableToResourceData(d, project, *createdVariable)
+	return setRuntimeConfigVariableToResourceData(d, *createdVariable)
 }
 
 func resourceRuntimeconfigVariableDelete(d *schema.ResourceData, meta interface{}) error {
@@ -125,6 +126,20 @@ func resourceRuntimeconfigVariableDelete(d *schema.ResourceData, meta interface{
 	d.SetId("")
 
 	return nil
+}
+
+func resourceRuntimeconfigVariableImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	config := meta.(*Config)
+	parseImportId([]string{"projects/(?P<project>[^/]+)/configs/(?P<parent>[^/]+)/variables/(?P<name>[^/]+)", "(?P<parent>[^/]+)/(?P<name>[^/]+)"}, d, config)
+
+	// Replace import id for the resource id
+	id, err := replaceVars(d, config, "projects/{{project}}/configs/{{parent}}/variables/{{name}}")
+	if err != nil {
+		return nil, fmt.Errorf("Error constructing id: %s", err)
+	}
+	d.SetId(id)
+
+	return []*schema.ResourceData{d}, nil
 }
 
 // resourceRuntimeconfigVariableFullName turns a given project, runtime config name, and a 'short name' for a runtime
@@ -176,18 +191,14 @@ func newRuntimeconfigVariableFromResourceData(d *schema.ResourceData, project st
 }
 
 // setRuntimeConfigVariableToResourceData stores a provided runtimeconfig.Variable struct inside a schema.ResourceData.
-func setRuntimeConfigVariableToResourceData(d *schema.ResourceData, project string, variable runtimeconfig.Variable) error {
+func setRuntimeConfigVariableToResourceData(d *schema.ResourceData, variable runtimeconfig.Variable) error {
 	varProject, parent, name, err := resourceRuntimeconfigVariableParseFullName(variable.Name)
 	if err != nil {
 		return err
 	}
 	d.Set("name", name)
 	d.Set("parent", parent)
-
-	if varProject != project {
-		d.Set("project", varProject)
-	}
-
+	d.Set("project", varProject)
 	d.Set("value", variable.Value)
 	d.Set("text", variable.Text)
 	d.Set("update_time", variable.UpdateTime)

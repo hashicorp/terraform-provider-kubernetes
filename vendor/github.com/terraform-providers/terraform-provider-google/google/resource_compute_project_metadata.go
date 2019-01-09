@@ -14,19 +14,23 @@ func resourceComputeProjectMetadata() *schema.Resource {
 		Read:   resourceComputeProjectMetadataRead,
 		Update: resourceComputeProjectMetadataUpdate,
 		Delete: resourceComputeProjectMetadataDelete,
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
 
 		SchemaVersion: 0,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": &schema.Schema{
-				Elem:     schema.TypeString,
 				Type:     schema.TypeMap,
 				Required: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
 
 			"project": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 			},
 		},
@@ -90,24 +94,30 @@ func resourceComputeProjectMetadataCreate(d *schema.ResourceData, meta interface
 func resourceComputeProjectMetadataRead(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
-	projectID, err := getProject(d, config)
-	if err != nil {
-		return err
+	if d.Id() == "" {
+		projectID, err := getProject(d, config)
+		if err != nil {
+			return err
+		}
+		d.SetId(projectID)
 	}
 
 	// Load project service
-	log.Printf("[DEBUG] Loading project service: %s", projectID)
-	project, err := config.clientCompute.Projects.Get(projectID).Do()
+	log.Printf("[DEBUG] Loading project service: %s", d.Id())
+	project, err := config.clientCompute.Projects.Get(d.Id()).Do()
 	if err != nil {
-		return handleNotFoundError(err, d, fmt.Sprintf("Project metadata for project %q", projectID))
+		return handleNotFoundError(err, d, fmt.Sprintf("Project metadata for project %q", d.Id()))
 	}
 
 	md := flattenMetadata(project.CommonInstanceMetadata)
 	existingMetadata := d.Get("metadata").(map[string]interface{})
 	// Remove all keys not explicitly mentioned in the terraform config
-	for k := range md {
-		if _, ok := existingMetadata[k]; !ok {
-			delete(md, k)
+	// unless you're doing an import.
+	if len(existingMetadata) > 0 {
+		for k := range md {
+			if _, ok := existingMetadata[k]; !ok {
+				delete(md, k)
+			}
 		}
 	}
 
@@ -115,8 +125,8 @@ func resourceComputeProjectMetadataRead(d *schema.ResourceData, meta interface{}
 		return fmt.Errorf("Error setting metadata: %s", err)
 	}
 
-	d.SetId("common_metadata")
-
+	d.Set("project", project.Name)
+	d.SetId(project.Name)
 	return nil
 }
 

@@ -114,7 +114,7 @@ func flattenMetadata(meta metav1.ObjectMeta) []map[string]interface{} {
 }
 
 func removeInternalKeys(m map[string]string) map[string]string {
-	for k, _ := range m {
+	for k := range m {
 		if isInternalKey(k) {
 			delete(m, k)
 		}

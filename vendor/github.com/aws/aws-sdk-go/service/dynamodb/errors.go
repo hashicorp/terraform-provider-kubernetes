@@ -8,7 +8,7 @@ const (
 	// "BackupInUseException".
 	//
 	// There is another ongoing conflicting backup control plane operation on the
-	// table. The backups is either being created, deleted or restored to a table.
+	// table. The backup is either being created, deleted or restored to a table.
 	ErrCodeBackupInUseException = "BackupInUseException"
 
 	// ErrCodeBackupNotFoundException for service response error code
@@ -41,11 +41,31 @@ const (
 	// The specified global table does not exist.
 	ErrCodeGlobalTableNotFoundException = "GlobalTableNotFoundException"
 
+	// ErrCodeIdempotentParameterMismatchException for service response error code
+	// "IdempotentParameterMismatchException".
+	//
+	// DynamoDB rejected the request because you retried a request with a different
+	// payload but with an idempotent token that was already used.
+	ErrCodeIdempotentParameterMismatchException = "IdempotentParameterMismatchException"
+
+	// ErrCodeIndexNotFoundException for service response error code
+	// "IndexNotFoundException".
+	//
+	// The operation tried to access a nonexistent index.
+	ErrCodeIndexNotFoundException = "IndexNotFoundException"
+
 	// ErrCodeInternalServerError for service response error code
 	// "InternalServerError".
 	//
 	// An error occurred on the server side.
 	ErrCodeInternalServerError = "InternalServerError"
+
+	// ErrCodeInvalidRestoreTimeException for service response error code
+	// "InvalidRestoreTimeException".
+	//
+	// An invalid restore time was specified. RestoreDateTime must be between EarliestRestorableDateTime
+	// and LatestRestorableDateTime.
+	ErrCodeInvalidRestoreTimeException = "InvalidRestoreTimeException"
 
 	// ErrCodeItemCollectionSizeLimitExceededException for service response error code
 	// "ItemCollectionSizeLimitExceededException".
@@ -57,17 +77,11 @@ const (
 	// ErrCodeLimitExceededException for service response error code
 	// "LimitExceededException".
 	//
-	// Up to 50 CreateBackup operations are allowed per second, per account. There
-	// is no limit to the number of daily on-demand backups that can be taken.
+	// There is no limit to the number of daily on-demand backups that can be taken.
 	//
 	// Up to 10 simultaneous table operations are allowed per account. These operations
-	// include CreateTable, UpdateTable, DeleteTable,UpdateTimeToLive, and RestoreTableFromBackup.
-	//
-	// For tables with secondary indexes, only one of those tables can be in the
-	// CREATING state at any point in time. Do not attempt to create more than one
-	// such table simultaneously.
-	//
-	// The total limit of tables in the ACTIVE state is 250.
+	// include CreateTable, UpdateTable, DeleteTable,UpdateTimeToLive, RestoreTableFromBackup,
+	// and RestoreTableToPointInTime.
 	//
 	// For tables with secondary indexes, only one of those tables can be in the
 	// CREATING state at any point in time. Do not attempt to create more than one
@@ -75,6 +89,12 @@ const (
 	//
 	// The total limit of tables in the ACTIVE state is 250.
 	ErrCodeLimitExceededException = "LimitExceededException"
+
+	// ErrCodePointInTimeRecoveryUnavailableException for service response error code
+	// "PointInTimeRecoveryUnavailableException".
+	//
+	// Point in time recovery has not yet been enabled for this source table.
+	ErrCodePointInTimeRecoveryUnavailableException = "PointInTimeRecoveryUnavailableException"
 
 	// ErrCodeProvisionedThroughputExceededException for service response error code
 	// "ProvisionedThroughputExceededException".
@@ -99,6 +119,14 @@ const (
 	// The specified replica is no longer part of the global table.
 	ErrCodeReplicaNotFoundException = "ReplicaNotFoundException"
 
+	// ErrCodeRequestLimitExceeded for service response error code
+	// "RequestLimitExceeded".
+	//
+	// Throughput exceeds the current throughput limit for your account. Please
+	// contact AWS Support at AWS Support (http://docs.aws.amazon.com/https:/aws.amazon.com/support)
+	// to request a limit increase.
+	ErrCodeRequestLimitExceeded = "RequestLimitExceeded"
+
 	// ErrCodeResourceInUseException for service response error code
 	// "ResourceInUseException".
 	//
@@ -117,19 +145,61 @@ const (
 	// ErrCodeTableAlreadyExistsException for service response error code
 	// "TableAlreadyExistsException".
 	//
-	// A table with the name already exists.
+	// A target table with the specified name already exists.
 	ErrCodeTableAlreadyExistsException = "TableAlreadyExistsException"
 
 	// ErrCodeTableInUseException for service response error code
 	// "TableInUseException".
 	//
-	// A table by that name is either being created or deleted.
+	// A target table with the specified name is either being created or deleted.
 	ErrCodeTableInUseException = "TableInUseException"
 
 	// ErrCodeTableNotFoundException for service response error code
 	// "TableNotFoundException".
 	//
-	// A table with the name TableName does not currently exist within the subscriber's
-	// account.
+	// A source table with the name TableName does not currently exist within the
+	// subscriber's account.
 	ErrCodeTableNotFoundException = "TableNotFoundException"
+
+	// ErrCodeTransactionCanceledException for service response error code
+	// "TransactionCanceledException".
+	//
+	// The entire transaction request was rejected.
+	//
+	// DynamoDB will reject the entire TransactWriteItems request if any of the
+	// following is true:
+	//
+	//    *  A table in the TransactWriteItems request does not exist.
+	//
+	//    *  A table in the TransactWriteItems request is on a different account
+	//    or region.
+	//
+	//    *  Operations contain item schema violations.
+	//
+	//    *  More than one write operation (UpdateItem, PutItem, DeleteItem) operates
+	//    on the same item.
+	//
+	//    *  More than one check operation operates on the same item.
+	//
+	//    *  The number of operations sent in the TransactWriteItems request is
+	//    0 or greater than 10.
+	//
+	//    *  A TransactWriteItems request exceeds the maximum 4 MB request size.
+	//
+	//
+	//    *  Any operation in the TransactWriteItems request would cause an item
+	//    to become larger than 400KB.
+	ErrCodeTransactionCanceledException = "TransactionCanceledException"
+
+	// ErrCodeTransactionConflictException for service response error code
+	// "TransactionConflictException".
+	//
+	// Operation was rejected because there is an ongoing transaction for the item.
+	ErrCodeTransactionConflictException = "TransactionConflictException"
+
+	// ErrCodeTransactionInProgressException for service response error code
+	// "TransactionInProgressException".
+	//
+	// The transaction with the given request token is already in progress.
+	ErrCodeTransactionInProgressException = "TransactionInProgressException"
 )

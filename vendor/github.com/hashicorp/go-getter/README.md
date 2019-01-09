@@ -169,6 +169,9 @@ is shown below:
 The checksum query parameter is never sent to the backend protocol
 implementation. It is used at a higher level by go-getter itself.
 
+If the destination file exists and the checksums match: download
+will be skipped.
+
 ### Unarchiving
 
 go-getter will automatically unarchive files into a file or directory
@@ -215,11 +218,12 @@ from the URL before going to the final protocol downloader.
 
 ## Protocol-Specific Options
 
-This section documents the protocol-specific options that can be specified
-for go-getter. These options should be appended to the input as normal query
-parameters. Depending on the usage of go-getter, applications may provide
-alternate ways of inputting options. For example, [Nomad](https://www.nomadproject.io)
-provides a nice options block for specifying options rather than in the URL.
+This section documents the protocol-specific options that can be specified for
+go-getter. These options should be appended to the input as normal query
+parameters ([HTTP headers](#headers) are an exception to this, however).
+Depending on the usage of go-getter, applications may provide alternate ways of
+inputting options. For example, [Nomad](https://www.nomadproject.io) provides a
+nice options block for specifying options rather than in the URL.
 
 ## General (All Protocols)
 
@@ -231,6 +235,9 @@ The options below are available to all protocols:
 
   * `checksum` - Checksum to verify the downloaded file or archive. See
     the entire section on checksumming above for format and more details.
+
+  * `filename` - When in file download mode, allows specifying the name of the
+    downloaded file on disk. Has no effect in directory mode.
 
 ### Local Files (`file`)
 
@@ -260,6 +267,13 @@ To use HTTP basic authentication with go-getter, simply prepend `username:passwo
 hostname in the URL such as `https://Aladdin:OpenSesame@www.example.com/index.html`. All special
 characters, including the username and password, must be URL encoded.
 
+#### Headers
+
+Optional request headers can be added by supplying them in a custom
+[`HttpGetter`](https://godoc.org/github.com/hashicorp/go-getter#HttpGetter)
+(_not_ as query parameters like most other options). These headers will be sent
+out on every request the getter in question makes.
+
 ### S3 (`s3`)
 
 S3 takes various access configurations in the URL. Note that it will also
@@ -282,7 +296,7 @@ be used automatically.
   * `aws_access_key_id` (required) - Minio access key.
   * `aws_access_key_secret` (required) - Minio access key secret.
   * `region` (optional - defaults to us-east-1) - Region identifier to use.
-  * `version` (optional - fefaults to Minio default) - Configuration file format.
+  * `version` (optional - defaults to Minio default) - Configuration file format.
 
 #### S3 Bucket Examples
 

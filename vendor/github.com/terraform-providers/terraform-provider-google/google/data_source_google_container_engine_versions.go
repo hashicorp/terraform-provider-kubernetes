@@ -17,7 +17,16 @@ func dataSourceGoogleContainerEngineVersions() *schema.Resource {
 			},
 			"zone": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
+			},
+			"region": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				ConflictsWith: []string{"zone"},
+			},
+			"default_cluster_version": {
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 			"latest_master_version": {
 				Type:     schema.TypeString,
@@ -49,19 +58,30 @@ func dataSourceGoogleContainerEngineVersionsRead(d *schema.ResourceData, meta in
 		return err
 	}
 
-	zone := d.Get("zone").(string)
+	location, err := getLocation(d, config)
+	if err != nil {
+		return err
+	}
+	if len(location) == 0 {
+		return fmt.Errorf("Cannot determine location: set zone or region in this data source or at provider-level")
+	}
 
-	resp, err := config.clientContainer.Projects.Zones.GetServerconfig(project, zone).Do()
+	location = fmt.Sprintf("projects/%s/locations/%s", project, location)
+	resp, err := config.clientContainerBeta.Projects.Locations.GetServerConfig(location).Do()
 	if err != nil {
 		return fmt.Errorf("Error retrieving available container cluster versions: %s", err.Error())
 	}
 
 	d.Set("valid_master_versions", resp.ValidMasterVersions)
+	d.Set("default_cluster_version", resp.DefaultClusterVersion)
 	d.Set("valid_node_versions", resp.ValidNodeVersions)
-	d.Set("latest_master_version", resp.ValidMasterVersions[0])
-	d.Set("latest_node_version", resp.ValidNodeVersions[0])
+	if len(resp.ValidMasterVersions) > 0 {
+		d.Set("latest_master_version", resp.ValidMasterVersions[0])
+	}
+	if len(resp.ValidNodeVersions) > 0 {
+		d.Set("latest_node_version", resp.ValidNodeVersions[0])
+	}
 
 	d.SetId(time.Now().UTC().String())
-
 	return nil
 }

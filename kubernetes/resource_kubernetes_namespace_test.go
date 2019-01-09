@@ -250,7 +250,7 @@ func testAccCheckMetaAnnotations(om *meta_v1.ObjectMeta, expected map[string]str
 
 		// Remove any internal k8s annotations unless we expect them
 		annotations := om.Annotations
-		for key, _ := range annotations {
+		for key := range annotations {
 			_, isExpected := expected[key]
 			if isInternalKey(key) && !isExpected {
 				delete(annotations, key)
@@ -273,7 +273,7 @@ func testAccCheckMetaLabels(om *meta_v1.ObjectMeta, expected map[string]string) 
 
 		// Remove any internal k8s labels unless we expect them
 		labels := om.Labels
-		for key, _ := range labels {
+		for key := range labels {
 			_, isExpected := expected[key]
 			if isInternalKey(key) && !isExpected {
 				delete(labels, key)

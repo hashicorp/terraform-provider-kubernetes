@@ -1,12 +1,11 @@
 package google
 
 import (
+	"context"
 	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
-
-	"golang.org/x/net/context"
 )
 
 func resourceBigtableTable() *schema.Resource {
@@ -38,6 +37,7 @@ func resourceBigtableTable() *schema.Resource {
 			"project": {
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 			},
 		},
@@ -108,6 +108,8 @@ func resourceBigtableTableRead(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return fmt.Errorf("Error retrieving table. Could not find %s in %s. %s", name, instanceName, err)
 	}
+
+	d.Set("project", project)
 
 	return nil
 }

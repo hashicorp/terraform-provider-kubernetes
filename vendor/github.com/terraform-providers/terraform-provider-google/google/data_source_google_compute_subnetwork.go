@@ -4,7 +4,8 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"google.golang.org/api/googleapi"
+	computeBeta "google.golang.org/api/compute/v0.beta"
+	"google.golang.org/api/compute/v1"
 )
 
 func dataSourceGoogleComputeSubnetwork() *schema.Resource {
@@ -83,17 +84,11 @@ func dataSourceGoogleComputeSubnetworkRead(d *schema.ResourceData, meta interfac
 	if err != nil {
 		return err
 	}
+	name := d.Get("name").(string)
 
-	subnetwork, err := config.clientCompute.Subnetworks.Get(
-		project, region, d.Get("name").(string)).Do()
+	subnetwork, err := config.clientCompute.Subnetworks.Get(project, region, name).Do()
 	if err != nil {
-		if gerr, ok := err.(*googleapi.Error); ok && gerr.Code == 404 {
-			// The resource doesn't exist anymore
-
-			return fmt.Errorf("Subnetwork Not Found")
-		}
-
-		return fmt.Errorf("Error reading Subnetwork: %s", err)
+		return handleNotFoundError(err, d, fmt.Sprintf("Subnetwork Not Found : %s", name))
 	}
 
 	d.Set("ip_cidr_range", subnetwork.IpCidrRange)
@@ -111,4 +106,25 @@ func dataSourceGoogleComputeSubnetworkRead(d *schema.ResourceData, meta interfac
 	subnetwork.Region = region
 	d.SetId(createSubnetID(subnetwork))
 	return nil
+}
+
+func flattenSecondaryRanges(secondaryRanges []*compute.SubnetworkSecondaryRange) []map[string]interface{} {
+	secondaryRangesSchema := make([]map[string]interface{}, 0, len(secondaryRanges))
+	for _, secondaryRange := range secondaryRanges {
+		data := map[string]interface{}{
+			"range_name":    secondaryRange.RangeName,
+			"ip_cidr_range": secondaryRange.IpCidrRange,
+		}
+
+		secondaryRangesSchema = append(secondaryRangesSchema, data)
+	}
+	return secondaryRangesSchema
+}
+
+func createSubnetID(s *compute.Subnetwork) string {
+	return fmt.Sprintf("%s/%s", s.Region, s.Name)
+}
+
+func createSubnetIDBeta(s *computeBeta.Subnetwork) string {
+	return fmt.Sprintf("%s/%s", s.Region, s.Name)
 }

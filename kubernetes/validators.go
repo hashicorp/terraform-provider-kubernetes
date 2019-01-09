@@ -13,7 +13,7 @@ import (
 
 func validateAnnotations(value interface{}, key string) (ws []string, es []error) {
 	m := value.(map[string]interface{})
-	for k, _ := range m {
+	for k := range m {
 		errors := utilValidation.IsQualifiedName(strings.ToLower(k))
 		if len(errors) > 0 {
 			for _, e := range errors {

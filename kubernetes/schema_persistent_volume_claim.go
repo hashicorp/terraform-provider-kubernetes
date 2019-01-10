@@ -68,7 +68,7 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 			ForceNew:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: labelSelectorFields(),
+				Schema: labelSelectorFields(false),
 			},
 		},
 		"volume_name": {

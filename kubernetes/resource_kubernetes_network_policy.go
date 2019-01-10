@@ -335,7 +335,6 @@ func resourceKubernetesNetworkPolicyDelete(d *schema.ResourceData, meta interfac
 
 	log.Printf("[INFO] Network Policy %s deleted", name)
 
-	d.SetId("")
 	return nil
 }
 

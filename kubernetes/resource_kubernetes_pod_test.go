@@ -560,6 +560,7 @@ func TestAccKubernetesPod_with_empty_dir_volume(t *testing.T) {
 
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := "nginx:1.7.9"
+	saName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -645,7 +646,7 @@ func TestAccKubernetesPod_config_with_automount_service_account_token(t *testing
 		CheckDestroy: testAccCheckKubernetesPodDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodConfigWithAutomountServiceAccountToken(podName, imageName),
+				Config: testAccKubernetesPodConfigWithAutomountServiceAccountToken(saName, podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodExists("kubernetes_pod.test", &confPod),
 					testAccCheckKubernetesServiceAccountExists("kubernetes_service_account.test", &confSA),
@@ -1439,11 +1440,11 @@ resource "kubernetes_pod" "test" {
 `, podName, imageName, val)
 }
 
-func testAccKubernetesPodConfigWithAutomountServiceAccountToken(podName, imageName string) string {
+func testAccKubernetesPodConfigWithAutomountServiceAccountToken(saName string, podName string, imageName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service_account" "test" {
   metadata {
-    name = "foo"
+    name = "%s"
   }
 }
 
@@ -1457,7 +1458,7 @@ resource "kubernetes_pod" "test" {
   }
 
   spec {
-    service_account_name            = "foo"
+    service_account_name            = "kubernetes_service_account.test.metadata.0.name"
     automount_service_account_token = true
 
     container {
@@ -1465,8 +1466,6 @@ resource "kubernetes_pod" "test" {
       name  = "containername"
     }
   }
-
-  depends_on = [ "kubernetes_service_account.test" ]
 }
-`, podName, imageName)
+`, saName, podName, imageName)
 }

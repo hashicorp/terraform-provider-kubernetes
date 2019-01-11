@@ -103,28 +103,10 @@ func Provider() terraform.ResourceProvider {
 			},
 		},
 
-		DataSourcesMap: map[string]*schema.Resource{
-			"kubernetes_service":       dataSourceKubernetesService(),
-			"kubernetes_storage_class": dataSourceKubernetesStorageClass(),
-		},
+		DataSourcesMap: map[string]*schema.Resource{},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"kubernetes_config_map":                resourceKubernetesConfigMap(),
-			"kubernetes_deployment":                resourceKubernetesDeployment(),
-			"kubernetes_horizontal_pod_autoscaler": resourceKubernetesHorizontalPodAutoscaler(),
-			"kubernetes_limit_range":               resourceKubernetesLimitRange(),
-			"kubernetes_namespace":                 resourceKubernetesNamespace(),
-			"kubernetes_persistent_volume":         resourceKubernetesPersistentVolume(),
-			"kubernetes_persistent_volume_claim":   resourceKubernetesPersistentVolumeClaim(),
-			"kubernetes_pod":                       resourceKubernetesPod(),
-			"kubernetes_replication_controller":    resourceKubernetesReplicationController(),
-			"kubernetes_resource_quota":            resourceKubernetesResourceQuota(),
-			"kubernetes_secret":                    resourceKubernetesSecret(),
-			"kubernetes_service":                   resourceKubernetesService(),
-			"kubernetes_service_account":           resourceKubernetesServiceAccount(),
-			"kubernetes_storage_class":             resourceKubernetesStorageClass(),
-			"kubernetes_cluster_role_binding":      resourceKubernetesClusterRoleBinding(),
-			"kubernetes_yaml":                      resourceKubernetesYAML(),
+			"kubernetes_yaml": resourceKubernetesYAML(),
 		},
 		ConfigureFunc: providerConfigure,
 	}

@@ -538,5 +538,4 @@ func compareObjsInternal(originalObj, returnedObj reflect.Value, builder *string
 func getMD5Hash(text string) string {
 	hash := md5.Sum([]byte(text))
 	return hex.EncodeToString(hash[:])
-	return text
 }

@@ -77,11 +77,7 @@ func testAccCheckKubernetesClusterRoleDestroy(s *terraform.State) error {
 		if rs.Type != "kubernetes_cluster_role" {
 			continue
 		}
-		_, name, err := idParts(rs.Primary.ID)
-		if err != nil {
-			return err
-		}
-		resp, err := conn.RbacV1().ClusterRoles().Get(name, meta_v1.GetOptions{})
+		resp, err := conn.RbacV1().ClusterRoles().Get(rs.Primary.ID, meta_v1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("Cluster Role still exists: %s", rs.Primary.ID)
@@ -97,11 +93,7 @@ func testAccCheckKubernetesClusterRoleExists(n string, obj *api.ClusterRole) res
 			return fmt.Errorf("Not found: %s", n)
 		}
 		conn := testAccProvider.Meta().(*kubernetes.Clientset)
-		_, name, err := idParts(rs.Primary.ID)
-		if err != nil {
-			return err
-		}
-		out, err := conn.RbacV1().ClusterRoles().Get(name, meta_v1.GetOptions{})
+		out, err := conn.RbacV1().ClusterRoles().Get(rs.Primary.ID, meta_v1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -112,40 +104,47 @@ func testAccCheckKubernetesClusterRoleExists(n string, obj *api.ClusterRole) res
 func testAccKubernetesClusterRoleConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_cluster_role" "test" {
-	metadata {
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	rule {
-		api_groups = [""]
-		resources  = ["pods", "pods/log"]
-		verbs = ["get", "list"]
-	}
-}`, name)
+  metadata {
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+  
+  rule {
+    api_groups = [""]
+    resources  = ["pods", "pods/log"]
+    verbs      = ["get", "list"]
+  }
+}
+`, name)
 }
 func testAccKubernetesClusterRoleConfig_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_cluster_role" "test" {
-	metadata {
-		labels {
-			TestLabelOne = "one"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	rule {
-		api_groups = [""]
-		resources  = ["pods", "pods/log"]
-		verbs      = ["get", "list", "watch"]
-	}
-	rule {
-		api_groups = [""]
-		resources  = ["deployments"]
-		verbs      = ["get", "list"]
-	}
-}`, name)
+  metadata {
+    labels {
+      TestLabelOne   = "one"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["pods", "pods/log"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["deployments"]
+    verbs      = ["get", "list"]
+  }
+}
+`, name)
 }

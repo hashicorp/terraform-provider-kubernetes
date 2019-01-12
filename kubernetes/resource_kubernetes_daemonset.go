@@ -59,44 +59,7 @@ func resourceKubernetesDaemonSet() *schema.Resource {
 							ForceNew:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"match_expressions": {
-										Type:        schema.TypeList,
-										Description: "A list of label selector requirements. The requirements are ANDed.",
-										Optional:    true,
-										ForceNew:    true,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"key": {
-													Type:        schema.TypeString,
-													Description: "The label key that the selector applies to.",
-													Optional:    true,
-													ForceNew:    true,
-												},
-												"operator": {
-													Type:        schema.TypeString,
-													Description: "A key's relationship to a set of values. Valid operators ard `In`, `NotIn`, `Exists` and `DoesNotExist`.",
-													Optional:    true,
-													ForceNew:    true,
-												},
-												"values": {
-													Type:        schema.TypeSet,
-													Description: "An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.",
-													Optional:    true,
-													ForceNew:    true,
-													Elem:        &schema.Schema{Type: schema.TypeString},
-													Set:         schema.HashString,
-												},
-											},
-										},
-									},
-									"match_labels": {
-										Type:        schema.TypeMap,
-										Description: "A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is \"key\", the operator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
-										Optional:    true,
-										ForceNew:    true,
-									},
-								},
+								Schema: labelSelectorFields(true),
 							},
 						},
 						"strategy": {
@@ -139,18 +102,7 @@ func resourceKubernetesDaemonSet() *schema.Resource {
 							Required:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"metadata": namespacedMetadataSchema("pod", true),
-									"spec": {
-										Type:        schema.TypeList,
-										Description: "Spec defines the specification of the desired behavior of the pod. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status",
-										Required:    true,
-										MaxItems:    1,
-										Elem: &schema.Resource{
-											Schema: podSpecFields(true),
-										},
-									},
-								},
+								Schema: podTemplateFields(true),
 							},
 						},
 					},
@@ -241,6 +193,10 @@ func resourceKubernetesDaemonSetRead(d *schema.ResourceData, meta interface{}) e
 	log.Printf("[INFO] Reading daemonset %s", name)
 	daemonset, err := conn.AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
+		if errors.IsNotFound(err) {
+			d.SetId("")
+			return nil
+		}
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
 	}
@@ -282,7 +238,6 @@ func resourceKubernetesDaemonSetDelete(d *schema.ResourceData, meta interface{})
 
 	log.Printf("[INFO] DaemonSet %s deleted", name)
 
-	d.SetId("")
 	return nil
 }
 
@@ -297,7 +252,7 @@ func resourceKubernetesDaemonSetExists(d *schema.ResourceData, meta interface{})
 	log.Printf("[INFO] Checking daemonset %s", name)
 	_, err = conn.AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if errors.IsNotFound(err) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

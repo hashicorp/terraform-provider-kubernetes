@@ -247,24 +247,27 @@ resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
   }
+
   spec {
     selector {
-			match_labels {
-				foo = "bar"
-			}
+      match_labels {
+        foo = "bar"
+      }
     }
+
     template {
-			metadata {
-				labels {
-					foo = "bar"
-				}
-			}
-			spec {
-				container {
-					image = "nginx:1.7.8"
-					name  = "tf-acc-test"
-				}
-			}
+      metadata {
+        labels {
+          foo = "bar"
+        }
+      }
+
+      spec {
+        container {
+          image = "nginx:1.7.8"
+          name  = "tf-acc-test"
+        }
+      }
     }
   }
 }
@@ -279,35 +282,40 @@ resource "kubernetes_daemonset" "test" {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
+
     labels {
-      TestLabelOne = "one"
-      TestLabelTwo = "two"
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
+
     name = "%s"
   }
+
   spec {
     selector {
-			match_labels {
-        TestLabelOne = "one"
-        TestLabelTwo = "two"
-				TestLabelThree = "three"
-			}
+      match_labels {
+        TestLabelOne   = "one"
+        TestLabelTwo   = "two"
+        TestLabelThree = "three"
+      }
     }
+
     template {
-			metadata {
-				labels {
-					TestLabelOne = "one"
-					TestLabelTwo = "two"
-					TestLabelThree = "three"
-				}
-			}
-			spec {
-				container {
-					image = "nginx:1.7.8"
-					name  = "tf-acc-test"
-				}
-			}
+      metadata {
+        labels {
+          TestLabelOne   = "one"
+          TestLabelTwo   = "two"
+          TestLabelThree = "three"
+        }
+      }
+
+      spec {
+        container {
+          image = "nginx:1.7.8"
+          name  = "tf-acc-test"
+        }
+      }
     }
   }
 }
@@ -320,39 +328,45 @@ resource "kubernetes_daemonset" "test" {
   metadata {
     annotations {
       TestAnnotationOne = "one"
-      Different = "1234"
+      Different         = "1234"
     }
+
     labels {
-      TestLabelOne = "one"
+      TestLabelOne   = "one"
       TestLabelThree = "three"
     }
+
     name = "%s"
   }
+
   spec {
     selector {
-			match_labels {
-				TestLabelOne = "one"
-				TestLabelTwo = "two"
-				TestLabelThree = "three"
-			}
+      match_labels {
+        TestLabelOne   = "one"
+        TestLabelTwo   = "two"
+        TestLabelThree = "three"
+      }
     }
+    
     template {
-			metadata {
-				labels {
-					TestLabelOne = "one"
-					TestLabelTwo = "two"
-					TestLabelThree = "three"
-				}
-			}
-			spec {
-				container {
-					image = "nginx:1.7.9"
-					name  = "tf-acc-test"
-				}
-			}
+      metadata {
+        labels {
+          TestLabelOne   = "one"
+          TestLabelTwo   = "two"
+          TestLabelThree = "three"
+        }
+      }
+    
+      spec {
+        container {
+          image = "nginx:1.7.9"
+          name  = "tf-acc-test"
+        }
+      }
     }
   }
-}`, name)
+}
+`, name)
 }
 
 func testAccKubernetesDaemonSetConfigWithTemplateMetadata(depName, imageName string) string {
@@ -360,34 +374,39 @@ func testAccKubernetesDaemonSetConfigWithTemplateMetadata(depName, imageName str
 resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
+
     labels {
       Test = "TfAcceptanceTest"
     }
   }
+
   spec {
     selector {
-			match_labels {
-				Test = "TfAcceptanceTest"
-			}
-		}
+      match_labels {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
     template {
-			metadata {
-				labels {
-					foo = "bar"
-					Test = "TfAcceptanceTest"
-				}
-				annotations {
-					"prometheus.io/scrape" = "true"
-					"prometheus.io/scheme" = "https"
-					"prometheus.io/port"   = "4000"
-				}
-			}
-			spec {
-				container {
-					image = "%s"
-					name  = "containername"
-				}
-			}
+      metadata {
+        labels {
+          foo  = "bar"
+          Test = "TfAcceptanceTest"
+        }
+
+        annotations {
+          "prometheus.io/scrape" = "true"
+          "prometheus.io/scheme" = "https"
+          "prometheus.io/port"   = "4000"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+        }
+      }
     }
   }
 }
@@ -399,34 +418,39 @@ func testAccKubernetesDaemonSetConfigWithTemplateMetadataModified(depName, image
 resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
+
     labels {
       Test = "TfAcceptanceTest"
     }
   }
+
   spec {
     selector {
-			match_labels {
-				Test = "TfAcceptanceTest"
-			}
-		}
+      match_labels {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
     template {
-			metadata {
-				labels {
-					foo = "bar"
-					Test = "TfAcceptanceTest"
-				}
-				annotations {
-					"prometheus.io/scrape" = "true"
-					"prometheus.io/scheme" = "http"
-					"prometheus.io/port"   = "8080"
-				}
-			}
-			spec {
-				container {
-					image = "%s"
-					name  = "containername"
-				}
-			}
+      metadata {
+        labels {
+          foo  = "bar"
+          Test = "TfAcceptanceTest"
+        }
+
+        annotations {
+          "prometheus.io/scrape" = "true"
+          "prometheus.io/scheme" = "http"
+          "prometheus.io/port"   = "8080"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+        }
+      }
     }
   }
 }
@@ -438,33 +462,38 @@ func testAccKubernetesDaemonSetWithInitContainer(depName, imageName string) stri
 resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
+
     labels {
-			foo = "bar"
+      foo = "bar"
     }
   }
+
   spec {
     selector {
-			match_labels {
-				foo = "bar"
-			}
-		}
+      match_labels {
+        foo = "bar"
+      }
+    }
+
     template {
-			metadata {
-				labels {
-					foo = "bar"
-				}
-			}
-			spec {
-				init_container {
-					name = "hello"
-					image = "alpine"
-					command = ["echo", "'hello'"]
-				}
-				container {
-					image = "%s"
-					name  = "containername"
-				}
-			}
+      metadata {
+        labels {
+          foo = "bar"
+        }
+      }
+
+      spec {
+        init_container {
+          name    = "hello"
+          image   = "alpine"
+          command = ["echo", "'hello'"]
+        }
+
+        container {
+          image = "%s"
+          name  = "containername"
+        }
+      }
     }
   }
 }
@@ -477,24 +506,27 @@ resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
   }
+
   spec {
     selector {
-			match_labels {
-				foo = "bar"
-			}
-		}
+      match_labels {
+        foo = "bar"
+      }
+    }
+
     template {
-			metadata {
-				labels {
-					foo = "bar"
-				}
-			}
-			spec {
-				container {
-					image = "%s"
-					name  = "containername"
-				}
-			}
+      metadata {
+        labels {
+          foo = "bar"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+        }
+      }
     }
   }
 }

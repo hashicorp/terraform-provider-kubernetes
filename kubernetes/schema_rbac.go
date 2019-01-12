@@ -53,8 +53,8 @@ func rbacSubjectSchema() map[string]*schema.Schema {
 	}
 }
 
-func policyRuleFields() map[string]*schema.Schema {
-	s := map[string]*schema.Schema{
+func policyRuleSchema() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
 		"api_groups": {
 			Type:        schema.TypeList,
 			Description: "APIGroups is the name of the APIGroup that contains the resources. If multiple API groups are specified, any action requested against one of the enumerated resources in any API group will be allowed.",
@@ -87,5 +87,4 @@ func policyRuleFields() map[string]*schema.Schema {
 			Elem:        &schema.Schema{Type: schema.TypeString},
 		},
 	}
-	return s
 }

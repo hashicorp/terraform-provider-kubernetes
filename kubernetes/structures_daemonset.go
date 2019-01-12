@@ -77,7 +77,7 @@ func expandDaemonSetSpec(daemonset []interface{}) (appsv1.DaemonSetSpec, error) 
 	if err != nil {
 		return obj, err
 	}
-	obj.Template = template
+	obj.Template = *template
 
 	return obj, nil
 }

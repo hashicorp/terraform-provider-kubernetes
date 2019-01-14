@@ -172,7 +172,7 @@ func resourceKubernetesDeployment() *schema.Resource {
 										Required:    true,
 										MaxItems:    1,
 										Elem: &schema.Resource{
-											Schema: podSpecFields(true),
+											Schema: podSpecFields(true, false, false),
 										},
 									},
 								},
@@ -198,7 +198,7 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 
 	deployment := appsv1.Deployment{
 		ObjectMeta: metadata,
-		Spec:       spec,
+		Spec:       *spec,
 	}
 
 	log.Printf("[INFO] Creating new deployment: %#v", deployment)

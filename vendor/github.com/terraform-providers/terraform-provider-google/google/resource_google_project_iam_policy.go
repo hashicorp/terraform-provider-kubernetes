@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"sort"
-	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -18,11 +17,15 @@ func resourceGoogleProjectIamPolicy() *schema.Resource {
 		Read:   resourceGoogleProjectIamPolicyRead,
 		Update: resourceGoogleProjectIamPolicyUpdate,
 		Delete: resourceGoogleProjectIamPolicyDelete,
+		Importer: &schema.ResourceImporter{
+			State: resourceGoogleProjectIamPolicyImport,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"project": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 			},
 			"policy_data": &schema.Schema{
@@ -33,15 +36,16 @@ func resourceGoogleProjectIamPolicy() *schema.Resource {
 			"authoritative": &schema.Schema{
 				Type:       schema.TypeBool,
 				Optional:   true,
-				Deprecated: "Use google_project_iam_policy_binding and google_project_iam_policy_member instead.",
+				Deprecated: "A future version of Terraform will remove the authoritative field. To ignore changes not managed by Terraform, use google_project_iam_binding and google_project_iam_member instead. See https://www.terraform.io/docs/providers/google/r/google_project_iam.html for more information.",
 			},
 			"etag": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
 			},
 			"restore_policy": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
+				Deprecated: "This field will be removed alongside the authoritative field. To ignore changes not managed by Terraform, use google_project_iam_binding and google_project_iam_member instead. See https://www.terraform.io/docs/providers/google/r/google_project_iam.html for more information.",
+				Type:       schema.TypeString,
+				Computed:   true,
 			},
 			"disable_project": &schema.Schema{
 				Deprecated: "This will be removed with the authoritative field. Use lifecycle.prevent_destroy instead.",
@@ -58,6 +62,11 @@ func resourceGoogleProjectIamPolicyCreate(d *schema.ResourceData, meta interface
 	if err != nil {
 		return err
 	}
+
+	mutexKey := getProjectIamPolicyMutexKey(pid)
+	mutexKV.Lock(mutexKey)
+	defer mutexKV.Unlock(mutexKey)
+
 	// Get the policy in the template
 	p, err := getResourceIamPolicy(d)
 	if err != nil {
@@ -138,6 +147,7 @@ func resourceGoogleProjectIamPolicyRead(d *schema.ResourceData, meta interface{}
 	log.Printf("[DEBUG]: Setting etag=%s", p.Etag)
 	d.Set("etag", p.Etag)
 	d.Set("policy_data", string(pBytes))
+	d.Set("project", pid)
 	return nil
 }
 
@@ -148,6 +158,10 @@ func resourceGoogleProjectIamPolicyUpdate(d *schema.ResourceData, meta interface
 	if err != nil {
 		return err
 	}
+
+	mutexKey := getProjectIamPolicyMutexKey(pid)
+	mutexKV.Lock(mutexKey)
+	defer mutexKV.Unlock(mutexKey)
 
 	// Get the policy in the template
 	p, err := getResourceIamPolicy(d)
@@ -216,6 +230,10 @@ func resourceGoogleProjectIamPolicyDelete(d *schema.ResourceData, meta interface
 		return err
 	}
 
+	mutexKey := getProjectIamPolicyMutexKey(pid)
+	mutexKV.Lock(mutexKey)
+	defer mutexKV.Unlock(mutexKey)
+
 	// Get the existing IAM policy from the API
 	ep, err := getProjectIamPolicy(pid, config)
 	if err != nil {
@@ -245,6 +263,11 @@ func resourceGoogleProjectIamPolicyDelete(d *schema.ResourceData, meta interface
 	}
 	d.SetId("")
 	return nil
+}
+
+func resourceGoogleProjectIamPolicyImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	d.Set("project", d.Id())
+	return []*schema.ResourceData{d}, nil
 }
 
 // Subtract all bindings in policy b from policy a, and return the result
@@ -342,43 +365,6 @@ func rolesToMembersBinding(m map[string]map[string]bool) []*cloudresourcemanager
 	return bindings
 }
 
-// Map a role to a map of members, allowing easy merging of multiple bindings.
-func rolesToMembersMap(bindings []*cloudresourcemanager.Binding) map[string]map[string]bool {
-	bm := make(map[string]map[string]bool)
-	// Get each binding
-	for _, b := range bindings {
-		// Initialize members map
-		if _, ok := bm[b.Role]; !ok {
-			bm[b.Role] = make(map[string]bool)
-		}
-		// Get each member (user/principal) for the binding
-		for _, m := range b.Members {
-			// Add the member
-			bm[b.Role][m] = true
-		}
-	}
-	return bm
-}
-
-// Merge multiple Bindings such that Bindings with the same Role result in
-// a single Binding with combined Members
-func mergeBindings(bindings []*cloudresourcemanager.Binding) []*cloudresourcemanager.Binding {
-	bm := rolesToMembersMap(bindings)
-	rb := make([]*cloudresourcemanager.Binding, 0)
-
-	for role, members := range bm {
-		var b cloudresourcemanager.Binding
-		b.Role = role
-		b.Members = make([]string, 0)
-		for m, _ := range members {
-			b.Members = append(b.Members, m)
-		}
-		rb = append(rb, &b)
-	}
-
-	return rb
-}
-
 func jsonPolicyDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
 	var oldPolicy, newPolicy cloudresourcemanager.Policy
 	if err := json.Unmarshal([]byte(old), &oldPolicy); err != nil {
@@ -434,39 +420,6 @@ func (b sortableBindings) Less(i, j int) bool {
 	return b[i].Role < b[j].Role
 }
 
-type iamPolicyModifyFunc func(p *cloudresourcemanager.Policy) error
-
-func projectIamPolicyReadModifyWrite(d *schema.ResourceData, config *Config, pid string, modify iamPolicyModifyFunc) error {
-	for {
-		backoff := time.Second
-		log.Printf("[DEBUG]: Retrieving policy for project %q\n", pid)
-		p, err := getProjectIamPolicy(pid, config)
-		if err != nil {
-			return err
-		}
-		log.Printf("[DEBUG]: Retrieved policy for project %q: %+v\n", pid, p)
-
-		err = modify(p)
-		if err != nil {
-			return err
-		}
-
-		log.Printf("[DEBUG]: Setting policy for project %q to %+v\n", pid, p)
-		err = setProjectIamPolicy(p, config, pid)
-		if err == nil {
-			break
-		}
-		if isConflictError(err) {
-			log.Printf("[DEBUG]: Concurrent policy changes, restarting read-modify-write after %s\n", backoff)
-			time.Sleep(backoff)
-			backoff = backoff * 2
-			if backoff > 30*time.Second {
-				return fmt.Errorf("Error applying IAM policy to project %q: too many concurrent policy changes.\n", pid)
-			}
-			continue
-		}
-		return fmt.Errorf("Error applying IAM policy to project: %v", err)
-	}
-	log.Printf("[DEBUG]: Set policy for project %q\n", pid)
-	return nil
+func getProjectIamPolicyMutexKey(pid string) string {
+	return fmt.Sprintf("iam-project-%s", pid)
 }

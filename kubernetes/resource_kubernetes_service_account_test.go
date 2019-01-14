@@ -341,54 +341,60 @@ func testAccCheckKubernetesServiceAccountExists(n string, obj *api.ServiceAccoun
 func testAccKubernetesServiceAccountConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service_account" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	secret {
-		name = "${kubernetes_secret.one.metadata.0.name}"
-	}
-	secret {
-		name = "${kubernetes_secret.two.metadata.0.name}"
-	}
-	image_pull_secret {
-		name = "${kubernetes_secret.three.metadata.0.name}"
-	}
-	image_pull_secret {
-		name = "${kubernetes_secret.four.metadata.0.name}"
-	}
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  secret {
+    name = "${kubernetes_secret.one.metadata.0.name}"
+  }
+
+  secret {
+    name = "${kubernetes_secret.two.metadata.0.name}"
+  }
+
+  image_pull_secret {
+    name = "${kubernetes_secret.three.metadata.0.name}"
+  }
+
+  image_pull_secret {
+    name = "${kubernetes_secret.four.metadata.0.name}"
+  }
 }
 
 resource "kubernetes_secret" "one" {
-	metadata {
-		name = "%s-one"
-	}
+  metadata {
+    name = "%s-one"
+  }
 }
 
 resource "kubernetes_secret" "two" {
-	metadata {
-		name = "%s-two"
-	}
+  metadata {
+    name = "%s-two"
+  }
 }
 
 resource "kubernetes_secret" "three" {
-	metadata {
-		name = "%s-three"
-	}
+  metadata {
+    name = "%s-three"
+  }
 }
 
 resource "kubernetes_secret" "four" {
-	metadata {
-		name = "%s-four"
-	}
+  metadata {
+    name = "%s-four"
+  }
 }
 `, name, name, name, name, name)
 }
@@ -396,53 +402,59 @@ resource "kubernetes_secret" "four" {
 func testAccKubernetesServiceAccountConfig_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service_account" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			Different = "1234"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	secret {
-		name = "${kubernetes_secret.one.metadata.0.name}"
-	}
-	image_pull_secret {
-		name = "${kubernetes_secret.two.metadata.0.name}"
-	}
-	image_pull_secret {
-		name = "${kubernetes_secret.three.metadata.0.name}"
-	}
-	image_pull_secret {
-		name = "${kubernetes_secret.four.metadata.0.name}"
-	}
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      Different         = "1234"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  secret {
+    name = "${kubernetes_secret.one.metadata.0.name}"
+  }
+
+  image_pull_secret {
+    name = "${kubernetes_secret.two.metadata.0.name}"
+  }
+
+  image_pull_secret {
+    name = "${kubernetes_secret.three.metadata.0.name}"
+  }
+
+  image_pull_secret {
+    name = "${kubernetes_secret.four.metadata.0.name}"
+  }
 }
 
 resource "kubernetes_secret" "one" {
-	metadata {
-		name = "%s-one"
-	}
+  metadata {
+    name = "%s-one"
+  }
 }
 
 resource "kubernetes_secret" "two" {
-	metadata {
-		name = "%s-two"
-	}
+  metadata {
+    name = "%s-two"
+  }
 }
 
 resource "kubernetes_secret" "three" {
-	metadata {
-		name = "%s-three"
-	}
+  metadata {
+    name = "%s-three"
+  }
 }
 
 resource "kubernetes_secret" "four" {
-	metadata {
-		name = "%s-four"
-	}
+  metadata {
+    name = "%s-four"
+  }
 }
 `, name, name, name, name, name)
 }
@@ -450,72 +462,82 @@ resource "kubernetes_secret" "four" {
 func testAccKubernetesServiceAccountConfig_noAttributes(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service_account" "test" {
-	metadata {
-		name = "%s"
-	}
-}`, name)
+  metadata {
+    name = "%s"
+  }
+}
+`, name)
 }
 
 func testAccKubernetesServiceAccountConfig_generatedName(prefix string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service_account" "test" {
-	metadata {
-		generate_name = "%s"
-	}
-}`, prefix)
+  metadata {
+    generate_name = "%s"
+  }
+}
+`, prefix)
 }
 
 func testAccKubernetesServiceAccountConfig_automount(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service_account" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	secret {
-		name = "${kubernetes_secret.one.metadata.0.name}"
-	}
-	secret {
-		name = "${kubernetes_secret.two.metadata.0.name}"
-	}
-	image_pull_secret {
-		name = "${kubernetes_secret.three.metadata.0.name}"
-	}
-	image_pull_secret {
-		name = "${kubernetes_secret.four.metadata.0.name}"
-	}
-	automount_service_account_token = true
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  secret {
+    name = "${kubernetes_secret.one.metadata.0.name}"
+  }
+
+  secret {
+    name = "${kubernetes_secret.two.metadata.0.name}"
+  }
+
+  image_pull_secret {
+    name = "${kubernetes_secret.three.metadata.0.name}"
+  }
+
+  image_pull_secret {
+    name = "${kubernetes_secret.four.metadata.0.name}"
+  }
+
+  automount_service_account_token = true
 }
 
 resource "kubernetes_secret" "one" {
-	metadata {
-		name = "%s-one"
-	}
+  metadata {
+    name = "%s-one"
+  }
 }
 
 resource "kubernetes_secret" "two" {
-	metadata {
-		name = "%s-two"
-	}
+  metadata {
+    name = "%s-two"
+  }
 }
 
 resource "kubernetes_secret" "three" {
-	metadata {
-		name = "%s-three"
-	}
+  metadata {
+    name = "%s-three"
+  }
 }
 
 resource "kubernetes_secret" "four" {
-	metadata {
-		name = "%s-four"
-	}
-}`, name, name, name, name, name)
+  metadata {
+    name = "%s-four"
+  }
+}
+`, name, name, name, name, name)
 }

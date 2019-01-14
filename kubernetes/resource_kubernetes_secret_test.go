@@ -332,123 +332,145 @@ resource "kubernetes_secret" "test" {
 func testAccKubernetesSecretConfig_emptyData(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_secret" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	data {}
-}`, name)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  data {}
+}
+`, name)
 }
 
 func testAccKubernetesSecretConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_secret" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	data {
-		one = "first"
-		two = "second"
-	}
-}`, name)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  data {
+    one = "first"
+    two = "second"
+  }
+}
+`, name)
 }
 
 func testAccKubernetesSecretConfig_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_secret" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			Different = "1234"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	data {
-		one = "first"
-		two = "second"
-		nine = "ninth"
-	}
-}`, name)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      Different         = "1234"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  data {
+    one  = "first"
+    two  = "second"
+    nine = "ninth"
+  }
+}
+`, name)
 }
 
 func testAccKubernetesSecretConfig_noData(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_secret" "test" {
-	metadata {
-		name = "%s"
-	}
-}`, name)
+  metadata {
+    name = "%s"
+  }
+}
+`, name)
 }
 
 func testAccKubernetesSecretConfig_typeSpecified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_secret" "test" {
-	metadata {
-		name = "%s"
-	}
-	data {
-		username = "admin"
-		password = "password"
-	}
-	type = "kubernetes.io/basic-auth"
-}`, name)
+  metadata {
+    name = "%s"
+  }
+
+  data {
+    username = "admin"
+    password = "password"
+  }
+
+  type = "kubernetes.io/basic-auth"
+}
+`, name)
 }
 
 func testAccKubernetesSecretConfig_generatedName(prefix string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_secret" "test" {
-	metadata {
-		generate_name = "%s"
-	}
-	data {
-		one = "first"
-		two = "second"
-	}
-}`, prefix)
+  metadata {
+    generate_name = "%s"
+  }
+
+  data {
+    one = "first"
+    two = "second"
+  }
+}
+`, prefix)
 }
 
 func testAccKubernetesSecretConfig_binaryData(prefix string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_secret" "test" {
-	metadata {
-		generate_name = "%s"
-	}
-	data {
-		one = "${file("./test-fixtures/binary.data")}"
-	}
-}`, prefix)
+  metadata {
+    generate_name = "%s"
+  }
+
+  data {
+    one = "${file("./test-fixtures/binary.data")}"
+  }
+}
+`, prefix)
 }
 
 func testAccKubernetesSecretConfig_binaryData2(prefix string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_secret" "test" {
-	metadata {
-		generate_name = "%s"
-	}
-	data {
-		one = "${file("./test-fixtures/binary2.data")}"
-		two = "${file("./test-fixtures/binary.data")}"
-	}
-}`, prefix)
+  metadata {
+    generate_name = "%s"
+  }
+
+  data {
+    one = "${file("./test-fixtures/binary2.data")}"
+    two = "${file("./test-fixtures/binary.data")}"
+  }
+}
+`, prefix)
 }

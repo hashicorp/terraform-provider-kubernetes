@@ -38,8 +38,8 @@ func flattenDeploymentSpec(in appsv1.DeploymentSpec) ([]interface{}, error) {
 	return []interface{}{att}, nil
 }
 
-func expandDeploymentSpec(deployment []interface{}) (appsv1.DeploymentSpec, error) {
-	obj := appsv1.DeploymentSpec{}
+func expandDeploymentSpec(deployment []interface{}) (*appsv1.DeploymentSpec, error) {
+	obj := &appsv1.DeploymentSpec{}
 
 	if len(deployment) == 0 || deployment[0] == nil {
 		return obj, nil
@@ -65,13 +65,13 @@ func expandDeploymentSpec(deployment []interface{}) (appsv1.DeploymentSpec, erro
 	if err != nil {
 		return obj, err
 	}
-	obj.Template = template
+	obj.Template = *template
 
 	return obj, nil
 }
 
-func expandPodTemplate(l []interface{}) (corev1.PodTemplateSpec, error) {
-	obj := corev1.PodTemplateSpec{}
+func expandPodTemplate(l []interface{}) (*corev1.PodTemplateSpec, error) {
+	obj := &corev1.PodTemplateSpec{}
 	if len(l) == 0 || l[0] == nil {
 		return obj, nil
 	}
@@ -84,7 +84,7 @@ func expandPodTemplate(l []interface{}) (corev1.PodTemplateSpec, error) {
 		if err != nil {
 			return obj, err
 		}
-		obj.Spec = podSpec
+		obj.Spec = *podSpec
 	}
 	return obj, nil
 }

@@ -42,6 +42,7 @@ func resourceBigQueryTable() *schema.Resource {
 			"project": {
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 			},
 
@@ -77,7 +78,7 @@ func resourceBigQueryTable() *schema.Resource {
 			"labels": &schema.Schema{
 				Type:     schema.TypeMap,
 				Optional: true,
-				Elem:     schema.TypeString,
+				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
 
 			// Schema: [Optional] Describes the schema of this table.
@@ -112,6 +113,7 @@ func resourceBigQueryTable() *schema.Resource {
 						"use_legacy_sql": {
 							Type:     schema.TypeBool,
 							Optional: true,
+							Default:  true,
 						},
 					},
 				},
@@ -138,6 +140,15 @@ func resourceBigQueryTable() *schema.Resource {
 							Type:         schema.TypeString,
 							Required:     true,
 							ValidateFunc: validation.StringInSlice([]string{"DAY"}, false),
+						},
+
+						// Type: [Optional] The field used to determine how to create a time-based
+						// partition. If time-based partitioning is enabled without this value, the
+						// table is partitioned based on the load time.
+						"field": {
+							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
 						},
 					},
 				},
@@ -298,23 +309,22 @@ func resourceBigQueryTableCreate(d *schema.ResourceData, meta interface{}) error
 	return resourceBigQueryTableRead(d, meta)
 }
 
-func resourceBigQueryTableParseID(id string) (string, string, string) {
-	parts := strings.FieldsFunc(id, func(r rune) bool { return r == ':' || r == '.' })
-	return parts[0], parts[1], parts[2] // projectID, datasetID, tableID
-}
-
 func resourceBigQueryTableRead(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
 	log.Printf("[INFO] Reading BigQuery table: %s", d.Id())
 
-	projectID, datasetID, tableID := resourceBigQueryTableParseID(d.Id())
-
-	res, err := config.clientBigQuery.Tables.Get(projectID, datasetID, tableID).Do()
+	id, err := parseBigQueryTableId(d.Id())
 	if err != nil {
-		return handleNotFoundError(err, d, fmt.Sprintf("BigQuery table %q", tableID))
+		return err
 	}
 
+	res, err := config.clientBigQuery.Tables.Get(id.Project, id.DatasetId, id.TableId).Do()
+	if err != nil {
+		return handleNotFoundError(err, d, fmt.Sprintf("BigQuery table %q", id.TableId))
+	}
+
+	d.Set("project", id.Project)
 	d.Set("description", res.Description)
 	d.Set("expiration_time", res.ExpirationTime)
 	d.Set("friendly_name", res.FriendlyName)
@@ -364,9 +374,12 @@ func resourceBigQueryTableUpdate(d *schema.ResourceData, meta interface{}) error
 
 	log.Printf("[INFO] Updating BigQuery table: %s", d.Id())
 
-	projectID, datasetID, tableID := resourceBigQueryTableParseID(d.Id())
+	id, err := parseBigQueryTableId(d.Id())
+	if err != nil {
+		return err
+	}
 
-	if _, err = config.clientBigQuery.Tables.Update(projectID, datasetID, tableID, table).Do(); err != nil {
+	if _, err = config.clientBigQuery.Tables.Update(id.Project, id.DatasetId, id.TableId, table).Do(); err != nil {
 		return err
 	}
 
@@ -378,9 +391,12 @@ func resourceBigQueryTableDelete(d *schema.ResourceData, meta interface{}) error
 
 	log.Printf("[INFO] Deleting BigQuery table: %s", d.Id())
 
-	projectID, datasetID, tableID := resourceBigQueryTableParseID(d.Id())
+	id, err := parseBigQueryTableId(d.Id())
+	if err != nil {
+		return err
+	}
 
-	if err := config.clientBigQuery.Tables.Delete(projectID, datasetID, tableID).Do(); err != nil {
+	if err := config.clientBigQuery.Tables.Delete(id.Project, id.DatasetId, id.TableId).Do(); err != nil {
 		return err
 	}
 
@@ -412,6 +428,10 @@ func expandTimePartitioning(configured interface{}) *bigquery.TimePartitioning {
 	raw := configured.([]interface{})[0].(map[string]interface{})
 	tp := &bigquery.TimePartitioning{Type: raw["type"].(string)}
 
+	if v, ok := raw["field"]; ok {
+		tp.Field = v.(string)
+	}
+
 	if v, ok := raw["expiration_ms"]; ok {
 		tp.ExpirationMs = int64(v.(int))
 	}
@@ -421,6 +441,10 @@ func expandTimePartitioning(configured interface{}) *bigquery.TimePartitioning {
 
 func flattenTimePartitioning(tp *bigquery.TimePartitioning) []map[string]interface{} {
 	result := map[string]interface{}{"type": tp.Type}
+
+	if tp.Field != "" {
+		result["field"] = tp.Field
+	}
 
 	if tp.ExpirationMs != 0 {
 		result["expiration_ms"] = tp.ExpirationMs
@@ -446,4 +470,22 @@ func flattenView(vd *bigquery.ViewDefinition) []map[string]interface{} {
 	result["use_legacy_sql"] = vd.UseLegacySql
 
 	return []map[string]interface{}{result}
+}
+
+type bigQueryTableId struct {
+	Project, DatasetId, TableId string
+}
+
+func parseBigQueryTableId(id string) (*bigQueryTableId, error) {
+	parts := strings.FieldsFunc(id, func(r rune) bool { return r == ':' || r == '.' })
+
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("Invalid BigQuery table specifier. Expecting {project}:{dataset-id}.{table-id}, got %s", id)
+	}
+
+	return &bigQueryTableId{
+		Project:   parts[0],
+		DatasetId: parts[1],
+		TableId:   parts[2],
+	}, nil
 }

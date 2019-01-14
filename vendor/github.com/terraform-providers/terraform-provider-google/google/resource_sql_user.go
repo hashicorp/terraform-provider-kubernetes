@@ -16,7 +16,7 @@ func resourceSqlUser() *schema.Resource {
 		Update: resourceSqlUserUpdate,
 		Delete: resourceSqlUserDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			State: resourceSqlUserImporter,
 		},
 
 		SchemaVersion: 1,
@@ -25,7 +25,7 @@ func resourceSqlUser() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"host": &schema.Schema{
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 				ForceNew: true,
 			},
 
@@ -43,13 +43,14 @@ func resourceSqlUser() *schema.Resource {
 
 			"password": &schema.Schema{
 				Type:      schema.TypeString,
-				Required:  true,
+				Optional:  true,
 				Sensitive: true,
 			},
 
 			"project": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 			},
 		},
@@ -86,7 +87,9 @@ func resourceSqlUserCreate(d *schema.ResourceData, meta interface{}) error {
 			"user %s into instance %s: %s", name, instance, err)
 	}
 
-	d.SetId(fmt.Sprintf("%s/%s", instance, name))
+	// This will include a double-slash (//) for postgres instances,
+	// for which user.Host is an empty string.  That's okay.
+	d.SetId(fmt.Sprintf("%s/%s/%s", user.Name, user.Host, user.Instance))
 
 	err = sqladminOperationWait(config, op, project, "Insert User")
 
@@ -106,26 +109,25 @@ func resourceSqlUserRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	instanceAndName := strings.SplitN(d.Id(), "/", 2)
-	if len(instanceAndName) != 2 {
-		return fmt.Errorf(
-			"Wrong number of arguments when specifying imported id. Expected: 2.  Saw: %d. Expected Input: $INSTANCENAME/$SQLUSERNAME Input: %s",
-			len(instanceAndName),
-			d.Id())
-	}
+	instance := d.Get("instance").(string)
+	name := d.Get("name").(string)
+	host := d.Get("host").(string)
 
-	instance := instanceAndName[0]
-	name := instanceAndName[1]
-
-	users, err := config.clientSqlAdmin.Users.List(project, instance).Do()
-
+	var users *sqladmin.UsersListResponse
+	err = nil
+	err = retryTime(func() error {
+		users, err = config.clientSqlAdmin.Users.List(project, instance).Do()
+		return err
+	}, 5)
 	if err != nil {
 		return handleNotFoundError(err, d, fmt.Sprintf("SQL User %q in instance %q", name, instance))
 	}
 
 	var user *sqladmin.User
 	for _, currentUser := range users.Items {
-		if currentUser.Name == name {
+		// The second part of this conditional is irrelevant for postgres instances because
+		// host and currentUser.Host will always both be empty.
+		if currentUser.Name == name && currentUser.Host == host {
 			user = currentUser
 			break
 		}
@@ -141,6 +143,8 @@ func resourceSqlUserRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("host", user.Host)
 	d.Set("instance", user.Instance)
 	d.Set("name", user.Name)
+	d.Set("project", project)
+	d.SetId(fmt.Sprintf("%s/%s/%s", user.Name, user.Host, user.Instance))
 	return nil
 }
 
@@ -167,7 +171,7 @@ func resourceSqlUserUpdate(d *schema.ResourceData, meta interface{}) error {
 
 		mutexKV.Lock(instanceMutexKey(project, instance))
 		defer mutexKV.Unlock(instanceMutexKey(project, instance))
-		op, err := config.clientSqlAdmin.Users.Update(project, instance, host, name,
+		op, err := config.clientSqlAdmin.Users.Update(project, instance, name,
 			user).Do()
 
 		if err != nil {
@@ -218,4 +222,21 @@ func resourceSqlUserDelete(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	return nil
+}
+
+func resourceSqlUserImporter(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	parts := strings.Split(d.Id(), "/")
+
+	if len(parts) == 2 {
+		d.Set("instance", parts[0])
+		d.Set("name", parts[1])
+	} else if len(parts) == 3 {
+		d.Set("instance", parts[0])
+		d.Set("host", parts[1])
+		d.Set("name", parts[2])
+	} else {
+		return nil, fmt.Errorf("Invalid specifier. Expecting {instance}/{name} for postgres instance and {instance}/{host}/{name} for MySQL instance")
+	}
+
+	return []*schema.ResourceData{d}, nil
 }

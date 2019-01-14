@@ -418,7 +418,7 @@ func testAccCheckServicePorts(svc *api.Service, expected []api.ServicePort) reso
 		ports := svc.Spec.Ports
 
 		// Ignore NodePorts as these are assigned randomly
-		for k, _ := range ports {
+		for k := range ports {
 			ports[k].NodePort = 0
 		}
 
@@ -482,152 +482,179 @@ func testAccCheckKubernetesServiceExists(n string, obj *api.Service) resource.Te
 func testAccKubernetesServiceConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	spec {
-		port {
-			port = 8080
-			target_port = 80
-		}
-	}
-}`, name)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    port {
+      port        = 8080
+      target_port = 80
+    }
+  }
+}
+`, name)
 }
 
 func testAccKubernetesServiceConfig_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			Different = "1234"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	spec {
-		port {
-			port = 8081
-			target_port = 80
-		}
-	}
-}`, name)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      Different         = "1234"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    port {
+      port        = 8081
+      target_port = 80
+    }
+  }
+}
+`, name)
 }
 
 func testAccKubernetesServiceConfig_loadBalancer(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		external_name = "ext-name-%s"
-		external_ips = ["10.0.0.3", "10.0.0.4"]
-		load_balancer_source_ranges = ["10.0.0.5/32", "10.0.0.6/32"]
-		selector {
-			App = "MyApp"
-		}
-		session_affinity = "ClientIP"
-		port {
-			port = 8888
-			target_port = 80
-		}
-		type = "LoadBalancer"
-	}
-}`, name, name)
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    external_name               = "ext-name-%s"
+    external_ips                = ["10.0.0.3", "10.0.0.4"]
+    load_balancer_source_ranges = ["10.0.0.5/32", "10.0.0.6/32"]
+
+    selector {
+      App = "MyApp"
+    }
+
+    session_affinity = "ClientIP"
+
+    port {
+      port        = 8888
+      target_port = 80
+    }
+
+    type = "LoadBalancer"
+  }
+}
+`, name, name)
 }
 
 func testAccKubernetesServiceConfig_loadBalancer_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		external_name = "ext-name-modified-%s"
-		external_ips = ["10.0.0.4", "10.0.0.5"]
-		load_balancer_source_ranges = ["10.0.0.1/32", "10.0.0.2/32"]
-		selector {
-			App = "MyModifiedApp"
-			NewSelector = "NewValue"
-		}
-		session_affinity = "ClientIP"
-		port {
-			port = 9999
-			target_port = 81
-		}
-		type = "LoadBalancer"
-	}
-}`, name, name)
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    external_name               = "ext-name-modified-%s"
+    external_ips                = ["10.0.0.4", "10.0.0.5"]
+    load_balancer_source_ranges = ["10.0.0.1/32", "10.0.0.2/32"]
+
+    selector {
+      App         = "MyModifiedApp"
+      NewSelector = "NewValue"
+    }
+
+    session_affinity = "ClientIP"
+
+    port {
+      port        = 9999
+      target_port = 81
+    }
+
+    type = "LoadBalancer"
+  }
+}
+`, name, name)
 }
 
 func testAccKubernetesServiceConfig_nodePort(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		external_name = "ext-name-%s"
-		external_ips = ["10.0.0.4", "10.0.0.5"]
-		load_balancer_ip = "12.0.0.125"
-		selector {
-			App = "MyApp"
-		}
-		session_affinity = "ClientIP"
-		port {
-			name = "first"
-			port = 10222
-			target_port = 22
-		}
-		port {
-			name = "second"
-			port = 10333
-			target_port = 33
-		}
-		type = "NodePort"
-	}
-}`, name, name)
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    external_name    = "ext-name-%s"
+    external_ips     = ["10.0.0.4", "10.0.0.5"]
+    load_balancer_ip = "12.0.0.125"
+
+    selector {
+      App = "MyApp"
+    }
+
+    session_affinity = "ClientIP"
+
+    port {
+      name        = "first"
+      port        = 10222
+      target_port = 22
+    }
+
+    port {
+      name        = "second"
+      port        = 10333
+      target_port = 33
+    }
+
+    type = "NodePort"
+  }
+}
+`, name, name)
 }
 
 func testAccKubernetesServiceConfig_stringTargetPort(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service" "test" {
-	metadata {
-	  name = "%s"
+  metadata {
+    name = "%s"
 
-	  labels {
-		app  = "helloweb"
-		tier = "frontend"
-	  }
-	}
-  
-	spec {
-	  type = "LoadBalancer"
-  
-	  selector {
-		app  = "helloweb"
-		tier = "frontend"
-	  }
-  
-	  port {
-		port        = 8080
-		target_port = "http-server"
-	  }
-	}
+    labels {
+      app  = "helloweb"
+      tier = "frontend"
+    }
   }
+
+  spec {
+    type = "LoadBalancer"
+
+    selector {
+      app  = "helloweb"
+      tier = "frontend"
+    }
+
+    port {
+      port        = 8080
+      target_port = "http-server"
+    }
+  }
+}
 `, name)
 }
 
@@ -637,18 +664,22 @@ resource "kubernetes_service" "test" {
   metadata {
     name = "%s"
   }
+
   spec {
     selector {
       App = "MyOtherApp"
     }
+
     port {
       name = "http"
       port = 80
     }
+
     port {
       name = "https"
       port = 443
     }
+
     type = "LoadBalancer"
   }
 }
@@ -658,13 +689,14 @@ resource "kubernetes_service" "test" {
 func testAccKubernetesServiceConfig_externalName(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		type = "ExternalName"
-		external_name = "terraform.io"
-	}
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    type          = "ExternalName"
+    external_name = "terraform.io"
+  }
 }
 `, name)
 }
@@ -672,14 +704,16 @@ resource "kubernetes_service" "test" {
 func testAccKubernetesServiceConfig_generatedName(prefix string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service" "test" {
-	metadata {
-		generate_name = "%s"
-	}
-	spec {
-		port {
-			port = 8080
-			target_port = 80
-		}
-	}
-}`, prefix)
+  metadata {
+    generate_name = "%s"
+  }
+
+  spec {
+    port {
+      port        = 8080
+      target_port = 80
+    }
+  }
+}
+`, prefix)
 }

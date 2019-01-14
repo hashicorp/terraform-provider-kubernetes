@@ -17,6 +17,10 @@ func resourceRuntimeconfigConfig() *schema.Resource {
 		Update: resourceRuntimeconfigConfigUpdate,
 		Delete: resourceRuntimeconfigConfigDelete,
 
+		Importer: &schema.ResourceImporter{
+			State: resourceRuntimeconfigConfigImport,
+		},
+
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:         schema.TypeString,
@@ -33,6 +37,7 @@ func resourceRuntimeconfigConfig() *schema.Resource {
 			"project": {
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 			},
 		},
@@ -91,6 +96,7 @@ func resourceRuntimeconfigConfigRead(d *schema.ResourceData, meta interface{}) e
 
 	d.Set("name", name)
 	d.Set("description", runConfig.Description)
+	d.Set("project", project)
 
 	return nil
 }
@@ -127,6 +133,20 @@ func resourceRuntimeconfigConfigDelete(d *schema.ResourceData, meta interface{})
 	}
 	d.SetId("")
 	return nil
+}
+
+func resourceRuntimeconfigConfigImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	config := meta.(*Config)
+	parseImportId([]string{"projects/(?P<project>[^/]+)/configs/(?P<name>[^/]+)", "(?P<name>[^/]+)"}, d, config)
+
+	// Replace import id for the resource id
+	id, err := replaceVars(d, config, "projects/{{project}}/configs/{{name}}")
+	if err != nil {
+		return nil, fmt.Errorf("Error constructing id: %s", err)
+	}
+	d.SetId(id)
+
+	return []*schema.ResourceData{d}, nil
 }
 
 // resourceRuntimeconfigFullName turns a given project and a 'short name' for a runtime config into a full name

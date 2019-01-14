@@ -63,7 +63,7 @@ func resourceKubernetesReplicationController() *schema.Resource {
 							Required:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
-								Schema: podSpecFields(true),
+								Schema: replicationControllerTemplateFieldSpec(),
 							},
 						},
 					},
@@ -73,11 +73,48 @@ func resourceKubernetesReplicationController() *schema.Resource {
 	}
 }
 
+func replicationControllerTemplateFieldSpec() map[string]*schema.Schema {
+	metadata := namespacedMetadataSchema("replication controller's template", true)
+	// TODO: make this required once the legacy fields are removed
+	metadata.Computed = true
+	metadata.Required = false
+	metadata.Optional = true
+
+	templateFields := map[string]*schema.Schema{
+		"metadata": metadata,
+		"spec": {
+			Type:        schema.TypeList,
+			Description: "Spec of the pods managed by the replication controller",
+			Optional:    true, // TODO: make this required once the legacy fields are removed
+			Computed:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: podSpecFields(false, false, true),
+			},
+		},
+	}
+
+	// Merge deprecated fields and mark them conflicting with the ones to avoid complex mixed use-cases
+	for k, v := range podSpecFields(true, true, true) {
+		v.ConflictsWith = []string{"spec.0.template.0.spec", "spec.0.template.0.metadata"}
+		templateFields[k] = v
+	}
+
+	return templateFields
+}
+
+func useDeprecatedSpecFields(d *schema.ResourceData) (deprecatedSpecFieldsExist bool) {
+	// Check which replication controller template spec fields are used
+	_, deprecatedSpecFieldsExist = d.GetOkExists("spec.0.template.0.container.0.name")
+	return
+}
+
 func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}))
+
+	spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}), useDeprecatedSpecFields(d))
 	if err != nil {
 		return err
 	}
@@ -86,7 +123,7 @@ func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta 
 
 	rc := api.ReplicationController{
 		ObjectMeta: metadata,
-		Spec:       spec,
+		Spec:       *spec,
 	}
 
 	log.Printf("[INFO] Creating new replication controller: %#v", rc)
@@ -135,7 +172,7 @@ func resourceKubernetesReplicationControllerRead(d *schema.ResourceData, meta in
 		return err
 	}
 
-	spec, err := flattenReplicationControllerSpec(rc.Spec)
+	spec, err := flattenReplicationControllerSpec(rc.Spec, useDeprecatedSpecFields(d))
 	if err != nil {
 		return err
 	}
@@ -159,7 +196,7 @@ func resourceKubernetesReplicationControllerUpdate(d *schema.ResourceData, meta 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("spec") {
-		spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}))
+		spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}), useDeprecatedSpecFields(d))
 		if err != nil {
 			return err
 		}

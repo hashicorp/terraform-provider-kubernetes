@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	urlhelper "github.com/hashicorp/go-getter/helper/url"
+	"github.com/hashicorp/go-safetemp"
 )
 
 // Client is a client for downloading things.
@@ -100,17 +101,14 @@ func (c *Client) Get() error {
 	dst := c.Dst
 	src, subDir := SourceDirSubdir(src)
 	if subDir != "" {
-		tmpDir, err := ioutil.TempDir("", "tf")
+		td, tdcloser, err := safetemp.Dir("", "getter")
 		if err != nil {
 			return err
 		}
-		if err := os.RemoveAll(tmpDir); err != nil {
-			return err
-		}
-		defer os.RemoveAll(tmpDir)
+		defer tdcloser.Close()
 
 		realDst = dst
-		dst = tmpDir
+		dst = td
 	}
 
 	u, err := urlhelper.Parse(src)
@@ -232,21 +230,41 @@ func (c *Client) Get() error {
 		// Destination is the base name of the URL path in "any" mode when
 		// a file source is detected.
 		if mode == ClientModeFile {
-			dst = filepath.Join(dst, filepath.Base(u.Path))
+			filename := filepath.Base(u.Path)
+
+			// Determine if we have a custom file name
+			if v := q.Get("filename"); v != "" {
+				// Delete the query parameter if we have it.
+				q.Del("filename")
+				u.RawQuery = q.Encode()
+
+				filename = v
+			}
+
+			dst = filepath.Join(dst, filename)
 		}
 	}
 
 	// If we're not downloading a directory, then just download the file
 	// and return.
 	if mode == ClientModeFile {
-		err := g.GetFile(dst, u)
-		if err != nil {
-			return err
-		}
-
+		getFile := true
 		if checksumHash != nil {
-			if err := checksum(dst, checksumHash, checksumValue); err != nil {
+			if err := checksum(dst, checksumHash, checksumValue); err == nil {
+				// don't get the file if the checksum of dst is correct
+				getFile = false
+			}
+		}
+		if getFile {
+			err := g.GetFile(dst, u)
+			if err != nil {
 				return err
+			}
+
+			if checksumHash != nil {
+				if err := checksum(dst, checksumHash, checksumValue); err != nil {
+					return err
+				}
 			}
 		}
 

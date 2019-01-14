@@ -2,6 +2,7 @@ package google
 
 import (
 	"fmt"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"google.golang.org/api/sourcerepo/v1"
 )
@@ -13,6 +14,10 @@ func resourceSourceRepoRepository() *schema.Resource {
 		Delete: resourceSourceRepoRepositoryDelete,
 		//Update: not supported,
 
+		Importer: &schema.ResourceImporter{
+			State: resourceSourceRepoRepositoryImport,
+		},
+
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
@@ -23,11 +28,17 @@ func resourceSourceRepoRepository() *schema.Resource {
 			"project": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 			},
 
 			"size": &schema.Schema{
 				Type:     schema.TypeInt,
+				Computed: true,
+			},
+
+			"url": &schema.Schema{
+				Type:     schema.TypeString,
 				Computed: true,
 			},
 		},
@@ -78,6 +89,8 @@ func resourceSourceRepoRepositoryRead(d *schema.ResourceData, meta interface{}) 
 	}
 
 	d.Set("size", repo.Size)
+	d.Set("project", project)
+	d.Set("url", repo.Url)
 
 	return nil
 }
@@ -104,4 +117,18 @@ func resourceSourceRepoRepositoryDelete(d *schema.ResourceData, meta interface{}
 func buildRepositoryName(project, name string) string {
 	repositoryName := "projects/" + project + "/repos/" + name
 	return repositoryName
+}
+
+func resourceSourceRepoRepositoryImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	config := meta.(*Config)
+	parseImportId([]string{"projects/(?P<project>[^/]+)/repos/(?P<name>[^/]+)", "(?P<project>[^/]+)/(?P<name>[^/]+)", "(?P<name>[^/]+)"}, d, config)
+
+	// Replace import id for the resource id
+	id, err := replaceVars(d, config, "projects/{{project}}/repos/{{name}}")
+	if err != nil {
+		return nil, fmt.Errorf("Error constructing id: %s", err)
+	}
+	d.SetId(id)
+
+	return []*schema.ResourceData{d}, nil
 }

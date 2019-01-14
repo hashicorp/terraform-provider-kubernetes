@@ -93,7 +93,7 @@ func Provider() terraform.ResourceProvider {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_TOKEN", ""),
-				Description: "Token to authentifcate an service account",
+				Description: "Token to authenticate an service account",
 			},
 			"load_config_file": {
 				Type:        schema.TypeBool,
@@ -104,27 +104,31 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
+			"kubernetes_secret":        dataSourceKubernetesSecret(),
 			"kubernetes_service":       dataSourceKubernetesService(),
 			"kubernetes_storage_class": dataSourceKubernetesStorageClass(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
+			"kubernetes_cluster_role_binding":      resourceKubernetesClusterRoleBinding(),
 			"kubernetes_config_map":                resourceKubernetesConfigMap(),
 			"kubernetes_deployment":                resourceKubernetesDeployment(),
 			"kubernetes_horizontal_pod_autoscaler": resourceKubernetesHorizontalPodAutoscaler(),
 			"kubernetes_limit_range":               resourceKubernetesLimitRange(),
 			"kubernetes_namespace":                 resourceKubernetesNamespace(),
+			"kubernetes_network_policy":            resourceKubernetesNetworkPolicy(),
 			"kubernetes_persistent_volume":         resourceKubernetesPersistentVolume(),
 			"kubernetes_persistent_volume_claim":   resourceKubernetesPersistentVolumeClaim(),
 			"kubernetes_pod":                       resourceKubernetesPod(),
 			"kubernetes_replication_controller":    resourceKubernetesReplicationController(),
 			"kubernetes_role_binding":              resourceKubernetesRoleBinding(),
 			"kubernetes_resource_quota":            resourceKubernetesResourceQuota(),
+			"kubernetes_role":                      resourceKubernetesRole(),
 			"kubernetes_secret":                    resourceKubernetesSecret(),
 			"kubernetes_service":                   resourceKubernetesService(),
 			"kubernetes_service_account":           resourceKubernetesServiceAccount(),
+			"kubernetes_stateful_set":              resourceKubernetesStatefulSet(),
 			"kubernetes_storage_class":             resourceKubernetesStorageClass(),
-			"kubernetes_cluster_role_binding":      resourceKubernetesClusterRoleBinding(),
 		},
 		ConfigureFunc: providerConfigure,
 	}

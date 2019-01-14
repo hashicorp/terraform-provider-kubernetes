@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"bytes"
+	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/terraform"
 )
 
@@ -87,4 +89,47 @@ func migrateBackendServiceStateV0toV1(is *terraform.InstanceState) (*terraform.I
 
 	log.Printf("[DEBUG] Attributes after migration: %#v", is.Attributes)
 	return is, nil
+}
+
+func resourceGoogleComputeBackendServiceBackendHash(v interface{}) int {
+	if v == nil {
+		return 0
+	}
+
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+
+	if group, err := getRelativePath(m["group"].(string)); err != nil {
+		log.Printf("[WARN] Error on retrieving relative path of instance group: %s", err)
+		buf.WriteString(fmt.Sprintf("%s-", m["group"].(string)))
+	} else {
+		buf.WriteString(fmt.Sprintf("%s-", group))
+	}
+
+	if v, ok := m["balancing_mode"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", v.(string)))
+	}
+	if v, ok := m["capacity_scaler"]; ok {
+		buf.WriteString(fmt.Sprintf("%f-", v.(float64)))
+	}
+	if v, ok := m["description"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", v.(string)))
+	}
+	if v, ok := m["max_rate"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", int64(v.(int))))
+	}
+	if v, ok := m["max_rate_per_instance"]; ok {
+		buf.WriteString(fmt.Sprintf("%f-", v.(float64)))
+	}
+	if v, ok := m["max_connections"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", int64(v.(int))))
+	}
+	if v, ok := m["max_connections_per_instance"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", int64(v.(int))))
+	}
+	if v, ok := m["max_rate_per_instance"]; ok {
+		buf.WriteString(fmt.Sprintf("%f-", v.(float64)))
+	}
+
+	return hashcode.String(buf.String())
 }

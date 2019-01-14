@@ -1,15 +1,17 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	api "k8s.io/api/autoscaling/v1"
 )
 
-func expandHorizontalPodAutoscalerSpec(in []interface{}) api.HorizontalPodAutoscalerSpec {
+func expandHorizontalPodAutoscalerSpec(in []interface{}) (*api.HorizontalPodAutoscalerSpec, error) {
+	spec := &api.HorizontalPodAutoscalerSpec{}
 	if len(in) == 0 || in[0] == nil {
-		return api.HorizontalPodAutoscalerSpec{}
+		return nil, fmt.Errorf("failed to expand HorizontalPodAutoscaler.Spec: null or empty input")
 	}
-	spec := api.HorizontalPodAutoscalerSpec{}
 	m := in[0].(map[string]interface{})
 	if v, ok := m["max_replicas"]; ok {
 		spec.MaxReplicas = int32(v.(int))
@@ -24,7 +26,7 @@ func expandHorizontalPodAutoscalerSpec(in []interface{}) api.HorizontalPodAutosc
 		spec.TargetCPUUtilizationPercentage = ptrToInt32(int32(v))
 	}
 
-	return spec
+	return spec, nil
 }
 
 func expandCrossVersionObjectReference(in []interface{}) api.CrossVersionObjectReference {

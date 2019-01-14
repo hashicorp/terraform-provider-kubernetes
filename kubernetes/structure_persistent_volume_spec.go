@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/hashicorp/terraform/helper/schema"
 )
@@ -99,6 +99,18 @@ func flattenCephFSPersistentVolumeSource(in *v1.CephFSPersistentVolumeSource) []
 	return []interface{}{att}
 }
 
+func flattenCinderPersistentVolumeSource(in *v1.CinderPersistentVolumeSource) []interface{} {
+	att := make(map[string]interface{})
+	att["volume_id"] = in.VolumeID
+	if in.FSType != "" {
+		att["fs_type"] = in.FSType
+	}
+	if in.ReadOnly != false {
+		att["read_only"] = in.ReadOnly
+	}
+	return []interface{}{att}
+}
+
 func flattenCinderVolumeSource(in *v1.CinderVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["volume_id"] = in.VolumeID
@@ -182,6 +194,16 @@ func flattenGCEPersistentDiskVolumeSource(in *v1.GCEPersistentDiskVolumeSource) 
 	return []interface{}{att}
 }
 
+func flattenGlusterfsPersistentVolumeSource(in *v1.GlusterfsPersistentVolumeSource) []interface{} {
+	att := make(map[string]interface{})
+	att["endpoints_name"] = in.EndpointsName
+	att["path"] = in.Path
+	if in.ReadOnly != false {
+		att["read_only"] = in.ReadOnly
+	}
+	return []interface{}{att}
+}
+
 func flattenGlusterfsVolumeSource(in *v1.GlusterfsVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["endpoints_name"] = in.EndpointsName
@@ -193,6 +215,12 @@ func flattenGlusterfsVolumeSource(in *v1.GlusterfsVolumeSource) []interface{} {
 }
 
 func flattenHostPathVolumeSource(in *v1.HostPathVolumeSource) []interface{} {
+	att := make(map[string]interface{})
+	att["path"] = in.Path
+	return []interface{}{att}
+}
+
+func flattenLocalVolumeSource(in *v1.LocalVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["path"] = in.Path
 	return []interface{}{att}
@@ -281,8 +309,11 @@ func flattenPersistentVolumeSource(in v1.PersistentVolumeSource) []interface{} {
 	if in.HostPath != nil {
 		att["host_path"] = flattenHostPathVolumeSource(in.HostPath)
 	}
+	if in.Local != nil {
+		att["local"] = flattenLocalVolumeSource(in.Local)
+	}
 	if in.Glusterfs != nil {
-		att["glusterfs"] = flattenGlusterfsVolumeSource(in.Glusterfs)
+		att["glusterfs"] = flattenGlusterfsPersistentVolumeSource(in.Glusterfs)
 	}
 	if in.NFS != nil {
 		att["nfs"] = flattenNFSVolumeSource(in.NFS)
@@ -294,7 +325,7 @@ func flattenPersistentVolumeSource(in v1.PersistentVolumeSource) []interface{} {
 		att["iscsi"] = flattenISCSIPersistentVolumeSource(in.ISCSI)
 	}
 	if in.Cinder != nil {
-		att["cinder"] = flattenCinderVolumeSource(in.Cinder)
+		att["cinder"] = flattenCinderPersistentVolumeSource(in.Cinder)
 	}
 	if in.CephFS != nil {
 		att["ceph_fs"] = flattenCephFSPersistentVolumeSource(in.CephFS)
@@ -341,6 +372,9 @@ func flattenPersistentVolumeSpec(in v1.PersistentVolumeSpec) []interface{} {
 	}
 	if in.StorageClassName != "" {
 		att["storage_class_name"] = in.StorageClassName
+	}
+	if in.NodeAffinity != nil {
+		att["node_affinity"] = flattenVolumeNodeAffinity(in.NodeAffinity)
 	}
 	return []interface{}{att}
 }
@@ -553,6 +587,23 @@ func expandCephFSPersistentVolumeSource(l []interface{}) *v1.CephFSPersistentVol
 	return obj
 }
 
+func expandCinderPersistentVolumeSource(l []interface{}) *v1.CinderPersistentVolumeSource {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.CinderPersistentVolumeSource{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.CinderPersistentVolumeSource{
+		VolumeID: in["volume_id"].(string),
+	}
+	if v, ok := in["fs_type"].(string); ok {
+		obj.FSType = v
+	}
+	if v, ok := in["read_only"].(bool); ok {
+		obj.ReadOnly = v
+	}
+	return obj
+}
+
 func expandCinderVolumeSource(l []interface{}) *v1.CinderVolumeSource {
 	if len(l) == 0 || l[0] == nil {
 		return &v1.CinderVolumeSource{}
@@ -666,6 +717,21 @@ func expandGCEPersistentDiskVolumeSource(l []interface{}) *v1.GCEPersistentDiskV
 	return obj
 }
 
+func expandGlusterfsPersistentVolumeSource(l []interface{}) *v1.GlusterfsPersistentVolumeSource {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.GlusterfsPersistentVolumeSource{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.GlusterfsPersistentVolumeSource{
+		EndpointsName: in["endpoints_name"].(string),
+		Path:          in["path"].(string),
+	}
+	if v, ok := in["read_only"].(bool); ok {
+		obj.ReadOnly = v
+	}
+	return obj
+}
+
 func expandGlusterfsVolumeSource(l []interface{}) *v1.GlusterfsVolumeSource {
 	if len(l) == 0 || l[0] == nil {
 		return &v1.GlusterfsVolumeSource{}
@@ -687,6 +753,17 @@ func expandHostPathVolumeSource(l []interface{}) *v1.HostPathVolumeSource {
 	}
 	in := l[0].(map[string]interface{})
 	obj := &v1.HostPathVolumeSource{
+		Path: in["path"].(string),
+	}
+	return obj
+}
+
+func expandLocalVolumeSource(l []interface{}) *v1.LocalVolumeSource {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.LocalVolumeSource{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.LocalVolumeSource{
 		Path: in["path"].(string),
 	}
 	return obj
@@ -794,8 +871,11 @@ func expandPersistentVolumeSource(l []interface{}) v1.PersistentVolumeSource {
 	if v, ok := in["host_path"].([]interface{}); ok && len(v) > 0 {
 		obj.HostPath = expandHostPathVolumeSource(v)
 	}
+	if v, ok := in["local"].([]interface{}); ok && len(v) > 0 {
+		obj.Local = expandLocalVolumeSource(v)
+	}
 	if v, ok := in["glusterfs"].([]interface{}); ok && len(v) > 0 {
-		obj.Glusterfs = expandGlusterfsVolumeSource(v)
+		obj.Glusterfs = expandGlusterfsPersistentVolumeSource(v)
 	}
 	if v, ok := in["nfs"].([]interface{}); ok && len(v) > 0 {
 		obj.NFS = expandNFSVolumeSource(v)
@@ -807,7 +887,7 @@ func expandPersistentVolumeSource(l []interface{}) v1.PersistentVolumeSource {
 		obj.ISCSI = expandISCSIPersistentVolumeSource(v)
 	}
 	if v, ok := in["cinder"].([]interface{}); ok && len(v) > 0 {
-		obj.Cinder = expandCinderVolumeSource(v)
+		obj.Cinder = expandCinderPersistentVolumeSource(v)
 	}
 	if v, ok := in["ceph_fs"].([]interface{}); ok && len(v) > 0 {
 		obj.CephFS = expandCephFSPersistentVolumeSource(v)
@@ -839,18 +919,18 @@ func expandPersistentVolumeSource(l []interface{}) v1.PersistentVolumeSource {
 	return obj
 }
 
-func expandPersistentVolumeSpec(l []interface{}) (v1.PersistentVolumeSpec, error) {
+func expandPersistentVolumeSpec(l []interface{}) (*v1.PersistentVolumeSpec, error) {
+	obj := &v1.PersistentVolumeSpec{}
 	if len(l) == 0 || l[0] == nil {
-		return v1.PersistentVolumeSpec{}, nil
+		return obj, nil
 	}
 	in := l[0].(map[string]interface{})
-	obj := v1.PersistentVolumeSpec{}
 	if v, ok := in["capacity"].(map[string]interface{}); ok && len(v) > 0 {
-		var err error
-		obj.Capacity, err = expandMapToResourceList(v)
+		c, err := expandMapToResourceList(v)
 		if err != nil {
 			return obj, err
 		}
+		obj.Capacity = *c
 	}
 	if v, ok := in["persistent_volume_source"].([]interface{}); ok && len(v) > 0 {
 		obj.PersistentVolumeSource = expandPersistentVolumeSource(v)
@@ -863,6 +943,9 @@ func expandPersistentVolumeSpec(l []interface{}) (v1.PersistentVolumeSpec, error
 	}
 	if v, ok := in["storage_class_name"].(string); ok {
 		obj.StorageClassName = v
+	}
+	if v, ok := in["node_affinity"].([]interface{}); ok && len(v) > 0 {
+		obj.NodeAffinity = expandVolumeNodeAffinity(v)
 	}
 	return obj, nil
 }
@@ -1027,6 +1110,14 @@ func patchPersistentVolumeSpec(pathPrefix, prefix string, d *schema.ResourceData
 				Value: n.(string),
 			})
 		}
+	}
+	if d.HasChange(prefix + "node_affinity") {
+		v := d.Get(prefix + "node_affinity").([]interface{})
+		nodeAffinity := expandVolumeNodeAffinity(v)
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "/nodeAffinity",
+			Value: nodeAffinity,
+		})
 	}
 
 	return ops, nil
@@ -1410,4 +1501,36 @@ func patchPersistentVolumeSource(pathPrefix, prefix string, d *schema.ResourceDa
 	}
 
 	return ops
+}
+
+func flattenVolumeNodeAffinity(in *v1.VolumeNodeAffinity) []interface{} {
+	att := make(map[string]interface{})
+	nodeSelector := map[string]interface{}{
+		"node_selector_term": flattenNodeSelectorTerm(in.Required.NodeSelectorTerms[0]),
+	}
+	att["required"] = []interface{}{nodeSelector}
+	return []interface{}{att}
+}
+
+func expandVolumeNodeAffinity(l []interface{}) *v1.VolumeNodeAffinity {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.VolumeNodeAffinity{}
+	}
+	in := l[0].(map[string]interface{})
+	nodeSelectorList := in["required"].([]interface{})
+
+	if len(nodeSelectorList) == 0 || nodeSelectorList[0] == nil {
+		return &v1.VolumeNodeAffinity{}
+	}
+	nodeSelector := nodeSelectorList[0].(map[string]interface{})
+
+	if len(nodeSelector) == 0 || nodeSelectorList[0] == nil {
+		return &v1.VolumeNodeAffinity{}
+	}
+	obj := &v1.VolumeNodeAffinity{
+		Required: &v1.NodeSelector{
+			NodeSelectorTerms: []v1.NodeSelectorTerm{expandNodeSelectorTerm(nodeSelector["node_selector_term"].([]interface{}))},
+		},
+	}
+	return obj
 }

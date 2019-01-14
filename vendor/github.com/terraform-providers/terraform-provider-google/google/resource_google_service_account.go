@@ -17,7 +17,7 @@ func resourceGoogleServiceAccount() *schema.Resource {
 		Delete: resourceGoogleServiceAccountDelete,
 		Update: resourceGoogleServiceAccountUpdate,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			State: resourceGoogleServiceAccountImport,
 		},
 		Schema: map[string]*schema.Schema{
 			"email": &schema.Schema{
@@ -33,9 +33,10 @@ func resourceGoogleServiceAccount() *schema.Resource {
 				Computed: true,
 			},
 			"account_id": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
+				ValidateFunc: validateRFC1035Name(6, 30),
 			},
 			"display_name": &schema.Schema{
 				Type:     schema.TypeString,
@@ -48,8 +49,9 @@ func resourceGoogleServiceAccount() *schema.Resource {
 				ForceNew: true,
 			},
 			"policy_data": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:       schema.TypeString,
+				Optional:   true,
+				Deprecated: "Use the 'google_service_account_iam_policy' resource to define policies for a service account",
 			},
 		},
 	}
@@ -313,4 +315,21 @@ func saMergeBindings(bindings []*iam.Binding) []*iam.Binding {
 	}
 
 	return rb
+}
+
+func resourceGoogleServiceAccountImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	config := meta.(*Config)
+	parseImportId([]string{
+		"projects/(?P<project>[^/]+)/serviceAccounts/(?P<email>[^/]+)",
+		"(?P<project>[^/]+)/(?P<email>[^/]+)",
+		"(?P<email>[^/]+)"}, d, config)
+
+	// Replace import id for the resource id
+	id, err := replaceVars(d, config, "projects/{{project}}/serviceAccounts/{{email}}")
+	if err != nil {
+		return nil, fmt.Errorf("Error constructing id: %s", err)
+	}
+	d.SetId(id)
+
+	return []*schema.ResourceData{d}, nil
 }

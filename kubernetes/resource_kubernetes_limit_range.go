@@ -89,7 +89,7 @@ func resourceKubernetesLimitRangeCreate(d *schema.ResourceData, meta interface{}
 	}
 	limitRange := api.LimitRange{
 		ObjectMeta: metadata,
-		Spec:       spec,
+		Spec:       *spec,
 	}
 	log.Printf("[INFO] Creating new limit range: %#v", limitRange)
 	out, err := conn.CoreV1().LimitRanges(metadata.Namespace).Create(&limitRange)

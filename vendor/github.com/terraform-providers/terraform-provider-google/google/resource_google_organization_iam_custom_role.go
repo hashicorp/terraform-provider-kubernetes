@@ -1,0 +1,233 @@
+package google
+
+import (
+	"fmt"
+	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
+	"google.golang.org/api/iam/v1"
+)
+
+func resourceGoogleOrganizationIamCustomRole() *schema.Resource {
+	return &schema.Resource{
+		Create: resourceGoogleOrganizationIamCustomRoleCreate,
+		Read:   resourceGoogleOrganizationIamCustomRoleRead,
+		Update: resourceGoogleOrganizationIamCustomRoleUpdate,
+		Delete: resourceGoogleOrganizationIamCustomRoleDelete,
+
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
+
+		Schema: map[string]*schema.Schema{
+			"role_id": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"org_id": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"title": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"permissions": {
+				Type:     schema.TypeSet,
+				Required: true,
+				MinItems: 1,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+			"stage": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "GA",
+				ValidateFunc: validation.StringInSlice([]string{"ALPHA", "BETA", "GA", "DEPRECATED", "DISABLED", "EAP"}, false),
+			},
+			"description": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"deleted": {
+				Type:       schema.TypeBool,
+				Optional:   true,
+				Default:    false,
+				Deprecated: `deleted will be converted to a computed-only field soon - if you want to delete this role, please use destroy`,
+			},
+		},
+	}
+}
+
+func resourceGoogleOrganizationIamCustomRoleCreate(d *schema.ResourceData, meta interface{}) error {
+	config := meta.(*Config)
+
+	if d.Get("deleted").(bool) {
+		return fmt.Errorf("cannot create a custom organization role with a deleted state. `deleted` field should be false.")
+	}
+
+	org := d.Get("org_id").(string)
+	roleId := fmt.Sprintf("organizations/%s/roles/%s", org, d.Get("role_id").(string))
+	orgId := fmt.Sprintf("organizations/%s", org)
+
+	// Look for role with given ID.
+	// If it exists in deleted state, update to match "created" role state
+	// If it exists and and is enabled, return error - we should not try to recreate.
+	r, err := config.clientIAM.Organizations.Roles.Get(roleId).Do()
+	if err == nil {
+		if r.Deleted {
+			// This role was soft-deleted; update to match new state.
+			d.SetId(r.Name)
+			if err := resourceGoogleOrganizationIamCustomRoleUpdate(d, meta); err != nil {
+				// If update failed, make sure it wasn't actually added to state.
+				d.SetId("")
+				return err
+			}
+		} else {
+			// If a role with same name exists and is enabled, just return error
+			return fmt.Errorf("Custom project role %s already exists and must be imported", roleId)
+		}
+	} else if err := handleNotFoundError(err, d, fmt.Sprintf("Custom Organization Role %q", roleId)); err == nil {
+		// If no role was found, actually create a new role.
+		role, err := config.clientIAM.Organizations.Roles.Create(orgId, &iam.CreateRoleRequest{
+			RoleId: d.Get("role_id").(string),
+			Role: &iam.Role{
+				Title:               d.Get("title").(string),
+				Description:         d.Get("description").(string),
+				Stage:               d.Get("stage").(string),
+				IncludedPermissions: convertStringSet(d.Get("permissions").(*schema.Set)),
+			},
+		}).Do()
+		if err != nil {
+			return fmt.Errorf("Error creating the custom organization role %s: %s", d.Get("title").(string), err)
+		}
+
+		d.SetId(role.Name)
+	} else {
+		return fmt.Errorf("Unable to verify whether custom org role %s already exists and must be undeleted: %v", roleId, err)
+	}
+
+	return resourceGoogleOrganizationIamCustomRoleRead(d, meta)
+}
+
+func resourceGoogleOrganizationIamCustomRoleRead(d *schema.ResourceData, meta interface{}) error {
+	config := meta.(*Config)
+
+	role, err := config.clientIAM.Organizations.Roles.Get(d.Id()).Do()
+	if err != nil {
+		return handleNotFoundError(err, d, d.Id())
+	}
+
+	parsedRoleName, err := ParseOrganizationCustomRoleName(role.Name)
+	if err != nil {
+		return err
+	}
+
+	d.Set("role_id", parsedRoleName.Name)
+	d.Set("org_id", parsedRoleName.OrgId)
+	d.Set("title", role.Title)
+	d.Set("description", role.Description)
+	d.Set("permissions", role.IncludedPermissions)
+	d.Set("stage", role.Stage)
+	d.Set("deleted", role.Deleted)
+
+	return nil
+}
+
+func resourceGoogleOrganizationIamCustomRoleUpdate(d *schema.ResourceData, meta interface{}) error {
+	config := meta.(*Config)
+
+	d.Partial(true)
+
+	if d.Get("deleted").(bool) {
+		if d.HasChange("deleted") {
+			// If other fields were changed, we need to update those first and then delete.
+			// If we don't update, we will get diffs from re-apply
+			// If we delete and then try to update, we will get an error.
+			if err := resourceGoogleOrganizationIamCustomRoleUpdateNonDeletedFields(d, meta); err != nil {
+				return err
+			}
+
+			if err := resourceGoogleOrganizationIamCustomRoleDelete(d, meta); err != nil {
+				return err
+			}
+
+			d.SetPartial("deleted")
+			d.Partial(false)
+			return nil
+		} else {
+			return fmt.Errorf("cannot make changes to deleted custom organization role %s", d.Id())
+		}
+	}
+
+	// We want to update the role to some undeleted state.
+	// Make sure the role with given ID exists and is un-deleted before patching.
+	r, err := config.clientIAM.Organizations.Roles.Get(d.Id()).Do()
+	if err != nil {
+		return fmt.Errorf("unable to find custom project role %s to update: %v", d.Id(), err)
+	}
+	if r.Deleted {
+		if err := resourceGoogleOrganizationIamCustomRoleUndelete(d, meta); err != nil {
+			return err
+		}
+		d.SetPartial("deleted")
+	}
+
+	if err := resourceGoogleOrganizationIamCustomRoleUpdateNonDeletedFields(d, meta); err != nil {
+		return err
+	}
+	d.Partial(false)
+
+	return nil
+}
+
+func resourceGoogleOrganizationIamCustomRoleUpdateNonDeletedFields(d *schema.ResourceData, meta interface{}) error {
+	config := meta.(*Config)
+
+	if d.HasChange("title") || d.HasChange("description") || d.HasChange("stage") || d.HasChange("permissions") {
+		_, err := config.clientIAM.Organizations.Roles.Patch(d.Id(), &iam.Role{
+			Title:               d.Get("title").(string),
+			Description:         d.Get("description").(string),
+			Stage:               d.Get("stage").(string),
+			IncludedPermissions: convertStringSet(d.Get("permissions").(*schema.Set)),
+		}).Do()
+
+		if err != nil {
+			return fmt.Errorf("Error updating the custom organization role %s: %s", d.Get("title").(string), err)
+		}
+		d.SetPartial("title")
+		d.SetPartial("description")
+		d.SetPartial("stage")
+		d.SetPartial("permissions")
+	}
+
+	return nil
+}
+
+func resourceGoogleOrganizationIamCustomRoleDelete(d *schema.ResourceData, meta interface{}) error {
+	config := meta.(*Config)
+
+	r, err := config.clientIAM.Organizations.Roles.Get(d.Id()).Do()
+	if err == nil && r != nil && r.Deleted && d.Get("deleted").(bool) {
+		// This role has already been deleted, don't try again.
+		return nil
+	}
+
+	_, err = config.clientIAM.Organizations.Roles.Delete(d.Id()).Do()
+	if err != nil {
+		return fmt.Errorf("Error deleting the custom organization role %s: %s", d.Get("title").(string), err)
+	}
+
+	return nil
+}
+
+func resourceGoogleOrganizationIamCustomRoleUndelete(d *schema.ResourceData, meta interface{}) error {
+	config := meta.(*Config)
+
+	_, err := config.clientIAM.Organizations.Roles.Undelete(d.Id(), &iam.UndeleteRoleRequest{}).Do()
+	if err != nil {
+		return fmt.Errorf("Error undeleting the custom organization role %s: %s", d.Get("title").(string), err)
+	}
+
+	return nil
+}

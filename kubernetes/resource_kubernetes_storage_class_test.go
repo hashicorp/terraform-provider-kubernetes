@@ -44,6 +44,7 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_storage_class.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "storage_provisioner", "kubernetes.io/gce-pd"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "reclaim_policy", "Delete"),
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "volume_binding_mode", "Immediate"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.type", "pd-ssd"),
 					testAccCheckStorageClassParameters(&conf, map[string]string{"type": "pd-ssd"}),
@@ -68,6 +69,7 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_storage_class.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "storage_provisioner", "kubernetes.io/gce-pd"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "reclaim_policy", "Retain"),
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "volume_binding_mode", "WaitForFirstConsumer"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.type", "pd-standard"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.zones", "us-west1-a,us-west1-b"),
@@ -89,6 +91,7 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_storage_class.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "storage_provisioner", "kubernetes.io/gce-pd"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "reclaim_policy", "Delete"),
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "volume_binding_mode", "Immediate"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.%", "0"),
 					testAccCheckStorageClassParameters(&conf, map[string]string{}),
 				),
@@ -227,65 +230,81 @@ func testAccCheckKubernetesStorageClassExists(n string, obj *api.StorageClass) r
 func testAccKubernetesStorageClassConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_storage_class" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelTwo = "two"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	storage_provisioner = "kubernetes.io/gce-pd"
-	reclaim_policy = "Delete"
-	parameters {
-		type = "pd-ssd"
-	}
-}`, name)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  storage_provisioner = "kubernetes.io/gce-pd"
+  reclaim_policy      = "Delete"
+  volume_binding_mode = "Immediate"
+
+  parameters {
+    type = "pd-ssd"
+  }
+}
+`, name)
 }
 
 func testAccKubernetesStorageClassConfig_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_storage_class" "test" {
-	metadata {
-		annotations {
-			TestAnnotationOne = "one"
-			Different = "1234"
-		}
-		labels {
-			TestLabelOne = "one"
-			TestLabelThree = "three"
-		}
-		name = "%s"
-	}
-	storage_provisioner = "kubernetes.io/gce-pd"
-	reclaim_policy = "Retain"
-	parameters {
-		type = "pd-standard"
-		zones = "us-west1-a,us-west1-b"
-	}
-}`, name)
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      Different         = "1234"
+    }
+
+    labels {
+      TestLabelOne   = "one"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  storage_provisioner = "kubernetes.io/gce-pd"
+  reclaim_policy      = "Retain"
+  volume_binding_mode = "WaitForFirstConsumer"
+
+  parameters {
+    type  = "pd-standard"
+    zones = "us-west1-a,us-west1-b"
+  }
+}
+`, name)
 }
 
 func testAccKubernetesStorageClassConfig_noParameters(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_storage_class" "test" {
-	metadata {
-		name = "%s"
-	}
-	storage_provisioner = "kubernetes.io/gce-pd"
-}`, name)
+  metadata {
+    name = "%s"
+  }
+
+  storage_provisioner = "kubernetes.io/gce-pd"
+}
+`, name)
 }
 
 func testAccKubernetesStorageClassConfig_generatedName(prefix string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_storage_class" "test" {
-	metadata {
-		generate_name = "%s"
-	}
-	storage_provisioner = "kubernetes.io/gce-pd"
-}`, prefix)
+  metadata {
+    generate_name = "%s"
+  }
+
+  storage_provisioner = "kubernetes.io/gce-pd"
+}
+`, prefix)
 }

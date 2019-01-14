@@ -1,4 +1,4 @@
-## 1.5.0 (Unreleased)
+## 1.5.0 (January 14, 2019)
 
 FEATURES:
 

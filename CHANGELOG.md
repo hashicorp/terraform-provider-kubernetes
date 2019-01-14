@@ -1,17 +1,25 @@
 ## 1.5.0 (Unreleased)
 
+FEATURES:
+
+* **New Resource:** `kubernetes_network_policy` ([#118](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/118))
+* **New Resource:** `kubernetes_role`
+* **New Resource:** `kubernetes_role_binding`
+* **New Datasource:** `kubernetes_secret datasource` ([#241](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/241))
+
+
 IMPROVEMENTS:
 
 * `resource/kubernetes_deployment`, `resource/kubernetes_pod`, `resource/kubernetes_replication_controller`, `resource/kubernetes_stateful_set`: Add `allow_privilege_escalation` to container security contexts attributes ([#249](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/249))
 * Add pod metadata to replication controller spec template ([#193](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/193))
+* Add support for `volume_binding_mode` attribute in `kubernetes_storage_class`
+* Add `node_affinity` attribute to persistent volumes.
+* Add support for `local` type persistent volumes.
+* Upgrade to Go 1.11 + Go modules
 
 BUG FIXES:
 
 * `resource/kubernetes_stateful_set`: Fix updates of stateful set images ([#252](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/252))
-
-FEATURES:
-
-* **New Resource:** `kubernetes_network_policy` ([#118](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/118))
 
 ## 1.4.0 (November 29, 2018)
 

@@ -77,3 +77,27 @@ output "node_version" {
 output "kubeconfig_path" {
   value = "${local_file.kubeconfig.filename}"
 }
+
+output "kube_endpoint" {
+  value = "${google_container_cluster.primary.endpoint}"
+}
+
+output "kube_username" {
+  value = "${google_container_cluster.primary.master_auth.0.username}"
+}
+
+output "kube_password" {
+  value = "${google_container_cluster.primary.master_auth.0.password}"
+}
+
+output "kube_client_certificate_b64" {
+  value = "${google_container_cluster.primary.master_auth.0.client_certificate}"
+}
+
+output "kube_client_key_b64" {
+  value = "${google_container_cluster.primary.master_auth.0.client_key}"
+}
+
+output "kube_cluster_ca_certificate_b64" {
+  value = "${google_container_cluster.primary.master_auth.0.cluster_ca_certificate}"
+}

@@ -20,11 +20,6 @@ See https://cloud.google.com/kubernetes-engine/versioning-and-upgrades#versions_
 ## Exporting K8S variables
 
 ```
-export KUBE_HOST=https://$(terraform output endpoint)
-export KUBE_USER=$(terraform output username)
-export KUBE_PASSWORD=$(terraform output password)
-export KUBE_CLIENT_CERT_DATA="$(terraform output client_certificate_b64 | base64 -d -)"
-export KUBE_CLIENT_KEY_DATA="$(terraform output client_key_b64 | base64 -d -)"
-export KUBE_CLUSTER_CA_CERT_DATA="$(terraform output cluster_ca_certificate_b64 | base64 -d -)"
-export GOOGLE_ZONE=$(terraform output zone)
+export KUBECONFIG="$(terraform output kubeconfig_path)"
+export GOOGLE_ZONE=$(terraform output google_zone)
 ```

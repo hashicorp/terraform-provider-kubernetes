@@ -20,6 +20,6 @@ See https://cloud.google.com/kubernetes-engine/versioning-and-upgrades#versions_
 ## Exporting K8S variables
 
 ```
-export KUBECONFIG="${KUBECONFIG}:$(terraform output kubeconfig_path)"
+export KUBECONFIG="$(terraform output kubeconfig_path)"
 export GOOGLE_ZONE=$(terraform output google_zone)
 ```

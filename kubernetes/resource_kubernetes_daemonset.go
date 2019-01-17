@@ -98,7 +98,7 @@ func resourceKubernetesDaemonSet() *schema.Resource {
 						},
 						"template": {
 							Type:        schema.TypeList,
-							Description: "An object that describes the pod that will be created. The DaemonSet will create exactly one copy of this pod on every node that matches the template's node selector (or on every node if no node selector is specified). More info: https://kubernetes.io/docs/concepts/workloads/controllers/replicationcontroller#pod-template",
+							Description: "An object that describes the pod that will be created. The DaemonSet will create exactly one copy of this pod on every node that matches the template's node selector (or on every node if no node selector is specified). More info: https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/#pod-template",
 							Required:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{

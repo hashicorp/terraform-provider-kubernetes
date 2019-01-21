@@ -113,6 +113,7 @@ func resourceKubernetesServiceAccountCreate(d *schema.ResourceData, meta interfa
 				break
 			}
 		}
+		log.Printf("[WARN] Expected 1 generated default secret but %d found (%s), selected: %s", len(diff), diff, defaultSecret.Name)
 	}
 
 	d.Set("default_secret_name", defaultSecret.Name)

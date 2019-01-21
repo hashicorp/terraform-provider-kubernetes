@@ -110,6 +110,7 @@ func resourceKubernetesServiceAccountCreate(d *schema.ResourceData, meta interfa
 		for _, secret := range diff {
 			if strings.Contains(secret.Name, "token") {
 				defaultSecret = secret
+				break
 			}
 		}
 	}

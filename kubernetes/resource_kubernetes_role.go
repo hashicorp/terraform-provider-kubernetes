@@ -2,13 +2,14 @@ package kubernetes
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"log"
 )
 
 func resourceKubernetesRole() *schema.Resource {
@@ -66,7 +67,7 @@ func resourceKubernetesRole() *schema.Resource {
 }
 
 func resourceKubernetesRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	rules := expandRules(d.Get("rule").([]interface{}))
@@ -88,7 +89,7 @@ func resourceKubernetesRoleCreate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func resourceKubernetesRoleRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -117,7 +118,7 @@ func resourceKubernetesRoleRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func resourceKubernetesRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -150,7 +151,7 @@ func resourceKubernetesRoleUpdate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func resourceKubernetesRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -169,7 +170,7 @@ func resourceKubernetesRoleDelete(d *schema.ResourceData, meta interface{}) erro
 }
 
 func resourceKubernetesRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

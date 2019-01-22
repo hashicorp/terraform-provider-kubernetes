@@ -82,7 +82,7 @@ func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
 }
 
 func resourceKubernetesHorizontalPodAutoscalerCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandHorizontalPodAutoscalerSpec(d.Get("spec").([]interface{}))
@@ -107,7 +107,7 @@ func resourceKubernetesHorizontalPodAutoscalerCreate(d *schema.ResourceData, met
 }
 
 func resourceKubernetesHorizontalPodAutoscalerRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -136,7 +136,7 @@ func resourceKubernetesHorizontalPodAutoscalerRead(d *schema.ResourceData, meta 
 }
 
 func resourceKubernetesHorizontalPodAutoscalerUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -164,7 +164,7 @@ func resourceKubernetesHorizontalPodAutoscalerUpdate(d *schema.ResourceData, met
 }
 
 func resourceKubernetesHorizontalPodAutoscalerDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -183,7 +183,7 @@ func resourceKubernetesHorizontalPodAutoscalerDelete(d *schema.ResourceData, met
 }
 
 func resourceKubernetesHorizontalPodAutoscalerExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

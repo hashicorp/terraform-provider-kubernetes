@@ -11,7 +11,7 @@ import (
 	kubernetes "k8s.io/client-go/kubernetes"
 )
 
-func getLastWarningsForObject(conn *kubernetes.Clientset, metadata meta_v1.ObjectMeta, kind string, limit int) ([]api.Event, error) {
+func getLastWarningsForObject(conn kubernetes.Interface, metadata meta_v1.ObjectMeta, kind string, limit int) ([]api.Event, error) {
 	m := map[string]string{
 		"involvedObject.name": metadata.Name,
 		"involvedObject.kind": kind,

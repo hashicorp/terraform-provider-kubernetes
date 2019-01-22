@@ -57,7 +57,7 @@ func resourceKubernetesResourceQuota() *schema.Resource {
 }
 
 func resourceKubernetesResourceQuotaCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandResourceQuotaSpec(d.Get("spec").([]interface{}))
@@ -96,7 +96,7 @@ func resourceKubernetesResourceQuotaCreate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesResourceQuotaRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -132,7 +132,7 @@ func resourceKubernetesResourceQuotaRead(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -187,7 +187,7 @@ func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesResourceQuotaDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -207,7 +207,7 @@ func resourceKubernetesResourceQuotaDelete(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesResourceQuotaExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

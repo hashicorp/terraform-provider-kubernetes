@@ -1,0 +1,13 @@
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "//MRaQwvODFsKuAfSqPV+tfyY+0=",
+			"path": "github.com/ghodss/yaml",
+			"revision": "c7ce16629ff4cd059ed96ed06419dd3856fd3577",
+			"revisionTime": "2018-08-20T08:47:58Z"
+		}
+	],
+	"rootPath": "github.com/terraform-providers/terraform-provider-kubernetes"
+}

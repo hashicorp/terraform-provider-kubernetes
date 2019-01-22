@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
+	discovery "k8s.io/client-go/discovery"
 	kubernetes "k8s.io/client-go/kubernetes"
 )
 
@@ -34,7 +35,7 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 
 			// Mutation of PersistentVolumeSource after creation is no longer allowed in 1.9+
 			// See https://github.com/kubernetes/kubernetes/blob/v1.9.3/CHANGELOG-1.9.md#storage-3
-			conn := meta.(*kubernetes.Clientset)
+			conn := meta.(discovery.ServerVersionInterface)
 			serverVersion, err := conn.ServerVersion()
 			if err != nil {
 				return err
@@ -138,7 +139,7 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 }
 
 func resourceKubernetesPersistentVolumeCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandPersistentVolumeSpec(d.Get("spec").([]interface{}))
@@ -185,7 +186,7 @@ func resourceKubernetesPersistentVolumeCreate(d *schema.ResourceData, meta inter
 }
 
 func resourceKubernetesPersistentVolumeRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	name := d.Id()
 	log.Printf("[INFO] Reading persistent volume %s", name)
@@ -208,7 +209,7 @@ func resourceKubernetesPersistentVolumeRead(d *schema.ResourceData, meta interfa
 }
 
 func resourceKubernetesPersistentVolumeUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("spec") {
@@ -235,7 +236,7 @@ func resourceKubernetesPersistentVolumeUpdate(d *schema.ResourceData, meta inter
 }
 
 func resourceKubernetesPersistentVolumeDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting persistent volume: %#v", name)
@@ -251,7 +252,7 @@ func resourceKubernetesPersistentVolumeDelete(d *schema.ResourceData, meta inter
 }
 
 func resourceKubernetesPersistentVolumeExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	name := d.Id()
 	log.Printf("[INFO] Checking persistent volume %s", name)

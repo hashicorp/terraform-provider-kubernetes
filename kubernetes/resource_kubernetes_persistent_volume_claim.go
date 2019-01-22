@@ -46,7 +46,7 @@ func resourceKubernetesPersistentVolumeClaim() *schema.Resource {
 }
 
 func resourceKubernetesPersistentVolumeClaimCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	claim, err := expandPersistenVolumeClaim(map[string]interface{}{
 		"metadata": d.Get("metadata"),
@@ -110,7 +110,7 @@ func resourceKubernetesPersistentVolumeClaimCreate(d *schema.ResourceData, meta 
 }
 
 func resourceKubernetesPersistentVolumeClaimRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -137,7 +137,7 @@ func resourceKubernetesPersistentVolumeClaimRead(d *schema.ResourceData, meta in
 }
 
 func resourceKubernetesPersistentVolumeClaimUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -162,7 +162,7 @@ func resourceKubernetesPersistentVolumeClaimUpdate(d *schema.ResourceData, meta 
 }
 
 func resourceKubernetesPersistentVolumeClaimDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -182,7 +182,7 @@ func resourceKubernetesPersistentVolumeClaimDelete(d *schema.ResourceData, meta 
 }
 
 func resourceKubernetesPersistentVolumeClaimExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

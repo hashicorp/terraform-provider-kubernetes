@@ -16,6 +16,16 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
+type ExtendedClientset struct {
+	*kubernetes.Clientset
+	customResource *CustomResourceClient
+}
+
+// la la connect the dots
+func (c *ExtendedClientset) CustomResource() *CustomResourceClient {
+	return c.customResource
+}
+
 func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
@@ -115,6 +125,7 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_config_map":                resourceKubernetesConfigMap(),
 			"kubernetes_daemonset":                 resourceKubernetesDaemonSet(),
 			"kubernetes_deployment":                resourceKubernetesDeployment(),
+			"kubernetes_generic":                   resourceKubernetesCustom(),
 			"kubernetes_horizontal_pod_autoscaler": resourceKubernetesHorizontalPodAutoscaler(),
 			"kubernetes_limit_range":               resourceKubernetesLimitRange(),
 			"kubernetes_namespace":                 resourceKubernetesNamespace(),
@@ -185,7 +196,12 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, fmt.Errorf("Failed to configure: %s", err)
 	}
 
-	return k, nil
+	rest, err := NewCustomResourceClient(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to configure: %s", err)
+	}
+
+	return ExtendedClientset{Clientset: k, customResource: rest}, nil
 }
 
 func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {

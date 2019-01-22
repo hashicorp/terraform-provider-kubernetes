@@ -186,7 +186,7 @@ func resourceKubernetesDeployment() *schema.Resource {
 }
 
 func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandDeploymentSpec(d.Get("spec").([]interface{}))
@@ -224,7 +224,7 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesDeploymentUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -265,7 +265,7 @@ func resourceKubernetesDeploymentUpdate(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesDeploymentRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -299,7 +299,7 @@ func resourceKubernetesDeploymentRead(d *schema.ResourceData, meta interface{}) 
 }
 
 func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -320,7 +320,7 @@ func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesDeploymentExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -350,7 +350,7 @@ func GetDeploymentCondition(status appsv1.DeploymentStatus, condType appsv1.Depl
 	return nil
 }
 
-func waitForDeploymentReplicasFunc(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
+func waitForDeploymentReplicasFunc(conn kubernetes.Interface, ns, name string) resource.RetryFunc {
 	return func() *resource.RetryError {
 		// Query the deployment to get a status update.
 		dply, err := conn.AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})

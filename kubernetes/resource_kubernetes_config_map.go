@@ -35,7 +35,7 @@ func resourceKubernetesConfigMap() *schema.Resource {
 }
 
 func resourceKubernetesConfigMapCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	cfgMap := api.ConfigMap{
@@ -54,7 +54,7 @@ func resourceKubernetesConfigMapCreate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesConfigMapRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -77,7 +77,7 @@ func resourceKubernetesConfigMapRead(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesConfigMapUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -106,7 +106,7 @@ func resourceKubernetesConfigMapUpdate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesConfigMapDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -125,7 +125,7 @@ func resourceKubernetesConfigMapDelete(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesConfigMapExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

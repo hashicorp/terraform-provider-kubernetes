@@ -110,7 +110,7 @@ func useDeprecatedSpecFields(d *schema.ResourceData) (deprecatedSpecFieldsExist 
 }
 
 func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
@@ -152,7 +152,7 @@ func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta 
 }
 
 func resourceKubernetesReplicationControllerRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -186,7 +186,7 @@ func resourceKubernetesReplicationControllerRead(d *schema.ResourceData, meta in
 }
 
 func resourceKubernetesReplicationControllerUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -227,7 +227,7 @@ func resourceKubernetesReplicationControllerUpdate(d *schema.ResourceData, meta 
 }
 
 func resourceKubernetesReplicationControllerDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -270,7 +270,7 @@ func resourceKubernetesReplicationControllerDelete(d *schema.ResourceData, meta 
 }
 
 func resourceKubernetesReplicationControllerExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(kubernetes.Interface)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -288,7 +288,7 @@ func resourceKubernetesReplicationControllerExists(d *schema.ResourceData, meta 
 	return true, err
 }
 
-func waitForDesiredReplicasFunc(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
+func waitForDesiredReplicasFunc(conn kubernetes.Interface, ns, name string) resource.RetryFunc {
 	return func() *resource.RetryError {
 		rc, err := conn.CoreV1().ReplicationControllers(ns).Get(name, metav1.GetOptions{})
 		if err != nil {

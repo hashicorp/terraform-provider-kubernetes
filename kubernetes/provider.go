@@ -110,8 +110,10 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
+			"kubernetes_cluster_role":              resourceKubernetesClusterRole(),
 			"kubernetes_cluster_role_binding":      resourceKubernetesClusterRoleBinding(),
 			"kubernetes_config_map":                resourceKubernetesConfigMap(),
+			"kubernetes_daemonset":                 resourceKubernetesDaemonSet(),
 			"kubernetes_deployment":                resourceKubernetesDeployment(),
 			"kubernetes_horizontal_pod_autoscaler": resourceKubernetesHorizontalPodAutoscaler(),
 			"kubernetes_limit_range":               resourceKubernetesLimitRange(),

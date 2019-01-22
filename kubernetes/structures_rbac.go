@@ -51,6 +51,34 @@ func expandRBACSubjects(in []interface{}) []api.Subject {
 	return subjects
 }
 
+func expandClusterRoleRules(in []interface{}) []api.PolicyRule {
+	if len(in) == 0 {
+		return []api.PolicyRule{}
+	}
+	rules := make([]api.PolicyRule, len(in))
+	for i, rule := range in {
+		r := api.PolicyRule{}
+		ruleCfg := rule.(map[string]interface{})
+		if v, ok := ruleCfg["api_groups"]; ok {
+			r.APIGroups = expandStringSlice(v.([]interface{}))
+		}
+		if v, ok := ruleCfg["non_resource_urls"]; ok {
+			r.NonResourceURLs = expandStringSlice(v.([]interface{}))
+		}
+		if v, ok := ruleCfg["resource_names"]; ok {
+			r.ResourceNames = expandStringSlice(v.([]interface{}))
+		}
+		if v, ok := ruleCfg["resources"]; ok {
+			r.Resources = expandStringSlice(v.([]interface{}))
+		}
+		if v, ok := ruleCfg["verbs"]; ok {
+			r.Verbs = expandStringSlice(v.([]interface{}))
+		}
+		rules[i] = r
+	}
+	return rules
+}
+
 func flattenRBACRoleRef(in api.RoleRef) interface{} {
 	att := make(map[string]interface{})
 
@@ -75,6 +103,20 @@ func flattenRBACSubjects(in []api.Subject) []interface{} {
 			m["namespace"] = n.Namespace
 		}
 		att = append(att, m)
+	}
+	return att
+}
+
+func flattenClusterRoleRules(in []api.PolicyRule) []interface{} {
+	att := make([]interface{}, len(in), len(in))
+	for i, n := range in {
+		m := make(map[string]interface{})
+		m["api_groups"] = n.APIGroups
+		m["non_resource_urls"] = n.NonResourceURLs
+		m["resource_names"] = n.ResourceNames
+		m["resources"] = n.Resources
+		m["verbs"] = n.Verbs
+		att[i] = m
 	}
 	return att
 }
@@ -107,6 +149,40 @@ func patchRbacSubject(d *schema.ResourceData) PatchOperations {
 		for i, v := range newsubjects[common:] {
 			ops = append(ops, &AddOperation{
 				Path:  "/subjects/" + strconv.Itoa(common+i),
+				Value: v,
+			})
+		}
+	}
+	return ops
+}
+
+func patchRbacRule(d *schema.ResourceData) PatchOperations {
+	o, n := d.GetChange("rule")
+	oldrules := expandClusterRoleRules(o.([]interface{}))
+	newrules := expandClusterRoleRules(n.([]interface{}))
+	ops := make([]PatchOperation, 0, len(newrules)+len(oldrules))
+
+	common := len(newrules)
+	if common > len(oldrules) {
+		common = len(oldrules)
+	}
+	for i, v := range newrules[:common] {
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/rules/" + strconv.Itoa(i),
+			Value: v,
+		})
+	}
+	if len(oldrules) > len(newrules) {
+		for i := len(newrules); i < len(oldrules); i++ {
+			ops = append(ops, &RemoveOperation{
+				Path: "/rules/" + strconv.Itoa(len(oldrules)-i),
+			})
+		}
+	}
+	if len(newrules) > len(oldrules) {
+		for i, v := range newrules[common:] {
+			ops = append(ops, &AddOperation{
+				Path:  "/rules/" + strconv.Itoa(common+i),
 				Value: v,
 			})
 		}

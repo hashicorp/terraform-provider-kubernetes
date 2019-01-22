@@ -88,7 +88,12 @@ func expandStringMapToByteMap(m map[string]interface{}) map[string][]byte {
 func expandStringSlice(s []interface{}) []string {
 	result := make([]string, len(s), len(s))
 	for k, v := range s {
-		result[k] = v.(string)
+		// Handle the Terraform parser bug which turns empty strings in lists to nil.
+		if v == nil {
+			result[k] = ""
+		} else {
+			result[k] = v.(string)
+		}
 	}
 	return result
 }
@@ -125,6 +130,11 @@ func removeInternalKeys(m map[string]string) map[string]string {
 func isInternalKey(annotationKey string) bool {
 	u, err := url.Parse("//" + annotationKey)
 	if err == nil && strings.HasSuffix(u.Hostname(), "kubernetes.io") {
+		return true
+	}
+
+	// Specific to DaemonSet annotations, generated & controlled by the server.
+	if strings.Contains(annotationKey, "deprecated.daemonset.template.generation") {
 		return true
 	}
 

@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform/helper/resource"
@@ -105,18 +104,22 @@ func resourceKubernetesServiceAccountCreate(d *schema.ResourceData, meta interfa
 	})
 
 	diff := diffObjectReferences(svcAcc.Secrets, resp.Secrets)
-	defaultSecret := diff[0]
-	if len(diff) > 1 {
-		for _, secret := range diff {
-			if strings.Contains(secret.Name, "-token-") {
-				defaultSecret = secret
-				break
-			}
+	var svcAccTokens []*api.Secret
+	for _, svcSecret := range diff {
+		secret, err := conn.CoreV1().Secrets(out.Namespace).Get(svcSecret.Name, metav1.GetOptions{})
+		if err != nil {
+			return err
 		}
-		log.Printf("[WARN] Expected 1 generated default secret but %d found (%s), selected: %s", len(diff), diff, defaultSecret.Name)
+		if secret.Type == api.SecretTypeServiceAccountToken {
+			svcAccTokens = append(svcAccTokens, secret)
+		}
 	}
 
-	d.Set("default_secret_name", defaultSecret.Name)
+	if len(svcAccTokens) != 1 {
+		return fmt.Errorf("Expected 1 generated service account token, %d found: %s", len(svcAccTokens), err)
+	}
+
+	d.Set("default_secret_name", svcAccTokens[0].Name)
 
 	return resourceKubernetesServiceAccountRead(d, meta)
 }

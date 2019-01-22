@@ -127,8 +127,8 @@ func resourceKubernetesDaemonSetCreate(d *schema.ResourceData, meta interface{})
 	}
 
 	log.Printf("[INFO] Creating new daemonset: %#v", daemonset)
-	out := &appsv1.DaemonSet{}
-	out, err = conn.AppsV1().DaemonSets(metadata.Namespace).Create(&daemonset)
+
+	out, err := conn.AppsV1().DaemonSets(metadata.Namespace).Create(&daemonset)
 	if err != nil {
 		return fmt.Errorf("Failed to create daemonset: %s", err)
 	}
@@ -166,8 +166,8 @@ func resourceKubernetesDaemonSetUpdate(d *schema.ResourceData, meta interface{})
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating daemonset: %q", name)
-	out := &appsv1.DaemonSet{}
-	out, err = conn.AppsV1().DaemonSets(namespace).Patch(name, pkgApi.JSONPatchType, data)
+
+	out, err := conn.AppsV1().DaemonSets(namespace).Patch(name, pkgApi.JSONPatchType, data)
 	if err != nil {
 		return fmt.Errorf("Failed to update daemonset: %s", err)
 	}

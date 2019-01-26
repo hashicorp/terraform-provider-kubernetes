@@ -58,7 +58,7 @@ func policyRuleSchema() map[string]*schema.Schema {
 		"api_groups": {
 			Type:        schema.TypeList,
 			Description: "APIGroups is the name of the APIGroup that contains the resources. If multiple API groups are specified, any action requested against one of the enumerated resources in any API group will be allowed.",
-			Required:    true,
+			Optional:    true,
 			MinItems:    1,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 		},
@@ -83,7 +83,7 @@ func policyRuleSchema() map[string]*schema.Schema {
 		"verbs": {
 			Type:        schema.TypeList,
 			Description: "Verbs is a list of Verbs that apply to ALL the ResourceKinds and AttributeRestrictions contained in this rule. VerbAll represents all kinds.",
-			Optional:    true,
+			Required:    true,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 		},
 	}

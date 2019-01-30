@@ -66,7 +66,7 @@ func TestFlattenTolerations(t *testing.T) {
 func TestExpandTolerations(t *testing.T) {
 	cases := []struct {
 		Input          []interface{}
-		ExpectedOutput []v1.Toleration
+		ExpectedOutput []*v1.Toleration
 	}{
 		{
 			[]interface{}{
@@ -75,8 +75,8 @@ func TestExpandTolerations(t *testing.T) {
 					"value": "true",
 				},
 			},
-			[]v1.Toleration{
-				v1.Toleration{
+			[]*v1.Toleration{
+				&v1.Toleration{
 					Key:   "node-role.kubernetes.io/spot-worker",
 					Value: "true",
 				},
@@ -93,12 +93,12 @@ func TestExpandTolerations(t *testing.T) {
 					"operator": "Exists",
 				},
 			},
-			[]v1.Toleration{
-				v1.Toleration{
+			[]*v1.Toleration{
+				&v1.Toleration{
 					Key:   "node-role.kubernetes.io/spot-worker",
 					Value: "true",
 				},
-				v1.Toleration{
+				&v1.Toleration{
 					Key:      "node-role.kubernetes.io/other-worker",
 					Operator: "Exists",
 				},
@@ -106,7 +106,7 @@ func TestExpandTolerations(t *testing.T) {
 		},
 		{
 			[]interface{}{},
-			[]v1.Toleration{},
+			[]*v1.Toleration{},
 		},
 	}
 

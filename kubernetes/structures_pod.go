@@ -77,7 +77,7 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	}
 
 	if len(in.Tolerations) > 0 {
-		att["tolerations"] = flattenTolerations(in.Tolerations)
+		att["toleration"] = flattenTolerations(in.Tolerations)
 	}
 
 	if len(in.Volumes) > 0 {
@@ -512,8 +512,10 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.TerminationGracePeriodSeconds = ptrToInt64(int64(v))
 	}
 
-	if v, ok := in["tolerations"].([]interface{}); ok && len(v) > 0 {
-		obj.Tolerations = expandTolerations(v)
+	if v, ok := in["toleration"].([]interface{}); ok && len(v) > 0 {
+		for _, t := range expandTolerations(v) {
+			obj.Tolerations = append(obj.Tolerations, *t)
+		}
 	}
 
 	if v, ok := in["volume"].([]interface{}); ok && len(v) > 0 {
@@ -798,13 +800,14 @@ func expandSecretVolumeSource(l []interface{}) (*v1.SecretVolumeSource, error) {
 	return obj, nil
 }
 
-func expandTolerations(tolerations []interface{}) []v1.Toleration {
+func expandTolerations(tolerations []interface{}) []*v1.Toleration {
 	if len(tolerations) == 0 {
-		return []v1.Toleration{}
+		return []*v1.Toleration{}
 	}
-	ts := make([]v1.Toleration, len(tolerations))
+	ts := make([]*v1.Toleration, len(tolerations))
 	for i, t := range tolerations {
 		m := t.(map[string]interface{})
+		ts[i] = &v1.Toleration{}
 
 		if value, ok := m["effect"]; ok {
 			ts[i].Effect = v1.TaintEffect(value.(string))

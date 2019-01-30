@@ -270,10 +270,10 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Description:  "Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request. Value must be non-negative integer. The value zero indicates delete immediately. If this value is nil, the default grace period will be used instead. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Set this value longer than the expected cleanup time for your process.",
 			Deprecated:   deprecatedMessage,
 		},
-		"tolerations": {
+		"toleration": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			Description: "If specified, the pod's tolerations. Optional: Defaults to empty",
+			Description: "If specified, the pod's toleration. Optional: Defaults to empty",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"effect": {

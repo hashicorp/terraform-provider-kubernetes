@@ -212,7 +212,7 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 * `service_account_name` - (Optional) ServiceAccountName is the name of the ServiceAccount to use to run this pod. For more info see http://releases.k8s.io/HEAD/docs/design/service_accounts.md.
 * `subdomain` - (Optional) If specified, the fully qualified Pod hostname will be "...svc.". If not specified, the pod will not have a domainname at all..
 * `termination_grace_period_seconds` - (Optional) Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request. Value must be non-negative integer. The value zero indicates delete immediately. If this value is nil, the default grace period will be used instead. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Set this value longer than the expected cleanup time for your process.
-* `tolerations` - (Optional) Optional pod node tolerations. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/)
+* `toleration` - (Optional) Optional pod node tolerations. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/)
 * `volume` - (Optional) List of volumes that can be mounted by containers belonging to the pod. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes)
 
 ### `affinity`
@@ -785,7 +785,7 @@ The `items` block supports the following:
 
 * `port` - (Required) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 
-### `tolerations`
+### `toleration`
 
 #### Arguments
 

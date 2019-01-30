@@ -525,7 +525,7 @@ resource "kubernetes_deployment" "test" {
   }
 
   spec {
-    replicas = 300 # This is intentionally high to exercise the waiter
+    replicas = 100 # This is intentionally high to exercise the waiter
 
     selector {
       match_labels {
@@ -582,7 +582,7 @@ resource "kubernetes_deployment" "test" {
   }
 
   spec {
-    replicas = 300 # This is intentionally high to exercise the waiter
+    replicas = 100 # This is intentionally high to exercise the waiter
 
     selector {
       match_labels {

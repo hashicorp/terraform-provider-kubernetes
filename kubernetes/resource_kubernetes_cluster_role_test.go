@@ -37,7 +37,7 @@ func TestAccKubernetesClusterRole_basic(t *testing.T) {
 				Config: testAccKubernetesClusterRoleConfig_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesClusterRoleExists("kubernetes_cluster_role.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.#", "3"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.verbs.#", "3"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.verbs.2", "watch"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.api_groups.#", "1"),
@@ -46,6 +46,10 @@ func TestAccKubernetesClusterRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.verbs.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.verbs.0", "get"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.verbs.1", "list"),
+					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.non_resource_urls.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.non_resource_urls.0", "/metrics"),
+					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.verbs.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.verbs.0", "get"),
 				),
 			},
 		},
@@ -144,6 +148,11 @@ resource "kubernetes_cluster_role" "test" {
     api_groups = [""]
     resources  = ["deployments"]
     verbs      = ["get", "list"]
+  }
+
+  rule {
+    non_resource_urls = ["/metrics"]
+    verbs = ["get"]
   }
 }
 `, name)

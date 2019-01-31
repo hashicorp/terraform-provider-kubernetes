@@ -90,33 +90,38 @@ func resourceKubernetesServiceAccountCreate(d *schema.ResourceData, meta interfa
 
 	// Here we get the only chance to identify and store default secret name
 	// so we can avoid showing it in diff as it's not managed by Terraform
-	var resp *api.ServiceAccount
+	var svcAccTokens []api.Secret
 	err = resource.Retry(30*time.Second, func() *resource.RetryError {
-		var err error
-		resp, err = conn.CoreV1().ServiceAccounts(out.Namespace).Get(out.Name, metav1.GetOptions{})
+		resp, err := conn.CoreV1().ServiceAccounts(out.Namespace).Get(out.Name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
 		}
-		if len(resp.Secrets) > len(svcAcc.Secrets) {
-			return nil
+
+		if len(resp.Secrets) == len(svcAcc.Secrets) {
+			return resource.RetryableError(fmt.Errorf("Waiting for default secret of %q to appear", d.Id()))
 		}
-		return resource.RetryableError(fmt.Errorf("Waiting for default secret of %q to appear", d.Id()))
+
+		diff := diffObjectReferences(svcAcc.Secrets, resp.Secrets)
+		secretList, err := conn.CoreV1().Secrets(out.Namespace).List(metav1.ListOptions{})
+		for _, secret := range secretList.Items {
+			for _, svcSecret := range diff {
+				if secret.Name != svcSecret.Name {
+					break
+				}
+				if secret.Type == api.SecretTypeServiceAccountToken {
+					svcAccTokens = append(svcAccTokens, secret)
+				}
+			}
+		}
+
+		if len(svcAccTokens) > 1 {
+			return resource.NonRetryableError(fmt.Errorf("Expected 1 generated service account token, %d found: %s", len(svcAccTokens), err))
+		}
+
+		return nil
 	})
-
-	diff := diffObjectReferences(svcAcc.Secrets, resp.Secrets)
-	var svcAccTokens []*api.Secret
-	for _, svcSecret := range diff {
-		secret, err := conn.CoreV1().Secrets(out.Namespace).Get(svcSecret.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		if secret.Type == api.SecretTypeServiceAccountToken {
-			svcAccTokens = append(svcAccTokens, secret)
-		}
-	}
-
-	if len(svcAccTokens) != 1 {
-		return fmt.Errorf("Expected 1 generated service account token, %d found: %s", len(svcAccTokens), err)
+	if err != nil {
+		return err
 	}
 
 	d.Set("default_secret_name", svcAccTokens[0].Name)

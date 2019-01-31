@@ -76,4 +76,4 @@ The following arguments are supported:
 In addition to the arguments listed above, the following computed attributes are
 exported:
 
-* `default_secret_name` - Name of the default secret the is created & managed by the service
+* `default_secret_name` - Name of the default secret, containing service account token, created & managed by the service.

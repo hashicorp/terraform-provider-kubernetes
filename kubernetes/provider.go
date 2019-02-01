@@ -145,6 +145,7 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_deployment":                resourceKubernetesDeployment(),
 			"kubernetes_endpoints":                 resourceKubernetesEndpoints(),
 			"kubernetes_horizontal_pod_autoscaler": resourceKubernetesHorizontalPodAutoscaler(),
+			"kubernetes_ingress":                   resourceKubernetesIngress(),
 			"kubernetes_limit_range":               resourceKubernetesLimitRange(),
 			"kubernetes_namespace":                 resourceKubernetesNamespace(),
 			"kubernetes_network_policy":            resourceKubernetesNetworkPolicy(),

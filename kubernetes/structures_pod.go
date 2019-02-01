@@ -825,10 +825,8 @@ func expandTolerations(tolerations []interface{}) []*v1.Toleration {
 		if value, ok := m["operator"]; ok {
 			ts[i].Operator = v1.TolerationOperator(value.(string))
 		}
-		if value, ok := m["toleration_seconds"]; ok && value.(int) > 0 {
+		if value, ok := m["toleration_seconds"]; ok {
 			ts[i].TolerationSeconds = ptrToInt64(int64(value.(int)))
-		} else {
-			ts[i].TolerationSeconds = nil
 		}
 		if value, ok := m["value"]; ok {
 			ts[i].Value = value.(string)

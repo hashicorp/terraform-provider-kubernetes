@@ -174,6 +174,7 @@ func TestAccKubernetesDeployment_with_security_context(t *testing.T) {
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := "redis:5.0.2"
+	tolerationSeconds := 6000
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -234,7 +235,7 @@ func TestAccKubernetesDeployment_with_tolerations(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDeploymentConfigWithTolerations(rcName, imageName),
+				Config: testAccKubernetesDeploymentConfigWithTolerations(rcName, imageName, &tolerationSeconds),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.tolerations.0.effect", "NoExecute"),
@@ -242,6 +243,32 @@ func TestAccKubernetesDeployment_with_tolerations(t *testing.T) {
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.tolerations.0.operator", "Exists"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.tolerations.0.toleration_seconds", "6000"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.tolerations.0.value", "value"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDeployment_with_tolerationsUnsetTolerationSeconds(t *testing.T) {
+	var conf api.Deployment
+
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "redis:5.0.2"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentConfigWithTolerations(rcName, imageName, nil),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.tolerations.0.effect", "NoExecute"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.tolerations.0.key", "node.kubernetes.io/unreachable"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.tolerations.0.operator", "Exists"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.tolerations.0.value", "value"),
+					resource.TestCheckNoResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.tolerations.0.toleration_seconds"),
 				),
 			},
 		},
@@ -1138,7 +1165,11 @@ resource "kubernetes_deployment" "test" {
 `, rcName, imageName)
 }
 
-func testAccKubernetesDeploymentConfigWithTolerations(rcName, imageName string) string {
+func testAccKubernetesDeploymentConfigWithTolerations(rcName, imageName string, tolerationSeconds *int) string {
+	tolerationDuration := "\n"
+	if tolerationSeconds != nil {
+		tolerationDuration = fmt.Sprintf("\ntoleration_seconds = %d\n", *tolerationSeconds)
+	}
 	return fmt.Sprintf(`
 resource "kubernetes_deployment" "test" {
   metadata {
@@ -1167,8 +1198,7 @@ resource "kubernetes_deployment" "test" {
         toleration {
           effect             = "NoExecute"
           key                = "node.kubernetes.io/unreachable"
-          operator           = "Exists"
-          toleration_seconds = 6000
+          operator           = "Exists"%s
           value              = "value"
         }
 
@@ -1180,7 +1210,7 @@ resource "kubernetes_deployment" "test" {
     }
   }
 }
-`, rcName, imageName)
+`, rcName, imageName, tolerationDuration)
 }
 
 func testAccKubernetesDeploymentConfigWithLivenessProbeUsingExec(rcName, imageName string) string {

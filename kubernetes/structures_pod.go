@@ -781,6 +781,5 @@ func patchPodSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOpera
 		}
 
 	}
-
 	return ops, nil
 }

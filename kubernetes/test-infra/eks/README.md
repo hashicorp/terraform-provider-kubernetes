@@ -16,7 +16,7 @@ See https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html for 
 
 You can set the desired version of Kubernetes via the `kubernetes_version` TF variable, like this:
 ```
-export TF_VAR_kubernetes_version="1.11.5"
+export TF_VAR_kubernetes_version="1.11"
 ```
 Alternatively you can pass it to the `apply` command line, like below.
 

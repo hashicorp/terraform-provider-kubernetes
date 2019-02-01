@@ -2,7 +2,9 @@ package kubernetes
 
 import (
 	"fmt"
+	"log"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	v1 "k8s.io/api/core/v1"
@@ -177,8 +179,13 @@ func flattenSeLinuxOptions(in *v1.SELinuxOptions) []interface{} {
 }
 
 func flattenTolerations(tolerations []v1.Toleration) []interface{} {
-	att := make([]interface{}, len(tolerations))
-	for i, v := range tolerations {
+	att := []interface{}{}
+	for _, v := range tolerations {
+		// The API Server may automatically add several Tolerations to pods, strip these to avoid TF diff.
+		if strings.Contains(v.Key, "node.kubernetes.io/") {
+			log.Printf("[INFO] ignoring toleration with key: %s", v.Key)
+			continue
+		}
 		obj := map[string]interface{}{}
 
 		if v.Effect != "" {
@@ -196,7 +203,7 @@ func flattenTolerations(tolerations []v1.Toleration) []interface{} {
 		if v.Value != "" {
 			obj["value"] = v.Value
 		}
-		att[i] = obj
+		att = append(att, obj)
 	}
 	return att
 }

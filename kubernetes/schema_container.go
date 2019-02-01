@@ -290,6 +290,11 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 												Required:    true,
 												Description: "Resource to select",
 											},
+											"divisor": {
+												Type:        schema.TypeInt,
+												Optional:    true,
+												Description: "Specifies the output format of the exposed resources, defaults to '1'",
+											},
 										},
 									},
 								},
@@ -309,6 +314,11 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 												Type:        schema.TypeString,
 												Optional:    true,
 												Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+											},
+											"optional": {
+												Type:        schema.TypeBool,
+												Optional:    true,
+												Description: "Specify whether the Secret or it's key must be defined",
 											},
 										},
 									},

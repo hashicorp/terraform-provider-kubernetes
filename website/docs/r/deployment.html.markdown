@@ -513,6 +513,7 @@ The following arguments are supported:
 
 * `container_name` - (Optional) The name of the container
 * `resource` - (Required) Resource to select
+* `divisor` - (Optional) Specifies the output format of the exposed resources, defaults to '1'
 
 ### `se_linux_options`
 
@@ -551,6 +552,7 @@ The `items` block supports:
 
 * `key` - (Optional) The key of the secret to select from. Must be a valid secret key.
 * `name` - (Optional) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+* `optional` - (Optional) Specify whether the Secret or it's key must be defined
 
 ### `secret_ref`
 

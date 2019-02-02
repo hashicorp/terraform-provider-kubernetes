@@ -1,7 +1,7 @@
 variable "k8s_node_role_arn" {
-  type = "string"
+  type = "list"
 }
 
-variable "kubeconfig_path" {
+variable "kubeconfig" {
   type = "string"
 }

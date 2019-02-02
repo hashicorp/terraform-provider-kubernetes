@@ -19,3 +19,8 @@ variable "workers_type" {
   type    = "string"
   default = "m4.large"
 }
+
+locals {
+  kubeconfig_name = "kubeconfig_${module.vpc.cluster_name}"
+  kubeconfig_path = "${path.root}"
+}

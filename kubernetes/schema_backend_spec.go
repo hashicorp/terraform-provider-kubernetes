@@ -19,7 +19,7 @@ func backendSpecFields(description string) *schema.Schema {
 					Optional:    true,
 				},
 				"service_port": {
-					Type:        schema.TypeInt,
+					Type:        schema.TypeString,
 					Description: "Specifies the port of the referenced service.",
 					Computed:    true,
 					Optional:    true,

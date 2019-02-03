@@ -8,10 +8,6 @@ import (
 
 // Flatteners
 
-func flattenIntOrString(in intstr.IntOrString) int {
-	return in.IntValue()
-}
-
 func flattenIngressRule(in []v1beta1.IngressRule) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
@@ -44,7 +40,7 @@ func flattenIngressBackend(in *v1beta1.IngressBackend) []interface{} {
 
 	m := make(map[string]interface{})
 	m["service_name"] = in.ServiceName
-	m["service_port"] = flattenIntOrString(in.ServicePort)
+	m["service_port"] = in.ServicePort.String()
 
 	att[0] = m
 
@@ -84,10 +80,6 @@ func flattenIngressTLS(in []v1beta1.IngressTLS) []interface{} {
 }
 
 // Expanders
-
-func expandIntOrString(in int) intstr.IntOrString {
-	return intstr.FromInt(in)
-}
 
 func expandIngressRule(l []interface{}) []v1beta1.IngressRule {
 	if len(l) == 0 || l[0] == nil {
@@ -163,8 +155,8 @@ func expandIngressBackend(l []interface{}) *v1beta1.IngressBackend {
 		obj.ServiceName = v
 	}
 
-	if v, ok := in["service_port"].(int); ok {
-		obj.ServicePort = expandIntOrString(v)
+	if v, ok := in["service_port"].(string); ok {
+		obj.ServicePort = intstr.Parse(v)
 	}
 
 	return obj

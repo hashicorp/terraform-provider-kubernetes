@@ -1,0 +1,30 @@
+builds:
+- env:
+  - CGO_ENABLED=0
+  goos:
+    - darwin
+    - linux
+    - windows
+  goarch:
+    - amd64
+  ldflags:
+    - "-w -s"
+
+archive:
+  format_overrides:
+  - goos: windows
+    format: zip
+
+changelog:
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+    - '^Initial commit$'
+    - '^Merge pull request #.* from'
+    - typo
+
+release:
+  github:
+    owner: mbarrien
+    name: terraform-provider-kubernetes

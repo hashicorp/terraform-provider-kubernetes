@@ -191,6 +191,12 @@ func volumeMountFields() map[string]*schema.Schema {
 			Optional:    true,
 			Description: `Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).`,
 		},
+		"mount_propagation": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Default:     "None",
+			Description: `Determines how mounts are propagated from the host to container and the other way around. Defaults to None`,
+		},
 	}
 }
 

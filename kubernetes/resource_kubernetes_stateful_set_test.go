@@ -344,6 +344,7 @@ func testAccKubernetesStatefulSetChecksBasic(name string) resource.TestCheckFunc
 		resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.container.0.port.0.name", "web"),
 		resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.name", "workdir"),
 		resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.mount_path", "/work-dir"),
+		resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.mount_propagation", "None"),
 		resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.update_strategy.0.type", "RollingUpdate"),
 		resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.update_strategy.0.rolling_update.#", "1"),
 		resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.update_strategy.0.rolling_update.0.partition", "1"),

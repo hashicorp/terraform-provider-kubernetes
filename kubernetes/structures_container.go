@@ -277,6 +277,9 @@ func flattenContainerVolumeMounts(in []v1.VolumeMount) ([]interface{}, error) {
 		if v.SubPath != "" {
 			m["sub_path"] = v.SubPath
 		}
+		if v.MountPropagation != nil {
+			m["mount_propagation"] = v.MountPropagation
+		}
 		att[i] = m
 	}
 	return att, nil
@@ -713,6 +716,10 @@ func expandContainerVolumeMounts(in []interface{}) ([]v1.VolumeMount, error) {
 		}
 		if subPath, ok := p["sub_path"]; ok {
 			vmp[i].SubPath = subPath.(string)
+		}
+		if mountPropagation, ok := p["mount_propagation"]; ok {
+			temp := v1.MountPropagationMode(mountPropagation.(string))
+			vmp[i].MountPropagation = &temp
 		}
 	}
 	return vmp, nil

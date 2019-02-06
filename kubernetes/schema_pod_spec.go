@@ -293,9 +293,10 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 						Optional:    true,
 					},
 					"toleration_seconds": {
-						Type:        schema.TypeInt,
-						Description: "TolerationSeconds represents the period of time the toleration (which must be of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default, it is not set, which means tolerate the taint forever (do not evict). Zero and negative values will be treated as 0 (evict immediately) by the system.",
-						Optional:    true,
+						Type:         schema.TypeInt,
+						Description:  "TolerationSeconds represents the period of time the toleration (which must be of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default, it is not set, which means tolerate the taint forever (do not evict). Zero and negative values will be treated as 0 (evict immediately) by the system.",
+						Optional:     true,
+						ValidateFunc: validatePositiveInteger,
 					},
 					"value": {
 						Type:        schema.TypeString,

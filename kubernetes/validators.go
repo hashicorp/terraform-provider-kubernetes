@@ -171,6 +171,14 @@ func validateTerminationGracePeriodSeconds(value interface{}, key string) (ws []
 	return
 }
 
+func validateTolerationSeconds(value interface{}, key string) (ws []string, es []error) {
+	v := value.(int)
+	if v == 0 {
+		es = append(es, fmt.Errorf("%s must be negative (evict immediatly), postive (evict after seconds), or not present (never evict)", key))
+	}
+	return
+}
+
 func validateModeBits(value interface{}, key string) (ws []string, es []error) {
 	v := value.(int)
 	if v < 0 || v > 0777 {

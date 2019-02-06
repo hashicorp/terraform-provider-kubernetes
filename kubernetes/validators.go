@@ -200,6 +200,14 @@ func validateTerminationGracePeriodSeconds(value interface{}, key string) (ws []
 	return
 }
 
+func validateTolerationSeconds(value interface{}, key string) (ws []string, es []error) {
+	v := value.(int)
+	if v == 0 {
+		es = append(es, fmt.Errorf("%s must be negative (evict immediatly), postive (evict after seconds), or not present (never evict)", key))
+	}
+	return
+}
+
 func validateModeBits(value interface{}, key string) (ws []string, es []error) {
 	if !strings.HasPrefix(value.(string), "0") {
 		es = append(es, fmt.Errorf("%s: value %s should start with '0' (octal numeral)", key, value.(string)))

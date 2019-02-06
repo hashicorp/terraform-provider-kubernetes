@@ -290,11 +290,6 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 												Required:    true,
 												Description: "Resource to select",
 											},
-											"divisor": {
-												Type:        schema.TypeInt,
-												Optional:    true,
-												Description: "Specifies the output format of the exposed resources, defaults to '1'",
-											},
 										},
 									},
 								},

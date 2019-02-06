@@ -239,6 +239,9 @@ func flattenSecretKeyRef(in *v1.SecretKeySelector) []interface{} {
 	if in.Name != "" {
 		att["name"] = in.Name
 	}
+	if in.Optional != nil {
+		att["optional"] = *in.Optional
+	}
 	return []interface{}{att}
 }
 
@@ -873,6 +876,9 @@ func expandSecretKeyRef(r []interface{}) (*v1.SecretKeySelector, error) {
 	}
 	if v, ok := in["name"].(string); ok {
 		obj.Name = v
+	}
+	if v, ok := in["optional"]; ok {
+		obj.Optional = ptrToBool(v.(bool))
 	}
 	return obj, nil
 }

@@ -197,7 +197,7 @@ func flattenTolerations(tolerations []v1.Toleration) []interface{} {
 		if v.Operator != "" {
 			obj["operator"] = string(v.Operator)
 		}
-		if v.TolerationSeconds != nil {
+		if v.TolerationSeconds != nil && *v.TolerationSeconds > 0 {
 			obj["toleration_seconds"] = *v.TolerationSeconds
 		}
 		if v.Value != "" {

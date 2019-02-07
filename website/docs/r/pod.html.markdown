@@ -24,6 +24,11 @@ resource "kubernetes_pod" "test" {
     container {
       image = "nginx:1.7.9"
       name  = "example"
+
+      env {
+        name  = "environment"
+        value = "test"
+      }
     }
   }
 }
@@ -91,7 +96,7 @@ The following arguments are supported:
 
 * `args` - (Optional) Arguments to the entrypoint. The docker image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/containers#containers-and-commands)
 * `command` - (Optional) Entrypoint array. Not executed within a shell. The docker image's ENTRYPOINT is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/containers#containers-and-commands)
-* `env` - (Optional) List of environment variables to set in the container. Cannot be updated.
+* `env` - (Optional) Block of string name and value pairs to set in the container's environment. May be declared multiple times. Cannot be updated.
 * `env_from` - (Optional) List of sources to populate environment variables in the container. The keys defined within a source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the container is starting. When a key exists in multiple sources, the value associated with the last source will take precedence. Values defined by an Env with a duplicate key will take precedence. Cannot be updated.
 * `image` - (Optional) Docker image name. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/images)
 * `image_pull_policy` - (Optional) Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/images#updating-images)

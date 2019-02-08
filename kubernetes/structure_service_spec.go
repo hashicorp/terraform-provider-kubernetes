@@ -3,7 +3,7 @@ package kubernetes
 import (
 	gversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform/helper/schema"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/version"
 )
@@ -54,6 +54,8 @@ func flattenServiceSpec(in v1.ServiceSpec) []interface{} {
 	if in.ExternalName != "" {
 		att["external_name"] = in.ExternalName
 	}
+	att["publish_not_ready_addresses"] = in.PublishNotReadyAddresses
+
 	return []interface{}{att}
 }
 
@@ -130,6 +132,10 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 	if v, ok := in["external_name"].(string); ok {
 		obj.ExternalName = v
 	}
+	if v, ok := in["publish_not_ready_addresses"].(bool); ok {
+		obj.PublishNotReadyAddresses = v
+	}
+
 	return obj
 }
 
@@ -197,6 +203,20 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 			Path:  pathPrefix + "externalName",
 			Value: d.Get(keyPrefix + "external_name").(string),
 		})
+	}
+	if d.HasChange(keyPrefix + "publish_not_ready_addresses") {
+		p := pathPrefix + "publishNotReadyAddresses"
+		v := d.Get(keyPrefix + "publish_not_ready_addresses").(bool)
+		if v {
+			ops = append(ops, &AddOperation{
+				Path:  p,
+				Value: v,
+			})
+		} else {
+			ops = append(ops, &RemoveOperation{
+				Path: p,
+			})
+		}
 	}
 	return ops, nil
 }

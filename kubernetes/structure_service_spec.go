@@ -54,10 +54,8 @@ func flattenServiceSpec(in v1.ServiceSpec) []interface{} {
 	if in.ExternalName != "" {
 		att["external_name"] = in.ExternalName
 	}
-	if in.PublishNotReadyAddresses != false {
-		att["publish_not_ready_addresses"] = in.PublishNotReadyAddresses
+	att["publish_not_ready_addresses"] = in.PublishNotReadyAddresses
 
-	}
 	return []interface{}{att}
 }
 
@@ -207,10 +205,18 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 		})
 	}
 	if d.HasChange(keyPrefix + "publish_not_ready_addresses") {
-		ops = append(ops, &ReplaceOperation{
-			Path:  pathPrefix + "publishNotReadyAddresses",
-			Value: d.Get(keyPrefix + "publish_not_ready_addresses").(bool),
-		})
+		p := pathPrefix + "publishNotReadyAddresses"
+		v := d.Get(keyPrefix + "publish_not_ready_addresses").(bool)
+		if v {
+			ops = append(ops, &AddOperation{
+				Path:  p,
+				Value: v,
+			})
+		} else {
+			ops = append(ops, &RemoveOperation{
+				Path: p,
+			})
+		}
 	}
 	return ops, nil
 }

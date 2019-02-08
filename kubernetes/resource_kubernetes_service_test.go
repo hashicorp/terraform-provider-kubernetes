@@ -44,6 +44,7 @@ func TestAccKubernetesService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.target_port", "80"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.session_affinity", "None"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.type", "ClusterIP"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.publish_not_ready_addresses", "false"),
 					testAccCheckServicePorts(&conf, []api.ServicePort{
 						{
 							Port:       int32(8080),
@@ -72,6 +73,7 @@ func TestAccKubernetesService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.target_port", "80"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.session_affinity", "None"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.type", "ClusterIP"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.publish_not_ready_addresses", "true"),
 					testAccCheckServicePorts(&conf, []api.ServicePort{
 						{
 							Port:       int32(8081),
@@ -528,7 +530,9 @@ resource "kubernetes_service" "test" {
     port {
       port        = 8081
       target_port = 80
-    }
+		}
+
+		publish_not_ready_addresses = "true"
   }
 }
 `, name)

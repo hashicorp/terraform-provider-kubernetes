@@ -26,6 +26,8 @@ func flattenDeploymentSpec(in appsv1.DeploymentSpec) ([]interface{}, error) {
 		att["selector"] = flattenLabelSelector(in.Selector)
 	}
 
+	att["strategy"] = flattenDeploymentStrategy(in.Strategy)
+
 	podSpec, err := flattenPodSpec(in.Template.Spec)
 	if err != nil {
 		return nil, err
@@ -66,7 +68,6 @@ func expandDeploymentSpec(deployment []interface{}) (*appsv1.DeploymentSpec, err
 		return obj, err
 	}
 	obj.Template = *template
-
 	return obj, nil
 }
 
@@ -90,12 +91,13 @@ func expandPodTemplate(l []interface{}) (*corev1.PodTemplateSpec, error) {
 }
 
 func expandDeploymentStrategy(l []interface{}) appsv1.DeploymentStrategy {
-	if len(l) == 0 || l[0] == nil {
-		return appsv1.DeploymentStrategy{}
-	}
-	in := l[0].(map[string]interface{})
 	obj := appsv1.DeploymentStrategy{}
-	if v, ok := in["type"].(map[string]interface{}); ok && len(v) > 0 {
+	if len(l) == 0 || l[0] == nil {
+		return obj
+	}
+
+	in := l[0].(map[string]interface{})
+	if v, ok := in["type"].(string); ok && len(v) > 0 {
 		obj.Type = appsv1.DeploymentStrategyType(in["type"].(string))
 	}
 	if v, ok := in["rolling_update"].([]interface{}); ok && len(v) > 0 {
@@ -105,25 +107,47 @@ func expandDeploymentStrategy(l []interface{}) appsv1.DeploymentStrategy {
 }
 
 func expandRollingUpdateDeployment(l []interface{}) *appsv1.RollingUpdateDeployment {
+	obj := appsv1.RollingUpdateDeployment{}
 	if len(l) == 0 || l[0] == nil {
-		return &appsv1.RollingUpdateDeployment{}
+		return &obj
 	}
 
 	in := l[0].(map[string]interface{})
-	obj := &appsv1.RollingUpdateDeployment{}
-	if v, ok := in["max_surge"].(map[string]interface{}); ok && len(v) > 0 {
+	if v, ok := in["max_surge"].(string); ok && len(v) > 0 {
 		maxSurge := intstr.IntOrString{
 			Type:   intstr.String,
 			StrVal: in["max_surge"].(string),
 		}
 		obj.MaxSurge = &maxSurge
 	}
-	if v, ok := in["max_unavailable"].([]interface{}); ok && len(v) > 0 {
+	if v, ok := in["max_unavailable"].(string); ok && len(v) > 0 {
 		maxUnavailable := intstr.IntOrString{
 			Type:   intstr.String,
 			StrVal: in["max_unavailable"].(string),
 		}
 		obj.MaxUnavailable = &maxUnavailable
 	}
-	return obj
+	return &obj
+}
+
+func flattenDeploymentStrategy(in appsv1.DeploymentStrategy) []interface{} {
+	att := make(map[string]interface{})
+	if in.Type != "" {
+		att["type"] = in.Type
+	}
+	if in.RollingUpdate != nil {
+		att["rolling_update"] = flattenRollingUpdateDeployment(*in.RollingUpdate)
+	}
+	return []interface{}{att}
+}
+
+func flattenRollingUpdateDeployment(in appsv1.RollingUpdateDeployment) []interface{} {
+	att := make(map[string]interface{})
+	if in.MaxSurge != nil {
+		att["max_surge"] = in.MaxSurge.String()
+	}
+	if in.MaxUnavailable != nil {
+		att["max_unavailable"] = in.MaxUnavailable.String()
+	}
+	return []interface{}{att}
 }

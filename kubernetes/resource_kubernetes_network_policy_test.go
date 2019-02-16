@@ -107,7 +107,7 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesNetworkPolicyConfig_specModified_all_namespaces(name),
+				Config: testAccKubernetesNetworkPolicyConfig_specModified_allow_all_namespaces(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesNetworkPolicyExists("kubernetes_network_policy.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "0"),
@@ -127,6 +127,7 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_expressions.0.values.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_expressions.0.values.1742479128", "webfront"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_expressions.0.values.2902841359", "api"),
+					resource.TestCheckNoResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_labels"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.0.port", "http"),
@@ -135,8 +136,41 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.1.protocol", "UDP"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.namespace_selector.#", "1"),
+					resource.TestCheckNoResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.0.match_expressions"),
 					resource.TestCheckNoResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.namespace_selector.0.match_labels"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.0", "Ingress"),
+				),
+			},
+			{
+				Config: testAccKubernetesNetworkPolicyConfig_specModified_deny_other_namespaces(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesNetworkPolicyExists("kubernetes_network_policy.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "0"),
+					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.%", "0"),
+					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.#", "1"),
+					resource.TestCheckNoResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_expressions"),
+					resource.TestCheckNoResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_labels"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.0.port", "http"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.0.protocol", "TCP"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.1.port", "8125"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.1.protocol", "UDP"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.namespace_selector.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.#", "1"),
+					resource.TestCheckNoResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.0.match_expressions"),
+					resource.TestCheckNoResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.0.match_labels"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.0", "Ingress"),
 				),
@@ -480,7 +514,7 @@ resource "kubernetes_network_policy" "test" {
 	`, name)
 }
 
-func testAccKubernetesNetworkPolicyConfig_specModified_all_namespaces(name string) string {
+func testAccKubernetesNetworkPolicyConfig_specModified_allow_all_namespaces(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_network_policy" "test" {
   metadata {
@@ -523,6 +557,42 @@ resource "kubernetes_network_policy" "test" {
 	`, name)
 }
 
+func testAccKubernetesNetworkPolicyConfig_specModified_deny_other_namespaces(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_network_policy" "test" {
+  metadata {
+    name      = "%s"
+    namespace = "default"
+  }
+
+  spec {
+    pod_selector {}
+
+    ingress = [
+      {
+        ports = [
+          {
+            port     = "http"
+          },
+          {
+            port     = "8125"
+            protocol = "UDP"
+          },
+        ]
+
+        from = [
+          {
+            pod_selector {}
+          },
+        ]
+      },
+    ]
+
+	policy_types = [ "Ingress" ]
+  }
+}
+	`, name)
+}
 func testAccKubernetesNetworkPolicyConfig_specModified_pod_selector(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_network_policy" "test" {

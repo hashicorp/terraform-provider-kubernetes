@@ -198,7 +198,9 @@ func flattenTolerations(tolerations []v1.Toleration) []interface{} {
 			obj["operator"] = string(v.Operator)
 		}
 		if v.TolerationSeconds != nil {
-			obj["toleration_seconds"] = *v.TolerationSeconds
+			obj["toleration_seconds"] = strconv.FormatInt(*v.TolerationSeconds, 10)
+		} else {
+			obj["toleration_seconds"] = "unspecified"
 		}
 		if v.Value != "" {
 			obj["value"] = v.Value
@@ -520,7 +522,11 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	}
 
 	if v, ok := in["toleration"].([]interface{}); ok && len(v) > 0 {
-		for _, t := range expandTolerations(v) {
+		ts, err := expandTolerations(v)
+		if err != nil {
+			return obj, err
+		}
+		for _, t := range ts {
 			obj.Tolerations = append(obj.Tolerations, *t)
 		}
 	}
@@ -807,9 +813,9 @@ func expandSecretVolumeSource(l []interface{}) (*v1.SecretVolumeSource, error) {
 	return obj, nil
 }
 
-func expandTolerations(tolerations []interface{}) []*v1.Toleration {
+func expandTolerations(tolerations []interface{}) ([]*v1.Toleration, error) {
 	if len(tolerations) == 0 {
-		return []*v1.Toleration{}
+		return []*v1.Toleration{}, nil
 	}
 	ts := make([]*v1.Toleration, len(tolerations))
 	for i, t := range tolerations {
@@ -826,17 +832,21 @@ func expandTolerations(tolerations []interface{}) []*v1.Toleration {
 			ts[i].Operator = v1.TolerationOperator(value.(string))
 		}
 		if value, ok := m["toleration_seconds"]; ok {
-			// Defaults to 0 when not set, prevent updates from zero values
-			// (https://github.com/hashicorp/terraform/issues/16796)
-			if value != 0 {
-				ts[i].TolerationSeconds = ptrToInt64(int64(value.(int)))
+			if value == "unspecified" {
+				ts[i].TolerationSeconds = nil
+			} else {
+				seconds, err := strconv.ParseInt(value.(string), 10, 64)
+				if err != nil {
+					return nil, err
+				}
+				ts[i].TolerationSeconds = ptrToInt64(seconds)
 			}
 		}
 		if value, ok := m["value"]; ok {
 			ts[i].Value = value.(string)
 		}
 	}
-	return ts
+	return ts, nil
 }
 
 func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {

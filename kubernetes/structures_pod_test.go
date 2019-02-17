@@ -21,8 +21,9 @@ func TestFlattenTolerations(t *testing.T) {
 			},
 			[]interface{}{
 				map[string]interface{}{
-					"key":   "node-role.kubernetes.io/spot-worker",
-					"value": "true",
+					"key":                "node-role.kubernetes.io/spot-worker",
+					"value":              "true",
+					"toleration_seconds": "unspecified",
 				},
 			},
 		},
@@ -39,12 +40,14 @@ func TestFlattenTolerations(t *testing.T) {
 			},
 			[]interface{}{
 				map[string]interface{}{
-					"key":      "node-role.kubernetes.io/other-worker",
-					"operator": "Exists",
+					"key":                "node-role.kubernetes.io/other-worker",
+					"operator":           "Exists",
+					"toleration_seconds": "unspecified",
 				},
 				map[string]interface{}{
-					"key":   "node-role.kubernetes.io/spot-worker",
-					"value": "true",
+					"key":                "node-role.kubernetes.io/spot-worker",
+					"value":              "true",
+					"toleration_seconds": "unspecified",
 				},
 			},
 		},
@@ -111,7 +114,10 @@ func TestExpandTolerations(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output := expandTolerations(tc.Input)
+		output, err := expandTolerations(tc.Input)
+		if err != nil {
+			t.Fatalf("Unexpected failure in expander.\nInput: %#v, error: %#v", tc.Input, err)
+		}
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)

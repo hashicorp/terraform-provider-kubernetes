@@ -200,7 +200,7 @@ func flattenTolerations(tolerations []v1.Toleration) []interface{} {
 		if v.TolerationSeconds != nil {
 			obj["toleration_seconds"] = strconv.FormatInt(*v.TolerationSeconds, 10)
 		} else {
-			obj["toleration_seconds"] = "unspecified"
+			obj["toleration_seconds"] = ""
 		}
 		if v.Value != "" {
 			obj["value"] = v.Value
@@ -832,12 +832,12 @@ func expandTolerations(tolerations []interface{}) ([]*v1.Toleration, error) {
 			ts[i].Operator = v1.TolerationOperator(value.(string))
 		}
 		if value, ok := m["toleration_seconds"]; ok {
-			if value == "unspecified" {
+			if value == "" {
 				ts[i].TolerationSeconds = nil
 			} else {
 				seconds, err := strconv.ParseInt(value.(string), 10, 64)
 				if err != nil {
-					return nil, fmt.Errorf("invalid toleration_seconds must be int or \"unspecified\", got \"%s\":\n", value)
+					return nil, fmt.Errorf("invalid toleration_seconds must be int or \"\", got \"%s\"", value)
 				}
 				ts[i].TolerationSeconds = ptrToInt64(seconds)
 			}

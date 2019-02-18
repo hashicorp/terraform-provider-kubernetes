@@ -201,7 +201,7 @@ func validateTerminationGracePeriodSeconds(value interface{}, key string) (ws []
 }
 
 // validateTypeStringNullableInt provides custom error messaging for TypeString ints
-// Some arguments require an int value or an unspecified, empty field.
+// Some arguments require an int value or unspecified, empty field.
 func validateTypeStringNullableInt(v interface{}, k string) (ws []string, es []error) {
 	value, ok := v.(string)
 	if !ok {
@@ -209,7 +209,7 @@ func validateTypeStringNullableInt(v interface{}, k string) (ws []string, es []e
 		return
 	}
 
-	if value == "unspecified" {
+	if value == "" {
 		return
 	}
 

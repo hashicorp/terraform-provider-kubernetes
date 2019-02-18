@@ -21,7 +21,6 @@ type ExtendedClientset struct {
 	customResource *CustomResourceClient
 }
 
-// la la connect the dots
 func (c *ExtendedClientset) CustomResource() *CustomResourceClient {
 	return c.customResource
 }

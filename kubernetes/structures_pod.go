@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -675,7 +676,7 @@ func expandTolerations(tolerations []interface{}) ([]*v1.Toleration, error) {
 			} else {
 				seconds, err := strconv.ParseInt(value.(string), 10, 64)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("invalid toleration_seconds must be int or \"unspecified\", got \"%s\":\n", value)
 				}
 				ts[i].TolerationSeconds = ptrToInt64(seconds)
 			}

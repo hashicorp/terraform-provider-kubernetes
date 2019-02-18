@@ -1,4 +1,4 @@
-## 1.5.1 (Unreleased)
+## 1.5.1 (February 18, 2019)
 
 FEATURES:
 * New resources: DaemonSet and ClusterRole (#229)

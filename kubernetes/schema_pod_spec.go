@@ -280,6 +280,7 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 						Type:        schema.TypeString,
 						Description: "Effect indicates the taint effect to match. Empty means match all taint effects. When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.",
 						Optional:    true,
+						ValidateFunc: validation.StringInSlice([]string{"NoSchedule", "PreferNoSchedule","NoExecute"}, false),
 					},
 					"key": {
 						Type:        schema.TypeString,

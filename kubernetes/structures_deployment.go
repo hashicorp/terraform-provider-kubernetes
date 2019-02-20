@@ -1,12 +1,13 @@
 package kubernetes
 
 import (
+	"github.com/hashicorp/terraform/helper/schema"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func flattenDeploymentSpec(in appsv1.DeploymentSpec) ([]interface{}, error) {
+func flattenDeploymentSpec(in appsv1.DeploymentSpec, d *schema.ResourceData) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	att["min_ready_seconds"] = in.MinReadySeconds
 

@@ -147,7 +147,7 @@ func podAffinityTermFields() map[string]*schema.Schema {
 			Description: "A label query over a set of resources, in this case pods.",
 			Optional:    true,
 			Elem: &schema.Resource{
-				Schema: labelSelectorFields(),
+				Schema: labelSelectorFields(false),
 			},
 		},
 		"namespaces": {

@@ -102,30 +102,6 @@ func flattenNodeSelector(in *v1.NodeSelector) []interface{} {
 	return []interface{}{}
 }
 
-func flattenNodeSelectorTerms(in []v1.NodeSelectorTerm) []interface{} {
-	att := make([]interface{}, len(in), len(in))
-	for i, n := range in {
-		m := make(map[string]interface{})
-		if len(n.MatchExpressions) > 0 {
-			m["match_expressions"] = flattenNodeSelectorRequirements(n.MatchExpressions)
-		}
-		att[i] = m
-	}
-	return att
-}
-
-func flattenNodeSelectorRequirements(in []v1.NodeSelectorRequirement) []interface{} {
-	att := make([]interface{}, len(in), len(in))
-	for i, n := range in {
-		m := make(map[string]interface{})
-		m["key"] = n.Key
-		m["operator"] = n.Operator
-		m["values"] = newStringSet(schema.HashString, n.Values)
-		att[i] = m
-	}
-	return att
-}
-
 func flattenPreferredSchedulingTerm(in []v1.PreferredSchedulingTerm) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
@@ -135,15 +111,6 @@ func flattenPreferredSchedulingTerm(in []v1.PreferredSchedulingTerm) []interface
 		att[i] = m
 	}
 	return att
-}
-
-func flattenNodeSelectorTerm(in v1.NodeSelectorTerm) []interface{} {
-	if len(in.MatchExpressions) > 0 {
-		m := make(map[string]interface{})
-		m["match_expressions"] = flattenNodeSelectorRequirements(in.MatchExpressions)
-		return []interface{}{m}
-	}
-	return []interface{}{}
 }
 
 // Expanders
@@ -222,20 +189,8 @@ func expandPreferredSchedulingTerms(t []interface{}) []v1.PreferredSchedulingTer
 			obj[i].Weight = int32(v)
 		}
 		if v, ok := in["preference"].([]interface{}); ok && len(v) > 0 {
-			obj[i].Preference = expandNodeSelectorTerm(v)
+			obj[i].Preference = *expandNodeSelectorTerm(v)
 		}
-	}
-	return obj
-}
-
-func expandNodeSelectorTerm(t []interface{}) v1.NodeSelectorTerm {
-	if len(t) == 0 || t[0] == nil {
-		return v1.NodeSelectorTerm{}
-	}
-	in := t[0].(map[string]interface{})
-	obj := v1.NodeSelectorTerm{}
-	if v, ok := in["match_expressions"].([]interface{}); ok && len(v) > 0 {
-		obj.MatchExpressions = expandNodeSelectorRequirements(v)
 	}
 	return obj
 }
@@ -250,36 +205,6 @@ func expandNodeSelector(s []interface{}) *v1.NodeSelector {
 		obj.NodeSelectorTerms = expandNodeSelectorTerms(v)
 	}
 	return &obj
-}
-
-func expandNodeSelectorTerms(t []interface{}) []v1.NodeSelectorTerm {
-	if len(t) == 0 || t[0] == nil {
-		return []v1.NodeSelectorTerm{}
-	}
-	obj := make([]v1.NodeSelectorTerm, len(t), len(t))
-	for i, n := range t {
-		in := n.(map[string]interface{})
-		if v, ok := in["match_expressions"].([]interface{}); ok && len(v) > 0 {
-			obj[i].MatchExpressions = expandNodeSelectorRequirements(v)
-		}
-	}
-	return obj
-}
-
-func expandNodeSelectorRequirements(r []interface{}) []v1.NodeSelectorRequirement {
-	if len(r) == 0 || r[0] == nil {
-		return []v1.NodeSelectorRequirement{}
-	}
-	obj := make([]v1.NodeSelectorRequirement, len(r), len(r))
-	for i, n := range r {
-		in := n.(map[string]interface{})
-		obj[i] = v1.NodeSelectorRequirement{
-			Key:      in["key"].(string),
-			Operator: v1.NodeSelectorOperator(in["operator"].(string)),
-			Values:   sliceOfString(in["values"].(*schema.Set).List()),
-		}
-	}
-	return obj
 }
 
 func expandPodAffinityTerms(t []interface{}) []v1.PodAffinityTerm {

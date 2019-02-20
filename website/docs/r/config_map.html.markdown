@@ -23,6 +23,9 @@ resource "kubernetes_config_map" "example" {
     api_host = "myhost:443"
     db_host  = "dbhost:5432"
   }
+  data {
+    my_config_file.yml = "${file("${path.module}/my_config_file.yml")}"
+  }
 }
 ```
 

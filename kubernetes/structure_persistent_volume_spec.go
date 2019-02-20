@@ -1506,7 +1506,7 @@ func patchPersistentVolumeSource(pathPrefix, prefix string, d *schema.ResourceDa
 func flattenVolumeNodeAffinity(in *v1.VolumeNodeAffinity) []interface{} {
 	att := make(map[string]interface{})
 	nodeSelector := map[string]interface{}{
-		"node_selector_term": flattenNodeSelectorTerm(in.Required.NodeSelectorTerms[0]),
+		"node_selector_term": flattenNodeSelectorTerms(in.Required.NodeSelectorTerms),
 	}
 	att["required"] = []interface{}{nodeSelector}
 	return []interface{}{att}
@@ -1529,7 +1529,7 @@ func expandVolumeNodeAffinity(l []interface{}) *v1.VolumeNodeAffinity {
 	}
 	obj := &v1.VolumeNodeAffinity{
 		Required: &v1.NodeSelector{
-			NodeSelectorTerms: []v1.NodeSelectorTerm{expandNodeSelectorTerm(nodeSelector["node_selector_term"].([]interface{}))},
+			NodeSelectorTerms: expandNodeSelectorTerms(nodeSelector["node_selector_term"].([]interface{})),
 		},
 	}
 	return obj

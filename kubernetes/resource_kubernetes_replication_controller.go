@@ -172,7 +172,7 @@ func resourceKubernetesReplicationControllerRead(d *schema.ResourceData, meta in
 		return err
 	}
 
-	spec, err := flattenReplicationControllerSpec(rc.Spec, useDeprecatedSpecFields(d))
+	spec, err := flattenReplicationControllerSpec(rc.Spec, d, useDeprecatedSpecFields(d))
 	if err != nil {
 		return err
 	}

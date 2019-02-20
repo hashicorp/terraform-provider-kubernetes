@@ -3,10 +3,11 @@ package kubernetes
 import (
 	"errors"
 
+	"github.com/hashicorp/terraform/helper/schema"
 	"k8s.io/api/core/v1"
 )
 
-func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec, useDeprecatedSpecFields bool) ([]interface{}, error) {
+func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec, d *schema.ResourceData, useDeprecatedSpecFields bool) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	att["min_ready_seconds"] = in.MinReadySeconds
 
@@ -33,7 +34,7 @@ func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec, useDeprec
 		} else {
 			// Use new fields
 			template["spec"] = podSpec
-			template["metadata"] = flattenMetadata(in.Template.ObjectMeta)
+			template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d)
 		}
 
 		att["template"] = []interface{}{template}

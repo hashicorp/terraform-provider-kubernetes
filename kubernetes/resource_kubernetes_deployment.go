@@ -294,7 +294,7 @@ func resourceKubernetesDeploymentRead(d *schema.ResourceData, meta interface{}) 
 		return err
 	}
 
-	spec, err := flattenDeploymentSpec(deployment.Spec)
+	spec, err := flattenDeploymentSpec(deployment.Spec, d)
 	if err != nil {
 		return err
 	}

@@ -120,7 +120,7 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, metaPrefix 
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}
-	configLabels := d.Get("metadata.0.labels").(map[string]interface{})
+	configLabels := d.Get(prefix + "metadata.0.labels").(map[string]interface{})
 	m["labels"] = removeInternalKeys(meta.Labels, configLabels)
 	m["name"] = meta.Name
 	m["resource_version"] = meta.ResourceVersion

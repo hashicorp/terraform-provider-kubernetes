@@ -20,6 +20,14 @@ const (
 )
 
 func resourceKubernetesCustom() *schema.Resource {
+	metadataSchema := metadataFields("GenericResource")
+	metadataSchema["namespace"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		ForceNew:    true,
+		Description: fmt.Sprintf("Kubernetes namespace where this resource will be placed."),
+	}
+
 	return &schema.Resource{
 		Create: resourceKubernetesCustomCreate,
 		Read:   resourceKubernetesCustomRead,
@@ -55,7 +63,7 @@ func resourceKubernetesCustom() *schema.Resource {
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
-					Schema: metadataFields("GenericResource"),
+					Schema: metadataSchema,
 				},
 			},
 			"yaml": &schema.Schema{
@@ -106,6 +114,14 @@ func resourceKubernetesCustomCreate(d *schema.ResourceData, meta interface{}) er
 		"metadata": map[string]interface{}{
 			"name": metadata.Name,
 		},
+	}
+
+	if strings.TrimSpace(metadata.Namespace) != "" {
+		genericID.Namespace = metadata.Namespace
+		base["metadata"] = map[string]interface{}{
+			"name":      metadata.Name,
+			"namespace": metadata.Namespace,
+		}
 	}
 
 	spec := map[string]interface{}{}

@@ -23,7 +23,7 @@ func TestFlattenTolerations(t *testing.T) {
 				map[string]interface{}{
 					"key":                "node-role.kubernetes.io/spot-worker",
 					"value":              "true",
-					"toleration_seconds": "unspecified",
+					"toleration_seconds": "",
 				},
 			},
 		},
@@ -42,12 +42,12 @@ func TestFlattenTolerations(t *testing.T) {
 				map[string]interface{}{
 					"key":                "node-role.kubernetes.io/other-worker",
 					"operator":           "Exists",
-					"toleration_seconds": "unspecified",
+					"toleration_seconds": "",
 				},
 				map[string]interface{}{
 					"key":                "node-role.kubernetes.io/spot-worker",
 					"value":              "true",
-					"toleration_seconds": "unspecified",
+					"toleration_seconds": "",
 				},
 			},
 		},

@@ -92,6 +92,72 @@ func TestAccKubernetesRoleBinding_importBasic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesRoleBinding_sa_subject(t *testing.T) {
+	var conf api.RoleBinding
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_role_binding.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesRoleBindingDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesRoleBindingConfig_sa_subject(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesRoleBindingExists("kubernetes_role_binding.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_role_binding.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_role_binding.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_role_binding.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_role_binding.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "role_ref.%", "3"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "role_ref.api_group", "rbac.authorization.k8s.io"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "role_ref.kind", "Role"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "role_ref.name", "admin"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "subject.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "subject.0.api_group", ""),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "subject.0.name", "someservice"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "subject.0.kind", "ServiceAccount"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesRoleBinding_group_subject(t *testing.T) {
+	var conf api.RoleBinding
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_role_binding.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesRoleBindingDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesRoleBindingConfig_group_subject(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesRoleBindingExists("kubernetes_role_binding.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_role_binding.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_role_binding.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_role_binding.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_role_binding.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "role_ref.%", "3"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "role_ref.api_group", "rbac.authorization.k8s.io"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "role_ref.kind", "Role"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "role_ref.name", "admin"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "subject.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "subject.0.api_group", "rbac.authorization.k8s.io"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "subject.0.name", "somegroup"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding.test", "subject.0.kind", "Group"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesRoleBindingDestroy(s *terraform.State) error {
 	conn := testAccProvider.Meta().(*kubernetes.Clientset)
 
@@ -191,6 +257,50 @@ resource "kubernetes_role_binding" "test" {
   subject {
     kind      = "Group"
     name      = "system:masters"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
+}
+
+func testAccKubernetesRoleBindingConfig_sa_subject(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "someservice"
+    api_group = ""
+  }
+}
+`, name)
+}
+
+func testAccKubernetesRoleBindingConfig_group_subject(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "somegroup"
     api_group = "rbac.authorization.k8s.io"
   }
 }

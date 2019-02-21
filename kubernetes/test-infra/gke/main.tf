@@ -48,7 +48,7 @@ resource "google_container_cluster" "primary" {
 }
 
 data "template_file" "kubeconfig" {
-  template = "${file("kubeconfig-template.yaml")}"
+  template = "${file("${path.module}/kubeconfig-template.yaml")}"
 
   vars {
     cluster_name    = "${google_container_cluster.primary.name}"

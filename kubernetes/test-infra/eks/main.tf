@@ -1,4 +1,3 @@
-
 module "vpc" {
   source = "./vpc"
 }
@@ -34,5 +33,7 @@ module "node-config" {
   source = "./node-config"
 
   k8s_node_role_arn = ["${list(module.cluster.worker_iam_role_arn)}"]
+  cluster_ca        = "${module.cluster.cluster_certificate_authority_data}"
+  cluster_endpoint  = "${module.cluster.cluster_endpoint}"
   kubeconfig        = "${module.cluster.kubeconfig}"
 }

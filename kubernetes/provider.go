@@ -123,6 +123,7 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_persistent_volume":         resourceKubernetesPersistentVolume(),
 			"kubernetes_persistent_volume_claim":   resourceKubernetesPersistentVolumeClaim(),
 			"kubernetes_pod":                       resourceKubernetesPod(),
+			"kubernetes_pod_disruption_budget":     resourceKubernetesPodDisruptionBudget(),
 			"kubernetes_replication_controller":    resourceKubernetesReplicationController(),
 			"kubernetes_role_binding":              resourceKubernetesRoleBinding(),
 			"kubernetes_resource_quota":            resourceKubernetesResourceQuota(),

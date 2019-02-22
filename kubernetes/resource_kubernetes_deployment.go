@@ -280,12 +280,12 @@ func resourceKubernetesDeploymentRead(d *schema.ResourceData, meta interface{}) 
 	}
 	log.Printf("[INFO] Received deployment: %#v", deployment)
 
-	err = d.Set("metadata", flattenMetadata(deployment.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(deployment.ObjectMeta, d))
 	if err != nil {
 		return err
 	}
 
-	spec, err := flattenDeploymentSpec(deployment.Spec)
+	spec, err := flattenDeploymentSpec(deployment.Spec, d)
 	if err != nil {
 		return err
 	}

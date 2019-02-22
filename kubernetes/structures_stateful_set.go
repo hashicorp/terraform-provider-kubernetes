@@ -153,7 +153,7 @@ func expandMatchExpressions(in []interface{}) ([]metav1.LabelSelectorRequirement
 
 // Flattners
 
-func flattenStatefulSetSpec(spec v1.StatefulSetSpec) ([]interface{}, error) {
+func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
 	if spec.PodManagementPolicy != "" {
@@ -171,21 +171,21 @@ func flattenStatefulSetSpec(spec v1.StatefulSetSpec) ([]interface{}, error) {
 	if spec.ServiceName != "" {
 		att["service_name"] = spec.ServiceName
 	}
-	template, err := flattenPodTemplateSpec(spec.Template)
+	template, err := flattenPodTemplateSpec(spec.Template, d)
 	if err != nil {
 		return []interface{}{att}, err
 	}
 	att["template"] = template
-	att["volume_claim_template"] = flattenPersistentVolumeClaim(spec.VolumeClaimTemplates)
+	att["volume_claim_template"] = flattenPersistentVolumeClaim(spec.VolumeClaimTemplates, d)
 	att["update_strategy"] = flattenStatefulSetSpecUpdateStrategy(spec.UpdateStrategy)
 
 	return []interface{}{att}, nil
 }
 
-func flattenPodTemplateSpec(t corev1.PodTemplateSpec) ([]interface{}, error) {
+func flattenPodTemplateSpec(t corev1.PodTemplateSpec, d *schema.ResourceData) ([]interface{}, error) {
 	template := make(map[string]interface{})
 
-	template["metadata"] = flattenMetadata(t.ObjectMeta)
+	template["metadata"] = flattenMetadata(t.ObjectMeta, d, "spec.0.template.0.")
 	spec, err := flattenPodSpec(t.Spec)
 	if err != nil {
 		return []interface{}{template}, err
@@ -195,12 +195,12 @@ func flattenPodTemplateSpec(t corev1.PodTemplateSpec) ([]interface{}, error) {
 	return []interface{}{template}, nil
 }
 
-func flattenPersistentVolumeClaim(in []corev1.PersistentVolumeClaim) []interface{} {
+func flattenPersistentVolumeClaim(in []corev1.PersistentVolumeClaim, d *schema.ResourceData) []interface{} {
 	pvcs := make([]interface{}, 0, len(in))
 
-	for _, pvc := range in {
+	for i, pvc := range in {
 		p := make(map[string]interface{})
-		p["metadata"] = flattenMetadata(pvc.ObjectMeta)
+		p["metadata"] = flattenMetadata(pvc.ObjectMeta, d, fmt.Sprintf("spec.0.volume_claim_template.%d.", i))
 		p["spec"] = flattenPersistentVolumeClaimSpec(pvc.Spec)
 		pvcs = append(pvcs, p)
 	}

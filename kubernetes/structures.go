@@ -101,13 +101,19 @@ func expandStringSlice(s []interface{}) []string {
 	return result
 }
 
-func flattenMetadata(meta metav1.ObjectMeta) []map[string]interface{} {
+func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, metaPrefix ...string) []map[string]interface{} {
 	m := make(map[string]interface{})
-	m["annotations"] = removeInternalKeys(meta.Annotations)
+	prefix := ""
+	if len(metaPrefix) > 0 {
+		prefix = metaPrefix[0]
+	}
+	configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
+	m["annotations"] = removeInternalKeys(meta.Annotations, configAnnotations)
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}
-	m["labels"] = removeInternalKeys(meta.Labels)
+	configLabels := d.Get(prefix + "metadata.0.labels").(map[string]interface{})
+	m["labels"] = removeInternalKeys(meta.Labels, configLabels)
 	m["name"] = meta.Name
 	m["resource_version"] = meta.ResourceVersion
 	m["self_link"] = meta.SelfLink
@@ -121,13 +127,25 @@ func flattenMetadata(meta metav1.ObjectMeta) []map[string]interface{} {
 	return []map[string]interface{}{m}
 }
 
-func removeInternalKeys(m map[string]string) map[string]string {
+func removeInternalKeys(m map[string]string, d map[string]interface{}) map[string]string {
 	for k := range m {
-		if isInternalKey(k) {
+		if isInternalKey(k) && !isKeyInMap(k, d) {
 			delete(m, k)
 		}
 	}
 	return m
+}
+
+func isKeyInMap(key string, d map[string]interface{}) bool {
+	if d == nil {
+		return false
+	}
+	for k := range d {
+		if k == key {
+			return true
+		}
+	}
+	return false
 }
 
 func isInternalKey(annotationKey string) bool {

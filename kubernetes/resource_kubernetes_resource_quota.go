@@ -119,7 +119,7 @@ func resourceKubernetesResourceQuotaRead(d *schema.ResourceData, meta interface{
 		}
 	}
 
-	err = d.Set("metadata", flattenMetadata(resQuota.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(resQuota.ObjectMeta, d))
 	if err != nil {
 		return err
 	}

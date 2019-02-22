@@ -18,9 +18,31 @@ locals {
 MAPPEDROLE
 }
 
+resource "local_file" "cluster_ca" {
+  content  = "${base64decode(var.cluster_ca)}"
+  filename = "${path.module}/cluster_ca"
+}
+
+resource "null_resource" "wait_for_api" {
+  depends_on = ["local_file.cluster_ca"]
+
+  provisioner "local-exec" {
+    command = <<CMDEOF
+while ! curl -s --cacert ${local_file.cluster_ca.filename} ${var.cluster_endpoint}/version > /dev/null; do 
+  echo "Waiting for the cluster API to come online..."
+  sleep 3
+done
+CMDEOF
+
+    working_dir = "${path.module}"
+  }
+}
+
 resource "kubernetes_config_map" "name" {
+  depends_on = ["null_resource.wait_for_api"]
+
   metadata {
-    name = "aws-auth"
+    name      = "aws-auth"
     namespace = "kube-system"
   }
 

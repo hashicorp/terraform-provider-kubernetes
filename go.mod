@@ -58,7 +58,7 @@ require (
 	google.golang.org/api v0.1.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/api v0.0.0-20181221193117-173ce66c1e39
-	k8s.io/apimachinery v0.0.0-20181227073029-9c4c36654334
+	k8s.io/apimachinery v0.0.0-20190221093215-450d01ad5771
 	k8s.io/client-go v10.0.0+incompatible
 	k8s.io/klog v0.1.0 // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect

@@ -2,15 +2,16 @@ package kubernetes
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
 )
 
 func rbacRoleRefSchema(kind string) map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"api_group": {
-			Type:        schema.TypeString,
-			Description: "The API group of the user. Always `rbac.authorization.k8s.io`",
-			Required:    true,
-			Default:     "rbac.authorization.k8s.io",
+			Type:         schema.TypeString,
+			Description:  "The API group of the user. The only value possible at the moment is `rbac.authorization.k8s.io`.",
+			Required:     true,
+			ValidateFunc: validation.StringInSlice([]string{"rbac.authorization.k8s.io"}, false),
 		},
 		"kind": {
 			Type:        schema.TypeString,
@@ -30,9 +31,9 @@ func rbacSubjectSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"api_group": {
 			Type:        schema.TypeString,
-			Description: "The API group of the user. Always `rbac.authorization.k8s.io`",
+			Description: "The API group of the subject resource.",
 			Optional:    true,
-			Default:     "rbac.authorization.k8s.io",
+			Computed:    true,
 		},
 		"kind": {
 			Type:        schema.TypeString,
@@ -46,7 +47,7 @@ func rbacSubjectSchema() map[string]*schema.Schema {
 		},
 		"namespace": {
 			Type:        schema.TypeString,
-			Description: "The Namespace of the ServiceAccount",
+			Description: "The Namespace of the subject resource.",
 			Optional:    true,
 			Default:     "default",
 		},

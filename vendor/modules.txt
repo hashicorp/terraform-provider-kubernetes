@@ -435,7 +435,7 @@ golang.org/x/oauth2/jwt
 golang.org/x/oauth2/jws
 # golang.org/x/sync v0.0.0-20181108010431-42b317875d0f
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e
+# golang.org/x/sys v0.0.0-20190221075227-b4e8571b14e0
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 # golang.org/x/text v0.3.0
@@ -552,6 +552,7 @@ gopkg.in/yaml.v2
 k8s.io/api/apps/v1
 k8s.io/api/autoscaling/v1
 k8s.io/api/core/v1
+k8s.io/api/networking/v1
 k8s.io/api/rbac/v1
 k8s.io/api/storage/v1
 k8s.io/api/admissionregistration/v1alpha1
@@ -573,7 +574,6 @@ k8s.io/api/coordination/v1beta1
 k8s.io/api/policy/v1beta1
 k8s.io/api/events/v1beta1
 k8s.io/api/extensions/v1beta1
-k8s.io/api/networking/v1
 k8s.io/api/rbac/v1alpha1
 k8s.io/api/rbac/v1beta1
 k8s.io/api/scheduling/v1alpha1

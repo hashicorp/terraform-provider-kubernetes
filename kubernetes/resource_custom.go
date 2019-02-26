@@ -3,6 +3,8 @@ package kubernetes
 import (
 	"fmt"
 	"log"
+	"math"
+	"reflect"
 	"strings"
 	"time"
 
@@ -153,6 +155,45 @@ func resourceKubernetesCustomCreate(d *schema.ResourceData, meta interface{}) er
 	return nil
 }
 
+func preFlattenYaml(v reflect.Value) {
+	if v.Kind() == reflect.Interface {
+		v = v.Elem()
+	}
+
+	switch v.Kind() {
+	case reflect.Slice:
+		for i := 0; i < v.Len(); i++ {
+			preFlattenYaml(v.Index(i))
+		}
+	case reflect.Map:
+		for _, k := range v.MapKeys() {
+			vv := v.MapIndex(k)
+			if vv.Kind() == reflect.Interface {
+				vv = vv.Elem()
+			}
+
+			switch vv.Kind() {
+			case reflect.Slice:
+				for i := 0; i < vv.Len(); i++ {
+					preFlattenYaml(vv.Index(i))
+				}
+			case reflect.Map:
+				preFlattenYaml(vv.MapIndex(k))
+			case reflect.Int64, reflect.Int32, reflect.Int16:
+				v.SetMapIndex(k, reflect.ValueOf(int(vv.Int())))
+			case reflect.Float32, reflect.Float64:
+				floatv := vv.Float()
+				if floatv == math.Trunc(floatv) {
+					v.SetMapIndex(k, reflect.ValueOf(int(floatv)))
+				} else {
+					asString := fmt.Sprintf("%g", vv.Float())
+					v.SetMapIndex(k, reflect.ValueOf(asString))
+				}
+			}
+		}
+	}
+}
+
 func resourceKubernetesCustomDiff(d *schema.ResourceDiff, meta interface{}) error {
 	resource, err := getCustomResourceFromKubernetes(d.Id(), d.Get("kind").(string), meta)
 	if resource == nil {
@@ -165,6 +206,14 @@ func resourceKubernetesCustomDiff(d *schema.ResourceDiff, meta interface{}) erro
 	err = yaml.Unmarshal([]byte(d.Get("yaml").(string)), &fullSpec)
 	if err != nil {
 		return err
+	}
+
+	// Replace values that are not allowed when flattened
+	preFlattenYaml(reflect.ValueOf(fullSpec))
+
+	// Some resources have YAML that is not in the spec (cant patch)
+	if strings.ToLower(d.Get("kind").(string)) == "customresourcedefinition" || strings.ToLower(d.Get("kind").(string)) == "customresourcedefinitions" {
+		delete(fullSpec, "additionalPrinterColumns")
 	}
 
 	desiredSpec := flat.Flatten(fullSpec)

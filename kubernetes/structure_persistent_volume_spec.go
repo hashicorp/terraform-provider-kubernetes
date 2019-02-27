@@ -27,6 +27,7 @@ func flattenAzureDiskVolumeSource(in *v1.AzureDiskVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["disk_name"] = in.DiskName
 	att["data_disk_uri"] = in.DataDiskURI
+	att["kind"] = string(*in.Kind)
 	att["caching_mode"] = string(*in.CachingMode)
 	if in.FSType != nil {
 		att["fs_type"] = *in.FSType
@@ -491,10 +492,15 @@ func expandAzureDiskVolumeSource(l []interface{}) *v1.AzureDiskVolumeSource {
 	}
 	in := l[0].(map[string]interface{})
 	cachingMode := v1.AzureDataDiskCachingMode(in["caching_mode"].(string))
+
 	obj := &v1.AzureDiskVolumeSource{
 		CachingMode: &cachingMode,
 		DiskName:    in["disk_name"].(string),
 		DataDiskURI: in["data_disk_uri"].(string),
+	}
+	if v, ok := in["kind"].(string); ok {
+		kind := v1.AzureDataDiskKind(v)
+		obj.Kind = &kind
 	}
 	if v, ok := in["fs_type"].(string); ok {
 		obj.FSType = ptrToString(v)

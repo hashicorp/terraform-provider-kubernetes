@@ -1,4 +1,4 @@
-## 1.5.2 (Unreleased)
+## 1.5.2 (February 28, 2019)
 
 BUG FIXES:
 * Fix `api_group` attribute attribute of RBAC subjects. (#331)

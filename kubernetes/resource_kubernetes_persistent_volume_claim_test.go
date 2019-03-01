@@ -518,11 +518,11 @@ func testAccKubernetesPersistentVolumeClaimConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume_claim" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelThree = "three"
       TestLabelFour  = "four"
@@ -535,7 +535,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
     access_modes = ["ReadWriteOnce"]
 
     resources {
-      requests {
+      requests = {
         storage = "5Gi"
       }
     }
@@ -558,12 +558,12 @@ func testAccKubernetesPersistentVolumeClaimConfig_metaModified(name string) stri
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume_claim" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -576,7 +576,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
     access_modes = ["ReadWriteOnce"]
 
     resources {
-      requests {
+      requests = {
         storage = "5Gi"
       }
     }
@@ -603,7 +603,7 @@ resource "kubernetes_persistent_volume" "test" {
   }
 
   spec {
-    capacity {
+    capacity = {
       storage = "10Gi"
     }
 
@@ -636,7 +636,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
     storage_class_name = "standard"
 
     resources {
-      requests {
+      requests = {
         storage = "5Gi"
       }
     }
@@ -655,7 +655,7 @@ resource "kubernetes_persistent_volume" "test" {
   }
 
   spec {
-    capacity {
+    capacity = {
       storage = "10Gi"
     }
 
@@ -688,7 +688,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
     storage_class_name = "standard"
 
     resources {
-      requests {
+      requests = {
         storage = "5Gi"
       }
     }
@@ -707,7 +707,7 @@ resource "kubernetes_persistent_volume" "test2" {
   }
 
   spec {
-    capacity {
+    capacity = {
       storage = "10Gi"
     }
 
@@ -740,7 +740,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
     storage_class_name = "standard"
 
     resources {
-      requests {
+      requests = {
         storage = "5Gi"
       }
     }
@@ -847,7 +847,7 @@ resource "kubernetes_persistent_volume" "test" {
   }
 
   spec {
-    capacity {
+    capacity = {
       storage = "%s"
     }
 
@@ -880,7 +880,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
     storage_class_name = "standard"
 
     resources {
-      requests {
+      requests = {
         storage = "5Gi"
       }
     }
@@ -900,7 +900,7 @@ resource "kubernetes_storage_class" "test" {
 
   storage_provisioner = "kubernetes.io/gce-pd"
 
-  parameters {
+  parameters = {
     type = "pd-standard"
   }
 }
@@ -914,7 +914,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
     access_modes = ["ReadWriteOnce"]
 
     resources {
-      requests {
+      requests = {
         storage = "5Gi"
       }
     }
@@ -934,7 +934,7 @@ resource "kubernetes_storage_class" "test" {
 
   storage_provisioner = "kubernetes.io/gce-pd"
 
-  parameters {
+  parameters = {
     type = "pd-standard"
   }
 }
@@ -946,7 +946,7 @@ resource "kubernetes_storage_class" "second" {
 
   storage_provisioner = "kubernetes.io/gce-pd"
 
-  parameters {
+  parameters = {
     type = "pd-ssd"
   }
 }
@@ -960,7 +960,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
     access_modes = ["ReadWriteOnce"]
 
     resources {
-      requests {
+      requests = {
         storage = "5Gi"
       }
     }

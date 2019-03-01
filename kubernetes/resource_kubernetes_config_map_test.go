@@ -69,7 +69,7 @@ func TestAccKubernetesConfigMap_basic(t *testing.T) {
 					testAccCheckConfigMapData(&conf, map[string]string{"one": "first", "two": "second"}),
 				),
 			},
-			{
+			{ // TODO: broken
 				Config: testAccKubernetesConfigMapConfig_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesConfigMapExists("kubernetes_config_map.test", &conf),
@@ -250,12 +250,12 @@ func testAccKubernetesConfigMapConfig_nodata(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_config_map" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -264,7 +264,7 @@ resource "kubernetes_config_map" "test" {
     name = "%s"
   }
 
-  data {}
+  data = {}
 }
 `, name)
 }
@@ -273,12 +273,12 @@ func testAccKubernetesConfigMapConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_config_map" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -287,7 +287,7 @@ resource "kubernetes_config_map" "test" {
     name = "%s"
   }
 
-  data {
+  data = {
     one = "first"
     two = "second"
   }
@@ -299,12 +299,12 @@ func testAccKubernetesConfigMapConfig_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_config_map" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       Different         = "1234"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelThree = "three"
     }
@@ -312,7 +312,7 @@ resource "kubernetes_config_map" "test" {
     name = "%s"
   }
 
-  data {
+  data = {
     one  = "first"
     two  = "second"
     nine = "ninth"
@@ -338,7 +338,7 @@ resource "kubernetes_config_map" "test" {
     generate_name = "%s"
   }
 
-  data {
+  data = {
     one = "first"
     two = "second"
   }

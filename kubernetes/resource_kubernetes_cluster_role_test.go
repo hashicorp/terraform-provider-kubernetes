@@ -2,13 +2,14 @@ package kubernetes
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	api "k8s.io/api/rbac/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetes "k8s.io/client-go/kubernetes"
-	"testing"
 )
 
 func TestAccKubernetesClusterRole_basic(t *testing.T) {
@@ -109,7 +110,7 @@ func testAccKubernetesClusterRoleConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_cluster_role" "test" {
   metadata {
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -130,7 +131,7 @@ func testAccKubernetesClusterRoleConfig_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_cluster_role" "test" {
   metadata {
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelThree = "three"
     }

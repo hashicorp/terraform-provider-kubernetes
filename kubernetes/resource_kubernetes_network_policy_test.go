@@ -66,7 +66,7 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.0", "Ingress"),
 				),
@@ -419,11 +419,11 @@ resource "kubernetes_network_policy" "test" {
     name      = "%s"
     namespace = "default"
 
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelThree = "three"
       TestLabelFour  = "four"
@@ -433,8 +433,8 @@ resource "kubernetes_network_policy" "test" {
   spec {
     pod_selector {}
 
-	policy_types = [ "Ingress" ]
-  }
+		policy_types = ["Ingress"]
+	}
 }
 `, name)
 }
@@ -446,12 +446,12 @@ resource "kubernetes_network_policy" "test" {
     name      = "%s"
     namespace = "default"
 
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -459,9 +459,9 @@ resource "kubernetes_network_policy" "test" {
   }
 
   spec {
-    pod_selector = {}
-    ingress      = []
-	policy_types = [ "Ingress" ]
+    pod_selector {}
+    ingress      {}
+	  policy_types = [ "Ingress" ]
   }
 }
 `, name)
@@ -484,33 +484,28 @@ resource "kubernetes_network_policy" "test" {
       }
     }
 
-    ingress = [
-      {
-        ports = [
-          {
-            port     = "http"
-          },
-          {
-            port     = "8125"
-            protocol = "UDP"
-          },
-        ]
+    ingress {
+      ports {
+        port = "http"
+      }
+      ports {
+        port     = "8125"
+        protocol = "UDP"
+      }
 
-        from = [
-          {
-            namespace_selector {
-              match_labels = {
-                name = "default"
-              }
-            }
-          },
-        ]
-      },
-    ]
+      from {
+        namespace_selector {
+          match_labels = {
+            name = "default"
+          }
+        }
+      }
+    }
 
-	policy_types = [ "Ingress" ]
+    policy_types = ["Ingress"]
   }
 }
+
 	`, name)
 }
 
@@ -531,27 +526,21 @@ resource "kubernetes_network_policy" "test" {
       }
     }
 
-    ingress = [
-      {
-        ports = [
-          {
-            port     = "http"
-          },
-          {
-            port     = "8125"
-            protocol = "UDP"
-          },
-        ]
+    ingress {
+      ports {
+        port     = "http"
+      }
 
-        from = [
-          {
-            namespace_selector {}
-          },
-        ]
-      },
-    ]
+      ports {
+        port     = "8125"
+        protocol = "UDP"
+      }
 
-	policy_types = [ "Ingress" ]
+      from {
+        namespace_selector {}
+      }
+    }
+    policy_types = [ "Ingress" ]
   }
 }
 	`, name)
@@ -568,27 +557,22 @@ resource "kubernetes_network_policy" "test" {
   spec {
     pod_selector {}
 
-    ingress = [
-      {
-        ports = [
-          {
-            port     = "http"
-          },
-          {
-            port     = "8125"
-            protocol = "UDP"
-          },
-        ]
+    ingress {
+      ports {
+        port     = "http"
+      }
 
-        from = [
-          {
-            pod_selector {}
-          },
-        ]
-      },
-    ]
+      ports {
+        port     = "8125"
+        protocol = "UDP"
+      }
 
-	policy_types = [ "Ingress" ]
+      from {
+          pod_selector {}
+      }
+    }
+
+    policy_types = [ "Ingress" ]
   }
 }
 	`, name)
@@ -610,41 +594,34 @@ resource "kubernetes_network_policy" "test" {
       }
     }
 
-    ingress = [
-      {
-        ports = [
-          {
-            port     = "http"
-            protocol = "TCP"
-          },
-          {
-            port     = "statsd"
-            protocol = "UDP"
-          },
-        ]
+    ingress {
+      ports {
+        port     = "http"
+        protocol = "TCP"
+      }
+      ports {
+        port     = "statsd"
+        protocol = "UDP"
+      }
+      from {
+        ip_block {
+          cidr = "10.0.0.0/8"
+          except = [
+            "10.0.0.0/24",
+            "10.0.1.0/24",
+          ]
+        }
+      }
+      from {
+        pod_selector {
+          match_labels = {
+            app = "myapp"
+          }
+        }
+      }
+    }
 
-        from = [
-          {
-            ip_block {
-              cidr = "10.0.0.0/8"
-              except = [
-                "10.0.0.0/24",
-                "10.0.1.0/24",
-              ]
-            }
-          },
-          {
-            pod_selector {
-              match_labels = {
-                app = "myapp"
-              }
-            }
-          },
-        ]
-      },
-    ]
-
-	policy_types = [ "Ingress" ]
+    policy_types = ["Ingress"]
   }
 }
 	`, name)
@@ -667,64 +644,50 @@ resource "kubernetes_network_policy" "test" {
       }
     }
 
-    ingress = [
-      {
-        ports = [
-          {
-            port     = "http"
-            protocol = "TCP"
-          },
-          {
-            port     = "statsd"
-            protocol = "UDP"
-          },
-        ]
+    ingress {
+      ports {
+        port     = "http"
+        protocol = "TCP"
+      }
+      ports {
+        port     = "statsd"
+        protocol = "UDP"
+      }
+      from {
+        ip_block {
+          cidr = "10.0.0.0/8"
+          except = [
+            "10.0.0.0/24",
+            "10.0.1.0/24",
+          ]
+        }
+      }
+      from {
+        pod_selector {
+          match_labels = {
+            app = "myapp"
+          }
+        }
+      }
+    }
 
-        from = [
-          {
-            ip_block {
-              cidr = "10.0.0.0/8"
-              except = [
-                "10.0.0.0/24",
-                "10.0.1.0/24",
-              ]
-            }
-          },
-          {
-            pod_selector {
-              match_labels = {
-                app = "myapp"
-              }
-            }
-          },
-        ]
-      },
-    ]
+    egress {
+      ports {
+        port     = "statsd"
+        protocol = "UDP"
+      }
+      to {
+        ip_block {
+          cidr = "10.0.0.0/8"
+          except = [
+            "10.0.0.0/24",
+            "10.0.1.0/24",
+          ]
+        }
+      }
+    }
 
-    egress = [
-      {
-        ports = [
-          {
-            port     = "statsd"
-            protocol = "UDP"
-          },
-        ]
-
-        to = [
-          {
-            ip_block {
-              cidr = "10.0.0.0/8"
-              except = [
-                "10.0.0.0/24",
-                "10.0.1.0/24",
-              ]
-            }
-          },
-        ]
-      },
-    ]
-
-	policy_types = [ "Ingress", "Egress" ]
+    policy_types = ["Ingress", "Egress"]
   }
 }
 	`, name)

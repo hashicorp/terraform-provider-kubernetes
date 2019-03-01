@@ -514,12 +514,12 @@ func testAccKubernetesServiceConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -542,12 +542,12 @@ func testAccKubernetesServiceConfig_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       Different         = "1234"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelThree = "three"
     }
@@ -579,7 +579,7 @@ resource "kubernetes_service" "test" {
     external_ips                = ["10.0.0.3", "10.0.0.4"]
     load_balancer_source_ranges = ["10.0.0.5/32", "10.0.0.6/32"]
 
-    selector {
+    selector = {
       App = "MyApp"
     }
 
@@ -608,7 +608,7 @@ resource "kubernetes_service" "test" {
     external_ips                = ["10.0.0.4", "10.0.0.5"]
     load_balancer_source_ranges = ["10.0.0.1/32", "10.0.0.2/32"]
 
-    selector {
+    selector = {
       App         = "MyModifiedApp"
       NewSelector = "NewValue"
     }
@@ -638,7 +638,7 @@ resource "kubernetes_service" "test" {
     external_ips     = ["10.0.0.4", "10.0.0.5"]
     load_balancer_ip = "12.0.0.125"
 
-    selector {
+    selector = {
       App = "MyApp"
     }
 
@@ -668,7 +668,7 @@ resource "kubernetes_service" "test" {
   metadata {
     name = "%s"
 
-    labels {
+    labels = {
       app  = "helloweb"
       tier = "frontend"
     }
@@ -677,7 +677,7 @@ resource "kubernetes_service" "test" {
   spec {
     type = "LoadBalancer"
 
-    selector {
+    selector = {
       app  = "helloweb"
       tier = "frontend"
     }
@@ -699,7 +699,7 @@ resource "kubernetes_service" "test" {
   }
 
   spec {
-    selector {
+    selector = {
       App = "MyOtherApp"
     }
 

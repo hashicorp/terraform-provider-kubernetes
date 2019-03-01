@@ -206,11 +206,11 @@ func testAccKubernetesHorizontalPodAutoscalerConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_horizontal_pod_autoscaler" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelThree = "three"
       TestLabelFour  = "four"
@@ -235,12 +235,12 @@ func testAccKubernetesHorizontalPodAutoscalerConfig_metaModified(name string) st
 	return fmt.Sprintf(`
 resource "kubernetes_horizontal_pod_autoscaler" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"

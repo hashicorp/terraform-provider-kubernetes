@@ -416,12 +416,12 @@ func testAccKubernetesReplicationControllerConfig_deprecated_basic(name string) 
 	return fmt.Sprintf(`
 resource "kubernetes_replication_controller" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -433,7 +433,7 @@ resource "kubernetes_replication_controller" "test" {
   spec {
     replicas = 1000 # This is intentionally high to exercise the waiter
 
-    selector {
+    selector = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -454,11 +454,11 @@ func testAccKubernetesReplicationControllerConfig_deprecated_initContainer(name 
 	return fmt.Sprintf(`
 resource "kubernetes_replication_controller" "test" {
 	metadata {
-		annotations {
+		annotations = {
 			TestAnnotationOne = "one"
 			TestAnnotationTwo = "two"
 		}
-		labels {
+		labels = {
 			TestLabelOne = "one"
 			TestLabelTwo = "two"
 			TestLabelThree = "three"
@@ -467,7 +467,7 @@ resource "kubernetes_replication_controller" "test" {
 	}
 	spec {
 		replicas = 1000 # This is intentionally high to exercise the waiter
-		selector {
+		selector = {
 			TestLabelOne = "one"
 			TestLabelTwo = "two"
 			TestLabelThree = "three"
@@ -507,18 +507,18 @@ func testAccKubernetesReplicationControllerConfig_deprecated_modified(name strin
 	return fmt.Sprintf(`
 resource "kubernetes_replication_controller" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       Different = "1234"
     }
-    labels {
+    labels = {
       TestLabelOne = "one"
       TestLabelThree = "three"
     }
     name = "%s"
   }
   spec {
-    selector {
+    selector = {
       TestLabelOne = "one"
       TestLabelTwo = "two"
       TestLabelThree = "three"
@@ -537,7 +537,7 @@ func testAccKubernetesReplicationControllerConfig_deprecated_generatedName(prefi
 	return fmt.Sprintf(`
 resource "kubernetes_replication_controller" "test" {
   metadata {
-    labels {
+    labels = {
       TestLabelOne = "one"
       TestLabelTwo = "two"
       TestLabelThree = "three"
@@ -545,7 +545,7 @@ resource "kubernetes_replication_controller" "test" {
     generate_name = "%s"
   }
   spec {
-    selector {
+    selector = {
       TestLabelOne = "one"
       TestLabelTwo = "two"
       TestLabelThree = "three"
@@ -565,12 +565,12 @@ func testAccKubernetesReplicationControllerConfig_deprecated_WithSecurityContext
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
     template {
@@ -595,12 +595,12 @@ func testAccKubernetesReplicationControllerConfig_deprecated_WithLivenessProbeUs
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
     template {
@@ -629,12 +629,12 @@ func testAccKubernetesReplicationControllerConfig_deprecated_WithLivenessProbeUs
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
     template {
@@ -668,12 +668,12 @@ func testAccKubernetesReplicationControllerConfig_deprecated_WithLivenessProbeUs
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
     template {
@@ -702,12 +702,12 @@ func testAccKubernetesReplicationControllerConfig_deprecated_WithLifeCycle(rcNam
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
     template {
@@ -741,12 +741,12 @@ func testAccKubernetesReplicationControllerConfig_deprecated_WithContainerSecuri
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
     template {
@@ -777,7 +777,7 @@ resource "kubernetes_secret" "test" {
     name = "%s"
   }
 
-  data {
+  data = {
     one = "first"
   }
 }
@@ -785,13 +785,13 @@ resource "kubernetes_secret" "test" {
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
 
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
   	template {
@@ -805,7 +805,7 @@ resource "kubernetes_replication_controller" "test" {
       }
       volume {
         name = "db"
-        secret = {
+        secret {
           secret_name = "${kubernetes_secret.test.metadata.0.name}"
         }
       }
@@ -820,13 +820,13 @@ func testAccKubernetesReplicationControllerConfig_deprecated_WithResourceRequire
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
 
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
   	template {
@@ -856,13 +856,13 @@ func testAccKubernetesReplicationControllerConfig_deprecated_WithEmptyDirVolumes
 resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
 
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
     template {
@@ -876,7 +876,7 @@ resource "kubernetes_replication_controller" "test" {
       }
       volume {
         name = "cache-volume"
-        empty_dir = {
+        empty_dir {
           medium = "Memory"
         }
       }

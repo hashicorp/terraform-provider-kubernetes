@@ -2,14 +2,15 @@ package kubernetes
 
 import (
 	"fmt"
+	"regexp"
+	"testing"
+
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 	api "k8s.io/api/rbac/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"regexp"
-	"testing"
 )
 
 func TestAccKubernetesRole_basic(t *testing.T) {
@@ -33,7 +34,7 @@ func TestAccKubernetesRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_role.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.api_groups.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.api_groups.0", ""),
+					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.api_groups.1804436815", "core"),
 					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.resources.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.resources.3245178296", "pods"),
 					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.verbs.#", "3"),
@@ -132,12 +133,12 @@ func testAccKubernetesRoleConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_role" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -147,11 +148,11 @@ resource "kubernetes_role" "test" {
   }
 
   rule {
-    api_groups     = [""]
+    api_groups     = ["core"]
     resources      = ["pods"]
     verbs          = ["get", "list", "watch"]
     resource_names = ["foo"]
-  }
+	}
 
   rule {
     api_groups = ["apps"]
@@ -166,12 +167,12 @@ func testAccKubernetesRoleConfig_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_role" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       Different         = "1234"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelThree = "three"
     }

@@ -486,12 +486,12 @@ func testAccKubernetesReplicationControllerConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_replication_controller" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -503,7 +503,7 @@ resource "kubernetes_replication_controller" "test" {
   spec {
     replicas = 1000 # This is intentionally high to exercise the waiter
 
-    selector {
+    selector = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -511,13 +511,13 @@ resource "kubernetes_replication_controller" "test" {
 
     template {
       metadata {
-        labels {
+        labels = {
           TestLabelOne   = "one"
           TestLabelTwo   = "two"
           TestLabelThree = "three"
         }
 
-        annotations {
+        annotations = {
           TestAnnotationFive = "five"
         }
       }
@@ -538,12 +538,12 @@ func testAccKubernetesReplicationControllerConfig_initContainer(name string) str
 	return fmt.Sprintf(`
 resource "kubernetes_replication_controller" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -555,7 +555,7 @@ resource "kubernetes_replication_controller" "test" {
   spec {
     replicas = 1000 # This is intentionally high to exercise the waiter
 
-    selector {
+    selector = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -563,7 +563,7 @@ resource "kubernetes_replication_controller" "test" {
 
     template {
       metadata {
-        labels {
+        labels = {
           TestLabelOne   = "one"
           TestLabelTwo   = "two"
           TestLabelThree = "three"
@@ -614,7 +614,7 @@ resource "kubernetes_replication_controller" "test" {
 
         volume {
           name      = "workdir"
-          empty_dir = {}
+          empty_dir {}
         }
       }
     }
@@ -627,12 +627,12 @@ func testAccKubernetesReplicationControllerConfig_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_replication_controller" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       Different         = "1234"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelThree = "three"
     }
@@ -641,7 +641,7 @@ resource "kubernetes_replication_controller" "test" {
   }
 
   spec {
-    selector {
+    selector = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -649,13 +649,13 @@ resource "kubernetes_replication_controller" "test" {
 
     template {
       metadata {
-        labels {
+        labels = {
           TestLabelOne   = "one"
           TestLabelTwo   = "two"
           TestLabelThree = "three"
         }
 
-        annotations {
+        annotations = {
           TestAnnotationSix = "six"
         }
       }
@@ -676,7 +676,7 @@ func testAccKubernetesReplicationControllerConfig_generatedName(prefix string) s
 	return fmt.Sprintf(`
 resource "kubernetes_replication_controller" "test" {
   metadata {
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -686,7 +686,7 @@ resource "kubernetes_replication_controller" "test" {
   }
 
   spec {
-    selector {
+    selector = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -694,7 +694,7 @@ resource "kubernetes_replication_controller" "test" {
 
     template {
       metadata {
-        labels {
+        labels = {
           TestLabelOne   = "one"
           TestLabelTwo   = "two"
           TestLabelThree = "three"
@@ -719,19 +719,19 @@ resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
 
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
 
     template {
       metadata {
-        labels {
+        labels = {
           Test = "TfAcceptanceTest"
         }
       }
@@ -761,19 +761,19 @@ resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
 
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
 
     template {
       metadata {
-        labels {
+        labels = {
           Test = "TfAcceptanceTest"
         }
       }
@@ -806,19 +806,19 @@ resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
 
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
 
     template {
       metadata {
-        labels {
+        labels = {
           Test = "TfAcceptanceTest"
         }
       }
@@ -857,19 +857,19 @@ resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
 
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
 
     template {
       metadata {
-        labels {
+        labels = {
           Test = "TfAcceptanceTest"
         }
       }
@@ -902,19 +902,19 @@ resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
 
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
 
     template {
       metadata {
-        labels {
+        labels = {
           Test = "TfAcceptanceTest"
         }
       }
@@ -952,19 +952,19 @@ resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
 
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
 
     template {
       metadata {
-        labels {
+        labels = {
           Test = "TfAcceptanceTest"
         }
       }
@@ -997,7 +997,7 @@ resource "kubernetes_secret" "test" {
     name = "%s"
   }
 
-  data {
+  data = {
     one = "first"
   }
 }
@@ -1006,19 +1006,19 @@ resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
 
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
 
     template {
       metadata {
-        labels {
+        labels = {
           Test = "TfAcceptanceTest"
         }
       }
@@ -1037,7 +1037,7 @@ resource "kubernetes_replication_controller" "test" {
         volume {
           name = "db"
 
-          secret = {
+          secret {
             secret_name = "${kubernetes_secret.test.metadata.0.name}"
           }
         }
@@ -1054,19 +1054,19 @@ resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
 
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
 
     template {
       metadata {
-        labels {
+        labels = {
           Test = "TfAcceptanceTest"
         }
       }
@@ -1101,19 +1101,19 @@ resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
 
   spec {
-    selector {
+    selector = {
       Test = "TfAcceptanceTest"
     }
 
     template {
       metadata {
-        labels {
+        labels = {
           Test = "TfAcceptanceTest"
         }
       }
@@ -1132,7 +1132,7 @@ resource "kubernetes_replication_controller" "test" {
         volume {
           name = "cache-volume"
 
-          empty_dir = {
+          empty_dir {
             medium = "Memory"
           }
         }

@@ -98,7 +98,7 @@ func expandStringSlice(s []interface{}) []string {
 	return result
 }
 
-func flattenMetadata(meta metav1.ObjectMeta) []map[string]interface{} {
+func flattenMetadata(meta metav1.ObjectMeta) []interface{} {
 	m := make(map[string]interface{})
 	m["annotations"] = removeInternalKeys(meta.Annotations)
 	if meta.GenerateName != "" {
@@ -115,7 +115,7 @@ func flattenMetadata(meta metav1.ObjectMeta) []map[string]interface{} {
 		m["namespace"] = meta.Namespace
 	}
 
-	return []map[string]interface{}{m}
+	return []interface{}{m}
 }
 
 func removeInternalKeys(m map[string]string) map[string]string {

@@ -459,7 +459,10 @@ resource "kubernetes_secret" "test" {
   }
 
   data = {
-    one = "${base64decode(filebase64("./test-fixtures/binary.data"))}"
+		one =<<EOF
+"${filebase64("./test-fixtures/binary.data")}"
+EOF
+
   }
 }
 `, prefix)
@@ -473,8 +476,14 @@ resource "kubernetes_secret" "test" {
   }
 
   data = {
-    one = "${base64decode(filebase64("./test-fixtures/binary2.data"))}"
-    two = "${base64decode(filebase64("./test-fixtures/binary.data"))}"
+		one =<<EOF
+"${filebase64("./test-fixtures/binary2.data")}"
+EOF
+
+		two =<<EOF
+"${filebase64("./test-fixtures/binary.data")}"
+EOF
+
   }
 }
 `, prefix)

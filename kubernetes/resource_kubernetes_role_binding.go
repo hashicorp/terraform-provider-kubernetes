@@ -25,12 +25,13 @@ func resourceKubernetesRoleBinding() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("roleBinding", false),
 			"role_ref": {
-				Type:        schema.TypeMap,
+				Type:        schema.TypeList,
 				Description: "RoleRef references the Role for this binding",
 				Required:    true,
 				ForceNew:    true,
+				MaxItems:    1,
 				Elem: &schema.Resource{
-					Schema: rbacRoleRefSchema("Role"),
+					Schema: rbacRoleRefSchema(),
 				},
 			},
 			"subject": {
@@ -52,7 +53,7 @@ func resourceKubernetesRoleBindingCreate(d *schema.ResourceData, meta interface{
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	binding := &api.RoleBinding{
 		ObjectMeta: metadata,
-		RoleRef:    expandRBACRoleRef(d.Get("role_ref").(interface{})),
+		RoleRef:    expandRBACRoleRef(d.Get("role_ref").([]interface{})),
 		Subjects:   expandRBACSubjects(d.Get("subject").([]interface{})),
 	}
 	log.Printf("[INFO] Creating new RoleBinding: %#v", binding)

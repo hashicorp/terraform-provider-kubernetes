@@ -106,12 +106,16 @@ func resourceKubernetesServiceAccountCreate(d *schema.ResourceData, meta interfa
 		for _, secret := range secretList.Items {
 			for _, svcSecret := range diff {
 				if secret.Name != svcSecret.Name {
-					break
+					continue
 				}
 				if secret.Type == api.SecretTypeServiceAccountToken {
 					svcAccTokens = append(svcAccTokens, secret)
 				}
 			}
+		}
+
+		if len(svcAccTokens) == 0 {
+			return resource.RetryableError(fmt.Errorf("Expected 1 generated service account token, %d found", len(svcAccTokens)))
 		}
 
 		if len(svcAccTokens) > 1 {

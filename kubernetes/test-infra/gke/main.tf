@@ -19,7 +19,7 @@ resource "random_id" "password" {
 # See https://cloud.google.com/container-engine/supported-versions
 variable "kubernetes_version" {}
 variable "workers_count" {
-  default = "4"
+  default = "3"
 }
 
 resource "google_container_cluster" "primary" {

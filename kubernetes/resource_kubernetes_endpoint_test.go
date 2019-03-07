@@ -327,13 +327,14 @@ resource "kubernetes_endpoint" "test" {
 
   subsets {
     addresses {
-      ip   = "10.0.0.4"
+      ip = "10.0.0.4"
     }
-	ports {
-      name = "httptransport"
-      port = 80
+
+    ports {
+      name     = "httptransport"
+      port     = 80
       protocol = "TCP"
-	}
+    }
   }
 }
 `, name)
@@ -358,34 +359,38 @@ resource "kubernetes_endpoint" "test" {
 
   subsets {
     addresses {
-      ip   = "10.0.0.5"
+      ip = "10.0.0.5"
     }
-	ports {
-      name = "httptransport"
-      port = 82
+
+    ports {
+      name     = "httptransport"
+      port     = 82
       protocol = "TCP"
-	}
+    }
   }
 
   subsets {
     addresses {
-      ip   = "10.0.0.6"
-      hostname = "test-hostname"
+      ip        = "10.0.0.6"
+      hostname  = "test-hostname"
       node_name = "test-nodename"
     }
+
     addresses {
-      ip   = "10.0.0.7"
+      ip = "10.0.0.7"
     }
-	ports {
-      name = "httpstransport"
-      port = 443
+
+    ports {
+      name     = "httpstransport"
+      port     = 443
       protocol = "TCP"
-	}
-	ports {
-      name = "httpstransport2"
-      port = 444
+    }
+
+    ports {
+      name     = "httpstransport2"
+      port     = 444
       protocol = "TCP"
-	}
+    }
   }
 }
 `, name)
@@ -400,13 +405,14 @@ resource "kubernetes_endpoint" "test" {
 
   subsets {
     addresses {
-      ip   = "10.0.0.4"
+      ip = "10.0.0.4"
     }
-	ports {
-      name = "transport"
-      port = 80
+
+    ports {
+      name     = "transport"
+      port     = 80
       protocol = "TCP"
-	}
+    }
   }
 }
 `, prefix)

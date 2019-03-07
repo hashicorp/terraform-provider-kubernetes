@@ -27,9 +27,8 @@ func resourceKubernetesEndpoint() *schema.Resource {
 			"metadata": namespacedMetadataSchema("endpoints", true),
 			"subsets": {
 				Type:        schema.TypeList,
-				Description: "Sets of addresses and ports that comprise a service.. More info: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors",
-				Required:    true,
-				MinItems:    1,
+				Description: "Sets of addresses and ports that comprise a service. More info: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors",
+				Optional:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"addresses": {
@@ -126,7 +125,7 @@ func resourceKubernetesEndpointCreate(d *schema.ResourceData, meta interface{}) 
 	log.Printf("[INFO] Creating new endpoint: %#v", ep)
 	out, err := conn.CoreV1().Endpoints(metadata.Namespace).Create(&ep)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to create endpoint because: %s", err)
 	}
 	log.Printf("[INFO] Submitted new endpoint: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
@@ -139,26 +138,26 @@ func resourceKubernetesEndpointRead(d *schema.ResourceData, meta interface{}) er
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to read endpoint because: %s", err)
 	}
 
 	log.Printf("[INFO] Reading endpoint %s", name)
 	ep, err := conn.CoreV1().Endpoints(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return fmt.Errorf("Failed to read endpoint because: %s", err)
 	}
 	log.Printf("[INFO] Received endpoint: %#v", ep)
 	err = d.Set("metadata", flattenMetadata(ep.ObjectMeta))
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to read endpoint because: %s", err)
 	}
 
 	flattened := flattenEndpointSubsets(ep.Subsets)
 	log.Printf("[DEBUG] Flattened endpoint subset: %#v", flattened)
 	err = d.Set("subsets", flattened)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to read endpoint because: %s", err)
 	}
 
 	return nil
@@ -169,7 +168,7 @@ func resourceKubernetesEndpointUpdate(d *schema.ResourceData, meta interface{}) 
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to update endpoint because: %s", err)
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -200,18 +199,16 @@ func resourceKubernetesEndpointDelete(d *schema.ResourceData, meta interface{}) 
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to delete endpoint because: %s", err)
 	}
-
 	log.Printf("[INFO] Deleting endpoint: %#v", name)
 	err = conn.CoreV1().Endpoints(namespace).Delete(name, &meta_v1.DeleteOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to delete endpoint because: %s", err)
 	}
-
 	log.Printf("[INFO] Endpoint %s deleted", name)
-
 	d.SetId("")
+
 	return nil
 }
 

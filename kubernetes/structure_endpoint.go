@@ -12,17 +12,14 @@ func expandEndpointAddresses(in []interface{}) []api.EndpointAddress {
 	for i, addr := range in {
 		r := api.EndpointAddress{}
 		addrCfg := addr.(map[string]interface{})
-
 		if v, ok := addrCfg["hostname"].(string); ok {
 			r.Hostname = v
 		}
 		if v, ok := addrCfg["ip"].(string); ok {
 			r.IP = v
 		}
-		if v, ok := addrCfg["node_name"].(string); ok {
-			if v != "" {
-				r.NodeName = ptrToString(v)
-			}
+		if v, ok := addrCfg["node_name"].(string); ok && v != "" {
+			r.NodeName = ptrToString(v)
 		}
 		addresses[i] = r
 	}
@@ -33,7 +30,7 @@ func expandEndpointPorts(in []interface{}) []api.EndpointPort {
 	if len(in) == 0 {
 		return []api.EndpointPort{}
 	}
-	subsets := make([]api.EndpointPort, len(in))
+	ports := make([]api.EndpointPort, len(in))
 	for i, port := range in {
 		r := api.EndpointPort{}
 		portCfg := port.(map[string]interface{})
@@ -46,9 +43,9 @@ func expandEndpointPorts(in []interface{}) []api.EndpointPort {
 		if v, ok := portCfg["protocol"].(string); ok {
 			r.Protocol = api.Protocol(v)
 		}
-		subsets[i] = r
+		ports[i] = r
 	}
-	return subsets
+	return ports
 }
 
 func expandEndpointSubsets(in []interface{}) []api.EndpointSubset {
@@ -59,11 +56,11 @@ func expandEndpointSubsets(in []interface{}) []api.EndpointSubset {
 	for i, subset := range in {
 		r := api.EndpointSubset{}
 		subsetCfg := subset.(map[string]interface{})
-		if v, ok := subsetCfg["addresses"]; ok {
-			r.Addresses = expandEndpointAddresses(v.([]interface{}))
+		if v, ok := subsetCfg["addresses"].([]interface{}); ok {
+			r.Addresses = expandEndpointAddresses(v)
 		}
-		if v, ok := subsetCfg["not_ready_addresses"]; ok {
-			r.NotReadyAddresses = expandEndpointAddresses(v.([]interface{}))
+		if v, ok := subsetCfg["not_ready_addresses"].([]interface{}); ok {
+			r.NotReadyAddresses = expandEndpointAddresses(v)
 		}
 		if v, ok := subsetCfg["ports"]; ok {
 			r.Ports = expandEndpointPorts(v.([]interface{}))
@@ -77,13 +74,10 @@ func flattenEndpointAddresses(in []api.EndpointAddress) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
-
 		if n.Hostname != "" {
 			m["hostname"] = n.Hostname
 		}
-
 		m["ip"] = n.IP
-
 		if n.NodeName != nil {
 			m["node_name"] = *n.NodeName
 		}
@@ -96,11 +90,9 @@ func flattenEndpointPorts(in []api.EndpointPort) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
-
 		if n.Name != "" {
 			m["name"] = n.Name
 		}
-
 		m["port"] = int(n.Port)
 		m["protocol"] = string(n.Protocol)
 		att[i] = m
@@ -112,19 +104,15 @@ func flattenEndpointSubsets(in []api.EndpointSubset) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
-
 		if len(n.Addresses) > 0 {
 			m["addresses"] = flattenEndpointAddresses(n.Addresses)
 		}
-
 		if len(n.NotReadyAddresses) > 0 {
 			m["not_ready_addresses"] = flattenEndpointAddresses(n.NotReadyAddresses)
 		}
-
 		if len(n.Ports) > 0 {
 			m["ports"] = flattenEndpointPorts(n.Ports)
 		}
-
 		att[i] = m
 	}
 	return att

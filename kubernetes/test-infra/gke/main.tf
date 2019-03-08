@@ -18,11 +18,14 @@ resource "random_id" "password" {
 
 # See https://cloud.google.com/container-engine/supported-versions
 variable "kubernetes_version" {}
+variable "workers_count" {
+  default = "3"
+}
 
 resource "google_container_cluster" "primary" {
   name               = "tf-acc-test-${random_id.cluster_name.hex}"
   zone               = "${data.google_compute_zones.available.names[0]}"
-  initial_node_count = 3
+  initial_node_count = "${var.workers_count}"
   node_version       = "${var.kubernetes_version}"
   min_master_version = "${var.kubernetes_version}"
 

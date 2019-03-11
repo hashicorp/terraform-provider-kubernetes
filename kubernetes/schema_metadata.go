@@ -9,11 +9,10 @@ import (
 func metadataFields(objectName string) map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"annotations": {
-			Type:         schema.TypeMap,
-			Description:  fmt.Sprintf("An unstructured key value map stored with the %s that may be used to store arbitrary metadata. More info: http://kubernetes.io/docs/user-guide/annotations", objectName),
-			Optional:     true,
-			Elem:         &schema.Schema{Type: schema.TypeString},
-			ValidateFunc: validateAnnotations,
+			Type:        schema.TypeMap,
+			Description: fmt.Sprintf("An unstructured key value map stored with the %s that may be used to store arbitrary metadata. More info: http://kubernetes.io/docs/user-guide/annotations", objectName),
+			Optional:    true,
+			Elem:        &schema.Schema{Type: schema.TypeString},
 		},
 		"generation": {
 			Type:        schema.TypeInt,
@@ -21,11 +20,10 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 			Computed:    true,
 		},
 		"labels": {
-			Type:         schema.TypeMap,
-			Description:  fmt.Sprintf("Map of string keys and values that can be used to organize and categorize (scope and select) the %s. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels", objectName),
-			Optional:     true,
-			Elem:         &schema.Schema{Type: schema.TypeString},
-			ValidateFunc: validateLabels,
+			Type:        schema.TypeMap,
+			Description: fmt.Sprintf("Map of string keys and values that can be used to organize and categorize (scope and select) the %s. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels", objectName),
+			Optional:    true,
+			Elem:        &schema.Schema{Type: schema.TypeString},
 		},
 		"name": {
 			Type:         schema.TypeString,

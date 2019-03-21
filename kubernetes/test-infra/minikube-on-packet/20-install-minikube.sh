@@ -5,7 +5,7 @@ set -e
 KUBECTL_VERSION=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)
 curl -LO https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl \
   && chmod a+x kubectl && mv kubectl /usr/local/bin/
-kubectl version
+kubectl version --client
 
 # Install minikube
 curl -Lo minikube https://storage.googleapis.com/minikube/releases/${MINIKUBE_VERSION}/minikube-linux-amd64 \

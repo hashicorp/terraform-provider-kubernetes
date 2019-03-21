@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 export NODE_SIZE=n1-standard-1
 export MASTER_SIZE=n1-standard-2
 export KOPS_STATE_STORE="gs://${BUCKET_NAME}"
@@ -27,9 +29,4 @@ kops create cluster --cloud=gce \
   --admin-access=${IP_ADDRESS}/32 \
   --yes
 
-EXIT_CODE=$?
-if [ $EXIT_CODE == 0 ]; then
-  ../kops-waiter.sh 120
-else
-  exit $EXIT_CODE
-fi
+../kops-waiter.sh 120

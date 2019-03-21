@@ -1,4 +1,5 @@
 #!/usr/bin/bash
+set -e
 
 yum install -y curl yum-utils libvirt qemu-kvm virt-install libguestfs-tools libvirt-client qemu-kvm-tools
 

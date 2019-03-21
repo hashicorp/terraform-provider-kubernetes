@@ -1,7 +1,7 @@
 #!/usr/bin/bash
+set -e
 
 # Install kubectl
-
 KUBECTL_VERSION=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)
 curl -LO https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl \
   && chmod a+x kubectl && mv kubectl /usr/local/bin/

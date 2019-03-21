@@ -19,5 +19,7 @@ minikube config set vm-driver kvm2
 
 # These settings allocate half of the host's CPU cores and memory to the minikube virtual machine.
 # The proportion can be adjusted by chaning the '/ 2' factor in the expressions below.
-minikube config set cpus $(($(lscpu -p | grep -cv '#') / 2))
-minikube config set memory $(($(free --mega -tw | grep Mem: | cut -d' ' -f12) / 2))
+CPU_CORES=$(lscpu -p | grep -cv '#')
+FREE_MEMORY=$(free --mega -tw | grep Mem: | cut -d' ' -f12)
+minikube config set cpus $((CPU_CORES / 2))
+minikube config set memory $((FREE_MEMORY / 2))

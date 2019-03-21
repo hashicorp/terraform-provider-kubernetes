@@ -69,7 +69,7 @@ resource "packet_ssh_key" "default" {
 resource "packet_device" "minikube" {
   hostname         = "minikube"
   plan             = "${var.packet_plan}"
-  facility         = "${var.packet_facility}"
+  facilities       = ["${var.packet_facility}"]
   operating_system = "centos_7"
   billing_cycle    = "hourly"
   project_id       = "${packet_project.main.id}"

@@ -5,6 +5,11 @@ variable "kubernetes_version" {
   description = "See 'minikube get-k8s-versions' for all available versions"
 }
 
+variable "minikube_version" {
+  type = "string"
+  description = "See https://github.com/kubernetes/minikube/releases"
+}
+
 variable "packet_facility" {
   type = "string"
   description = "See https://www.packet.net/developers/api/facilities/ for all available facilities"
@@ -97,7 +102,7 @@ resource "packet_device" "minikube" {
     inline = [
       "chmod a+x /tmp/10-install-kvm.sh && chmod a+x /tmp/20-install-minikube.sh",
       "/tmp/10-install-kvm.sh | tee /var/log/provisioning-11-kvm.log",
-      "/tmp/20-install-minikube.sh | tee /var/log/provisioning-20-minikube.log",
+      "MINIKUBE_VERSION=${var.minikube_version} /tmp/20-install-minikube.sh | tee /var/log/provisioning-20-minikube.log",
       "/usr/local/bin/minikube start --kubernetes-version=v${var.kubernetes_version}",
       # Extract certs so they can be transfered back to client
       "mkdir -p /tmp/${var.dotminikube_path}",

@@ -45,6 +45,9 @@ func TestAccKubernetesDeployment_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(deploymentTestResourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.8"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.0.max.surge", "25%"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.0.max.unavailable", "25%"),
 				),
 			},
 		},
@@ -452,6 +455,32 @@ func TestAccKubernetesDeploymentUpdate_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "metadata.0.annotations.Different", "1234"),
 					// Changed
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.9"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDeployment_with_deployment_strategy(t *testing.T) {
+	var conf api.Deployment
+
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentConfigWithDeploymentStrategy(rcName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "1"),
 				),
 			},
 		},
@@ -1208,6 +1237,52 @@ resource "kubernetes_deployment" "test" {
           empty_dir = {
             medium = "Memory"
           }
+        }
+      }
+    }
+  }
+}
+`, rcName, imageName)
+}
+
+func testAccKubernetesDeploymentConfigWithDeploymentStrategy(rcName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_deployment" "test" {
+  metadata {
+    name = "%s"
+
+    labels {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    strategy {
+      type = "RollingUpdate"
+
+      rolling_update {
+        max_surge       = "1"
+        max_unavailable = "1"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
         }
       }
     }

@@ -1,8 +1,6 @@
 package kubernetes
 
 import (
-	"strconv"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -108,21 +106,8 @@ func expandRollingUpdateDaemonSet(p []interface{}) *appsv1.RollingUpdateDaemonSe
 	in := p[0].(map[string]interface{})
 
 	if v, ok := in["max_unavailable"]; ok {
-		obj.MaxUnavailable = expandRollingUpdateDaemonSetIntOrString(v.(string))
+		val := intstr.Parse(v.(string))
+		obj.MaxUnavailable = &val
 	}
 	return &obj
-}
-
-func expandRollingUpdateDaemonSetIntOrString(v string) *intstr.IntOrString {
-	i, err := strconv.Atoi(v)
-	if err != nil {
-		return &intstr.IntOrString{
-			Type:   intstr.String,
-			StrVal: v,
-		}
-	}
-	return &intstr.IntOrString{
-		Type:   intstr.Int,
-		IntVal: int32(i),
-	}
 }

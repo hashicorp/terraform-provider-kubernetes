@@ -166,7 +166,7 @@ func TestAccKubernetesServiceAccount_update(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_service_account.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "secret.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "image_pull_secret.#", "3"),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", "false"),
+					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", "true"),
 					testAccCheckServiceAccountImagePullSecrets(&conf, []*regexp.Regexp{
 						regexp.MustCompile("^" + name + "-three$"),
 						regexp.MustCompile("^" + name + "-four$"),
@@ -233,6 +233,28 @@ func TestAccKubernetesServiceAccount_generatedName(t *testing.T) {
 						regexp.MustCompile("^" + prefix + "[a-z0-9]+-token-[a-z0-9]+$"),
 					}),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesServiceAccount_importBasic(t *testing.T) {
+	resourceName := "kubernetes_service_account.test"
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesServiceAccountDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesServiceAccountConfig_basic(name),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "automount_service_account_token"},
 			},
 		},
 	})
@@ -431,6 +453,8 @@ resource "kubernetes_service_account" "test" {
   image_pull_secret {
     name = "${kubernetes_secret.four.metadata.0.name}"
   }
+
+  automount_service_account_token = "true"
 }
 
 resource "kubernetes_secret" "one" {

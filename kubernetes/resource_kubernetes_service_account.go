@@ -169,9 +169,17 @@ func resourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interface
 	if err != nil {
 		return err
 	}
-	err = d.Set("automount_service_account_token", *svcAcc.AutomountServiceAccountToken)
-	if err != nil {
-		return err
+
+	if svcAcc.AutomountServiceAccountToken == nil {
+		err = d.Set("automount_service_account_token", false)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = d.Set("automount_service_account_token", *svcAcc.AutomountServiceAccountToken)
+		if err != nil {
+			return err
+		}
 	}
 	d.Set("image_pull_secret", flattenLocalObjectReferenceArray(svcAcc.ImagePullSecrets))
 
@@ -275,21 +283,21 @@ func resourceKubernetesServiceAccountImportState(d *schema.ResourceData, meta in
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unable to parse identifier %s: %s", d.Id(), err)
 	}
 
 	sa, err := conn.CoreV1().ServiceAccounts(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unable to fetch service account from Kubernetes: %s", err)
 	}
 	defaultSecret, err := findDefaultServiceAccount(sa, conn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to discover the default service account token: %s", err)
 	}
 
 	err = d.Set("default_secret_name", defaultSecret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unable to set default_secret_name: %s", err)
 	}
 	d.SetId(buildId(sa.ObjectMeta))
 
@@ -305,7 +313,6 @@ func findDefaultServiceAccount(sa *api.ServiceAccount, conn *kubernetes.Clientse
 		See this for where the default token is created in Kubernetes
 		https://github.com/kubernetes/kubernetes/blob/release-1.13/pkg/controller/serviceaccount/tokens_controller.go#L384
 	*/
-	var serviceAccountTokens []string
 	for _, saSecret := range sa.Secrets {
 		if !strings.HasPrefix(saSecret.Name, fmt.Sprintf("%s-token-", sa.Name)) {
 			log.Printf("[DEBUG] Skipping %s as it doesn't have the right name", saSecret.Name)
@@ -314,7 +321,7 @@ func findDefaultServiceAccount(sa *api.ServiceAccount, conn *kubernetes.Clientse
 
 		secret, err := conn.CoreV1().Secrets(sa.Namespace).Get(saSecret.Name, metav1.GetOptions{})
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("Unable to fetch secret %s/%s from Kubernetes: %s", sa.Namespace, saSecret.Name, err)
 		}
 
 		if secret.Type != api.SecretTypeServiceAccountToken {
@@ -333,16 +340,9 @@ func findDefaultServiceAccount(sa *api.ServiceAccount, conn *kubernetes.Clientse
 		}
 
 		log.Printf("[DEBUG] Found %s as a candidate for the default service account token", saSecret.Name)
-		serviceAccountTokens = append(serviceAccountTokens, secret.Name)
+
+		return saSecret.Name, nil
 	}
 
-	if len(serviceAccountTokens) == 0 {
-		return "", fmt.Errorf("Unable to find any service accounts tokens which could have been the default one")
-	}
-
-	if len(serviceAccountTokens) > 1 {
-		return "", fmt.Errorf("Found too many service accounts tokens which could have been the default one")
-	}
-
-	return serviceAccountTokens[0], nil
+	return "", fmt.Errorf("Unable to find any service accounts tokens which could have been the default one")
 }

@@ -11,7 +11,7 @@
 
 
 -	[Terraform](https://www.terraform.io/downloads.html) 0.10.x
--	[Go](https://golang.org/doc/install) 1.9 (to build the provider plugin)
+-	[Go](https://golang.org/doc/install) 1.11.x (to build the provider plugin)
 
 ## Building The Provider
 
@@ -29,15 +29,11 @@ $ cd $GOPATH/src/github.com/terraform-providers/terraform-provider-kubernetes
 $ make build
 ```
 
-## Using the provider
-
-- [ ] Fill in for each provider
-
 ## Developing the Provider
 
 ### Contributing Resources
 
-In order to prevent breaking changes and migration of user-created resources, resources included in this provider will be limited to `v1` APIs and not `alpha` or `beta`. You can find `v1` resources in the Kubernetes [API documentation](https://kubernetes.io/docs/reference/#api-reference) for the appropriate version of Kubernetes.
+In order to prevent breaking changes and migration of user-created resources, resources included in this provider will be limited to stable (aka `v1`) and beta APIs (with beta resources, readiness for inclusion will be assessed individually). You can find `v1` resources in the Kubernetes [API documentation](https://kubernetes.io/docs/reference/#api-reference) for the appropriate version of Kubernetes.
 
 ### Development Environment
 

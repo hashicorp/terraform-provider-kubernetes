@@ -123,10 +123,10 @@ func expandDeploymentStrategy(l []interface{}) appsv1.DeploymentStrategy {
 	in := l[0].(map[string]interface{})
 
 	if v, ok := in["type"].(string); ok {
-		obj.Type = appsv1.DeploymentStrategyType(v.(string))
+		obj.Type = appsv1.DeploymentStrategyType(v)
 	}
-	if v, ok := in["rolling_update"]; ok {
-		obj.RollingUpdate = expandRollingUpdateDeployment(v.([]interface{}))
+	if v, ok := in["rolling_update"].([]interface{}); ok {
+		obj.RollingUpdate = expandRollingUpdateDeployment(v)
 	}
 	return obj
 }
@@ -138,12 +138,12 @@ func expandRollingUpdateDeployment(l []interface{}) *appsv1.RollingUpdateDeploym
 	}
 	in := l[0].(map[string]interface{})
 
-	if v, ok := in["max_surge"]; ok {
-		val := intstr.Parse(v.(string))
+	if v, ok := in["max_surge"].(string); ok {
+		val := intstr.Parse(v)
 		obj.MaxSurge = &val
 	}
-	if v, ok := in["max_unavailable"]; ok {
-		val := intstr.Parse(v.(string))
+	if v, ok := in["max_unavailable"].(string); ok {
+		val := intstr.Parse(v)
 		obj.MaxUnavailable = &val
 	}
 	return &obj

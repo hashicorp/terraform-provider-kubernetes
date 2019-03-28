@@ -89,11 +89,11 @@ func expandDaemonSetStrategy(p []interface{}) appsv1.DaemonSetUpdateStrategy {
 	}
 	in := p[0].(map[string]interface{})
 
-	if v, ok := in["type"]; ok {
-		obj.Type = appsv1.DaemonSetUpdateStrategyType(v.(string))
+	if v, ok := in["type"].(string); ok {
+		obj.Type = appsv1.DaemonSetUpdateStrategyType(v)
 	}
-	if v, ok := in["rolling_update"]; ok {
-		obj.RollingUpdate = expandRollingUpdateDaemonSet(v.([]interface{}))
+	if v, ok := in["rolling_update"].([]interface{}); ok {
+		obj.RollingUpdate = expandRollingUpdateDaemonSet(v)
 	}
 	return obj
 }
@@ -105,8 +105,8 @@ func expandRollingUpdateDaemonSet(p []interface{}) *appsv1.RollingUpdateDaemonSe
 	}
 	in := p[0].(map[string]interface{})
 
-	if v, ok := in["max_unavailable"]; ok {
-		val := intstr.Parse(v.(string))
+	if v, ok := in["max_unavailable"].(string); ok {
+		val := intstr.Parse(v)
 		obj.MaxUnavailable = &val
 	}
 	return &obj

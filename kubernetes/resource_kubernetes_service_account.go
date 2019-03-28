@@ -60,7 +60,6 @@ func resourceKubernetesServiceAccount() *schema.Resource {
 				Type:        schema.TypeBool,
 				Description: "True to enable automatic mounting of the service account token",
 				Optional:    true,
-				Default:     false,
 			},
 			"default_secret_name": {
 				Type:     schema.TypeString,

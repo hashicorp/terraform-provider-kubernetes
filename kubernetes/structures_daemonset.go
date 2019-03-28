@@ -92,7 +92,7 @@ func expandDaemonSetStrategy(p []interface{}) appsv1.DaemonSetUpdateStrategy {
 	if v, ok := in["type"].(string); ok {
 		obj.Type = appsv1.DaemonSetUpdateStrategyType(v)
 	}
-	if v, ok := in["rolling_update"].([]interface{}); ok {
+	if v, ok := in["rolling_update"].([]interface{}); ok && len(v) > 0 {
 		obj.RollingUpdate = expandRollingUpdateDaemonSet(v)
 	}
 	return obj
@@ -101,7 +101,7 @@ func expandDaemonSetStrategy(p []interface{}) appsv1.DaemonSetUpdateStrategy {
 func expandRollingUpdateDaemonSet(p []interface{}) *appsv1.RollingUpdateDaemonSet {
 	obj := appsv1.RollingUpdateDaemonSet{}
 	if len(p) == 0 || p[0] == nil {
-		return &obj
+		return nil
 	}
 	in := p[0].(map[string]interface{})
 

@@ -65,6 +65,8 @@ func TestAccKubernetesDaemonSet_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.8"),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.rolling_update.0.max_unavailable", "1"),
 				),
 			},
 			{

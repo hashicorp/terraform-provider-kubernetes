@@ -122,7 +122,7 @@ func expandDeploymentStrategy(l []interface{}) appsv1.DeploymentStrategy {
 	}
 	in := l[0].(map[string]interface{})
 
-	if v, ok := in["type"]; ok {
+	if v, ok := in["type"].(string); ok {
 		obj.Type = appsv1.DeploymentStrategyType(v.(string))
 	}
 	if v, ok := in["rolling_update"]; ok {

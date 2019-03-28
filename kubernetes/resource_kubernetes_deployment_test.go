@@ -461,7 +461,7 @@ func TestAccKubernetesDeploymentUpdate_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesDeployment_with_deployment_strategy(t *testing.T) {
+func TestAccKubernetesDeployment_with_deployment_strategy_rollingupdate(t *testing.T) {
 	var conf api.Deployment
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -473,14 +473,90 @@ func TestAccKubernetesDeployment_with_deployment_strategy(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDeploymentConfigWithDeploymentStrategy(rcName, imageName),
+				Config: testAccKubernetesDeploymentConfigWithDeploymentStrategy(rcName, "RollingUpdate", imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "25%"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "25%"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDeployment_with_deployment_strategy_rollingupdate_max_surge_30perc_max_unavailable_40perc(t *testing.T) {
+	var conf api.Deployment
+
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentConfigWithDeploymentStrategyRollingUpdate(rcName, "30%", "40%", imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "30%"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "40%"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDeployment_with_deployment_strategy_rollingupdate_max_surge_1_max_unavailable_2(t *testing.T) {
+	var conf api.Deployment
+
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentConfigWithDeploymentStrategyRollingUpdate(rcName, "1", "2", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.#", "1"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.#", "1"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "1"),
-					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "2"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDeployment_with_deployment_strategy_recreate(t *testing.T) {
+	var conf api.Deployment
+
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentConfigWithDeploymentStrategy(rcName, "Recreate", imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.type", "Recreate"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.rolling_update.#", "0"),
 				),
 			},
 		},
@@ -1245,7 +1321,48 @@ resource "kubernetes_deployment" "test" {
 `, rcName, imageName)
 }
 
-func testAccKubernetesDeploymentConfigWithDeploymentStrategy(rcName, imageName string) string {
+func testAccKubernetesDeploymentConfigWithDeploymentStrategy(rcName, strategy, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_deployment" "test" {
+  metadata {
+    name = "%s"
+
+    labels {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    strategy {
+      type = "%s"
+    }
+
+    template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+        }
+      }
+    }
+  }
+}
+`, rcName, strategy, imageName)
+}
+
+func testAccKubernetesDeploymentConfigWithDeploymentStrategyRollingUpdate(rcName, maxSurge, maxUnavailable, imageName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_deployment" "test" {
   metadata {
@@ -1267,8 +1384,8 @@ resource "kubernetes_deployment" "test" {
       type = "RollingUpdate"
 
       rolling_update {
-        max_surge       = "1"
-        max_unavailable = "1"
+        max_surge       = "%s"
+        max_unavailable = "%s"
       }
     }
 
@@ -1288,5 +1405,5 @@ resource "kubernetes_deployment" "test" {
     }
   }
 }
-`, rcName, imageName)
+`, rcName, maxSurge, maxUnavailable, imageName)
 }

@@ -1,8 +1,6 @@
 package kubernetes
 
 import (
-	"strconv"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -91,11 +89,11 @@ func expandDaemonSetStrategy(p []interface{}) appsv1.DaemonSetUpdateStrategy {
 	}
 	in := p[0].(map[string]interface{})
 
-	if v, ok := in["type"]; ok {
-		obj.Type = appsv1.DaemonSetUpdateStrategyType(v.(string))
+	if v, ok := in["type"].(string); ok {
+		obj.Type = appsv1.DaemonSetUpdateStrategyType(v)
 	}
-	if v, ok := in["rolling_update"]; ok {
-		obj.RollingUpdate = expandRollingUpdateDaemonSet(v.([]interface{}))
+	if v, ok := in["rolling_update"].([]interface{}); ok && len(v) > 0 {
+		obj.RollingUpdate = expandRollingUpdateDaemonSet(v)
 	}
 	return obj
 }
@@ -103,26 +101,13 @@ func expandDaemonSetStrategy(p []interface{}) appsv1.DaemonSetUpdateStrategy {
 func expandRollingUpdateDaemonSet(p []interface{}) *appsv1.RollingUpdateDaemonSet {
 	obj := appsv1.RollingUpdateDaemonSet{}
 	if len(p) == 0 || p[0] == nil {
-		return &obj
+		return nil
 	}
 	in := p[0].(map[string]interface{})
 
-	if v, ok := in["max_unavailable"]; ok {
-		obj.MaxUnavailable = expandRollingUpdateDaemonSetIntOrString(v.(string))
+	if v, ok := in["max_unavailable"].(string); ok {
+		val := intstr.Parse(v)
+		obj.MaxUnavailable = &val
 	}
 	return &obj
-}
-
-func expandRollingUpdateDaemonSetIntOrString(v string) *intstr.IntOrString {
-	i, err := strconv.Atoi(v)
-	if err != nil {
-		return &intstr.IntOrString{
-			Type:   intstr.String,
-			StrVal: v,
-		}
-	}
-	return &intstr.IntOrString{
-		Type:   intstr.Int,
-		IntVal: int32(i),
-	}
 }

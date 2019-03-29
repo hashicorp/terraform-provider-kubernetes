@@ -3,18 +3,14 @@ package kubernetes
 import (
 	"bytes"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"log"
 	"os"
-	"text/template"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/eks"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/mitchellh/go-homedir"
+	"github.com/terraform-providers/terraform-provider-kubernetes/eks"
 	kubernetes "k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	restclient "k8s.io/client-go/rest"
@@ -156,7 +152,6 @@ func Provider() terraform.ResourceProvider {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-
 	var cfg *restclient.Config
 	var err error
 	if d.Get("load_config_file").(bool) {
@@ -213,10 +208,15 @@ func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
 		return nil, err
 	}
 
-	log.Printf("[INFO] eks_cluster_name is %v\n", d.Get("eks_cluster_name"))
-	// but eks_cluster_name overrides it all! bwahahaha
-	if d.Get("eks_cluster_name") != nil {
-		writeVolatileEksConfigFile(d.Get("eks_cluster_name").(string), d.Get("eks_cluster_region").(string))
+	if eksClusterName := d.Get("eks_cluster_name").(string); eksClusterName != "" {
+		log.Printf("[INFO] Trying to generate config for eks_cluster_name '%s'.", eksClusterName)
+		log.Print("[DEBUG] Ignoring config_path because eks_cluster_name was provided.")
+		configpath, err := writeVolatileEksConfigFile(eksClusterName, d.Get("eks_cluster_region").(string))
+		if err != nil {
+			return nil, err
+		}
+		log.Printf("[DEBUG] Wrote config to %s", configpath)
+
 		path = configpath
 	}
 
@@ -264,88 +264,19 @@ func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
 	return cfg, nil
 }
 
-const configpath = "/tmp/ekstfprovider"
-const kubeconfigTemplate = `
-apiVersion: v1
-clusters:
-- cluster:
-    certificate-authority-data: {{ .CertificateAuthority }}
-    server: {{ .Endpoint }}
-  name: {{ .Arn }}
-contexts:
-- context:
-    cluster: {{ .Arn }}
-    user: {{ .Arn }}
-  name: {{ .Arn }}
-current-context: {{ .Arn }}
-kind: Config
-preferences: {}
-users:
-- name: {{ .Arn }}
-  user:
-    exec:
-      apiVersion: client.authentication.k8s.io/v1alpha1
-      args:
-      - token
-      - -i
-      - stack-eks-cluster-dev
-      command: aws-iam-authenticator
-`
-
-type ClusterInfo struct {
-	Arn                  string
-	Endpoint             string
-	CertificateAuthority string
-}
-
-func getEksInfo(session *session.Session) (*ClusterInfo, error) {
-	eksClient := eks.New(session)
-
-	dci := &eks.DescribeClusterInput{Name: aws.String("stack-eks-cluster-dev")}
-	dco, err := eksClient.DescribeCluster(dci)
-	if err != nil {
-		return nil, err
-	}
-
-	info := &ClusterInfo{}
-	info.Arn = *dco.Cluster.Arn
-	info.Endpoint = *dco.Cluster.Endpoint
-	info.CertificateAuthority = *dco.Cluster.CertificateAuthority.Data
-	return info, nil
-}
-
-func renderConfig(info *ClusterInfo, dest io.Writer) error {
-	tmpl, err := template.New("kubeconfig").Parse(kubeconfigTemplate)
-	if err != nil {
-		return err
-	}
-
-	err = tmpl.Execute(dest, *info)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func getAwsSession(region string) *session.Session {
-	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(region),
-	}))
-
-	return sess
-}
-
-func writeVolatileEksConfigFile(clustername, awsregion string) {
-	session := getAwsSession(awsregion)
-	info, _ := getEksInfo(session)
-	f, err := os.Create(configpath)
+func writeVolatileEksConfigFile(clustername, awsregion string) (string, error) {
+	info, _ := eks.GetEksInfo(clustername, awsregion)
+	f, err := ioutil.TempFile("", "eksconf")
 	if err != nil {
 		log.Printf("[ERROR] can't write temporary kubeconfig: %s\n", err.Error())
+		return "", err
 	}
 	defer f.Close()
-	err = renderConfig(info, f)
+	err = eks.RenderConfig(info, f)
 	if err != nil {
 		log.Printf("[ERROR] couldn't write config: %s\n", err.Error())
+		return "", err
 	}
+
+	return f.Name(), nil
 }

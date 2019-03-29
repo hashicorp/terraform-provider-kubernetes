@@ -5,7 +5,7 @@ require (
 	contrib.go.opencensus.io/exporter/ocagent v0.4.1 // indirect
 	github.com/Azure/go-autorest v11.2.8+incompatible // indirect
 	github.com/apparentlymart/go-cidr v1.0.0 // indirect
-	github.com/aws/aws-sdk-go v1.16.12 // indirect
+	github.com/aws/aws-sdk-go v1.16.12
 	github.com/beevik/etree v1.0.1 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/boombuler/barcode v1.0.0 // indirect

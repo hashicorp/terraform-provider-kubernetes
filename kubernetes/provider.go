@@ -3,8 +3,14 @@ package kubernetes
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"os"
+	"text/template"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/eks"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
@@ -101,6 +107,18 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_LOAD_CONFIG_FILE", true),
 				Description: "Load local kubeconfig.",
 			},
+			"eks_cluster_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("KUBE_EKS_CLUSTER_NAME", ""),
+				Description: "Name of eks cluster to try to autoload",
+			},
+			"eks_cluster_region": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("AWS_REGION_DO_I_REALLY_WANT_THIS", ""),
+				Description: "adjlsfkdslfds",
+			},
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -195,6 +213,13 @@ func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
 		return nil, err
 	}
 
+	log.Printf("[INFO] eks_cluster_name is %v\n", d.Get("eks_cluster_name"))
+	// but eks_cluster_name overrides it all! bwahahaha
+	if d.Get("eks_cluster_name") != nil {
+		writeVolatileEksConfigFile(d.Get("eks_cluster_name").(string), d.Get("eks_cluster_region").(string))
+		path = configpath
+	}
+
 	loader := &clientcmd.ClientConfigLoadingRules{
 		ExplicitPath: path,
 	}
@@ -237,4 +262,90 @@ func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
 
 	log.Printf("[INFO] Successfully loaded config file (%s%s)", path, ctxSuffix)
 	return cfg, nil
+}
+
+const configpath = "/tmp/ekstfprovider"
+const kubeconfigTemplate = `
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: {{ .CertificateAuthority }}
+    server: {{ .Endpoint }}
+  name: {{ .Arn }}
+contexts:
+- context:
+    cluster: {{ .Arn }}
+    user: {{ .Arn }}
+  name: {{ .Arn }}
+current-context: {{ .Arn }}
+kind: Config
+preferences: {}
+users:
+- name: {{ .Arn }}
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1alpha1
+      args:
+      - token
+      - -i
+      - stack-eks-cluster-dev
+      command: aws-iam-authenticator
+`
+
+type ClusterInfo struct {
+	Arn                  string
+	Endpoint             string
+	CertificateAuthority string
+}
+
+func getEksInfo(session *session.Session) (*ClusterInfo, error) {
+	eksClient := eks.New(session)
+
+	dci := &eks.DescribeClusterInput{Name: aws.String("stack-eks-cluster-dev")}
+	dco, err := eksClient.DescribeCluster(dci)
+	if err != nil {
+		return nil, err
+	}
+
+	info := &ClusterInfo{}
+	info.Arn = *dco.Cluster.Arn
+	info.Endpoint = *dco.Cluster.Endpoint
+	info.CertificateAuthority = *dco.Cluster.CertificateAuthority.Data
+	return info, nil
+}
+
+func renderConfig(info *ClusterInfo, dest io.Writer) error {
+	tmpl, err := template.New("kubeconfig").Parse(kubeconfigTemplate)
+	if err != nil {
+		return err
+	}
+
+	err = tmpl.Execute(dest, *info)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getAwsSession(region string) *session.Session {
+	sess := session.Must(session.NewSession(&aws.Config{
+		Region: aws.String(region),
+	}))
+
+	return sess
+}
+
+func writeVolatileEksConfigFile(clustername, awsregion string) {
+	session := getAwsSession(awsregion)
+	info, _ := getEksInfo(session)
+	f, err := os.Create(configpath)
+	if err != nil {
+		log.Printf("[ERROR] can't write temporary kubeconfig: %s\n", err.Error())
+	}
+	defer f.Close()
+	err = renderConfig(info, f)
+	if err != nil {
+		log.Printf("[ERROR] couldn't write config: %s\n", err.Error())
+	}
 }

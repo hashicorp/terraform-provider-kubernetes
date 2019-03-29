@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform/helper/resource"
@@ -21,10 +22,9 @@ func resourceKubernetesServiceAccount() *schema.Resource {
 		Exists: resourceKubernetesServiceAccountExists,
 		Update: resourceKubernetesServiceAccountUpdate,
 		Delete: resourceKubernetesServiceAccountDelete,
-
-		// This resource is not importable because the API doesn't offer
-		// any way to differentiate between default & user-defined secret
-		// after the account was created.
+		Importer: &schema.ResourceImporter{
+			State: resourceKubernetesServiceAccountImportState,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("service account", true),
@@ -60,7 +60,6 @@ func resourceKubernetesServiceAccount() *schema.Resource {
 				Type:        schema.TypeBool,
 				Description: "True to enable automatic mounting of the service account token",
 				Optional:    true,
-				Default:     false,
 			},
 			"default_secret_name": {
 				Type:     schema.TypeString,
@@ -169,6 +168,18 @@ func resourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interface
 	if err != nil {
 		return err
 	}
+
+	if svcAcc.AutomountServiceAccountToken == nil {
+		err = d.Set("automount_service_account_token", false)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = d.Set("automount_service_account_token", *svcAcc.AutomountServiceAccountToken)
+		if err != nil {
+			return err
+		}
+	}
 	d.Set("image_pull_secret", flattenLocalObjectReferenceArray(svcAcc.ImagePullSecrets))
 
 	defaultSecretName := d.Get("default_secret_name").(string)
@@ -203,6 +214,13 @@ func resourceKubernetesServiceAccountUpdate(d *schema.ResourceData, meta interfa
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/secrets",
 			Value: expandServiceAccountSecrets(v, defaultSecretName),
+		})
+	}
+	if d.HasChange("automount_service_account_token") {
+		v := d.Get("automount_service_account_token").(bool)
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/automountServiceAccountToken",
+			Value: v,
 		})
 	}
 	data, err := ops.MarshalJSON()
@@ -257,4 +275,73 @@ func resourceKubernetesServiceAccountExists(d *schema.ResourceData, meta interfa
 		log.Printf("[DEBUG] Received error: %#v", err)
 	}
 	return true, err
+}
+
+func resourceKubernetesServiceAccountImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	conn := meta.(*kubernetes.Clientset)
+
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return nil, fmt.Errorf("Unable to parse identifier %s: %s", d.Id(), err)
+	}
+
+	sa, err := conn.CoreV1().ServiceAccounts(namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("Unable to fetch service account from Kubernetes: %s", err)
+	}
+	defaultSecret, err := findDefaultServiceAccount(sa, conn)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to discover the default service account token: %s", err)
+	}
+
+	err = d.Set("default_secret_name", defaultSecret)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to set default_secret_name: %s", err)
+	}
+	d.SetId(buildId(sa.ObjectMeta))
+
+	return []*schema.ResourceData{d}, nil
+}
+
+func findDefaultServiceAccount(sa *api.ServiceAccount, conn *kubernetes.Clientset) (string, error) {
+	/*
+		The default service account token secret would have:
+		- been created either at the same moment as the service account or _just_ after (Kubernetes controllers appears to work off a queue)
+		- have a name starting with "[service account name]-token-"
+
+		See this for where the default token is created in Kubernetes
+		https://github.com/kubernetes/kubernetes/blob/release-1.13/pkg/controller/serviceaccount/tokens_controller.go#L384
+	*/
+	for _, saSecret := range sa.Secrets {
+		if !strings.HasPrefix(saSecret.Name, fmt.Sprintf("%s-token-", sa.Name)) {
+			log.Printf("[DEBUG] Skipping %s as it doesn't have the right name", saSecret.Name)
+			continue
+		}
+
+		secret, err := conn.CoreV1().Secrets(sa.Namespace).Get(saSecret.Name, metav1.GetOptions{})
+		if err != nil {
+			return "", fmt.Errorf("Unable to fetch secret %s/%s from Kubernetes: %s", sa.Namespace, saSecret.Name, err)
+		}
+
+		if secret.Type != api.SecretTypeServiceAccountToken {
+			log.Printf("[DEBUG] Skipping %s as it is of the wrong type", saSecret.Name)
+			continue
+		}
+
+		if secret.CreationTimestamp.Before(&sa.CreationTimestamp) {
+			log.Printf("[DEBUG] Skipping %s as it existed before the service account", saSecret.Name)
+			continue
+		}
+
+		if secret.CreationTimestamp.Sub(sa.CreationTimestamp.Time) > (1 * time.Second) {
+			log.Printf("[DEBUG] Skipping %s as it wasn't created at the same time as the service account", saSecret.Name)
+			continue
+		}
+
+		log.Printf("[DEBUG] Found %s as a candidate for the default service account token", saSecret.Name)
+
+		return saSecret.Name, nil
+	}
+
+	return "", fmt.Errorf("Unable to find any service accounts tokens which could have been the default one")
 }

@@ -77,3 +77,11 @@ In addition to the arguments listed above, the following computed attributes are
 exported:
 
 * `default_secret_name` - Name of the default secret, containing service account token, created & managed by the service.
+
+## Import
+
+Service account can be imported using the namespace and name, e.g.
+
+```
+$ terraform import kubernetes_service_account.example default/terraform-example
+```

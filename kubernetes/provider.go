@@ -112,7 +112,7 @@ func Provider() terraform.ResourceProvider {
 			"eks_cluster_region": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("AWS_REGION_DO_I_REALLY_WANT_THIS", ""),
+				DefaultFunc: schema.EnvDefaultFunc("AWS_REGION", ""),
 				Description: "adjlsfkdslfds",
 			},
 		},

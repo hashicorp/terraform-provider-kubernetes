@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -71,6 +72,11 @@ func Provider() terraform.ResourceProvider {
 					},
 					"~/.kube/config"),
 				Description: "Path to the kube config file, defaults to ~/.kube/config",
+			},
+			"config_content": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Content of the kube config file to use as a string instead. Mutually exclusive with config_path.",
 			},
 			"config_context": {
 				Type:        schema.TypeString,
@@ -191,6 +197,10 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
 	path, err := homedir.Expand(d.Get("config_path").(string))
+	if configContent := d.Get("config_content").(string); configContent != "" {
+		log.Print("[DEBUG] Ignoring config_path in favor of config_content")
+		path, err = writeConfigContentToTempFile(configContent)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -237,4 +247,22 @@ func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
 
 	log.Printf("[INFO] Successfully loaded config file (%s%s)", path, ctxSuffix)
 	return cfg, nil
+}
+
+func writeConfigContentToTempFile(content string) (string, error) {
+	tmpfile, err := ioutil.TempFile("", "terraform-provider-kubernetes")
+	if err != nil {
+		return "", err
+	}
+	defer tmpfile.Close()
+
+	bw, err := tmpfile.WriteString(content)
+	if bw != len(content) {
+		return "", fmt.Errorf("Didn't write expected number of bytes (%d) from config_content to file %s", len(content), tmpfile.Name())
+	}
+	if err != nil {
+		return "", err
+	}
+
+	return tmpfile.Name(), nil
 }

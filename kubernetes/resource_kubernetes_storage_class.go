@@ -109,7 +109,9 @@ func resourceKubernetesStorageClassRead(d *schema.ResourceData, meta interface{}
 	d.Set("storage_provisioner", storageClass.Provisioner)
 	d.Set("reclaim_policy", storageClass.ReclaimPolicy)
 	d.Set("volume_binding_mode", storageClass.VolumeBindingMode)
-	d.Set("allow_volume_expansion", storageClass.AllowVolumeExpansion)
+	if storageClass.AllowVolumeExpansion != nil {
+		d.Set("allow_volume_expansion", *storageClass.AllowVolumeExpansion)
+	}
 
 	return nil
 }

@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -197,10 +196,6 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
 	path, err := homedir.Expand(d.Get("config_path").(string))
-	if configContent := d.Get("config_content").(string); configContent != "" {
-		log.Print("[DEBUG] Ignoring config_path in favor of config_content")
-		path, err = writeConfigContentToTempFile(configContent)
-	}
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +230,18 @@ func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
 		log.Printf("[DEBUG] Using overidden context: %#v", overrides.Context)
 	}
 
-	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
+	var cc clientcmd.ClientConfig
+	if configcontent := d.Get("config_content").(string); configcontent != "" {
+		log.Print("[INFO] Loading config from config_content instead of config_path")
+		configbytes := []byte(configcontent)
+		apiConfigFromConfigContent, err := clientcmd.Load(configbytes)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to load config from config_content: %s", err)
+		}
+		cc = clientcmd.NewDefaultClientConfig(*apiConfigFromConfigContent, overrides)
+	} else {
+		cc = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
+	}
 	cfg, err := cc.ClientConfig()
 	if err != nil {
 		if pathErr, ok := err.(*os.PathError); ok && os.IsNotExist(pathErr.Err) {
@@ -247,22 +253,4 @@ func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
 
 	log.Printf("[INFO] Successfully loaded config file (%s%s)", path, ctxSuffix)
 	return cfg, nil
-}
-
-func writeConfigContentToTempFile(content string) (string, error) {
-	tmpfile, err := ioutil.TempFile("", "terraform-provider-kubernetes")
-	if err != nil {
-		return "", err
-	}
-	defer tmpfile.Close()
-
-	bw, err := tmpfile.WriteString(content)
-	if bw != len(content) {
-		return "", fmt.Errorf("Didn't write expected number of bytes (%d) from config_content to file %s", len(content), tmpfile.Name())
-	}
-	if err != nil {
-		return "", err
-	}
-
-	return tmpfile.Name(), nil
 }

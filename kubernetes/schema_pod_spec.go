@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
 )
 
 func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schema.Schema {
@@ -81,7 +82,10 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 						Type:        schema.TypeList,
 						Description: "A list of DNS name server IP addresses. This will be appended to the base nameservers generated from DNSPolicy. Duplicated nameservers will be removed.",
 						Optional:    true,
-						Elem:        &schema.Schema{Type: schema.TypeString},
+						Elem: &schema.Schema{
+							Type:         schema.TypeString,
+							ValidateFunc: validation.SingleIP(),
+						},
 					},
 					"option": {
 						Type:        schema.TypeList,
@@ -106,7 +110,10 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 						Type:        schema.TypeList,
 						Description: "A list of DNS search domains for host-name lookup. This will be appended to the base search paths generated from DNSPolicy. Duplicated search paths will be removed.",
 						Optional:    true,
-						Elem:        &schema.Schema{Type: schema.TypeString},
+						Elem: &schema.Schema{
+							Type:         schema.TypeString,
+							ValidateFunc: validateName,
+						},
 					},
 				},
 			},

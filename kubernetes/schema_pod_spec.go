@@ -47,6 +47,29 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Description: "Set DNS policy for containers within the pod. One of 'ClusterFirst' or 'Default'. Defaults to 'ClusterFirst'.",
 			Deprecated:  deprecatedMessage,
 		},
+		"host_aliases": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			ForceNew:    true,
+			Computed:    isComputed,
+			Description: "List of hosts and IPs that will be injected into the pod's hosts file if specified. Optional: Default to false.",
+			Deprecated:  deprecatedMessage,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"hostnames": {
+						Type:        schema.TypeList,
+						Required:    true,
+						Description: "Hostnames for the above IP address.",
+						Elem:        &schema.Schema{Type: schema.TypeString},
+					},
+					"ip": {
+						Type:        schema.TypeString,
+						Required:    true,
+						Description: "IP address of the host file entry.",
+					},
+				},
+			},
+		},
 		"host_ipc": {
 			Type:        schema.TypeBool,
 			Optional:    true,

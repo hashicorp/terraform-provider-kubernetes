@@ -29,6 +29,8 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 
 	att["dns_policy"] = in.DNSPolicy
 
+	att["host_aliases"] = flattenHostaliases(in.HostAliases)
+
 	att["host_ipc"] = in.HostIPC
 	att["host_network"] = in.HostNetwork
 	att["host_pid"] = in.HostPID
@@ -342,6 +344,14 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 
 	if v, ok := in["dns_policy"].(string); ok {
 		obj.DNSPolicy = v1.DNSPolicy(v)
+	}
+
+	if v, ok := in["host_aliases"].([]interface{}); ok && len(v) > 0 {
+		hs, err := expandHostaliases(v)
+		if err != nil {
+			return obj, err
+		}
+		obj.HostAliases = hs
 	}
 
 	if v, ok := in["host_ipc"]; ok {

@@ -44,7 +44,7 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Optional:    true,
 			Computed:    isComputed,
 			Default:     defaultIfNotComputed(isComputed, "ClusterFirst"),
-			Description: "Set DNS policy for containers within the pod. One of 'ClusterFirst', 'Default', 'ClusterFirstWithHostNet', or 'None'. Defaults to 'ClusterFirst'.",
+			Description: "Set DNS policy for the pod. Defaults to 'ClusterFirst'. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'.",
 			Deprecated:  deprecatedMessage,
 		},
 		"host_aliases": {
@@ -74,29 +74,39 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
-			Description: "DnsConfig holds pod-level DNS settings. Optional: Defaults to empty",
+			Description: "Specifies the DNS parameters of a pod. Parameters specified here will be merged to the generated DNS configuration based on DNSPolicy. Optional: Defaults to empty",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"nameservers": {
-						Type:        schema.TypeSet,
-						Description: "A list of IP addresses that will be used as DNS servers for the Pod. There can be at most 3 IP addresses specified. When the Pod’s dnsPolicy is set to “None”, the list must contain at least one IP address, otherwise this property is optional. The servers listed will be combined to the base nameservers generated from the specified DNS policy with duplicate addresses removed.",
+						Type:        schema.TypeList,
+						Description: "A list of DNS name server IP addresses. This will be appended to the base nameservers generated from DNSPolicy. Duplicated nameservers will be removed.",
 						Optional:    true,
-						MaxItems:    3,
 						Elem:        &schema.Schema{Type: schema.TypeString},
-						Set:         schema.HashString,
+					},
+					"option": {
+						Type:        schema.TypeList,
+						Description: "A list of DNS resolver options. This will be merged with the base options generated from DNSPolicy. Duplicated entries will be removed. Resolution options given in Options will override those that appear in the base DNSPolicy.",
+						Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"name": {
+									Type:        schema.TypeString,
+									Description: "Name of the option (Required).",
+									Required:    true,
+								},
+								"value": {
+									Type:        schema.TypeString,
+									Description: "Value of the option (Optional).",
+									Optional:    true,
+								},
+							},
+						},
 					},
 					"searches": {
-						Type:        schema.TypeSet,
-						Description: "A list of DNS search domains for hostname lookup in the Pod. This property is optional. When specified, the provided list will be merged into the base search domain names generated from the chosen DNS policy. Duplicate domain names are removed. Kubernetes allows for at most 6 search domains.",
+						Type:        schema.TypeList,
+						Description: "A list of DNS search domains for host-name lookup. This will be appended to the base search paths generated from DNSPolicy. Duplicated search paths will be removed.",
 						Optional:    true,
-						MaxItems:    6,
 						Elem:        &schema.Schema{Type: schema.TypeString},
-						Set:         schema.HashString,
-					},
-					"options": {
-						Type:        schema.TypeMap,
-						Description: "An optional list of objects where each object may have a name property (required) and a value property (optional). The contents in this property will be merged to the options generated from the specified DNS policy. Duplicate entries are removed.",
-						Optional:    true,
 					},
 				},
 			},

@@ -97,6 +97,19 @@ func TestAccKubernetesPod_initContainer_updateForcesNew(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.init_container.0.command.3", "http://kubernetes.io"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.init_container.0.volume_mount.0.name", "workdir"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.init_container.0.volume_mount.0.mount_path", "/work-dir"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.dns_config.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.dns_config.0.nameservers.#", "3"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.dns_config.0.nameservers.0", "1.1.1.1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.dns_config.0.nameservers.1", "8.8.8.8"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.dns_config.0.nameservers.2", "9.9.9.9"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.dns_config.0.searches.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.dns_config.0.searches.0", "kubernetes.io"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.dns_config.0.option.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.dns_config.0.option.0.name", "ndots"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.dns_config.0.option.0.value", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.dns_config.0.option.1.name", "use-vc"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.dns_config.0.option.1.value", ""),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.dns_policy", "Default"),
 				),
 			},
 			{
@@ -798,6 +811,20 @@ resource "kubernetes_pod" "test" {
         mount_path = "/work-dir"
       }
     }
+
+		dns_config {
+			nameservers = ["1.1.1.1", "8.8.8.8", "9.9.9.9"]
+			searches    = ["kubernetes.io"]
+
+			option {
+				name  = "ndots"
+				value = 1
+			}
+
+			option {
+				name = "use-vc"
+			}
+		}
 
     dns_policy = "Default"
 

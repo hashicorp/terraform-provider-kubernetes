@@ -30,6 +30,22 @@ resource "kubernetes_pod" "test" {
         value = "test"
       }
     }
+
+		dns_config {
+			nameservers = ["1.1.1.1", "8.8.8.8", "9.9.9.9"]
+			searches    = ["example.com"]
+
+			option {
+				name  = "ndots"
+				value = 1
+			}
+
+			option {
+				name = "use-vc"
+			}
+		}
+
+    dns_policy = "None"
   }
 }
 ```
@@ -75,8 +91,9 @@ The following arguments are supported:
 * `active_deadline_seconds` - (Optional) Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.
 * `container` - (Optional) List of containers belonging to the pod. Containers cannot currently be added or removed. There must be at least one container in a Pod. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/containers)
 * `init_container` - (Optional) List of init containers belonging to the pod. Init containers always run to completion and each must complete successfully before the next is started. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/pods/init-containers)/
-* `dns_policy` - (Optional) Set DNS policy for containers within the pod. One of 'ClusterFirst' or 'Default'. Defaults to 'ClusterFirst'.
 * `host_ipc` - (Optional) Use the host's ipc namespace. Optional: Default to false.
+* `dns_policy` - (Optional) Set DNS policy for the pod. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'. Optional: Defaults to 'ClusterFirst', see [Kubernetes reference](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy).
+* `dns_config` - (Optional) Specifies the DNS parameters of a pod. Parameters specified here will be merged to the generated DNS configuration based on DNSPolicy. Defaults to empty. See `dns_config` block definition below.
 * `host_network` - (Optional) Host networking requested for this pod. Use the host's network namespace. If this option is set, the ports that will be used must be specified.
 * `host_pid` - (Optional) Use the host's pid namespace.
 * `hostname` - (Optional) Specifies the hostname of the Pod If not specified, the pod's hostname will be set to a system-defined value.
@@ -188,6 +205,19 @@ The following arguments are supported:
 
 * `key` - (Optional) The key to select.
 * `name` - (Optional) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+
+### `dns_config`
+
+#### Arguments
+
+* `nameservers` - (Optional) A list of DNS name server IP addresses specified as strings. This will be appended to the base nameservers generated from DNSPolicy. Duplicated nameservers will be removed. Optional: Defaults to empty.
+* `option` - (Optional) A list of DNS resolver options specified as blocks with `name`/`value` pairs. This will be merged with the base options generated from DNSPolicy. Duplicated entries will be removed. Resolution options given in Options will override those that appear in the base DNSPolicy. Optional: Defaults to empty.
+* `searches` - (Optional) A list of DNS search domains for host-name lookup specified as strings. This will be appended to the base search paths generated from DNSPolicy. Duplicated search paths will be removed. Optional: Defaults to empty.
+
+The `option` block supports the following:
+
+* `name` - (Required) Name of the option.
+* `value` - (Optional) Value of the option. Optional: Defaults to empty.
 
 ### `downward_api`
 

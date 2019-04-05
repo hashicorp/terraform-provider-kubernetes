@@ -45,7 +45,7 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Optional:    true,
 			Computed:    isComputed,
 			Default:     defaultIfNotComputed(isComputed, "ClusterFirst"),
-			Description: "Set DNS policy for the pod. Defaults to 'ClusterFirst'. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'.",
+			Description: "Set DNS policy for the pod. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'. Optional: Defaults to 'ClusterFirst', see [Kubernetes reference](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy).",
 			Deprecated:  deprecatedMessage,
 		},
 		"dns_config": {
@@ -72,12 +72,12 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 							Schema: map[string]*schema.Schema{
 								"name": {
 									Type:        schema.TypeString,
-									Description: "Name of the option (Required).",
+									Description: "Name of the option.",
 									Required:    true,
 								},
 								"value": {
 									Type:        schema.TypeString,
-									Description: "Value of the option (Optional).",
+									Description: "Value of the option. Optional: Defaults to empty.",
 									Optional:    true,
 								},
 							},

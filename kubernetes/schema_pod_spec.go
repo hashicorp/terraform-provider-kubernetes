@@ -48,29 +48,6 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Description: "Set DNS policy for the pod. Defaults to 'ClusterFirst'. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'.",
 			Deprecated:  deprecatedMessage,
 		},
-		"host_aliases": {
-			Type:        schema.TypeList,
-			Optional:    true,
-			ForceNew:    true,
-			Computed:    isComputed,
-			Description: "List of hosts and IPs that will be injected into the pod's hosts file if specified. Optional: Default to false.",
-			Deprecated:  deprecatedMessage,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"hostnames": {
-						Type:        schema.TypeList,
-						Required:    true,
-						Description: "Hostnames for the above IP address.",
-						Elem:        &schema.Schema{Type: schema.TypeString},
-					},
-					"ip": {
-						Type:        schema.TypeString,
-						Required:    true,
-						Description: "IP address of the host file entry.",
-					},
-				},
-			},
-		},
 		"dns_config": {
 			Type:        schema.TypeList,
 			Optional:    true,
@@ -114,6 +91,29 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 							Type:         schema.TypeString,
 							ValidateFunc: validateName,
 						},
+					},
+				},
+			},
+		},
+		"host_aliases": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			ForceNew:    true,
+			Computed:    isComputed,
+			Description: "List of hosts and IPs that will be injected into the pod's hosts file if specified. Optional: Default to false.",
+			Deprecated:  deprecatedMessage,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"hostnames": {
+						Type:        schema.TypeList,
+						Required:    true,
+						Description: "Hostnames for the above IP address.",
+						Elem:        &schema.Schema{Type: schema.TypeString},
+					},
+					"ip": {
+						Type:        schema.TypeString,
+						Required:    true,
+						Description: "IP address of the host file entry.",
 					},
 				},
 			},

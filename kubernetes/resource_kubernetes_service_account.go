@@ -57,9 +57,22 @@ func resourceKubernetesServiceAccount() *schema.Resource {
 				},
 			},
 			"automount_service_account_token": {
-				Type:        schema.TypeBool,
+				Type:        schema.TypeString,
 				Description: "True to enable automatic mounting of the service account token",
 				Optional:    true,
+				ValidateFunc: func(i interface{}, k string) (s []string, es []error) {
+					v := i.(string)
+					switch v {
+					case "":
+						fallthrough
+					case "true":
+						fallthrough
+					case "false":
+						return nil, nil
+					default:
+						return nil, []error{fmt.Errorf("invalid value")}
+					}
+				},
 			},
 			"default_secret_name": {
 				Type:     schema.TypeString,
@@ -74,10 +87,12 @@ func resourceKubernetesServiceAccountCreate(d *schema.ResourceData, meta interfa
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svcAcc := api.ServiceAccount{
-		AutomountServiceAccountToken: ptrToBool(d.Get("automount_service_account_token").(bool)),
-		ObjectMeta:                   metadata,
-		ImagePullSecrets:             expandLocalObjectReferenceArray(d.Get("image_pull_secret").(*schema.Set).List()),
-		Secrets:                      expandServiceAccountSecrets(d.Get("secret").(*schema.Set).List(), ""),
+		ObjectMeta:       metadata,
+		ImagePullSecrets: expandLocalObjectReferenceArray(d.Get("image_pull_secret").(*schema.Set).List()),
+		Secrets:          expandServiceAccountSecrets(d.Get("secret").(*schema.Set).List(), ""),
+	}
+	if automount, ok := d.GetOkExists("automount_service_account_token"); ok {
+		svcAcc.AutomountServiceAccountToken = strToBool(automount.(string))
 	}
 	log.Printf("[INFO] Creating new service account: %#v", svcAcc)
 	out, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Create(&svcAcc)
@@ -169,16 +184,9 @@ func resourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interface
 		return err
 	}
 
-	if svcAcc.AutomountServiceAccountToken == nil {
-		err = d.Set("automount_service_account_token", false)
-		if err != nil {
-			return err
-		}
-	} else {
-		err = d.Set("automount_service_account_token", *svcAcc.AutomountServiceAccountToken)
-		if err != nil {
-			return err
-		}
+	err = d.Set("automount_service_account_token", boolToStr(svcAcc.AutomountServiceAccountToken))
+	if err != nil {
+		return err
 	}
 	d.Set("image_pull_secret", flattenLocalObjectReferenceArray(svcAcc.ImagePullSecrets))
 
@@ -217,11 +225,23 @@ func resourceKubernetesServiceAccountUpdate(d *schema.ResourceData, meta interfa
 		})
 	}
 	if d.HasChange("automount_service_account_token") {
-		v := d.Get("automount_service_account_token").(bool)
-		ops = append(ops, &ReplaceOperation{
-			Path:  "/automountServiceAccountToken",
-			Value: v,
-		})
+		existing, replacement := d.GetChange("automount_service_account_token")
+		v := strToBool(replacement.(string))
+		if v == nil {
+			ops = append(ops, &RemoveOperation{
+				Path: "/automountServiceAccountToken",
+			})
+		} else if strToBool(existing.(string)) == nil {
+			ops = append(ops, &AddOperation{
+				Path:  "/automountServiceAccountToken",
+				Value: *v,
+			})
+		} else {
+			ops = append(ops, &ReplaceOperation{
+				Path:  "/automountServiceAccountToken",
+				Value: *v,
+			})
+		}
 	}
 	data, err := ops.MarshalJSON()
 	if err != nil {
@@ -344,4 +364,29 @@ func findDefaultServiceAccount(sa *api.ServiceAccount, conn *kubernetes.Clientse
 	}
 
 	return "", fmt.Errorf("Unable to find any service accounts tokens which could have been the default one")
+}
+
+func strToBool(input string) *bool {
+	var ret bool
+	if input == "false" {
+		ret = false
+	} else if input == "true" {
+		ret = true
+	} else {
+		return nil
+	}
+
+	return &ret
+}
+
+func boolToStr(input *bool) string {
+	if input == nil {
+		return ""
+	} else if *input == false {
+		return "false"
+	} else if *input == true {
+		return "true"
+	}
+
+	return ""
 }

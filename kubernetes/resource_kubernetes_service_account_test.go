@@ -43,7 +43,7 @@ func TestAccKubernetesServiceAccount_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_service_account.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "secret.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "image_pull_secret.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", "false"),
+					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", ""),
 					testAccCheckServiceAccountImagePullSecrets(&conf, []*regexp.Regexp{
 						regexp.MustCompile("^" + name + "-three$"),
 						regexp.MustCompile("^" + name + "-four$"),
@@ -135,7 +135,7 @@ func TestAccKubernetesServiceAccount_update(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_service_account.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "secret.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "image_pull_secret.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", "false"),
+					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", ""),
 					testAccCheckServiceAccountImagePullSecrets(&conf, []*regexp.Regexp{
 						regexp.MustCompile("^" + name + "-three$"),
 						regexp.MustCompile("^" + name + "-four$"),
@@ -192,7 +192,7 @@ func TestAccKubernetesServiceAccount_update(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_service_account.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "secret.#", "0"),
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "image_pull_secret.#", "0"),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", "false"),
+					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", ""),
 					testAccCheckServiceAccountImagePullSecrets(&conf, []*regexp.Regexp{}),
 					testAccCheckServiceAccountSecrets(&conf, []*regexp.Regexp{
 						regexp.MustCompile("^" + name + "-token-[a-z0-9]+$"),
@@ -227,7 +227,7 @@ func TestAccKubernetesServiceAccount_generatedName(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_service_account.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_service_account.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_service_account.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", "false"),
+					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", ""),
 					testAccCheckServiceAccountImagePullSecrets(&conf, []*regexp.Regexp{}),
 					testAccCheckServiceAccountSecrets(&conf, []*regexp.Regexp{
 						regexp.MustCompile("^" + prefix + "[a-z0-9]+-token-[a-z0-9]+$"),
@@ -537,7 +537,7 @@ resource "kubernetes_service_account" "test" {
     name = "${kubernetes_secret.four.metadata.0.name}"
   }
 
-  automount_service_account_token = true
+  automount_service_account_token = "true"
 }
 
 resource "kubernetes_secret" "one" {

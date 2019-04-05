@@ -69,14 +69,6 @@ The following arguments are supported:
 * `name` - (Optional) Name of the pod, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 * `namespace` - (Optional) Namespace defines the space within which name of the pod must be unique.
 
-### Timeouts
-
-`kubernetes_pod` provides the following
-[Timeouts](/docs/configuration/resources.html#timeouts) configuration options:
-
-- `create` - (Default `5 minutes`) Used for Creating Pods.
-- `delete` - (Default `5 minutes`) Used for Destroying Pods.
-
 #### Attributes
 
 * `generation` - A sequence number representing a specific generation of the desired state.
@@ -91,9 +83,10 @@ The following arguments are supported:
 * `active_deadline_seconds` - (Optional) Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.
 * `container` - (Optional) List of containers belonging to the pod. Containers cannot currently be added or removed. There must be at least one container in a Pod. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/containers)
 * `init_container` - (Optional) List of init containers belonging to the pod. Init containers always run to completion and each must complete successfully before the next is started. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/pods/init-containers)/
-* `host_ipc` - (Optional) Use the host's ipc namespace. Optional: Default to false.
 * `dns_policy` - (Optional) Set DNS policy for containers within the pod. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'. Optional: Defaults to 'ClusterFirst', see [Kubernetes reference](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy).
 * `dns_config` - (Optional) Specifies the DNS parameters of a pod. Parameters specified here will be merged to the generated DNS configuration based on DNSPolicy. Defaults to empty. See `dns_config` block definition below.
+* `host_alias` - (Optional) List of hosts and IPs that will be injected into the pod's hosts file if specified. Optional: Defaults to empty. See `host_alias` block definition below.
+* `host_ipc` - (Optional) Use the host's ipc namespace. Optional: Defaults to false.
 * `host_network` - (Optional) Host networking requested for this pod. Use the host's network namespace. If this option is set, the ports that will be used must be specified.
 * `host_pid` - (Optional) Use the host's pid namespace.
 * `hostname` - (Optional) Specifies the hostname of the Pod If not specified, the pod's hostname will be set to a system-defined value.
@@ -311,6 +304,13 @@ The `option` block supports the following:
 * `endpoints_name` - (Required) The endpoint name that details Glusterfs topology. For more info see http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
 * `path` - (Required) The Glusterfs volume path. For more info see http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
 * `read_only` - (Optional) Whether to force the Glusterfs volume to be mounted with read-only permissions. Defaults to false. For more info see http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
+
+### `host_alias`
+
+#### Arguments
+
+* `hostnames` - (Required) Hostnames for the IP address.
+* `ip` - (Required) IP address of the host file entry.
 
 ### `host_path`
 
@@ -624,6 +624,13 @@ The `items` block supports the following:
 
 * `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
 * `volume_path` - (Required) Path that identifies vSphere volume vmdk
+
+## Timeouts
+
+The following [Timeout](/docs/configuration/resources.html#timeouts) configuration options are available for the `kubernetes_pod` resource:
+
+* `create` - (Default `5 minutes`) Used for Creating Pods.
+* `delete` - (Default `5 minutes`) Used for Destroying Pods.
 
 ## Import
 

@@ -104,7 +104,7 @@ The following arguments are supported:
 #### Arguments
 
 * `type` - Type of deployment. Can be 'Recreate' or 'RollingUpdate'. Default is RollingUpdate.
-* `rolling_update` - Rolling update config params. Present only if DeploymentStrategyType = RollingUpdate.
+* `rolling_update` - Rolling update config params. Present only if type = RollingUpdate.
 
 ### `rolling_update`
 
@@ -127,8 +127,10 @@ The following arguments are supported:
 * `active_deadline_seconds` - (Optional) Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.
 * `container` - (Optional) List of containers belonging to the pod. Containers cannot currently be added or removed. There must be at least one container in a Pod. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/containers)
 * `init_container` - (Optional) List of init containers belonging to the pod. Init containers always run to completion and each must complete successfully before the next is started. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/pods/init-containers)/
-* `dns_policy` - (Optional) Set DNS policy for containers within the pod. One of 'ClusterFirst' or 'Default'. Defaults to 'ClusterFirst'.
-* `host_ipc` - (Optional) Use the host's ipc namespace. Optional: Default to false.
+* `dns_policy` - (Optional) Set DNS policy for containers within the pod. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'. Optional: Defaults to 'ClusterFirst', see [Kubernetes reference](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy).
+* `dns_config` - (Optional) Specifies the DNS parameters of a pod. Parameters specified here will be merged to the generated DNS configuration based on DNSPolicy. Defaults to empty. See `dns_config` block definition below.
+* `host_alias` - (Optional) List of hosts and IPs that will be injected into the pod's hosts file if specified. Optional: Defaults to empty. See `host_alias` block definition below.
+* `host_ipc` - (Optional) Use the host's ipc namespace. Optional: Defaults to false.
 * `host_network` - (Optional) Host networking requested for this pod. Use the host's network namespace. If this option is set, the ports that will be used must be specified.
 * `host_pid` - (Optional) Use the host's pid namespace.
 * `hostname` - (Optional) Specifies the hostname of the Pod If not specified, the pod's hostname will be set to a system-defined value.
@@ -148,7 +150,7 @@ The following arguments are supported:
 
 * `args` - (Optional) Arguments to the entrypoint. The docker image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/containers#containers-and-commands)
 * `command` - (Optional) Entrypoint array. Not executed within a shell. The docker image's ENTRYPOINT is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/containers#containers-and-commands)
-* `env` - (Optional) List of environment variables to set in the container. Cannot be updated.
+* `env` - (Optional) Block of string name and value pairs to set in the container's environment. May be declared multiple times. Cannot be updated.
 * `env_from` - (Optional) List of sources to populate environment variables in the container. The keys defined within a source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the container is starting. When a key exists in multiple sources, the value associated with the last source will take precedence. Values defined by an Env with a duplicate key will take precedence. Cannot be updated.
 * `image` - (Optional) Docker image name. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/images)
 * `image_pull_policy` - (Optional) Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/images#updating-images)
@@ -240,6 +242,19 @@ The following arguments are supported:
 
 * `key` - (Optional) The key to select.
 * `name` - (Optional) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+
+### `dns_config`
+
+#### Arguments
+
+* `nameservers` - (Optional) A list of DNS name server IP addresses specified as strings. This will be appended to the base nameservers generated from DNSPolicy. Duplicated nameservers will be removed. Optional: Defaults to empty.
+* `option` - (Optional) A list of DNS resolver options specified as blocks with `name`/`value` pairs. This will be merged with the base options generated from DNSPolicy. Duplicated entries will be removed. Resolution options given in Options will override those that appear in the base DNSPolicy. Optional: Defaults to empty.
+* `searches` - (Optional) A list of DNS search domains for host-name lookup specified as strings. This will be appended to the base search paths generated from DNSPolicy. Duplicated search paths will be removed. Optional: Defaults to empty.
+
+The `option` block supports the following:
+
+* `name` - (Required) Name of the option.
+* `value` - (Optional) Value of the option. Optional: Defaults to empty.
 
 ### `downward_api`
 
@@ -333,6 +348,13 @@ The following arguments are supported:
 * `endpoints_name` - (Required) The endpoint name that details Glusterfs topology. For more info see http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
 * `path` - (Required) The Glusterfs volume path. For more info see http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
 * `read_only` - (Optional) Whether to force the Glusterfs volume to be mounted with read-only permissions. Defaults to false. For more info see http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
+
+### `host_alias`
+
+#### Arguments
+
+* `hostnames` - (Required) Hostnames for the IP address.
+* `ip` - (Required) IP address of the host file entry.
 
 ### `host_path`
 
@@ -532,7 +554,7 @@ The following arguments are supported:
 * `optional` - (Optional) Specify whether the Secret or it's keys must be defined.
 * `secret_name` - (Optional) Name of the secret in the pod's namespace to use. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#secrets)
 
-The `items` block supports:
+The `items` block supports the following:
 
 * `key` - (Required) The key to project.
 * `mode` - (Optional) Mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used.
@@ -649,11 +671,11 @@ The `items` block supports:
 
 ## Timeouts
 
-The following [Timeout](/docs/configuration/resources.html#timeouts) configuration options are available:
+The following [Timeout](/docs/configuration/resources.html#timeouts) configuration options are available for the `kubernetes_deployment` resource:
 
-- `create` - (Default `10 minutes`) Used for creating new controller
-- `update` - (Default `10 minutes`) Used for updating a controller
-- `delete` - (Default `10 minutes`) Used for destroying a controller
+* `create` - (Default `10 minutes`) Used for creating new controller
+* `update` - (Default `10 minutes`) Used for updating a controller
+* `delete` - (Default `10 minutes`) Used for destroying a controller
 
 ## Import
 

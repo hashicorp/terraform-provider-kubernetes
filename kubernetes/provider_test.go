@@ -190,6 +190,13 @@ func skipIfNoGoogleCloudSettingsFound(t *testing.T) {
 	}
 }
 
+func skipIfNoAzureCloudSettingsFound(t *testing.T) {
+	if os.Getenv("TF_VAR_aks_client_id") == "" || os.Getenv("TF_VAR_aks_client_secret") == "" || os.Getenv("TF_VAR_location") == "" {
+		t.Skip("The environment variables TF_VAR_aks_client_id, TF_VAR_aks_client_secret and TF_VAR_location" +
+			" must be set to run Azure Cloud tests - skipping")
+	}
+}
+
 func skipIfNoAwsSettingsFound(t *testing.T) {
 	if os.Getenv("AWS_DEFAULT_REGION") == "" || os.Getenv("AWS_ZONE") == "" || os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
 		t.Skip("The environment variables AWS_DEFAULT_REGION, AWS_ZONE, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY" +

@@ -45,6 +45,7 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "storage_provisioner", "kubernetes.io/gce-pd"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "reclaim_policy", "Delete"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "volume_binding_mode", "Immediate"),
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "allow_volume_expansion", "true"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.type", "pd-ssd"),
 					testAccCheckStorageClassParameters(&conf, map[string]string{"type": "pd-ssd"}),
@@ -70,6 +71,7 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "storage_provisioner", "kubernetes.io/gce-pd"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "reclaim_policy", "Retain"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "volume_binding_mode", "WaitForFirstConsumer"),
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "allow_volume_expansion", "false"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.type", "pd-standard"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.zones", "us-west1-a,us-west1-b"),
@@ -92,6 +94,7 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "storage_provisioner", "kubernetes.io/gce-pd"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "reclaim_policy", "Delete"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "volume_binding_mode", "Immediate"),
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "allow_volume_expansion", "true"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.%", "0"),
 					testAccCheckStorageClassParameters(&conf, map[string]string{}),
 				),
@@ -245,9 +248,10 @@ resource "kubernetes_storage_class" "test" {
     name = "%s"
   }
 
-  storage_provisioner = "kubernetes.io/gce-pd"
-  reclaim_policy      = "Delete"
-  volume_binding_mode = "Immediate"
+  storage_provisioner    = "kubernetes.io/gce-pd"
+  reclaim_policy         = "Delete"
+  volume_binding_mode    = "Immediate"
+  allow_volume_expansion = true
 
   parameters {
     type = "pd-ssd"
@@ -273,9 +277,10 @@ resource "kubernetes_storage_class" "test" {
     name = "%s"
   }
 
-  storage_provisioner = "kubernetes.io/gce-pd"
-  reclaim_policy      = "Retain"
-  volume_binding_mode = "WaitForFirstConsumer"
+  storage_provisioner    = "kubernetes.io/gce-pd"
+  reclaim_policy         = "Retain"
+  volume_binding_mode    = "WaitForFirstConsumer"
+  allow_volume_expansion = false
 
   parameters {
     type  = "pd-standard"

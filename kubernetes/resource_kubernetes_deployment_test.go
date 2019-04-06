@@ -563,6 +563,34 @@ func TestAccKubernetesDeployment_with_deployment_strategy_recreate(t *testing.T)
 	})
 }
 
+func TestAccKubernetesDeployment_with_host_aliases(t *testing.T) {
+	var conf api.Deployment
+
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "nginx:1.7.8"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentConfigHostAliases(rcName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.host_aliases.0.hostnames.#", "2"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.host_aliases.0.hostnames.0", "abc.com"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.host_aliases.0.hostnames.1", "contoso.com"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.host_aliases.0.ip", "127.0.0.5"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.host_aliases.1.hostnames.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.host_aliases.1.hostnames.0", "xyz.com"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.host_aliases.1.ip", "127.0.0.6"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesDeploymentDestroy(s *terraform.State) error {
 	conn := testAccProvider.Meta().(*kubernetes.Clientset)
 
@@ -1367,35 +1395,29 @@ func testAccKubernetesDeploymentConfigWithDeploymentStrategyRollingUpdate(rcName
 resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
-
     labels {
       Test = "TfAcceptanceTest"
     }
   }
-
   spec {
     selector {
       match_labels {
         Test = "TfAcceptanceTest"
       }
     }
-
     strategy {
       type = "RollingUpdate"
-
       rolling_update {
         max_surge       = "%s"
         max_unavailable = "%s"
       }
     }
-
     template {
       metadata {
         labels {
           Test = "TfAcceptanceTest"
         }
       }
-
       spec {
         container {
           image = "%s"
@@ -1406,4 +1428,62 @@ resource "kubernetes_deployment" "test" {
   }
 }
 `, rcName, maxSurge, maxUnavailable, imageName)
+}
+
+func testAccKubernetesDeploymentConfigHostAliases(name string, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_deployment" "test" {
+  metadata {
+    annotations {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+    labels {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+    name = "%s"
+  }
+  spec {
+    replicas = 1 
+    selector {
+      match_labels {
+        TestLabelOne   = "one"
+        TestLabelTwo   = "two"
+        TestLabelThree = "three"
+      }
+    }
+    template {
+      metadata {
+        labels {
+          TestLabelOne   = "one"
+          TestLabelTwo   = "two"
+          TestLabelThree = "three"
+        }
+      }
+      spec {
+        container {
+          image = "%s"
+          name  = "tf-acc-test"
+          resources {
+            requests {
+              memory = "64Mi"
+              cpu    = "50m"
+            }
+          }
+        }
+        host_aliases {
+          ip = "127.0.0.5"
+          hostnames = ["abc.com","contoso.com"]
+        }
+        host_aliases {
+          ip = "127.0.0.6"
+          hostnames = ["xyz.com"]
+        }
+      }
+    }
+  }
+}
+`, name, imageName)
 }

@@ -50,6 +50,12 @@ func resourceKubernetesStorageClass() *schema.Resource {
 				Optional:    true,
 				Default:     "Immediate",
 			},
+			"allow_volume_expansion": {
+				Type:        schema.TypeBool,
+				Description: "Indicates whether the storage class allow volume expand",
+				Optional:    true,
+				Default:     true,
+			},
 		},
 	}
 }
@@ -60,11 +66,13 @@ func resourceKubernetesStorageClassCreate(d *schema.ResourceData, meta interface
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	reclaimPolicy := v1.PersistentVolumeReclaimPolicy(d.Get("reclaim_policy").(string))
 	volumeBindingMode := api.VolumeBindingMode(d.Get("volume_binding_mode").(string))
+	allowVolumeExpansion := d.Get("allow_volume_expansion").(bool)
 	storageClass := api.StorageClass{
-		ObjectMeta:        metadata,
-		Provisioner:       d.Get("storage_provisioner").(string),
-		ReclaimPolicy:     &reclaimPolicy,
-		VolumeBindingMode: &volumeBindingMode,
+		ObjectMeta:           metadata,
+		Provisioner:          d.Get("storage_provisioner").(string),
+		ReclaimPolicy:        &reclaimPolicy,
+		VolumeBindingMode:    &volumeBindingMode,
+		AllowVolumeExpansion: &allowVolumeExpansion,
 	}
 
 	if v, ok := d.GetOk("parameters"); ok {
@@ -101,6 +109,9 @@ func resourceKubernetesStorageClassRead(d *schema.ResourceData, meta interface{}
 	d.Set("storage_provisioner", storageClass.Provisioner)
 	d.Set("reclaim_policy", storageClass.ReclaimPolicy)
 	d.Set("volume_binding_mode", storageClass.VolumeBindingMode)
+	if storageClass.AllowVolumeExpansion != nil {
+		d.Set("allow_volume_expansion", *storageClass.AllowVolumeExpansion)
+	}
 
 	return nil
 }

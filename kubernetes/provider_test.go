@@ -41,7 +41,9 @@ func TestProvider_impl(t *testing.T) {
 
 const kubeConfigTestFixture = "test-fixtures/kube-config.yaml"
 
-func TestProvider_configureFromFile(t *testing.T) {
+func TestProvider_configure(t *testing.T) {
+	skipAccIfTestAltersEnv(t)
+
 	resetEnv := unsetEnv(t)
 	defer resetEnv()
 
@@ -61,6 +63,8 @@ func TestProvider_configureFromFile(t *testing.T) {
 }
 
 func TestProvider_configureWithConfigContent(t *testing.T) {
+	skipAccIfTestAltersEnv(t)
+
 	resetEnv := unsetEnv(t)
 	defer resetEnv()
 
@@ -210,6 +214,13 @@ func testAccPreCheck(t *testing.T) {
 	err := testAccProvider.Configure(terraform.NewResourceConfig(nil))
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func skipAccIfTestAltersEnv(t *testing.T) {
+	if os.Getenv("TF_ACC") != "" {
+		t.Skip("The environment variable TF_ACC is set, and this test prevents acceptance tests" +
+			" from running as it alters environment variables - skipping")
 	}
 }
 

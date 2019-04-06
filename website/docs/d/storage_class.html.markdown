@@ -10,7 +10,7 @@ description: |-
 
 Storage class is the foundation of dynamic provisioning, allowing cluster administrators to define abstractions for the underlying storage platform.
 
-Read more at http://blog.kubernetes.io/2017/03/dynamic-provisioning-and-storage-classes-kubernetes.html
+Read more at https://kubernetes.io/blog/2017/03/dynamic-provisioning-and-storage-classes-kubernetes/
 
 ## Example Usage
 
@@ -55,3 +55,4 @@ The following attributes are exported:
 * `storage_provisioner` - Indicates the type of the provisioner this storage class represents
 * `reclaim_policy` - Indicates the reclaim policy used.
 * `volume_binding_mode` - Indicates when volume binding and dynamic provisioning should occur.
+* `allow_volume_expansion` - Indicates whether the storage class allow volume expand.

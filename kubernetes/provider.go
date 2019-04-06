@@ -11,6 +11,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	kubernetes "k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -148,7 +149,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	var err error
 	if d.Get("load_config_file").(bool) {
 		// Config file loading
-		cfg, err = tryLoadingConfigFile(d)
+		cfg, err = tryLoadingConfig(d)
 	}
 
 	if err != nil {
@@ -194,7 +195,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	return k, nil
 }
 
-func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
+func tryLoadingConfig(d *schema.ResourceData) (*restclient.Config, error) {
 	path, err := homedir.Expand(d.Get("config_path").(string))
 	if err != nil {
 		return nil, err
@@ -231,6 +232,7 @@ func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
 	}
 
 	var cc clientcmd.ClientConfig
+	var cfg *rest.Config
 	if configcontent := d.Get("config_content").(string); configcontent != "" {
 		log.Print("[INFO] Loading config from config_content instead of config_path")
 		configbytes := []byte(configcontent)
@@ -239,16 +241,20 @@ func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
 			return nil, fmt.Errorf("Failed to load config from config_content: %s", err)
 		}
 		cc = clientcmd.NewDefaultClientConfig(*apiConfigFromConfigContent, overrides)
+		cfg, err = cc.ClientConfig()
+		if err != nil {
+			return nil, fmt.Errorf("Failed to load config with overrides '%v' from config_content: %s", overrides, err)
+		}
 	} else {
 		cc = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
-	}
-	cfg, err := cc.ClientConfig()
-	if err != nil {
-		if pathErr, ok := err.(*os.PathError); ok && os.IsNotExist(pathErr.Err) {
-			log.Printf("[INFO] Unable to load config file as it doesn't exist at %q", path)
-			return nil, nil
+		cfg, err = cc.ClientConfig()
+		if err != nil {
+			if pathErr, ok := err.(*os.PathError); ok && os.IsNotExist(pathErr.Err) {
+				log.Printf("[INFO] Unable to load config file as it doesn't exist at %q", path)
+				return nil, nil
+			}
+			return nil, fmt.Errorf("Failed to load config (%s%s): %s", path, ctxSuffix, err)
 		}
-		return nil, fmt.Errorf("Failed to load config (%s%s): %s", path, ctxSuffix, err)
 	}
 
 	log.Printf("[INFO] Successfully loaded config file (%s%s)", path, ctxSuffix)

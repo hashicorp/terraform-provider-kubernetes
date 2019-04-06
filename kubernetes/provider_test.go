@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"errors"
+	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -38,11 +39,13 @@ func TestProvider_impl(t *testing.T) {
 	var _ terraform.ResourceProvider = Provider()
 }
 
-func TestProvider_configure(t *testing.T) {
+const kubeConfigTestFixture = "test-fixtures/kube-config.yaml"
+
+func TestProvider_configureFromFile(t *testing.T) {
 	resetEnv := unsetEnv(t)
 	defer resetEnv()
 
-	os.Setenv("KUBECONFIG", "test-fixtures/kube-config.yaml")
+	os.Setenv("KUBECONFIG", kubeConfigTestFixture)
 	os.Setenv("KUBE_CTX", "gcp")
 
 	c, err := config.NewRawConfig(map[string]interface{}{})
@@ -54,6 +57,33 @@ func TestProvider_configure(t *testing.T) {
 	err = p.Configure(rc)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestProvider_configureWithConfigContent(t *testing.T) {
+	resetEnv := unsetEnv(t)
+	defer resetEnv()
+
+	os.Setenv("KUBECONFIG", "dont/accidentally/load/me")
+
+	configbytes, err := ioutil.ReadFile(kubeConfigTestFixture)
+	if err != nil {
+		t.Errorf("Error reading test fixture %s: %s", kubeConfigTestFixture, err)
+	}
+	configContent := string(configbytes)
+
+	c, err := config.NewRawConfig(map[string]interface{}{
+		"config_content": configContent,
+		"config_context": "gcp",
+	})
+	if err != nil {
+		t.Fatalf("Error setting up test config: %s", err)
+	}
+	rc := terraform.NewResourceConfig(c)
+	p := Provider()
+	err = p.Configure(rc)
+	if err != nil {
+		t.Fatalf("%s", err)
 	}
 }
 

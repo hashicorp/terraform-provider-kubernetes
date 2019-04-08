@@ -13,7 +13,7 @@ func podTemplateFields(isUpdatable bool) map[string]*schema.Schema {
 			Optional:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: podSpecFields(false, false, false),
+				Schema: podSpecFields(false),
 			},
 		},
 	}

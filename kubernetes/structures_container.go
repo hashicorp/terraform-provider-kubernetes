@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"strconv"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -18,26 +18,25 @@ func flattenCapability(in []v1.Capability) []string {
 func flattenContainerSecurityContext(in *v1.SecurityContext) []interface{} {
 	att := make(map[string]interface{})
 
-	if in.AllowPrivilegeEscalation != nil {
-		att["allow_privilege_escalation"] = *in.AllowPrivilegeEscalation
-	}
-	if in.Capabilities != nil {
-		att["capabilities"] = flattenSecurityCapabilities(in.Capabilities)
-	}
 	if in.Privileged != nil {
 		att["privileged"] = *in.Privileged
 	}
 	if in.ReadOnlyRootFilesystem != nil {
 		att["read_only_root_filesystem"] = *in.ReadOnlyRootFilesystem
 	}
+
 	if in.RunAsNonRoot != nil {
 		att["run_as_non_root"] = *in.RunAsNonRoot
 	}
 	if in.RunAsUser != nil {
 		att["run_as_user"] = *in.RunAsUser
 	}
+
 	if in.SELinuxOptions != nil {
 		att["se_linux_options"] = flattenSeLinuxOptions(in.SELinuxOptions)
+	}
+	if in.Capabilities != nil {
+		att["capabilities"] = flattenSecurityCapabilities(in.Capabilities)
 	}
 	return []interface{}{att}
 
@@ -170,18 +169,6 @@ func flattenProbe(in *v1.Probe) []interface{} {
 	return []interface{}{att}
 }
 
-func flattenConfigMapRef(in *v1.ConfigMapEnvSource) []interface{} {
-	att := make(map[string]interface{})
-
-	if in.Name != "" {
-		att["name"] = in.Name
-	}
-	if in.Optional != nil {
-		att["optional"] = *in.Optional
-	}
-	return []interface{}{att}
-}
-
 func flattenConfigMapKeyRef(in *v1.ConfigMapKeySelector) []interface{} {
 	att := make(map[string]interface{})
 
@@ -218,18 +205,6 @@ func flattenResourceFieldSelector(in *v1.ResourceFieldSelector) []interface{} {
 	return []interface{}{att}
 }
 
-func flattenSecretRef(in *v1.SecretEnvSource) []interface{} {
-	att := make(map[string]interface{})
-
-	if in.Name != "" {
-		att["name"] = in.Name
-	}
-	if in.Optional != nil {
-		att["optional"] = *in.Optional
-	}
-	return []interface{}{att}
-}
-
 func flattenSecretKeyRef(in *v1.SecretKeySelector) []interface{} {
 	att := make(map[string]interface{})
 
@@ -257,6 +232,34 @@ func flattenValueFrom(in *v1.EnvVarSource) []interface{} {
 	if in.FieldRef != nil {
 		att["field_ref"] = flattenObjectFieldSelector(in.FieldRef)
 	}
+	return []interface{}{att}
+}
+
+func flattenConfigMapEnvSource(in *v1.ConfigMapEnvSource) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.Name != "" {
+		att["name"] = in.Name
+	}
+
+	if in.Optional != nil {
+		att["optional"] = *in.Optional
+	}
+
+	return []interface{}{att}
+}
+
+func flattenSecretEnvSource(in *v1.SecretEnvSource) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.Name != "" {
+		att["name"] = in.Name
+	}
+
+	if in.Optional != nil {
+		att["optional"] = *in.Optional
+	}
+
 	return []interface{}{att}
 }
 
@@ -303,16 +306,17 @@ func flattenContainerEnvs(in []v1.EnvVar) []interface{} {
 
 func flattenContainerEnvFroms(in []v1.EnvFromSource) []interface{} {
 	att := make([]interface{}, len(in))
+
 	for i, v := range in {
 		m := map[string]interface{}{}
-		if v.ConfigMapRef != nil {
-			m["config_map_ref"] = flattenConfigMapRef(v.ConfigMapRef)
-		}
 		if v.Prefix != "" {
 			m["prefix"] = v.Prefix
 		}
+		if v.ConfigMapRef != nil {
+			m["config_map_ref"] = flattenConfigMapEnvSource(v.ConfigMapRef)
+		}
 		if v.SecretRef != nil {
-			m["secret_ref"] = flattenSecretRef(v.SecretRef)
+			m["secret_ref"] = flattenSecretEnvSource(v.SecretRef)
 		}
 
 		att[i] = m
@@ -435,20 +439,17 @@ func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 		if v, ok := ctr["resources"].([]interface{}); ok && len(v) > 0 {
 
 			var err error
-			crr, err := expandContainerResourceRequirements(v)
+			cs[i].Resources, err = expandContainerResourceRequirements(v)
 			if err != nil {
 				return cs, err
 			}
-			cs[i].Resources = *crr
 		}
 
 		if v, ok := ctr["port"].([]interface{}); ok && len(v) > 0 {
-			cp, err := expandContainerPort(v)
+			var err error
+			cs[i].Ports, err = expandContainerPort(v)
 			if err != nil {
 				return cs, err
-			}
-			for _, p := range cp {
-				cs[i].Ports = append(cs[i].Ports, *p)
 			}
 		}
 		if v, ok := ctr["env"].([]interface{}); ok && len(v) > 0 {
@@ -458,6 +459,7 @@ func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 				return cs, err
 			}
 		}
+
 		if v, ok := ctr["env_from"].([]interface{}); ok && len(v) > 0 {
 			var err error
 			cs[i].EnvFrom, err = expandContainerEnvFrom(v)
@@ -542,12 +544,6 @@ func expandContainerSecurityContext(l []interface{}) *v1.SecurityContext {
 	}
 	in := l[0].(map[string]interface{})
 	obj := v1.SecurityContext{}
-	if v, ok := in["allow_privilege_escalation"]; ok {
-		obj.AllowPrivilegeEscalation = ptrToBool(v.(bool))
-	}
-	if v, ok := in["capabilities"].([]interface{}); ok && len(v) > 0 {
-		obj.Capabilities = expandSecurityCapabilities(v)
-	}
 	if v, ok := in["privileged"]; ok {
 		obj.Privileged = ptrToBool(v.(bool))
 	}
@@ -562,6 +558,9 @@ func expandContainerSecurityContext(l []interface{}) *v1.SecurityContext {
 	}
 	if v, ok := in["se_linux_options"].([]interface{}); ok && len(v) > 0 {
 		obj.SELinuxOptions = expandSeLinuxOptions(v)
+	}
+	if v, ok := in["capabilities"].([]interface{}); ok && len(v) > 0 {
+		obj.Capabilities = expandSecurityCapabilities(v)
 	}
 
 	return &obj
@@ -746,38 +745,37 @@ func expandContainerEnvFrom(in []interface{}) ([]v1.EnvFromSource, error) {
 	if len(in) == 0 {
 		return []v1.EnvFromSource{}, nil
 	}
-	envFroms := make([]v1.EnvFromSource, len(in))
+	envs := make([]v1.EnvFromSource, len(in))
 	for i, c := range in {
 		p := c.(map[string]interface{})
+		if prefix, ok := p["prefix"]; ok {
+			envs[i].Prefix = prefix.(string)
+		}
 		if v, ok := p["config_map_ref"].([]interface{}); ok && len(v) > 0 {
 			var err error
-			envFroms[i].ConfigMapRef, err = expandConfigMapRef(v)
+			envs[i].ConfigMapRef, err = expandEnvConfigMapRef(v)
 			if err != nil {
-				return envFroms, err
+				return envs, err
 			}
-		}
-		if value, ok := p["prefix"]; ok {
-			envFroms[i].Prefix = value.(string)
 		}
 		if v, ok := p["secret_ref"].([]interface{}); ok && len(v) > 0 {
 			var err error
-			envFroms[i].SecretRef, err = expandSecretRef(v)
+			envs[i].SecretRef, err = expandEnvSecretRef(v)
 			if err != nil {
-				return envFroms, err
+				return envs, err
 			}
 		}
 	}
-	return envFroms, nil
+	return envs, nil
 }
 
-func expandContainerPort(in []interface{}) ([]*v1.ContainerPort, error) {
-	ports := make([]*v1.ContainerPort, len(in))
+func expandContainerPort(in []interface{}) ([]v1.ContainerPort, error) {
 	if len(in) == 0 {
-		return ports, nil
+		return []v1.ContainerPort{}, nil
 	}
+	ports := make([]v1.ContainerPort, len(in))
 	for i, c := range in {
 		p := c.(map[string]interface{})
-		ports[i] = &v1.ContainerPort{}
 		if containerPort, ok := p["container_port"]; ok {
 			ports[i].ContainerPort = int32(containerPort.(int))
 		}
@@ -843,24 +841,6 @@ func expandResourceFieldRef(r []interface{}) (*v1.ResourceFieldSelector, error) 
 	}
 	return obj, nil
 }
-
-func expandSecretRef(r []interface{}) (*v1.SecretEnvSource, error) {
-	if len(r) == 0 || r[0] == nil {
-		return &v1.SecretEnvSource{}, nil
-	}
-	in := r[0].(map[string]interface{})
-	obj := &v1.SecretEnvSource{}
-
-	if v, ok := in["name"].(string); ok {
-		obj.Name = v
-	}
-	if v, ok := in["optional"]; ok {
-		obj.Optional = ptrToBool(v.(bool))
-	}
-
-	return obj, nil
-}
-
 func expandSecretKeyRef(r []interface{}) (*v1.SecretKeySelector, error) {
 	if len(r) == 0 || r[0] == nil {
 		return &v1.SecretKeySelector{}, nil
@@ -913,7 +893,7 @@ func expandEnvValueFrom(r []interface{}) (*v1.EnvVarSource, error) {
 
 }
 
-func expandConfigMapRef(r []interface{}) (*v1.ConfigMapEnvSource, error) {
+func expandEnvConfigMapRef(r []interface{}) (*v1.ConfigMapEnvSource, error) {
 	if len(r) == 0 || r[0] == nil {
 		return &v1.ConfigMapEnvSource{}, nil
 	}
@@ -923,21 +903,38 @@ func expandConfigMapRef(r []interface{}) (*v1.ConfigMapEnvSource, error) {
 	if v, ok := in["name"].(string); ok {
 		obj.Name = v
 	}
-	if v, ok := in["optional"]; ok {
-		obj.Optional = ptrToBool(v.(bool))
+	if v, ok := in["optional"].(bool); ok {
+		obj.Optional = &v
 	}
 
 	return obj, nil
 }
 
-func expandContainerResourceRequirements(l []interface{}) (*v1.ResourceRequirements, error) {
-	obj := &v1.ResourceRequirements{}
+func expandEnvSecretRef(r []interface{}) (*v1.SecretEnvSource, error) {
+	if len(r) == 0 || r[0] == nil {
+		return &v1.SecretEnvSource{}, nil
+	}
+	in := r[0].(map[string]interface{})
+	obj := &v1.SecretEnvSource{}
+
+	if v, ok := in["name"].(string); ok {
+		obj.Name = v
+	}
+	if v, ok := in["optional"].(bool); ok {
+		obj.Optional = &v
+	}
+
+	return obj, nil
+}
+
+func expandContainerResourceRequirements(l []interface{}) (v1.ResourceRequirements, error) {
 	if len(l) == 0 || l[0] == nil {
-		return obj, nil
+		return v1.ResourceRequirements{}, nil
 	}
 	in := l[0].(map[string]interface{})
+	obj := v1.ResourceRequirements{}
 
-	fn := func(in []interface{}) (*v1.ResourceList, error) {
+	fn := func(in []interface{}) (v1.ResourceList, error) {
 		for _, c := range in {
 			p := c.(map[string]interface{})
 			if p["cpu"] == "" {
@@ -948,27 +945,26 @@ func expandContainerResourceRequirements(l []interface{}) (*v1.ResourceRequireme
 			}
 			rl, err := expandMapToResourceList(p)
 			if err != nil {
-				return rl, err
+				return nil, err
 			}
-			return rl, nil
+			return *rl, nil
 		}
 		return nil, nil
 	}
 
+	var err error
 	if v, ok := in["limits"].([]interface{}); ok && len(v) > 0 {
-		rl, err := fn(v)
+		obj.Limits, err = fn(v)
 		if err != nil {
 			return obj, err
 		}
-		obj.Limits = *rl
 	}
 
 	if v, ok := in["requests"].([]interface{}); ok && len(v) > 0 {
-		rq, err := fn(v)
+		obj.Requests, err = fn(v)
 		if err != nil {
 			return obj, err
 		}
-		obj.Requests = *rq
 	}
 
 	return obj, nil

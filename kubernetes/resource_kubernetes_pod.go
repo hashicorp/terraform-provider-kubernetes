@@ -38,7 +38,7 @@ func resourceKubernetesPod() *schema.Resource {
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
-					Schema: podSpecFields(false, false, false),
+					Schema: podSpecFields(false),
 				},
 			},
 		},
@@ -57,7 +57,7 @@ func resourceKubernetesPodCreate(d *schema.ResourceData, meta interface{}) error
 
 	pod := api.Pod{
 		ObjectMeta: metadata,
-		Spec:       *spec,
+		Spec:       spec,
 	}
 
 	log.Printf("[INFO] Creating new pod: %#v", pod)

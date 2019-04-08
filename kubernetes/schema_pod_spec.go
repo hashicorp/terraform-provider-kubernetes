@@ -2,14 +2,25 @@ package kubernetes
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
 )
 
-func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schema.Schema {
-	var deprecatedMessage string
-	if isDeprecated {
-		deprecatedMessage = "This field is deprecated because template was incorrectly defined as a PodSpec preventing the definition of metadata. Please use the one under the spec field"
+func podTemplateSpecFields(isUpdatable bool) map[string]*schema.Schema {
+	s := map[string]*schema.Schema{
+		"metadata": metadataSchema("podTemplateSpec", true),
+		"spec": {
+			Type:        schema.TypeList,
+			Description: "Specification of the desired behavior of the job",
+			Required:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: podSpecFields(isUpdatable),
+			},
+		},
 	}
+	return s
+}
+
+func podSpecFields(isUpdatable bool) map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
 		"affinity": {
 			Type:        schema.TypeList,
@@ -23,64 +34,69 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 		"active_deadline_seconds": {
 			Type:         schema.TypeInt,
 			Optional:     true,
-			Computed:     isComputed,
 			ValidateFunc: validatePositiveInteger,
 			Description:  "Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.",
-			Deprecated:   deprecatedMessage,
 		},
 		"container": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			Computed:    isComputed,
 			Description: "List of containers belonging to the pod. Containers cannot currently be added or removed. There must be at least one container in a Pod. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/containers",
-			Deprecated:  deprecatedMessage,
 			Elem: &schema.Resource{
-				Schema: containerFields(isUpdatable, false),
+				Schema: containerFields(isUpdatable),
 			},
 		},
-		"init_container": {
+		"dns_config": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			Computed:    isComputed,
-			ForceNew:    true,
-			Description: "List of init containers belonging to the pod. Init containers always run to completion and each must complete successfully before the next is started. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/",
-			Deprecated:  deprecatedMessage,
+			MaxItems:    1,
+			Description: "PodDNSConfig defines the DNS parameters of a pod in addition to those generated from DNSPolicy.",
 			Elem: &schema.Resource{
-				Schema: containerFields(isUpdatable, true),
+				Schema: map[string]*schema.Schema{
+					"nameservers": {
+						Type:        schema.TypeList,
+						Description: "A list of DNS name server IP addresses. This will be appended to the base nameservers generated from DNSPolicy. Duplicated nameservers will be removed.",
+						Elem:        &schema.Schema{Type: schema.TypeString},
+						Optional:    true,
+					},
+					"options": {
+						Type:        schema.TypeMap,
+						Description: "A list of DNS resolver options. This will be merged with the base options generated from DNSPolicy. Duplicated entries will be removed. Resolution options given in Options will override those that appear in the base DNSPolicy.",
+						Elem:        &schema.Schema{Type: schema.TypeString},
+						Optional:    true,
+					},
+					"searches": {
+						Type:        schema.TypeList,
+						Description: "A list of DNS search domains for host-name lookup. This will be appended to the base search paths generated from DNSPolicy. Duplicated search paths will be removed.",
+						Elem:        &schema.Schema{Type: schema.TypeString},
+						Optional:    true,
+					},
+				},
 			},
 		},
 		"dns_policy": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Computed:    isComputed,
-			DefaultFunc: defaultIfNotComputed(isComputed, "ClusterFirst"),
+			Default:     "ClusterFirst",
 			Description: "Set DNS policy for containers within the pod. One of 'ClusterFirst' or 'Default'. Defaults to 'ClusterFirst'.",
-			Deprecated:  deprecatedMessage,
 		},
 		"host_ipc": {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Computed:    isComputed,
-			DefaultFunc: defaultIfNotComputed(isComputed, false),
+			Default:     false,
 			Description: "Use the host's ipc namespace. Optional: Default to false.",
-			Deprecated:  deprecatedMessage,
 		},
 		"host_network": {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Computed:    isComputed,
-			DefaultFunc: defaultIfNotComputed(isComputed, false),
+			Default:     false,
 			Description: "Host networking requested for this pod. Use the host's network namespace. If this option is set, the ports that will be used must be specified.",
-			Deprecated:  deprecatedMessage,
 		},
 
 		"host_pid": {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Computed:    isComputed,
-			DefaultFunc: defaultIfNotComputed(isComputed, false),
+			Default:     false,
 			Description: "Use the host's pid namespace.",
-			Deprecated:  deprecatedMessage,
 		},
 
 		"hostname": {
@@ -88,12 +104,10 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Optional:    true,
 			Computed:    true,
 			Description: "Specifies the hostname of the Pod If not specified, the pod's hostname will be set to a system-defined value.",
-			Deprecated:  deprecatedMessage,
 		},
 		"image_pull_secrets": {
 			Type:        schema.TypeList,
 			Description: "ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. For example, in the case of docker, only DockerConfig type secrets are honored. More info: http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod",
-			Deprecated:  deprecatedMessage,
 			Optional:    true,
 			Computed:    true,
 			Elem: &schema.Resource{
@@ -106,35 +120,36 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 				},
 			},
 		},
+		"init_container": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Description: "List of initialization containers belonging to the pod. Init containers are executed in order prior to containers being started. If any init container fails, the pod is considered to have failed and is handled according to its restartPolicy. The name for an init container or normal container must be unique among all containers. Init containers may not have Lifecycle actions, Readiness probes, or Liveness probes. The resourceRequirements of an init container are taken into account during scheduling by finding the highest request/limit for each resource type, and then using the max of of that value or the sum of the normal containers. Limits are applied to init containers in a similar fashion. Init containers cannot currently be added or removed. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/",
+			Elem: &schema.Resource{
+				Schema: containerFields(isUpdatable),
+			},
+		},
 		"node_name": {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Computed:    true,
 			Description: "NodeName is a request to schedule this pod onto a specific node. If it is non-empty, the scheduler simply schedules this pod onto that node, assuming that it fits resource requirements.",
-			Deprecated:  deprecatedMessage,
 		},
 		"node_selector": {
 			Type:        schema.TypeMap,
 			Optional:    true,
-			Computed:    isComputed,
 			Description: "NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node. More info: http://kubernetes.io/docs/user-guide/node-selection.",
-			Deprecated:  deprecatedMessage,
 		},
 		"restart_policy": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Computed:    isComputed,
-			DefaultFunc: defaultIfNotComputed(isComputed, "Always"),
+			Default:     "Always",
 			Description: "Restart policy for all containers within the pod. One of Always, OnFailure, Never. More info: http://kubernetes.io/docs/user-guide/pod-states#restartpolicy.",
-			Deprecated:  deprecatedMessage,
 		},
 		"security_context": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			Computed:    isComputed,
 			MaxItems:    1,
 			Description: "SecurityContext holds pod-level security attributes and common container settings. Optional: Defaults to empty",
-			Deprecated:  deprecatedMessage,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"fs_group": {
@@ -144,13 +159,21 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 					},
 					"run_as_non_root": {
 						Type:        schema.TypeBool,
-						Description: "Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does. If unset or false, no such validation will be performed. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
+						Description: "Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does.",
 						Optional:    true,
 					},
 					"run_as_user": {
 						Type:        schema.TypeInt,
-						Description: "The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.",
+						Description: "The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified",
 						Optional:    true,
+					},
+					"supplemental_groups": {
+						Type:        schema.TypeSet,
+						Description: "A list of groups applied to the first process run in each container, in addition to the container's primary GID. If unspecified, no groups will be added to any container.",
+						Optional:    true,
+						Elem: &schema.Schema{
+							Type: schema.TypeInt,
+						},
 					},
 					"se_linux_options": {
 						Type:        schema.TypeList,
@@ -161,14 +184,6 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 							Schema: seLinuxOptionsField(),
 						},
 					},
-					"supplemental_groups": {
-						Type:        schema.TypeSet,
-						Description: "A list of groups applied to the first process run in each container, in addition to the container's primary GID. If unspecified, no groups will be added to any container.",
-						Optional:    true,
-						Elem: &schema.Schema{
-							Type: schema.TypeInt,
-						},
-					},
 				},
 			},
 		},
@@ -177,59 +192,58 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Optional:    true,
 			Computed:    true,
 			Description: "ServiceAccountName is the name of the ServiceAccount to use to run this pod. More info: http://releases.k8s.io/HEAD/docs/design/service_accounts.md.",
-			Deprecated:  deprecatedMessage,
+		},
+		"automount_service_account_token": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     true,
+			Description: "In version 1.6+, you can also opt out of automounting API credentials for a particular pod",
 		},
 		"subdomain": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Computed:    isComputed,
 			Description: `If specified, the fully qualified Pod hostname will be "...svc.". If not specified, the pod will not have a domainname at all..`,
-			Deprecated:  deprecatedMessage,
 		},
 		"termination_grace_period_seconds": {
 			Type:         schema.TypeInt,
 			Optional:     true,
-			Computed:     isComputed,
-			DefaultFunc:  defaultIfNotComputed(isComputed, 30),
+			Default:      30,
 			ValidateFunc: validateTerminationGracePeriodSeconds,
 			Description:  "Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request. Value must be non-negative integer. The value zero indicates delete immediately. If this value is nil, the default grace period will be used instead. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Set this value longer than the expected cleanup time for your process.",
-			Deprecated:   deprecatedMessage,
 		},
 		"toleration": {
 			Type:        schema.TypeList,
+			Description: "Tolerations is an optional list of node tolerations controlling where pod can be placed",
 			Optional:    true,
-			Description: "If specified, the pod's toleration. Optional: Defaults to empty",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
-					"effect": {
-						Type:         schema.TypeString,
-						Description:  "Effect indicates the taint effect to match. Empty means match all taint effects. When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.",
-						Optional:     true,
-						ValidateFunc: validation.StringInSlice([]string{"NoSchedule", "PreferNoSchedule", "NoExecute"}, false),
-					},
 					"key": {
 						Type:        schema.TypeString,
-						Description: "Key is the taint key that the toleration applies to. Empty means match all taint keys. If the key is empty, operator must be Exists; this combination means to match all values and all keys.",
+						Description: "Key for toleration effect",
+						Optional:    true,
+					},
+					"value": {
+						Type:        schema.TypeString,
+						Description: "Value for key",
 						Optional:    true,
 					},
 					"operator": {
 						Type:         schema.TypeString,
-						Description:  "Operator represents a key's relationship to the value. Valid operators are Exists and Equal. Defaults to Equal. Exists is equivalent to wildcard for value, so that a pod can tolerate all taints of a particular category.",
-						Default:      "Equal",
+						ValidateFunc: validateAttributeValueIsIn([]string{"Exists", "Equal"}),
+						Description:  "Type of check for toleration type",
 						Optional:     true,
-						ValidateFunc: validation.StringInSlice([]string{"Exists", "Equal"}, false),
+					},
+					"effect": {
+						Type:         schema.TypeString,
+						ValidateFunc: validateAttributeValueIsIn([]string{"NoSchedule", "PreferNoSchedule", "NoExecute"}),
+						Description:  "Toleration effect",
+						Optional:     true,
 					},
 					"toleration_seconds": {
-						// Use TypeString to allow an "unspecified" value,
-						Type:         schema.TypeString,
-						Description:  "TolerationSeconds represents the period of time the toleration (which must be of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default, it is not set, which means tolerate the taint forever (do not evict). Zero and negative values will be treated as 0 (evict immediately) by the system.",
+						Type:         schema.TypeInt,
+						ValidateFunc: validatePositiveInteger,
+						Description:  "Time allowance before pod is evicted when toleration is in effect",
 						Optional:     true,
-						ValidateFunc: validateTypeStringNullableInt,
-					},
-					"value": {
-						Type:        schema.TypeString,
-						Description: "Value is the taint value the toleration matches to. If the operator is Exists, the value should be empty, otherwise just a regular string.",
-						Optional:    true,
 					},
 				},
 			},
@@ -238,15 +252,13 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 		"volume": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			Computed:    isComputed,
 			Description: "List of volumes that can be mounted by containers belonging to the pod. More info: http://kubernetes.io/docs/user-guide/volumes",
-			Deprecated:  deprecatedMessage,
-			Elem:        volumeSchema(),
+			Elem:        volumeSchema(isUpdatable),
 		},
 	}
 
 	if !isUpdatable {
-		for k := range s {
+		for k, _ := range s {
 			if k == "active_deadline_seconds" {
 				// This field is always updatable
 				continue
@@ -262,17 +274,7 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 	return s
 }
 
-func defaultIfNotComputed(isComputed bool, defaultValue interface{}) schema.SchemaDefaultFunc {
-	return func() (interface{}, error) {
-		if isComputed {
-			return nil, nil
-		}
-
-		return defaultValue, nil
-	}
-}
-
-func volumeSchema() *schema.Resource {
+func volumeSchema(isUpdatable bool) *schema.Resource {
 	v := commonVolumeSources()
 
 	v["config_map"] = &schema.Schema{
@@ -312,6 +314,7 @@ func volumeSchema() *schema.Resource {
 					Description:  "Optional: mode bits to use on created files by default. Must be a value between 0 and 0777. Defaults to 0644. Directories within the path are not affected by this setting. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.",
 					Optional:     true,
 					ValidateFunc: validateModeBits,
+					Default:      0644,
 				},
 				"name": {
 					Type:        schema.TypeString,
@@ -441,6 +444,14 @@ func volumeSchema() *schema.Resource {
 					Optional:     true,
 					Default:      "",
 					ValidateFunc: validateAttributeValueIsIn([]string{"", "Memory"}),
+				},
+				"size_limit": {
+					Type:         schema.TypeString,
+					Description:  `Total amount of local storage required for this EmptyDir volume. The size limit is also applicable for memory medium. The maximum usage on memory medium EmptyDir would be the minimum value between the SizeLimit specified here and the sum of memory limits of all containers in a pod. The default is nil which means that the limit is undefined. More info: http://kubernetes.io/docs/user-guide/volumes#emptydir`,
+					Optional:     true,
+					Default:      "0",
+					ForceNew:     !isUpdatable,
+					ValidateFunc: validateResourceQuantity,
 				},
 			},
 		},

@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec, d *schema.ResourceData, useDeprecatedSpecFields bool) ([]interface{}, error) {
@@ -75,7 +75,7 @@ func expandReplicationControllerTemplate(rct []interface{}, selector map[string]
 		if err != nil {
 			return obj, err
 		}
-		obj.Spec = *podSpecDeprecated
+		obj.Spec = podSpecDeprecated
 	} else {
 		in := rct[0].(map[string]interface{})
 		metadata := in["metadata"].([]interface{})
@@ -94,7 +94,7 @@ func expandReplicationControllerTemplate(rct []interface{}, selector map[string]
 		if err != nil {
 			return obj, err
 		}
-		obj.Spec = *podSpec
+		obj.Spec = podSpec
 	}
 
 	return obj, nil

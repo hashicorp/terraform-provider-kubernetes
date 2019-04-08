@@ -85,7 +85,7 @@ func expandPodTemplate(l []interface{}) (*corev1.PodTemplateSpec, error) {
 		if err != nil {
 			return obj, err
 		}
-		obj.Spec = *podSpec
+		obj.Spec = podSpec
 	}
 	return obj, nil
 }

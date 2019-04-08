@@ -79,6 +79,8 @@ func TestAccKubernetesEndpoints_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.address.0.hostname", "test-hostname"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.address.0.node_name", "test-nodename"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.address.1.ip", "10.0.0.7"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.not_ready_address.0.ip", "10.0.0.10"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.not_ready_address.1.ip", "10.0.0.11"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.0.name", "httpstransport"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.0.port", "443"),
@@ -110,6 +112,14 @@ func TestAccKubernetesEndpoints_basic(t *testing.T) {
 								},
 								{
 									IP: "10.0.0.7",
+								},
+							},
+							NotReadyAddresses: []api.EndpointAddress{
+								{
+									IP: "10.0.0.10",
+								},
+								{
+									IP: "10.0.0.11",
 								},
 							},
 							Ports: []api.EndpointPort{
@@ -380,7 +390,15 @@ resource "kubernetes_endpoints" "test" {
       ip = "10.0.0.7"
     }
 
-    ports {
+		not_ready_address {
+      ip = "10.0.0.10"
+    }
+
+		not_ready_address {
+      ip = "10.0.0.11"
+    }
+
+    port {
       name     = "httpstransport"
       port     = 443
       protocol = "TCP"

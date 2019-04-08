@@ -139,20 +139,20 @@ func TestFlattenEndpointsSubsets(t *testing.T) {
 			},
 			[]interface{}{
 				map[string]interface{}{
-					"addresses": []interface{}{
+					"address": []interface{}{
 						map[string]interface{}{
 							"hostname":  "any.hostname.io",
 							"ip":        "10.0.0.4",
 							"node_name": testNodeName,
 						},
 					},
-					"not_ready_addresses": []interface{}{
+					"not_ready_address": []interface{}{
 						map[string]interface{}{
 							"hostname": "notready.hostname.io",
 							"ip":       "10.0.0.5",
 						},
 					},
-					"ports": []interface{}{
+					"port": []interface{}{
 						map[string]interface{}{
 							"name":     "transport",
 							"port":     8889,
@@ -280,20 +280,20 @@ func TestExpandEndpointsSubsets(t *testing.T) {
 		{
 			[]interface{}{
 				map[string]interface{}{
-					"addresses": []interface{}{
+					"address": []interface{}{
 						map[string]interface{}{
 							"hostname":  "any.hostname.io",
 							"ip":        "10.0.0.4",
 							"node_name": testNodeName,
 						},
 					},
-					"not_ready_addresses": []interface{}{
+					"not_ready_address": []interface{}{
 						map[string]interface{}{
 							"hostname": "notready.hostname.io",
 							"ip":       "10.0.0.5",
 						},
 					},
-					"ports": []interface{}{
+					"port": []interface{}{
 						map[string]interface{}{
 							"name":     "transport",
 							"port":     8889,

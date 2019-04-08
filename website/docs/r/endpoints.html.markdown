@@ -19,13 +19,46 @@ resource "kubernetes_endpoints" "example" {
     name = "terraform-example"
   }
 
-  subsets {
-    addresses {
+  subset {
+    address {
       ip = "10.0.0.4"
     }
 
-    ports {
+    address {
+      ip = "10.0.0.5"
+    }
+
+    port {
+      name     = "http"
       port     = 80
+      protocol = "TCP"
+    }
+
+    port {
+      name     = "https"
+      port     = 443
+      protocol = "TCP"
+    }
+  }
+
+  subset {
+    address {
+      ip = "10.0.1.4"
+    }
+
+    address {
+      ip = "10.0.1.5"
+    }
+
+    port {
+      name     = "http"
+      port     = 80
+      protocol = "TCP"
+    }
+
+    port {
+      name     = "https"
+      port     = 443
       protocol = "TCP"
     }
   }
@@ -41,6 +74,11 @@ resource "kubernetes_service" "example" {
       port       = 8080
       targetPort = 80
     }
+
+    port {
+      port       = 8443
+      targetPort = 443
+    }
   }
 }
 ```
@@ -50,7 +88,7 @@ resource "kubernetes_service" "example" {
 The following arguments are supported:
 
 * `metadata` - (Required) Standard endpoints' metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#metadata)
-* `subsets` - (Optional) A list of IP address(es) and port(s) that comprise the target service.
+* `subset` - (Optional) Set of addresses and ports that comprise a service. Can be repeated multiple times.
 
 ## Nested Blocks
 
@@ -72,23 +110,15 @@ The following arguments are supported:
 * `self_link` - A URL representing this endpoints resource.
 * `uid` - The unique in time and space value for this endpoints resource. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
-### `subsets`
+### `subset`
 
 #### Arguments
 
-* `addresses` - (Optional) A list of IP addresses which offer the related ports and are ready to accept traffic. These endpoints should be considered safe for load balancers and clients to utilize.
-* `not_ready_addresses` - (Optional) A list of IP addresses which offer the related ports but are not currently marked as ready because they have not yet finished starting, have recently failed a readiness check, or have recently failed a liveness check.
-* `ports` - (Optional) A list of port numbers available on the related IP addresses.
+* `address` - (Optional) An IP address block which offers the related ports and is ready to accept traffic. These endpoints should be considered safe for load balancers and clients to utilize. Can be repeated multiple times.
+* `not_ready_address` - (Optional) A IP address block which offers the related ports but is not currently marked as ready because it have not yet finished starting, have recently failed a readiness check, or have recently failed a liveness check. Can be repeated multiple times.
+* `port` - (Optional) A port number block available on the related IP addresses. Can be repeated multiple times.
 
-### `addresses`
-
-#### Attributes
-
-* `ip` - The IP of this endpoint. May not be loopback (127.0.0.0/8), link-local (169.254.0.0/16), or link-local multicast ((224.0.0.0/24).
-* `hostname` - (Optional) The Hostname of this endpoint.
-* `node_name` - (Optional) Node hosting this endpoint. This can be used to determine endpoints local to a node.
-
-### `not_ready_addresses`
+### `address`
 
 #### Attributes
 
@@ -96,7 +126,15 @@ The following arguments are supported:
 * `hostname` - (Optional) The Hostname of this endpoint.
 * `node_name` - (Optional) Node hosting this endpoint. This can be used to determine endpoints local to a node.
 
-### `ports`
+### `not_ready_address`
+
+#### Attributes
+
+* `ip` - The IP of this endpoint. May not be loopback (127.0.0.0/8), link-local (169.254.0.0/16), or link-local multicast ((224.0.0.0/24).
+* `hostname` - (Optional) The Hostname of this endpoint.
+* `node_name` - (Optional) Node hosting this endpoint. This can be used to determine endpoints local to a node.
+
+### `port`
 
 #### Arguments
 

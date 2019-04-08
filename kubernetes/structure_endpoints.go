@@ -56,13 +56,13 @@ func expandEndpointsSubsets(in []interface{}) []api.EndpointSubset {
 	for i, subset := range in {
 		r := api.EndpointSubset{}
 		subsetCfg := subset.(map[string]interface{})
-		if v, ok := subsetCfg["addresses"].([]interface{}); ok {
+		if v, ok := subsetCfg["address"].([]interface{}); ok {
 			r.Addresses = expandEndpointsAddresses(v)
 		}
-		if v, ok := subsetCfg["not_ready_addresses"].([]interface{}); ok {
+		if v, ok := subsetCfg["not_ready_address"].([]interface{}); ok {
 			r.NotReadyAddresses = expandEndpointsAddresses(v)
 		}
-		if v, ok := subsetCfg["ports"]; ok {
+		if v, ok := subsetCfg["port"]; ok {
 			r.Ports = expandEndpointsPorts(v.([]interface{}))
 		}
 		subsets[i] = r
@@ -105,13 +105,13 @@ func flattenEndpointsSubsets(in []api.EndpointSubset) []interface{} {
 	for i, n := range in {
 		m := make(map[string]interface{})
 		if len(n.Addresses) > 0 {
-			m["addresses"] = flattenEndpointsAddresses(n.Addresses)
+			m["address"] = flattenEndpointsAddresses(n.Addresses)
 		}
 		if len(n.NotReadyAddresses) > 0 {
-			m["not_ready_addresses"] = flattenEndpointsAddresses(n.NotReadyAddresses)
+			m["not_ready_address"] = flattenEndpointsAddresses(n.NotReadyAddresses)
 		}
 		if len(n.Ports) > 0 {
-			m["ports"] = flattenEndpointsPorts(n.Ports)
+			m["port"] = flattenEndpointsPorts(n.Ports)
 		}
 		att[i] = m
 	}

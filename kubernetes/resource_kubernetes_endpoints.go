@@ -25,15 +25,15 @@ func resourceKubernetesEndpoints() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("endpoints", true),
-			"subsets": {
+			"subset": {
 				Type:        schema.TypeList,
-				Description: "Sets of addresses and ports that comprise a service. More info: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors",
+				Description: "Set of addresses and ports that comprise a service. More info: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors",
 				Optional:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"addresses": {
+						"address": {
 							Type:        schema.TypeList,
-							Description: "IP addresses which offer the related ports that are marked as ready. These endpoints should be considered safe for load balancers and clients to utilize.",
+							Description: "IP address which offers the related ports that are marked as ready. These endpoints should be considered safe for load balancers and clients to utilize.",
 							Optional:    true,
 							MinItems:    1,
 							Elem: &schema.Resource{
@@ -56,9 +56,9 @@ func resourceKubernetesEndpoints() *schema.Resource {
 								},
 							},
 						},
-						"not_ready_addresses": {
+						"not_ready_address": {
 							Type:        schema.TypeList,
-							Description: "IP addresses which offer the related ports but are not currently marked as ready because they have not yet finished starting, have recently failed a readiness check, or have recently failed a liveness check.",
+							Description: "IP address which offers the related ports but is not currently marked as ready because it have not yet finished starting, have recently failed a readiness check, or have recently failed a liveness check.",
 							Optional:    true,
 							MinItems:    1,
 							Elem: &schema.Resource{
@@ -81,9 +81,9 @@ func resourceKubernetesEndpoints() *schema.Resource {
 								},
 							},
 						},
-						"ports": {
+						"port": {
 							Type:        schema.TypeList,
-							Description: "Port numbers available on the related IP addresses.",
+							Description: "Port number available on the related IP addresses.",
 							Optional:    true,
 							MinItems:    1,
 							Elem: &schema.Resource{
@@ -120,7 +120,7 @@ func resourceKubernetesEndpointsCreate(d *schema.ResourceData, meta interface{})
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	ep := api.Endpoints{
 		ObjectMeta: metadata,
-		Subsets:    expandEndpointsSubsets(d.Get("subsets").([]interface{})),
+		Subsets:    expandEndpointsSubsets(d.Get("subset").([]interface{})),
 	}
 	log.Printf("[INFO] Creating new endpoints: %#v", ep)
 	out, err := conn.CoreV1().Endpoints(metadata.Namespace).Create(&ep)
@@ -155,7 +155,7 @@ func resourceKubernetesEndpointsRead(d *schema.ResourceData, meta interface{}) e
 
 	flattened := flattenEndpointsSubsets(ep.Subsets)
 	log.Printf("[DEBUG] Flattened endpoints subset: %#v", flattened)
-	err = d.Set("subsets", flattened)
+	err = d.Set("subset", flattened)
 	if err != nil {
 		return fmt.Errorf("Failed to read endpoints because: %s", err)
 	}
@@ -172,8 +172,8 @@ func resourceKubernetesEndpointsUpdate(d *schema.ResourceData, meta interface{})
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
-	if d.HasChange("subsets") {
-		subsets := expandEndpointsSubsets(d.Get("subsets").([]interface{}))
+	if d.HasChange("subset") {
+		subsets := expandEndpointsSubsets(d.Get("subset").([]interface{}))
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/subsets",
 			Value: subsets,

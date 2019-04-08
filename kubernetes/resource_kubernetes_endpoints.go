@@ -12,13 +12,13 @@ import (
 	kubernetes "k8s.io/client-go/kubernetes"
 )
 
-func resourceKubernetesEndpoint() *schema.Resource {
+func resourceKubernetesEndpoints() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesEndpointCreate,
-		Read:   resourceKubernetesEndpointRead,
-		Exists: resourceKubernetesEndpointExists,
-		Update: resourceKubernetesEndpointUpdate,
-		Delete: resourceKubernetesEndpointDelete,
+		Create: resourceKubernetesEndpointsCreate,
+		Read:   resourceKubernetesEndpointsRead,
+		Exists: resourceKubernetesEndpointsExists,
+		Update: resourceKubernetesEndpointsUpdate,
+		Delete: resourceKubernetesEndpointsDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -114,66 +114,66 @@ func resourceKubernetesEndpoint() *schema.Resource {
 	}
 }
 
-func resourceKubernetesEndpointCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesEndpointsCreate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	ep := api.Endpoints{
 		ObjectMeta: metadata,
-		Subsets:    expandEndpointSubsets(d.Get("subsets").([]interface{})),
+		Subsets:    expandEndpointsSubsets(d.Get("subsets").([]interface{})),
 	}
-	log.Printf("[INFO] Creating new endpoint: %#v", ep)
+	log.Printf("[INFO] Creating new endpoints: %#v", ep)
 	out, err := conn.CoreV1().Endpoints(metadata.Namespace).Create(&ep)
 	if err != nil {
-		return fmt.Errorf("Failed to create endpoint because: %s", err)
+		return fmt.Errorf("Failed to create endpoints because: %s", err)
 	}
-	log.Printf("[INFO] Submitted new endpoint: %#v", out)
+	log.Printf("[INFO] Submitted new endpoints: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesEndpointRead(d, meta)
+	return resourceKubernetesEndpointsRead(d, meta)
 }
 
-func resourceKubernetesEndpointRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesEndpointsRead(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return fmt.Errorf("Failed to read endpoint because: %s", err)
+		return fmt.Errorf("Failed to read endpoints because: %s", err)
 	}
 
-	log.Printf("[INFO] Reading endpoint %s", name)
+	log.Printf("[INFO] Reading endpoints %s", name)
 	ep, err := conn.CoreV1().Endpoints(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return fmt.Errorf("Failed to read endpoint because: %s", err)
 	}
-	log.Printf("[INFO] Received endpoint: %#v", ep)
+	log.Printf("[INFO] Received endpoints: %#v", ep)
 	err = d.Set("metadata", flattenMetadata(ep.ObjectMeta))
 	if err != nil {
-		return fmt.Errorf("Failed to read endpoint because: %s", err)
+		return fmt.Errorf("Failed to read endpoints because: %s", err)
 	}
 
-	flattened := flattenEndpointSubsets(ep.Subsets)
-	log.Printf("[DEBUG] Flattened endpoint subset: %#v", flattened)
+	flattened := flattenEndpointsSubsets(ep.Subsets)
+	log.Printf("[DEBUG] Flattened endpoints subset: %#v", flattened)
 	err = d.Set("subsets", flattened)
 	if err != nil {
-		return fmt.Errorf("Failed to read endpoint because: %s", err)
+		return fmt.Errorf("Failed to read endpoints because: %s", err)
 	}
 
 	return nil
 }
 
-func resourceKubernetesEndpointUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesEndpointsUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return fmt.Errorf("Failed to update endpoint because: %s", err)
+		return fmt.Errorf("Failed to update endpoints because: %s", err)
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("subsets") {
-		subsets := expandEndpointSubsets(d.Get("subsets").([]interface{}))
+		subsets := expandEndpointsSubsets(d.Get("subsets").([]interface{}))
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/subsets",
 			Value: subsets,
@@ -183,36 +183,36 @@ func resourceKubernetesEndpointUpdate(d *schema.ResourceData, meta interface{}) 
 	if err != nil {
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
-	log.Printf("[INFO] Updating endpoint %q: %v", name, string(data))
+	log.Printf("[INFO] Updating endpoints %q: %v", name, string(data))
 	out, err := conn.CoreV1().Endpoints(namespace).Patch(name, pkgApi.JSONPatchType, data)
 	if err != nil {
-		return fmt.Errorf("Failed to update endpoint: %s", err)
+		return fmt.Errorf("Failed to update endpoints: %s", err)
 	}
-	log.Printf("[INFO] Submitted updated endpoint: %#v", out)
+	log.Printf("[INFO] Submitted updated endpoints: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesEndpointRead(d, meta)
+	return resourceKubernetesEndpointsRead(d, meta)
 }
 
-func resourceKubernetesEndpointDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesEndpointsDelete(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return fmt.Errorf("Failed to delete endpoint because: %s", err)
+		return fmt.Errorf("Failed to delete endpoints because: %s", err)
 	}
-	log.Printf("[INFO] Deleting endpoint: %#v", name)
+	log.Printf("[INFO] Deleting endpoints: %#v", name)
 	err = conn.CoreV1().Endpoints(namespace).Delete(name, &meta_v1.DeleteOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to delete endpoint because: %s", err)
+		return fmt.Errorf("Failed to delete endpoints because: %s", err)
 	}
-	log.Printf("[INFO] Endpoint %s deleted", name)
+	log.Printf("[INFO] Endpoints %s deleted", name)
 	d.SetId("")
 
 	return nil
 }
 
-func resourceKubernetesEndpointExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesEndpointsExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn := meta.(*kubernetes.Clientset)
 
 	namespace, name, err := idParts(d.Id())
@@ -220,7 +220,7 @@ func resourceKubernetesEndpointExists(d *schema.ResourceData, meta interface{}) 
 		return false, err
 	}
 
-	log.Printf("[INFO] Checking endpoint %s", name)
+	log.Printf("[INFO] Checking endpoints %s", name)
 	_, err = conn.CoreV1().Endpoints(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {

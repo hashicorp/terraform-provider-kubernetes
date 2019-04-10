@@ -598,6 +598,10 @@ resource "kubernetes_persistent_volume_claim" "test" {
 func testAccKubernetesPersistentVolumeClaimConfig_import(volumeName, claimName, diskName, zone string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
+  lifecycle {
+    ignore_changes = ["spec.0.node_affinity"]
+  }
+
   metadata {
     name = "%s"
   }
@@ -650,6 +654,10 @@ resource "kubernetes_persistent_volume_claim" "test" {
 func testAccKubernetesPersistentVolumeClaimConfig_volumeMatch(volumeName, claimName, diskName, zone string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
+  lifecycle {
+    ignore_changes = ["spec.0.node_affinity"]
+  }
+
   metadata {
     name = "%s"
   }
@@ -702,6 +710,10 @@ resource "kubernetes_persistent_volume_claim" "test" {
 func testAccKubernetesPersistentVolumeClaimConfig_volumeMatch_modified(volumeName, claimName, diskName, zone string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test2" {
+  lifecycle {
+    ignore_changes = ["spec.0.node_affinity"]
+  }
+
   metadata {
     name = "%s"
   }
@@ -842,6 +854,10 @@ resource "kubernetes_persistent_volume_claim" "test" {
 func testAccKubernetesPersistentVolumeClaimConfig_volumeUpdate(volumeName, claimName, storage, diskName, zone string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
+  lifecycle {
+    ignore_changes = ["spec.0.node_affinity"]
+  }
+
   metadata {
     name = "%s"
   }

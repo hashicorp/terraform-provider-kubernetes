@@ -108,6 +108,7 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Type:        schema.TypeList,
 							Description: "A description of the persistent volume's node affinity. More info: https://kubernetes.io/docs/concepts/storage/volumes/#local",
 							Optional:    true,
+							Computed:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{

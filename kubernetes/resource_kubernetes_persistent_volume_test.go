@@ -614,10 +614,6 @@ func testAccCheckKubernetesPersistentVolumeExists(n string, obj *api.PersistentV
 func testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
-  lifecycle {
-    ignore_changes = ["spec.0.node_affinity"]
-  }
-
   metadata {
     annotations {
       TestAnnotationOne = "one"
@@ -661,10 +657,6 @@ resource "google_compute_disk" "test" {
 func testAccKubernetesPersistentVolumeConfig_googleCloud_modified(name, diskName, zone string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
-  lifecycle {
-    ignore_changes = ["spec.0.node_affinity"]
-  }
-
   metadata {
     annotations {
       TestAnnotationOne = "one"
@@ -710,10 +702,6 @@ resource "google_compute_disk" "test" {
 func testAccKubernetesPersistentVolumeConfig_googleCloud_volumeSource(name, diskName, zone string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
-  lifecycle {
-    ignore_changes = ["spec.0.node_affinity"]
-  }
-
   metadata {
     name = "%s"
   }
@@ -924,10 +912,6 @@ resource "kubernetes_persistent_volume" "test" {
 func testAccKubernetesPersistentVolumeConfig_storageClass(name, diskName, storageClassName, storageClassName2, zone, refName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
-  lifecycle {
-    ignore_changes = ["spec.0.node_affinity"]
-  }
-
   metadata {
     name = "%s"
   }

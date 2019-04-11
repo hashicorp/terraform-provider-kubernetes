@@ -641,6 +641,14 @@ resource "kubernetes_persistent_volume" "test" {
         pd_name = "${google_compute_disk.test.name}"
       }
     }
+
+    node_affinity {
+      required {
+        node_selector_term {
+          match_expressions = [{}]
+        }
+      }
+    }
   }
 }
 

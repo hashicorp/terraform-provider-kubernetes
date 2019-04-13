@@ -367,7 +367,7 @@ func waitForDeploymentReplicasFunc(conn *kubernetes.Clientset, ns, name string) 
 			return resource.NonRetryableError(err)
 		}
 
-		if dply.Generation <= dply.Status.ObservedGeneration {
+		if dply.Generation >= dply.Status.ObservedGeneration {
 			cond := GetDeploymentCondition(dply.Status, appsv1.DeploymentProgressing)
 			if cond != nil && cond.Reason == TimedOutReason {
 				err := fmt.Errorf("Deployment exceeded its progress deadline")

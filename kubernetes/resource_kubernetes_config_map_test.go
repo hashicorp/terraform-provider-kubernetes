@@ -151,14 +151,18 @@ func TestAccKubernetesConfigMap_binaryData(t *testing.T) {
 				Config: testAccKubernetesConfigMapConfig_binaryData(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesConfigMapExists("kubernetes_config_map.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_config_map.test", "binary_data.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.two", "second"),
 				),
 			},
 			{
 				Config: testAccKubernetesConfigMapConfig_binaryData2(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesConfigMapExists("kubernetes_config_map.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.%", "2"),
+					resource.TestCheckResourceAttr("kubernetes_config_map.test", "binary_data.%", "2"),
+					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.three", "third"),
 				),
 			},
 		},
@@ -381,8 +385,12 @@ resource "kubernetes_config_map" "test" {
     generate_name = "%s"
   }
 
-  data {
+  binary_data {
     one = "${file("./test-fixtures/binary.data")}"
+  }
+
+  data {
+    two = "second"
   }
 }
 `, prefix)
@@ -395,9 +403,13 @@ resource "kubernetes_config_map" "test" {
     generate_name = "%s"
   }
 
-  data {
+  binary_data {
     one = "${file("./test-fixtures/binary2.data")}"
     two = "${file("./test-fixtures/binary.data")}"
+  }
+
+  data {
+    three = "third"
   }
 }
 `, prefix)

@@ -106,7 +106,7 @@ func resourceKubernetesDaemonSet() *schema.Resource {
 							Required:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
-								Schema: podTemplateFields(true),
+								Schema: podTemplateFields("daemon set"),
 							},
 						},
 					},

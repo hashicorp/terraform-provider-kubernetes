@@ -237,7 +237,7 @@ func TestAccKubernetesStatefulSet_update_update_strategy_rolling_update(t *testi
 	})
 }
 
-func TestAccKubernetesStatefulSet_update_pod_template_container_port(t *testing.T) {
+func TestAccKubernetesStatefulSet_update_pod_template(t *testing.T) {
 	var conf api.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.Test(t, resource.TestCase{
@@ -254,7 +254,7 @@ func TestAccKubernetesStatefulSet_update_pod_template_container_port(t *testing.
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetConfigUpdateTemplateContainerPort(name),
+				Config: testAccKubernetesStatefulSetConfigUpdateTemplate(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetExists(statefulSetTestResourceName, &conf),
 					resource.TestCheckResourceAttr(statefulSetTestResourceName, "metadata.0.name", name),
@@ -263,6 +263,19 @@ func TestAccKubernetesStatefulSet_update_pod_template_container_port(t *testing.
 					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.container.0.port.0.name", "web"),
 					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.container.0.port.1.container_port", "443"),
 					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.container.0.port.1.name", "secure"),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.dns_config.#", "1"),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.dns_config.0.nameservers.#", "3"),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.dns_config.0.nameservers.0", "1.1.1.1"),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.dns_config.0.nameservers.1", "8.8.8.8"),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.dns_config.0.nameservers.2", "9.9.9.9"),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.dns_config.0.searches.#", "1"),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.dns_config.0.searches.0", "kubernetes.io"),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.dns_config.0.option.#", "2"),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.dns_config.0.option.0.name", "ndots"),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.dns_config.0.option.0.value", "1"),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.dns_config.0.option.1.name", "use-vc"),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.dns_config.0.option.1.value", ""),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.template.0.spec.0.dns_policy", "Default"),
 				),
 			},
 		},
@@ -694,7 +707,7 @@ resource "kubernetes_stateful_set" "test" {
 `, name)
 }
 
-func testAccKubernetesStatefulSetConfigUpdateTemplateContainerPort(name string) string {
+func testAccKubernetesStatefulSetConfigUpdateTemplate(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_stateful_set" "test" {
   metadata {
@@ -752,6 +765,22 @@ resource "kubernetes_stateful_set" "test" {
             mount_path = "/work-dir"
           }
         }
+
+        dns_config {
+          nameservers = ["1.1.1.1", "8.8.8.8", "9.9.9.9"]
+          searches    = ["kubernetes.io"]
+
+          option {
+            name  = "ndots"
+            value = 1
+          }
+
+          option {
+            name = "use-vc"
+          }
+        }
+
+        dns_policy = "Default"
       }
     }
 

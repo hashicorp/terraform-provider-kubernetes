@@ -238,11 +238,14 @@ func patchStatefulSetSpec(d *schema.ResourceData) (PatchOperations, error) {
 
 	if d.HasChange("spec.0.template") {
 		log.Printf("[TRACE] StatefulSet.Spec.Template has changes")
-		t, err := patchPodTemplateSpec("spec.0.template.0.", "/spec/template/", d)
+		template, err := expandPodTemplate(d.Get("spec.0.template").([]interface{}))
 		if err != nil {
 			return ops, err
 		}
-		ops = append(ops, t...)
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/spec/template",
+			Value: template,
+		})
 	}
 
 	if d.HasChange("spec.0.update_strategy") {
@@ -253,27 +256,6 @@ func patchStatefulSetSpec(d *schema.ResourceData) (PatchOperations, error) {
 		}
 		ops = append(ops, u...)
 	}
-	return ops, nil
-}
-
-func patchPodTemplateSpec(keyPrefix, pathPrefix string, d *schema.ResourceData) (PatchOperations, error) {
-	ops := PatchOperations{}
-
-	if d.HasChange(keyPrefix + "metadata") {
-		log.Printf("[TRACE] StatefulSet.Spec.Template.Metadata has changes")
-		m := patchMetadata(keyPrefix+"metadata.0.", pathPrefix+"metadata/", d)
-		ops = append(ops, m...)
-	}
-
-	if d.HasChange(keyPrefix + "spec") {
-		log.Printf("[TRACE] StatefulSet.Spec.Template.Spec has changes")
-		p, err := patchPodSpec(pathPrefix+"spec", keyPrefix+"spec.0.", d)
-		if err != nil {
-			return ops, err
-		}
-		ops = append(ops, p...)
-	}
-
 	return ops, nil
 }
 

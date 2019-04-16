@@ -4,7 +4,7 @@ import (
 	api "k8s.io/api/core/v1"
 )
 
-func expandEndpointAddresses(in []interface{}) []api.EndpointAddress {
+func expandEndpointsAddresses(in []interface{}) []api.EndpointAddress {
 	if len(in) == 0 {
 		return []api.EndpointAddress{}
 	}
@@ -26,7 +26,7 @@ func expandEndpointAddresses(in []interface{}) []api.EndpointAddress {
 	return addresses
 }
 
-func expandEndpointPorts(in []interface{}) []api.EndpointPort {
+func expandEndpointsPorts(in []interface{}) []api.EndpointPort {
 	if len(in) == 0 {
 		return []api.EndpointPort{}
 	}
@@ -48,7 +48,7 @@ func expandEndpointPorts(in []interface{}) []api.EndpointPort {
 	return ports
 }
 
-func expandEndpointSubsets(in []interface{}) []api.EndpointSubset {
+func expandEndpointsSubsets(in []interface{}) []api.EndpointSubset {
 	if len(in) == 0 {
 		return []api.EndpointSubset{}
 	}
@@ -56,21 +56,21 @@ func expandEndpointSubsets(in []interface{}) []api.EndpointSubset {
 	for i, subset := range in {
 		r := api.EndpointSubset{}
 		subsetCfg := subset.(map[string]interface{})
-		if v, ok := subsetCfg["addresses"].([]interface{}); ok {
-			r.Addresses = expandEndpointAddresses(v)
+		if v, ok := subsetCfg["address"].([]interface{}); ok {
+			r.Addresses = expandEndpointsAddresses(v)
 		}
-		if v, ok := subsetCfg["not_ready_addresses"].([]interface{}); ok {
-			r.NotReadyAddresses = expandEndpointAddresses(v)
+		if v, ok := subsetCfg["not_ready_address"].([]interface{}); ok {
+			r.NotReadyAddresses = expandEndpointsAddresses(v)
 		}
-		if v, ok := subsetCfg["ports"]; ok {
-			r.Ports = expandEndpointPorts(v.([]interface{}))
+		if v, ok := subsetCfg["port"]; ok {
+			r.Ports = expandEndpointsPorts(v.([]interface{}))
 		}
 		subsets[i] = r
 	}
 	return subsets
 }
 
-func flattenEndpointAddresses(in []api.EndpointAddress) []interface{} {
+func flattenEndpointsAddresses(in []api.EndpointAddress) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
@@ -86,7 +86,7 @@ func flattenEndpointAddresses(in []api.EndpointAddress) []interface{} {
 	return att
 }
 
-func flattenEndpointPorts(in []api.EndpointPort) []interface{} {
+func flattenEndpointsPorts(in []api.EndpointPort) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
@@ -100,18 +100,18 @@ func flattenEndpointPorts(in []api.EndpointPort) []interface{} {
 	return att
 }
 
-func flattenEndpointSubsets(in []api.EndpointSubset) []interface{} {
+func flattenEndpointsSubsets(in []api.EndpointSubset) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
 		if len(n.Addresses) > 0 {
-			m["addresses"] = flattenEndpointAddresses(n.Addresses)
+			m["address"] = flattenEndpointsAddresses(n.Addresses)
 		}
 		if len(n.NotReadyAddresses) > 0 {
-			m["not_ready_addresses"] = flattenEndpointAddresses(n.NotReadyAddresses)
+			m["not_ready_address"] = flattenEndpointsAddresses(n.NotReadyAddresses)
 		}
 		if len(n.Ports) > 0 {
-			m["ports"] = flattenEndpointPorts(n.Ports)
+			m["port"] = flattenEndpointsPorts(n.Ports)
 		}
 		att[i] = m
 	}

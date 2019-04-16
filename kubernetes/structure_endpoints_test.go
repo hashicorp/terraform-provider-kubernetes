@@ -11,7 +11,7 @@ var (
 	testNodeName = "test-nodename"
 )
 
-func TestFlattenEndpointAddresses(t *testing.T) {
+func TestFlattenEndpointsAddresses(t *testing.T) {
 
 	cases := []struct {
 		Input          []api.EndpointAddress
@@ -44,7 +44,7 @@ func TestFlattenEndpointAddresses(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output := flattenEndpointAddresses(tc.Input)
+		output := flattenEndpointsAddresses(tc.Input)
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)
@@ -52,7 +52,7 @@ func TestFlattenEndpointAddresses(t *testing.T) {
 	}
 }
 
-func TestFlattenEndpointPorts(t *testing.T) {
+func TestFlattenEndpointsPorts(t *testing.T) {
 
 	cases := []struct {
 		Input          []api.EndpointPort
@@ -98,7 +98,7 @@ func TestFlattenEndpointPorts(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output := flattenEndpointPorts(tc.Input)
+		output := flattenEndpointsPorts(tc.Input)
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)
@@ -106,7 +106,7 @@ func TestFlattenEndpointPorts(t *testing.T) {
 	}
 }
 
-func TestFlattenEndpointSubsets(t *testing.T) {
+func TestFlattenEndpointsSubsets(t *testing.T) {
 
 	cases := []struct {
 		Input          []api.EndpointSubset
@@ -139,20 +139,20 @@ func TestFlattenEndpointSubsets(t *testing.T) {
 			},
 			[]interface{}{
 				map[string]interface{}{
-					"addresses": []interface{}{
+					"address": []interface{}{
 						map[string]interface{}{
 							"hostname":  "any.hostname.io",
 							"ip":        "10.0.0.4",
 							"node_name": testNodeName,
 						},
 					},
-					"not_ready_addresses": []interface{}{
+					"not_ready_address": []interface{}{
 						map[string]interface{}{
 							"hostname": "notready.hostname.io",
 							"ip":       "10.0.0.5",
 						},
 					},
-					"ports": []interface{}{
+					"port": []interface{}{
 						map[string]interface{}{
 							"name":     "transport",
 							"port":     8889,
@@ -173,7 +173,7 @@ func TestFlattenEndpointSubsets(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output := flattenEndpointSubsets(tc.Input)
+		output := flattenEndpointsSubsets(tc.Input)
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)
@@ -181,7 +181,7 @@ func TestFlattenEndpointSubsets(t *testing.T) {
 	}
 }
 
-func TestExpandEndpointAddresses(t *testing.T) {
+func TestExpandEndpointsAddresses(t *testing.T) {
 
 	cases := []struct {
 		Input          []interface{}
@@ -212,7 +212,7 @@ func TestExpandEndpointAddresses(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output := expandEndpointAddresses(tc.Input)
+		output := expandEndpointsAddresses(tc.Input)
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)
@@ -220,7 +220,7 @@ func TestExpandEndpointAddresses(t *testing.T) {
 	}
 }
 
-func TestExpandEndpointPorts(t *testing.T) {
+func TestExpandEndpointsPorts(t *testing.T) {
 
 	cases := []struct {
 		Input          []interface{}
@@ -263,7 +263,7 @@ func TestExpandEndpointPorts(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output := expandEndpointPorts(tc.Input)
+		output := expandEndpointsPorts(tc.Input)
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)
@@ -271,7 +271,7 @@ func TestExpandEndpointPorts(t *testing.T) {
 	}
 }
 
-func TestExpandEndpointSubsets(t *testing.T) {
+func TestExpandEndpointsSubsets(t *testing.T) {
 
 	cases := []struct {
 		Input          []interface{}
@@ -280,20 +280,20 @@ func TestExpandEndpointSubsets(t *testing.T) {
 		{
 			[]interface{}{
 				map[string]interface{}{
-					"addresses": []interface{}{
+					"address": []interface{}{
 						map[string]interface{}{
 							"hostname":  "any.hostname.io",
 							"ip":        "10.0.0.4",
 							"node_name": testNodeName,
 						},
 					},
-					"not_ready_addresses": []interface{}{
+					"not_ready_address": []interface{}{
 						map[string]interface{}{
 							"hostname": "notready.hostname.io",
 							"ip":       "10.0.0.5",
 						},
 					},
-					"ports": []interface{}{
+					"port": []interface{}{
 						map[string]interface{}{
 							"name":     "transport",
 							"port":     8889,
@@ -338,7 +338,7 @@ func TestExpandEndpointSubsets(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output := expandEndpointSubsets(tc.Input)
+		output := expandEndpointsSubsets(tc.Input)
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)

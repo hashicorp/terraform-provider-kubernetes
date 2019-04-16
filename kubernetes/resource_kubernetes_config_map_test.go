@@ -137,6 +137,34 @@ func TestAccKubernetesConfigMap_importBasic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesConfigMap_binaryData(t *testing.T) {
+	var conf api.ConfigMap
+	prefix := "tf-acc-test-gen-"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_config_map.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesConfigMapDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesConfigMapConfig_binaryData(prefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesConfigMapExists("kubernetes_config_map.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.%", "1"),
+				),
+			},
+			{
+				Config: testAccKubernetesConfigMapConfig_binaryData2(prefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesConfigMapExists("kubernetes_config_map.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.%", "2"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesConfigMap_generatedName(t *testing.T) {
 	var conf api.ConfigMap
 	prefix := "tf-acc-test-gen-"
@@ -341,6 +369,35 @@ resource "kubernetes_config_map" "test" {
   data = {
     one = "first"
     two = "second"
+  }
+}
+`, prefix)
+}
+
+func testAccKubernetesConfigMapConfig_binaryData(prefix string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_config_map" "test" {
+  metadata {
+    generate_name = "%s"
+  }
+
+  data {
+    one = "${file("./test-fixtures/binary.data")}"
+  }
+}
+`, prefix)
+}
+
+func testAccKubernetesConfigMapConfig_binaryData2(prefix string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_config_map" "test" {
+  metadata {
+    generate_name = "%s"
+  }
+
+  data {
+    one = "${file("./test-fixtures/binary2.data")}"
+    two = "${file("./test-fixtures/binary.data")}"
   }
 }
 `, prefix)

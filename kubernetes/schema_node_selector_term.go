@@ -9,13 +9,13 @@ func nodeSelectorRequirementFields() map[string]*schema.Schema {
 		"key": {
 			Type:        schema.TypeString,
 			Description: "The label key that the selector applies to.",
-			Optional:    true,
+			Required:    true,
 			ForceNew:    true,
 		},
 		"operator": {
 			Type:        schema.TypeString,
-			Description: "A key's relationship to a set of values. Valid operators ard `In`, `NotIn`, `Exists` and `DoesNotExist`.",
-			Optional:    true,
+			Description: "A key's relationship to a set of values. Valid operators ard `In`, `NotIn`, `Exists`, `DoesNotExist`, `Gt`, and `Lt`.",
+			Required:    true,
 			ForceNew:    true,
 		},
 		"values": {

@@ -119,7 +119,7 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 											Schema: map[string]*schema.Schema{
 												"node_selector_term": {
 													Type:     schema.TypeList,
-													Optional: true,
+													Required: true,
 													Elem: &schema.Resource{
 														Schema: nodeSelectorTermFields(),
 													},

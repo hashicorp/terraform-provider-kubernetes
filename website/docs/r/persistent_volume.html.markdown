@@ -48,9 +48,37 @@ The following arguments are supported:
 
 * `access_modes` - (Required) Contains all ways the volume can be mounted. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes)
 * `capacity` - (Required) A description of the persistent volume's resources and capacity. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/persistent-volumes#capacity)
+* `node_affinity` - (Optional) NodeAffinity defines constraints that limit what nodes this volume can be accessed from. This field influences the scheduling of pods that use this volume.
 * `persistent_volume_reclaim_policy` - (Optional) What happens to a persistent volume when released from its claim. Valid options are Retain (default) and Recycle. Recycling must be supported by the volume plugin underlying this persistent volume. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/persistent-volumes#recycling-policy)
 * `persistent_volume_source` - (Required) The specification of a persistent volume.
 * `storage_class_name` - (Optional) The name of the persistent volume's storage class. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class)
+
+### `node_affinity`
+
+#### Arguments
+
+* `required` - (Optional) Required specifies hard node constraints that must be met.
+
+### `required`
+
+#### Arguments
+
+* `node_selector_terms` - (Required) A list of node selector terms. The terms are ORed.
+
+### `node_selector_terms`
+
+#### Arguments
+
+* `match_expressions` - (Optional) A list of node selector requirements by node's labels.
+* `match_fields` - (Optional) A list of node selector requirements by node's fields.
+
+### `match_expressions` and `match_fields`
+
+#### Arguments
+
+* `key` - (Required) The label key that the selector applies to.
+* `operator` - (Required) Represents a key's relationship to a set of values. Valid operators are `In`, `NotIn`, `Exists`, `DoesNotExist`. `Gt`, and `Lt`.
+* `values` - (Optional) An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. If the operator is `Gt` or `Lt`, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
 
 ### `persistent_volume_source`
 

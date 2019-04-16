@@ -645,7 +645,12 @@ resource "kubernetes_persistent_volume" "test" {
     node_affinity {
       required {
         node_selector_term {
-          match_expressions = [{}]
+          match_expressions = [
+            {
+              key      = "test"
+              operator = "Exists"
+            }
+          ]
         }
       }
     }

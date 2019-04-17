@@ -1,4 +1,27 @@
-## 1.5.3 (Unreleased)
+## 1.6.0 (Unreleased)
+
+FEATURES:
+
+* New resource: `kubernetes_endpoints` (#167)
+
+IMPROVEMENTS:
+
+* Add support for importing `kubernetes_service_account` resources.
+* Add validation for `strategy` attribute on `kubernetes_daemonset` and `kubernetes_deployment`
+* Add `allow_volume_expansion` attribute to `kubernetes_storage_class` resource.
+* Add `host_aliases` attribute to Pod spec and Pod templates.
+* Add support for `dns_config` attribute on Pods and Pod templates.
+* Mark `node_affinity` attribute on PV as Computed to support server populated values.
+* Wait for PVs to finish deleting.
+* Documentation now mentions acceptance of beta Kubernetes resources.
+
+BUG FIXES:
+
+* Fix detection of default token secret (#349)
+* Fix unexpected diffs on `kubernetes_network_policy` when `namespace_selector` is empty (#310)
+* Fix crashes on empty node_affinity / node_selector_term / match_expressions (#394)
+* Make entire Pod template updatable (#384)
+
 ## 1.5.2 (February 28, 2019)
 
 BUG FIXES:

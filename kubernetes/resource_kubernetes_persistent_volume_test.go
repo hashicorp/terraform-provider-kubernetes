@@ -877,8 +877,8 @@ resource "kubernetes_persistent_volume" "test" {
       local {
         path = "%s"
       }
-		}
-		node_affinity {
+    }
+    node_affinity {
       required {
         node_selector_term {
           match_expressions = [{

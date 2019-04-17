@@ -108,6 +108,7 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Type:        schema.TypeList,
 							Description: "A description of the persistent volume's node affinity. More info: https://kubernetes.io/docs/concepts/storage/volumes/#local",
 							Optional:    true,
+							Computed:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -244,6 +245,23 @@ func resourceKubernetesPersistentVolumeDelete(d *schema.ResourceData, meta inter
 		return err
 	}
 
+	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+		out, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return nil
+			}
+			return resource.NonRetryableError(err)
+		}
+
+		log.Printf("[DEBUG] Current state of persistent volume: %#v", out.Status.Phase)
+		e := fmt.Errorf("Persistent volume %s still exists (%s)", name, out.Status.Phase)
+		return resource.RetryableError(e)
+	})
+	if err != nil {
+		return err
+	}
+
 	log.Printf("[INFO] Persistent volume %s deleted", name)
 
 	d.SetId("")
@@ -257,7 +275,7 @@ func resourceKubernetesPersistentVolumeExists(d *schema.ResourceData, meta inter
 	log.Printf("[INFO] Checking persistent volume %s", name)
 	_, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if errors.IsNotFound(err) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

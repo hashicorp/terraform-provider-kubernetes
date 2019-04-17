@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 // Flatteners
@@ -28,6 +28,13 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	att["init_container"] = initContainers
 
 	att["dns_policy"] = in.DNSPolicy
+	if in.DNSConfig != nil {
+		v, err := flattenPodDNSConfig(in.DNSConfig)
+		if err != nil {
+			return []interface{}{att}, err
+		}
+		att["dns_config"] = v
+	}
 
 	att["host_aliases"] = flattenHostaliases(in.HostAliases)
 
@@ -72,6 +79,45 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["volume"] = v
 	}
 	return []interface{}{att}, nil
+}
+
+func flattenPodDNSConfig(in *v1.PodDNSConfig) ([]interface{}, error) {
+	att := make(map[string]interface{})
+
+	if len(in.Nameservers) > 0 {
+		att["nameservers"] = in.Nameservers
+	}
+	if len(in.Searches) > 0 {
+		att["searches"] = in.Searches
+	}
+	if len(in.Options) > 0 {
+		v, err := flattenPodDNSConfigOptions(in.Options)
+		if err != nil {
+			return []interface{}{att}, err
+		}
+		att["option"] = v
+	}
+
+	if len(att) > 0 {
+		return []interface{}{att}, nil
+	}
+	return []interface{}{}, nil
+}
+
+func flattenPodDNSConfigOptions(options []v1.PodDNSConfigOption) ([]interface{}, error) {
+	att := make([]interface{}, len(options))
+	for i, v := range options {
+		obj := map[string]interface{}{}
+
+		if v.Name != "" {
+			obj["name"] = v.Name
+		}
+		if v.Value != nil {
+			obj["value"] = *v.Value
+		}
+		att[i] = obj
+	}
+	return att, nil
 }
 
 func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
@@ -346,6 +392,14 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.DNSPolicy = v1.DNSPolicy(v)
 	}
 
+	if v, ok := in["dns_config"].([]interface{}); ok && len(v) > 0 {
+		dnsConfig, err := expandPodDNSConfig(v)
+		if err != nil {
+			return obj, nil
+		}
+		obj.DNSConfig = dnsConfig
+	}
+
 	if v, ok := in["host_aliases"].([]interface{}); ok && len(v) > 0 {
 		hs, err := expandHostaliases(v)
 		if err != nil {
@@ -417,6 +471,48 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.Volumes = cs
 	}
 	return obj, nil
+}
+
+func expandPodDNSConfig(l []interface{}) (*v1.PodDNSConfig, error) {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.PodDNSConfig{}, nil
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.PodDNSConfig{}
+	if v, ok := in["nameservers"].([]interface{}); ok {
+		obj.Nameservers = expandStringSlice(v)
+	}
+	if v, ok := in["searches"].([]interface{}); ok {
+		obj.Searches = expandStringSlice(v)
+	}
+	if v, ok := in["option"].([]interface{}); ok {
+		opts, err := expandDNSConfigOptions(v)
+		if err != nil {
+			return obj, err
+		}
+		obj.Options = opts
+	}
+	return obj, nil
+}
+
+func expandDNSConfigOptions(options []interface{}) ([]v1.PodDNSConfigOption, error) {
+	if len(options) == 0 {
+		return []v1.PodDNSConfigOption{}, nil
+	}
+	opts := make([]v1.PodDNSConfigOption, len(options))
+	for i, c := range options {
+		in := c.(map[string]interface{})
+		opt := v1.PodDNSConfigOption{}
+		if v, ok := in["name"].(string); ok {
+			opt.Name = v
+		}
+		if v, ok := in["value"].(string); ok {
+			opt.Value = ptrToString(v)
+		}
+		opts[i] = opt
+	}
+
+	return opts, nil
 }
 
 func expandPodSecurityContext(l []interface{}) *v1.PodSecurityContext {

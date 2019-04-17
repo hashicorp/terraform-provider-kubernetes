@@ -55,7 +55,7 @@ func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
 			Required:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: podTemplateFields(isUpdatable),
+				Schema: podTemplateFields("stateful set"),
 			},
 		},
 		"update_strategy": {

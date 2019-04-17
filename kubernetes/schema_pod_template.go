@@ -1,19 +1,21 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
-func podTemplateFields(isUpdatable bool) map[string]*schema.Schema {
+func podTemplateFields(owner string) map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
-		"metadata": metadataSchema("stateful set", true),
+		"metadata": metadataSchema(owner, true),
 		"spec": {
 			Type:        schema.TypeList,
-			Description: "Spec of the pods owned by the stateful set",
+			Description: fmt.Sprintf("Spec of the pods owned by the %s", owner),
 			Optional:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: podSpecFields(false, false, false),
+				Schema: podSpecFields(true, false, false),
 			},
 		},
 	}

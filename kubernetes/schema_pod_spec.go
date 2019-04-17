@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
 )
 
 func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schema.Schema {
@@ -44,8 +45,55 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Optional:    true,
 			Computed:    isComputed,
 			Default:     defaultIfNotComputed(isComputed, "ClusterFirst"),
-			Description: "Set DNS policy for containers within the pod. One of 'ClusterFirst' or 'Default'. Defaults to 'ClusterFirst'.",
+			Description: "Set DNS policy for containers within the pod. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'. Optional: Defaults to 'ClusterFirst', see [Kubernetes reference](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy).",
 			Deprecated:  deprecatedMessage,
+		},
+		"dns_config": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			MaxItems:    1,
+			Description: "Specifies the DNS parameters of a pod. Parameters specified here will be merged to the generated DNS configuration based on DNSPolicy. Optional: Defaults to empty",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"nameservers": {
+						Type:        schema.TypeList,
+						Description: "A list of DNS name server IP addresses. This will be appended to the base nameservers generated from DNSPolicy. Duplicated nameservers will be removed.",
+						Optional:    true,
+						Elem: &schema.Schema{
+							Type:         schema.TypeString,
+							ValidateFunc: validation.SingleIP(),
+						},
+					},
+					"option": {
+						Type:        schema.TypeList,
+						Description: "A list of DNS resolver options. This will be merged with the base options generated from DNSPolicy. Duplicated entries will be removed. Resolution options given in Options will override those that appear in the base DNSPolicy.",
+						Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"name": {
+									Type:        schema.TypeString,
+									Description: "Name of the option.",
+									Required:    true,
+								},
+								"value": {
+									Type:        schema.TypeString,
+									Description: "Value of the option. Optional: Defaults to empty.",
+									Optional:    true,
+								},
+							},
+						},
+					},
+					"searches": {
+						Type:        schema.TypeList,
+						Description: "A list of DNS search domains for host-name lookup. This will be appended to the base search paths generated from DNSPolicy. Duplicated search paths will be removed.",
+						Optional:    true,
+						Elem: &schema.Schema{
+							Type:         schema.TypeString,
+							ValidateFunc: validateName,
+						},
+					},
+				},
+			},
 		},
 		"host_aliases": {
 			Type:        schema.TypeList,

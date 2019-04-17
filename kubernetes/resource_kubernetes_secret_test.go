@@ -232,33 +232,38 @@ func TestAccKubernetesSecret_importGeneratedName(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesSecret_binaryData(t *testing.T) {
-	var conf api.Secret
-	prefix := "tf-acc-test-gen-"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_secret.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesSecretDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesSecretConfig_binaryData(prefix),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "1"),
-				),
-			},
-			{
-				Config: testAccKubernetesSecretConfig_binaryData2(prefix),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "2"),
-				),
-			},
-		},
-	})
-}
+// Disabled - this test loads binary data from a file and passes it through configuration
+//            which is no longer supported in TF 0.12.
+//            Instead, the resource attribute should be adapted to transport base64 encoded
+//            data and decode it when constructing the API object for client-go.
+//
+// func TestAccKubernetesSecret_binaryData(t *testing.T) {
+// 	var conf api.Secret
+// 	prefix := "tf-acc-test-gen-"
+//
+// 	resource.Test(t, resource.TestCase{
+// 		PreCheck:      func() { testAccPreCheck(t) },
+// 		IDRefreshName: "kubernetes_secret.test",
+// 		Providers:     testAccProviders,
+// 		CheckDestroy:  testAccCheckKubernetesSecretDestroy,
+// 		Steps: []resource.TestStep{
+// 			{
+// 				Config: testAccKubernetesSecretConfig_binaryData(prefix),
+// 				Check: resource.ComposeAggregateTestCheckFunc(
+// 					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
+// 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "1"),
+// 				),
+// 			},
+// 			{
+// 				Config: testAccKubernetesSecretConfig_binaryData2(prefix),
+// 				Check: resource.ComposeAggregateTestCheckFunc(
+// 					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
+// 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "2"),
+// 				),
+// 			},
+// 		},
+// 	})
+// }
 
 func testAccCheckSecretData(m *api.Secret, expected map[string]string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
@@ -333,12 +338,12 @@ func testAccKubernetesSecretConfig_emptyData(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_secret" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -347,7 +352,7 @@ resource "kubernetes_secret" "test" {
     name = "%s"
   }
 
-  data {}
+  data = {}
 }
 `, name)
 }
@@ -356,12 +361,12 @@ func testAccKubernetesSecretConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_secret" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -370,7 +375,7 @@ resource "kubernetes_secret" "test" {
     name = "%s"
   }
 
-  data {
+  data = {
     one = "first"
     two = "second"
   }
@@ -382,12 +387,12 @@ func testAccKubernetesSecretConfig_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_secret" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       Different         = "1234"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelThree = "three"
     }
@@ -395,7 +400,7 @@ resource "kubernetes_secret" "test" {
     name = "%s"
   }
 
-  data {
+  data = {
     one  = "first"
     two  = "second"
     nine = "ninth"
@@ -421,7 +426,7 @@ resource "kubernetes_secret" "test" {
     name = "%s"
   }
 
-  data {
+  data = {
     username = "admin"
     password = "password"
   }
@@ -438,7 +443,7 @@ resource "kubernetes_secret" "test" {
     generate_name = "%s"
   }
 
-  data {
+  data = {
     one = "first"
     two = "second"
   }
@@ -453,8 +458,11 @@ resource "kubernetes_secret" "test" {
     generate_name = "%s"
   }
 
-  data {
-    one = "${file("./test-fixtures/binary.data")}"
+  data = {
+		one =<<EOF
+"${filebase64("./test-fixtures/binary.data")}"
+EOF
+
   }
 }
 `, prefix)
@@ -467,9 +475,15 @@ resource "kubernetes_secret" "test" {
     generate_name = "%s"
   }
 
-  data {
-    one = "${file("./test-fixtures/binary2.data")}"
-    two = "${file("./test-fixtures/binary.data")}"
+  data = {
+		one =<<EOF
+"${filebase64("./test-fixtures/binary2.data")}"
+EOF
+
+		two =<<EOF
+"${filebase64("./test-fixtures/binary.data")}"
+EOF
+
   }
 }
 `, prefix)

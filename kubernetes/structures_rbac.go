@@ -7,12 +7,12 @@ import (
 	api "k8s.io/api/rbac/v1"
 )
 
-func expandRBACRoleRef(in interface{}) api.RoleRef {
-	if in == nil {
+func expandRBACRoleRef(in []interface{}) api.RoleRef {
+	if len(in) == 0 || in[0] == nil {
 		return api.RoleRef{}
 	}
 	ref := api.RoleRef{}
-	m := in.(map[string]interface{})
+	m := in[0].(map[string]interface{})
 	if v, ok := m["api_group"]; ok {
 		ref.APIGroup = v.(string)
 	}
@@ -79,7 +79,7 @@ func expandClusterRoleRules(in []interface{}) []api.PolicyRule {
 	return rules
 }
 
-func flattenRBACRoleRef(in api.RoleRef) interface{} {
+func flattenRBACRoleRef(in api.RoleRef) []interface{} {
 	att := make(map[string]interface{})
 
 	if in.APIGroup != "" {
@@ -87,7 +87,7 @@ func flattenRBACRoleRef(in api.RoleRef) interface{} {
 	}
 	att["kind"] = in.Kind
 	att["name"] = in.Name
-	return att
+	return []interface{}{att}
 }
 
 func flattenRBACSubjects(in []api.Subject) []interface{} {

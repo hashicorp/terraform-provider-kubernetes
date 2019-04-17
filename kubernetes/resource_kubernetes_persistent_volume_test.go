@@ -615,12 +615,12 @@ func testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, z
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -630,7 +630,7 @@ resource "kubernetes_persistent_volume" "test" {
   }
 
   spec {
-    capacity {
+    capacity = {
       storage = "123Gi"
     }
 
@@ -645,12 +645,10 @@ resource "kubernetes_persistent_volume" "test" {
     node_affinity {
       required {
         node_selector_term {
-          match_expressions = [
-            {
-              key      = "test"
-              operator = "Exists"
-            }
-          ]
+          match_expressions {
+            key      = "test"
+            operator = "Exists"
+          }
         }
       }
     }
@@ -671,12 +669,12 @@ func testAccKubernetesPersistentVolumeConfig_googleCloud_modified(name, diskName
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -686,7 +684,7 @@ resource "kubernetes_persistent_volume" "test" {
   }
 
   spec {
-    capacity {
+    capacity = {
       storage = "42Mi"
     }
 
@@ -720,7 +718,7 @@ resource "kubernetes_persistent_volume" "test" {
   }
 
   spec {
-    capacity {
+    capacity = {
       storage = "123Gi"
     }
 
@@ -748,12 +746,12 @@ func testAccKubernetesPersistentVolumeConfig_aws_basic(name, diskName, zone stri
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -763,7 +761,7 @@ resource "kubernetes_persistent_volume" "test" {
   }
 
   spec {
-    capacity {
+    capacity = {
       storage = "123Gi"
     }
 
@@ -781,7 +779,7 @@ resource "aws_ebs_volume" "test" {
   availability_zone = "%s"
   size              = 10
 
-  tags {
+  tags = {
     Name = "%s"
   }
 }
@@ -792,12 +790,12 @@ func testAccKubernetesPersistentVolumeConfig_aws_modified(name, diskName, zone s
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -807,7 +805,7 @@ resource "kubernetes_persistent_volume" "test" {
   }
 
   spec {
-    capacity {
+    capacity = {
       storage = "42Mi"
     }
 
@@ -828,7 +826,7 @@ resource "aws_ebs_volume" "test" {
   availability_zone = "%s"
   size              = 10
 
-  tags {
+  tags = {
     Name = "%s"
   }
 }
@@ -843,7 +841,7 @@ resource "kubernetes_persistent_volume" "test" {
   }
 
   spec {
-    capacity {
+    capacity = {
       storage = "123Gi"
     }
 
@@ -867,7 +865,7 @@ resource "kubernetes_persistent_volume" "test" {
   }
 
   spec {
-    capacity {
+    capacity = {
       storage = "123Gi"
     }
 
@@ -881,11 +879,11 @@ resource "kubernetes_persistent_volume" "test" {
     node_affinity {
       required {
         node_selector_term {
-          match_expressions = [{
+          match_expressions {
             key      = "kubernetes.io/hostname"
             operator = "In"
             values   = ["%s"]
-          }]
+          }
         }
       }
     }
@@ -902,7 +900,7 @@ resource "kubernetes_persistent_volume" "test" {
   }
 
   spec {
-    capacity {
+    capacity = {
       storage = "2Gi"
     }
 
@@ -930,7 +928,7 @@ resource "kubernetes_persistent_volume" "test" {
   }
 
   spec {
-    capacity {
+    capacity = {
       storage = "123Gi"
     }
 
@@ -961,7 +959,7 @@ resource "kubernetes_storage_class" "test" {
 
   storage_provisioner = "kubernetes.io/gce-pd"
 
-  parameters {
+  parameters = {
     type = "pd-ssd"
   }
 }
@@ -973,7 +971,7 @@ resource "kubernetes_storage_class" "test2" {
 
   storage_provisioner = "kubernetes.io/gce-pd"
 
-  parameters {
+  parameters = {
     type = "pd-standard"
   }
 }
@@ -987,7 +985,7 @@ resource "kubernetes_persistent_volume" "test" {
     name = "%s"
   }
   spec {
-    capacity {
+    capacity = {
       storage = "2Gi"
     }
     access_modes = ["ReadWriteMany"]
@@ -1006,11 +1004,11 @@ func testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity_match(name, s
     node_affinity {
       required {
         node_selector_term {
-          match_expressions = [{
+          match_expressions {
             key = "%s"
             operator = "In"
             values = ["%s"]
-          }]
+          }
         }
       }
     }

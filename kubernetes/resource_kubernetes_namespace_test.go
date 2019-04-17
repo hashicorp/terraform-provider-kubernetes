@@ -111,22 +111,6 @@ func TestAccKubernetesNamespace_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesNamespace_invalidLabelValueType(t *testing.T) {
-	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesNamespaceDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccKubernetesNamespaceConfig_invalidLabelValueType(nsName),
-				ExpectError: regexp.MustCompile("Expected value to be string"),
-			},
-		},
-	})
-}
-
 func TestAccKubernetesNamespace_importBasic(t *testing.T) {
 	resourceName := "kubernetes_namespace.test"
 	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -339,11 +323,10 @@ func testAccKubernetesNamespaceConfig_addAnnotations(nsName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
   metadata {
-    annotations {
+		annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
-
     name = "%s"
   }
 }
@@ -353,12 +336,12 @@ func testAccKubernetesNamespaceConfig_addLabels(nsName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -374,12 +357,12 @@ func testAccKubernetesNamespaceConfig_smallerLists(nsName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       Different         = "1234"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelThree = "three"
     }
@@ -414,30 +397,14 @@ func testAccKubernetesNamespaceConfig_specialCharacters(nsName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
   metadata {
-    annotations {
+    annotations = {
       "myhost.co.uk/any-path" = "one"
       "Different"             = "1234"
     }
 
-    labels {
+    labels = {
       "myhost.co.uk/any-path" = "one"
       "TestLabelThree"        = "three"
-    }
-
-    name = "%s"
-  }
-}
-`, nsName)
-}
-
-func testAccKubernetesNamespaceConfig_invalidLabelValueType(nsName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace" "test" {
-  metadata {
-    labels {
-      "first"   = "one"
-      "integer" = 2
-      "bool"    = true
     }
 
     name = "%s"

@@ -251,11 +251,11 @@ func testAccKubernetesResourceQuotaConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_resource_quota" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelThree = "three"
       TestLabelFour  = "four"
@@ -265,7 +265,7 @@ resource "kubernetes_resource_quota" "test" {
   }
 
   spec {
-    hard {
+    hard = {
       "limits.cpu"    = 2
       "limits.memory" = "2Gi"
       pods            = 4
@@ -279,12 +279,12 @@ func testAccKubernetesResourceQuotaConfig_metaModified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_resource_quota" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -294,7 +294,7 @@ resource "kubernetes_resource_quota" "test" {
   }
 
   spec {
-    hard {
+    hard = {
       "limits.cpu"    = 2
       "limits.memory" = "2Gi"
       pods            = 4
@@ -312,7 +312,7 @@ resource "kubernetes_resource_quota" "test" {
   }
 
   spec {
-    hard {
+    hard = {
       "limits.cpu"    = 4
       "requests.cpu"  = 1
       "limits.memory" = "4Gi"
@@ -331,7 +331,7 @@ resource "kubernetes_resource_quota" "test" {
   }
 
   spec {
-    hard {
+    hard = {
       pods = 10
     }
   }
@@ -347,7 +347,7 @@ resource "kubernetes_resource_quota" "test" {
   }
 
   spec {
-    hard {
+    hard = {
       pods = 10
     }
 
@@ -365,7 +365,7 @@ resource "kubernetes_resource_quota" "test" {
   }
 
   spec {
-    hard {
+    hard = {
       pods = 10
     }
 

@@ -172,7 +172,13 @@ func validateTerminationGracePeriodSeconds(value interface{}, key string) (ws []
 }
 
 func validateModeBits(value interface{}, key string) (ws []string, es []error) {
-	v := value.(int)
+	if !strings.HasPrefix(value.(string), "0") {
+		es = append(es, fmt.Errorf("%s: value %s should start with '0' (octal numeral)", key, value.(string)))
+	}
+	v, err := strconv.ParseInt(value.(string), 8, 32)
+	if err != nil {
+		es = append(es, fmt.Errorf("%s :Cannot parse octal numeral (%#v): %s", key, value, err))
+	}
 	if v < 0 || v > 0777 {
 		es = append(es, fmt.Errorf("%s (%#o) expects octal notation (a value between 0 and 0777)", key, v))
 	}

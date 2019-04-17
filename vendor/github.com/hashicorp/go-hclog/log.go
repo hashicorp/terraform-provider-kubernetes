@@ -127,6 +127,9 @@ type Logger interface {
 
 	// Return a value that conforms to the stdlib log.Logger interface
 	StandardLogger(opts *StandardLoggerOptions) *log.Logger
+
+	// Return a value that conforms to io.Writer, which can be passed into log.SetOutput()
+	StandardWriter(opts *StandardLoggerOptions) io.Writer
 }
 
 type StandardLoggerOptions struct {

@@ -5,7 +5,7 @@ import (
 	"github.com/hashicorp/terraform/helper/validation"
 )
 
-func rbacRoleRefSchema(kind string) map[string]*schema.Schema {
+func rbacRoleRefSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"api_group": {
 			Type:         schema.TypeString,
@@ -14,10 +14,10 @@ func rbacRoleRefSchema(kind string) map[string]*schema.Schema {
 			ValidateFunc: validation.StringInSlice([]string{"rbac.authorization.k8s.io"}, false),
 		},
 		"kind": {
-			Type:        schema.TypeString,
-			Description: "The kind of resource.",
-			Default:     kind,
-			Required:    true,
+			Type:         schema.TypeString,
+			Description:  "The kind of resource.",
+			Required:     true,
+			ValidateFunc: validation.StringInSlice([]string{"Role", "ClusterRole"}, false),
 		},
 		"name": {
 			Type:        schema.TypeString,

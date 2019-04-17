@@ -349,11 +349,11 @@ func testAccKubernetesLimitRangeConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_limit_range" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelThree = "three"
       TestLabelFour  = "four"
@@ -366,12 +366,12 @@ resource "kubernetes_limit_range" "test" {
     limit {
       type = "Container"
 
-      default {
+      default = {
         cpu    = "200m"
         memory = "512M"
       }
 
-      default_request {
+      default_request = {
         cpu    = "100m"
         memory = "256M"
       }
@@ -385,12 +385,12 @@ func testAccKubernetesLimitRangeConfig_metaModified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_limit_range" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
@@ -403,12 +403,12 @@ resource "kubernetes_limit_range" "test" {
     limit {
       type = "Container"
 
-      default {
+      default = {
         cpu    = "200m"
         memory = "512M"
       }
 
-      default_request {
+      default_request = {
         cpu    = "100m"
         memory = "256M"
       }
@@ -429,16 +429,16 @@ resource "kubernetes_limit_range" "test" {
     limit {
       type = "Container"
 
-      default {
+      default = {
         cpu    = "200m"
         memory = "1024M"
       }
 
-      max {
+      max = {
         cpu = "500m"
       }
 
-      min {
+      min = {
         cpu    = "10m"
         memory = "10M"
       }
@@ -475,7 +475,7 @@ resource "kubernetes_limit_range" "test" {
     limit {
       type = "Container"
 
-      default {
+      default = {
         cpu    = "200m"
         memory = "1024M"
       }
@@ -496,7 +496,7 @@ resource "kubernetes_limit_range" "test" {
     limit {
       type = "Pod"
 
-      min {
+      min = {
         cpu    = "200m"
         memory = "1024M"
       }
@@ -517,7 +517,7 @@ resource "kubernetes_limit_range" "test" {
     limit {
       type = "Pod"
 
-      max {
+      max = {
         cpu    = "200m"
         memory = "1024M"
       }
@@ -526,7 +526,7 @@ resource "kubernetes_limit_range" "test" {
     limit {
       type = "PersistentVolumeClaim"
 
-      min {
+      min = {
         storage = "24M"
       }
     }
@@ -534,7 +534,7 @@ resource "kubernetes_limit_range" "test" {
     limit {
       type = "Container"
 
-      default {
+      default = {
         cpu    = "50m"
         memory = "24M"
       }

@@ -313,9 +313,10 @@ func volumeSchema() *schema.Resource {
 								Description: "The key to project.",
 							},
 							"mode": {
-								Type:        schema.TypeInt,
-								Optional:    true,
-								Description: `Optional: mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.`,
+								Type:         schema.TypeString,
+								Optional:     true,
+								Description:  `Optional: mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.`,
+								ValidateFunc: validateModeBits,
 							},
 							"path": {
 								Type:         schema.TypeString,
@@ -327,9 +328,10 @@ func volumeSchema() *schema.Resource {
 					},
 				},
 				"default_mode": {
-					Type:         schema.TypeInt,
+					Type:         schema.TypeString,
 					Description:  "Optional: mode bits to use on created files by default. Must be a value between 0 and 0777. Defaults to 0644. Directories within the path are not affected by this setting. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.",
 					Optional:     true,
+					Default:      "0644",
 					ValidateFunc: validateModeBits,
 				},
 				"name": {
@@ -375,9 +377,11 @@ func volumeSchema() *schema.Resource {
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"default_mode": {
-					Type:        schema.TypeInt,
-					Description: "Optional: mode bits to use on created files by default. Must be a value between 0 and 0777. Defaults to 0644. Directories within the path are not affected by this setting. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.",
-					Optional:    true,
+					Type:         schema.TypeString,
+					Description:  "Optional: mode bits to use on created files by default. Must be a value between 0 and 0777. Defaults to 0644. Directories within the path are not affected by this setting. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.",
+					Optional:     true,
+					Default:      "0644",
+					ValidateFunc: validateModeBits,
 				},
 				"items": {
 					Type:        schema.TypeList,
@@ -407,9 +411,10 @@ func volumeSchema() *schema.Resource {
 								},
 							},
 							"mode": {
-								Type:        schema.TypeInt,
-								Optional:    true,
-								Description: `Optional: mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.`,
+								Type:         schema.TypeString,
+								Optional:     true,
+								Description:  `Optional: mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.`,
+								ValidateFunc: validateModeBits,
 							},
 							"path": {
 								Type:         schema.TypeString,
@@ -495,10 +500,10 @@ func volumeSchema() *schema.Resource {
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"default_mode": {
-					Type:         schema.TypeInt,
+					Type:         schema.TypeString,
 					Description:  "Optional: mode bits to use on created files by default. Must be a value between 0 and 0777. Defaults to 0644. Directories within the path are not affected by this setting. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.",
 					Optional:     true,
-					Default:      0644,
+					Default:      "0644",
 					ValidateFunc: validateModeBits,
 				},
 				"items": {
@@ -513,9 +518,10 @@ func volumeSchema() *schema.Resource {
 								Description: "The key to project.",
 							},
 							"mode": {
-								Type:        schema.TypeInt,
-								Optional:    true,
-								Description: "Optional: mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.",
+								Type:         schema.TypeString,
+								Optional:     true,
+								Description:  "Optional: mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.",
+								ValidateFunc: validateModeBits,
 							},
 							"path": {
 								Type:         schema.TypeString,

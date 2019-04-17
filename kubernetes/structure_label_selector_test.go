@@ -22,7 +22,7 @@ func TestFlattenLabelSelector(t *testing.T) {
 		},
 		{
 			&metav1.LabelSelector{},
-			[]interface{}{},
+			[]interface{}{map[string]interface{}{}},
 		},
 	}
 

@@ -11,6 +11,7 @@ import (
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	kubernetes "k8s.io/client-go/kubernetes"
 )
@@ -241,6 +242,23 @@ func resourceKubernetesPersistentVolumeDelete(d *schema.ResourceData, meta inter
 	name := d.Id()
 	log.Printf("[INFO] Deleting persistent volume: %#v", name)
 	err := conn.CoreV1().PersistentVolumes().Delete(name, &meta_v1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+
+	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+		out, err := conn.CoreV1().PersistentVolumes().Get(name, metav1.GetOptions{})
+		if err != nil {
+			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+				return nil
+			}
+			return resource.NonRetryableError(err)
+		}
+
+		log.Printf("[DEBUG] Current state of persistent volume: %#v", out.Status.Phase)
+		e := fmt.Errorf("Persistent volume %s still exists (%s)", name, out.Status.Phase)
+		return resource.RetryableError(e)
+	})
 	if err != nil {
 		return err
 	}

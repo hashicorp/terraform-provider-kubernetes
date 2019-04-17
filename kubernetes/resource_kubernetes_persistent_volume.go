@@ -248,7 +248,7 @@ func resourceKubernetesPersistentVolumeDelete(d *schema.ResourceData, meta inter
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		out, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
 		if err != nil {
-			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+			if errors.IsNotFound(err) {
 				return nil
 			}
 			return resource.NonRetryableError(err)
@@ -275,7 +275,7 @@ func resourceKubernetesPersistentVolumeExists(d *schema.ResourceData, meta inter
 	log.Printf("[INFO] Checking persistent volume %s", name)
 	_, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if errors.IsNotFound(err) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

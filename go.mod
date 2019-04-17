@@ -13,11 +13,10 @@ require (
 	github.com/gophercloud/gophercloud v0.0.0-20190221164956-3f3cc5a566b2 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
 	github.com/hashicorp/go-hclog v0.7.0 // indirect
-	github.com/hashicorp/go-uuid v1.0.1 // indirect
 	github.com/hashicorp/go-version v1.1.0
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/hil v0.0.0-20190212132231-97b3a9cdfa93 // indirect
-	github.com/hashicorp/terraform v0.12.0-alpha4.0.20190401213546-16778fea9219
+	github.com/hashicorp/terraform v0.12.0-alpha4.0.20190417210818-177a7afb781f
 	github.com/hashicorp/vault v1.0.3 // indirect
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/imdario/mergo v0.3.6 // indirect

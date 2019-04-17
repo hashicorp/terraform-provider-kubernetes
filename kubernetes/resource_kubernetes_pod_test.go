@@ -812,19 +812,19 @@ resource "kubernetes_pod" "test" {
       }
     }
 
-		dns_config {
-			nameservers = ["1.1.1.1", "8.8.8.8", "9.9.9.9"]
-			searches    = ["kubernetes.io"]
+    dns_config {
+      nameservers = ["1.1.1.1", "8.8.8.8", "9.9.9.9"]
+      searches    = ["kubernetes.io"]
 
-			option {
-				name  = "ndots"
-				value = 1
-			}
+      option {
+        name  = "ndots"
+        value = 1
+      }
 
-			option {
-				name = "use-vc"
-			}
-		}
+      option {
+        name = "use-vc"
+      }
+    }
 
     dns_policy = "Default"
 
@@ -1297,7 +1297,7 @@ resource "kubernetes_pod" "test" {
   spec {
     container {
       image = "%s"
-      args = %s
+      args  = %s
       name  = "containername"
     }
   }

@@ -362,7 +362,7 @@ resource "kubernetes_daemonset" "test" {
         TestLabelThree = "three"
       }
     }
-    
+
     template {
       metadata {
         labels {
@@ -371,7 +371,7 @@ resource "kubernetes_daemonset" "test" {
           TestLabelThree = "three"
         }
       }
-    
+
       spec {
         container {
           image = "nginx:1.7.9"

@@ -1122,8 +1122,8 @@ resource "kubernetes_deployment" "test" {
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
           command = ["sleep", "60"]
 
           lifecycle {
@@ -1197,7 +1197,7 @@ resource "kubernetes_deployment" "test" {
 
             capabilities {
               drop = ["all"]
-              add = ["NET_BIND_SERVICE"]
+              add  = ["NET_BIND_SERVICE"]
             }
 
             privileged                = true
@@ -1422,29 +1422,35 @@ func testAccKubernetesDeploymentConfigWithDeploymentStrategyRollingUpdate(rcName
 resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
+
     labels {
       Test = "TfAcceptanceTest"
     }
   }
+
   spec {
     selector {
       match_labels {
         Test = "TfAcceptanceTest"
       }
     }
+
     strategy {
       type = "RollingUpdate"
+
       rolling_update {
         max_surge       = "%s"
         max_unavailable = "%s"
       }
     }
+
     template {
       metadata {
         labels {
           Test = "TfAcceptanceTest"
         }
       }
+
       spec {
         container {
           image = "%s"
@@ -1465,15 +1471,19 @@ resource "kubernetes_deployment" "test" {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
+
     labels {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
+
     name = "%s"
   }
+
   spec {
-    replicas = 1 
+    replicas = 1
+
     selector {
       match_labels {
         TestLabelOne   = "one"
@@ -1481,6 +1491,7 @@ resource "kubernetes_deployment" "test" {
         TestLabelThree = "three"
       }
     }
+
     template {
       metadata {
         labels {
@@ -1489,10 +1500,12 @@ resource "kubernetes_deployment" "test" {
           TestLabelThree = "three"
         }
       }
+
       spec {
         container {
           image = "%s"
           name  = "tf-acc-test"
+
           resources {
             requests {
               memory = "64Mi"
@@ -1500,12 +1513,14 @@ resource "kubernetes_deployment" "test" {
             }
           }
         }
+
         host_aliases {
-          ip = "127.0.0.5"
-          hostnames = ["abc.com","contoso.com"]
+          ip        = "127.0.0.5"
+          hostnames = ["abc.com", "contoso.com"]
         }
+
         host_aliases {
-          ip = "127.0.0.6"
+          ip        = "127.0.0.6"
           hostnames = ["xyz.com"]
         }
       }

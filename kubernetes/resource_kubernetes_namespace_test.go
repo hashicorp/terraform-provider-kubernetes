@@ -111,24 +111,6 @@ func TestAccKubernetesNamespace_basic(t *testing.T) {
 	})
 }
 
-// Test disabled: this seems to no longer be an error in Terraform 0.12
-// TODO: Confirm with core team.
-//
-// func TestAccKubernetesNamespace_invalidLabelValueType(t *testing.T) {
-// 	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-// 	resource.Test(t, resource.TestCase{
-// 		PreCheck:     func() { testAccPreCheck(t) },
-// 		Providers:    testAccProviders,
-// 		CheckDestroy: testAccCheckKubernetesNamespaceDestroy,
-// 		Steps: []resource.TestStep{
-// 			{
-// 				Config:      testAccKubernetesNamespaceConfig_invalidLabelValueType(nsName),
-// 				ExpectError: regexp.MustCompile(".*Expected value to be string"),
-// 			},
-// 		},
-// 	})
-// }
-
 func TestAccKubernetesNamespace_importBasic(t *testing.T) {
 	resourceName := "kubernetes_namespace.test"
 	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -430,20 +412,3 @@ resource "kubernetes_namespace" "test" {
 }
 `, nsName)
 }
-
-// Test disabled: this seems to no longer be an error in Terraform 0.12
-// func testAccKubernetesNamespaceConfig_invalidLabelValueType(nsName string) string {
-// 	return fmt.Sprintf(`
-// resource "kubernetes_namespace" "test" {
-//   metadata {
-//     labels = {
-//       "first"   = "one"
-//       "integer" = 2
-//       "bool"    = true
-//     }
-
-//     name = "%s"
-//   }
-// }
-// `, nsName)
-// }

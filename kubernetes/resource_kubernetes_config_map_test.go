@@ -69,7 +69,7 @@ func TestAccKubernetesConfigMap_basic(t *testing.T) {
 					testAccCheckConfigMapData(&conf, map[string]string{"one": "first", "two": "second"}),
 				),
 			},
-			{ // TODO: broken
+			{
 				Config: testAccKubernetesConfigMapConfig_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesConfigMapExists("kubernetes_config_map.test", &conf),

@@ -100,14 +100,14 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Optional:    true,
 			ForceNew:    true,
 			Computed:    isComputed,
-			Description: "List of hosts and IPs that will be injected into the pod's hosts file if specified. Optional: Default to false.",
+			Description: "List of hosts and IPs that will be injected into the pod's hosts file if specified. Optional: Defaults to empty.",
 			Deprecated:  deprecatedMessage,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"hostnames": {
 						Type:        schema.TypeList,
 						Required:    true,
-						Description: "Hostnames for the above IP address.",
+						Description: "Hostnames for the IP address.",
 						Elem:        &schema.Schema{Type: schema.TypeString},
 					},
 					"ip": {
@@ -123,7 +123,7 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Optional:    true,
 			Computed:    isComputed,
 			Default:     defaultIfNotComputed(isComputed, false),
-			Description: "Use the host's ipc namespace. Optional: Default to false.",
+			Description: "Use the host's ipc namespace. Optional: Defaults to false.",
 			Deprecated:  deprecatedMessage,
 		},
 		"host_network": {

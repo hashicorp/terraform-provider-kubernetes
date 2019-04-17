@@ -25,3 +25,32 @@ func TestValidateModeBits(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateBase64Encoded(t *testing.T) {
+	validCases := []interface{}{
+		"",         // the plain empty string
+		"Cg==",     // the encoded empty string
+		"blah",     // "nV"
+		"VGVzdAo=", // "Test"
+		"f0VMRgIBAQAAAAAAAAAAAAMAPgABAAAAMGEAAAAAAABAAAAAAAAAAKATAgAAAAAAAAAAAEAAOAALAEAAHAAbAAYAAAAEAAAAQAAAAAAAAABAAAAAAAAAAEAAAAAAAAAAaAIAAA==", // `head /bin/ls -c 100 | base64`
+	}
+	for _, data := range validCases {
+		_, es := validateBase64Encoded(data, "binary_data")
+		if len(es) > 0 {
+			t.Fatalf("Expected %#o to be valid: %#v", data, es)
+		}
+	}
+
+	invalidCases := []interface{}{
+		nil,
+		"bl ah",
+		"blahd",
+		"C=",
+	}
+	for _, data := range invalidCases {
+		_, es := validateBase64Encoded(data, "binary_data")
+		if len(es) == 0 {
+			t.Fatalf("Expected %#o to be invalid", data)
+		}
+	}
+}

@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
@@ -24,6 +25,21 @@ func validateAnnotations(value interface{}, key string) (ws []string, es []error
 		if isInternalKey(k) {
 			es = append(es, fmt.Errorf("%s: %q is internal Kubernetes annotation", key, k))
 		}
+	}
+	return
+}
+
+func validateBase64Encoded(v interface{}, key string) (ws []string, es []error) {
+	s, ok := v.(string)
+	if !ok {
+		es = []error{fmt.Errorf("%s: must be a non-nil base64-encoded string", key)}
+		return
+	}
+
+	_, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		es = []error{fmt.Errorf("%s: must be a base64-encoded string", key)}
+		return
 	}
 	return
 }

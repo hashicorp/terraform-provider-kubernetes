@@ -7,9 +7,11 @@ IMPROVEMENTS:
 
 UPGRADE NOTES:
 
-* On volume blocks, the `mode` and `default_mode` attributes are now of type string
+* On volume source blocks, the `mode` and `default_mode` attributes are now of type string
   and will produce a diff on the first run with state comming from Terraform 0.11.x and lower.
-  Subsequent applies should behave as expected.
+  Also, `default_mode` now defaults to 0644 when not set, in accordance with Kubernetes API docs.
+  This will also produce a diff when applied against state from Terraform 0.11.x and lower
+  (where it was implicitly 0). Subsequent applies should behave as expected.
 
 ## 1.6.0 (April 17, 2019)
 

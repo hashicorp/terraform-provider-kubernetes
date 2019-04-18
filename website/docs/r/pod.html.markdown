@@ -627,7 +627,7 @@ The `items` block supports the following:
 
 ## Timeouts
 
-The following [Timeout](/docs/configuration/resources.html#timeouts) configuration options are available for the `kubernetes_pod` resource:
+The following [Timeout](/docs/configuration/resources.html#operation-timeouts) configuration options are available for the `kubernetes_pod` resource:
 
 * `create` - (Default `5 minutes`) Used for Creating Pods.
 * `delete` - (Default `5 minutes`) Used for Destroying Pods.

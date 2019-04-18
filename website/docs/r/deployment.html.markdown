@@ -671,7 +671,7 @@ The `items` block supports the following:
 
 ## Timeouts
 
-The following [Timeout](/docs/configuration/resources.html#timeouts) configuration options are available for the `kubernetes_deployment` resource:
+The following [Timeout](/docs/configuration/resources.html#operation-timeouts) configuration options are available for the `kubernetes_deployment` resource:
 
 * `create` - (Default `10 minutes`) Used for creating new controller
 * `update` - (Default `10 minutes`) Used for updating a controller

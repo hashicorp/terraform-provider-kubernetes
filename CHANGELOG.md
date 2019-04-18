@@ -1,4 +1,9 @@
 ## 1.6.2 (Unreleased)
+
+BUG FIXES:
+
+* Fix to release metadata to register the privider as compatible with Terraform 0.12.
+
 ## 1.6.1 (April 18, 2019)
 
 IMPROVEMENTS:

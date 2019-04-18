@@ -1,4 +1,15 @@
 ## 1.6.1 (Unreleased)
+
+IMPROVEMENTS:
+
+* Updated the Terraform SDK to support the upcoming Terraform version 0.12.
+
+UPGRADE NOTES:
+
+* On volume blocks, the `mode` and `default_mode` attributes are now of type string
+  and will produce a diff on the first run with state comming from Terraform 0.11.x and lower.
+  Subsequent applies should behave as expected.
+
 ## 1.6.0 (April 17, 2019)
 
 FEATURES:

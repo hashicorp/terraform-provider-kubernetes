@@ -65,6 +65,11 @@ func resourceKubernetesService() *schema.Resource {
 							Elem:        &schema.Schema{Type: schema.TypeString},
 							Set:         schema.HashString,
 						},
+						"external_traffic_policy": {
+							Type:        schema.TypeString,
+							Description: "Only applies to `type = NodePort` or `type = LoadBalancer`. Defines the policy for external traffic. Can be Cluster (default) or Local. Local adds proxy rules only for pods that exist on the same node.",
+							Optional:    true,
+						},
 						"port": {
 							Type:        schema.TypeList,
 							Description: "The list of ports that are exposed by this service. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",

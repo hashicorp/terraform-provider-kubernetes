@@ -253,6 +253,64 @@ func TestAccKubernetesService_nodePort(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesService_nodePortTrafficPolicy(t *testing.T) {
+	var conf api.Service
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_service.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesServiceDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesServiceConfig_nodePortTrafficPolicy(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceExists("kubernetes_service.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.#", "1"),
+					resource.TestCheckResourceAttrSet("kubernetes_service.test", "spec.0.cluster_ip"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_ips.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_ips.1452553500", "10.0.0.4"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_ips.563283338", "10.0.0.5"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_name", "ext-name-"+name),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_ip", "12.0.0.125"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_traffic_policy", "Local"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.name", "first"),
+					resource.TestCheckResourceAttrSet("kubernetes_service.test", "spec.0.port.0.node_port"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.port", "10222"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.protocol", "TCP"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.target_port", "22"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.1.name", "second"),
+					resource.TestCheckResourceAttrSet("kubernetes_service.test", "spec.0.port.1.node_port"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.1.port", "10333"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.1.protocol", "TCP"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.1.target_port", "33"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.App", "MyApp"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.session_affinity", "ClientIP"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.type", "NodePort"),
+					testAccCheckServicePorts(&conf, []api.ServicePort{
+						{
+							Name:       "first",
+							Port:       int32(10222),
+							Protocol:   api.ProtocolTCP,
+							TargetPort: intstr.FromInt(22),
+						},
+						{
+							Name:       "second",
+							Port:       int32(10333),
+							Protocol:   api.ProtocolTCP,
+							TargetPort: intstr.FromInt(33),
+						},
+					}),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesService_noTargetPort(t *testing.T) {
 	var conf api.Service
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -621,6 +679,43 @@ resource "kubernetes_service" "test" {
     }
 
     type = "LoadBalancer"
+  }
+}
+`, name, name)
+}
+
+func testAccKubernetesServiceConfig_nodePortTrafficPolicy(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    external_name           = "ext-name-%s"
+    external_ips            = ["10.0.0.4", "10.0.0.5"]
+		load_balancer_ip        = "12.0.0.125"
+		external_traffic_policy = "Local"
+
+    selector {
+      App = "MyApp"
+    }
+
+    session_affinity = "ClientIP"
+
+    port {
+      name        = "first"
+      port        = 10222
+      target_port = 22
+    }
+
+    port {
+      name        = "second"
+      port        = 10333
+      target_port = 33
+    }
+
+    type = "NodePort"
   }
 }
 `, name, name)

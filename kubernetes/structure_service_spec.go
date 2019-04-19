@@ -36,6 +36,9 @@ func flattenServiceSpec(in v1.ServiceSpec) []interface{} {
 	if in.ClusterIP != "" {
 		att["cluster_ip"] = in.ClusterIP
 	}
+	if in.ExternalTrafficPolicy != "" {
+		att["external_traffic_policy"] = in.ExternalTrafficPolicy
+	}
 	if in.Type != "" {
 		att["type"] = string(in.Type)
 	}
@@ -126,6 +129,9 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 	if v, ok := in["load_balancer_ip"].(string); ok {
 		obj.LoadBalancerIP = v
 	}
+	if v, ok := in["external_traffic_policy"].(string); ok {
+		obj.ExternalTrafficPolicy = v1.ServiceExternalTrafficPolicyType(v)
+	}
 	if v, ok := in["load_balancer_source_ranges"].(*schema.Set); ok && v.Len() > 0 {
 		obj.LoadBalancerSourceRanges = sliceOfString(v.List())
 	}
@@ -165,6 +171,12 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "loadBalancerIP",
 			Value: d.Get(keyPrefix + "load_balancer_ip").(string),
+		})
+	}
+	if d.HasChange(keyPrefix + "external_traffic_policy") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "externalTrafficPolicy",
+			Value: d.Get(keyPrefix + "external_traffic_policy").(string),
 		})
 	}
 	if d.HasChange(keyPrefix + "load_balancer_source_ranges") {

@@ -18,7 +18,7 @@ func resourceKubernetesJob() *schema.Resource {
 	s := &schema.Resource{
 		Create: resourceKubernetesJobCreate,
 		Read:   resourceKubernetesJobRead,
-		// Update: resourceKubernetesJobUpdate,
+		Update: resourceKubernetesJobUpdate,
 		Delete: resourceKubernetesJobDelete,
 		Exists: resourceKubernetesJobExists,
 		Importer: &schema.ResourceImporter{
@@ -30,7 +30,6 @@ func resourceKubernetesJob() *schema.Resource {
 				Type:        schema.TypeList,
 				Description: "Spec of the job owned by the cluster",
 				Required:    true,
-				ForceNew:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: jobSpecFields(),
@@ -106,7 +105,6 @@ func resourceKubernetesJobUpdate(d *schema.ResourceData, meta interface{}) error
 	// if err != nil {
 	// 	return err
 	// }
-	// spec.Template.ObjectMeta.Annotations = metadata.Annotations
 
 	// job := batchv1.Job{
 	// 	ObjectMeta: metadata,

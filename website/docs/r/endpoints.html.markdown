@@ -71,13 +71,13 @@ resource "kubernetes_service" "example" {
 
   spec {
     port {
-      port       = 8080
-      targetPort = 80
+      port        = 8080
+      target_port = 80
     }
 
     port {
-      port       = 8443
-      targetPort = 443
+      port        = 8443
+      target_port = 443
     }
   }
 }

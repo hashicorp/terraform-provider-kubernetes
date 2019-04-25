@@ -26,6 +26,10 @@ resource "kubernetes_config_map" "example" {
   data {
     my_config_file.yml = "${file("${path.module}/my_config_file.yml")}"
   }
+
+  binary_data {
+    my_payload.bin = "${filebase64("${path.module}/my_payload.bin")}"
+  }
 }
 ```
 
@@ -33,7 +37,7 @@ resource "kubernetes_config_map" "example" {
 
 The following arguments are supported:
 
-* `binary_data` - (Optional) BinaryData contains the binary data. Each key must consist of alphanumeric characters, '-', '_' or '.'. BinaryData can contain byte sequences that are not in the UTF-8 range. The keys stored in BinaryData must not overlap with the ones in the Data field, this is enforced during validation process. Using this field will require 1.10+ apiserver and kubelet.
+* `binary_data` - (Optional) BinaryData contains the binary data. Each key must consist of alphanumeric characters, '-', '_' or '.'. BinaryData can contain byte sequences that are not in the UTF-8 range. The keys stored in BinaryData must not overlap with the ones in the Data field, this is enforced during validation process. Using this field will require 1.10+ apiserver and kubelet. This field only accepts base64-encoded payloads that will be decoded/received before being sent/received to the apiserver.
 * `data` - (Optional) Data contains the configuration data. Each key must consist of alphanumeric characters, '-', '_' or '.'. Values with non-UTF-8 byte sequences must use the BinaryData field. The keys stored in Data must not overlap with the keys in the BinaryData field, this is enforced during validation process.
 * `metadata` - (Required) Standard config map's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#metadata)
 

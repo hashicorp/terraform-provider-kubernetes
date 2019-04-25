@@ -27,7 +27,7 @@ func resourceKubernetesConfigMap() *schema.Resource {
 			"metadata": namespacedMetadataSchema("config map", true),
 			"binary_data": {
 				Type:         schema.TypeMap,
-				Description:  "BinaryData contains the binary data. Each key must consist of alphanumeric characters, '-', '_' or '.'. BinaryData can contain byte sequences that are not in the UTF-8 range. The keys stored in BinaryData must not overlap with the ones in the Data field, this is enforced during validation process. Using this field will require 1.10+ apiserver and kubelet.",
+				Description:  "BinaryData contains the binary data. Each key must consist of alphanumeric characters, '-', '_' or '.'. BinaryData can contain byte sequences that are not in the UTF-8 range. The keys stored in BinaryData must not overlap with the ones in the Data field, this is enforced during validation process. Using this field will require 1.10+ apiserver and kubelet. This field only accepts base64-encoded payloads that will be decoded/encoded before being sent/received to/from the apiserver.",
 				Optional:     true,
 				ValidateFunc: validateBase64EncodedMap,
 			},
@@ -46,7 +46,7 @@ func resourceKubernetesConfigMapCreate(d *schema.ResourceData, meta interface{})
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	cfgMap := api.ConfigMap{
 		ObjectMeta: metadata,
-		BinaryData: expandStringMapToByteMap(d.Get("binary_data").(map[string]interface{})),
+		BinaryData: expandBase64MapToByteMap(d.Get("binary_data").(map[string]interface{})),
 		Data:       expandStringMap(d.Get("data").(map[string]interface{})),
 	}
 	log.Printf("[INFO] Creating new config map: %#v", cfgMap)
@@ -79,7 +79,7 @@ func resourceKubernetesConfigMapRead(d *schema.ResourceData, meta interface{}) e
 		return err
 	}
 
-	d.Set("binary_data", byteMapToStringMap(cfgMap.BinaryData))
+	d.Set("binary_data", byteMapToBase64Map(cfgMap.BinaryData))
 	d.Set("data", cfgMap.Data)
 
 	return nil
@@ -96,10 +96,6 @@ func resourceKubernetesConfigMapUpdate(d *schema.ResourceData, meta interface{})
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("binary_data") {
 		oldV, newV := d.GetChange("binary_data")
-
-		oldV = base64EncodeStringMap(oldV.(map[string]interface{}))
-		newV = base64EncodeStringMap(newV.(map[string]interface{}))
-
 		diffOps := diffStringMap("/binaryData/", oldV.(map[string]interface{}), newV.(map[string]interface{}))
 		ops = append(ops, diffOps...)
 	}

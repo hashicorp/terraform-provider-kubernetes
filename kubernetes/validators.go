@@ -44,6 +44,23 @@ func validateBase64Encoded(v interface{}, key string) (ws []string, es []error) 
 	return
 }
 
+func validateBase64EncodedMap(value interface{}, key string) (ws []string, es []error) {
+	m, ok := value.(map[string]interface{})
+	if !ok {
+		es = []error{fmt.Errorf("%s: must be a map of strings to base64 encoded strings", key)}
+		return
+	}
+
+	for k, v := range m {
+		_, errs := validateBase64Encoded(v, k)
+		for _, e := range errs {
+			es = append(es, fmt.Errorf("%s (%q) %s", k, v, e))
+		}
+	}
+
+	return
+}
+
 func validateName(value interface{}, key string) (ws []string, es []error) {
 	v := value.(string)
 	errors := apiValidation.NameIsDNSSubdomain(v, false)

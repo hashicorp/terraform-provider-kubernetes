@@ -160,7 +160,8 @@ func TestAccKubernetesConfigMap_binaryData(t *testing.T) {
 				Config: testAccKubernetesConfigMapConfig_binaryData2(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesConfigMapExists("kubernetes_config_map.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "binary_data.%", "2"),
+					resource.TestCheckResourceAttr("kubernetes_config_map.test", "binary_data.%", "3"),
+					resource.TestCheckResourceAttr("kubernetes_config_map.test", "binary_data.raw", "UmF3IGRhdGEgc2hvdWxkIGNvbWUgYmFjayBhcyBpcyBpbiB0aGUgcG9k"),
 					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.three", "third"),
 				),
@@ -405,7 +406,8 @@ resource "kubernetes_config_map" "test" {
 
   binary_data = {
     one = "${filebase64("./test-fixtures/binary2.data")}"
-    two = "${filebase64("./test-fixtures/binary.data")}"
+		two = "${filebase64("./test-fixtures/binary.data")}"
+		raw = "${base64encode("Raw data should come back as is in the pod")}"
   }
 
   data = {

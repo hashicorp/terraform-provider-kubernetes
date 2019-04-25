@@ -129,7 +129,7 @@ Please see the [Pod resource](pod.html#spec-1) for reference.
 
 ## Timeouts
 
-The following [Timeout](/docs/configuration/resources.html#timeouts) configuration options are available:
+The following [Timeout](/docs/configuration/resources.html#operation-timeouts) configuration options are available:
 
 - `create` - (Default `10 minutes`) Used for creating new controller
 - `update` - (Default `10 minutes`) Used for updating a controller

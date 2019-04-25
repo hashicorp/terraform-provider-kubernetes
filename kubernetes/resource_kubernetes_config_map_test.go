@@ -385,11 +385,11 @@ resource "kubernetes_config_map" "test" {
     generate_name = "%s"
   }
 
-  binary_data {
-    one = "${file("./test-fixtures/binary.data")}"
+  binary_data = {
+    one = "${filebase64("./test-fixtures/binary.data")}"
   }
 
-  data {
+  data = {
     two = "second"
   }
 }
@@ -403,12 +403,12 @@ resource "kubernetes_config_map" "test" {
     generate_name = "%s"
   }
 
-  binary_data {
-    one = "${file("./test-fixtures/binary2.data")}"
-    two = "${file("./test-fixtures/binary.data")}"
+  binary_data = {
+    one = "${filebase64("./test-fixtures/binary2.data")}"
+    two = "${filebase64("./test-fixtures/binary.data")}"
   }
 
-  data {
+  data = {
     three = "third"
   }
 }

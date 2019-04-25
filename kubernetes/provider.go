@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/mitchellh/go-homedir"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
 	kubernetes "k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -190,12 +191,14 @@ func Provider() terraform.ResourceProvider {
 type KubeClientsets interface {
 	MainClientset() (*kubernetes.Clientset, error)
 	AggregatorClientset() (*aggregator.Clientset, error)
+	ApiextensionsClientset() (*apiextensions.Clientset, error)
 }
 
 type kubeClientsets struct {
-	config              *rest.Config
-	mainClientset       *kubernetes.Clientset
-	aggregatorClientset *aggregator.Clientset
+	config                 *rest.Config
+	mainClientset          *kubernetes.Clientset
+	aggregatorClientset    *aggregator.Clientset
+	apiextensionsClientset *apiextensions.Clientset
 }
 
 func (k kubeClientsets) MainClientset() (*kubernetes.Clientset, error) {
@@ -226,6 +229,21 @@ func (k kubeClientsets) AggregatorClientset() (*aggregator.Clientset, error) {
 	return k.aggregatorClientset, nil
 }
 
+func (k kubeClientsets) ApiextensionsClientset() (*apiextensions.Clientset, error) {
+
+	if k.apiextensionsClientset != nil {
+		return k.apiextensionsClientset, nil
+	}
+	if k.config != nil {
+		ak, err := apiextensions.NewForConfig(k.config)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to configure client: %s", err)
+		}
+		k.apiextensionsClientset = ak
+	}
+	return k.apiextensionsClientset, nil
+}
+
 func providerConfigure(d *schema.ResourceData, terraformVersion string) (interface{}, error) {
 
 	// Config initialization
@@ -251,9 +269,10 @@ func providerConfigure(d *schema.ResourceData, terraformVersion string) (interfa
 	}
 
 	m := kubeClientsets{
-		config:              cfg,
-		mainClientset:       nil,
-		aggregatorClientset: nil,
+		config:                 cfg,
+		mainClientset:          nil,
+		aggregatorClientset:    nil,
+		apiextensionsClientset: nil,
 	}
 	return m, nil
 }

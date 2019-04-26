@@ -24,6 +24,11 @@ func dataSourceKubernetesStorageClass() *schema.Resource {
 				Description: "Indicates the type of the reclaim policy",
 				Computed:    true,
 			},
+			"allow_volume_expansion": {
+				Type:        schema.TypeBool,
+				Description: "Indicates whether the storage class allow volume expand",
+				Computed:    true,
+			},
 		},
 	}
 }

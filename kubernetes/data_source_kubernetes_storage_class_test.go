@@ -31,6 +31,7 @@ func TestAccKubernetesDataSourceStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("data.kubernetes_storage_class.test", "metadata.0.labels.TestLabelThree", "three"),
 					resource.TestCheckResourceAttr("data.kubernetes_storage_class.test", "reclaim_policy", "Delete"),
 					resource.TestCheckResourceAttr("data.kubernetes_storage_class.test", "storage_provisioner", "kubernetes.io/gce-pd"),
+					resource.TestCheckResourceAttr("data.kubernetes_storage_class.test", "allow_volume_expansion", "true"),
 					resource.TestCheckResourceAttr("data.kubernetes_storage_class.test", "parameters.%", "1"),
 					resource.TestCheckResourceAttr("data.kubernetes_storage_class.test", "parameters.type", "pd-ssd"),
 				),

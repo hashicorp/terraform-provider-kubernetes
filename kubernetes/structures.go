@@ -77,6 +77,17 @@ func expandStringMap(m map[string]interface{}) map[string]string {
 	return result
 }
 
+func expandBase64MapToByteMap(m map[string]interface{}) map[string][]byte {
+	result := make(map[string][]byte)
+	for k, v := range m {
+		b, err := base64.StdEncoding.DecodeString(v.(string))
+		if err == nil {
+			result[k] = b
+		}
+	}
+	return result
+}
+
 func expandStringMapToByteMap(m map[string]interface{}) map[string][]byte {
 	result := make(map[string][]byte)
 	for k, v := range m {
@@ -141,7 +152,15 @@ func isInternalKey(annotationKey string) bool {
 	return false
 }
 
-func byteMapToStringMap(m map[string][]byte) map[string]string {
+func flattenByteMapToBase64Map(m map[string][]byte) map[string]string {
+	result := make(map[string]string)
+	for k, v := range m {
+		result[k] = base64.StdEncoding.EncodeToString([]byte(v))
+	}
+	return result
+}
+
+func flattenByteMapToStringMap(m map[string][]byte) map[string]string {
 	result := make(map[string]string)
 	for k, v := range m {
 		result[k] = string(v)

@@ -405,8 +405,8 @@ resource "kubernetes_config_map" "test" {
   }
 
   binary_data = {
-    one = "${filebase64("./test-fixtures/binary2.data")}"
-    two = "${filebase64("./test-fixtures/binary.data")}"
+    one = "${filebase64("./test-fixtures/binary.data")}"
+    two = "${filebase64("./test-fixtures/binary2.data")}"
     raw = "${base64encode("Raw data should come back as is in the pod")}"
   }
 

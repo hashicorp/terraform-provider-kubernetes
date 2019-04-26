@@ -152,7 +152,7 @@ func isInternalKey(annotationKey string) bool {
 	return false
 }
 
-func byteMapToBase64Map(m map[string][]byte) map[string]string {
+func flattenByteMapToBase64Map(m map[string][]byte) map[string]string {
 	result := make(map[string]string)
 	for k, v := range m {
 		result[k] = base64.StdEncoding.EncodeToString([]byte(v))
@@ -160,7 +160,7 @@ func byteMapToBase64Map(m map[string][]byte) map[string]string {
 	return result
 }
 
-func byteMapToStringMap(m map[string][]byte) map[string]string {
+func flattenByteMapToStringMap(m map[string][]byte) map[string]string {
 	result := make(map[string]string)
 	for k, v := range m {
 		result[k] = string(v)

@@ -270,7 +270,7 @@ func testAccCheckSecretData(m *api.Secret, expected map[string]string) resource.
 		if len(expected) == 0 && len(m.Data) == 0 {
 			return nil
 		}
-		if !reflect.DeepEqual(byteMapToStringMap(m.Data), expected) {
+		if !reflect.DeepEqual(flattenByteMapToStringMap(m.Data), expected) {
 			return fmt.Errorf("%s data don't match.\nExpected: %q\nGiven: %q",
 				m.Name, expected, m.Data)
 		}

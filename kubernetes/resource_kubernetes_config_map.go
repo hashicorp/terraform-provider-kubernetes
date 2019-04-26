@@ -79,7 +79,7 @@ func resourceKubernetesConfigMapRead(d *schema.ResourceData, meta interface{}) e
 		return err
 	}
 
-	d.Set("binary_data", byteMapToBase64Map(cfgMap.BinaryData))
+	d.Set("binary_data", flattenByteMapToBase64Map(cfgMap.BinaryData))
 	d.Set("data", cfgMap.Data)
 
 	return nil

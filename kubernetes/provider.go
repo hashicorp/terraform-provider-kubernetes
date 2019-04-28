@@ -230,9 +230,10 @@ func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
 	if err != nil {
 		if pathErr, ok := err.(*os.PathError); ok && os.IsNotExist(pathErr.Err) {
 			log.Printf("[INFO] Unable to load config file as it doesn't exist at %q", path)
-			return nil, nil
+			return &restclient.Config{}, nil
 		}
-		return nil, fmt.Errorf("Failed to load config (%s%s): %s", path, ctxSuffix, err)
+		log.Printf("[INFO] Failed to load config (%s%s): %s", path, ctxSuffix, err)
+		return &restclient.Config{}, nil
 	}
 
 	log.Printf("[INFO] Successfully loaded config file (%s%s)", path, ctxSuffix)

@@ -195,27 +195,56 @@ func TestAccKubernetesDeployment_with_security_context(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesDeployment_with_security_context_run_as_group(t *testing.T) {
+func TestAccKubernetesDeployment_with_tolerations(t *testing.T) {
 	var conf api.Deployment
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := "redis:5.0.2"
+	tolerationSeconds := 6000
+	operator := "Exists"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
+		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,
 		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDeploymentConfigWithSecurityContextRunAsGroup(rcName, imageName),
+				Config: testAccKubernetesDeploymentConfigWithTolerations(rcName, imageName, &tolerationSeconds, operator, nil),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
-					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.fs_group", "100"),
-					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.run_as_group", "100"),
-					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.run_as_non_root", "true"),
-					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.run_as_user", "101"),
-					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.supplemental_groups.#", "1"),
-					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.supplemental_groups.988695518", "101"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.toleration.0.effect", "NoExecute"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.toleration.0.key", "myKey"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.toleration.0.operator", operator),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.toleration.0.toleration_seconds", "6000"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.toleration.0.value", ""),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDeployment_with_tolerationsUnsetTolerationSeconds(t *testing.T) {
+	var conf api.Deployment
+
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "redis:5.0.2"
+	operator := "Equal"
+	value := "value"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentConfigWithTolerations(rcName, imageName, nil, operator, &value),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.toleration.0.effect", "NoExecute"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.toleration.0.key", "myKey"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.toleration.0.operator", operator),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.toleration.0.value", "value"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.toleration.0.toleration_seconds", "0"),
 				),
 			},
 		},
@@ -1058,6 +1087,58 @@ resource "kubernetes_deployment" "test" {
   }
 }
 `, rcName, imageName)
+}
+
+func testAccKubernetesDeploymentConfigWithTolerations(rcName, imageName string, tolerationSeconds *int, operator string, value *string) string {
+	tolerationDuration := ""
+	if tolerationSeconds != nil {
+		tolerationDuration = fmt.Sprintf("\ntoleration_seconds = %d\n", *tolerationSeconds)
+	}
+	valueString := ""
+	if value != nil {
+		valueString = fmt.Sprintf("\nvalue = \"%s\"\n", *value)
+	}
+
+	return fmt.Sprintf(`
+resource "kubernetes_deployment" "test" {
+  metadata {
+    name = "%s"
+
+    labels {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        toleration {
+          effect             = "NoExecute"
+          key                = "myKey"%s%s
+          operator           = "%s"
+        }
+
+        container {
+          image = "%s"
+          name  = "containername"
+        }
+      }
+    }
+  }
+}
+`, rcName, tolerationDuration, valueString, operator, imageName)
 }
 
 func testAccKubernetesDeploymentConfigWithLivenessProbeUsingExec(rcName, imageName string) string {

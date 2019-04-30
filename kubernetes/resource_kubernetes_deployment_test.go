@@ -195,6 +195,33 @@ func TestAccKubernetesDeployment_with_security_context(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDeployment_with_security_context_run_as_group(t *testing.T) {
+	var conf api.Deployment
+
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "redis:5.0.2"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentConfigWithSecurityContextRunAsGroup(rcName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.fs_group", "100"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.run_as_group", "100"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.run_as_non_root", "true"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.run_as_user", "101"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.supplemental_groups.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.security_context.0.supplemental_groups.988695518", "101"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesDeployment_with_container_liveness_probe_using_exec(t *testing.T) {
 	var conf api.Deployment
 
@@ -350,6 +377,46 @@ func TestAccKubernetesDeployment_with_container_security_context(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDeployment_with_container_security_context_run_as_group(t *testing.T) {
+	var conf api.Deployment
+
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "redis:5.0.2"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentConfigWithContainerSecurityContextRunAsGroup(rcName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.#", "2"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.security_context.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.security_context.0.capabilities.#", "0"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.security_context.0.privileged", "true"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.security_context.0.se_linux_options.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.security_context.0.se_linux_options.0.level", "s0:c123,c456"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.allow_privilege_escalation", "true"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.capabilities.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.capabilities.0.add.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.capabilities.0.add.0", "NET_BIND_SERVICE"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.capabilities.0.drop.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.capabilities.0.drop.0", "all"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.privileged", "true"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.read_only_root_filesystem", "true"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.run_as_group", "200"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.run_as_non_root", "true"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.run_as_user", "201"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.se_linux_options.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.1.security_context.0.se_linux_options.0.level", "s0:c123,c789"),
+				),
+			},
+		},
+	})
+}
 func TestAccKubernetesDeployment_with_volume_mount(t *testing.T) {
 	var conf api.Deployment
 
@@ -948,6 +1015,51 @@ resource "kubernetes_deployment" "test" {
 `, rcName, imageName)
 }
 
+func testAccKubernetesDeploymentConfigWithSecurityContextRunAsGroup(rcName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_deployment" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        security_context {
+          fs_group            = 100
+          run_as_group        = 100
+          run_as_non_root     = true
+          run_as_user         = 101
+          supplemental_groups = [101]
+        }
+
+        container {
+          image = "%s"
+          name  = "containername"
+        }
+      }
+    }
+  }
+}
+`, rcName, imageName)
+}
+
 func testAccKubernetesDeploymentConfigWithLivenessProbeUsingExec(rcName, imageName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_deployment" "test" {
@@ -1202,6 +1314,77 @@ resource "kubernetes_deployment" "test" {
 
             privileged                = true
             read_only_root_filesystem = true
+            run_as_non_root           = true
+            run_as_user               = 201
+
+            se_linux_options {
+              level = "s0:c123,c789"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, rcName, imageName)
+}
+
+func testAccKubernetesDeploymentConfigWithContainerSecurityContextRunAsGroup(rcName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_deployment" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+
+          security_context {
+            privileged  = true
+            run_as_user = 1
+
+            se_linux_options {
+              level = "s0:c123,c456"
+            }
+          }
+        }
+
+        container {
+          image = "gcr.io/google_containers/liveness"
+          name  = "containername2"
+          args  = ["/server"]
+
+          security_context {
+            allow_privilege_escalation = true
+
+            capabilities {
+              drop = ["all"]
+              add  = ["NET_BIND_SERVICE"]
+            }
+
+            privileged                = true
+            read_only_root_filesystem = true
+            run_as_group              = 200
             run_as_non_root           = true
             run_as_user               = 201
 

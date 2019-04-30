@@ -215,6 +215,33 @@ func TestAccKubernetesReplicationController_with_security_context(t *testing.T) 
 	})
 }
 
+func TestAccKubernetesReplicationController_with_security_context_run_as_group(t *testing.T) {
+	var conf api.ReplicationController
+
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesReplicationControllerDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesReplicationControllerConfigWithSecurityContextRunAsGroup(rcName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.fs_group", "100"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.run_as_group", "100"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.run_as_non_root", "true"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.run_as_user", "101"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.supplemental_groups.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.spec.0.security_context.0.supplemental_groups.988695518", "101"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesReplicationController_with_container_liveness_probe_using_exec(t *testing.T) {
 	var conf api.ReplicationController
 
@@ -739,6 +766,49 @@ resource "kubernetes_replication_controller" "test" {
       spec {
         security_context {
           fs_group            = 100
+          run_as_non_root     = true
+          run_as_user         = 101
+          supplemental_groups = [101]
+        }
+
+        container {
+          image = "%s"
+          name  = "containername"
+        }
+      }
+    }
+  }
+}
+`, rcName, imageName)
+}
+
+func testAccKubernetesReplicationControllerConfigWithSecurityContextRunAsGroup(rcName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_replication_controller" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector = {
+      Test = "TfAcceptanceTest"
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        security_context {
+          fs_group            = 100
+          run_as_group        = 100
           run_as_non_root     = true
           run_as_user         = 101
           supplemental_groups = [101]

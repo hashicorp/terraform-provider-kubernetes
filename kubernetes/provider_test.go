@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	gversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform/config"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
@@ -221,6 +222,28 @@ func skipIfNotRunningInGke(t *testing.T) {
 	}
 	if !isInGke {
 		t.Skip("The Kubernetes endpoint must come from GKE for this test to run - skipping")
+	}
+}
+
+func skipIfUnsupportedSecurityContextRunAsGroup(t *testing.T) {
+	meta := testAccProvider.Meta()
+	if meta == nil {
+		t.Fatal("Provider not initialized, unable to check cluster capabilities")
+	}
+	conn := meta.(*kubernetes.Clientset)
+	serverVersion, err := conn.ServerVersion()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	k8sVersion, err := gversion.NewVersion(serverVersion.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	v1_14_0, _ := gversion.NewVersion("1.14.0")
+	if k8sVersion.LessThan(v1_14_0) {
+		t.Skip("The Kubernetes version must be 1.14.0 or newer for this test to run - skipping")
 	}
 }
 

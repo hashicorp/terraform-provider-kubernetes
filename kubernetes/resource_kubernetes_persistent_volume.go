@@ -134,6 +134,13 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 								},
 							},
 						},
+						"mount_options": {
+							Type:        schema.TypeSet,
+							Description: "A list of mount options, e.g. [\"ro\", \"soft\"]. Not validated - mount will simply fail if one is invalid.",
+							Optional:    true,
+							Elem:        &schema.Schema{Type: schema.TypeString},
+							Set:         schema.HashString,
+						},
 					},
 				},
 			},

@@ -562,6 +562,29 @@ func TestAccKubernetesPersistentVolume_hostPath_nodeAffinity(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPersistentVolume_hostPath_mountOptions(t *testing.T) {
+	var conf api.PersistentVolume
+	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	name := fmt.Sprintf("tf-acc-test-%s", randString)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_persistent_volume.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_mountOptions(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.mount_options.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.mount_options.0", "rw"),
+				),
+			},
+		},
+	})
+}
+
 func waitForPersistenceVolumeDeleted(pvName string, poll, timeout time.Duration) error {
 	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(poll) {
@@ -1031,4 +1054,25 @@ func testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity_match(name, s
 
 func testAccKubernetesPersistentVolumeConfig_hostPath_withoutNodeAffinity(name string) string {
 	return testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity(name, "")
+}
+
+func testAccKubernetesPersistentVolumeConfig_hostPath_mountOptions(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_persistent_volume" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    capacity = {
+      storage = "1Gi"
+    }
+    access_modes = ["ReadWriteMany"]
+    mount_options = ["rw"]
+    persistent_volume_source {
+      host_path {
+        path = "/mnt/local-volume"
+      }
+    }
+  }
+}`, name)
 }

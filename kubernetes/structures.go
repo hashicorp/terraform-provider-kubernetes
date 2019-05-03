@@ -576,3 +576,19 @@ func expandNodeSelectorTerm(l []interface{}) api.NodeSelectorTerm {
 	}
 	return obj
 }
+
+func flattenPersistentVolumeMountOptions(in []string) *schema.Set {
+	var out = make([]interface{}, len(in), len(in))
+	for i, v := range in {
+		out[i] = string(v)
+	}
+	return schema.NewSet(schema.HashString, out)
+}
+
+func expandPersistentVolumeMountOptions(s []interface{}) []string {
+	out := make([]string, len(s), len(s))
+	for i, v := range s {
+		out[i] = v.(string)
+	}
+	return out
+}

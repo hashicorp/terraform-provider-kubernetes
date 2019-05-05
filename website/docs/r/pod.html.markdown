@@ -336,6 +336,7 @@ The `option` block supports the following:
 #### Arguments
 
 * `path` - (Optional) Path of the directory on the host. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#hostpath)
+* `type` - (Optional) Type for HostPath Volume. Defaults to "". For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#hostpath)
 
 ### `http_get`
 

@@ -255,7 +255,7 @@ func testAccKubernetesPodConfigWithNodeAffinityWithPreferredDuringSchedulingIgno
 	return fmt.Sprintf(`
 	resource "kubernetes_pod" "test" {
 		metadata {
-			labels {
+			labels = {
 				app = "pod_label"
 			}
 			name = "%s"
@@ -293,7 +293,7 @@ func testAccKubernetesPodConfigWithPodAffinityWithRequiredDuringSchedulingIgnore
 	return fmt.Sprintf(`
 	resource "kubernetes_pod" "test" {
 		metadata {
-			labels {
+			labels = {
 				app = "pod_label"
 			}
 			name = "%s"
@@ -326,7 +326,7 @@ func testAccKubernetesPodConfigWithPodAffinityWithPreferredDuringSchedulingIgnor
 	return fmt.Sprintf(`
 	resource "kubernetes_pod" "test" {
 		metadata {
-			labels {
+			labels = {
 				app = "pod_label"
 			}
 			name = "%s"
@@ -363,7 +363,7 @@ func testAccKubernetesPodConfigWithPodAntiAffinityWithRequiredDuringSchedulingIg
 	return fmt.Sprintf(`
 	resource "kubernetes_pod" "test" {
 		metadata {
-			labels {
+			labels = {
 				app = "pod_label"
 			}
 			name = "%s"
@@ -396,7 +396,7 @@ func testAccKubernetesPodConfigWithPodAntiAffinityWithPreferredDuringSchedulingI
 	return fmt.Sprintf(`
 	resource "kubernetes_pod" "test" {
 		metadata {
-			labels {
+			labels = {
 				app = "pod_label"
 			}
 			name = "%s"

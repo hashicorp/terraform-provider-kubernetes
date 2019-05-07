@@ -195,6 +195,14 @@ The following arguments are supported:
 * `termination_grace_period_seconds` - (Optional) Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request. Value must be non-negative integer. The value zero indicates delete immediately. If this value is nil, the default grace period will be used instead. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Set this value longer than the expected cleanup time for your process.
 * `volume` - (Optional) List of volumes that can be mounted by containers belonging to the pod. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes)
 
+### `affinity`
+
+#### Arguments
+
+* `node_affinity` - (Optional) Node affinity scheduling rules for the pod. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#node-affinity-beta-feature)
+* `pod_affinity` - (Optional) Inter-pod topological affinity. rules that specify that certain pods should be placed in the same topological domain (e.g. same node, same rack, same zone, same power domain, etc.) For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#inter-pod-affinity-and-anti-affinity-beta-feature)
+* `pod_anti_affinity` - (Optional) Inter-pod topological affinity. rules that specify that certain pods should be placed in the same topological domain (e.g. same node, same rack, same zone, same power domain, etc.) For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#inter-pod-affinity-and-anti-affinity-beta-feature)
+
 ### `container`
 
 #### Arguments

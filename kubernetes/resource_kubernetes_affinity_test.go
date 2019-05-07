@@ -218,7 +218,7 @@ func testAccKubernetesPodConfigWithNodeAffinityWithRequiredDuringSchedulingIgnor
 	return fmt.Sprintf(`
 	resource "kubernetes_pod" "test" {
 		metadata {
-			labels {
+			labels = {
 				app = "pod_label"
 			}
 			name = "%s"

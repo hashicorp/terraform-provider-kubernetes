@@ -1,7 +1,7 @@
 ---
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_endpoints"
-sidebar_current: "docs-kubernetes-resource-endpoint-x"
+sidebar_current: "docs-kubernetes-resource-endpoints-x"
 description: |-
   An Endpoints resource is an abstraction, linked to a Service, which defines the list of endpoints that actually implement the service.
 ---

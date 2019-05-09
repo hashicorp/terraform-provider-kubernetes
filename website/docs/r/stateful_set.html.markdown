@@ -160,6 +160,7 @@ resource "kubernetes_stateful_set" "prometheus" {
             http_get {
               path = "/-/healthy"
               port = 9090
+              scheme = "HTTPS"
             }
 
             initial_delay_seconds = 30

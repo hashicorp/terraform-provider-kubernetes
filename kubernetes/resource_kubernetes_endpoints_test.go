@@ -80,13 +80,16 @@ func TestAccKubernetesEndpoints_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.address.1.ip", "10.0.0.7"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.not_ready_address.0.ip", "10.0.0.10"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.not_ready_address.1.ip", "10.0.0.11"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.#", "3"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.0.name", "httpstransport"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.0.port", "443"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.0.protocol", "TCP"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.1.name", "httpstransport2"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.1.port", "444"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.1.protocol", "TCP"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.2.name", "aaaa"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.2.port", "442"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.2.protocol", "TCP"),
 					testAccCheckEndpointSubsets(&conf, []api.EndpointSubset{
 						{
 							Addresses: []api.EndpointAddress{
@@ -130,6 +133,11 @@ func TestAccKubernetesEndpoints_basic(t *testing.T) {
 								{
 									Name:     "httpstransport2",
 									Port:     444,
+									Protocol: api.ProtocolTCP,
+								},
+								{
+									Name:     "aaaa",
+									Port:     442,
 									Protocol: api.ProtocolTCP,
 								},
 							},
@@ -355,7 +363,7 @@ resource "kubernetes_endpoints" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
-      Different         = "1234"
+      Different         = "4424"
     }
 
     labels = {
@@ -408,7 +416,13 @@ resource "kubernetes_endpoints" "test" {
       port     = 444
       protocol = "TCP"
     }
-  }
+
+    port {
+      name     = "aaaa"
+      port     = 442
+      protocol = "TCP"
+    }
+	}
 }
 `, name)
 }

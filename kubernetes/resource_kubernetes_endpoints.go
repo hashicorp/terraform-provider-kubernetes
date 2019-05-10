@@ -31,54 +31,20 @@ func resourceKubernetesEndpoints() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"address": {
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Description: "IP address which offers the related ports that are marked as ready. These endpoints should be considered safe for load balancers and clients to utilize.",
 							Optional:    true,
 							MinItems:    1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"ip": {
-										Type:        schema.TypeString,
-										Description: "The IP of this endpoint. May not be loopback (127.0.0.0/8), link-local (169.254.0.0/16), or link-local multicast ((224.0.0.0/24).",
-										Required:    true,
-									},
-									"hostname": {
-										Type:        schema.TypeString,
-										Description: "The Hostname of this endpoint.",
-										Optional:    true,
-									},
-									"node_name": {
-										Type:        schema.TypeString,
-										Description: "Node hosting this endpoint. This can be used to determine endpoints local to a node.",
-										Optional:    true,
-									},
-								},
-							},
+							Elem:        schemaEndpointsSubsetAddress(),
+							Set:         hashEndpointsSubsetAddress(),
 						},
 						"not_ready_address": {
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Description: "IP address which offers the related ports but is not currently marked as ready because it have not yet finished starting, have recently failed a readiness check, or have recently failed a liveness check.",
 							Optional:    true,
 							MinItems:    1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"ip": {
-										Type:        schema.TypeString,
-										Description: "The IP of this endpoint. May not be loopback (127.0.0.0/8), link-local (169.254.0.0/16), or link-local multicast ((224.0.0.0/24).",
-										Required:    true,
-									},
-									"hostname": {
-										Type:        schema.TypeString,
-										Description: "The Hostname of this endpoint.",
-										Optional:    true,
-									},
-									"node_name": {
-										Type:        schema.TypeString,
-										Description: "Node hosting this endpoint. This can be used to determine endpoints local to a node.",
-										Optional:    true,
-									},
-								},
-							},
+							Elem:        schemaEndpointsSubsetAddress(),
+							Set:         hashEndpointsSubsetAddress(),
 						},
 						"port": {
 							Type:        schema.TypeSet,
@@ -93,6 +59,32 @@ func resourceKubernetesEndpoints() *schema.Resource {
 			},
 		},
 	}
+}
+
+func schemaEndpointsSubsetAddress() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"ip": {
+				Type:        schema.TypeString,
+				Description: "The IP of this endpoint. May not be loopback (127.0.0.0/8), link-local (169.254.0.0/16), or link-local multicast ((224.0.0.0/24).",
+				Required:    true,
+			},
+			"hostname": {
+				Type:        schema.TypeString,
+				Description: "The Hostname of this endpoint.",
+				Optional:    true,
+			},
+			"node_name": {
+				Type:        schema.TypeString,
+				Description: "Node hosting this endpoint. This can be used to determine endpoints local to a node.",
+				Optional:    true,
+			},
+		},
+	}
+}
+
+func hashEndpointsSubsetAddress() schema.SchemaSetFunc {
+	return schema.HashResource(schemaEndpointsSubsetAddress())
 }
 
 func schemaEndpointsSubsetPort() *schema.Resource {

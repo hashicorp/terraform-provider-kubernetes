@@ -16,7 +16,7 @@ func TestFlattenEndpointsAddresses(t *testing.T) {
 
 	cases := []struct {
 		Input          []api.EndpointAddress
-		ExpectedOutput []interface{}
+		ExpectedOutput *schema.Set
 	}{
 		{
 			[]api.EndpointAddress{{
@@ -24,23 +24,21 @@ func TestFlattenEndpointsAddresses(t *testing.T) {
 				IP:       "10.0.0.4",
 				NodeName: &testNodeName,
 			}},
-			[]interface{}{
-				map[string]interface{}{
-					"hostname":  "any.hostname.io",
-					"ip":        "10.0.0.4",
-					"node_name": testNodeName,
-				},
-			},
+			schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{
+				"hostname":  "any.hostname.io",
+				"ip":        "10.0.0.4",
+				"node_name": testNodeName,
+			}}),
 		},
 		{
 			[]api.EndpointAddress{{}},
-			[]interface{}{map[string]interface{}{
+			schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{
 				"ip": "",
-			}},
+			}}),
 		},
 		{
 			[]api.EndpointAddress{},
-			[]interface{}{},
+			schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{}),
 		},
 	}
 
@@ -134,19 +132,15 @@ func TestFlattenEndpointsSubsets(t *testing.T) {
 			},
 			[]interface{}{
 				map[string]interface{}{
-					"address": []interface{}{
-						map[string]interface{}{
-							"hostname":  "any.hostname.io",
-							"ip":        "10.0.0.4",
-							"node_name": testNodeName,
-						},
-					},
-					"not_ready_address": []interface{}{
-						map[string]interface{}{
-							"hostname": "notready.hostname.io",
-							"ip":       "10.0.0.5",
-						},
-					},
+					"address": schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{
+						"hostname":  "any.hostname.io",
+						"ip":        "10.0.0.4",
+						"node_name": testNodeName,
+					}}),
+					"not_ready_address": schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{
+						"hostname": "notready.hostname.io",
+						"ip":       "10.0.0.5",
+					}}),
 					"port": schema.NewSet(hashEndpointsSubsetPort(), []interface{}{map[string]interface{}{
 						"name":     "transport",
 						"port":     8889,
@@ -176,17 +170,15 @@ func TestFlattenEndpointsSubsets(t *testing.T) {
 func TestExpandEndpointsAddresses(t *testing.T) {
 
 	cases := []struct {
-		Input          []interface{}
+		Input          *schema.Set
 		ExpectedOutput []api.EndpointAddress
 	}{
 		{
-			[]interface{}{
-				map[string]interface{}{
-					"hostname":  "any.hostname.io",
-					"ip":        "10.0.0.4",
-					"node_name": testNodeName,
-				},
-			},
+			schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{
+				"hostname":  "any.hostname.io",
+				"ip":        "10.0.0.4",
+				"node_name": testNodeName,
+			}}),
 			[]api.EndpointAddress{{
 				Hostname: "any.hostname.io",
 				IP:       "10.0.0.4",
@@ -194,11 +186,11 @@ func TestExpandEndpointsAddresses(t *testing.T) {
 			}},
 		},
 		{
-			[]interface{}{map[string]interface{}{}},
+			schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{}}),
 			[]api.EndpointAddress{{}},
 		},
 		{
-			[]interface{}{},
+			schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{}),
 			[]api.EndpointAddress{},
 		},
 	}
@@ -270,19 +262,15 @@ func TestExpandEndpointsSubsets(t *testing.T) {
 		{
 			[]interface{}{
 				map[string]interface{}{
-					"address": []interface{}{
-						map[string]interface{}{
-							"hostname":  "any.hostname.io",
-							"ip":        "10.0.0.4",
-							"node_name": testNodeName,
-						},
-					},
-					"not_ready_address": []interface{}{
-						map[string]interface{}{
-							"hostname": "notready.hostname.io",
-							"ip":       "10.0.0.5",
-						},
-					},
+					"address": schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{
+						"hostname":  "any.hostname.io",
+						"ip":        "10.0.0.4",
+						"node_name": testNodeName,
+					}}),
+					"not_ready_address": schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{
+						"hostname": "notready.hostname.io",
+						"ip":       "10.0.0.5",
+					}}),
 					"port": schema.NewSet(hashEndpointsSubsetPort(), []interface{}{map[string]interface{}{
 						"name":     "transport",
 						"port":     8889,

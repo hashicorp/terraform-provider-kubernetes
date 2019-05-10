@@ -5,12 +5,12 @@ import (
 	api "k8s.io/api/core/v1"
 )
 
-func expandEndpointsAddresses(in []interface{}) []api.EndpointAddress {
-	if len(in) == 0 {
+func expandEndpointsAddresses(in *schema.Set) []api.EndpointAddress {
+	if in == nil || in.Len() == 0 {
 		return []api.EndpointAddress{}
 	}
-	addresses := make([]api.EndpointAddress, len(in))
-	for i, addr := range in {
+	addresses := make([]api.EndpointAddress, in.Len())
+	for i, addr := range in.List() {
 		r := api.EndpointAddress{}
 		addrCfg := addr.(map[string]interface{})
 		if v, ok := addrCfg["hostname"].(string); ok {
@@ -57,10 +57,10 @@ func expandEndpointsSubsets(in []interface{}) []api.EndpointSubset {
 	for i, subset := range in {
 		r := api.EndpointSubset{}
 		subsetCfg := subset.(map[string]interface{})
-		if v, ok := subsetCfg["address"].([]interface{}); ok {
+		if v, ok := subsetCfg["address"].(*schema.Set); ok {
 			r.Addresses = expandEndpointsAddresses(v)
 		}
-		if v, ok := subsetCfg["not_ready_address"].([]interface{}); ok {
+		if v, ok := subsetCfg["not_ready_address"].(*schema.Set); ok {
 			r.NotReadyAddresses = expandEndpointsAddresses(v)
 		}
 		if v, ok := subsetCfg["port"]; ok {
@@ -71,7 +71,7 @@ func expandEndpointsSubsets(in []interface{}) []api.EndpointSubset {
 	return subsets
 }
 
-func flattenEndpointsAddresses(in []api.EndpointAddress) []interface{} {
+func flattenEndpointsAddresses(in []api.EndpointAddress) *schema.Set {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
@@ -84,7 +84,7 @@ func flattenEndpointsAddresses(in []api.EndpointAddress) []interface{} {
 		}
 		att[i] = m
 	}
-	return att
+	return schema.NewSet(hashEndpointsSubsetAddress(), att)
 }
 
 func flattenEndpointsPorts(in []api.EndpointPort) *schema.Set {

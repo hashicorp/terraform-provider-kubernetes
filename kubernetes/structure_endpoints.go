@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"github.com/hashicorp/terraform/helper/schema"
 	api "k8s.io/api/core/v1"
 )
 
@@ -26,12 +27,12 @@ func expandEndpointsAddresses(in []interface{}) []api.EndpointAddress {
 	return addresses
 }
 
-func expandEndpointsPorts(in []interface{}) []api.EndpointPort {
-	if len(in) == 0 {
+func expandEndpointsPorts(in *schema.Set) []api.EndpointPort {
+	if in == nil || in.Len() == 0 {
 		return []api.EndpointPort{}
 	}
-	ports := make([]api.EndpointPort, len(in))
-	for i, port := range in {
+	ports := make([]api.EndpointPort, in.Len())
+	for i, port := range in.List() {
 		r := api.EndpointPort{}
 		portCfg := port.(map[string]interface{})
 		if v, ok := portCfg["name"].(string); ok {
@@ -63,7 +64,7 @@ func expandEndpointsSubsets(in []interface{}) []api.EndpointSubset {
 			r.NotReadyAddresses = expandEndpointsAddresses(v)
 		}
 		if v, ok := subsetCfg["port"]; ok {
-			r.Ports = expandEndpointsPorts(v.([]interface{}))
+			r.Ports = expandEndpointsPorts(v.(*schema.Set))
 		}
 		subsets[i] = r
 	}
@@ -86,7 +87,7 @@ func flattenEndpointsAddresses(in []api.EndpointAddress) []interface{} {
 	return att
 }
 
-func flattenEndpointsPorts(in []api.EndpointPort) []interface{} {
+func flattenEndpointsPorts(in []api.EndpointPort) *schema.Set {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
@@ -97,7 +98,7 @@ func flattenEndpointsPorts(in []api.EndpointPort) []interface{} {
 		m["protocol"] = string(n.Protocol)
 		att[i] = m
 	}
-	return att
+	return schema.NewSet(hashEndpointsSubsetPort(), att)
 }
 
 func flattenEndpointsSubsets(in []api.EndpointSubset) []interface{} {

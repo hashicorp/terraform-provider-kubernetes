@@ -1,9 +1,10 @@
 package kubernetes
 
 import (
-	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform/helper/schema"
 	api "k8s.io/api/core/v1"
 )
 
@@ -45,9 +46,8 @@ func TestFlattenEndpointsAddresses(t *testing.T) {
 
 	for _, tc := range cases {
 		output := flattenEndpointsAddresses(tc.Input)
-		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
-			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
-				tc.ExpectedOutput, output)
+		if diff := cmp.Diff(tc.ExpectedOutput, output); diff != "" {
+			t.Fatalf("Unexpected output from flattener: mismatch (-want +got):\n%s", diff)
 		}
 	}
 }
@@ -56,7 +56,7 @@ func TestFlattenEndpointsPorts(t *testing.T) {
 
 	cases := []struct {
 		Input          []api.EndpointPort
-		ExpectedOutput []interface{}
+		ExpectedOutput *schema.Set
 	}{
 		{
 			[]api.EndpointPort{{
@@ -64,44 +64,39 @@ func TestFlattenEndpointsPorts(t *testing.T) {
 				Port:     80,
 				Protocol: api.ProtocolTCP,
 			}},
-			[]interface{}{
-				map[string]interface{}{
-					"name":     "transport",
-					"port":     80,
-					"protocol": "TCP",
-				},
-			},
+			schema.NewSet(hashEndpointsSubsetPort(), []interface{}{map[string]interface{}{
+				"name":     "transport",
+				"port":     80,
+				"protocol": "TCP",
+			}}),
 		},
 		{
 			[]api.EndpointPort{{
 				Port:     443,
 				Protocol: api.ProtocolUDP,
 			}},
-			[]interface{}{
-				map[string]interface{}{
-					"port":     443,
-					"protocol": "UDP",
-				},
-			},
+			schema.NewSet(hashEndpointsSubsetPort(), []interface{}{map[string]interface{}{
+				"port":     443,
+				"protocol": "UDP",
+			}}),
 		},
 		{
 			[]api.EndpointPort{{}},
-			[]interface{}{map[string]interface{}{
+			schema.NewSet(hashEndpointsSubsetPort(), []interface{}{map[string]interface{}{
 				"port":     0,
 				"protocol": "",
-			}},
+			}}),
 		},
 		{
 			[]api.EndpointPort{},
-			[]interface{}{},
+			schema.NewSet(hashEndpointsSubsetPort(), []interface{}{}),
 		},
 	}
 
 	for _, tc := range cases {
 		output := flattenEndpointsPorts(tc.Input)
-		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
-			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
-				tc.ExpectedOutput, output)
+		if diff := cmp.Diff(tc.ExpectedOutput, output); diff != "" {
+			t.Fatalf("Unexpected output from flattener: mismatch (-want +got):\n%s", diff)
 		}
 	}
 }
@@ -152,13 +147,11 @@ func TestFlattenEndpointsSubsets(t *testing.T) {
 							"ip":       "10.0.0.5",
 						},
 					},
-					"port": []interface{}{
-						map[string]interface{}{
-							"name":     "transport",
-							"port":     8889,
-							"protocol": "UDP",
-						},
-					},
+					"port": schema.NewSet(hashEndpointsSubsetPort(), []interface{}{map[string]interface{}{
+						"name":     "transport",
+						"port":     8889,
+						"protocol": "UDP",
+					}}),
 				},
 			},
 		},
@@ -174,9 +167,8 @@ func TestFlattenEndpointsSubsets(t *testing.T) {
 
 	for _, tc := range cases {
 		output := flattenEndpointsSubsets(tc.Input)
-		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
-			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
-				tc.ExpectedOutput, output)
+		if diff := cmp.Diff(tc.ExpectedOutput, output); diff != "" {
+			t.Fatalf("Unexpected output from flattener: mismatch (-want +got):\n%s", diff)
 		}
 	}
 }
@@ -213,9 +205,8 @@ func TestExpandEndpointsAddresses(t *testing.T) {
 
 	for _, tc := range cases {
 		output := expandEndpointsAddresses(tc.Input)
-		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
-			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
-				tc.ExpectedOutput, output)
+		if diff := cmp.Diff(tc.ExpectedOutput, output); diff != "" {
+			t.Fatalf("Unexpected output from expander: mismatch (-want +got):\n%s", diff)
 		}
 	}
 }
@@ -263,10 +254,9 @@ func TestExpandEndpointsPorts(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output := expandEndpointsPorts(tc.Input)
-		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
-			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
-				tc.ExpectedOutput, output)
+		output := expandEndpointsPorts(schema.NewSet(hashEndpointsSubsetPort(), tc.Input))
+		if diff := cmp.Diff(tc.ExpectedOutput, output); diff != "" {
+			t.Fatalf("Unexpected output from expander: mismatch (-want +got):\n%s", diff)
 		}
 	}
 }
@@ -293,13 +283,11 @@ func TestExpandEndpointsSubsets(t *testing.T) {
 							"ip":       "10.0.0.5",
 						},
 					},
-					"port": []interface{}{
-						map[string]interface{}{
-							"name":     "transport",
-							"port":     8889,
-							"protocol": "UDP",
-						},
-					},
+					"port": schema.NewSet(hashEndpointsSubsetPort(), []interface{}{map[string]interface{}{
+						"name":     "transport",
+						"port":     8889,
+						"protocol": "UDP",
+					}}),
 				},
 			},
 			[]api.EndpointSubset{
@@ -339,9 +327,8 @@ func TestExpandEndpointsSubsets(t *testing.T) {
 
 	for _, tc := range cases {
 		output := expandEndpointsSubsets(tc.Input)
-		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
-			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
-				tc.ExpectedOutput, output)
+		if diff := cmp.Diff(tc.ExpectedOutput, output); diff != "" {
+			t.Fatalf("Unexpected output from expander: mismatch (-want +got):\n%s", diff)
 		}
 	}
 }

@@ -81,36 +81,45 @@ func resourceKubernetesEndpoints() *schema.Resource {
 							},
 						},
 						"port": {
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Description: "Port number available on the related IP addresses.",
 							Optional:    true,
 							MinItems:    1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"name": {
-										Type:        schema.TypeString,
-										Description: "The name of this port within the endpoint. Must be a DNS_LABEL. Optional if only one Port is defined on this endpoint.",
-										Optional:    true,
-									},
-									"port": {
-										Type:        schema.TypeInt,
-										Description: "The port that will be exposed by this endpoint.",
-										Required:    true,
-									},
-									"protocol": {
-										Type:        schema.TypeString,
-										Description: "The IP protocol for this port. Supports `TCP` and `UDP`. Default is `TCP`.",
-										Optional:    true,
-										Default:     "TCP",
-									},
-								},
-							},
+							Elem:        schemaEndpointsSubsetPort(),
+							Set:         hashEndpointsSubsetPort(),
 						},
 					},
 				},
 			},
 		},
 	}
+}
+
+func schemaEndpointsSubsetPort() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:        schema.TypeString,
+				Description: "The name of this port within the endpoint. Must be a DNS_LABEL. Optional if only one Port is defined on this endpoint.",
+				Optional:    true,
+			},
+			"port": {
+				Type:        schema.TypeInt,
+				Description: "The port that will be exposed by this endpoint.",
+				Required:    true,
+			},
+			"protocol": {
+				Type:        schema.TypeString,
+				Description: "The IP protocol for this port. Supports `TCP` and `UDP`. Default is `TCP`.",
+				Optional:    true,
+				Default:     "TCP",
+			},
+		},
+	}
+}
+
+func hashEndpointsSubsetPort() schema.SchemaSetFunc {
+	return schema.HashResource(schemaEndpointsSubsetPort())
 }
 
 func resourceKubernetesEndpointsCreate(d *schema.ResourceData, meta interface{}) error {

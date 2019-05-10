@@ -20,8 +20,8 @@ func flattenIngressRule(in []v1beta1.IngressRule) []interface{} {
 		pathAtts := make([]interface{}, len(n.HTTP.Paths), len(n.HTTP.Paths))
 		for i, p := range n.HTTP.Paths {
 			path := map[string]interface{}{
-				"path_regex": p.Path,
-				"backend":    flattenIngressBackend(&p.Backend),
+				"path":    p.Path,
+				"backend": flattenIngressBackend(&p.Backend),
 			}
 			pathAtts[i] = path
 		}
@@ -101,7 +101,7 @@ func expandIngressRule(l []interface{}) []v1beta1.IngressRule {
 					for i, path := range pathList {
 						p := path.(map[string]interface{})
 						hip := v1beta1.HTTPIngressPath{
-							Path:    p["path_regex"].(string),
+							Path:    p["path"].(string),
 							Backend: *expandIngressBackend(p["backend"].([]interface{})),
 						}
 						paths[i] = hip

@@ -23,7 +23,7 @@ resource "kubernetes_ingress" "example" {
 
       http {
         path {
-          path_regex = "/"
+          path = "/"
 
           backend {
             service_name = "echoserver"
@@ -38,7 +38,7 @@ resource "kubernetes_ingress" "example" {
 
       http {
         path {
-          path_regex = "/stilton"
+          path = "/stilton"
 
           backend {
             service_name = "stilton-cheese"
@@ -47,7 +47,7 @@ resource "kubernetes_ingress" "example" {
         }
 
         path {
-          path_regex = "/cheddar"
+          path = "/cheddar"
 
           backend {
             service_name = "cheddar"

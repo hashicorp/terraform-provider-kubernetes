@@ -24,7 +24,7 @@ github.com/apparentlymart/go-cidr/cidr
 github.com/apparentlymart/go-textseg/textseg
 # github.com/armon/go-radix v1.0.0
 github.com/armon/go-radix
-# github.com/aws/aws-sdk-go v1.17.3
+# github.com/aws/aws-sdk-go v1.19.18
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/arn
 github.com/aws/aws-sdk-go/aws/awserr
@@ -154,6 +154,7 @@ github.com/aws/aws-sdk-go/internal/ini
 github.com/aws/aws-sdk-go/internal/shareddefaults
 github.com/aws/aws-sdk-go/aws/client
 github.com/aws/aws-sdk-go/internal/sdkuri
+github.com/aws/aws-sdk-go/internal/sdkrand
 github.com/aws/aws-sdk-go/aws/corehandlers
 github.com/aws/aws-sdk-go/aws/credentials/endpointcreds
 github.com/aws/aws-sdk-go/aws/client/metadata
@@ -166,12 +167,11 @@ github.com/aws/aws-sdk-go/private/protocol/restjson
 github.com/aws/aws-sdk-go/private/protocol/query
 github.com/aws/aws-sdk-go/private/protocol/restxml
 github.com/aws/aws-sdk-go/aws/crr
-github.com/aws/aws-sdk-go/internal/sdkrand
 github.com/aws/aws-sdk-go/private/protocol/ec2query
-github.com/aws/aws-sdk-go/internal/s3err
 github.com/aws/aws-sdk-go/private/protocol/eventstream
 github.com/aws/aws-sdk-go/private/protocol/eventstream/eventstreamapi
 github.com/aws/aws-sdk-go/private/protocol/rest
+github.com/aws/aws-sdk-go/internal/s3err
 github.com/aws/aws-sdk-go/private/signer/v2
 github.com/aws/aws-sdk-go/private/protocol/query/queryutil
 github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
@@ -247,7 +247,7 @@ github.com/hashicorp/go-getter/helper/url
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-multierror v1.0.0
 github.com/hashicorp/go-multierror
-# github.com/hashicorp/go-plugin v0.0.0-20190322172744-52e1c4730856
+# github.com/hashicorp/go-plugin v1.0.1-0.20190430211030-5692942914bb
 github.com/hashicorp/go-plugin
 github.com/hashicorp/go-plugin/internal/plugin
 # github.com/hashicorp/go-safetemp v1.0.0
@@ -266,7 +266,7 @@ github.com/hashicorp/hcl/hcl/scanner
 github.com/hashicorp/hcl/hcl/strconv
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
-# github.com/hashicorp/hcl2 v0.0.0-20190416162332-2c5a4b7d729a
+# github.com/hashicorp/hcl2 v0.0.0-20190503210054-6e4ec17113ca
 github.com/hashicorp/hcl2/hcl
 github.com/hashicorp/hcl2/hcl/hclsyntax
 github.com/hashicorp/hcl2/hcldec
@@ -284,7 +284,7 @@ github.com/hashicorp/hil/parser
 github.com/hashicorp/hil/scanner
 # github.com/hashicorp/logutils v1.0.0
 github.com/hashicorp/logutils
-# github.com/hashicorp/terraform v0.12.0-alpha4.0.20190424121927-9327eedb0417
+# github.com/hashicorp/terraform v0.12.0-rc1
 github.com/hashicorp/terraform/plugin
 github.com/hashicorp/terraform/helper/resource
 github.com/hashicorp/terraform/helper/schema
@@ -428,7 +428,7 @@ github.com/ulikunitz/xz/internal/hash
 # github.com/vmihailenco/msgpack v4.0.2+incompatible
 github.com/vmihailenco/msgpack
 github.com/vmihailenco/msgpack/codes
-# github.com/zclconf/go-cty v0.0.0-20190320224746-fd76348b9329
+# github.com/zclconf/go-cty v0.0.0-20190430221426-d36a6f0dbffd
 github.com/zclconf/go-cty/cty
 github.com/zclconf/go-cty/cty/msgpack
 github.com/zclconf/go-cty/cty/convert
@@ -455,7 +455,7 @@ go.opencensus.io/plugin/ochttp/propagation/b3
 go.opencensus.io/trace/propagation
 go.opencensus.io/internal/tagencoding
 go.opencensus.io/stats/internal
-# golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
+# golang.org/x/crypto v0.0.0-20190426145343-a29dc8fdc734
 golang.org/x/crypto/ssh/terminal
 golang.org/x/crypto/openpgp
 golang.org/x/crypto/bcrypt
@@ -473,7 +473,7 @@ golang.org/x/crypto/cast5
 golang.org/x/crypto/openpgp/elgamal
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/internal/subtle
-# golang.org/x/net v0.0.0-20190311183353-d8887717615a
+# golang.org/x/net v0.0.0-20190502183928-7f726cade0ab
 golang.org/x/net/http2
 golang.org/x/net/context
 golang.org/x/net/trace
@@ -488,13 +488,13 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jwt
 golang.org/x/oauth2/jws
-# golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4
+# golang.org/x/sync v0.0.0-20190423024810-112230192c58
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20190222072716-a9d3bda3a223
+# golang.org/x/sys v0.0.0-20190502175342-a43fa875dd82
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/cpu
-# golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2
+# golang.org/x/text v0.3.2
 golang.org/x/text/unicode/norm
 golang.org/x/text/transform
 golang.org/x/text/secure/bidirule
@@ -610,12 +610,13 @@ gopkg.in/yaml.v2
 k8s.io/api/apps/v1
 k8s.io/api/autoscaling/v1
 k8s.io/api/core/v1
+k8s.io/api/extensions/v1beta1
 k8s.io/api/networking/v1
 k8s.io/api/rbac/v1
 k8s.io/api/storage/v1
+k8s.io/api/apps/v1beta1
 k8s.io/api/admissionregistration/v1alpha1
 k8s.io/api/admissionregistration/v1beta1
-k8s.io/api/apps/v1beta1
 k8s.io/api/apps/v1beta2
 k8s.io/api/auditregistration/v1alpha1
 k8s.io/api/authentication/v1
@@ -631,7 +632,6 @@ k8s.io/api/certificates/v1beta1
 k8s.io/api/coordination/v1beta1
 k8s.io/api/policy/v1beta1
 k8s.io/api/events/v1beta1
-k8s.io/api/extensions/v1beta1
 k8s.io/api/rbac/v1alpha1
 k8s.io/api/rbac/v1beta1
 k8s.io/api/scheduling/v1alpha1

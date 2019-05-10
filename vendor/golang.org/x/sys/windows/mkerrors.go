@@ -2,11 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build !linux
-// +build ppc64 ppc64le
+package windows
 
-package cpu
-
-const cacheLineSize = 128
-
-func doinit() {}
+//go:generate ./mkerrors.bash zerrors_windows.go

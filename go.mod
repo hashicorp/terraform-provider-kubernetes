@@ -3,7 +3,6 @@ module github.com/terraform-providers/terraform-provider-kubernetes
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.4.1 // indirect
 	github.com/Azure/go-autorest v11.5.0+incompatible // indirect
-	github.com/aws/aws-sdk-go v1.17.3 // indirect
 	github.com/beevik/etree v1.1.0 // indirect
 	github.com/boombuler/barcode v1.0.0 // indirect
 	github.com/dustinkirkland/golang-petname v0.0.0-20170921220637-d3c2ba80e75e // indirect
@@ -16,7 +15,7 @@ require (
 	github.com/hashicorp/go-version v1.1.0
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/hil v0.0.0-20190212132231-97b3a9cdfa93 // indirect
-	github.com/hashicorp/terraform v0.12.0-alpha4.0.20190424121927-9327eedb0417
+	github.com/hashicorp/terraform v0.12.0-rc1
 	github.com/hashicorp/vault v1.0.3 // indirect
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/imdario/mergo v0.3.6 // indirect

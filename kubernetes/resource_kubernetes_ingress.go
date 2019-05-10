@@ -149,7 +149,7 @@ func resourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) err
 		return fmt.Errorf("Failed to read Ingress '%s' because: %s", buildId(ing.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Received ingress: %#v", ing)
-	err = d.Set("metadata", flattenMetadata(ing.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(ing.ObjectMeta, d))
 	if err != nil {
 		return err
 	}

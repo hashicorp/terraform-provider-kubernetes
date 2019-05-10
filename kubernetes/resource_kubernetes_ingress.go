@@ -126,7 +126,7 @@ func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) e
 	log.Printf("[INFO] Creating new ingress: %#v", ing)
 	out, err := conn.ExtensionsV1beta1().Ingresses(metadata.Namespace).Create(ing)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to create Ingress '%s' because: %s", buildId(ing.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Submitted new ingress: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
@@ -146,7 +146,7 @@ func resourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) err
 	ing, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return fmt.Errorf("Failed to read Ingress '%s' because: %s", buildId(ing.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Received ingress: %#v", ing)
 	err = d.Set("metadata", flattenMetadata(ing.ObjectMeta))
@@ -191,7 +191,7 @@ func resourceKubernetesIngressUpdate(d *schema.ResourceData, meta interface{}) e
 
 	out, err := conn.ExtensionsV1beta1().Ingresses(namespace).Update(ingress)
 	if err != nil {
-		return fmt.Errorf("Failed to update ingress: %s", err)
+		return fmt.Errorf("Failed to update Ingress %s because: %s", buildId(ingress.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Submitted updated ingress: %#v", out)
 
@@ -209,7 +209,7 @@ func resourceKubernetesIngressDelete(d *schema.ResourceData, meta interface{}) e
 	log.Printf("[INFO] Deleting ingress: %#v", name)
 	err = conn.ExtensionsV1beta1().Ingresses(namespace).Delete(name, &meta_v1.DeleteOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to delete Ingress %s because: %s", d.Id(), err)
 	}
 
 	log.Printf("[INFO] Ingress %s deleted", name)

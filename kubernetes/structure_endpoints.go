@@ -49,12 +49,12 @@ func expandEndpointsPorts(in *schema.Set) []api.EndpointPort {
 	return ports
 }
 
-func expandEndpointsSubsets(in []interface{}) []api.EndpointSubset {
-	if len(in) == 0 {
+func expandEndpointsSubsets(in *schema.Set) []api.EndpointSubset {
+	if in == nil || in.Len() == 0 {
 		return []api.EndpointSubset{}
 	}
-	subsets := make([]api.EndpointSubset, len(in))
-	for i, subset := range in {
+	subsets := make([]api.EndpointSubset, in.Len())
+	for i, subset := range in.List() {
 		r := api.EndpointSubset{}
 		subsetCfg := subset.(map[string]interface{})
 		if v, ok := subsetCfg["address"].(*schema.Set); ok {
@@ -101,7 +101,7 @@ func flattenEndpointsPorts(in []api.EndpointPort) *schema.Set {
 	return schema.NewSet(hashEndpointsSubsetPort(), att)
 }
 
-func flattenEndpointsSubsets(in []api.EndpointSubset) []interface{} {
+func flattenEndpointsSubsets(in []api.EndpointSubset) *schema.Set {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
@@ -116,5 +116,5 @@ func flattenEndpointsSubsets(in []api.EndpointSubset) []interface{} {
 		}
 		att[i] = m
 	}
-	return att
+	return schema.NewSet(hashEndpointsSubset(), att)
 }

@@ -103,7 +103,7 @@ func TestFlattenEndpointsSubsets(t *testing.T) {
 
 	cases := []struct {
 		Input          []api.EndpointSubset
-		ExpectedOutput []interface{}
+		ExpectedOutput *schema.Set
 	}{
 		{
 			[]api.EndpointSubset{
@@ -130,37 +130,53 @@ func TestFlattenEndpointsSubsets(t *testing.T) {
 					},
 				},
 			},
-			[]interface{}{
-				map[string]interface{}{
-					"address": schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{
-						"hostname":  "any.hostname.io",
-						"ip":        "10.0.0.4",
-						"node_name": testNodeName,
-					}}),
-					"not_ready_address": schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{
-						"hostname": "notready.hostname.io",
-						"ip":       "10.0.0.5",
-					}}),
-					"port": schema.NewSet(hashEndpointsSubsetPort(), []interface{}{map[string]interface{}{
-						"name":     "transport",
-						"port":     8889,
-						"protocol": "UDP",
-					}}),
-				},
-			},
+			schema.NewSet(hashEndpointsSubset(), []interface{}{map[string]interface{}{
+				"address": schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{
+					"hostname":  "any.hostname.io",
+					"ip":        "10.0.0.4",
+					"node_name": testNodeName,
+				}}),
+				"not_ready_address": schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{
+					"hostname": "notready.hostname.io",
+					"ip":       "10.0.0.5",
+				}}),
+				"port": schema.NewSet(hashEndpointsSubsetPort(), []interface{}{map[string]interface{}{
+					"name":     "transport",
+					"port":     8889,
+					"protocol": "UDP",
+				}}),
+			}}),
 		},
 		{
 			[]api.EndpointSubset{{}},
-			[]interface{}{map[string]interface{}{}},
+			schema.NewSet(hashEndpointsSubset(), []interface{}{map[string]interface{}{}}),
 		},
 		{
 			[]api.EndpointSubset{},
-			[]interface{}{},
+			schema.NewSet(hashEndpointsSubset(), []interface{}{}),
 		},
 	}
 
 	for _, tc := range cases {
 		output := flattenEndpointsSubsets(tc.Input)
+
+		// FIXME: not sure why this is required here but not in other flatteners tests
+		output.F = nil
+		tc.ExpectedOutput.F = nil
+		if output.Len() > 0 {
+			if output.List()[0].(map[string]interface{})["address"] != nil {
+				output.List()[0].(map[string]interface{})["address"].(*schema.Set).F = nil
+				tc.ExpectedOutput.List()[0].(map[string]interface{})["address"].(*schema.Set).F = nil
+			}
+			if output.List()[0].(map[string]interface{})["not_ready_address"] != nil {
+				output.List()[0].(map[string]interface{})["not_ready_address"].(*schema.Set).F = nil
+				tc.ExpectedOutput.List()[0].(map[string]interface{})["not_ready_address"].(*schema.Set).F = nil
+			}
+			if output.List()[0].(map[string]interface{})["port"] != nil {
+				output.List()[0].(map[string]interface{})["port"].(*schema.Set).F = nil
+				tc.ExpectedOutput.List()[0].(map[string]interface{})["port"].(*schema.Set).F = nil
+			}
+		}
 		if diff := cmp.Diff(tc.ExpectedOutput, output); diff != "" {
 			t.Fatalf("Unexpected output from flattener: mismatch (-want +got):\n%s", diff)
 		}
@@ -256,28 +272,26 @@ func TestExpandEndpointsPorts(t *testing.T) {
 func TestExpandEndpointsSubsets(t *testing.T) {
 
 	cases := []struct {
-		Input          []interface{}
+		Input          *schema.Set
 		ExpectedOutput []api.EndpointSubset
 	}{
 		{
-			[]interface{}{
-				map[string]interface{}{
-					"address": schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{
-						"hostname":  "any.hostname.io",
-						"ip":        "10.0.0.4",
-						"node_name": testNodeName,
-					}}),
-					"not_ready_address": schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{
-						"hostname": "notready.hostname.io",
-						"ip":       "10.0.0.5",
-					}}),
-					"port": schema.NewSet(hashEndpointsSubsetPort(), []interface{}{map[string]interface{}{
-						"name":     "transport",
-						"port":     8889,
-						"protocol": "UDP",
-					}}),
-				},
-			},
+			schema.NewSet(hashEndpointsSubset(), []interface{}{map[string]interface{}{
+				"address": schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{
+					"hostname":  "any.hostname.io",
+					"ip":        "10.0.0.4",
+					"node_name": testNodeName,
+				}}),
+				"not_ready_address": schema.NewSet(hashEndpointsSubsetAddress(), []interface{}{map[string]interface{}{
+					"hostname": "notready.hostname.io",
+					"ip":       "10.0.0.5",
+				}}),
+				"port": schema.NewSet(hashEndpointsSubsetPort(), []interface{}{map[string]interface{}{
+					"name":     "transport",
+					"port":     8889,
+					"protocol": "UDP",
+				}}),
+			}}),
 			[]api.EndpointSubset{
 				{
 					Addresses: []api.EndpointAddress{
@@ -304,11 +318,11 @@ func TestExpandEndpointsSubsets(t *testing.T) {
 			},
 		},
 		{
-			[]interface{}{map[string]interface{}{}},
+			schema.NewSet(hashEndpointsSubset(), []interface{}{map[string]interface{}{}}),
 			[]api.EndpointSubset{{}},
 		},
 		{
-			[]interface{}{},
+			schema.NewSet(hashEndpointsSubset(), []interface{}{}),
 			[]api.EndpointSubset{},
 		},
 	}

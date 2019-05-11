@@ -25,40 +25,49 @@ func resourceKubernetesEndpoints() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("endpoints", true),
 			"subset": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Description: "Set of addresses and ports that comprise a service. More info: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors",
 				Optional:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"address": {
-							Type:        schema.TypeSet,
-							Description: "IP address which offers the related ports that are marked as ready. These endpoints should be considered safe for load balancers and clients to utilize.",
-							Optional:    true,
-							MinItems:    1,
-							Elem:        schemaEndpointsSubsetAddress(),
-							Set:         hashEndpointsSubsetAddress(),
-						},
-						"not_ready_address": {
-							Type:        schema.TypeSet,
-							Description: "IP address which offers the related ports but is not currently marked as ready because it have not yet finished starting, have recently failed a readiness check, or have recently failed a liveness check.",
-							Optional:    true,
-							MinItems:    1,
-							Elem:        schemaEndpointsSubsetAddress(),
-							Set:         hashEndpointsSubsetAddress(),
-						},
-						"port": {
-							Type:        schema.TypeSet,
-							Description: "Port number available on the related IP addresses.",
-							Optional:    true,
-							MinItems:    1,
-							Elem:        schemaEndpointsSubsetPort(),
-							Set:         hashEndpointsSubsetPort(),
-						},
-					},
-				},
+				Elem:        schemaEndpointsSubset(),
+				Set:         hashEndpointsSubset(),
 			},
 		},
 	}
+}
+
+func schemaEndpointsSubset() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"address": {
+				Type:        schema.TypeSet,
+				Description: "IP address which offers the related ports that are marked as ready. These endpoints should be considered safe for load balancers and clients to utilize.",
+				Optional:    true,
+				MinItems:    1,
+				Elem:        schemaEndpointsSubsetAddress(),
+				Set:         hashEndpointsSubsetAddress(),
+			},
+			"not_ready_address": {
+				Type:        schema.TypeSet,
+				Description: "IP address which offers the related ports but is not currently marked as ready because it have not yet finished starting, have recently failed a readiness check, or have recently failed a liveness check.",
+				Optional:    true,
+				MinItems:    1,
+				Elem:        schemaEndpointsSubsetAddress(),
+				Set:         hashEndpointsSubsetAddress(),
+			},
+			"port": {
+				Type:        schema.TypeSet,
+				Description: "Port number available on the related IP addresses.",
+				Optional:    true,
+				MinItems:    1,
+				Elem:        schemaEndpointsSubsetPort(),
+				Set:         hashEndpointsSubsetPort(),
+			},
+		},
+	}
+}
+
+func hashEndpointsSubset() schema.SchemaSetFunc {
+	return schema.HashResource(schemaEndpointsSubset())
 }
 
 func schemaEndpointsSubsetAddress() *schema.Resource {
@@ -120,7 +129,7 @@ func resourceKubernetesEndpointsCreate(d *schema.ResourceData, meta interface{})
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	ep := api.Endpoints{
 		ObjectMeta: metadata,
-		Subsets:    expandEndpointsSubsets(d.Get("subset").([]interface{})),
+		Subsets:    expandEndpointsSubsets(d.Get("subset").(*schema.Set)),
 	}
 	log.Printf("[INFO] Creating new endpoints: %#v", ep)
 	out, err := conn.CoreV1().Endpoints(metadata.Namespace).Create(&ep)
@@ -173,7 +182,7 @@ func resourceKubernetesEndpointsUpdate(d *schema.ResourceData, meta interface{})
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("subset") {
-		subsets := expandEndpointsSubsets(d.Get("subset").([]interface{}))
+		subsets := expandEndpointsSubsets(d.Get("subset").(*schema.Set))
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/subsets",
 			Value: subsets,

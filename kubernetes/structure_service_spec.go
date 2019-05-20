@@ -209,6 +209,12 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 			Value: d.Get(keyPrefix + "external_name").(string),
 		})
 	}
+	if d.HasChange(keyPrefix + "external_traffic_policy") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "externalTrafficPolicy",
+			Value: d.Get(keyPrefix + "external_traffic_policy").(string),
+		})
+	}
 	if d.HasChange(keyPrefix + "publish_not_ready_addresses") {
 		p := pathPrefix + "publishNotReadyAddresses"
 		v := d.Get(keyPrefix + "publish_not_ready_addresses").(bool)

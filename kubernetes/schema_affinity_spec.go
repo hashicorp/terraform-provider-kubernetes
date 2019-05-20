@@ -1,6 +1,11 @@
 package kubernetes
 
-import "github.com/hashicorp/terraform/helper/schema"
+import (
+	"regexp"
+
+	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
+)
 
 func affinityFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
@@ -102,9 +107,10 @@ func nodeSelectorRequirementsFields() map[string]*schema.Schema {
 						Optional:    true,
 					},
 					"operator": {
-						Type:        schema.TypeString,
-						Description: "Operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.",
-						Optional:    true,
+						Type:         schema.TypeString,
+						Description:  "Operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.",
+						Optional:     true,
+						ValidateFunc: validation.StringInSlice([]string{"In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt"}, false),
 					},
 					"values": {
 						Type:        schema.TypeSet,
@@ -158,9 +164,10 @@ func podAffinityTermFields() map[string]*schema.Schema {
 			Set:         schema.HashString,
 		},
 		"topology_key": {
-			Type:        schema.TypeString,
-			Description: "empty topology key is interpreted by the scheduler as 'all topologies'",
-			Optional:    true,
+			Type:         schema.TypeString,
+			Description:  "empty topology key is interpreted by the scheduler as 'all topologies'",
+			Optional:     true,
+			ValidateFunc: validation.StringMatch(regexp.MustCompile(`^.+$`), "value cannot be empty"),
 		},
 	}
 }

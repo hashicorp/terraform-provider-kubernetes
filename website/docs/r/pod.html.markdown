@@ -203,6 +203,89 @@ The following arguments are supported:
 * `pod_affinity` - (Optional) Inter-pod topological affinity. rules that specify that certain pods should be placed in the same topological domain (e.g. same node, same rack, same zone, same power domain, etc.) For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#inter-pod-affinity-and-anti-affinity-beta-feature)
 * `pod_anti_affinity` - (Optional) Inter-pod topological affinity. rules that specify that certain pods should be placed in the same topological domain (e.g. same node, same rack, same zone, same power domain, etc.) For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#inter-pod-affinity-and-anti-affinity-beta-feature)
 
+### `node_affinity`
+
+#### Arguments
+
+* `required_during_scheduling_ignored_during_execution` - (Optional) If the affinity requirements specified by this field are not met at scheduling time, the pod will not be scheduled onto the node. If the affinity requirements specified by this field cease to be met at some point during pod execution (e.g. due to an update), the system may or may not try to eventually evict the pod from its node.
+
+* `preferred_during_scheduling_ignored_during_execution` - (Optional) The scheduler will prefer to schedule pods to nodes that satisfy the affinity expressions specified by this field, but it may choose a node that violates one or more of the expressions.
+
+### `required_during_scheduling_ignored_during_execution`
+
+#### Arguments
+
+* `node_selector_term` - (Required) A list of node selector terms. The terms are ORed.
+
+## `node_selector_term`
+
+* `match_expressions` - (Optional) A list of node selector requirements by node's labels.
+
+* `match_fields` - (Optional) A list of node selector requirements by node's fields.
+
+### `match_expressions` / `match_fields`
+
+* `key` - (Required) The label key that the selector applies to.
+
+* `operator` - (Required) Represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+
+* `values` - (Optional) An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer.
+
+### `preferred_during_scheduling_ignored_during_execution`
+
+#### Arguments
+
+* `preference` - (Required) A node selector term, associated with the corresponding weight.
+
+* `weight` - (Required) Weight associated with matching the corresponding nodeSelectorTerm, in the range 1-100.
+
+### `preference`
+
+#### Arguments
+
+* `match_expressions` - (Optional) A list of node selector requirements by node's labels.
+
+* `match_fields` - (Optional) A list of node selector requirements by node's fields.
+
+## `match_expressions` / `match_fields`
+
+#### Arguments
+
+* `key` - (Required) The label key that the selector applies to.
+
+* `operator` - (Required)  Represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+
+* `values` - (Optional) An array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer.
+
+### `pod_affinity`
+
+#### Arguments
+
+* `required_during_scheduling_ignored_during_execution` - (Optional) If the affinity requirements specified by this field are not met at scheduling time, the pod will not be scheduled onto the node. If the affinity requirements specified by this field cease to be met at some point during pod execution (e.g. due to a pod label update), the system may or may not try to eventually evict the pod from its node.
+
+* `preferred_during_scheduling_ignored_during_execution` - (Optional) The scheduler will prefer to schedule pods to nodes that satisfy the affinity expressions specified by this field, but it may choose a node that violates one or more of the expressions.
+
+### `pod_anti_affinity`
+
+#### Arguments
+
+* `required_during_scheduling_ignored_during_execution` - (Optional) If the anti-affinity requirements specified by this field are not met at scheduling time, the pod will not be scheduled onto the node. If the anti-affinity requirements specified by this field cease to be met at some point during pod execution (e.g. due to a pod label update), the system may or may not try to eventually evict the pod from its node. 
+
+* `preferred_during_scheduling_ignored_during_execution` - (Optional) The scheduler will prefer to schedule pods to nodes that satisfy the anti-affinity expressions specified by this field, but it may choose a node that violates one or more of the expressions.
+
+### `required_during_scheduling_ignored_during_execution`
+
+#### Arguments (pod_affinity_term)
+
+* `label_selector` - (Optional) A label query over a set of resources, in this case pods.
+* `namespaces` - (Optional) Specifies which namespaces the `label_selector` applies to (matches against). Null or empty list means "this pod's namespace"
+* `topology_key` - (Optional) This pod should be co-located (affinity) or not co-located (anti-affinity) with the pods matching the `label_selector` in the specified namespaces, where co-located is defined as running on a node whose value of the label with key `topology_key` matches that of any node on which any of the selected pods is running. Empty `topology_key` is not allowed.
+
+### `preferred_during_scheduling_ignored_during_execution`
+
+* `pod_affinity_term` - (Required) A pod affinity term, associated with the corresponding weight.
+* `weight` - (Required) Weight associated with matching the corresponding `pod_affinity_term`, in the range 1-100.
+
 ### `container`
 
 #### Arguments

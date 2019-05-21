@@ -11,6 +11,15 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 		deprecatedMessage = "This field is deprecated because template was incorrectly defined as a PodSpec preventing the definition of metadata. Please use the one under the spec field"
 	}
 	s := map[string]*schema.Schema{
+		"affinity": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			MaxItems:    1,
+			Description: "Optional pod scheduling constraints.",
+			Elem: &schema.Resource{
+				Schema: affinityFields(),
+			},
+		},
 		"active_deadline_seconds": {
 			Type:         schema.TypeInt,
 			Optional:     true,

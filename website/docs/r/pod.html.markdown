@@ -219,11 +219,15 @@ The following arguments are supported:
 
 ## `node_selector_term`
 
+#### Arguments
+
 * `match_expressions` - (Optional) A list of node selector requirements by node's labels.
 
 * `match_fields` - (Optional) A list of node selector requirements by node's fields.
 
 ### `match_expressions` / `match_fields`
+
+#### Arguments
 
 * `key` - (Required) The label key that the selector applies to.
 
@@ -273,15 +277,17 @@ The following arguments are supported:
 
 * `preferred_during_scheduling_ignored_during_execution` - (Optional) The scheduler will prefer to schedule pods to nodes that satisfy the anti-affinity expressions specified by this field, but it may choose a node that violates one or more of the expressions.
 
-### `required_during_scheduling_ignored_during_execution`
+### `required_during_scheduling_ignored_during_execution` (pod_affinity_term)
 
-#### Arguments (pod_affinity_term)
+#### Arguments
 
 * `label_selector` - (Optional) A label query over a set of resources, in this case pods.
 * `namespaces` - (Optional) Specifies which namespaces the `label_selector` applies to (matches against). Null or empty list means "this pod's namespace"
 * `topology_key` - (Optional) This pod should be co-located (affinity) or not co-located (anti-affinity) with the pods matching the `label_selector` in the specified namespaces, where co-located is defined as running on a node whose value of the label with key `topology_key` matches that of any node on which any of the selected pods is running. Empty `topology_key` is not allowed.
 
 ### `preferred_during_scheduling_ignored_during_execution`
+
+#### Arguments
 
 * `pod_affinity_term` - (Required) A pod affinity term, associated with the corresponding weight.
 * `weight` - (Required) Weight associated with matching the corresponding `pod_affinity_term`, in the range 1-100.

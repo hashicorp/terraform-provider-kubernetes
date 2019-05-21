@@ -65,7 +65,7 @@ The following arguments are supported:
 
 * `node_selector_terms` - (Required) A list of node selector terms. The terms are ORed.
 
-### `node_selector_terms`
+### `node_selector_term`
 
 #### Arguments
 

@@ -1,14 +1,17 @@
-variable "gcp_region" {}
-variable "gcp_zone" {}
+variable "gcp_region" {
+}
+
+variable "gcp_zone" {
+}
 
 provider "google" {
-  region = "${var.gcp_region}"
+  region = var.gcp_region
 }
 
 resource "google_compute_disk" "mysql" {
-  name  = "wordpress-mysql"
-  type  = "pd-ssd"
-  zone  = "${var.gcp_zone}"
+  name = "wordpress-mysql"
+  type = "pd-ssd"
+  zone = var.gcp_zone
   size = 20
 }
 
@@ -17,13 +20,13 @@ resource "kubernetes_persistent_volume" "mysql" {
     name = "mysql-pv"
   }
   spec {
-    capacity {
+    capacity = {
       storage = "20Gi"
     }
     access_modes = ["ReadWriteOnce"]
     persistent_volume_source {
       gce_persistent_disk {
-        pd_name = "${google_compute_disk.mysql.name}"
+        pd_name = google_compute_disk.mysql.name
         fs_type = "ext4"
       }
     }
@@ -31,9 +34,9 @@ resource "kubernetes_persistent_volume" "mysql" {
 }
 
 resource "google_compute_disk" "wordpress" {
-  name  = "wordpress-frontend"
-  type  = "pd-ssd"
-  zone  = "${var.gcp_zone}"
+  name = "wordpress-frontend"
+  type = "pd-ssd"
+  zone = var.gcp_zone
   size = 20
 }
 
@@ -42,13 +45,13 @@ resource "kubernetes_persistent_volume" "wordpress" {
     name = "wordpress-pv"
   }
   spec {
-    capacity {
+    capacity = {
       storage = "20Gi"
     }
     access_modes = ["ReadWriteOnce"]
     persistent_volume_source {
       gce_persistent_disk {
-        pd_name = "${google_compute_disk.wordpress.name}"
+        pd_name = google_compute_disk.wordpress.name
         fs_type = "ext4"
       }
     }

@@ -365,7 +365,7 @@ github.com/jen20/awspolicyequivalence
 github.com/jmespath/go-jmespath
 # github.com/json-iterator/go v1.1.5
 github.com/json-iterator/go
-# github.com/keybase/go-crypto v0.0.0-20181127160227-255a5089e85a
+# github.com/keybase/go-crypto v0.0.0-20190523171820-b785b22cc757
 github.com/keybase/go-crypto/openpgp
 github.com/keybase/go-crypto/openpgp/packet
 github.com/keybase/go-crypto/openpgp/armor

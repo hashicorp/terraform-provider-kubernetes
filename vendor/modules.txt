@@ -351,7 +351,7 @@ github.com/hashicorp/terraform/svchost
 github.com/hashicorp/terraform/svchost/auth
 # github.com/hashicorp/terraform-config-inspect v0.0.0-20190327195015-8022a2663a70
 github.com/hashicorp/terraform-config-inspect/tfconfig
-# github.com/hashicorp/vault v1.0.3
+# github.com/hashicorp/vault v1.1.2
 github.com/hashicorp/vault/helper/pgpkeys
 github.com/hashicorp/vault/helper/jsonutil
 github.com/hashicorp/vault/helper/compressutil

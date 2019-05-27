@@ -372,7 +372,7 @@ github.com/hashicorp/vault/helper/jsonutil
 github.com/hashicorp/vault/helper/compressutil
 # github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d
 github.com/hashicorp/yamux
-# github.com/imdario/mergo v0.3.6
+# github.com/imdario/mergo v0.3.7
 github.com/imdario/mergo
 # github.com/jen20/awspolicyequivalence v1.0.0
 github.com/jen20/awspolicyequivalence

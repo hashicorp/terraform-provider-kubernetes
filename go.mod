@@ -3,7 +3,7 @@ module github.com/terraform-providers/terraform-provider-kubernetes
 require (
 	git.apache.org/thrift.git v0.0.0-20181218151757-9b75e4fe745a // indirect
 	github.com/Azure/go-autorest v12.1.0+incompatible // indirect
-	github.com/Azure/go-autorest/autorest v0.2.0 // indirect
+	github.com/Azure/go-autorest/autorest/v12 v12.1.0 // indirect
 	github.com/dustinkirkland/golang-petname v0.0.0-20170921220637-d3c2ba80e75e // indirect
 	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/golang/snappy v0.0.1 // indirect

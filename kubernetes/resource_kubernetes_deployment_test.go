@@ -174,8 +174,6 @@ func TestAccKubernetesDeployment_with_security_context(t *testing.T) {
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := "redis:5.0.2"
-	tolerationSeconds := 6000
-	operator := "Exists"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -229,8 +227,8 @@ func TestAccKubernetesDeployment_with_tolerations(t *testing.T) {
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := "redis:5.0.2"
+	tolerationSeconds := 6000
 	operator := "Equal"
-	value := "value"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -257,6 +255,8 @@ func TestAccKubernetesDeployment_with_tolerationsUnsetTolerationSeconds(t *testi
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := "redis:5.0.2"
+	operator := "Equal"
+	value := "value"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },

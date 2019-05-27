@@ -74,7 +74,7 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 #### Arguments
 
 * `api_version` - (Optional) API version of the referent
-* `kind` - (Required) Kind of the referent. e.g. `ReplicationController`. For more info see http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#types-kinds
+* `kind` - (Required) Kind of the referent. e.g. `ReplicationController`. For more info see https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#types-kinds
 * `name` - (Required) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 
 ## Import

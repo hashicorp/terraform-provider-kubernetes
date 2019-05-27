@@ -13,7 +13,7 @@ cloud.google.com/go/internal/trace
 cloud.google.com/go/internal/version
 # contrib.go.opencensus.io/exporter/ocagent v0.4.1
 contrib.go.opencensus.io/exporter/ocagent
-# github.com/Azure/go-autorest v11.5.0+incompatible
+# github.com/Azure/go-autorest v11.9.0+incompatible
 github.com/Azure/go-autorest/autorest
 github.com/Azure/go-autorest/autorest/adal
 github.com/Azure/go-autorest/autorest/azure

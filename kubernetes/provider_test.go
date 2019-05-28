@@ -204,12 +204,15 @@ func skipIfNoAwsSettingsFound(t *testing.T) {
 }
 
 func skipIfNoLoadBalancersAvailable(t *testing.T) {
-	// TODO: Support AWS ELBs
 	isInGke, err := isRunningInGke()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !isInGke {
+	isInEks, err := isRunningInEks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !isInGke && !isInEks {
 		t.Skip("The Kubernetes endpoint must come from an environment which supports " +
 			"load balancer provisioning for this test to run - skipping")
 	}
@@ -268,6 +271,19 @@ func isRunningInGke() (bool, error) {
 
 	labels := node.GetLabels()
 	if _, ok := labels["cloud.google.com/gke-nodepool"]; ok {
+		return true, nil
+	}
+	return false, nil
+}
+
+func isRunningInEks() (bool, error) {
+	node, err := getFirstNode()
+	if err != nil {
+		return false, err
+	}
+
+	labels := node.GetLabels()
+	if _, ok := labels["failure-domain.beta.kubernetes.io/region"]; ok {
 		return true, nil
 	}
 	return false, nil

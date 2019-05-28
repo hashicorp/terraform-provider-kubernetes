@@ -148,7 +148,7 @@ func resourceKubernetesEndpointsRead(d *schema.ResourceData, meta interface{}) e
 		return fmt.Errorf("Failed to read endpoint because: %s", err)
 	}
 	log.Printf("[INFO] Received endpoints: %#v", ep)
-	err = d.Set("metadata", flattenMetadata(ep.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(ep.ObjectMeta, d))
 	if err != nil {
 		return fmt.Errorf("Failed to read endpoints because: %s", err)
 	}

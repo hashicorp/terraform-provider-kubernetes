@@ -1,4 +1,28 @@
-## 1.6.3 (Unreleased)
+## 1.7.1 (Unreleased)
+## 1.7.0 (May 22, 2019)
+
+FEATURES:
+
+* Add support of client-go credential plugins in auth (#396)
+* Add kubernetes_ingress resource (closes #14) (#417)
+
+IMPROVEMENTS:
+
+* Add `affinity` (Pod affinity rules) attribute to Pod and PodTemplate spec
+* Add support for `binary_data` to kubernetes_config_map (#400)
+* Add `run_as_group` to container security context attribute (#414)
+* Add `local` attribute `persistent_volume_source` docs
+* Add `external_traffic_policy` to `kubernetes_service`
+* Allow `max_unavailable` and `max_surge` to be 0 on `kubernetes_deployment`
+
+BUG FIXES:
+
+* Fix docs typo: `kubernetes_service` takes `target_port` not `targetPort` (#409)
+* Fix links to timeouts documentation for terraform 0.12+ (#406)
+* Link Endpoints resource into sidebar (#431)
+* Add doc examples for container health probes.
+* Don’t prevent use of kubernetes.io annotation keys
+
 ## 1.6.2 (April 18, 2019)
 
 BUG FIXES:

@@ -84,7 +84,7 @@ func resourceKubernetesRoleBindingRead(d *schema.ResourceData, meta interface{})
 	}
 
 	log.Printf("[INFO] Received RoleBinding: %#v", binding)
-	err = d.Set("metadata", flattenMetadata(binding.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(binding.ObjectMeta, d))
 	if err != nil {
 		return err
 	}

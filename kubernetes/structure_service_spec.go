@@ -56,6 +56,9 @@ func flattenServiceSpec(in v1.ServiceSpec) []interface{} {
 	}
 	att["publish_not_ready_addresses"] = in.PublishNotReadyAddresses
 
+	if in.ExternalTrafficPolicy != "" {
+		att["external_traffic_policy"] = string(in.ExternalTrafficPolicy)
+	}
 	return []interface{}{att}
 }
 
@@ -135,7 +138,9 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 	if v, ok := in["publish_not_ready_addresses"].(bool); ok {
 		obj.PublishNotReadyAddresses = v
 	}
-
+	if v, ok := in["external_traffic_policy"].(string); ok {
+		obj.ExternalTrafficPolicy = v1.ServiceExternalTrafficPolicyType(v)
+	}
 	return obj
 }
 
@@ -202,6 +207,12 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "externalName",
 			Value: d.Get(keyPrefix + "external_name").(string),
+		})
+	}
+	if d.HasChange(keyPrefix + "external_traffic_policy") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "externalTrafficPolicy",
+			Value: d.Get(keyPrefix + "external_traffic_policy").(string),
 		})
 	}
 	if d.HasChange(keyPrefix + "publish_not_ready_addresses") {

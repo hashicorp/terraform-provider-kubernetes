@@ -167,12 +167,12 @@ func resourceKubernetesReplicationControllerRead(d *schema.ResourceData, meta in
 	}
 	log.Printf("[INFO] Received replication controller: %#v", rc)
 
-	err = d.Set("metadata", flattenMetadata(rc.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(rc.ObjectMeta, d))
 	if err != nil {
 		return err
 	}
 
-	spec, err := flattenReplicationControllerSpec(rc.Spec, useDeprecatedSpecFields(d))
+	spec, err := flattenReplicationControllerSpec(rc.Spec, d, useDeprecatedSpecFields(d))
 	if err != nil {
 		return err
 	}

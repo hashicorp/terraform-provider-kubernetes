@@ -109,13 +109,19 @@ func expandStringSlice(s []interface{}) []string {
 	return result
 }
 
-func flattenMetadata(meta metav1.ObjectMeta) []interface{} {
+func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, metaPrefix ...string) []interface{} {
 	m := make(map[string]interface{})
-	m["annotations"] = removeInternalKeys(meta.Annotations)
+	prefix := ""
+	if len(metaPrefix) > 0 {
+		prefix = metaPrefix[0]
+	}
+	configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
+	m["annotations"] = removeInternalKeys(meta.Annotations, configAnnotations)
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}
-	m["labels"] = removeInternalKeys(meta.Labels)
+	configLabels := d.Get(prefix + "metadata.0.labels").(map[string]interface{})
+	m["labels"] = removeInternalKeys(meta.Labels, configLabels)
 	m["name"] = meta.Name
 	m["resource_version"] = meta.ResourceVersion
 	m["self_link"] = meta.SelfLink
@@ -129,13 +135,25 @@ func flattenMetadata(meta metav1.ObjectMeta) []interface{} {
 	return []interface{}{m}
 }
 
-func removeInternalKeys(m map[string]string) map[string]string {
+func removeInternalKeys(m map[string]string, d map[string]interface{}) map[string]string {
 	for k := range m {
-		if isInternalKey(k) {
+		if isInternalKey(k) && !isKeyInMap(k, d) {
 			delete(m, k)
 		}
 	}
 	return m
+}
+
+func isKeyInMap(key string, d map[string]interface{}) bool {
+	if d == nil {
+		return false
+	}
+	for k := range d {
+		if k == key {
+			return true
+		}
+	}
+	return false
 }
 
 func isInternalKey(annotationKey string) bool {
@@ -562,9 +580,9 @@ func flattenNodeSelectorTerm(in api.NodeSelectorTerm) []interface{} {
 	return []interface{}{att}
 }
 
-func expandNodeSelectorTerm(l []interface{}) api.NodeSelectorTerm {
+func expandNodeSelectorTerm(l []interface{}) *api.NodeSelectorTerm {
 	if len(l) == 0 || l[0] == nil {
-		return api.NodeSelectorTerm{}
+		return &api.NodeSelectorTerm{}
 	}
 	in := l[0].(map[string]interface{})
 	obj := api.NodeSelectorTerm{}
@@ -573,6 +591,25 @@ func expandNodeSelectorTerm(l []interface{}) api.NodeSelectorTerm {
 	}
 	if v, ok := in["match_fields"].([]interface{}); ok && len(v) > 0 {
 		obj.MatchFields = expandNodeSelectorRequirementList(v)
+	}
+	return &obj
+}
+
+func flattenNodeSelectorTerms(in []api.NodeSelectorTerm) []interface{} {
+	att := make([]interface{}, len(in), len(in))
+	for i, n := range in {
+		att[i] = flattenNodeSelectorTerm(n)[0]
+	}
+	return att
+}
+
+func expandNodeSelectorTerms(l []interface{}) []api.NodeSelectorTerm {
+	if len(l) == 0 || l[0] == nil {
+		return []api.NodeSelectorTerm{}
+	}
+	obj := make([]api.NodeSelectorTerm, len(l), len(l))
+	for i, n := range l {
+		obj[i] = *expandNodeSelectorTerm([]interface{}{n})
 	}
 	return obj
 }

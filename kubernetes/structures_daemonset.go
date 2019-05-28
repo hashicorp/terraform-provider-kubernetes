@@ -26,7 +26,7 @@ func flattenDaemonSetSpec(in appsv1.DaemonSetSpec, d *schema.ResourceData) ([]in
 	}
 	template := make(map[string]interface{})
 	template["spec"] = podSpec
-	template["metadata"] = flattenMetadata(in.Template.ObjectMeta)
+	template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d, "spec.0.template.0.")
 	att["template"] = []interface{}{template}
 
 	return []interface{}{att}, nil

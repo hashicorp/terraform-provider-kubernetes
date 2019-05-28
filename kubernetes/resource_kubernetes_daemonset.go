@@ -206,7 +206,7 @@ func resourceKubernetesDaemonSetRead(d *schema.ResourceData, meta interface{}) e
 	}
 	log.Printf("[INFO] Received daemonset: %#v", daemonset)
 
-	err = d.Set("metadata", flattenMetadata(daemonset.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(daemonset.ObjectMeta, d))
 	if err != nil {
 		return err
 	}

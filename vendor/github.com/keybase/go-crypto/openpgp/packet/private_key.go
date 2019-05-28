@@ -44,6 +44,10 @@ type EdDSAPrivateKey struct {
 	seed parsedMPI
 }
 
+func (e *EdDSAPrivateKey) Seed() []byte {
+	return e.seed.bytes
+}
+
 func (e *EdDSAPrivateKey) Sign(digest []byte) (R, S []byte, err error) {
 	r := bytes.NewReader(e.seed.bytes)
 	publicKey, privateKey, err := ed25519.GenerateKey(r)

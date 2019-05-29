@@ -20,7 +20,7 @@ resource "kubernetes_persistent_volume" "example" {
 		name = "terraform-example"
 	}
 	spec {
-		capacity {
+		capacity = {
 			storage = "2Gi"
 		}
 		access_modes = ["ReadWriteMany"]

@@ -25,7 +25,7 @@ require (
 	github.com/terraform-providers/terraform-provider-random v2.0.0+incompatible // indirect
 	github.com/ulikunitz/xz v0.5.6 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	go.opencensus.io v0.20.2 // indirect
+	go.opencensus.io v0.22.0 // indirect
 	google.golang.org/grpc v1.19.1 // indirect
 	k8s.io/api v0.0.0-20181221193117-173ce66c1e39
 	k8s.io/apimachinery v0.0.0-20190210215030-4521e64aecd3

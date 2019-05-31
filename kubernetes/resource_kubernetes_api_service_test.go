@@ -38,8 +38,8 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group_priority_minimum", "1"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version", version),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version_priority", "1"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.ca_bundle", "base64"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.insecure_skip_tls_verify", "false"),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.ca_bundle", ""),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.insecure_skip_tls_verify", "true"),
 				),
 			},
 			{
@@ -59,8 +59,27 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group_priority_minimum", "100"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version", version),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version_priority", "100"),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.ca_bundle", "base64"),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.insecure_skip_tls_verify", "false"),
+				),
+			},
+			{
+				Config: testAccKubernetesAPIServiceConfig_modified_local_service(name, group, version),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesAPIServiceExists("kubernetes_api_service.test"),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group", group),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group_priority_minimum", "100"),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version", version),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version_priority", "100"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.ca_bundle", ""),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.insecure_skip_tls_verify", "true"),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.insecure_skip_tls_verify", "false"),
 				),
 			},
 			{
@@ -80,8 +99,8 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group_priority_minimum", "1"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version", version),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version_priority", "1"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.ca_bundle", "base64"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.insecure_skip_tls_verify", "false"),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.ca_bundle", ""),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.insecure_skip_tls_verify", "true"),
 				),
 			},
 		},
@@ -184,8 +203,7 @@ resource "kubernetes_api_service" "test" {
     version          = "%s"
     version_priority = 1
 
-    ca_bundle = "base64"
-    insecure_skip_tls_verify = false
+    insecure_skip_tls_verify = true
   }
 }
 `, name, group, version)
@@ -209,8 +227,8 @@ func testAccKubernetesAPIServiceConfig_modified(name, group, version string) str
 
     spec {
       service {
-        name      = "metrics-server"
-        namespace = "kube-system"
+        name        = "metrics-server"
+        namespace   = "kube-system"
       }
 
       group                  = "%s"
@@ -219,7 +237,37 @@ func testAccKubernetesAPIServiceConfig_modified(name, group, version string) str
       version          = "%s"
       version_priority = 100
 
-      insecure_skip_tls_verify = true
+      ca_bundle = "base64"
+      insecure_skip_tls_verify = false
+    }
+  }
+`, name, group, version)
+}
+
+func testAccKubernetesAPIServiceConfig_modified_local_service(name, group, version string) string {
+	return fmt.Sprintf(`
+  resource "kubernetes_api_service" "test" {
+    metadata {
+      annotations = {
+        TestAnnotationOne = "one"
+      }
+
+      labels = {
+        TestLabelOne = "one"
+        TestLabelTwo = "two"
+      }
+
+      name = "%s"
+    }
+
+    spec {
+      group                  = "%s"
+      group_priority_minimum = 100
+
+      version          = "%s"
+      version_priority = 100
+
+      insecure_skip_tls_verify = false
     }
   }
 `, name, group, version)

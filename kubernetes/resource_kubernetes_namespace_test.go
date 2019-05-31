@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	api "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func TestAccKubernetesNamespace_basic(t *testing.T) {
@@ -273,7 +272,7 @@ func testAccCheckMetaLabels(om *meta_v1.ObjectMeta, expected map[string]string) 
 }
 
 func testAccCheckKubernetesNamespaceDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_namespace" {
@@ -298,7 +297,7 @@ func testAccCheckKubernetesNamespaceExists(n string, obj *api.Namespace) resourc
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 		out, err := conn.CoreV1().Namespaces().Get(rs.Primary.ID, meta_v1.GetOptions{})
 		if err != nil {
 			return err

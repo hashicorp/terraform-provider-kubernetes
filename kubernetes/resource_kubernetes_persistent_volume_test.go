@@ -13,7 +13,6 @@ import (
 	api "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
@@ -561,7 +560,7 @@ func TestAccKubernetesPersistentVolume_hostPath_nodeAffinity(t *testing.T) {
 }
 
 func waitForPersistenceVolumeDeleted(pvName string, poll, timeout time.Duration) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(poll) {
 		_, err := conn.CoreV1().PersistentVolumes().Get(pvName, meta_v1.GetOptions{})
 		if err != nil && apierrs.IsNotFound(err) {
@@ -572,7 +571,7 @@ func waitForPersistenceVolumeDeleted(pvName string, poll, timeout time.Duration)
 }
 
 func testAccCheckKubernetesPersistentVolumeDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 	timeout := 5 * time.Second
 	poll := 1 * time.Second
 
@@ -599,7 +598,7 @@ func testAccCheckKubernetesPersistentVolumeExists(n string, obj *api.PersistentV
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 		name := rs.Primary.ID
 		out, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
 		if err != nil {

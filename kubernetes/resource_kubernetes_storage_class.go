@@ -5,12 +5,11 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	api "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesStorageClass() *schema.Resource {
@@ -61,7 +60,7 @@ func resourceKubernetesStorageClass() *schema.Resource {
 }
 
 func resourceKubernetesStorageClassCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	reclaimPolicy := v1.PersistentVolumeReclaimPolicy(d.Get("reclaim_policy").(string))
@@ -91,7 +90,7 @@ func resourceKubernetesStorageClassCreate(d *schema.ResourceData, meta interface
 }
 
 func resourceKubernetesStorageClassRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	name := d.Id()
 	log.Printf("[INFO] Reading storage class %s", name)
@@ -117,7 +116,7 @@ func resourceKubernetesStorageClassRead(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesStorageClassUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	name := d.Id()
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -137,7 +136,7 @@ func resourceKubernetesStorageClassUpdate(d *schema.ResourceData, meta interface
 }
 
 func resourceKubernetesStorageClassDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting storage class: %#v", name)
@@ -153,7 +152,7 @@ func resourceKubernetesStorageClassDelete(d *schema.ResourceData, meta interface
 }
 
 func resourceKubernetesStorageClassExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	name := d.Id()
 	log.Printf("[INFO] Checking storage class %s", name)

@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
@@ -82,7 +81,7 @@ func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
 }
 
 func resourceKubernetesHorizontalPodAutoscalerCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandHorizontalPodAutoscalerSpec(d.Get("spec").([]interface{}))
@@ -107,7 +106,7 @@ func resourceKubernetesHorizontalPodAutoscalerCreate(d *schema.ResourceData, met
 }
 
 func resourceKubernetesHorizontalPodAutoscalerRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -136,7 +135,7 @@ func resourceKubernetesHorizontalPodAutoscalerRead(d *schema.ResourceData, meta 
 }
 
 func resourceKubernetesHorizontalPodAutoscalerUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -164,7 +163,7 @@ func resourceKubernetesHorizontalPodAutoscalerUpdate(d *schema.ResourceData, met
 }
 
 func resourceKubernetesHorizontalPodAutoscalerDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -183,7 +182,7 @@ func resourceKubernetesHorizontalPodAutoscalerDelete(d *schema.ResourceData, met
 }
 
 func resourceKubernetesHorizontalPodAutoscalerExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

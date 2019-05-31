@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesLimitRange() *schema.Resource {
@@ -80,7 +79,7 @@ func resourceKubernetesLimitRange() *schema.Resource {
 }
 
 func resourceKubernetesLimitRangeCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandLimitRangeSpec(d.Get("spec").([]interface{}), d.IsNewResource())
@@ -103,7 +102,7 @@ func resourceKubernetesLimitRangeCreate(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesLimitRangeRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -130,7 +129,7 @@ func resourceKubernetesLimitRangeRead(d *schema.ResourceData, meta interface{}) 
 }
 
 func resourceKubernetesLimitRangeUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -164,7 +163,7 @@ func resourceKubernetesLimitRangeUpdate(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesLimitRangeDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -184,7 +183,7 @@ func resourceKubernetesLimitRangeDelete(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesLimitRangeExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

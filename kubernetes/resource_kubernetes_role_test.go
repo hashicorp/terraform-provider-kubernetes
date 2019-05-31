@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	api "k8s.io/api/rbac/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 func TestAccKubernetesRole_basic(t *testing.T) {
@@ -211,7 +210,7 @@ func testAccCheckKubernetesRoleExists(n string, obj *api.Role) resource.TestChec
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
@@ -229,7 +228,7 @@ func testAccCheckKubernetesRoleExists(n string, obj *api.Role) resource.TestChec
 }
 
 func testAccCheckKubernetesRoleDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_role" {

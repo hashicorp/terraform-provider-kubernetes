@@ -14,6 +14,7 @@ import (
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	aggregator "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
 
 func Provider() terraform.ResourceProvider {
@@ -168,6 +169,11 @@ func Provider() terraform.ResourceProvider {
 	}
 }
 
+type KubeClientsets struct {
+	MainClientset       *kubernetes.Clientset
+	AggregatorClientset *aggregator.Clientset
+}
+
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 
 	var cfg *restclient.Config
@@ -232,7 +238,12 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, fmt.Errorf("Failed to configure: %s", err)
 	}
 
-	return k, nil
+	a, err := aggregator.NewForConfig(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to configure: %s", err)
+	}
+
+	return &KubeClientsets{k, a}, nil
 }
 
 func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {

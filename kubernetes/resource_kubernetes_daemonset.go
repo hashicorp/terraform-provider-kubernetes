@@ -117,7 +117,7 @@ func resourceKubernetesDaemonSet() *schema.Resource {
 }
 
 func resourceKubernetesDaemonSetCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandDaemonSetSpec(d.Get("spec").([]interface{}))
@@ -145,7 +145,7 @@ func resourceKubernetesDaemonSetCreate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesDaemonSetUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -187,7 +187,7 @@ func resourceKubernetesDaemonSetUpdate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesDaemonSetRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -225,7 +225,7 @@ func resourceKubernetesDaemonSetRead(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesDaemonSetDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -246,7 +246,7 @@ func resourceKubernetesDaemonSetDelete(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesDaemonSetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

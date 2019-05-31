@@ -56,7 +56,7 @@ func resourceKubernetesAPIService() *schema.Resource {
 						},
 						"service": {
 							Type:        schema.TypeList,
-							Description: "Service is a reference to the service for this API server. It must communicate on port 443 If the Service is nil, that means the handling for the API groupversion is handled locally on this server. The call will simply delegate to the normal handler chain to be fulfilled.",
+							Description: "Service is a reference to the service for this API server. It must communicate on port 443. If the Service is nil, that means the handling for the API groupversion is handled locally on this server. The call will simply delegate to the normal handler chain to be fulfilled.",
 							Optional:    true,
 							ForceNew:    true,
 							MaxItems:    1,
@@ -77,7 +77,7 @@ func resourceKubernetesAPIService() *schema.Resource {
 						},
 						"version": {
 							Type:        schema.TypeString,
-							Description: "Version is the API version this server hosts. For example, `v1`",
+							Description: "Version is the API version this server hosts. For example, `v1`.",
 							Required:    true,
 						},
 						"version_priority": {

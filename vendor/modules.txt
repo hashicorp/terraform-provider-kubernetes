@@ -640,7 +640,7 @@ google.golang.org/grpc/credentials/oauth
 gopkg.in/inf.v0
 # gopkg.in/yaml.v2 v2.2.2
 gopkg.in/yaml.v2
-# k8s.io/api v0.0.0-20181221193117-173ce66c1e39
+# k8s.io/api v0.0.0-20190222213804-5cb15d344471
 k8s.io/api/apps/v1
 k8s.io/api/autoscaling/v1
 k8s.io/api/batch/v1
@@ -673,7 +673,7 @@ k8s.io/api/scheduling/v1beta1
 k8s.io/api/settings/v1alpha1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
-# k8s.io/apimachinery v0.0.0-20190210215030-4521e64aecd3
+# k8s.io/apimachinery v0.0.0-20190221213512-86fb29eff628
 k8s.io/apimachinery/pkg/api/errors
 k8s.io/apimachinery/pkg/api/resource
 k8s.io/apimachinery/pkg/api/validation
@@ -778,11 +778,13 @@ k8s.io/client-go/tools/clientcmd/api/v1
 k8s.io/client-go/third_party/forked/golang/template
 # k8s.io/klog v0.1.0
 k8s.io/klog
-# sigs.k8s.io/structured-merge-diff v0.0.0-20190130003954-e5e029740eb8
-sigs.k8s.io/structured-merge-diff/merge
-sigs.k8s.io/structured-merge-diff/fieldpath
-sigs.k8s.io/structured-merge-diff/typed
-sigs.k8s.io/structured-merge-diff/value
-sigs.k8s.io/structured-merge-diff/schema
+# k8s.io/kube-aggregator v0.0.0-20190508191239-c5c2b08eec9f
+k8s.io/kube-aggregator/pkg/apis/apiregistration/v1
+k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset
+k8s.io/kube-aggregator/pkg/apis/apiregistration
+k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/typed/apiregistration/v1
+k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/typed/apiregistration/v1beta1
+k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme
+k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1
 # sigs.k8s.io/yaml v1.1.0
 sigs.k8s.io/yaml

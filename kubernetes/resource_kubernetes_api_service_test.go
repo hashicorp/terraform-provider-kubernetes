@@ -59,7 +59,7 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group_priority_minimum", "100"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version", version),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version_priority", "100"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.ca_bundle", "base64"),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.ca_bundle", "ZGF0YQ=="),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.insecure_skip_tls_verify", "false"),
 				),
 			},
@@ -237,7 +237,7 @@ func testAccKubernetesAPIServiceConfig_modified(name, group, version string) str
       version          = "%s"
       version_priority = 100
 
-      ca_bundle = "base64"
+      ca_bundle = "${base64encode("data")}"
       insecure_skip_tls_verify = false
     }
   }

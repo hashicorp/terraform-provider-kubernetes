@@ -33,9 +33,10 @@ func resourceKubernetesAPIService() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ca_bundle": {
-							Type:        schema.TypeString,
-							Description: "CABundle is a PEM encoded CA bundle which will be used to validate an API server's serving certificate. If unspecified, system trust roots on the apiserver are used.",
-							Optional:    true,
+							Type:         schema.TypeString,
+							Description:  "CABundle is a PEM encoded CA bundle which will be used to validate an API server's serving certificate. If unspecified, system trust roots on the apiserver are used.",
+							Optional:     true,
+							ValidateFunc: validateBase64Encoded,
 						},
 						"group": {
 							Type:        schema.TypeString,

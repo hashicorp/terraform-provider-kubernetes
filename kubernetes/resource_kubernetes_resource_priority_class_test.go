@@ -237,9 +237,9 @@ resource "kubernetes_priority_class" "test" {
     name = "%s"
   }
 
-	value = 100
-	description = "Foobar"
-	global_default = true
+  value = 100
+  description = "Foobar"
+  global_default = true
 }
 `, name)
 }
@@ -251,7 +251,7 @@ resource "kubernetes_priority_class" "test" {
     generate_name = "%s"
   }
 
-	value = 999
+  value = 999
 }
 `, prefix)
 }

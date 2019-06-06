@@ -43,6 +43,7 @@ func resourceKubernetesPriorityClass() *schema.Resource {
 				Type:        schema.TypeInt,
 				Description: "The value of this priority class. This is the actual priority that pods receive when they have the name of this class in their pod spec.",
 				Required:    true,
+				ForceNew:    true,
 			},
 		},
 	}
@@ -52,7 +53,7 @@ func resourceKubernetesPriorityClassCreate(d *schema.ResourceData, meta interfac
 	conn := meta.(*kubernetes.Clientset)
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	value := d.Get("value").(int32)
+	value := d.Get("value").(int)
 	description := d.Get("description").(string)
 	globalDefault := d.Get("global_default").(bool)
 
@@ -60,7 +61,7 @@ func resourceKubernetesPriorityClassCreate(d *schema.ResourceData, meta interfac
 		ObjectMeta:    metadata,
 		Description:   description,
 		GlobalDefault: globalDefault,
-		Value:         value,
+		Value:         int32(value),
 	}
 
 	log.Printf("[INFO] Creating new priority class: %#v", priorityClass)
@@ -92,7 +93,11 @@ func resourceKubernetesPriorityClassCreate(d *schema.ResourceData, meta interfac
 
 func resourceKubernetesPriorityClassRead(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
-	name := d.Id()
+
+	_, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
 
 	log.Printf("[INFO] Reading priority class %s", name)
 	priorityClass, err := conn.Scheduling().PriorityClasses().Get(name, meta_v1.GetOptions{})
@@ -135,15 +140,19 @@ func resourceKubernetesPriorityClassRead(d *schema.ResourceData, meta interface{
 
 func resourceKubernetesPriorityClassUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
-	name := d.Id()
+
+	_, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("value") {
-		value := d.Get("value").(int32)
+		value := d.Get("value").(int)
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/value",
-			Value: value,
+			Value: int32(value),
 		})
 	}
 
@@ -156,7 +165,7 @@ func resourceKubernetesPriorityClassUpdate(d *schema.ResourceData, meta interfac
 	}
 
 	if d.HasChange("global_default") {
-		globalDefault := d.Get("global_default").(string)
+		globalDefault := d.Get("global_default").(bool)
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/globalDefault",
 			Value: globalDefault,
@@ -180,10 +189,14 @@ func resourceKubernetesPriorityClassUpdate(d *schema.ResourceData, meta interfac
 
 func resourceKubernetesPriorityClassDelete(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*kubernetes.Clientset)
-	name := d.Id()
+
+	_, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
 
 	log.Printf("[INFO] Deleting priority class: %#v", name)
-	err := conn.Scheduling().PriorityClasses().Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.Scheduling().PriorityClasses().Delete(name, &meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -196,10 +209,14 @@ func resourceKubernetesPriorityClassDelete(d *schema.ResourceData, meta interfac
 
 func resourceKubernetesPriorityClassExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn := meta.(*kubernetes.Clientset)
-	name := d.Id()
+
+	_, name, err := idParts(d.Id())
+	if err != nil {
+		return false, err
+	}
 
 	log.Printf("[INFO] Checking priority class %s", name)
-	_, err := conn.Scheduling().PriorityClasses().Get(name, meta_v1.GetOptions{})
+	_, err = conn.Scheduling().PriorityClasses().Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

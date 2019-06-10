@@ -1,6 +1,14 @@
 locals {
   random_prefix = "${var.prefix}-${random_id.tf-k8s-acc.hex}"
 }
+provider "azurerm" {
+  version = "~> 1.28.0"
+}
+
+data "azurerm_kubernetes_service_versions" "current" {
+  location       = "${var.location}"
+  version_prefix = "${var.kubernetes_version}"
+}
 
 resource "random_id" "tf-k8s-acc" {
   byte_length = 3
@@ -51,7 +59,7 @@ resource "azurerm_kubernetes_cluster" "tf-k8s-acc" {
   resource_group_name = "${azurerm_resource_group.tf-k8s-acc.name}"
   location            = "${azurerm_resource_group.tf-k8s-acc.location}"
   dns_prefix          = "${local.random_prefix}-cluster"
-  kubernetes_version  = "${var.kubernetes_version}"
+  kubernetes_version  = "${data.azurerm_kubernetes_service_versions.current.latest_version}"
 
   # Uncomment to enable SSH access to nodes
   #

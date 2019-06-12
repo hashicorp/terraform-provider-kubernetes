@@ -400,8 +400,8 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.Affinity = a
 	}
 
-	if v, ok := in["automount_service_account_token"]; ok {
-		obj.AutomountServiceAccountToken = ptrToBool(v.(bool))
+	if v, ok := in["automount_service_account_token"].(bool); ok {
+		obj.AutomountServiceAccountToken = ptrToBool(v)
 	}
 
 	if v, ok := in["container"].([]interface{}); ok && len(v) > 0 {

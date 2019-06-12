@@ -285,7 +285,7 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 		"volume": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			Computed:    isComputed,
+			Computed:    true,
 			Description: "List of volumes that can be mounted by containers belonging to the pod. More info: http://kubernetes.io/docs/user-guide/volumes",
 			Deprecated:  deprecatedMessage,
 			Elem:        volumeSchema(),

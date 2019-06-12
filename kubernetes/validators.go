@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"k8s.io/apimachinery/pkg/api/resource"
 	apiValidation "k8s.io/apimachinery/pkg/api/validation"
+	apiValidationPath "k8s.io/apimachinery/pkg/api/validation/path"
 	utilValidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -244,4 +245,15 @@ func validateAttributeValueIsIn(validValues []string) schema.SchemaValidateFunc 
 		return
 
 	}
+}
+
+func validateRBACName(value interface{}, key string) (ws []string, es []error) {
+	v := value.(string)
+	errors := apiValidationPath.IsValidPathSegmentName(v)
+	if len(errors) > 0 {
+		for _, err := range errors {
+			es = append(es, fmt.Errorf("%s %s", key, err))
+		}
+	}
+	return
 }

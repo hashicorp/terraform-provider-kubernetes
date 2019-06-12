@@ -7,6 +7,14 @@ import (
 )
 
 func metadataFields(objectName string) map[string]*schema.Schema {
+	var objectNameRBAC = []string{"roleBinding", "clusterRoleBinding", "clusterRole", "role"}
+	nameValidateFunc := validateName
+	for _, elementName := range objectNameRBAC {
+		if objectName == elementName {
+			nameValidateFunc = validateRBACName
+			break
+		}
+	}
 	return map[string]*schema.Schema{
 		"annotations": {
 			Type:         schema.TypeMap,
@@ -33,7 +41,7 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 			Optional:     true,
 			ForceNew:     true,
 			Computed:     true,
-			ValidateFunc: validateName,
+			ValidateFunc: nameValidateFunc,
 		},
 		"resource_version": {
 			Type:        schema.TypeString,

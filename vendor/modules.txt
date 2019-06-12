@@ -671,6 +671,7 @@ k8s.io/api/storage/v1beta1
 k8s.io/apimachinery/pkg/api/errors
 k8s.io/apimachinery/pkg/api/resource
 k8s.io/apimachinery/pkg/api/validation
+k8s.io/apimachinery/pkg/api/validation/path
 k8s.io/apimachinery/pkg/apis/meta/v1
 k8s.io/apimachinery/pkg/fields
 k8s.io/apimachinery/pkg/types

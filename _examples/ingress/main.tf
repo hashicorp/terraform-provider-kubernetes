@@ -36,7 +36,7 @@ resource "kubernetes_ingress" "example" {
           path = "/stilton"
 
           backend {
-            service_name = "stilton-cheese"
+            service_name = "stilton"
             service_port = 80
           }
         }
@@ -158,6 +158,58 @@ resource "kubernetes_service" "cheddar" {
   }
 }
 
+resource "kubernetes_deployment" "stilton" {
+  metadata {
+    name = "stilton-cheese"
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        app = "stilton"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "stilton"
+        }
+      }
+
+      spec {
+        container {
+          name  = "stilton"
+          image = "errm/cheese:stilton"
+
+          port {
+            container_port = 80
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_service" "stilton" {
+  metadata {
+    name = "stilton"
+  }
+
+  spec {
+    selector = {
+      app = "stilton"
+    }
+
+    port {
+      port        = 80
+      target_port = 80
+    }
+
+    type = "NodePort"
+  }
+}
+
 output "ingress_ip" {
-  value = formatlist("%s ", kubernetes_ingress.example.load_balancer_ingress.*.ip)
+  value = kubernetes_ingress.example.load_balancer_ingress.*.ip
 }

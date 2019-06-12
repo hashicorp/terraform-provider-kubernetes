@@ -20,7 +20,7 @@ resource "kubernetes_persistent_volume_claim" "example" {
   spec {
     access_modes = ["ReadWriteMany"]
     resources {
-      requests {
+      requests = {
         storage = "5Gi"
       }
     }
@@ -33,7 +33,7 @@ resource "kubernetes_persistent_volume" "example" {
     name = "examplevolumename"
   }
   spec {
-    capacity {
+    capacity = {
       storage = "10Gi"
     }
     access_modes = ["ReadWriteMany"]

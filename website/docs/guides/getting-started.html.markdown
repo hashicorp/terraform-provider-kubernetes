@@ -124,7 +124,7 @@ to the exposed port.
 resource "kubernetes_pod" "nginx" {
   metadata {
     name = "nginx-example"
-    labels {
+    labels = {
       App = "nginx"
     }
   }

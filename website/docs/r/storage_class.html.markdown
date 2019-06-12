@@ -20,9 +20,9 @@ resource "kubernetes_storage_class" "example" {
     name = "terraform-example"
   }
   storage_provisioner = "kubernetes.io/gce-pd"
-  reclaim_policy = "Retain"
-  parameters {
-  	type = "pd-standard"
+  reclaim_policy      = "Retain"
+  parameters = {
+    type = "pd-standard"
   }
 }
 ```

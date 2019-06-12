@@ -560,7 +560,6 @@ func TestAccKubernetesPod_with_empty_dir_volume(t *testing.T) {
 
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := "nginx:1.7.9"
-	saName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -638,6 +637,7 @@ func TestAccKubernetesPod_config_with_automount_service_account_token(t *testing
 	var confSA api.ServiceAccount
 
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	saName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := "nginx:1.7.9"
 
 	resource.Test(t, resource.TestCase{
@@ -648,9 +648,13 @@ func TestAccKubernetesPod_config_with_automount_service_account_token(t *testing
 			{
 				Config: testAccKubernetesPodConfigWithAutomountServiceAccountToken(saName, podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodExists("kubernetes_pod.test", &confPod),
 					testAccCheckKubernetesServiceAccountExists("kubernetes_service_account.test", &confSA),
+					testAccCheckKubernetesPodExists("kubernetes_pod.test", &confPod),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.automount_service_account_token", "true"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.mount_path", "/var/run/secrets/kubernetes.io/serviceaccount"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.secret.#", "1"),
 				),
 			},
 		},
@@ -1450,7 +1454,7 @@ resource "kubernetes_service_account" "test" {
 
 resource "kubernetes_pod" "test" {
   metadata {
-    labels {
+    labels = {
       app = "pod_label"
     }
 
@@ -1458,12 +1462,20 @@ resource "kubernetes_pod" "test" {
   }
 
   spec {
-    service_account_name            = "kubernetes_service_account.test.metadata.0.name"
+    service_account_name            = kubernetes_service_account.test.metadata.0.name
     automount_service_account_token = true
 
     container {
       image = "%s"
       name  = "containername"
+
+      lifecycle {
+        post_start {
+          exec {
+            command = ["/bin/sh", "-xc", "mount | grep /run/secrets/kubernetes.io/serviceaccount"]
+          }
+        }
+      }
     }
   }
 }

@@ -745,6 +745,28 @@ func TestAccKubernetesDeployment_with_host_aliases(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDeployment_config_with_automount_service_account_token(t *testing.T) {
+	var confDeployment api.Deployment
+
+	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentConfigWithAutomountServiceAccountToken(deploymentName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &confDeployment),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.automount_service_account_token", "true"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesDeploymentDestroy(s *terraform.State) error {
 	conn := testAccProvider.Meta().(*kubernetes.Clientset)
 
@@ -1827,4 +1849,37 @@ resource "kubernetes_deployment" "test" {
   }
 }
 `, name, imageName)
+}
+
+func testAccKubernetesDeploymentConfigWithAutomountServiceAccountToken(deploymentName string, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_deployment" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        "app" = "test"
+      }
+    }
+    template {
+      metadata {
+        name = "test-automount"
+        labels = {
+          "app" = "test"
+        }
+      }
+      spec {
+        automount_service_account_token = true
+        container {
+          name  = "containername"
+          image = "%s"
+        }
+      }
+    }
+  }
+}
+`, deploymentName, imageName)
 }

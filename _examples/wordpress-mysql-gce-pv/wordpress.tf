@@ -40,7 +40,8 @@ resource "kubernetes_persistent_volume_claim" "wordpress" {
         storage = "20Gi"
       }
     }
-    volume_name = kubernetes_persistent_volume.wordpress.metadata[0].name
+    storage_class_name = "standard"
+    volume_name        = kubernetes_persistent_volume.wordpress.metadata[0].name
   }
 }
 
@@ -57,39 +58,48 @@ resource "kubernetes_replication_controller" "wordpress" {
       tier = "frontend"
     }
     template {
-      container {
-        image = "wordpress:${var.wordpress_version}-apache"
-        name  = "wordpress"
-
-        env {
-          name  = "WORDPRESS_DB_HOST"
-          value = "wordpress-mysql"
-        }
-        env {
-          name = "WORDPRESS_DB_PASSWORD"
-          value_from {
-            secret_key_ref {
-              name = kubernetes_secret.mysql.metadata[0].name
-              key  = "password"
-            }
-          }
-        }
-
-        port {
-          container_port = 80
-          name           = "wordpress"
-        }
-
-        volume_mount {
-          name       = "wordpress-persistent-storage"
-          mount_path = "/var/www/html"
+      metadata {
+        labels = {
+          app  = "wordpress"
+          tier = "frontend"
         }
       }
 
-      volume {
-        name = "wordpress-persistent-storage"
-        persistent_volume_claim {
-          claim_name = kubernetes_persistent_volume_claim.wordpress.metadata[0].name
+      spec {
+        container {
+          image = "wordpress:${var.wordpress_version}-apache"
+          name  = "wordpress"
+
+          env {
+            name  = "WORDPRESS_DB_HOST"
+            value = "wordpress-mysql"
+          }
+          env {
+            name = "WORDPRESS_DB_PASSWORD"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret.mysql.metadata[0].name
+                key  = "password"
+              }
+            }
+          }
+
+          port {
+            container_port = 80
+            name           = "wordpress"
+          }
+
+          volume_mount {
+            name       = "wordpress-persistent-storage"
+            mount_path = "/var/www/html"
+          }
+        }
+
+        volume {
+          name = "wordpress-persistent-storage"
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim.wordpress.metadata[0].name
+          }
         }
       }
     }

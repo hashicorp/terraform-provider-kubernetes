@@ -39,7 +39,8 @@ resource "kubernetes_persistent_volume_claim" "mysql" {
         storage = "20Gi"
       }
     }
-    volume_name = kubernetes_persistent_volume.mysql.metadata[0].name
+    storage_class_name = "standard"
+    volume_name        = kubernetes_persistent_volume.mysql.metadata[0].name
   }
 }
 
@@ -66,35 +67,43 @@ resource "kubernetes_replication_controller" "mysql" {
       tier = "mysql"
     }
     template {
-      container {
-        image = "mysql:${var.mysql_version}"
-        name  = "mysql"
+      metadata {
+        labels = {
+          app  = "wordpress"
+          tier = "mysql"
+        }
+      }
+      spec {
+        container {
+          image = "mysql:${var.mysql_version}"
+          name  = "mysql"
 
-        env {
-          name = "MYSQL_ROOT_PASSWORD"
-          value_from {
-            secret_key_ref {
-              name = kubernetes_secret.mysql.metadata[0].name
-              key  = "password"
+          env {
+            name = "MYSQL_ROOT_PASSWORD"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret.mysql.metadata[0].name
+                key  = "password"
+              }
             }
+          }
+
+          port {
+            container_port = 3306
+            name           = "mysql"
+          }
+
+          volume_mount {
+            name       = "mysql-persistent-storage"
+            mount_path = "/var/lib/mysql"
           }
         }
 
-        port {
-          container_port = 3306
-          name           = "mysql"
-        }
-
-        volume_mount {
-          name       = "mysql-persistent-storage"
-          mount_path = "/var/lib/mysql"
-        }
-      }
-
-      volume {
-        name = "mysql-persistent-storage"
-        persistent_volume_claim {
-          claim_name = kubernetes_persistent_volume_claim.mysql.metadata[0].name
+        volume {
+          name = "mysql-persistent-storage"
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim.mysql.metadata[0].name
+          }
         }
       }
     }

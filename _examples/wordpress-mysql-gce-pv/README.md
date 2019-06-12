@@ -56,9 +56,11 @@ terraform init
 
 then we carry on by creating the real infrastructure which requires
 password for the MySQL server and GCP project, region & zone
-in which to create persistent disks. Both the region and zone
-must match the location of your K8S cluster, otherwise K8S
-won't be able to find those disks and claim the space.
+in which to create persistent disks.
+
+~> **WARNING:** Both the region and zone must match the location of your K8S cluster,
+otherwise K8S won't be able to find those disks and claim the space.
+Not respecting this condition will trigger errors such as `persistentvolumes "mysql-pv" is forbidden: error querying GCE PD volume wordpress-mysql: disk is not found`
 
 ```sh
 terraform apply \

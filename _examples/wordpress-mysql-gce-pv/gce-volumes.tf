@@ -4,10 +4,6 @@ variable "gcp_region" {
 variable "gcp_zone" {
 }
 
-provider "google" {
-  region = var.gcp_region
-}
-
 resource "google_compute_disk" "mysql" {
   name = "wordpress-mysql"
   type = "pd-ssd"
@@ -23,7 +19,8 @@ resource "kubernetes_persistent_volume" "mysql" {
     capacity = {
       storage = "20Gi"
     }
-    access_modes = ["ReadWriteOnce"]
+    access_modes       = ["ReadWriteOnce"]
+    storage_class_name = "standard"
     persistent_volume_source {
       gce_persistent_disk {
         pd_name = google_compute_disk.mysql.name
@@ -48,7 +45,8 @@ resource "kubernetes_persistent_volume" "wordpress" {
     capacity = {
       storage = "20Gi"
     }
-    access_modes = ["ReadWriteOnce"]
+    access_modes       = ["ReadWriteOnce"]
+    storage_class_name = "standard"
     persistent_volume_source {
       gce_persistent_disk {
         pd_name = google_compute_disk.wordpress.name

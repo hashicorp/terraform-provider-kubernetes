@@ -1,6 +1,3 @@
-provider "kubernetes" {
-}
-
 resource "kubernetes_ingress" "example" {
   metadata {
     name = "example"

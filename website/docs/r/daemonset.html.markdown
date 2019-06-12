@@ -15,24 +15,23 @@ A DaemonSet ensures that all (or some) Nodes run a copy of a Pod. As nodes are a
 ```hcl
 resource "kubernetes_daemonset" "example" {
   metadata {
-    name = "terraform-example"
+    name      = "terraform-example"
     namespace = "something"
-    labels {
+    labels = {
       test = "MyExampleApp"
     }
   }
 
   spec {
     selector {
-      match_labels {
+      match_labels = {
         test = "MyExampleApp"
       }
     }
 
     template {
       metadata {
-        namespace = "something"
-        labels {
+        labels = {
           test = "MyExampleApp"
         }
       }
@@ -42,12 +41,12 @@ resource "kubernetes_daemonset" "example" {
           image = "nginx:1.7.8"
           name  = "example"
 
-          resources{
-            limits{
+          resources {
+            limits {
               cpu    = "0.5"
               memory = "512Mi"
             }
-            requests{
+            requests {
               cpu    = "250m"
               memory = "50Mi"
             }

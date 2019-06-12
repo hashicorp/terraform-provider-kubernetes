@@ -19,7 +19,7 @@ resource "kubernetes_resource_quota" "example" {
     name = "terraform-example"
   }
   spec {
-    hard {
+    hard = {
       pods = 10
     }
     scopes = ["BestEffort"]

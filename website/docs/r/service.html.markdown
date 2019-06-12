@@ -19,12 +19,12 @@ resource "kubernetes_service" "example" {
     name = "terraform-example"
   }
   spec {
-    selector {
+    selector = {
       app = "${kubernetes_pod.example.metadata.0.labels.app}"
     }
     session_affinity = "ClientIP"
     port {
-      port = 8080
+      port        = 8080
       target_port = 80
     }
 
@@ -35,7 +35,7 @@ resource "kubernetes_service" "example" {
 resource "kubernetes_pod" "example" {
   metadata {
     name = "terraform-example"
-    labels {
+    labels = {
       app = "MyApp"
     }
   }

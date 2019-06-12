@@ -14,15 +14,15 @@ A ClusterRole creates a role at the cluster level and in all namespaces.
 
 ```hcl
 resource "kubernetes_cluster_role" "example" {
-    metadata {
-        name = "terraform-example"
-    }
+  metadata {
+    name = "terraform-example"
+  }
 
-    rule {
-        api_groups = [""]
-        resources  = ["namespaces", "pods"]
-        verbs      = ["get", "list", "watch"]
-    }
+  rule {
+    api_groups = [""]
+    resources  = ["namespaces", "pods"]
+    verbs      = ["get", "list", "watch"]
+  }
 }
 ```
 

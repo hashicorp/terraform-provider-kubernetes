@@ -56,7 +56,7 @@ resource "kubernetes_ingress" "example_ingress" {
 resource "kubernetes_pod" "example" {
   metadata {
     name = "terraform-example"
-    labels {
+    labels = {
       app = "MyApp1"
     }
   }
@@ -65,17 +65,18 @@ resource "kubernetes_pod" "example" {
     container {
       image = "nginx:1.7.9"
       name  = "example"
-    }
-    port {
-      container_port = 8080
+
+      port {
+        container_port = 8080
+      }
     }
   }
 }
 
-resource "kubernetes_pod" "example" {
+resource "kubernetes_pod" "example2" {
   metadata {
-    name = "terraform-example"
-    labels {
+    name = "terraform-example2"
+    labels = {
       app = "MyApp2"
     }
   }
@@ -84,9 +85,10 @@ resource "kubernetes_pod" "example" {
     container {
       image = "nginx:1.7.9"
       name  = "example"
-    }
-    port {
-      container_port = 8080
+
+      port {
+        container_port = 8080
+      }
     }
   }
 }

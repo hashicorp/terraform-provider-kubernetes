@@ -17,21 +17,21 @@ A role contains rules that represent a set of permissions. Permissions are purel
 resource "kubernetes_role" "example" {
   metadata {
     name = "terraform-example"
-    labels {
+    labels = {
       test = "MyRole"
     }
   }
 
   rule {
-    api_groups = [""]
-    resources = ["pods"]
+    api_groups     = [""]
+    resources      = ["pods"]
     resource_names = ["foo"]
-    verbs = ["get", "list", "watch"]
+    verbs          = ["get", "list", "watch"]
   }
   rule {
     api_groups = ["apps"]
-    resources = ["deployments"]
-    verbs = ["get", "list"]
+    resources  = ["deployments"]
+    verbs      = ["get", "list"]
   }
 }
 ```

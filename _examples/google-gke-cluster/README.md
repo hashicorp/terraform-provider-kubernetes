@@ -33,12 +33,12 @@ terraform apply \
 	-var 'password=MySecretPassword'
 ```
 
-You may also specify the K8S version (see [available versions](https://cloud.google.com/container-engine/release-notes))
+You may also specify the minimal K8S version (see [available versions](https://cloud.google.com/container-engine/release-notes))
 and name of the cluster.
 
 ```sh
 terraform apply \
-	-var 'kubernetes_version=1.6.7' \
+	-var 'kubernetes_version=1.12' \
 	-var 'cluster_name=terraform-example-cluster' \
 	-var 'region=us-west1' \
 	-var 'username=MySecretUsername' \
@@ -52,12 +52,12 @@ Afterwards you should see output similar to this one in your console
 
 Outputs:
 
-additional_zones = [
+node_locations = [
     us-west1-b
 ]
 cluster_name = terraform-example-cluster
 endpoint = 102.186.121.2
-node_version = 1.6.7
+node_version = 1.12.8-gke.7
 primary_zone = us-west1-a
 ```
 

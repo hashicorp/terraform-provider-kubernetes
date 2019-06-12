@@ -1,11 +1,6 @@
 variable "region" {
 }
 
-provider "google" {
-  region = var.region
-  // Provider settings to be provided via ENV variables
-}
-
 data "google_compute_zones" "available" {
 }
 
@@ -14,7 +9,6 @@ variable "cluster_name" {
 }
 
 variable "kubernetes_version" {
-  default = "1.10.11"
 }
 
 variable "username" {
@@ -23,15 +17,20 @@ variable "username" {
 variable "password" {
 }
 
+data "google_container_engine_versions" "supported" {
+  zone           = "${data.google_compute_zones.available.names[0]}"
+  version_prefix = "${var.kubernetes_version}"
+}
+
 resource "google_container_cluster" "primary" {
   name               = var.cluster_name
   zone               = data.google_compute_zones.available.names[0]
   initial_node_count = 3
 
-  min_master_version = var.kubernetes_version
-  node_version       = var.kubernetes_version
+  node_version       = data.google_container_engine_versions.supported.latest_node_version
+  min_master_version = data.google_container_engine_versions.supported.latest_master_version
 
-  additional_zones = [
+  node_locations = [
     data.google_compute_zones.available.names[1],
   ]
 
@@ -58,8 +57,8 @@ output "primary_zone" {
   value = google_container_cluster.primary.zone
 }
 
-output "additional_zones" {
-  value = google_container_cluster.primary.additional_zones
+output "node_locations" {
+  value = google_container_cluster.primary.node_locations
 }
 
 output "endpoint" {

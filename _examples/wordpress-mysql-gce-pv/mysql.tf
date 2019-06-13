@@ -1,4 +1,6 @@
-variable "mysql_password" {}
+variable "mysql_password" {
+}
+
 variable "mysql_version" {
   default = "5.6"
 }
@@ -6,18 +8,18 @@ variable "mysql_version" {
 resource "kubernetes_service" "mysql" {
   metadata {
     name = "wordpress-mysql"
-    labels {
+    labels = {
       app = "wordpress"
     }
   }
   spec {
     port {
-      port = 3306
+      port        = 3306
       target_port = 3306
     }
-    selector {
-      app = "wordpress"
-      tier = "${kubernetes_replication_controller.mysql.spec.0.selector.tier}"
+    selector = {
+      app  = "wordpress"
+      tier = kubernetes_replication_controller.mysql.spec[0].selector.tier
     }
     cluster_ip = "None"
   }
@@ -26,18 +28,18 @@ resource "kubernetes_service" "mysql" {
 resource "kubernetes_persistent_volume_claim" "mysql" {
   metadata {
     name = "mysql-pv-claim"
-    labels {
+    labels = {
       app = "wordpress"
     }
   }
   spec {
     access_modes = ["ReadWriteOnce"]
     resources {
-      requests {
+      requests = {
         storage = "20Gi"
       }
     }
-    volume_name = "${kubernetes_persistent_volume.mysql.metadata.0.name}"
+    volume_name = kubernetes_persistent_volume.mysql.metadata[0].name
   }
 }
 
@@ -46,21 +48,21 @@ resource "kubernetes_secret" "mysql" {
     name = "mysql-pass"
   }
 
-  data {
-    password = "${var.mysql_password}"
+  data = {
+    password = var.mysql_password
   }
 }
 
 resource "kubernetes_replication_controller" "mysql" {
   metadata {
     name = "wordpress-mysql"
-    labels {
+    labels = {
       app = "wordpress"
     }
   }
   spec {
-    selector {
-      app = "wordpress"
+    selector = {
+      app  = "wordpress"
       tier = "mysql"
     }
     template {
@@ -72,19 +74,19 @@ resource "kubernetes_replication_controller" "mysql" {
           name = "MYSQL_ROOT_PASSWORD"
           value_from {
             secret_key_ref {
-              name = "${kubernetes_secret.mysql.metadata.0.name}"
-              key = "password"
+              name = kubernetes_secret.mysql.metadata[0].name
+              key  = "password"
             }
           }
         }
 
         port {
           container_port = 3306
-          name = "mysql"
+          name           = "mysql"
         }
 
         volume_mount {
-          name = "mysql-persistent-storage"
+          name       = "mysql-persistent-storage"
           mount_path = "/var/lib/mysql"
         }
       }
@@ -92,9 +94,10 @@ resource "kubernetes_replication_controller" "mysql" {
       volume {
         name = "mysql-persistent-storage"
         persistent_volume_claim {
-          claim_name = "${kubernetes_persistent_volume_claim.mysql.metadata.0.name}"
+          claim_name = kubernetes_persistent_volume_claim.mysql.metadata[0].name
         }
       }
     }
   }
 }
+

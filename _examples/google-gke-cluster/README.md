@@ -7,6 +7,9 @@ You can read more about GKE at https://cloud.google.com/container-engine/
 
 ## Prerequsities
 
+*This example uses syntax elements specific to Terraform version 0.12+.
+It will not work out-of-the-box with Terraform 0.11.x and lower.*
+
 Configure the Google Cloud provider by supplying environment variables
 and/or standard config files.
 Check out [related docs](https://www.terraform.io/docs/providers/google/index.html#configuration-reference)

@@ -1,13 +1,13 @@
 resource "kubernetes_replication_controller" "example" {
   metadata {
     name = "terraform-nginx-example"
-    labels {
+    labels = {
       App = "TerraformNginxExample"
     }
   }
 
   spec {
-    selector {
+    selector = {
       App = "TerraformNginxExample"
     }
     template {
@@ -25,15 +25,15 @@ resource "kubernetes_replication_controller" "example" {
             port = 80
           }
           initial_delay_seconds = 30
-          timeout_seconds = 1
+          timeout_seconds       = 1
         }
 
-        resources{
-          limits{
+        resources {
+          limits {
             cpu    = "0.5"
             memory = "512Mi"
           }
-          requests{
+          requests {
             cpu    = "250m"
             memory = "50Mi"
           }
@@ -42,3 +42,4 @@ resource "kubernetes_replication_controller" "example" {
     }
   }
 }
+

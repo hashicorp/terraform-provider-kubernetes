@@ -1,10 +1,10 @@
 package kubernetes
 
 import (
-	"k8s.io/api/core/v1"
-
 	"reflect"
 	"testing"
+
+	v1 "k8s.io/api/core/v1"
 )
 
 func TestFlattenTolerations(t *testing.T) {
@@ -21,9 +21,8 @@ func TestFlattenTolerations(t *testing.T) {
 			},
 			[]interface{}{
 				map[string]interface{}{
-					"key":                "node-role.kubernetes.io/spot-worker",
-					"value":              "true",
-					"toleration_seconds": "",
+					"key":   "node-role.kubernetes.io/spot-worker",
+					"value": "true",
 				},
 			},
 		},
@@ -40,14 +39,26 @@ func TestFlattenTolerations(t *testing.T) {
 			},
 			[]interface{}{
 				map[string]interface{}{
-					"key":                "node-role.kubernetes.io/other-worker",
-					"operator":           "Exists",
-					"toleration_seconds": "",
+					"key":      "node-role.kubernetes.io/other-worker",
+					"operator": "Exists",
 				},
 				map[string]interface{}{
-					"key":                "node-role.kubernetes.io/spot-worker",
-					"value":              "true",
-					"toleration_seconds": "",
+					"key":   "node-role.kubernetes.io/spot-worker",
+					"value": "true",
+				},
+			},
+		},
+		{
+			[]v1.Toleration{
+				v1.Toleration{
+					Effect:            "NoExecute",
+					TolerationSeconds: ptrToInt64(120),
+				},
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"effect":             "NoExecute",
+					"toleration_seconds": "120",
 				},
 			},
 		},
@@ -104,6 +115,20 @@ func TestExpandTolerations(t *testing.T) {
 				&v1.Toleration{
 					Key:      "node-role.kubernetes.io/other-worker",
 					Operator: "Exists",
+				},
+			},
+		},
+		{
+			[]interface{}{
+				map[string]interface{}{
+					"effect":             "NoExecute",
+					"toleration_seconds": "120",
+				},
+			},
+			[]*v1.Toleration{
+				&v1.Toleration{
+					Effect:            "NoExecute",
+					TolerationSeconds: ptrToInt64(120),
 				},
 			},
 		},

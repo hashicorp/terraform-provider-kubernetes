@@ -250,7 +250,7 @@ func TestAccKubernetesDeployment_with_tolerations(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesDeployment_with_tolerationsUnsetTolerationSeconds(t *testing.T) {
+func TestAccKubernetesDeployment_with_tolerations_unset_toleration_seconds(t *testing.T) {
 	var conf api.Deployment
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -271,7 +271,7 @@ func TestAccKubernetesDeployment_with_tolerationsUnsetTolerationSeconds(t *testi
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.toleration.0.key", "myKey"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.toleration.0.operator", operator),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.toleration.0.value", "value"),
-					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.toleration.0.toleration_seconds", "0"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.toleration.0.toleration_seconds", ""),
 				),
 			},
 		},
@@ -1171,11 +1171,11 @@ resource "kubernetes_deployment" "test" {
 func testAccKubernetesDeploymentConfigWithTolerations(rcName, imageName string, tolerationSeconds *int, operator string, value *string) string {
 	tolerationDuration := ""
 	if tolerationSeconds != nil {
-		tolerationDuration = fmt.Sprintf("\ntoleration_seconds = %d\n", *tolerationSeconds)
+		tolerationDuration = fmt.Sprintf("toleration_seconds = %d", *tolerationSeconds)
 	}
 	valueString := ""
 	if value != nil {
-		valueString = fmt.Sprintf("\nvalue = \"%s\"\n", *value)
+		valueString = fmt.Sprintf("value = \"%s\"", *value)
 	}
 
 	return fmt.Sprintf(`
@@ -1183,21 +1183,21 @@ resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
-    labels {
+    labels = {
       Test = "TfAcceptanceTest"
     }
   }
 
   spec {
     selector {
-      match_labels {
+      match_labels = {
         Test = "TfAcceptanceTest"
       }
     }
 
     template {
       metadata {
-        labels {
+        labels = {
           Test = "TfAcceptanceTest"
         }
       }
@@ -1205,8 +1205,10 @@ resource "kubernetes_deployment" "test" {
       spec {
         toleration {
           effect             = "NoExecute"
-          key                = "myKey"%s%s
+          key                = "myKey"
           operator           = "%s"
+          %s
+          %s
         }
 
         container {
@@ -1217,7 +1219,7 @@ resource "kubernetes_deployment" "test" {
     }
   }
 }
-`, rcName, tolerationDuration, valueString, operator, imageName)
+`, rcName, operator, valueString, tolerationDuration, imageName)
 }
 
 func testAccKubernetesDeploymentConfigWithLivenessProbeUsingExec(rcName, imageName string) string {

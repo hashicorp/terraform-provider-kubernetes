@@ -199,8 +199,6 @@ func flattenTolerations(tolerations []v1.Toleration) []interface{} {
 		}
 		if v.TolerationSeconds != nil {
 			obj["toleration_seconds"] = strconv.FormatInt(*v.TolerationSeconds, 10)
-		} else {
-			obj["toleration_seconds"] = ""
 		}
 		if v.Value != "" {
 			obj["value"] = v.Value
@@ -822,25 +820,21 @@ func expandTolerations(tolerations []interface{}) ([]*v1.Toleration, error) {
 		m := t.(map[string]interface{})
 		ts[i] = &v1.Toleration{}
 
-		if value, ok := m["effect"]; ok {
-			ts[i].Effect = v1.TaintEffect(value.(string))
+		if value, ok := m["effect"].(string); ok {
+			ts[i].Effect = v1.TaintEffect(value)
 		}
-		if value, ok := m["key"]; ok {
-			ts[i].Key = value.(string)
+		if value, ok := m["key"].(string); ok {
+			ts[i].Key = value
 		}
-		if value, ok := m["operator"]; ok {
-			ts[i].Operator = v1.TolerationOperator(value.(string))
+		if value, ok := m["operator"].(string); ok {
+			ts[i].Operator = v1.TolerationOperator(value)
 		}
-		if value, ok := m["toleration_seconds"]; ok {
-			if value == "" {
-				ts[i].TolerationSeconds = nil
-			} else {
-				seconds, err := strconv.ParseInt(value.(string), 10, 64)
-				if err != nil {
-					return nil, fmt.Errorf("invalid toleration_seconds must be int or \"\", got \"%s\"", value)
-				}
-				ts[i].TolerationSeconds = ptrToInt64(seconds)
+		if value, ok := m["toleration_seconds"].(string); ok && value != "" {
+			seconds, err := strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid toleration_seconds must be int or \"\", got \"%s\"", value)
 			}
+			ts[i].TolerationSeconds = ptrToInt64(seconds)
 		}
 		if value, ok := m["value"]; ok {
 			ts[i].Value = value.(string)

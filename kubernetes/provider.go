@@ -3,17 +3,17 @@ package kubernetes
 import (
 	"bytes"
 	"fmt"
-	"log"
-	"os"
-
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/mitchellh/go-homedir"
-	kubernetes "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"log"
+	"os"
+	"strings"
 )
 
 func Provider() terraform.ResourceProvider {
@@ -240,7 +240,7 @@ func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
 	}
 
 	loader := &clientcmd.ClientConfigLoadingRules{
-		ExplicitPath: path,
+		Precedence: strings.Split(path, string(':')),
 	}
 
 	overrides := &clientcmd.ConfigOverrides{}

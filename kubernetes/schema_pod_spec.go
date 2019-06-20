@@ -28,6 +28,13 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Description:  "Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.",
 			Deprecated:   deprecatedMessage,
 		},
+		"automount_service_account_token": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    isComputed,
+			Description: "Indicates whether a service account token should be automatically mounted. More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/",
+			Deprecated:  deprecatedMessage,
+		},
 		"container": {
 			Type:        schema.TypeList,
 			Optional:    true,

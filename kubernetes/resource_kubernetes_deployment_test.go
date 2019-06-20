@@ -43,6 +43,7 @@ func TestAccKubernetesDeployment_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(deploymentTestResourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(deploymentTestResourceName, "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet(deploymentTestResourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.automount_service_account_token", "false"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.8"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.strategy.0.type", "RollingUpdate"),
@@ -810,6 +811,8 @@ resource "kubernetes_deployment" "test" {
       }
 
       spec {
+        automount_service_account_token = true
+
         container {
           image = "nginx:1.7.8"
           name  = "tf-acc-test"

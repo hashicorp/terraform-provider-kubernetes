@@ -20,6 +20,10 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["affinity"] = flattenAffinity(in.Affinity)
 	}
 
+	if in.AutomountServiceAccountToken != nil {
+		att["automount_service_account_token"] = in.AutomountServiceAccountToken
+	}
+
 	containers, err := flattenContainers(in.Containers)
 	if err != nil {
 		return nil, err
@@ -390,6 +394,10 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 			return obj, err
 		}
 		obj.Affinity = a
+	}
+
+	if v, ok := in["automount_service_account_token"].(bool); ok {
+		obj.AutomountServiceAccountToken = &v
 	}
 
 	if v, ok := in["container"].([]interface{}); ok && len(v) > 0 {

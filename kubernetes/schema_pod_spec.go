@@ -258,7 +258,7 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Default:     false,
-			Description: "When process namespace sharing is enabled, processes in a container are visible to all other containers in that pod"
+			Description: "Share a single process namespace between all of the containers in a pod. When this is set containers will be able to view and signal processes from other containers in the same pod, and the first process in each container will not be assigned PID 1. HostPID and ShareProcessNamespace cannot both be set. Optional: Defaults to false.",
 		},
 		"subdomain": {
 			Type:        schema.TypeString,

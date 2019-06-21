@@ -1,8 +1,11 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/robfig/cron"
 )
 
 func cronJobSpecFields() map[string]*schema.Schema {
@@ -17,7 +20,7 @@ func cronJobSpecFields() map[string]*schema.Schema {
 		"failed_jobs_history_limit": {
 			Type:        schema.TypeInt,
 			Optional:    true,
-			Default:     "1",
+			Default:     1,
 			Description: "The number of failed finished jobs to retain. This is a pointer to distinguish between explicit zero and not specified. Defaults to 1.",
 		},
 		"job_template": {
@@ -41,10 +44,10 @@ func cronJobSpecFields() map[string]*schema.Schema {
 			},
 		},
 		"schedule": {
-			Type:     schema.TypeString,
-			Required: true,
-			//ValidateFunc: validate, TODO: validate cron syntax..
-			Description: "Cron format string, e.g. 0 * * * * or @hourly, as schedule time of its jobs to be created and executed.",
+			Type:         schema.TypeString,
+			Required:     true,
+			ValidateFunc: validateCronExpression(),
+			Description:  "Cron format string, e.g. 0 * * * * or @hourly, as schedule time of its jobs to be created and executed.",
 		},
 		"starting_deadline_seconds": {
 			Type:        schema.TypeInt,
@@ -67,4 +70,19 @@ func cronJobSpecFields() map[string]*schema.Schema {
 	}
 
 	return s
+}
+
+func validateCronExpression() schema.SchemaValidateFunc {
+	return func(i interface{}, k string) (s []string, es []error) {
+		v, ok := i.(string)
+		if !ok {
+			es = append(es, fmt.Errorf("expected type of '%s' to be string", k))
+			return
+		}
+		_, err := cron.ParseStandard(v)
+		if err != nil {
+			es = append(es, fmt.Errorf("'%s' should be an valid Cron expression", k))
+		}
+		return
+	}
 }

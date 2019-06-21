@@ -1,49 +1,47 @@
 package kubernetes
 
 import (
+	"github.com/hashicorp/terraform/helper/schema"
 	"k8s.io/api/batch/v1beta1"
 )
 
-func flattenCronJobSpec(in v1beta1.CronJobSpec) ([]interface{}, error) {
+func flattenCronJobSpec(in v1beta1.CronJobSpec, d *schema.ResourceData) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
 	att["concurrency_policy"] = in.ConcurrencyPolicy
+
 	if in.FailedJobsHistoryLimit != nil {
 		att["failed_jobs_history_limit"] = int(*in.FailedJobsHistoryLimit)
-	} else {
-		att["failed_jobs_history_limit"] = 1
 	}
 
 	att["schedule"] = in.Schedule
 
-	jobTemplate, err := flattenJobTemplate(in.JobTemplate)
+	jobTemplate, err := flattenJobTemplate(in.JobTemplate, d)
 	if err != nil {
 		return nil, err
 	}
 	att["job_template"] = jobTemplate
 
 	if in.StartingDeadlineSeconds != nil {
-		att["starting_deadline_seconds"] = int64(*in.StartingDeadlineSeconds)
-	} else {
-		att["starting_deadline_seconds"] = 0
+		att["starting_deadline_seconds"] = int(*in.StartingDeadlineSeconds)
 	}
 
 	if in.SuccessfulJobsHistoryLimit != nil {
-		att["successful_jobs_history_limit"] = int32(*in.SuccessfulJobsHistoryLimit)
-	} else {
-		att["successful_jobs_history_limit"] = 3
+		att["successful_jobs_history_limit"] = int(*in.SuccessfulJobsHistoryLimit)
 	}
+
+	att["suspend"] = in.Suspend
 
 	return []interface{}{att}, nil
 }
 
-func flattenJobTemplate(in v1beta1.JobTemplateSpec) ([]interface{}, error) {
+func flattenJobTemplate(in v1beta1.JobTemplateSpec, d *schema.ResourceData) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
-	meta := flattenMetadata(in.ObjectMeta)
+	meta := flattenMetadata(in.ObjectMeta, d)
 	att["metadata"] = meta
 
-	jobSpec, err := flattenJobSpec(in.Spec)
+	jobSpec, err := flattenJobSpec(in.Spec, d, "spec.0.job_template.0.spec.0.template.0.")
 	if err != nil {
 		return nil, err
 	}
@@ -61,13 +59,17 @@ func expandCronJobSpec(j []interface{}) (v1beta1.CronJobSpec, error) {
 
 	in := j[0].(map[string]interface{})
 
-	obj.ConcurrencyPolicy = v1beta1.ConcurrencyPolicy(in["concurrency_policy"].(string))
+	if v, ok := in["concurrency_policy"].(string); ok && v != "" {
+		obj.ConcurrencyPolicy = v1beta1.ConcurrencyPolicy(v)
+	}
 
 	if v, ok := in["failed_jobs_history_limit"].(int); ok && v != 1 {
 		obj.FailedJobsHistoryLimit = ptrToInt32(int32(v))
 	}
 
-	obj.Schedule = in["schedule"].(string)
+	if v, ok := in["schedule"].(string); ok && v != "" {
+		obj.Schedule = v
+	}
 
 	jtSpec, err := expandJobTemplate(in["job_template"].([]interface{}))
 	if err != nil {
@@ -93,6 +95,10 @@ func expandCronJobSpec(j []interface{}) (v1beta1.CronJobSpec, error) {
 func expandJobTemplate(in []interface{}) (v1beta1.JobTemplateSpec, error) {
 	obj := v1beta1.JobTemplateSpec{}
 
+	if len(in) == 0 || in[0] == nil {
+		return obj, nil
+	}
+
 	tpl := in[0].(map[string]interface{})
 
 	spec, err := expandJobSpec(tpl["spec"].([]interface{}))
@@ -101,8 +107,8 @@ func expandJobTemplate(in []interface{}) (v1beta1.JobTemplateSpec, error) {
 	}
 	obj.Spec = spec
 
-	if metaCfg, ok := tpl["metadata"]; ok {
-		metadata := expandMetadata(metaCfg.([]interface{}))
+	if metaCfg, ok := tpl["metadata"].([]interface{}); ok {
+		metadata := expandMetadata(metaCfg)
 		obj.ObjectMeta = metadata
 	}
 

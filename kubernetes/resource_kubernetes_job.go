@@ -25,12 +25,13 @@ func resourceKubernetesJob() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("job", true),
+			"metadata": jobMetadataSchema(),
 			"spec": {
 				Type:        schema.TypeList,
 				Description: "Spec of the job owned by the cluster",
 				Required:    true,
 				MaxItems:    1,
+				ForceNew:    true,
 				Elem: &schema.Resource{
 					Schema: jobSpecFields(),
 				},
@@ -55,11 +56,11 @@ func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error
 		Spec:       spec,
 	}
 
-	log.Printf("[INFO] Creating new job: %#v", job)
+	log.Printf("[INFO] Creating new Job: %#v", job)
 
 	out, err := conn.BatchV1().Jobs(metadata.Namespace).Create(&job)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to create Job! API error: %s", err)
 	}
 	log.Printf("[INFO] Submitted new job: %#v", out)
 
@@ -78,45 +79,16 @@ func resourceKubernetesJobUpdate(d *schema.ResourceData, meta interface{}) error
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
-	if d.HasChange("spec") {
-		// specOps, err := patchJobSpec("/spec", "spec.0.", d)
-		// if err != nil {
-		// 	return err
-		// }
-		// ops = append(ops, specOps...)
-
-		spec, err := expandJobSpec(d.Get("spec").([]interface{}))
-		if err != nil {
-			return err
-		}
-		ops = append(ops, &ReplaceOperation{
-			Path:  "/spec",
-			Value: spec,
-		})
-	}
-
 	data, err := ops.MarshalJSON()
 	if err != nil {
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 
-	// metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	// spec, err := expandJobSpec(d.Get("spec").([]interface{}))
-	// if err != nil {
-	// 	return err
-	// }
-
-	// job := batchv1.Job{
-	// 	ObjectMeta: metadata,
-	// 	Spec:       spec,
-	// }
-
 	log.Printf("[INFO] Updating job %s: %#v", d.Id(), ops)
 
 	out, err := conn.BatchV1().Jobs(namespace).Patch(name, pkgApi.JSONPatchType, data)
-	// out, err := conn.BatchV1().Jobs(namespace).Update(&job)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to update Job! API error: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated job: %#v", out)
 
@@ -136,7 +108,7 @@ func resourceKubernetesJobRead(d *schema.ResourceData, meta interface{}) error {
 	job, err := conn.BatchV1().Jobs(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return fmt.Errorf("Failed to read Job! API error: %s", err)
 	}
 	log.Printf("[INFO] Received job: %#v", job)
 
@@ -159,12 +131,12 @@ func resourceKubernetesJobRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	err = d.Set("metadata", flattenMetadata(job.ObjectMeta))
+	err = d.Set("metadata", flattenMetadata(job.ObjectMeta, d))
 	if err != nil {
 		return err
 	}
 
-	jobSpec, err := flattenJobSpec(job.Spec)
+	jobSpec, err := flattenJobSpec(job.Spec, d)
 	if err != nil {
 		return err
 	}
@@ -188,7 +160,7 @@ func resourceKubernetesJobDelete(d *schema.ResourceData, meta interface{}) error
 	log.Printf("[INFO] Deleting job: %#v", name)
 	err = conn.BatchV1().Jobs(namespace).Delete(name, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to delete Job! API error: %s", err)
 	}
 
 	err = resource.Retry(1*time.Minute, func() *resource.RetryError {

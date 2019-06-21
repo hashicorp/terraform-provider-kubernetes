@@ -254,6 +254,12 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Description: "ServiceAccountName is the name of the ServiceAccount to use to run this pod. More info: http://releases.k8s.io/HEAD/docs/design/service_accounts.md.",
 			Deprecated:  deprecatedMessage,
 		},
+		"share_process_namespace": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "When process namespace sharing is enabled, processes in a container are visible to all other containers in that pod"
+		},
 		"subdomain": {
 			Type:        schema.TypeString,
 			Optional:    true,

@@ -432,6 +432,8 @@ github.com/posener/complete
 github.com/posener/complete/cmd/install
 github.com/posener/complete/cmd
 github.com/posener/complete/match
+# github.com/robfig/cron v1.2.0
+github.com/robfig/cron
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
 # github.com/spf13/afero v1.2.1
@@ -641,6 +643,8 @@ gopkg.in/yaml.v2
 # k8s.io/api v0.0.0-20181221193117-173ce66c1e39
 k8s.io/api/apps/v1
 k8s.io/api/autoscaling/v1
+k8s.io/api/batch/v1
+k8s.io/api/batch/v1beta1
 k8s.io/api/core/v1
 k8s.io/api/extensions/v1beta1
 k8s.io/api/networking/v1
@@ -657,8 +661,6 @@ k8s.io/api/authorization/v1
 k8s.io/api/authorization/v1beta1
 k8s.io/api/autoscaling/v2beta1
 k8s.io/api/autoscaling/v2beta2
-k8s.io/api/batch/v1
-k8s.io/api/batch/v1beta1
 k8s.io/api/batch/v2alpha1
 k8s.io/api/certificates/v1beta1
 k8s.io/api/coordination/v1beta1

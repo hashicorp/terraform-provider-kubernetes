@@ -567,6 +567,28 @@ func TestAccKubernetesDeployment_with_deployment_strategy_rollingupdate(t *testi
 	})
 }
 
+func TestAccKubernetesDeployment_with_share_process_namespace(t *testing.T) {
+	var conf api.Deployment
+
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentConfigWithShareProcessNamespace(rcName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.share_process_namespace", "true"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesDeployment_with_deployment_strategy_rollingupdate_max_surge_30perc_max_unavailable_40perc(t *testing.T) {
 	var conf api.Deployment
 
@@ -1650,6 +1672,48 @@ resource "kubernetes_deployment" "test" {
   }
 }
 `, rcName, strategy, imageName)
+}
+
+func testAccKubernetesDeploymentConfigWithShareProcessNamespace(rcName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_deployment" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        share_process_namespace = true
+        container {
+          image = "%s"
+          name  = "containername1"
+        }
+        container {
+          image = "%s"
+          name  = "containername2"
+        }
+      }
+    }
+  }
+}
+`, rcName, imageName, imageName)
 }
 
 func testAccKubernetesDeploymentConfigWithDeploymentStrategyRollingUpdate(rcName, maxSurge, maxUnavailable, imageName string) string {

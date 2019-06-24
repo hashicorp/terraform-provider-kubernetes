@@ -44,6 +44,7 @@ func jobSpecFields() map[string]*schema.Schema {
 			Type:         schema.TypeInt,
 			Optional:     true,
 			ForceNew:     true,
+			Default:      6,
 			ValidateFunc: validatePositiveInteger,
 			Description:  "Specifies the number of retries before marking this job failed. Defaults to 6",
 		},

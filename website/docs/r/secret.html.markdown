@@ -24,7 +24,7 @@ resource "kubernetes_secret" "example" {
     name = "basic-auth"
   }
 
-  data {
+  data = {
     username = "admin"
     password = "P4ssw0rd"
   }
@@ -41,11 +41,25 @@ resource "kubernetes_secret" "example" {
     name = "docker-cfg"
   }
 
-  data {
+  data = {
     ".dockerconfigjson" = "${file("${path.module}/.docker/config.json")}"
   }
 
   type = "kubernetes.io/dockerconfigjson"
+}
+```
+
+## Example Usage (Service account token)
+
+```hcl
+resource "kubernetes_secret" "example" {
+  metadata {
+    annotations = {
+      "kubernetes.io/service-account.name" = "my-service-account"
+    }
+  }
+
+  type = "kubernetes.io/service-account-token"
 }
 ```
 

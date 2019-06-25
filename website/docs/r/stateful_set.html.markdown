@@ -25,11 +25,11 @@ necessary updates to get there from the current state.
 ```hcl
 resource "kubernetes_stateful_set" "prometheus" {
   metadata {
-    annotations {
+    annotations = {
       SomeAnnotation = "foobar"
     }
 
-    labels {
+    labels = {
       k8s-app                           = "prometheus"
       "kubernetes.io/cluster-service"   = "true"
       "addonmanager.kubernetes.io/mode" = "Reconcile"
@@ -45,7 +45,7 @@ resource "kubernetes_stateful_set" "prometheus" {
     revision_history_limit = 5
 
     selector {
-      match_labels {
+      match_labels = {
         k8s-app = "prometheus"
       }
     }
@@ -54,11 +54,11 @@ resource "kubernetes_stateful_set" "prometheus" {
 
     template {
       metadata {
-        labels {
+        labels = {
           k8s-app = "prometheus"
         }
 
-        annotations {}
+        annotations = {}
       }
 
       spec {
@@ -158,8 +158,8 @@ resource "kubernetes_stateful_set" "prometheus" {
 
           liveness_probe {
             http_get {
-              path = "/-/healthy"
-              port = 9090
+              path   = "/-/healthy"
+              port   = 9090
               scheme = "HTTPS"
             }
 
@@ -198,7 +198,7 @@ resource "kubernetes_stateful_set" "prometheus" {
         storage_class_name = "standard"
 
         resources {
-          requests {
+          requests = {
             storage = "16Gi"
           }
         }

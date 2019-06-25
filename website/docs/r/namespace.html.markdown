@@ -16,18 +16,17 @@ Read more about namespaces at [Kubernetes reference](https://kubernetes.io/docs/
 ```hcl
 resource "kubernetes_namespace" "example" {
   metadata {
-    annotations {
+    annotations = {
       name = "example-annotation"
     }
 
-    labels {
+    labels = {
       mylabel = "label-value"
     }
 
     name = "terraform-example-namespace"
   }
 }
-
 ```
 
 ## Argument Reference

@@ -17,7 +17,7 @@ A Deployment ensures that a specified number of pod “replicas” are running a
 resource "kubernetes_deployment" "example" {
   metadata {
     name = "terraform-example"
-    labels {
+    labels = {
       test = "MyExampleApp"
     }
   }
@@ -26,14 +26,14 @@ resource "kubernetes_deployment" "example" {
     replicas = 3
 
     selector {
-      match_labels {
+      match_labels = {
         test = "MyExampleApp"
       }
     }
 
     template {
       metadata {
-        labels {
+        labels = {
           test = "MyExampleApp"
         }
       }
@@ -43,12 +43,12 @@ resource "kubernetes_deployment" "example" {
           image = "nginx:1.7.8"
           name  = "example"
 
-          resources{
-            limits{
+          resources {
+            limits {
               cpu    = "0.5"
               memory = "512Mi"
             }
-            requests{
+            requests {
               cpu    = "250m"
               memory = "50Mi"
             }

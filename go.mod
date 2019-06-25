@@ -13,7 +13,7 @@ require (
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/hil v0.0.0-20190212132231-97b3a9cdfa93 // indirect
-	github.com/hashicorp/terraform v0.12.0
+	github.com/hashicorp/terraform v0.12.2
 	github.com/hashicorp/vault v1.1.2 // indirect
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
@@ -21,6 +21,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
+	github.com/robfig/cron v1.2.0
 	github.com/stoewer/go-strcase v1.0.2 // indirect
 	github.com/terraform-providers/terraform-provider-aws v0.0.0-20190510001811-4b894dbf13f6
 	github.com/terraform-providers/terraform-provider-google v1.20.0

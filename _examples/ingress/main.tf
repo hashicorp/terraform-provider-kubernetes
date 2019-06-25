@@ -1,13 +1,11 @@
 provider "kubernetes" {
-  config_context_auth_info = "minikube"
-  config_context_cluster   = "minikube"
 }
 
 resource "kubernetes_ingress" "example" {
   metadata {
     name = "example"
 
-    annotations {
+    annotations = {
       "ingress.kubernetes.io/rewrite-target" = "/"
     }
   }
@@ -65,7 +63,7 @@ resource "kubernetes_service" "echoserver" {
   }
 
   spec {
-    selector {
+    selector = {
       app = "echoserver"
     }
 
@@ -85,12 +83,14 @@ resource "kubernetes_deployment" "echoserver" {
 
   spec {
     selector {
-      app = "echoserver"
+      match_labels = {
+        app = "echoserver"
+      }
     }
 
     template {
       metadata {
-        labels {
+        labels = {
           app = "echoserver"
         }
       }
@@ -116,12 +116,14 @@ resource "kubernetes_deployment" "cheddar" {
 
   spec {
     selector {
-      app = "cheddar"
+      match_labels = {
+        app = "cheddar"
+      }
     }
 
     template {
       metadata {
-        labels {
+        labels = {
           app = "cheddar"
         }
       }
@@ -146,7 +148,7 @@ resource "kubernetes_service" "cheddar" {
   }
 
   spec {
-    selector {
+    selector = {
       app = "cheddar"
     }
 
@@ -160,5 +162,5 @@ resource "kubernetes_service" "cheddar" {
 }
 
 output "ingress_ip" {
-  value = "${kubernetes_ingress.example.load_balancer_ingress.0.ip}"
+  value = formatlist("%s ", kubernetes_ingress.example.load_balancer_ingress.*.ip)
 }

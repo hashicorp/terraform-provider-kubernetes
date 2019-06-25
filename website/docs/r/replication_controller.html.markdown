@@ -18,25 +18,26 @@ A Replication Controller ensures that a specified number of pod “replicas” a
 resource "kubernetes_replication_controller" "example" {
   metadata {
     name = "terraform-example"
-    labels {
+    labels = {
       test = "MyExampleApp"
     }
   }
 
   spec {
-    selector {
+    selector = {
       test = "MyExampleApp"
     }
     template {
-      spec {
-        metadata {
-          labels {
-            test = "MyExampleApp"
-          }
-          annotations {
-            "key1" = "value1"
-          }
+      metadata {
+        labels = {
+          test = "MyExampleApp"
         }
+        annotations = {
+          "key1" = "value1"
+        }
+      }
+
+      spec {
         container {
           image = "nginx:1.7.8"
           name  = "example"
@@ -56,12 +57,12 @@ resource "kubernetes_replication_controller" "example" {
             period_seconds        = 3
           }
 
-          resources{
-            limits{
+          resources {
+            limits {
               cpu    = "0.5"
               memory = "512Mi"
             }
-            requests{
+            requests {
               cpu    = "250m"
               memory = "50Mi"
             }

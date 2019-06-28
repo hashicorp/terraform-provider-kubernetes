@@ -517,6 +517,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 		"volume_mount": {
 			Type:        schema.TypeList,
 			Optional:    true,
+			Computed:    true,
 			Description: "Pod volumes to mount into the container's filesystem. Cannot be updated.",
 			Elem: &schema.Resource{
 				Schema: volumeMountFields(),

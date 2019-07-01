@@ -15,6 +15,11 @@ import (
 )
 
 func resourceKubernetesPod() *schema.Resource {
+	podSpecFields := podSpecFields(false, false, false)
+	// Setting this default to false prevents a perpetual diff caused by volume_mounts
+	// being mutated on the server side as Kubernetes automatically adds a mount
+	// for the service account token
+	podSpecFields["automount_service_account_token"].Default = false
 	return &schema.Resource{
 		Create: resourceKubernetesPodCreate,
 		Read:   resourceKubernetesPodRead,
@@ -38,7 +43,7 @@ func resourceKubernetesPod() *schema.Resource {
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
-					Schema: podSpecFields(false, false, false),
+					Schema: podSpecFields,
 				},
 			},
 		},
@@ -52,8 +57,6 @@ func resourceKubernetesPodCreate(d *schema.ResourceData, meta interface{}) error
 	if err != nil {
 		return err
 	}
-
-	spec.AutomountServiceAccountToken = ptrToBool(false)
 
 	pod := api.Pod{
 		ObjectMeta: metadata,

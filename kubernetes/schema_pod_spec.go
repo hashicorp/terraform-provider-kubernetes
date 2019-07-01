@@ -28,6 +28,11 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Description:  "Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.",
 			Deprecated:   deprecatedMessage,
 		},
+		"automount_service_account_token": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "AutomountServiceAccountToken indicates whether a service account token should be automatically mounted.",
+		},
 		"container": {
 			Type:        schema.TypeList,
 			Optional:    true,
@@ -254,6 +259,12 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Description: "ServiceAccountName is the name of the ServiceAccount to use to run this pod. More info: http://releases.k8s.io/HEAD/docs/design/service_accounts.md.",
 			Deprecated:  deprecatedMessage,
 		},
+		"share_process_namespace": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "Share a single process namespace between all of the containers in a pod. When this is set containers will be able to view and signal processes from other containers in the same pod, and the first process in each container will not be assigned PID 1. HostPID and ShareProcessNamespace cannot both be set. Optional: Defaults to false.",
+		},
 		"subdomain": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -274,7 +285,7 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 		"volume": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			Computed:    isComputed,
+			Computed:    true,
 			Description: "List of volumes that can be mounted by containers belonging to the pod. More info: http://kubernetes.io/docs/user-guide/volumes",
 			Deprecated:  deprecatedMessage,
 			Elem:        volumeSchema(),

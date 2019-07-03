@@ -24,7 +24,7 @@ func expandStatefulSetSpec(s []interface{}) (*v1.StatefulSetSpec, error) {
 		obj.PodManagementPolicy = v1.PodManagementPolicyType(v)
 	}
 
-	if v, ok := in["replicas"].(int); ok && v > 0 {
+	if v, ok := in["replicas"].(int); ok && v >= 0 {
 		obj.Replicas = ptrToInt32(int32(v))
 	}
 

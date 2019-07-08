@@ -153,7 +153,7 @@ resource "kubernetes_service" "nginx" {
     name = "nginx-example"
   }
   spec {
-    selector {
+    selector = {
       App = "${kubernetes_pod.nginx.metadata.0.labels.App}"
     }
     port {

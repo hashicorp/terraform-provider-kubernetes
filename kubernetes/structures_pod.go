@@ -695,7 +695,7 @@ func expandDownwardAPIVolumeFile(in []interface{}) ([]v1.DownwardAPIVolumeFile, 
 			}
 		}
 		if v, ok := p["resource_field_ref"].([]interface{}); ok && len(v) > 0 {
-			dapivf[i].ResourceFieldRef, err = expandResourceFieldRef(v)
+			dapivf[i].ResourceFieldRef, err = expandResourceFieldSelector(v)
 			if err != nil {
 				return dapivf, err
 			}

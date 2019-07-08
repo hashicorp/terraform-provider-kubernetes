@@ -496,10 +496,6 @@ func volumeSchema() *schema.Resource {
 											Type:     schema.TypeString,
 											Required: true,
 										},
-										"quantity": {
-											Type:     schema.TypeString,
-											Optional: true,
-										},
 										"resource": {
 											Type:        schema.TypeString,
 											Required:    true,

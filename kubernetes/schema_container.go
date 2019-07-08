@@ -284,6 +284,13 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 												Type:     schema.TypeString,
 												Optional: true,
 											},
+											"divisor": {
+												Type:             schema.TypeString,
+												Optional:         true,
+												Computed:         true,
+												ValidateFunc:     validateResourceQuantity,
+												DiffSuppressFunc: suppressEquivalentResourceQuantity,
+											},
 											"resource": {
 												Type:        schema.TypeString,
 												Required:    true,

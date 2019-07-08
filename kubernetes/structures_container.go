@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -215,6 +216,9 @@ func flattenResourceFieldSelector(in *v1.ResourceFieldSelector) []interface{} {
 	if in.ContainerName != "" {
 		att["container_name"] = in.ContainerName
 	}
+
+	att["divisor"] = in.Divisor.String()
+
 	if in.Resource != "" {
 		att["resource"] = in.Resource
 	}
@@ -847,6 +851,13 @@ func expandResourceFieldSelector(r []interface{}) (*v1.ResourceFieldSelector, er
 
 	if v, ok := in["container_name"].(string); ok {
 		obj.ContainerName = v
+	}
+	if v, ok := in["divisor"].(string); ok && v != "" {
+		q, err := resource.ParseQuantity(v)
+		if err != nil {
+			return obj, err
+		}
+		obj.Divisor = q
 	}
 	if v, ok := in["resource"].(string); ok {
 		obj.Resource = v

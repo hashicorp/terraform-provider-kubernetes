@@ -823,6 +823,35 @@ func TestAccKubernetesDeployment_config_with_automount_service_account_token(t *
 	})
 }
 
+func TestAccKubernetesDeployment_with_resource_field_selector(t *testing.T) {
+	var conf api.Deployment
+
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentConfigWithResourceFieldSelector(rcName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.0.memory", "512Mi"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.env.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.env.0.name", "K8S_LIMITS_CPU"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.env.0.value_from.resource_field_ref.container_name", "containername"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.env.0.value_from.resource_field_ref.divisor", "1Mi"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.env.0.value_from.resource_field_ref.resource", "limits.cpu"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesDeploymentDestroy(s *terraform.State) error {
 	conn := testAccProvider.Meta().(*kubernetes.Clientset)
 
@@ -1992,4 +2021,59 @@ resource "kubernetes_deployment" "test" {
   }
 }
 `, deploymentName, imageName)
+}
+
+func testAccKubernetesDeploymentConfigWithResourceFieldSelector(rcName string, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_deployment" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+
+          resources {
+            limits {
+              memory = "512Mi"
+            }
+          }
+
+          env {
+            name = "K8S_LIMITS_CPU"
+
+            value_from {
+              resource_field_ref {
+                container_name = "containername"
+                resource       = "limits.cpu"
+                divisor        = "1Mi"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, rcName, imageName)
 }

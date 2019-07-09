@@ -121,7 +121,7 @@ func TestAccKubernetesStatefulSet_update_template_selector_labels(t *testing.T) 
 	})
 }
 
-func TestAccKubernetesStatefulSet_update_replicas(t *testing.T) {
+func TestAccKubernetesStatefulSet_update_replicas_to_five(t *testing.T) {
 	var conf api.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.Test(t, resource.TestCase{
@@ -138,7 +138,7 @@ func TestAccKubernetesStatefulSet_update_replicas(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetConfigUpdateReplicas(name),
+				Config: testAccKubernetesStatefulSetConfigUpdateReplicas(name, 5),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetExists(statefulSetTestResourceName, &conf),
 					resource.TestCheckResourceAttr(statefulSetTestResourceName, "metadata.0.name", name),
@@ -148,6 +148,35 @@ func TestAccKubernetesStatefulSet_update_replicas(t *testing.T) {
 		},
 	})
 }
+
+func TestAccKubernetesStatefulSet_update_replicas_to_zero(t *testing.T) {
+	var conf api.StatefulSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: statefulSetTestResourceName,
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesStatefulSetDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStatefulSetConfigBasic(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetExists(statefulSetTestResourceName, &conf),
+					testAccKubernetesStatefulSetChecksBasic(name),
+				),
+			},
+			{
+				Config: testAccKubernetesStatefulSetConfigUpdateReplicas(name, 0),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetExists(statefulSetTestResourceName, &conf),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(statefulSetTestResourceName, "spec.0.replicas", "0"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesStatefulSet_update_rolling_update_partition(t *testing.T) {
 	var conf api.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -623,7 +652,7 @@ resource "kubernetes_stateful_set" "test" {
 `, name)
 }
 
-func testAccKubernetesStatefulSetConfigUpdateReplicas(name string) string {
+func testAccKubernetesStatefulSetConfigUpdateReplicas(name string, replicas int) string {
 	return fmt.Sprintf(`
 resource "kubernetes_stateful_set" "test" {
   metadata {
@@ -643,7 +672,7 @@ resource "kubernetes_stateful_set" "test" {
 
   spec {
     pod_management_policy  = "OrderedReady"
-    replicas               = 5
+    replicas               = %d
     revision_history_limit = 11
 
     selector {
@@ -704,7 +733,7 @@ resource "kubernetes_stateful_set" "test" {
     }
   }
 }
-`, name)
+`, name, replicas)
 }
 
 func testAccKubernetesStatefulSetConfigUpdateTemplate(name string) string {

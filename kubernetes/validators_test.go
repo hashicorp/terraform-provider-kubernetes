@@ -106,3 +106,28 @@ func TestValidateBase64EncodedMap(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateNonNegativeInteger(t *testing.T) {
+	validCases := []int{
+		0,
+		1,
+		2,
+	}
+	for _, data := range validCases {
+		_, es := validateNonNegativeInteger(data, "replicas")
+		if len(es) > 0 {
+			t.Fatalf("Expected %#o to be valid: %#v", data, es)
+		}
+	}
+	invalidCases := []int{
+		-1,
+		-2,
+		-3,
+	}
+	for _, data := range invalidCases {
+		_, es := validateNonNegativeInteger(data, "replicas")
+		if len(es) == 0 {
+			t.Fatalf("Expected %#o to be invalid", data)
+		}
+	}
+}

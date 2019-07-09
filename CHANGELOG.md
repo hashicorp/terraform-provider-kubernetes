@@ -1,4 +1,23 @@
-## 1.7.1 (Unreleased)
+## 1.8.1 (Unreleased)
+## 1.8.0 (July 02, 2019)
+
+FEATURES:
+
+* New resources: `kubernetes_job` and `kubernetes_cron_job`
+
+IMPROVEMENTS:
+
+* Add `automount_service_account_token` attribute to the Pod spec (PR #261)
+* Add `share_process_namespace` attribute to the Pod spec (PR #516)
+* Update Terraform SDK to v0.12.3
+* Enable Renovate to keep package dependencies up to date.
+
+BUG FIXES:
+
+* Fix waiting for Deployments to finish (PR #502)
+* Adapt examples to Terraform 0.12 syntax
+* Documentation updates and fixes
+
 ## 1.7.0 (May 22, 2019)
 
 FEATURES:

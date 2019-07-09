@@ -165,6 +165,14 @@ func validateResourceQuantity(value interface{}, key string) (ws []string, es []
 	return
 }
 
+func validateNonNegativeInteger(value interface{}, key string) (ws []string, es []error) {
+	v := value.(int)
+	if v < 0 {
+		es = append(es, fmt.Errorf("%s must be greater than or equal to 0", key))
+	}
+	return
+}
+
 func validatePositiveInteger(value interface{}, key string) (ws []string, es []error) {
 	v := value.(int)
 	if v <= 0 {

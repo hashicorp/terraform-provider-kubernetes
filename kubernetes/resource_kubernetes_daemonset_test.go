@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	api "k8s.io/api/apps/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetes "k8s.io/client-go/kubernetes"
@@ -203,6 +204,62 @@ func TestAccKubernetesDaemonSet_noTopLevelLabels(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.%", "0"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDaemonSet_with_tolerations(t *testing.T) {
+	var conf api.DaemonSet
+
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "redis:5.0.2"
+	tolerationSeconds := 6000
+	operator := "Equal"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesDaemonSetDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDaemonSetConfigWithTolerations(rcName, imageName, &tolerationSeconds, operator, nil),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.toleration.0.effect", "NoExecute"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.toleration.0.key", "myKey"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.toleration.0.operator", operator),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.toleration.0.toleration_seconds", "6000"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.toleration.0.value", ""),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDaemonSet_with_tolerations_unset_toleration_seconds(t *testing.T) {
+	var conf api.DaemonSet
+
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "redis:5.0.2"
+	operator := "Equal"
+	value := "value"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesDaemonSetDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDaemonSetConfigWithTolerations(rcName, imageName, nil, operator, &value),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.toleration.0.effect", "NoExecute"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.toleration.0.key", "myKey"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.toleration.0.operator", operator),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.toleration.0.value", "value"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.toleration.0.toleration_seconds", ""),
 				),
 			},
 		},
@@ -562,4 +619,58 @@ resource "kubernetes_daemonset" "test" {
   }
 }
 `, depName, imageName)
+}
+
+func testAccKubernetesDaemonSetConfigWithTolerations(rcName, imageName string, tolerationSeconds *int, operator string, value *string) string {
+	tolerationDuration := ""
+	if tolerationSeconds != nil {
+		tolerationDuration = fmt.Sprintf("toleration_seconds = %d", *tolerationSeconds)
+	}
+	valueString := ""
+	if value != nil {
+		valueString = fmt.Sprintf("value = \"%s\"", *value)
+	}
+
+	return fmt.Sprintf(`
+resource "kubernetes_daemonset" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        toleration {
+          effect             = "NoExecute"
+          key                = "myKey"
+          operator           = "%s"
+          %s
+          %s
+        }
+
+        container {
+          image = "%s"
+          name  = "containername"
+        }
+      }
+    }
+  }
+}
+`, rcName, operator, valueString, tolerationDuration, imageName)
 }

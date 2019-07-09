@@ -2,7 +2,9 @@ package kubernetes
 
 import (
 	"fmt"
+	"log"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	v1 "k8s.io/api/core/v1"
@@ -82,6 +84,10 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 
 	if in.TerminationGracePeriodSeconds != nil {
 		att["termination_grace_period_seconds"] = *in.TerminationGracePeriodSeconds
+	}
+
+	if len(in.Tolerations) > 0 {
+		att["toleration"] = flattenTolerations(in.Tolerations)
 	}
 
 	if len(in.Volumes) > 0 {
@@ -178,6 +184,36 @@ func flattenSeLinuxOptions(in *v1.SELinuxOptions) []interface{} {
 		att["level"] = in.Level
 	}
 	return []interface{}{att}
+}
+
+func flattenTolerations(tolerations []v1.Toleration) []interface{} {
+	att := []interface{}{}
+	for _, v := range tolerations {
+		// The API Server may automatically add several Tolerations to pods, strip these to avoid TF diff.
+		if strings.Contains(v.Key, "node.kubernetes.io/") {
+			log.Printf("[INFO] ignoring toleration with key: %s", v.Key)
+			continue
+		}
+		obj := map[string]interface{}{}
+
+		if v.Effect != "" {
+			obj["effect"] = string(v.Effect)
+		}
+		if v.Key != "" {
+			obj["key"] = v.Key
+		}
+		if v.Operator != "" {
+			obj["operator"] = string(v.Operator)
+		}
+		if v.TolerationSeconds != nil {
+			obj["toleration_seconds"] = strconv.FormatInt(*v.TolerationSeconds, 10)
+		}
+		if v.Value != "" {
+			obj["value"] = v.Value
+		}
+		att = append(att, obj)
+	}
+	return att
 }
 
 func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
@@ -499,6 +535,16 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.TerminationGracePeriodSeconds = ptrToInt64(int64(v))
 	}
 
+	if v, ok := in["toleration"].([]interface{}); ok && len(v) > 0 {
+		ts, err := expandTolerations(v)
+		if err != nil {
+			return obj, err
+		}
+		for _, t := range ts {
+			obj.Tolerations = append(obj.Tolerations, *t)
+		}
+	}
+
 	if v, ok := in["volume"].([]interface{}); ok && len(v) > 0 {
 		cs, err := expandVolumes(v)
 		if err != nil {
@@ -781,6 +827,38 @@ func expandSecretVolumeSource(l []interface{}) (*v1.SecretVolumeSource, error) {
 	return obj, nil
 }
 
+func expandTolerations(tolerations []interface{}) ([]*v1.Toleration, error) {
+	if len(tolerations) == 0 {
+		return []*v1.Toleration{}, nil
+	}
+	ts := make([]*v1.Toleration, len(tolerations))
+	for i, t := range tolerations {
+		m := t.(map[string]interface{})
+		ts[i] = &v1.Toleration{}
+
+		if value, ok := m["effect"].(string); ok {
+			ts[i].Effect = v1.TaintEffect(value)
+		}
+		if value, ok := m["key"].(string); ok {
+			ts[i].Key = value
+		}
+		if value, ok := m["operator"].(string); ok {
+			ts[i].Operator = v1.TolerationOperator(value)
+		}
+		if value, ok := m["toleration_seconds"].(string); ok && value != "" {
+			seconds, err := strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid toleration_seconds must be int or \"\", got \"%s\"", value)
+			}
+			ts[i].TolerationSeconds = ptrToInt64(seconds)
+		}
+		if value, ok := m["value"]; ok {
+			ts[i].Value = value.(string)
+		}
+	}
+	return ts, nil
+}
+
 func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 	if len(volumes) == 0 {
 		return []v1.Volume{}, nil
@@ -904,6 +982,5 @@ func patchPodSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOpera
 		}
 
 	}
-
 	return ops, nil
 }

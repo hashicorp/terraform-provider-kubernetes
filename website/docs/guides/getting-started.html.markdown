@@ -66,9 +66,9 @@ If you wish to configure the provider statically you can do so by providing TLS 
 provider "kubernetes" {
   host = "https://104.196.242.174"
 
-  client_certificate     = "${file("~/.kube/client-cert.pem")}"
-  client_key             = "${file("~/.kube/client-key.pem")}"
-  cluster_ca_certificate = "${file("~/.kube/cluster-ca-cert.pem")}"
+  client_certificate     = file("~/.kube/client-cert.pem")
+  client_key             = file("~/.kube/client-key.pem")
+  cluster_ca_certificate = file("~/.kube/cluster-ca-cert.pem")
 }
 ```
 
@@ -89,9 +89,21 @@ to download the latest version of the Kubernetes provider.
 ```
 $ terraform init
 
+Initializing the backend...
 
 Initializing provider plugins...
-- Downloading plugin for provider "kubernetes"...
+- Checking for available provider plugins...
+- Downloading plugin for provider "kubernetes" (terraform-providers/kubernetes) 1.8.0...
+
+The following providers do not have any version constraints in configuration,
+so the latest version was installed.
+
+To prevent automatic upgrades to new major versions that may contain breaking
+changes, it is recommended to add version = "..." constraints to the
+corresponding provider blocks in configuration, with the constraint strings
+suggested below.
+
+* provider.kubernetes: version = "~> 1.8"
 
 Terraform has been successfully initialized!
 
@@ -153,11 +165,11 @@ resource "kubernetes_service" "nginx" {
     name = "nginx-example"
   }
   spec {
-    selector {
-      App = "${kubernetes_pod.nginx.metadata.0.labels.App}"
+    selector = {
+      App = kubernetes_pod.nginx.metadata[0].labels.App
     }
     port {
-      port = 80
+      port        = 80
       target_port = 80
     }
 
@@ -170,7 +182,7 @@ We may also add an output which will expose the IP address to the user
 
 ```hcl
 output "lb_ip" {
-  value = "${kubernetes_service.nginx.load_balancer_ingress.0.ip}"
+  value = kubernetes_service.nginx.load_balancer_ingress[0].ip
 }
 ```
 
@@ -181,7 +193,7 @@ should use the following snippet instead.
 
 ```hcl
 output "lb_ip" {
-  value = "${kubernetes_service.nginx.load_balancer_ingress.0.hostname}"
+  value = kubernetes_service.nginx.load_balancer_ingress[0].hostname
 }
 ```
 
@@ -198,73 +210,316 @@ Refreshing Terraform state in-memory prior to plan...
 The refreshed state will be used to calculate this plan, but will not be
 persisted to local or remote state storage.
 
-The Terraform execution plan has been generated and is shown below.
-Resources are shown in alphabetical order for quick scanning. Green resources
-will be created (or destroyed and then created if an existing resource
-exists), yellow resources are being changed in-place, and red resources
-will be destroyed. Cyan entries are data sources to be read.
 
-Note: You didn't specify an "-out" parameter to save this plan, so when
-"apply" is called, Terraform can't guarantee this is what will execute.
+------------------------------------------------------------------------
 
-  + kubernetes_pod.nginx
-      metadata.#:                                  "1"
-      metadata.0.generation:                       "<computed>"
-      metadata.0.labels.%:                         "1"
-      metadata.0.labels.App:                       "nginx"
-      metadata.0.name:                             "nginx-example"
-      metadata.0.namespace:                        "default"
-      metadata.0.resource_version:                 "<computed>"
-      metadata.0.self_link:                        "<computed>"
-      metadata.0.uid:                              "<computed>"
-      spec.#:                                      "1"
-      spec.0.automount_service_account_token:      "<computed>"
-      spec.0.container.#:                          "1"
-      spec.0.container.0.image:                    "nginx:1.7.8"
-      spec.0.container.0.image_pull_policy:        "<computed>"
-      spec.0.container.0.name:                     "example"
-      spec.0.container.0.port.#:                   "1"
-      spec.0.container.0.port.0.container_port:    "80"
-      spec.0.container.0.port.0.protocol:          "TCP"
-      spec.0.container.0.resources.#:              "<computed>"
-      spec.0.container.0.stdin:                    "false"
-      spec.0.container.0.stdin_once:               "false"
-      spec.0.container.0.termination_message_path: "/dev/termination-log"
-      spec.0.container.0.tty:                      "false"
-      spec.0.dns_policy:                           "ClusterFirst"
-      spec.0.host_ipc:                             "false"
-      spec.0.host_network:                         "false"
-      spec.0.host_pid:                             "false"
-      spec.0.hostname:                             "<computed>"
-      spec.0.image_pull_secrets.#:                 "<computed>"
-      spec.0.node_name:                            "<computed>"
-      spec.0.restart_policy:                       "Always"
-      spec.0.service_account_name:                 "<computed>"
-      spec.0.termination_grace_period_seconds:     "30"
+An execution plan has been generated and is shown below.
+Resource actions are indicated with the following symbols:
+  + create
 
-  + kubernetes_service.nginx
-      load_balancer_ingress.#:     "<computed>"
-      metadata.#:                  "1"
-      metadata.0.generation:       "<computed>"
-      metadata.0.name:             "nginx-example"
-      metadata.0.namespace:        "default"
-      metadata.0.resource_version: "<computed>"
-      metadata.0.self_link:        "<computed>"
-      metadata.0.uid:              "<computed>"
-      spec.#:                      "1"
-      spec.0.cluster_ip:           "<computed>"
-      spec.0.port.#:               "1"
-      spec.0.port.0.node_port:     "<computed>"
-      spec.0.port.0.port:          "80"
-      spec.0.port.0.protocol:      "TCP"
-      spec.0.port.0.target_port:   "80"
-      spec.0.selector.%:           "1"
-      spec.0.selector.App:         "nginx"
-      spec.0.session_affinity:     "None"
-      spec.0.type:                 "LoadBalancer"
+Terraform will perform the following actions:
 
+  # kubernetes_pod.nginx will be created
+  + resource "kubernetes_pod" "nginx" {
+      + id = (known after apply)
+
+      + metadata {
+          + generation       = (known after apply)
+          + labels           = {
+              + "App" = "nginx"
+            }
+          + name             = "nginx-example"
+          + namespace        = "default"
+          + resource_version = (known after apply)
+          + self_link        = (known after apply)
+          + uid              = (known after apply)
+        }
+
+      + spec {
+          + automount_service_account_token  = false
+          + dns_policy                       = "ClusterFirst"
+          + host_ipc                         = false
+          + host_network                     = false
+          + host_pid                         = false
+          + hostname                         = (known after apply)
+          + node_name                        = (known after apply)
+          + restart_policy                   = "Always"
+          + service_account_name             = (known after apply)
+          + share_process_namespace          = false
+          + termination_grace_period_seconds = 30
+
+          + container {
+              + image                    = "nginx:1.7.8"
+              + image_pull_policy        = (known after apply)
+              + name                     = "example"
+              + stdin                    = false
+              + stdin_once               = false
+              + termination_message_path = "/dev/termination-log"
+              + tty                      = false
+
+              + port {
+                  + container_port = 80
+                  + protocol       = "TCP"
+                }
+
+              + resources {
+                  + limits {
+                      + cpu    = (known after apply)
+                      + memory = (known after apply)
+                    }
+
+                  + requests {
+                      + cpu    = (known after apply)
+                      + memory = (known after apply)
+                    }
+                }
+
+              + volume_mount {
+                  + mount_path = (known after apply)
+                  + name       = (known after apply)
+                  + read_only  = (known after apply)
+                  + sub_path   = (known after apply)
+                }
+            }
+
+          + image_pull_secrets {
+              + name = (known after apply)
+            }
+
+          + volume {
+              + name = (known after apply)
+
+              + aws_elastic_block_store {
+                  + fs_type   = (known after apply)
+                  + partition = (known after apply)
+                  + read_only = (known after apply)
+                  + volume_id = (known after apply)
+                }
+
+              + azure_disk {
+                  + caching_mode  = (known after apply)
+                  + data_disk_uri = (known after apply)
+                  + disk_name     = (known after apply)
+                  + fs_type       = (known after apply)
+                  + read_only     = (known after apply)
+                }
+
+              + azure_file {
+                  + read_only   = (known after apply)
+                  + secret_name = (known after apply)
+                  + share_name  = (known after apply)
+                }
+
+              + ceph_fs {
+                  + monitors    = (known after apply)
+                  + path        = (known after apply)
+                  + read_only   = (known after apply)
+                  + secret_file = (known after apply)
+                  + user        = (known after apply)
+
+                  + secret_ref {
+                      + name = (known after apply)
+                    }
+                }
+
+              + cinder {
+                  + fs_type   = (known after apply)
+                  + read_only = (known after apply)
+                  + volume_id = (known after apply)
+                }
+
+              + config_map {
+                  + default_mode = (known after apply)
+                  + name         = (known after apply)
+
+                  + items {
+                      + key  = (known after apply)
+                      + mode = (known after apply)
+                      + path = (known after apply)
+                    }
+                }
+
+              + downward_api {
+                  + default_mode = (known after apply)
+
+                  + items {
+                      + mode = (known after apply)
+                      + path = (known after apply)
+
+                      + field_ref {
+                          + api_version = (known after apply)
+                          + field_path  = (known after apply)
+                        }
+
+                      + resource_field_ref {
+                          + container_name = (known after apply)
+                          + quantity       = (known after apply)
+                          + resource       = (known after apply)
+                        }
+                    }
+                }
+
+              + empty_dir {
+                  + medium = (known after apply)
+                }
+
+              + fc {
+                  + fs_type      = (known after apply)
+                  + lun          = (known after apply)
+                  + read_only    = (known after apply)
+                  + target_ww_ns = (known after apply)
+                }
+
+              + flex_volume {
+                  + driver    = (known after apply)
+                  + fs_type   = (known after apply)
+                  + options   = (known after apply)
+                  + read_only = (known after apply)
+
+                  + secret_ref {
+                      + name = (known after apply)
+                    }
+                }
+
+              + flocker {
+                  + dataset_name = (known after apply)
+                  + dataset_uuid = (known after apply)
+                }
+
+              + gce_persistent_disk {
+                  + fs_type   = (known after apply)
+                  + partition = (known after apply)
+                  + pd_name   = (known after apply)
+                  + read_only = (known after apply)
+                }
+
+              + git_repo {
+                  + directory  = (known after apply)
+                  + repository = (known after apply)
+                  + revision   = (known after apply)
+                }
+
+              + glusterfs {
+                  + endpoints_name = (known after apply)
+                  + path           = (known after apply)
+                  + read_only      = (known after apply)
+                }
+
+              + host_path {
+                  + path = (known after apply)
+                }
+
+              + iscsi {
+                  + fs_type         = (known after apply)
+                  + iqn             = (known after apply)
+                  + iscsi_interface = (known after apply)
+                  + lun             = (known after apply)
+                  + read_only       = (known after apply)
+                  + target_portal   = (known after apply)
+                }
+
+              + local {
+                  + path = (known after apply)
+                }
+
+              + nfs {
+                  + path      = (known after apply)
+                  + read_only = (known after apply)
+                  + server    = (known after apply)
+                }
+
+              + persistent_volume_claim {
+                  + claim_name = (known after apply)
+                  + read_only  = (known after apply)
+                }
+
+              + photon_persistent_disk {
+                  + fs_type = (known after apply)
+                  + pd_id   = (known after apply)
+                }
+
+              + quobyte {
+                  + group     = (known after apply)
+                  + read_only = (known after apply)
+                  + registry  = (known after apply)
+                  + user      = (known after apply)
+                  + volume    = (known after apply)
+                }
+
+              + rbd {
+                  + ceph_monitors = (known after apply)
+                  + fs_type       = (known after apply)
+                  + keyring       = (known after apply)
+                  + rados_user    = (known after apply)
+                  + rbd_image     = (known after apply)
+                  + rbd_pool      = (known after apply)
+                  + read_only     = (known after apply)
+
+                  + secret_ref {
+                      + name = (known after apply)
+                    }
+                }
+
+              + secret {
+                  + default_mode = (known after apply)
+                  + optional     = (known after apply)
+                  + secret_name  = (known after apply)
+
+                  + items {
+                      + key  = (known after apply)
+                      + mode = (known after apply)
+                      + path = (known after apply)
+                    }
+                }
+
+              + vsphere_volume {
+                  + fs_type     = (known after apply)
+                  + volume_path = (known after apply)
+                }
+            }
+        }
+    }
+
+  # kubernetes_service.nginx will be created
+  + resource "kubernetes_service" "nginx" {
+      + id                    = (known after apply)
+      + load_balancer_ingress = (known after apply)
+
+      + metadata {
+          + generation       = (known after apply)
+          + name             = "nginx-example"
+          + namespace        = "default"
+          + resource_version = (known after apply)
+          + self_link        = (known after apply)
+          + uid              = (known after apply)
+        }
+
+      + spec {
+          + cluster_ip                  = (known after apply)
+          + external_traffic_policy     = (known after apply)
+          + publish_not_ready_addresses = false
+          + selector                    = {
+              + "App" = "nginx"
+            }
+          + session_affinity            = "None"
+          + type                        = "LoadBalancer"
+
+          + port {
+              + node_port   = (known after apply)
+              + port        = 80
+              + protocol    = "TCP"
+              + target_port = "80"
+            }
+        }
+    }
 
 Plan: 2 to add, 0 to change, 0 to destroy.
+
+------------------------------------------------------------------------
+
+Note: You didn't specify an "-out" parameter to save this plan, so Terraform
+can't guarantee that exactly these actions will be performed if
+"terraform apply" is subsequently run.
 ```
 
 As we're happy with the plan output we may carry on applying
@@ -275,81 +530,23 @@ resources to finish provisioning to the point when it can either
 present useful attributes or a failure (with reason) to the user.
 
 ```
-$ terraform apply
+$ terraform apply -auto-approve
 
 kubernetes_pod.nginx: Creating...
-  metadata.#:                                  "" => "1"
-  metadata.0.generation:                       "" => "<computed>"
-  metadata.0.labels.%:                         "" => "1"
-  metadata.0.labels.App:                       "" => "nginx"
-  metadata.0.name:                             "" => "nginx-example"
-  metadata.0.namespace:                        "" => "default"
-  metadata.0.resource_version:                 "" => "<computed>"
-  metadata.0.self_link:                        "" => "<computed>"
-  metadata.0.uid:                              "" => "<computed>"
-  spec.#:                                      "" => "1"
-  spec.0.automount_service_account_token:      "" => "<computed>"
-  spec.0.container.#:                          "" => "1"
-  spec.0.container.0.image:                    "" => "nginx:1.7.8"
-  spec.0.container.0.image_pull_policy:        "" => "<computed>"
-  spec.0.container.0.name:                     "" => "example"
-  spec.0.container.0.port.#:                   "" => "1"
-  spec.0.container.0.port.0.container_port:    "" => "80"
-  spec.0.container.0.port.0.protocol:          "" => "TCP"
-  spec.0.container.0.resources.#:              "" => "<computed>"
-  spec.0.container.0.stdin:                    "" => "false"
-  spec.0.container.0.stdin_once:               "" => "false"
-  spec.0.container.0.termination_message_path: "" => "/dev/termination-log"
-  spec.0.container.0.tty:                      "" => "false"
-  spec.0.dns_policy:                           "" => "ClusterFirst"
-  spec.0.host_ipc:                             "" => "false"
-  spec.0.host_network:                         "" => "false"
-  spec.0.host_pid:                             "" => "false"
-  spec.0.hostname:                             "" => "<computed>"
-  spec.0.image_pull_secrets.#:                 "" => "<computed>"
-  spec.0.node_name:                            "" => "<computed>"
-  spec.0.restart_policy:                       "" => "Always"
-  spec.0.service_account_name:                 "" => "<computed>"
-  spec.0.termination_grace_period_seconds:     "" => "30"
-kubernetes_pod.nginx: Creation complete (ID: default/nginx-example)
+kubernetes_pod.nginx: Creation complete after 8s [id=default/nginx-example]
 kubernetes_service.nginx: Creating...
-  load_balancer_ingress.#:     "" => "<computed>"
-  metadata.#:                  "" => "1"
-  metadata.0.generation:       "" => "<computed>"
-  metadata.0.name:             "" => "nginx-example"
-  metadata.0.namespace:        "" => "default"
-  metadata.0.resource_version: "" => "<computed>"
-  metadata.0.self_link:        "" => "<computed>"
-  metadata.0.uid:              "" => "<computed>"
-  spec.#:                      "" => "1"
-  spec.0.cluster_ip:           "" => "<computed>"
-  spec.0.port.#:               "" => "1"
-  spec.0.port.0.node_port:     "" => "<computed>"
-  spec.0.port.0.port:          "" => "80"
-  spec.0.port.0.protocol:      "" => "TCP"
-  spec.0.port.0.target_port:   "" => "80"
-  spec.0.selector.%:           "" => "1"
-  spec.0.selector.App:         "" => "nginx"
-  spec.0.session_affinity:     "" => "None"
-  spec.0.type:                 "" => "LoadBalancer"
-kubernetes_service.nginx: Still creating... (10s elapsed)
-kubernetes_service.nginx: Still creating... (20s elapsed)
-kubernetes_service.nginx: Still creating... (30s elapsed)
-kubernetes_service.nginx: Still creating... (40s elapsed)
-kubernetes_service.nginx: Creation complete (ID: default/nginx-example)
+kubernetes_service.nginx: Still creating... [10s elapsed]
+kubernetes_service.nginx: Still creating... [20s elapsed]
+kubernetes_service.nginx: Still creating... [30s elapsed]
+kubernetes_service.nginx: Still creating... [40s elapsed]
+kubernetes_service.nginx: Still creating... [50s elapsed]
+kubernetes_service.nginx: Creation complete after 56s [id=default/nginx-example]
 
 Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
 
-The state of your infrastructure has been saved to the path
-below. This state is required to modify and destroy your
-infrastructure, so keep it safe. To inspect the complete state
-use the `terraform show` command.
-
-State path:
-
 Outputs:
 
-lb_ip = 35.197.9.247
+lb_ip = 34.77.88.233
 ```
 
 You may now enter that IP address to your favourite browser
@@ -369,10 +566,10 @@ We can just replace our Pod with RC from the previous config
 and keep the Service there.
 
 ```hcl
-resource "kubernetes_replication_controller" "nginx" {
+resource "kubernetes_deployment" "nginx" {
   metadata {
     name = "scalable-nginx-example"
-    labels {
+    labels = {
       App = "ScalableNginxExample"
     }
   }
@@ -380,25 +577,34 @@ resource "kubernetes_replication_controller" "nginx" {
   spec {
     replicas = 2
     selector {
-      App = "ScalableNginxExample"
+      match_labels = {
+        App = "ScalableNginxExample"
+      }
     }
     template {
-      container {
-        image = "nginx:1.7.8"
-        name  = "example"
-
-        port {
-          container_port = 80
+      metadata {
+        labels = {
+          App = "ScalableNginxExample"
         }
+      }
+      spec {
+        container {
+          image = "nginx:1.7.8"
+          name  = "example"
 
-        resources {
-          limits {
-            cpu    = "0.5"
-            memory = "512Mi"
+          port {
+            container_port = 80
           }
-          requests {
-            cpu    = "250m"
-            memory = "50Mi"
+
+          resources {
+            limits {
+              cpu    = "0.5"
+              memory = "512Mi"
+            }
+            requests {
+              cpu    = "250m"
+              memory = "50Mi"
+            }
           }
         }
       }
@@ -411,16 +617,20 @@ resource "kubernetes_service" "nginx" {
     name = "nginx-example"
   }
   spec {
-    selector {
-      App = "${kubernetes_replication_controller.nginx.metadata.0.labels.App}"
+    selector = {
+      App = kubernetes_deployment.nginx.spec.0.template.0.metadata[0].labels.App
     }
     port {
-      port = 80
+      port        = 80
       target_port = 80
     }
 
     type = "LoadBalancer"
   }
+}
+
+output "lb_ip" {
+  value = kubernetes_service.nginx.load_balancer_ingress[0].ip
 }
 ```
 
@@ -436,35 +646,29 @@ $ terraform plan
 # ...
 
 Plan: 2 to add, 0 to change, 0 to destroy.
-```
 
-```
-$ terraform apply
-
-kubernetes_replication_controller.nginx: Creating...
+------------------------------------------------------------------------
 # ...
-kubernetes_replication_controller.nginx: Creation complete (ID: default/scalable-nginx-example)
+
+```
+
+```
+$ terraform apply -auto-approve
+kubernetes_deployment.nginx: Creating...
+kubernetes_deployment.nginx: Creation complete after 10s [id=default/scalable-nginx-example]
 kubernetes_service.nginx: Creating...
-# ...
-kubernetes_service.nginx: Still creating... (10s elapsed)
-kubernetes_service.nginx: Still creating... (20s elapsed)
-kubernetes_service.nginx: Still creating... (30s elapsed)
-kubernetes_service.nginx: Still creating... (40s elapsed)
-kubernetes_service.nginx: Still creating... (50s elapsed)
-kubernetes_service.nginx: Creation complete (ID: default/nginx-example)
+kubernetes_service.nginx: Still creating... [10s elapsed]
+kubernetes_service.nginx: Still creating... [20s elapsed]
+kubernetes_service.nginx: Still creating... [30s elapsed]
+kubernetes_service.nginx: Still creating... [40s elapsed]
+kubernetes_service.nginx: Still creating... [50s elapsed]
+kubernetes_service.nginx: Creation complete after 59s [id=default/nginx-example]
 
 Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
 
-The state of your infrastructure has been saved to the path
-below. This state is required to modify and destroy your
-infrastructure, so keep it safe. To inspect the complete state
-use the `terraform show` command.
-
-State path:
-
 Outputs:
 
-lb_ip = 35.197.9.247
+lb_ip = 34.77.88.233
 ```
 
 Unlike in previous example, the IP address here will direct traffic
@@ -477,7 +681,7 @@ The easiest way to achieve this is to increase `replicas` field in the config
 accordingly.
 
 ```hcl
-resource "kubernetes_replication_controller" "example" {
+resource "kubernetes_deployment" "example" {
 # ...
 
   spec {
@@ -499,7 +703,7 @@ Refreshing Terraform state in-memory prior to plan...
 The refreshed state will be used to calculate this plan, but will not be
 persisted to local or remote state storage.
 
-kubernetes_replication_controller.nginx: Refreshing state... (ID: default/scalable-nginx-example)
+kubernetes_deployment.nginx: Refreshing state... (ID: default/scalable-nginx-example)
 kubernetes_service.nginx: Refreshing state... (ID: default/nginx-example)
 
 The Terraform execution plan has been generated and is shown below.
@@ -511,7 +715,7 @@ will be destroyed. Cyan entries are data sources to be read.
 Note: You didn't specify an "-out" parameter to save this plan, so when
 "apply" is called, Terraform can't guarantee this is what will execute.
 
-  ~ kubernetes_replication_controller.nginx
+  ~ kubernetes_deployment.nginx
       spec.0.replicas: "2" => "5"
 
 
@@ -543,7 +747,7 @@ resource "kubernetes_resource_quota" "example" {
     name = "terraform-example"
   }
   spec {
-    hard {
+    hard = {
       pods = 10
     }
     scopes = ["BestEffort"]
@@ -556,31 +760,31 @@ type (e.g. Pod or Persistent Volume Claim).
 
 ```hcl
 resource "kubernetes_limit_range" "example" {
-    metadata {
-        name = "terraform-example"
+  metadata {
+    name = "terraform-example"
+  }
+  spec {
+    limit {
+      type = "Pod"
+      max = {
+        cpu    = "200m"
+        memory = "1024M"
+      }
     }
-    spec {
-        limit {
-            type = "Pod"
-            max {
-                cpu = "200m"
-                memory = "1024M"
-            }
-        }
-        limit {
-            type = "PersistentVolumeClaim"
-            min {
-                storage = "24M"
-            }
-        }
-        limit {
-            type = "Container"
-            default {
-                cpu = "50m"
-                memory = "24M"
-            }
-        }
+    limit {
+      type = "PersistentVolumeClaim"
+      min = {
+        storage = "24M"
+      }
     }
+    limit {
+      type = "Container"
+      default = {
+        cpu    = "50m"
+        memory = "24M"
+      }
+    }
+  }
 }
 ```
 

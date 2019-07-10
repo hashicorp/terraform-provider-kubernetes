@@ -661,6 +661,37 @@ func TestAccKubernetesPod_config_with_automount_service_account_token(t *testing
 	})
 }
 
+func TestAccKubernetesPod_config_container_working_dir(t *testing.T) {
+	var confPod api.Pod
+
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodConfigWorkingDir(podName, imageName, "/www"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists("kubernetes_pod.test", &confPod),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "metadata.0.generation", "0"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.working_dir", "/www"),
+				),
+			},
+			{
+				Config: testAccKubernetesPodConfigWorkingDir(podName, imageName, "/srv"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists("kubernetes_pod.test", &confPod),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "metadata.0.generation", "0"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.working_dir", "/srv"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesPodDestroy(s *terraform.State) error {
 	conn := testAccProvider.Meta().(*kubernetes.Clientset)
 
@@ -1480,4 +1511,22 @@ resource "kubernetes_pod" "test" {
   }
 }
 `, saName, podName, imageName)
+}
+
+func testAccKubernetesPodConfigWorkingDir(podName, imageName, val string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_pod" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+      working_dir = "%s"
+    }
+  }
+}
+`, podName, imageName, val)
 }

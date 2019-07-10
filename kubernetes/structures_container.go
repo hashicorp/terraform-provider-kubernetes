@@ -507,6 +507,10 @@ func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 				return cs, err
 			}
 		}
+
+		if v, ok := ctr["working_dir"].(string); ok && v != "" {
+			cs[i].WorkingDir = v
+		}
 	}
 	return cs, nil
 }

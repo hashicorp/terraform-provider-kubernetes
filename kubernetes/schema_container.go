@@ -211,7 +211,6 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 		"env": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			ForceNew:    true,
 			Description: "List of environment variables to set in the container. Cannot be updated.",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
@@ -222,7 +221,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 					},
 					"value": {
 						Type:        schema.TypeString,
-						ForceNew:    true,
+						ForceNew:    !isUpdatable,
 						Optional:    true,
 						Description: `Variable references $(VAR_NAME) are expanded using the previous defined environment variables in the container and any service environment variables. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Defaults to "".`,
 					},
@@ -322,7 +321,6 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 		"env_from": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			ForceNew:    true,
 			Description: "List of sources to populate environment variables in the container. The keys defined within a source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the container is starting. When a key exists in multiple sources, the value associated with the last source will take precedence. Values defined by an Env with a duplicate key will take precedence. Cannot be updated.",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
@@ -389,7 +387,6 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
-			ForceNew:    true,
 			Description: "Actions that the management system should take in response to container lifecycle events",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
@@ -416,7 +413,6 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
-			ForceNew:    true,
 			Description: "Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/pod-states#container-probes",
 			Elem:        probeSchema(),
 		},
@@ -466,7 +462,6 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
-			ForceNew:    true,
 			Description: "Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/pod-states#container-probes",
 			Elem:        probeSchema(),
 		},
@@ -485,7 +480,6 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
-			ForceNew:    true,
 			Description: "Security options the pod should run with. More info: http://releases.k8s.io/HEAD/docs/design/security_context.md",
 			Elem:        securityContextSchema(),
 		},
@@ -504,7 +498,6 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 		"termination_message_path": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			ForceNew:    true,
 			Default:     "/dev/termination-log",
 			Description: "Optional: Path at which the file to which the container's termination message will be written is mounted into the container's filesystem. Message written is intended to be brief final status, such as an assertion failure message. Defaults to /dev/termination-log. Cannot be updated.",
 		},
@@ -526,7 +519,6 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 		"working_dir": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			ForceNew:    true,
 			Description: "Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.",
 		},
 	}

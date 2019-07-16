@@ -3,9 +3,7 @@ package kubernetes
 import (
 	"fmt"
 	"log"
-	"time"
 
-	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 	api "k8s.io/api/scheduling/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -72,22 +70,6 @@ func resourceKubernetesPriorityClassCreate(d *schema.ResourceData, meta interfac
 	log.Printf("[INFO] Submitted new priority class: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	err = resource.Retry(1*time.Minute, func() *resource.RetryError {
-		createdPriorityClass, err := conn.Scheduling().PriorityClasses().Get(out.Name, meta_v1.GetOptions{})
-		if err != nil {
-			return resource.NonRetryableError(err)
-		}
-		if createdPriorityClass.Value == priorityClass.Value {
-			return nil
-		}
-		err = fmt.Errorf("Priority class doesn't match after creation.\nExpected: %#v\nGiven: %#v",
-			createdPriorityClass.Value, priorityClass.Value)
-		return resource.RetryableError(err)
-	})
-	if err != nil {
-		return err
-	}
-
 	return resourceKubernetesPriorityClassRead(d, meta)
 }
 
@@ -106,14 +88,6 @@ func resourceKubernetesPriorityClassRead(d *schema.ResourceData, meta interface{
 		return err
 	}
 	log.Printf("[INFO] Received priority class: %#v", priorityClass)
-
-	// This is to work around K8S bug
-	// See https://github.com/kubernetes/kubernetes/issues/44539
-	if priorityClass.ObjectMeta.GenerateName == "" {
-		if v, ok := d.GetOk("metadata.0.generate_name"); ok {
-			priorityClass.ObjectMeta.GenerateName = v.(string)
-		}
-	}
 
 	err = d.Set("metadata", flattenMetadata(priorityClass.ObjectMeta, d))
 	if err != nil {
@@ -147,14 +121,6 @@ func resourceKubernetesPriorityClassUpdate(d *schema.ResourceData, meta interfac
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
-
-	if d.HasChange("value") {
-		value := d.Get("value").(int)
-		ops = append(ops, &ReplaceOperation{
-			Path:  "/value",
-			Value: int32(value),
-		})
-	}
 
 	if d.HasChange("description") {
 		description := d.Get("description").(string)

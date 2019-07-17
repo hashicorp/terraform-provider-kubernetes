@@ -198,6 +198,7 @@ The following arguments are supported:
 #### Arguments
 
 * `path` - (Optional) Path of the directory on the host. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#hostpath)
+* `type` - (Optional) Type for HostPath volume. Defaults to "". For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#hostpath)
 
 ### `iscsi`
 

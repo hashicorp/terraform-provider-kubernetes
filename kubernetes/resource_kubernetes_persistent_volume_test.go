@@ -249,7 +249,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/custom/testing/path"),
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/custom/testing/path", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
@@ -267,6 +267,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.host_path.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.host_path.0.path", "/custom/testing/path"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.host_path.0.type", ""),
 				),
 			},
 		},
@@ -285,7 +286,7 @@ func TestAccKubernetesPersistentVolume_hostPath_volumeSource(t *testing.T) {
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/first/path"),
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/first/path", "DirectoryOrCreate"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
@@ -303,10 +304,11 @@ func TestAccKubernetesPersistentVolume_hostPath_volumeSource(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.host_path.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.host_path.0.path", "/first/path"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.host_path.0.type", "DirectoryOrCreate"),
 				),
 			},
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/second/path"),
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/second/path", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
@@ -833,7 +835,7 @@ resource "aws_ebs_volume" "test" {
 `, name, zone, diskName)
 }
 
-func testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, path string) string {
+func testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, path, typ string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
   metadata {
@@ -850,11 +852,12 @@ resource "kubernetes_persistent_volume" "test" {
     persistent_volume_source {
       host_path {
         path = "%s"
+        type = "%s"
       }
     }
   }
 }
-`, name, path)
+`, name, path, typ)
 }
 
 func testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, path, hostname string) string {

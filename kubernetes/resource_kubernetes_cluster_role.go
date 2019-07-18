@@ -24,7 +24,7 @@ func resourceKubernetesClusterRole() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("clusterRole", false),
+			"metadata": metadataSchemaClusterRole(),
 			"rule": {
 				Type:        schema.TypeList,
 				Description: "List of PolicyRules for this ClusterRole",

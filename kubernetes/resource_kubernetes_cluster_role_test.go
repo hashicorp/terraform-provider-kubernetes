@@ -14,7 +14,7 @@ import (
 
 func TestAccKubernetesClusterRole_basic(t *testing.T) {
 	var conf api.ClusterRole
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
 		IDRefreshName: "kubernetes_cluster_role.test",
@@ -58,7 +58,7 @@ func TestAccKubernetesClusterRole_basic(t *testing.T) {
 }
 func TestAccKubernetesClusterRole_importBasic(t *testing.T) {
 	resourceName := "kubernetes_cluster_role.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,

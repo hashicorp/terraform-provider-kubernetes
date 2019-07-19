@@ -1,4 +1,19 @@
 ## 1.8.1 (Unreleased)
+
+FEATURES:
+
+* Add support for tolerations to Pod and Pod template.
+
+IMPROVEMENTS:
+
+* Update getting started guide to Terraform 0.12 syntax.
+
+BUG FIXES:
+
+* Align validation rules for names of Role and ClusterRole to Kubernetes.
+* Allow non-negative replicas in kubernetes_stateful_set.
+* Fix 'working_dir' attribute on Pod containers.
+
 ## 1.8.0 (July 02, 2019)
 
 FEATURES:

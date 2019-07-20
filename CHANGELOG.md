@@ -3,17 +3,17 @@
 
 FEATURES:
 
-* Add support for tolerations to Pod and Pod template.
+* Add support for tolerations to Pod and Pod template (PR #448).
 
 IMPROVEMENTS:
 
-* Update getting started guide to Terraform 0.12 syntax.
+* Update getting started guide to Terraform 0.12 syntax (PR #544).
 
 BUG FIXES:
 
-* Align validation rules for names of Role and ClusterRole to Kubernetes.
-* Allow non-negative replicas in kubernetes_stateful_set.
-* Fix 'working_dir' attribute on Pod containers.
+* Align validation rules for names of Role and ClusterRole to Kubernetes (PR #551).
+* Allow non-negative replicas in kubernetes_stateful_set (PR #527).
+* Fix 'working_dir' attribute on Pod containers (PR #539).
 
 ## 1.8.0 (July 02, 2019)
 

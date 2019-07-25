@@ -9,16 +9,16 @@ variable "location" {
 }
 
 variable "kubernetes_version" {
-  type = "string"
+  type = string
 }
 
 variable "workers_count" {
-  type    = "string"
+  type    = string
   default = 2
 }
 
 variable "workers_type" {
-  type    = "string"
+  type    = string
   default = "Standard_DS4_v2"
 }
 

@@ -3,11 +3,11 @@
 #
 variable "region" {
   default = "us-west-1"
-  type    = "string"
+  type    = string
 }
 
 variable "kubernetes_version" {
-  type    = "string"
+  type    = string
   default = "1.11"
 }
 
@@ -16,11 +16,12 @@ variable "workers_count" {
 }
 
 variable "workers_type" {
-  type    = "string"
+  type    = string
   default = "m4.large"
 }
 
 locals {
   kubeconfig_name = "kubeconfig_${module.vpc.cluster_name}"
-  kubeconfig_path = "${path.root}"
+  kubeconfig_path = path.root
 }
+

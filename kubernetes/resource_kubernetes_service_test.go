@@ -149,7 +149,6 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_source_ranges.445311837", "10.0.0.6/32"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.App", "MyApp"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.session_affinity", "ClientIP"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.type", "LoadBalancer"),
 					testAccCheckServicePorts(&conf, []api.ServicePort{
 						{
@@ -183,7 +182,6 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.App", "MyModifiedApp"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.NewSelector", "NewValue"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.session_affinity", "ClientIP"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.type", "LoadBalancer"),
 					testAccCheckServicePorts(&conf, []api.ServicePort{
 						{
@@ -213,9 +211,8 @@ func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceExists("kubernetes_service.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.annotations.%", "4"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.annotations.%", "3"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.annotations.service.beta.kubernetes.io/aws-load-balancer-backend-protocol", "http"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.annotations.service.beta.kubernetes.io/aws-load-balancer-access-log-enabled", "true"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.annotations.service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout", "300"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.annotations.service.beta.kubernetes.io/aws-load-balancer-ssl-ports", "*"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.#", "1"),
@@ -234,7 +231,6 @@ func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_source_ranges.445311837", "10.0.0.6/32"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.App", "MyApp"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.session_affinity", "ClientIP"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.type", "LoadBalancer"),
 					testAccCheckServicePorts(&conf, []api.ServicePort{
 						{
@@ -250,8 +246,7 @@ func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceExists("kubernetes_service.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.annotations.%", "3"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.annotations.service.beta.kubernetes.io/aws-load-balancer-access-log-enabled", "false"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.annotations.service.beta.kubernetes.io/aws-load-balancer-type", "nlb"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.annotations.service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout", "100"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.#", "1"),
@@ -271,7 +266,6 @@ func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.App", "MyModifiedApp"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.NewSelector", "NewValue"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.session_affinity", "ClientIP"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.type", "LoadBalancer"),
 					testAccCheckServicePorts(&conf, []api.ServicePort{
 						{
@@ -673,8 +667,6 @@ resource "kubernetes_service" "test" {
       App = "MyApp"
     }
 
-    session_affinity = "ClientIP"
-
     port {
       port        = 8888
       target_port = 80
@@ -704,8 +696,6 @@ resource "kubernetes_service" "test" {
       NewSelector = "NewValue"
     }
 
-    session_affinity = "ClientIP"
-
     port {
       port        = 9999
       target_port = 81
@@ -724,7 +714,6 @@ resource "kubernetes_service" "test" {
     name = "%s"
     annotations = {
       "service.beta.kubernetes.io/aws-load-balancer-backend-protocol"        = "http"
-      "service.beta.kubernetes.io/aws-load-balancer-access-log-enabled"      = "true"
       "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout" = "300"
       "service.beta.kubernetes.io/aws-load-balancer-ssl-ports"               = "*"
     }
@@ -738,8 +727,6 @@ resource "kubernetes_service" "test" {
     selector = {
       App = "MyApp"
     }
-
-    session_affinity = "ClientIP"
 
     port {
       port        = 8888
@@ -758,7 +745,6 @@ resource "kubernetes_service" "test" {
   metadata {
     name = "%s"
     annotations = {
-      "service.beta.kubernetes.io/aws-load-balancer-access-log-enabled"      = "false"
       "service.beta.kubernetes.io/aws-load-balancer-type"                    = "nlb"
       "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout" = "100"
     }
@@ -773,8 +759,6 @@ resource "kubernetes_service" "test" {
       App         = "MyModifiedApp"
       NewSelector = "NewValue"
     }
-
-    session_affinity = "ClientIP"
 
     port {
       port        = 9999

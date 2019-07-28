@@ -28,6 +28,9 @@ func resourceKubernetesNamespace() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("namespace", true),
 		},
+		Timeouts: &schema.ResourceTimeout{
+		    Delete: schema.DefaultTimeout(5 * time.Minute),
+		},
 	}
 }
 
@@ -101,7 +104,7 @@ func resourceKubernetesNamespaceDelete(d *schema.ResourceData, meta interface{})
 	stateConf := &resource.StateChangeConf{
 		Target:  []string{},
 		Pending: []string{"Terminating"},
-		Timeout: 5 * time.Minute,
+		Timeout: d.Timeout(schema.TimeoutDelete),
 		Refresh: func() (interface{}, string, error) {
 			out, err := conn.CoreV1().Namespaces().Get(name, meta_v1.GetOptions{})
 			if err != nil {

@@ -29,7 +29,7 @@ func resourceKubernetesNamespace() *schema.Resource {
 			"metadata": metadataSchema("namespace", true),
 		},
 		Timeouts: &schema.ResourceTimeout{
-		    Delete: schema.DefaultTimeout(5 * time.Minute),
+			Delete: schema.DefaultTimeout(5 * time.Minute),
 		},
 	}
 }

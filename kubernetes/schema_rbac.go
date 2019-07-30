@@ -48,7 +48,7 @@ func rbacRoleRefSchema() map[string]*schema.Schema {
 		"api_group": {
 			Type:         schema.TypeString,
 			Description:  "The API group of the user. The only value possible at the moment is `rbac.authorization.k8s.io`.",
-			Required:     true,
+			Optional:     true,
 			ValidateFunc: validation.StringInSlice([]string{"rbac.authorization.k8s.io"}, false),
 		},
 		"kind": {

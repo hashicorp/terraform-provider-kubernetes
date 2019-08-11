@@ -90,6 +90,12 @@ func commonVolumeSources() map[string]*schema.Schema {
 						Description: "The URI the data disk in the blob storage",
 						Required:    true,
 					},
+					"kind": {
+						Type:        schema.TypeString,
+						Description: "The type for the data disk. Expected values: Shared, Dedicated, Managed. Defaults to Shared",
+						Optional:    true,
+						Default:     "Shared",
+					},
 					"disk_name": {
 						Type:        schema.TypeString,
 						Description: "The Name of the data disk in the blob storage",

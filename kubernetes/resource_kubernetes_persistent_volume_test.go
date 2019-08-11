@@ -197,7 +197,7 @@ func TestAccKubernetesPersistentVolume_azure_basic(t *testing.T) {
 	region := os.Getenv("TF_VAR_location")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t); skipIfNoAzureSettingsFound(t) },
+		PreCheck:      func() { testAccPreCheck(t); skipIfNoAzureCloudSettingsFound(t) },
 		IDRefreshName: "kubernetes_persistent_volume.test",
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,

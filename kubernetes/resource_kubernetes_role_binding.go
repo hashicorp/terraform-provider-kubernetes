@@ -23,7 +23,7 @@ func resourceKubernetesRoleBinding() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("roleBinding", false),
+			"metadata": namespacedMetadataSchema("roleBinding", true),
 			"role_ref": {
 				Type:        schema.TypeList,
 				Description: "RoleRef references the Role for this binding",

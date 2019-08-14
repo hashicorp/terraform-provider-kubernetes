@@ -8,18 +8,13 @@ import (
 	pathValidation "k8s.io/apimachinery/pkg/api/validation/path"
 )
 
-func metadataSchemaClusterRole() *schema.Schema {
-	m := metadataSchema("clusterRole", false)
-	metadataFields := (m.Elem.(*schema.Resource)).Schema
-	nameSchema := metadataFields["name"]
-	if nameSchema != nil {
-		nameSchema.ValidateFunc = validateRBACNameFunc
+func metadataSchemaRBAC(objectName string, generatableName bool, namespaced bool) *schema.Schema {
+	var m *schema.Schema
+	if namespaced {
+		m = namespacedMetadataSchema(objectName, generatableName)
+	} else {
+		m = metadataSchema(objectName, generatableName)
 	}
-	return m
-}
-
-func metadataSchemaRole() *schema.Schema {
-	m := namespacedMetadataSchema("role", true)
 	metadataFields := (m.Elem.(*schema.Resource)).Schema
 	nameSchema := metadataFields["name"]
 	if nameSchema != nil {

@@ -32,7 +32,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone),
+				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone, region),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "2"),
@@ -195,6 +195,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_importBasic(t *testing.T) {
 	diskName := fmt.Sprintf("tf-acc-test-disk-%s", randString)
 
 	zone := os.Getenv("GOOGLE_ZONE")
+	region := os.Getenv("GOOGLE_REGION")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
@@ -202,7 +203,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_importBasic(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone),
+				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone, region),
 			},
 			{
 				ResourceName:      resourceName,
@@ -611,7 +612,7 @@ func testAccCheckKubernetesPersistentVolumeExists(n string, obj *api.PersistentV
 	}
 }
 
-func testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone string) string {
+func testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone string, region string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
   metadata {
@@ -648,7 +649,17 @@ resource "kubernetes_persistent_volume" "test" {
           match_expressions {
             key      = "test"
             operator = "Exists"
-          }
+		  }
+		  match_expressions {
+			  key = "failure-domain.beta.kubernetes.io/zone"
+			  operator = "In"
+			  values = ["%s"]
+		  }
+		  match_expressions {
+				key = "failure-domain.beta.kubernetes.io/region"
+				operator = "In"
+				values = ["%s"]
+		  }
         }
       }
     }
@@ -662,7 +673,7 @@ resource "google_compute_disk" "test" {
   image = "debian-8-jessie-v20170523"
   size  = 10
 }
-`, name, diskName, zone)
+`, name, zone, region, diskName, zone)
 }
 
 func testAccKubernetesPersistentVolumeConfig_googleCloud_modified(name, diskName, zone string) string {

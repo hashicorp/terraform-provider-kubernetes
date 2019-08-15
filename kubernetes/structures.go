@@ -231,6 +231,20 @@ func flattenResourceList(l api.ResourceList) map[string]string {
 	return m
 }
 
+func flattenExtendedResourceList(l api.ResourceList) map[string]string {
+	// Extended resources should be flattened to another level
+	m := make(map[string]string)
+	m = flattenResourceList(l)
+	extendedResources := make(map[string]string)
+	for key, val := range m {
+		if key != "cpu" && key != "memory" {
+			extendedResources[string(key)] = val
+			delete(m, key)
+		}
+	}
+	return m
+}
+
 func expandMapToResourceList(m map[string]interface{}) (*api.ResourceList, error) {
 	out := make(api.ResourceList)
 	for stringKey, origValue := range m {

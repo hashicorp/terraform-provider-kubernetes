@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"fmt"
 	"strconv"
 
 	"k8s.io/api/core/v1"
@@ -346,10 +347,10 @@ func flattenContainerPorts(in []v1.ContainerPort) []interface{} {
 func flattenContainerResourceRequirements(in v1.ResourceRequirements) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	if len(in.Limits) > 0 {
-		att["limits"] = []interface{}{flattenResourceList(in.Limits)}
+		att["limits"] = []interface{}{flattenExtendedResourceList(in.Limits)}
 	}
 	if len(in.Requests) > 0 {
-		att["requests"] = []interface{}{flattenResourceList(in.Requests)}
+		att["requests"] = []interface{}{flattenExtendedResourceList(in.Requests)}
 	}
 	return []interface{}{att}, nil
 }
@@ -955,6 +956,19 @@ func expandContainerResourceRequirements(l []interface{}) (*v1.ResourceRequireme
 			}
 			if p["memory"] == "" {
 				delete(p, "memory")
+			}
+			if p["extended_resources"] == "" {
+				delete(p, "extended_resources")
+			} else {
+				// Extended resources should be expanded out to the same base level as cpu/memory.
+				if resource, ok := p["extended_resources"].(map[string]interface{}); ok {
+					for key, val := range resource {
+						p[key] = val
+					}
+				} else {
+					return nil, fmt.Errorf("Unexpected extended resource type: %#v", resource)
+				}
+				delete(p, "extended_resources")
 			}
 			rl, err := expandMapToResourceList(p)
 			if err != nil {

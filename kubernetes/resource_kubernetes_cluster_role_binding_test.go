@@ -13,7 +13,7 @@ import (
 
 func TestAccKubernetesClusterRoleBinding(t *testing.T) {
 	var conf api.ClusterRoleBinding
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -72,7 +72,7 @@ func TestAccKubernetesClusterRoleBinding(t *testing.T) {
 
 func TestAccKubernetesClusterRoleBinding_serviceaccount_subject(t *testing.T) {
 	var conf api.ClusterRoleBinding
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -105,7 +105,7 @@ func TestAccKubernetesClusterRoleBinding_serviceaccount_subject(t *testing.T) {
 
 func TestAccKubernetesClusterRoleBinding_group_subject(t *testing.T) {
 	var conf api.ClusterRoleBinding
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -138,7 +138,7 @@ func TestAccKubernetesClusterRoleBinding_group_subject(t *testing.T) {
 
 func TestAccKubernetesClusterRoleBinding_importBasic(t *testing.T) {
 	resourceName := "kubernetes_cluster_role_binding.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },

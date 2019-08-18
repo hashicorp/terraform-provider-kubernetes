@@ -13,7 +13,7 @@ import (
 
 func TestAccKubernetesRoleBinding_basic(t *testing.T) {
 	var conf api.RoleBinding
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -72,7 +72,7 @@ func TestAccKubernetesRoleBinding_basic(t *testing.T) {
 
 func TestAccKubernetesRoleBinding_importBasic(t *testing.T) {
 	resourceName := "kubernetes_role_binding.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -94,7 +94,7 @@ func TestAccKubernetesRoleBinding_importBasic(t *testing.T) {
 
 func TestAccKubernetesRoleBinding_sa_subject(t *testing.T) {
 	var conf api.RoleBinding
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -127,7 +127,7 @@ func TestAccKubernetesRoleBinding_sa_subject(t *testing.T) {
 
 func TestAccKubernetesRoleBinding_group_subject(t *testing.T) {
 	var conf api.RoleBinding
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },

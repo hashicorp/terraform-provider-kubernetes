@@ -23,7 +23,7 @@ func resourceKubernetesClusterRoleBinding() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("clusterRoleBinding", false),
+			"metadata": metadataSchemaRBAC("clusterRoleBinding", false, false),
 			"role_ref": {
 				Type:        schema.TypeList,
 				Description: "RoleRef references the Cluster Role for this binding",

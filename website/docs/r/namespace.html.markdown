@@ -35,6 +35,13 @@ The following arguments are supported:
 
 * `metadata` - (Required) Standard namespace's [metadata](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#metadata).
 
+### Timeouts
+
+`kubernetes_namespace` provides the following
+[Timeouts](/docs/configuration/resources.html#timeouts) configuration options:
+
+- `delete` - Default `5 minutes`
+
 ## Nested Blocks
 
 ### `metadata`

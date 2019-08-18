@@ -23,7 +23,7 @@ func resourceKubernetesRole() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchemaRole(),
+			"metadata": metadataSchemaRBAC("role", true, true),
 			"rule": {
 				Type:        schema.TypeList,
 				Description: "Rule defining a set of permissions for the role",

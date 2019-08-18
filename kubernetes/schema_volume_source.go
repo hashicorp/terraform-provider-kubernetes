@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
 )
 
 func persistentVolumeSourceSchema() *schema.Resource {
@@ -24,6 +25,12 @@ func commonVolumeSources() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Path of the directory on the host. More info: http://kubernetes.io/docs/user-guide/volumes#hostpath",
 						Optional:    true,
+					},
+					"type": {
+						Type:         schema.TypeString,
+						Description:  "Type for HostPath volume. Allowed values are \"\" (default), DirectoryOrCreate, Directory, FileOrCreate, File, Socket, CharDevice and BlockDevice",
+						Optional:     true,
+						ValidateFunc: validation.StringInSlice([]string{"", "DirectoryOrCreate", "Directory", "FileOrCreate", "File", "Socket", "CharDevice", "BlockDevice"}, false),
 					},
 				},
 			},

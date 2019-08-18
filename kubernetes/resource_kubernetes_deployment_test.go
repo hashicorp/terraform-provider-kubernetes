@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	api "k8s.io/api/apps/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 const deploymentTestResourceName = "kubernetes_deployment.test"
@@ -850,7 +849,7 @@ func TestAccKubernetesDeployment_config_with_automount_service_account_token(t *
 }
 
 func testAccCheckKubernetesDeploymentDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_deployment" {
@@ -880,7 +879,7 @@ func testAccCheckKubernetesDeploymentExists(n string, obj *api.Deployment) resou
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {

@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	api "k8s.io/api/autoscaling/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func TestAccKubernetesHorizontalPodAutoscaler_basic(t *testing.T) {
@@ -155,7 +154,7 @@ func TestAccKubernetesHorizontalPodAutoscaler_importBasic(t *testing.T) {
 }
 
 func testAccCheckKubernetesHorizontalPodAutoscalerDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_horizontal_pod_autoscaler" {
@@ -185,7 +184,7 @@ func testAccCheckKubernetesHorizontalPodAutoscalerExists(n string, obj *api.Hori
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {

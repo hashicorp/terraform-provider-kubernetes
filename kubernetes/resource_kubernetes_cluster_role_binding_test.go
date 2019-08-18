@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	api "k8s.io/api/rbac/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func TestAccKubernetesClusterRoleBinding(t *testing.T) {
@@ -159,7 +158,7 @@ func TestAccKubernetesClusterRoleBinding_importBasic(t *testing.T) {
 }
 
 func testAccCheckKubernetesClusterRoleBindingDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_cluster_role_binding" {
@@ -184,7 +183,7 @@ func testAccCheckKubernetesClusterRoleBindingExists(n string, obj *api.ClusterRo
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 		name := rs.Primary.ID
 		resp, err := conn.Rbac().ClusterRoleBindings().Get(name, meta_v1.GetOptions{})
 		if err != nil {

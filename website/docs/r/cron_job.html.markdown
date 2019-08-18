@@ -28,7 +28,6 @@ resource "kubernetes_cron_job" "demo" {
     schedule                      = "1 0 * * *"
     starting_deadline_seconds     = 10
     successful_jobs_history_limit = 10
-    suspend                       = true
     job_template {
       metadata {}
       spec {

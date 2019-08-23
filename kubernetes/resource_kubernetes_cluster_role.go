@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesClusterRole() *schema.Resource {
@@ -24,7 +23,7 @@ func resourceKubernetesClusterRole() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("clusterRole", false),
+			"metadata": metadataSchemaRBAC("clusterRole", false, false),
 			"rule": {
 				Type:        schema.TypeList,
 				Description: "List of PolicyRules for this ClusterRole",
@@ -39,7 +38,7 @@ func resourceKubernetesClusterRole() *schema.Resource {
 }
 
 func resourceKubernetesClusterRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	cRole := api.ClusterRole{
@@ -58,7 +57,7 @@ func resourceKubernetesClusterRoleCreate(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesClusterRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	name := d.Id()
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -82,7 +81,7 @@ func resourceKubernetesClusterRoleUpdate(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesClusterRoleRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	name := d.Id()
 	log.Printf("[INFO] Reading cluster role %s", name)
@@ -106,7 +105,7 @@ func resourceKubernetesClusterRoleRead(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesClusterRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting cluster role: %#v", name)
@@ -121,7 +120,7 @@ func resourceKubernetesClusterRoleDelete(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesClusterRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	name := d.Id()
 	log.Printf("[INFO] Checking cluster role %s", name)

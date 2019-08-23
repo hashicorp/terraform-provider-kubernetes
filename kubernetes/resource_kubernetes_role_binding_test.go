@@ -9,12 +9,11 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	api "k8s.io/api/rbac/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 func TestAccKubernetesRoleBinding_basic(t *testing.T) {
 	var conf api.RoleBinding
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -73,7 +72,7 @@ func TestAccKubernetesRoleBinding_basic(t *testing.T) {
 
 func TestAccKubernetesRoleBinding_importBasic(t *testing.T) {
 	resourceName := "kubernetes_role_binding.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -95,7 +94,7 @@ func TestAccKubernetesRoleBinding_importBasic(t *testing.T) {
 
 func TestAccKubernetesRoleBinding_sa_subject(t *testing.T) {
 	var conf api.RoleBinding
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -128,7 +127,7 @@ func TestAccKubernetesRoleBinding_sa_subject(t *testing.T) {
 
 func TestAccKubernetesRoleBinding_group_subject(t *testing.T) {
 	var conf api.RoleBinding
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -160,7 +159,7 @@ func TestAccKubernetesRoleBinding_group_subject(t *testing.T) {
 }
 
 func testAccCheckKubernetesRoleBindingDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_role_binding" {
@@ -190,7 +189,7 @@ func testAccCheckKubernetesRoleBindingExists(n string, obj *api.RoleBinding) res
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {

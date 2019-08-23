@@ -1,3 +1,4 @@
 output "kubeconfig_path" {
-  value = "${local.kubeconfig_path}/${local.kubeconfig_name}"
+  value = abspath("${local.kubeconfig_path}/${local.kubeconfig_name}")
 }
+

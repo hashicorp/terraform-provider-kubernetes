@@ -10,12 +10,11 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	api "k8s.io/api/rbac/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 func TestAccKubernetesRole_basic(t *testing.T) {
 	var conf api.Role
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -78,7 +77,7 @@ func TestAccKubernetesRole_basic(t *testing.T) {
 
 func TestAccKubernetesRole_importBasic(t *testing.T) {
 	resourceName := "kubernetes_role.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
@@ -101,7 +100,7 @@ func TestAccKubernetesRole_importBasic(t *testing.T) {
 
 func TestAccKubernetesRole_generatedName(t *testing.T) {
 	var conf api.Role
-	prefix := "tf-acc-test-gen-"
+	prefix := "tf-acc-test-gen:"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -211,7 +210,7 @@ func testAccCheckKubernetesRoleExists(n string, obj *api.Role) resource.TestChec
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
@@ -229,7 +228,7 @@ func testAccCheckKubernetesRoleExists(n string, obj *api.Role) resource.TestChec
 }
 
 func testAccCheckKubernetesRoleDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_role" {

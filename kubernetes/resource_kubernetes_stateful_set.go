@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesStatefulSet() *schema.Resource {
@@ -41,7 +40,7 @@ func resourceKubernetesStatefulSet() *schema.Resource {
 }
 
 func resourceKubernetesStatefulSetCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandStatefulSetSpec(d.Get("spec").([]interface{}))
 	if err != nil {
@@ -69,7 +68,7 @@ func resourceKubernetesStatefulSetCreate(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesStatefulSetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -88,7 +87,7 @@ func resourceKubernetesStatefulSetExists(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesStatefulSetRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	id := d.Id()
 	namespace, name, err := idParts(id)
@@ -124,7 +123,7 @@ func resourceKubernetesStatefulSetRead(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesStatefulSetUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
 		return fmt.Errorf("Error parsing resource ID: %#v", err)
@@ -155,7 +154,7 @@ func resourceKubernetesStatefulSetUpdate(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesStatefulSetDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

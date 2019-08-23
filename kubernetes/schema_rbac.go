@@ -1,9 +1,42 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/validation"
+	pathValidation "k8s.io/apimachinery/pkg/api/validation/path"
 )
+
+func metadataSchemaRBAC(objectName string, generatableName bool, namespaced bool) *schema.Schema {
+	var m *schema.Schema
+	if namespaced {
+		m = namespacedMetadataSchema(objectName, generatableName)
+	} else {
+		m = metadataSchema(objectName, generatableName)
+	}
+	metadataFields := (m.Elem.(*schema.Resource)).Schema
+	nameSchema := metadataFields["name"]
+	if nameSchema != nil {
+		nameSchema.ValidateFunc = validateRBACNameFunc
+	}
+	generateNameSchema := metadataFields["generate_name"]
+	if generateNameSchema != nil {
+		generateNameSchema.ValidateFunc = validateRBACNameFunc
+	}
+	return m
+}
+
+func validateRBACNameFunc(value interface{}, key string) (ws []string, es []error) {
+	errors := pathValidation.IsValidPathSegmentName(value.(string))
+
+	if len(errors) > 0 {
+		for _, err := range errors {
+			es = append(es, fmt.Errorf("%s %s", key, err))
+		}
+	}
+	return
+}
 
 func rbacRoleRefSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{

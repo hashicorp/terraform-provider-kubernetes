@@ -13,7 +13,6 @@ import (
 	api "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
@@ -32,7 +31,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone),
+				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone, region),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "2"),
@@ -195,6 +194,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_importBasic(t *testing.T) {
 	diskName := fmt.Sprintf("tf-acc-test-disk-%s", randString)
 
 	zone := os.Getenv("GOOGLE_ZONE")
+	region := os.Getenv("GOOGLE_REGION")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
@@ -202,7 +202,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_importBasic(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone),
+				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone, region),
 			},
 			{
 				ResourceName:      resourceName,
@@ -249,7 +249,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/custom/testing/path"),
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/custom/testing/path", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
@@ -267,6 +267,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.host_path.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.host_path.0.path", "/custom/testing/path"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.host_path.0.type", ""),
 				),
 			},
 		},
@@ -285,7 +286,7 @@ func TestAccKubernetesPersistentVolume_hostPath_volumeSource(t *testing.T) {
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/first/path"),
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/first/path", "DirectoryOrCreate"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
@@ -303,10 +304,11 @@ func TestAccKubernetesPersistentVolume_hostPath_volumeSource(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.host_path.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.host_path.0.path", "/first/path"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.host_path.0.type", "DirectoryOrCreate"),
 				),
 			},
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/second/path"),
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/second/path", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
@@ -561,7 +563,7 @@ func TestAccKubernetesPersistentVolume_hostPath_nodeAffinity(t *testing.T) {
 }
 
 func waitForPersistenceVolumeDeleted(pvName string, poll, timeout time.Duration) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(poll) {
 		_, err := conn.CoreV1().PersistentVolumes().Get(pvName, meta_v1.GetOptions{})
 		if err != nil && apierrs.IsNotFound(err) {
@@ -572,7 +574,7 @@ func waitForPersistenceVolumeDeleted(pvName string, poll, timeout time.Duration)
 }
 
 func testAccCheckKubernetesPersistentVolumeDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 	timeout := 5 * time.Second
 	poll := 1 * time.Second
 
@@ -599,7 +601,7 @@ func testAccCheckKubernetesPersistentVolumeExists(n string, obj *api.PersistentV
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 		name := rs.Primary.ID
 		out, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
 		if err != nil {
@@ -611,7 +613,7 @@ func testAccCheckKubernetesPersistentVolumeExists(n string, obj *api.PersistentV
 	}
 }
 
-func testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone string) string {
+func testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone string, region string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
   metadata {
@@ -648,7 +650,17 @@ resource "kubernetes_persistent_volume" "test" {
           match_expressions {
             key      = "test"
             operator = "Exists"
-          }
+		  }
+		  match_expressions {
+			  key = "failure-domain.beta.kubernetes.io/zone"
+			  operator = "In"
+			  values = ["%s"]
+		  }
+		  match_expressions {
+				key = "failure-domain.beta.kubernetes.io/region"
+				operator = "In"
+				values = ["%s"]
+		  }
         }
       }
     }
@@ -662,7 +674,7 @@ resource "google_compute_disk" "test" {
   image = "debian-8-jessie-v20170523"
   size  = 10
 }
-`, name, diskName, zone)
+`, name, zone, region, diskName, zone)
 }
 
 func testAccKubernetesPersistentVolumeConfig_googleCloud_modified(name, diskName, zone string) string {
@@ -833,7 +845,7 @@ resource "aws_ebs_volume" "test" {
 `, name, zone, diskName)
 }
 
-func testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, path string) string {
+func testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, path, typ string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_persistent_volume" "test" {
   metadata {
@@ -850,11 +862,12 @@ resource "kubernetes_persistent_volume" "test" {
     persistent_volume_source {
       host_path {
         path = "%s"
+        type = "%s"
       }
     }
   }
 }
-`, name, path)
+`, name, path, typ)
 }
 
 func testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, path, hostname string) string {

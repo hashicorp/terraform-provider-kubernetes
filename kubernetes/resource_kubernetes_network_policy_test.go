@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	api "k8s.io/api/networking/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
@@ -365,7 +364,7 @@ func TestAccKubernetesNetworkPolicy_importBasic(t *testing.T) {
 }
 
 func testAccCheckKubernetesNetworkPolicyDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_network_policy" {
@@ -395,7 +394,7 @@ func testAccCheckKubernetesNetworkPolicyExists(n string, obj *api.NetworkPolicy)
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {

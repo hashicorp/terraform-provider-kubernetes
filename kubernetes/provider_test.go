@@ -14,7 +14,6 @@ import (
 	"github.com/terraform-providers/terraform-provider-google/google"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 var testAccProviders map[string]terraform.ResourceProvider
@@ -233,7 +232,7 @@ func skipIfUnsupportedSecurityContextRunAsGroup(t *testing.T) {
 	if meta == nil {
 		t.Fatal("Provider not initialized, unable to check cluster capabilities")
 	}
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 	serverVersion, err := conn.ServerVersion()
 	if err != nil {
 		t.Fatal(err)
@@ -294,7 +293,7 @@ func getFirstNode() (api.Node, error) {
 	if meta == nil {
 		return api.Node{}, errors.New("Provider not initialized, unable to get cluster node")
 	}
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 	resp, err := conn.CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
 		return api.Node{}, err

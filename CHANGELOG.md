@@ -1,4 +1,36 @@
-## 1.8.1 (Unreleased)
+## 1.9.1 (Unreleased)
+## 1.9.0 (August 22, 2019)
+
+FEATURES:
+
+* New resource: `kubernetes_api_service` (PR #487)
+
+IMPROVEMENTS:
+
+* Add `type` attribute to volume hostPath (#358)
+* Configurable delete timeout for `kubernetes_namespace` resource
+
+BUG FIXES:
+
+* Allow all values for deployment rolling update config (PR #587)
+* Align validation of `role_binding` and `cluster_role_binding` names to Kubernetes rules (PR #583)
+
+## 1.8.1 (July 19, 2019)
+
+FEATURES:
+
+* Add support for tolerations to Pod and Pod template (PR #448).
+
+IMPROVEMENTS:
+
+* Update getting started guide to Terraform 0.12 syntax (PR #544).
+
+BUG FIXES:
+
+* Align validation rules for names of Role and ClusterRole to Kubernetes (PR #551).
+* Allow non-negative replicas in kubernetes_stateful_set (PR #527).
+* Fix 'working_dir' attribute on Pod containers (PR #539).
+
 ## 1.8.0 (July 02, 2019)
 
 FEATURES:

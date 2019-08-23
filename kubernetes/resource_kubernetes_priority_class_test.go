@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 	api "k8s.io/api/scheduling/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func TestAccKubernetesPriorityClass_basic(t *testing.T) {
@@ -138,7 +137,7 @@ func TestAccKubernetesPriorityClass_importBasic(t *testing.T) {
 }
 
 func testAccCheckKubernetesPriorityClassDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_priority_class" {
@@ -168,7 +167,7 @@ func testAccCheckKubernetesPriorityClassExists(n string, obj *api.PriorityClass)
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
 		_, name, err := idParts(rs.Primary.ID)
 		if err != nil {

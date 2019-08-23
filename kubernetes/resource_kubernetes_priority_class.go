@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesPriorityClass() *schema.Resource {
@@ -48,7 +47,7 @@ func resourceKubernetesPriorityClass() *schema.Resource {
 }
 
 func resourceKubernetesPriorityClassCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	value := d.Get("value").(int)
@@ -74,7 +73,7 @@ func resourceKubernetesPriorityClassCreate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesPriorityClassRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	_, name, err := idParts(d.Id())
 	if err != nil {
@@ -113,7 +112,7 @@ func resourceKubernetesPriorityClassRead(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesPriorityClassUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	_, name, err := idParts(d.Id())
 	if err != nil {
@@ -154,7 +153,7 @@ func resourceKubernetesPriorityClassUpdate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesPriorityClassDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	_, name, err := idParts(d.Id())
 	if err != nil {
@@ -174,7 +173,7 @@ func resourceKubernetesPriorityClassDelete(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesPriorityClassExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn := meta.(*KubeClientsets).MainClientset
 
 	_, name, err := idParts(d.Id())
 	if err != nil {

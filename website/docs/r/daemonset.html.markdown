@@ -786,6 +786,7 @@ The `items` block supports the following:
 
 * `mount_path` - (Required) Path within the container at which the volume should be mounted. Must not contain ':'.
 * `name` - (Required) This must match the Name of a Volume.
+* `mount_propagation` - (Optional) Mount propagation allows for sharing volumes mounted by a Container to other Containers in the same Pod, or even to other Pods on the same node. One of None, HostToContainer, Bidirectional. Defaults to None. More info: https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation
 * `read_only` - (Optional) Mounted read-only if true, read-write otherwise (false or unspecified). Defaults to false.
 * `sub_path` - (Optional) Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).
 

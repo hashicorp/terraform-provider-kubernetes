@@ -353,6 +353,7 @@ func TestAccKubernetesReplicationController_deprecated_with_volume_mount(t *test
 					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.volume_mount.0.name", "db"),
 					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.volume_mount.0.read_only", "false"),
 					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.volume_mount.0.sub_path", ""),
+					resource.TestCheckResourceAttr("kubernetes_replication_controller.test", "spec.0.template.0.container.0.volume_mount.0.mount_propagation", "None"),
 				),
 			},
 		},
@@ -753,7 +754,7 @@ resource "kubernetes_replication_controller" "test" {
       container {
         image = "%s"
         name  = "containername"
-  
+
         security_context {
           privileged  = true
           run_as_user = 1

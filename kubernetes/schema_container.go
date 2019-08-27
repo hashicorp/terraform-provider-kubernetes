@@ -180,6 +180,12 @@ func volumeMountFields() map[string]*schema.Schema {
 			Required:    true,
 			Description: "This must match the Name of a Volume.",
 		},
+		"mount_propagation": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Mount propagation allows for sharing volumes mounted by a Container to other Containers in the same Pod, or even to other Pods on the same node. One of None, HostToContainer, Bidirectional. Defaults to None. More info: https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation",
+			Default:     "None",
+		},
 		"read_only": {
 			Type:        schema.TypeBool,
 			Optional:    true,

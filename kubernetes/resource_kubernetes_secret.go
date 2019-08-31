@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"encoding/base64"
 	"fmt"
 	"log"
 
@@ -30,6 +31,12 @@ func resourceKubernetesSecret() *schema.Resource {
 				Optional:    true,
 				Sensitive:   true,
 			},
+			"base64data": {
+				Type:        schema.TypeMap,
+				Description: "A map of the base64-encoded secret data.",
+				Optional:    true,
+				Sensitive:   true,
+			},
 			"type": {
 				Type:        schema.TypeString,
 				Description: "Type of secret",
@@ -44,10 +51,30 @@ func resourceKubernetesSecret() *schema.Resource {
 func resourceKubernetesSecretCreate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*KubeClientsets).MainClientset
 
+	// Merge data and base64-encoded data into a single data map
+	dataMap := d.Get("data").(map[string]interface{})
+	for key, value := range d.Get("base64data").(map[string]interface{}) {
+		// Decode Terraform's base64 representation to avoid double-encoding in Kubernetes.
+		var decodedValue []byte
+		var err error
+		switch value.(type) {
+		case string:
+			decodedValue, err = base64.StdEncoding.DecodeString(value.(string))
+		case []uint8:
+			decodedValue, err = base64.StdEncoding.DecodeString(string(value.([]uint8)))
+		default:
+			err = fmt.Errorf("base64data cannot decode type %T", value)
+		}
+		if err != nil {
+			return err
+		}
+		dataMap[key] = string(decodedValue)
+	}
+
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	secret := api.Secret{
 		ObjectMeta: metadata,
-		Data:       expandStringMapToByteMap(d.Get("data").(map[string]interface{})),
+		Data:       expandStringMapToByteMap(dataMap),
 	}
 
 	if v, ok := d.GetOk("type"); ok {

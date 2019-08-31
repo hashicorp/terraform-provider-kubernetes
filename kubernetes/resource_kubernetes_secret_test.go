@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"encoding/base64"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -66,8 +67,9 @@ func TestAccKubernetesSecret_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.one", "first"),
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.two", "second"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "base64data.three", base64.StdEncoding.EncodeToString([]byte("third"))),
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "type", "Opaque"),
-					testAccCheckSecretData(&conf, map[string]string{"one": "first", "two": "second"}),
+					testAccCheckSecretData(&conf, map[string]string{"one": "first", "two": "second", "three": "third"}),
 				),
 			},
 			{
@@ -231,38 +233,33 @@ func TestAccKubernetesSecret_importGeneratedName(t *testing.T) {
 	})
 }
 
-// Disabled - this test loads binary data from a file and passes it through configuration
-//            which is no longer supported in TF 0.12.
-//            Instead, the resource attribute should be adapted to transport base64 encoded
-//            data and decode it when constructing the API object for client-go.
-//
-// func TestAccKubernetesSecret_binaryData(t *testing.T) {
-// 	var conf api.Secret
-// 	prefix := "tf-acc-test-gen-"
-//
-// 	resource.Test(t, resource.TestCase{
-// 		PreCheck:      func() { testAccPreCheck(t) },
-// 		IDRefreshName: "kubernetes_secret.test",
-// 		Providers:     testAccProviders,
-// 		CheckDestroy:  testAccCheckKubernetesSecretDestroy,
-// 		Steps: []resource.TestStep{
-// 			{
-// 				Config: testAccKubernetesSecretConfig_binaryData(prefix),
-// 				Check: resource.ComposeAggregateTestCheckFunc(
-// 					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
-// 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "1"),
-// 				),
-// 			},
-// 			{
-// 				Config: testAccKubernetesSecretConfig_binaryData2(prefix),
-// 				Check: resource.ComposeAggregateTestCheckFunc(
-// 					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
-// 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "2"),
-// 				),
-// 			},
-// 		},
-// 	})
-// }
+func TestAccKubernetesSecret_binaryData(t *testing.T) {
+	var conf api.Secret
+	prefix := "tf-acc-test-gen-"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_secret.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesSecretDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesSecretConfig_binaryData(prefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "1"),
+				),
+			},
+			{
+				Config: testAccKubernetesSecretConfig_binaryData2(prefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "2"),
+				),
+			},
+		},
+	})
+}
 
 func testAccCheckSecretData(m *api.Secret, expected map[string]string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
@@ -330,7 +327,7 @@ resource "kubernetes_secret" "test" {
 	metadata {
 	  name = "dot.test"
 	}
-  }  
+  }
 `
 
 func testAccKubernetesSecretConfig_emptyData(name string) string {
@@ -457,7 +454,7 @@ resource "kubernetes_secret" "test" {
     generate_name = "%s"
   }
 
-  data = {
+  base64data = {
 		one =<<EOF
 "${filebase64("./test-fixtures/binary.data")}"
 EOF
@@ -474,7 +471,7 @@ resource "kubernetes_secret" "test" {
     generate_name = "%s"
   }
 
-  data = {
+  base64data = {
 		one =<<EOF
 "${filebase64("./test-fixtures/binary2.data")}"
 EOF

@@ -42,7 +42,7 @@ resource "kubernetes_secret" "example" {
   }
 
   data = {
-    ".dockerconfigjson" = "${file("${path.module}/.docker/config.json")}"
+    ".dockerconfigjson" = file("${path.module}/.docker/config.json")
   }
 
   type = "kubernetes.io/dockerconfigjson"
@@ -63,11 +63,33 @@ resource "kubernetes_secret" "example" {
 }
 ```
 
+## Example Usage (Base64 Data)
+
+```hcl
+resource "kubernetes_secret" "example" {
+  metadata {
+    name = "jvm-keystore"
+  }
+
+  data = {
+    password = "P4ssw0rd"
+  }
+
+  base64data = {
+    keystore = filebase64("${path.module}/client.keystore.p12")
+  }
+
+  type = "kubernetes.io/basic-auth"
+}
+```
+
+
 ## Argument Reference
 
 The following arguments are supported:
 
-* `data` - (Optional) A map of the secret data.
+* `data` - (Optional) A map of the secret data. This data must not be base64-encoded.
+* `base64data` - (Optional) A map of secret data that is already base64-encoded. Keys in the `base64data` map always take precedence over those in `data`.
 * `metadata` - (Required) Standard secret's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#metadata)
 * `type` - (Optional) The secret type. Defaults to `Opaque`. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/c7151dd8dd7e487e96e5ce34c6a416bb3b037609/contributors/design-proposals/auth/secrets.md#proposed-design)
 

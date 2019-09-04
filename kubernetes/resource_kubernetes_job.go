@@ -23,6 +23,11 @@ func resourceKubernetesJob() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+
+		Timeouts: &schema.ResourceTimeout{
+			Delete: schema.DefaultTimeout(1 * time.Minute),
+		},
+
 		Schema: map[string]*schema.Schema{
 			"metadata": jobMetadataSchema(),
 			"spec": {
@@ -162,7 +167,7 @@ func resourceKubernetesJobDelete(d *schema.ResourceData, meta interface{}) error
 		return fmt.Errorf("Failed to delete Job! API error: %s", err)
 	}
 
-	err = resource.Retry(1*time.Minute, func() *resource.RetryError {
+	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		_, err := conn.BatchV1().Jobs(namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {

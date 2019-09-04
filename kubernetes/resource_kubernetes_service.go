@@ -25,6 +25,10 @@ func resourceKubernetesService() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(10 * time.Minute),
+		},
+
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("service", true),
 			"spec": {
@@ -175,7 +179,7 @@ func resourceKubernetesServiceCreate(d *schema.ResourceData, meta interface{}) e
 	if out.Spec.Type == api.ServiceTypeLoadBalancer {
 		log.Printf("[DEBUG] Waiting for load balancer to assign IP/hostname")
 
-		err = resource.Retry(10*time.Minute, func() *resource.RetryError {
+		err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
 			svc, err := conn.CoreV1().Services(out.Namespace).Get(out.Name, meta_v1.GetOptions{})
 			if err != nil {
 				log.Printf("[DEBUG] Received error: %#v", err)

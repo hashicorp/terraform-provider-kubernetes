@@ -24,7 +24,7 @@ require (
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
-	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
+	github.com/pierrec/lz4 v2.3.0 // indirect
 	github.com/robfig/cron v1.2.0
 	github.com/stoewer/go-strcase v1.0.2 // indirect
 	github.com/terraform-providers/terraform-provider-aws v0.0.0-20190510001811-4b894dbf13f6

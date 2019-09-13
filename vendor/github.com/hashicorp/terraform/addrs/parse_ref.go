@@ -85,14 +85,6 @@ func parseRef(traversal hcl.Traversal) (*Reference, tfdiags.Diagnostics) {
 			Remaining:   remain,
 		}, diags
 
-	case "each":
-		name, rng, remain, diags := parseSingleAttrRef(traversal)
-		return &Reference{
-			Subject:     ForEachAttr{Name: name},
-			SourceRange: tfdiags.SourceRangeFromHCL(rng),
-			Remaining:   remain,
-		}, diags
-
 	case "data":
 		if len(traversal) < 3 {
 			diags = diags.Append(&hcl.Diagnostic{

@@ -6,28 +6,10 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/hashicorp/terraform/config"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/zclconf/go-cty/cty"
 )
-
-var ReservedDataSourceFields = []string{
-	"connection",
-	"count",
-	"depends_on",
-	"lifecycle",
-	"provider",
-	"provisioner",
-}
-
-var ReservedResourceFields = []string{
-	"connection",
-	"count",
-	"depends_on",
-	"id",
-	"lifecycle",
-	"provider",
-	"provisioner",
-}
 
 // Resource represents a thing in Terraform that has a set of configurable
 // attributes and a lifecycle (create, read, update, delete).
@@ -113,10 +95,9 @@ type Resource struct {
 	//
 	// Exists is a function that is called to check if a resource still
 	// exists. If this returns false, then this will affect the diff
-	// accordingly. If this function isn't set, it will not be called. You
-	// can also signal existence in the Read method by calling d.SetId("")
-	// if the Resource is no longer present and should be removed from state.
-	// The *ResourceData passed to Exists should _not_ be modified.
+	// accordingly. If this function isn't set, it will not be called. It
+	// is highly recommended to set it. The *ResourceData passed to Exists
+	// should _not_ be modified.
 	Create CreateFunc
 	Read   ReadFunc
 	Update UpdateFunc
@@ -348,13 +329,21 @@ func (r *Resource) simpleDiff(
 	c *terraform.ResourceConfig,
 	meta interface{}) (*terraform.InstanceDiff, error) {
 
+	t := &ResourceTimeout{}
+	err := t.ConfigDecode(r, c)
+
+	if err != nil {
+		return nil, fmt.Errorf("[ERR] Error decoding timeout: %s", err)
+	}
+
 	instanceDiff, err := schemaMap(r.Schema).Diff(s, c, r.CustomizeDiff, meta, false)
 	if err != nil {
 		return instanceDiff, err
 	}
 
 	if instanceDiff == nil {
-		instanceDiff = terraform.NewInstanceDiff()
+		log.Printf("[DEBUG] Instance Diff is nil in SimpleDiff()")
+		return nil, err
 	}
 
 	// Make sure the old value is set in each of the instance diffs.
@@ -368,7 +357,10 @@ func (r *Resource) simpleDiff(
 		}
 	}
 
-	return instanceDiff, nil
+	if err := t.DiffEncode(instanceDiff); err != nil {
+		log.Printf("[ERR] Error encoding timeout to instance diff: %s", err)
+	}
+	return instanceDiff, err
 }
 
 // Validate validates the resource configuration against the schema.
@@ -700,7 +692,7 @@ func (r *Resource) InternalValidate(topSchemaMap schemaMap, writable bool) error
 }
 
 func isReservedDataSourceFieldName(name string) bool {
-	for _, reservedName := range ReservedDataSourceFields {
+	for _, reservedName := range config.ReservedDataSourceFields {
 		if name == reservedName {
 			return true
 		}
@@ -715,7 +707,7 @@ func isReservedResourceFieldName(name string, s *Schema) bool {
 		return false
 	}
 
-	for _, reservedName := range ReservedResourceFields {
+	for _, reservedName := range config.ReservedResourceFields {
 		if name == reservedName {
 			return true
 		}

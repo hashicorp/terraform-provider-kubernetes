@@ -1,6 +1,6 @@
 package kubernetes
 
-import "github.com/hashicorp/terraform/helper/schema"
+import "github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 
 func handlerFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{

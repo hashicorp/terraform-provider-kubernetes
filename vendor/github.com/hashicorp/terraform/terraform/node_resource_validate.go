@@ -54,7 +54,6 @@ func (n *NodeValidatableResource) EvalTree() EvalNode {
 
 	if managed := n.Config.Managed; managed != nil {
 		hasCount := n.Config.Count != nil
-		hasForEach := n.Config.ForEach != nil
 
 		// Validate all the provisioners
 		for _, p := range managed.Provisioners {
@@ -75,12 +74,11 @@ func (n *NodeValidatableResource) EvalTree() EvalNode {
 					Schema: &provisionerSchema,
 				},
 				&EvalValidateProvisioner{
-					ResourceAddr:       addr.Resource,
-					Provisioner:        &provisioner,
-					Schema:             &provisionerSchema,
-					Config:             p,
-					ResourceHasCount:   hasCount,
-					ResourceHasForEach: hasForEach,
+					ResourceAddr:     addr.Resource,
+					Provisioner:      &provisioner,
+					Schema:           &provisionerSchema,
+					Config:           p,
+					ResourceHasCount: hasCount,
 				},
 			)
 		}

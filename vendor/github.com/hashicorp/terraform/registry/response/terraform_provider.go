@@ -12,7 +12,8 @@ import (
 // platforms for Terraform to perform version and os/arch constraint matching
 // locally.
 type TerraformProvider struct {
-	ID string `json:"id"`
+	ID       string `json:"id"`
+	Verified bool   `json:"verified"`
 
 	Versions []*TerraformProviderVersion `json:"versions"`
 }

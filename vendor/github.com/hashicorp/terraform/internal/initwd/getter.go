@@ -22,7 +22,6 @@ import (
 var goGetterDetectors = []getter.Detector{
 	new(getter.GitHubDetector),
 	new(getter.BitBucketDetector),
-	new(getter.GCSDetector),
 	new(getter.S3Detector),
 	new(getter.FileDetector),
 }
@@ -47,7 +46,6 @@ var goGetterDecompressors = map[string]getter.Decompressor{
 
 var goGetterGetters = map[string]getter.Getter{
 	"file":  new(getter.FileGetter),
-	"gcs":   new(getter.GCSGetter),
 	"git":   new(getter.GitGetter),
 	"hg":    new(getter.HgGetter),
 	"s3":    new(getter.S3Getter),

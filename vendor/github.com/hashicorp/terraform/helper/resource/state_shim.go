@@ -1,13 +1,12 @@
 package resource
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform/addrs"
 	"github.com/zclconf/go-cty/cty"
 
-	"github.com/hashicorp/terraform/configs/hcl2shim"
+	"github.com/hashicorp/terraform/config/hcl2shim"
 	"github.com/hashicorp/terraform/helper/schema"
 
 	"github.com/hashicorp/terraform/states"
@@ -53,57 +52,43 @@ func shimNewState(newState *states.State, providers map[string]terraform.Resourc
 			resource := getResource(providers, providerType, res.Addr)
 
 			for key, i := range res.Instances {
-				resState := &terraform.ResourceState{
-					Type:     resType,
-					Provider: res.ProviderConfig.String(),
+				flatmap, err := shimmedAttributes(i.Current, resource)
+				if err != nil {
+					return nil, fmt.Errorf("error decoding state for %q: %s", resType, err)
 				}
 
-				// We should always have a Current instance here, but be safe about checking.
-				if i.Current != nil {
-					flatmap, err := shimmedAttributes(i.Current, resource)
-					if err != nil {
-						return nil, fmt.Errorf("error decoding state for %q: %s", resType, err)
-					}
-
-					var meta map[string]interface{}
-					if i.Current.Private != nil {
-						err := json.Unmarshal(i.Current.Private, &meta)
-						if err != nil {
-							return nil, err
-						}
-					}
-
-					resState.Primary = &terraform.InstanceState{
+				resState := &terraform.ResourceState{
+					Type: resType,
+					Primary: &terraform.InstanceState{
 						ID:         flatmap["id"],
 						Attributes: flatmap,
 						Tainted:    i.Current.Status == states.ObjectTainted,
-						Meta:       meta,
-					}
-
-					if i.Current.SchemaVersion != 0 {
-						resState.Primary.Meta = map[string]interface{}{
-							"schema_version": i.Current.SchemaVersion,
-						}
-					}
-
-					for _, dep := range i.Current.Dependencies {
-						resState.Dependencies = append(resState.Dependencies, dep.String())
-					}
-
-					// convert the indexes to the old style flapmap indexes
-					idx := ""
-					switch key.(type) {
-					case addrs.IntKey:
-						// don't add numeric index values to resources with a count of 0
-						if len(res.Instances) > 1 {
-							idx = fmt.Sprintf(".%d", key)
-						}
-					case addrs.StringKey:
-						idx = "." + key.String()
-					}
-
-					mod.Resources[res.Addr.String()+idx] = resState
+					},
+					Provider: res.ProviderConfig.String(),
 				}
+				if i.Current.SchemaVersion != 0 {
+					resState.Primary.Meta = map[string]interface{}{
+						"schema_version": i.Current.SchemaVersion,
+					}
+				}
+
+				for _, dep := range i.Current.Dependencies {
+					resState.Dependencies = append(resState.Dependencies, dep.String())
+				}
+
+				// convert the indexes to the old style flapmap indexes
+				idx := ""
+				switch key.(type) {
+				case addrs.IntKey:
+					// don't add numeric index values to resources with a count of 0
+					if len(res.Instances) > 1 {
+						idx = fmt.Sprintf(".%d", key)
+					}
+				case addrs.StringKey:
+					idx = "." + key.String()
+				}
+
+				mod.Resources[res.Addr.String()+idx] = resState
 
 				// add any deposed instances
 				for _, dep := range i.Deposed {
@@ -112,19 +97,10 @@ func shimNewState(newState *states.State, providers map[string]terraform.Resourc
 						return nil, fmt.Errorf("error decoding deposed state for %q: %s", resType, err)
 					}
 
-					var meta map[string]interface{}
-					if dep.Private != nil {
-						err := json.Unmarshal(dep.Private, &meta)
-						if err != nil {
-							return nil, err
-						}
-					}
-
 					deposed := &terraform.InstanceState{
 						ID:         flatmap["id"],
 						Attributes: flatmap,
 						Tainted:    dep.Status == states.ObjectTainted,
-						Meta:       meta,
 					}
 					if dep.SchemaVersion != 0 {
 						deposed.Meta = map[string]interface{}{

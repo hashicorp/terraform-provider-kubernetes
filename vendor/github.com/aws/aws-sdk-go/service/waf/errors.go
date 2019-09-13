@@ -4,10 +4,6 @@ package waf
 
 const (
 
-	// ErrCodeBadRequestException for service response error code
-	// "WAFBadRequestException".
-	ErrCodeBadRequestException = "WAFBadRequestException"
-
 	// ErrCodeDisallowedNameException for service response error code
 	// "WAFDisallowedNameException".
 	//
@@ -201,12 +197,4 @@ const (
 	//
 	// The specified subscription does not exist.
 	ErrCodeSubscriptionNotFoundException = "WAFSubscriptionNotFoundException"
-
-	// ErrCodeTagOperationException for service response error code
-	// "WAFTagOperationException".
-	ErrCodeTagOperationException = "WAFTagOperationException"
-
-	// ErrCodeTagOperationInternalErrorException for service response error code
-	// "WAFTagOperationInternalErrorException".
-	ErrCodeTagOperationInternalErrorException = "WAFTagOperationInternalErrorException"
 )

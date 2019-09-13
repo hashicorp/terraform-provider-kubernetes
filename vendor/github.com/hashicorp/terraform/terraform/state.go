@@ -22,16 +22,18 @@ import (
 	version "github.com/hashicorp/go-version"
 	"github.com/hashicorp/hcl2/hcl"
 	"github.com/hashicorp/hcl2/hcl/hclsyntax"
-	"github.com/hashicorp/terraform/addrs"
-	"github.com/hashicorp/terraform/configs"
-	"github.com/hashicorp/terraform/configs/configschema"
-	"github.com/hashicorp/terraform/configs/hcl2shim"
-	"github.com/hashicorp/terraform/plans"
-	"github.com/hashicorp/terraform/tfdiags"
-	tfversion "github.com/hashicorp/terraform/version"
 	"github.com/mitchellh/copystructure"
 	"github.com/zclconf/go-cty/cty"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
+
+	"github.com/hashicorp/terraform/addrs"
+	"github.com/hashicorp/terraform/config"
+	"github.com/hashicorp/terraform/config/hcl2shim"
+	"github.com/hashicorp/terraform/configs"
+	"github.com/hashicorp/terraform/configs/configschema"
+	"github.com/hashicorp/terraform/plans"
+	"github.com/hashicorp/terraform/tfdiags"
+	tfversion "github.com/hashicorp/terraform/version"
 )
 
 const (
@@ -1199,7 +1201,7 @@ func (m *ModuleState) prune() {
 	}
 
 	for k, v := range m.Outputs {
-		if v.Value == hcl2shim.UnknownVariableValue {
+		if v.Value == config.UnknownVariableValue {
 			delete(m.Outputs, k)
 		}
 	}
@@ -1340,7 +1342,7 @@ func (m *ModuleState) Empty() bool {
 type ResourceStateKey struct {
 	Name  string
 	Type  string
-	Mode  ResourceMode
+	Mode  config.ResourceMode
 	Index int
 }
 
@@ -1370,9 +1372,9 @@ func (rsk *ResourceStateKey) String() string {
 	}
 	var prefix string
 	switch rsk.Mode {
-	case ManagedResourceMode:
+	case config.ManagedResourceMode:
 		prefix = ""
-	case DataResourceMode:
+	case config.DataResourceMode:
 		prefix = "data."
 	default:
 		panic(fmt.Errorf("unknown resource mode %s", rsk.Mode))
@@ -1389,9 +1391,9 @@ func (rsk *ResourceStateKey) String() string {
 // latter case, the index is returned as -1.
 func ParseResourceStateKey(k string) (*ResourceStateKey, error) {
 	parts := strings.Split(k, ".")
-	mode := ManagedResourceMode
+	mode := config.ManagedResourceMode
 	if len(parts) > 0 && parts[0] == "data" {
-		mode = DataResourceMode
+		mode = config.DataResourceMode
 		// Don't need the constant "data" prefix for parsing
 		// now that we've figured out the mode.
 		parts = parts[1:]
@@ -1825,7 +1827,7 @@ func (s *InstanceState) MergeDiff(d *InstanceDiff) *InstanceState {
 				continue
 			}
 			if diff.NewComputed {
-				result.Attributes[k] = hcl2shim.UnknownVariableValue
+				result.Attributes[k] = config.UnknownVariableValue
 				continue
 			}
 

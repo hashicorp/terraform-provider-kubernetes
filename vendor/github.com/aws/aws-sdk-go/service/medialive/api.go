@@ -5358,9 +5358,6 @@ type Channel struct {
 	// The name of the channel. (user-mutable)
 	Name *string `locationName:"name" type:"string"`
 
-	// Runtime details for the pipelines of a running channel.
-	PipelineDetails []*PipelineDetail `locationName:"pipelineDetails" type:"list"`
-
 	// The number of currently healthy pipelines.
 	PipelinesRunningCount *int64 `locationName:"pipelinesRunningCount" type:"integer"`
 
@@ -5440,12 +5437,6 @@ func (s *Channel) SetLogLevel(v string) *Channel {
 // SetName sets the Name field's value.
 func (s *Channel) SetName(v string) *Channel {
 	s.Name = &v
-	return s
-}
-
-// SetPipelineDetails sets the PipelineDetails field's value.
-func (s *Channel) SetPipelineDetails(v []*PipelineDetail) *Channel {
-	s.PipelineDetails = v
 	return s
 }
 
@@ -6106,8 +6097,6 @@ type DeleteChannelOutput struct {
 
 	Name *string `locationName:"name" type:"string"`
 
-	PipelineDetails []*PipelineDetail `locationName:"pipelineDetails" type:"list"`
-
 	PipelinesRunningCount *int64 `locationName:"pipelinesRunningCount" type:"integer"`
 
 	RoleArn *string `locationName:"roleArn" type:"string"`
@@ -6184,12 +6173,6 @@ func (s *DeleteChannelOutput) SetLogLevel(v string) *DeleteChannelOutput {
 // SetName sets the Name field's value.
 func (s *DeleteChannelOutput) SetName(v string) *DeleteChannelOutput {
 	s.Name = &v
-	return s
-}
-
-// SetPipelineDetails sets the PipelineDetails field's value.
-func (s *DeleteChannelOutput) SetPipelineDetails(v []*PipelineDetail) *DeleteChannelOutput {
-	s.PipelineDetails = v
 	return s
 }
 
@@ -6708,8 +6691,6 @@ type DescribeChannelOutput struct {
 
 	Name *string `locationName:"name" type:"string"`
 
-	PipelineDetails []*PipelineDetail `locationName:"pipelineDetails" type:"list"`
-
 	PipelinesRunningCount *int64 `locationName:"pipelinesRunningCount" type:"integer"`
 
 	RoleArn *string `locationName:"roleArn" type:"string"`
@@ -6786,12 +6767,6 @@ func (s *DescribeChannelOutput) SetLogLevel(v string) *DescribeChannelOutput {
 // SetName sets the Name field's value.
 func (s *DescribeChannelOutput) SetName(v string) *DescribeChannelOutput {
 	s.Name = &v
-	return s
-}
-
-// SetPipelineDetails sets the PipelineDetails field's value.
-func (s *DescribeChannelOutput) SetPipelineDetails(v []*PipelineDetail) *DescribeChannelOutput {
-	s.PipelineDetails = v
 	return s
 }
 
@@ -6872,12 +6847,6 @@ type DescribeInputOutput struct {
 	// A standard input has two sources and a single pipeline input only has one.
 	InputClass *string `locationName:"inputClass" type:"string" enum:"InputClass"`
 
-	// There are two types of input sources, static and dynamic. If an input source
-	// is dynamic you canchange the source url of the input dynamically using an
-	// input switch action. However, the only input typeto support a dynamic url
-	// at this time is MP4_FILE. By default all input sources are static.
-	InputSourceType *string `locationName:"inputSourceType" type:"string" enum:"InputSourceType"`
-
 	MediaConnectFlows []*MediaConnectFlow `locationName:"mediaConnectFlows" type:"list"`
 
 	Name *string `locationName:"name" type:"string"`
@@ -6932,12 +6901,6 @@ func (s *DescribeInputOutput) SetId(v string) *DescribeInputOutput {
 // SetInputClass sets the InputClass field's value.
 func (s *DescribeInputOutput) SetInputClass(v string) *DescribeInputOutput {
 	s.InputClass = &v
-	return s
-}
-
-// SetInputSourceType sets the InputSourceType field's value.
-func (s *DescribeInputOutput) SetInputSourceType(v string) *DescribeInputOutput {
-	s.InputSourceType = &v
 	return s
 }
 
@@ -10297,22 +10260,6 @@ func (s *HlsWebdavSettings) SetRestartDelay(v int64) *HlsWebdavSettings {
 	return s
 }
 
-// Settings to configure an action so that it occurs immediately. This is only
-// supported for input switch actions currently.
-type ImmediateModeScheduleActionStartSettings struct {
-	_ struct{} `type:"structure"`
-}
-
-// String returns the string representation
-func (s ImmediateModeScheduleActionStartSettings) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s ImmediateModeScheduleActionStartSettings) GoString() string {
-	return s.String()
-}
-
 type Input struct {
 	_ struct{} `type:"structure"`
 
@@ -10337,11 +10284,6 @@ type Input struct {
 	// SINGLE_PIPELINE, this value is valid. If the ChannelClass is STANDARD, this
 	// value is not valid because the channel requires two sources in the input.
 	InputClass *string `locationName:"inputClass" type:"string" enum:"InputClass"`
-
-	// Certain pull input sources can be dynamic, meaning that they can have their
-	// URL's dynamically changesduring input switch actions. Presently, this functionality
-	// only works with MP4_FILE inputs.
-	InputSourceType *string `locationName:"inputSourceType" type:"string" enum:"InputSourceType"`
 
 	// A list of MediaConnect Flows for this input.
 	MediaConnectFlows []*MediaConnectFlow `locationName:"mediaConnectFlows" type:"list"`
@@ -10404,12 +10346,6 @@ func (s *Input) SetId(v string) *Input {
 // SetInputClass sets the InputClass field's value.
 func (s *Input) SetInputClass(v string) *Input {
 	s.InputClass = &v
-	return s
-}
-
-// SetInputSourceType sets the InputSourceType field's value.
-func (s *Input) SetInputSourceType(v string) *Input {
-	s.InputSourceType = &v
 	return s
 }
 
@@ -10572,64 +10508,6 @@ func (s *InputChannelLevel) SetGain(v int64) *InputChannelLevel {
 // SetInputChannel sets the InputChannel field's value.
 func (s *InputChannelLevel) SetInputChannel(v int64) *InputChannelLevel {
 	s.InputChannel = &v
-	return s
-}
-
-// Settings to let you create a clip of the file input, in order to set up the
-// input to ingest only a portion of the file.
-type InputClippingSettings struct {
-	_ struct{} `type:"structure"`
-
-	// The source of the timecodes in the source being clipped.
-	//
-	// InputTimecodeSource is a required field
-	InputTimecodeSource *string `locationName:"inputTimecodeSource" type:"string" required:"true" enum:"InputTimecodeSource"`
-
-	// Settings to identify the start of the clip.
-	StartTimecode *StartTimecode `locationName:"startTimecode" type:"structure"`
-
-	// Settings to identify the end of the clip.
-	StopTimecode *StopTimecode `locationName:"stopTimecode" type:"structure"`
-}
-
-// String returns the string representation
-func (s InputClippingSettings) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s InputClippingSettings) GoString() string {
-	return s.String()
-}
-
-// Validate inspects the fields of the type to determine if they are valid.
-func (s *InputClippingSettings) Validate() error {
-	invalidParams := request.ErrInvalidParams{Context: "InputClippingSettings"}
-	if s.InputTimecodeSource == nil {
-		invalidParams.Add(request.NewErrParamRequired("InputTimecodeSource"))
-	}
-
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	}
-	return nil
-}
-
-// SetInputTimecodeSource sets the InputTimecodeSource field's value.
-func (s *InputClippingSettings) SetInputTimecodeSource(v string) *InputClippingSettings {
-	s.InputTimecodeSource = &v
-	return s
-}
-
-// SetStartTimecode sets the StartTimecode field's value.
-func (s *InputClippingSettings) SetStartTimecode(v *StartTimecode) *InputClippingSettings {
-	s.StartTimecode = v
-	return s
-}
-
-// SetStopTimecode sets the StopTimecode field's value.
-func (s *InputClippingSettings) SetStopTimecode(v *StopTimecode) *InputClippingSettings {
-	s.StopTimecode = v
 	return s
 }
 
@@ -11218,26 +11096,14 @@ func (s *InputSpecification) SetResolution(v string) *InputSpecification {
 	return s
 }
 
-// Settings for the "switch input" action: to switch from ingesting one input
-// to ingesting another input.
+// Settings for the action to switch an input.
 type InputSwitchScheduleActionSettings struct {
 	_ struct{} `type:"structure"`
 
-	// The name of the input attachment (not the name of the input!) to switch to.
-	// The name is specified in the channel configuration.
+	// The name of the input attachment that should be switched to by this action.
 	//
 	// InputAttachmentNameReference is a required field
 	InputAttachmentNameReference *string `locationName:"inputAttachmentNameReference" type:"string" required:"true"`
-
-	// Settings to let you create a clip of the file input, in order to set up the
-	// input to ingest only a portion of the file.
-	InputClippingSettings *InputClippingSettings `locationName:"inputClippingSettings" type:"structure"`
-
-	// The value for the variable portion of the URL for the dynamic input, for
-	// this instance of the input. Each time you use the same dynamic input in an
-	// input switch action, you can provide a different value, in order to connect
-	// the input to a different content source.
-	UrlPath []*string `locationName:"urlPath" type:"list"`
 }
 
 // String returns the string representation
@@ -11256,11 +11122,6 @@ func (s *InputSwitchScheduleActionSettings) Validate() error {
 	if s.InputAttachmentNameReference == nil {
 		invalidParams.Add(request.NewErrParamRequired("InputAttachmentNameReference"))
 	}
-	if s.InputClippingSettings != nil {
-		if err := s.InputClippingSettings.Validate(); err != nil {
-			invalidParams.AddNested("InputClippingSettings", err.(request.ErrInvalidParams))
-		}
-	}
 
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -11271,18 +11132,6 @@ func (s *InputSwitchScheduleActionSettings) Validate() error {
 // SetInputAttachmentNameReference sets the InputAttachmentNameReference field's value.
 func (s *InputSwitchScheduleActionSettings) SetInputAttachmentNameReference(v string) *InputSwitchScheduleActionSettings {
 	s.InputAttachmentNameReference = &v
-	return s
-}
-
-// SetInputClippingSettings sets the InputClippingSettings field's value.
-func (s *InputSwitchScheduleActionSettings) SetInputClippingSettings(v *InputClippingSettings) *InputSwitchScheduleActionSettings {
-	s.InputClippingSettings = v
-	return s
-}
-
-// SetUrlPath sets the UrlPath field's value.
-func (s *InputSwitchScheduleActionSettings) SetUrlPath(v []*string) *InputSwitchScheduleActionSettings {
-	s.UrlPath = v
 	return s
 }
 
@@ -12787,7 +12636,7 @@ func (s *MediaPackageGroupSettings) SetDestination(v *OutputLocationRef) *MediaP
 	return s
 }
 
-// MediaPackage Output Destination Settings
+// Media Package Output Destination Settings
 type MediaPackageOutputDestinationSettings struct {
 	_ struct{} `type:"structure"`
 
@@ -13871,51 +13720,6 @@ func (s *PauseStateScheduleActionSettings) SetPipelines(v []*PipelinePauseStateS
 	return s
 }
 
-// Runtime details of a pipeline when a channel is running.
-type PipelineDetail struct {
-	_ struct{} `type:"structure"`
-
-	// The name of the active input attachment currently being ingested by this
-	// pipeline.
-	ActiveInputAttachmentName *string `locationName:"activeInputAttachmentName" type:"string"`
-
-	// The name of the input switch schedule action that occurred most recently
-	// and that resulted in the switch to the current input attachment for this
-	// pipeline.
-	ActiveInputSwitchActionName *string `locationName:"activeInputSwitchActionName" type:"string"`
-
-	// Pipeline ID
-	PipelineId *string `locationName:"pipelineId" type:"string"`
-}
-
-// String returns the string representation
-func (s PipelineDetail) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s PipelineDetail) GoString() string {
-	return s.String()
-}
-
-// SetActiveInputAttachmentName sets the ActiveInputAttachmentName field's value.
-func (s *PipelineDetail) SetActiveInputAttachmentName(v string) *PipelineDetail {
-	s.ActiveInputAttachmentName = &v
-	return s
-}
-
-// SetActiveInputSwitchActionName sets the ActiveInputSwitchActionName field's value.
-func (s *PipelineDetail) SetActiveInputSwitchActionName(v string) *PipelineDetail {
-	s.ActiveInputSwitchActionName = &v
-	return s
-}
-
-// SetPipelineId sets the PipelineId field's value.
-func (s *PipelineDetail) SetPipelineId(v string) *PipelineDetail {
-	s.PipelineId = &v
-	return s
-}
-
 // Settings for pausing a pipeline.
 type PipelinePauseStateSettings struct {
 	_ struct{} `type:"structure"`
@@ -14799,19 +14603,15 @@ func (s *ScheduleActionSettings) SetStaticImageDeactivateSettings(v *StaticImage
 	return s
 }
 
-// Settings to specify when an action should occur. Only one of the options
-// must be selected.
+// Settings to specify the start time for an action.
 type ScheduleActionStartSettings struct {
 	_ struct{} `type:"structure"`
 
-	// Option for specifying the start time for an action.
+	// Holds the start time for the action.
 	FixedModeScheduleActionStartSettings *FixedModeScheduleActionStartSettings `locationName:"fixedModeScheduleActionStartSettings" type:"structure"`
 
-	// Option for specifying an action as relative to another action.
+	// Specifies an action to follow for scheduling this action.
 	FollowModeScheduleActionStartSettings *FollowModeScheduleActionStartSettings `locationName:"followModeScheduleActionStartSettings" type:"structure"`
-
-	// Option for specifying an action that should be applied immediately.
-	ImmediateModeScheduleActionStartSettings *ImmediateModeScheduleActionStartSettings `locationName:"immediateModeScheduleActionStartSettings" type:"structure"`
 }
 
 // String returns the string representation
@@ -14853,12 +14653,6 @@ func (s *ScheduleActionStartSettings) SetFixedModeScheduleActionStartSettings(v 
 // SetFollowModeScheduleActionStartSettings sets the FollowModeScheduleActionStartSettings field's value.
 func (s *ScheduleActionStartSettings) SetFollowModeScheduleActionStartSettings(v *FollowModeScheduleActionStartSettings) *ScheduleActionStartSettings {
 	s.FollowModeScheduleActionStartSettings = v
-	return s
-}
-
-// SetImmediateModeScheduleActionStartSettings sets the ImmediateModeScheduleActionStartSettings field's value.
-func (s *ScheduleActionStartSettings) SetImmediateModeScheduleActionStartSettings(v *ImmediateModeScheduleActionStartSettings) *ScheduleActionStartSettings {
-	s.ImmediateModeScheduleActionStartSettings = v
 	return s
 }
 
@@ -15702,8 +15496,6 @@ type StartChannelOutput struct {
 
 	Name *string `locationName:"name" type:"string"`
 
-	PipelineDetails []*PipelineDetail `locationName:"pipelineDetails" type:"list"`
-
 	PipelinesRunningCount *int64 `locationName:"pipelinesRunningCount" type:"integer"`
 
 	RoleArn *string `locationName:"roleArn" type:"string"`
@@ -15783,12 +15575,6 @@ func (s *StartChannelOutput) SetName(v string) *StartChannelOutput {
 	return s
 }
 
-// SetPipelineDetails sets the PipelineDetails field's value.
-func (s *StartChannelOutput) SetPipelineDetails(v []*PipelineDetail) *StartChannelOutput {
-	s.PipelineDetails = v
-	return s
-}
-
 // SetPipelinesRunningCount sets the PipelinesRunningCount field's value.
 func (s *StartChannelOutput) SetPipelinesRunningCount(v int64) *StartChannelOutput {
 	s.PipelinesRunningCount = &v
@@ -15810,32 +15596,6 @@ func (s *StartChannelOutput) SetState(v string) *StartChannelOutput {
 // SetTags sets the Tags field's value.
 func (s *StartChannelOutput) SetTags(v map[string]*string) *StartChannelOutput {
 	s.Tags = v
-	return s
-}
-
-// Settings to identify the start of the clip.
-type StartTimecode struct {
-	_ struct{} `type:"structure"`
-
-	// The timecode for the frame where you want to start the clip. Optional; if
-	// not specified, the clip starts at first frame in the file. Enter the timecode
-	// as HH:MM:SS:FF or HH:MM:SS;FF.
-	Timecode *string `locationName:"timecode" type:"string"`
-}
-
-// String returns the string representation
-func (s StartTimecode) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s StartTimecode) GoString() string {
-	return s.String()
-}
-
-// SetTimecode sets the Timecode field's value.
-func (s *StartTimecode) SetTimecode(v string) *StartTimecode {
-	s.Timecode = &v
 	return s
 }
 
@@ -16146,8 +15906,6 @@ type StopChannelOutput struct {
 
 	Name *string `locationName:"name" type:"string"`
 
-	PipelineDetails []*PipelineDetail `locationName:"pipelineDetails" type:"list"`
-
 	PipelinesRunningCount *int64 `locationName:"pipelinesRunningCount" type:"integer"`
 
 	RoleArn *string `locationName:"roleArn" type:"string"`
@@ -16227,12 +15985,6 @@ func (s *StopChannelOutput) SetName(v string) *StopChannelOutput {
 	return s
 }
 
-// SetPipelineDetails sets the PipelineDetails field's value.
-func (s *StopChannelOutput) SetPipelineDetails(v []*PipelineDetail) *StopChannelOutput {
-	s.PipelineDetails = v
-	return s
-}
-
 // SetPipelinesRunningCount sets the PipelinesRunningCount field's value.
 func (s *StopChannelOutput) SetPipelinesRunningCount(v int64) *StopChannelOutput {
 	s.PipelinesRunningCount = &v
@@ -16254,43 +16006,6 @@ func (s *StopChannelOutput) SetState(v string) *StopChannelOutput {
 // SetTags sets the Tags field's value.
 func (s *StopChannelOutput) SetTags(v map[string]*string) *StopChannelOutput {
 	s.Tags = v
-	return s
-}
-
-// Settings to identify the end of the clip.
-type StopTimecode struct {
-	_ struct{} `type:"structure"`
-
-	// If you specify a StopTimecode in an input (in order to clip the file), you
-	// can specify if you want the clip to exclude (the default) or include the
-	// frame specified by the timecode.
-	LastFrameClippingBehavior *string `locationName:"lastFrameClippingBehavior" type:"string" enum:"LastFrameClippingBehavior"`
-
-	// The timecode for the frame where you want to stop the clip. Optional; if
-	// not specified, the clip continues to the end of the file. Enter the timecode
-	// as HH:MM:SS:FF or HH:MM:SS;FF.
-	Timecode *string `locationName:"timecode" type:"string"`
-}
-
-// String returns the string representation
-func (s StopTimecode) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s StopTimecode) GoString() string {
-	return s.String()
-}
-
-// SetLastFrameClippingBehavior sets the LastFrameClippingBehavior field's value.
-func (s *StopTimecode) SetLastFrameClippingBehavior(v string) *StopTimecode {
-	s.LastFrameClippingBehavior = &v
-	return s
-}
-
-// SetTimecode sets the Timecode field's value.
-func (s *StopTimecode) SetTimecode(v string) *StopTimecode {
-	s.Timecode = &v
 	return s
 }
 
@@ -18822,18 +18537,6 @@ const (
 	InputSourceEndBehaviorLoop = "LOOP"
 )
 
-// There are two types of input sources, static and dynamic. If an input source
-// is dynamic you canchange the source url of the input dynamically using an
-// input switch action. However, the only input typeto support a dynamic url
-// at this time is MP4_FILE. By default all input sources are static.
-const (
-	// InputSourceTypeStatic is a InputSourceType enum value
-	InputSourceTypeStatic = "STATIC"
-
-	// InputSourceTypeDynamic is a InputSourceType enum value
-	InputSourceTypeDynamic = "DYNAMIC"
-)
-
 const (
 	// InputStateCreating is a InputState enum value
 	InputStateCreating = "CREATING"
@@ -18849,21 +18552,6 @@ const (
 
 	// InputStateDeleted is a InputState enum value
 	InputStateDeleted = "DELETED"
-)
-
-// To clip the file, you must specify the timecode for the start and end of
-// the clip. Specify EMBEDDED to use the timecode embedded in the source content.
-// The embedded timecode must exist in the source content, otherwise MediaLive
-// will output black frames until it reaches the end of the source. Specify
-// ZEROBASED to use a timecode that assumes that the first frame in the file
-// has the timestamp 00:00:00.00. There is no default for this field, you must
-// specify a value.
-const (
-	// InputTimecodeSourceZerobased is a InputTimecodeSource enum value
-	InputTimecodeSourceZerobased = "ZEROBASED"
-
-	// InputTimecodeSourceEmbedded is a InputTimecodeSource enum value
-	InputTimecodeSourceEmbedded = "EMBEDDED"
 )
 
 const (
@@ -18887,17 +18575,6 @@ const (
 
 	// InputTypeMediaconnect is a InputType enum value
 	InputTypeMediaconnect = "MEDIACONNECT"
-)
-
-// If you specify a StopTimecode in an input (in order to clip the file), you
-// can specify if you want the clip to exclude (the default) or include the
-// frame specified by the timecode.
-const (
-	// LastFrameClippingBehaviorExcludeLastFrame is a LastFrameClippingBehavior enum value
-	LastFrameClippingBehaviorExcludeLastFrame = "EXCLUDE_LAST_FRAME"
-
-	// LastFrameClippingBehaviorIncludeLastFrame is a LastFrameClippingBehavior enum value
-	LastFrameClippingBehaviorIncludeLastFrame = "INCLUDE_LAST_FRAME"
 )
 
 // The log level the user wants for their channel.

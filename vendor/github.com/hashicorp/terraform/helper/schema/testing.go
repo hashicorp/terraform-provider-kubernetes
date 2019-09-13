@@ -3,6 +3,7 @@ package schema
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform/config"
 	"github.com/hashicorp/terraform/terraform"
 )
 
@@ -11,10 +12,13 @@ func TestResourceDataRaw(
 	t *testing.T, schema map[string]*Schema, raw map[string]interface{}) *ResourceData {
 	t.Helper()
 
-	c := terraform.NewResourceConfigRaw(raw)
+	c, err := config.NewRawConfig(raw)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 
 	sm := schemaMap(schema)
-	diff, err := sm.Diff(nil, c, nil, nil, true)
+	diff, err := sm.Diff(nil, terraform.NewResourceConfig(c), nil, nil, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

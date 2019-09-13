@@ -2,6 +2,8 @@ package terraform
 
 import (
 	"sort"
+
+	"github.com/hashicorp/terraform/config"
 )
 
 // Semaphore is a wrapper around a channel to provide
@@ -44,6 +46,10 @@ func (s Semaphore) Release() {
 	default:
 		panic("release without an acquire")
 	}
+}
+
+func resourceProvider(resourceType, explicitProvider string) string {
+	return config.ResourceProviderFullName(resourceType, explicitProvider)
 }
 
 // strSliceContains checks if a given string is contained in a slice

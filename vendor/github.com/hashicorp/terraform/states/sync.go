@@ -283,7 +283,7 @@ func (s *SyncState) MaybeFixUpResourceInstanceAddressForCount(addr addrs.AbsReso
 }
 
 // SetResourceInstanceCurrent saves the given instance object as the current
-// generation of the resource instance with the given address, simultaneously
+// generation of the resource instance with the given address, simulataneously
 // updating the recorded provider configuration address, dependencies, and
 // resource EachMode.
 //

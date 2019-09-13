@@ -246,7 +246,7 @@ var CompactFunc = function.New(&function.Spec{
 
 		for it := listVal.ElementIterator(); it.Next(); {
 			_, v := it.Element()
-			if v.IsNull() || v.AsString() == "" {
+			if v.AsString() == "" {
 				continue
 			}
 			outputList = append(outputList, v)
@@ -363,9 +363,6 @@ var DistinctFunc = function.New(&function.Spec{
 			}
 		}
 
-		if len(list) == 0 {
-			return cty.ListValEmpty(retType.ElementType()), nil
-		}
 		return cty.ListVal(list), nil
 	},
 })
@@ -390,10 +387,6 @@ var ChunklistFunc = function.New(&function.Spec{
 		listVal := args[0]
 		if !listVal.IsKnown() {
 			return cty.UnknownVal(retType), nil
-		}
-
-		if listVal.LengthInt() == 0 {
-			return cty.ListValEmpty(listVal.Type()), nil
 		}
 
 		var size int
@@ -660,12 +653,6 @@ var LookupFunc = function.New(&function.Spec{
 			}
 			return cty.DynamicPseudoType, function.NewArgErrorf(0, "the given object has no attribute %q", key)
 		case ty.IsMapType():
-			if len(args) == 3 {
-				_, err = convert.Convert(args[2], ty.ElementType())
-				if err != nil {
-					return cty.NilType, function.NewArgErrorf(2, "the default value must have the same type as the map elements")
-				}
-			}
 			return ty.ElementType(), nil
 		default:
 			return cty.NilType, function.NewArgErrorf(0, "lookup() requires a map as the first argument")
@@ -692,7 +679,17 @@ var LookupFunc = function.New(&function.Spec{
 				return mapVar.GetAttr(lookupKey), nil
 			}
 		} else if mapVar.HasIndex(cty.StringVal(lookupKey)) == cty.True {
-			return mapVar.Index(cty.StringVal(lookupKey)), nil
+			v := mapVar.Index(cty.StringVal(lookupKey))
+			if ty := v.Type(); !ty.Equals(cty.NilType) {
+				switch {
+				case ty.Equals(cty.String):
+					return cty.StringVal(v.AsString()), nil
+				case ty.Equals(cty.Number):
+					return cty.NumberVal(v.AsBigFloat()), nil
+				default:
+					return cty.NilVal, errors.New("lookup() can only be used with flat lists")
+				}
+			}
 		}
 
 		if defaultValueSet {
@@ -800,12 +797,10 @@ var MatchkeysFunc = function.New(&function.Spec{
 		},
 	},
 	Type: func(args []cty.Value) (cty.Type, error) {
-		ty, _ := convert.UnifyUnsafe([]cty.Type{args[1].Type(), args[2].Type()})
-		if ty == cty.NilType {
-			return cty.NilType, errors.New("keys and searchset must be of the same type")
+		if !args[1].Type().Equals(args[2].Type()) {
+			return cty.NilType, errors.New("lists must be of the same type")
 		}
 
-		// the return type is based on args[0] (values)
 		return args[0].Type(), nil
 	},
 	Impl: func(args []cty.Value, retType cty.Type) (ret cty.Value, err error) {
@@ -818,14 +813,10 @@ var MatchkeysFunc = function.New(&function.Spec{
 		}
 
 		output := make([]cty.Value, 0)
-		values := args[0]
 
-		// Keys and searchset must be the same type.
-		// We can skip error checking here because we've already verified that
-		// they can be unified in the Type function
-		ty, _ := convert.UnifyUnsafe([]cty.Type{args[1].Type(), args[2].Type()})
-		keys, _ := convert.Convert(args[1], ty)
-		searchset, _ := convert.Convert(args[2], ty)
+		values := args[0]
+		keys := args[1]
+		searchset := args[2]
 
 		// if searchset is empty, return an empty list.
 		if searchset.LengthInt() == 0 {
@@ -876,6 +867,7 @@ var MergeFunc = function.New(&function.Spec{
 		Name:             "maps",
 		Type:             cty.DynamicPseudoType,
 		AllowDynamicType: true,
+		AllowNull:        true,
 	},
 	Type: function.StaticReturnType(cty.DynamicPseudoType),
 	Impl: func(args []cty.Value, retType cty.Type) (ret cty.Value, err error) {
@@ -1072,11 +1064,11 @@ var SliceFunc = function.New(&function.Spec{
 			Type: cty.DynamicPseudoType,
 		},
 		{
-			Name: "start_index",
+			Name: "startIndex",
 			Type: cty.Number,
 		},
 		{
-			Name: "end_index",
+			Name: "endIndex",
 			Type: cty.Number,
 		},
 	},
@@ -1084,39 +1076,25 @@ var SliceFunc = function.New(&function.Spec{
 		arg := args[0]
 		argTy := arg.Type()
 
-		if argTy.IsSetType() {
-			return cty.NilType, function.NewArgErrorf(0, "cannot slice a set, because its elements do not have indices; use the tolist function to force conversion to list if the ordering of the result is not important")
-		}
 		if !argTy.IsListType() && !argTy.IsTupleType() {
-			return cty.NilType, function.NewArgErrorf(0, "must be a list or tuple value")
-		}
-
-		startIndex, endIndex, idxsKnown, err := sliceIndexes(args)
-		if err != nil {
-			return cty.NilType, err
+			return cty.NilType, errors.New("cannot slice a set, because its elements do not have indices; use the tolist function to force conversion to list if the ordering of the result is not important")
 		}
 
 		if argTy.IsListType() {
 			return argTy, nil
 		}
 
-		if !idxsKnown {
-			// If we don't know our start/end indices then we can't predict
-			// the result type if we're planning to return a tuple.
-			return cty.DynamicPseudoType, nil
+		startIndex, endIndex, err := sliceIndexes(args, args[0].LengthInt())
+		if err != nil {
+			return cty.NilType, err
 		}
+
 		return cty.Tuple(argTy.TupleElementTypes()[startIndex:endIndex]), nil
 	},
 	Impl: func(args []cty.Value, retType cty.Type) (ret cty.Value, err error) {
 		inputList := args[0]
 
-		if retType == cty.DynamicPseudoType {
-			return cty.DynamicVal, nil
-		}
-
-		// we ignore idxsKnown return value here because the indices are always
-		// known here, or else the call would've short-circuited.
-		startIndex, endIndex, _, err := sliceIndexes(args)
+		startIndex, endIndex, err := sliceIndexes(args, inputList.LengthInt())
 		if err != nil {
 			return cty.NilVal, err
 		}
@@ -1138,45 +1116,26 @@ var SliceFunc = function.New(&function.Spec{
 	},
 })
 
-func sliceIndexes(args []cty.Value) (int, int, bool, error) {
-	var startIndex, endIndex, length int
-	var startKnown, endKnown, lengthKnown bool
+func sliceIndexes(args []cty.Value, max int) (int, int, error) {
+	var startIndex, endIndex int
 
-	if args[0].Type().IsTupleType() || args[0].IsKnown() { // if it's a tuple then we always know the length by the type, but lists must be known
-		length = args[0].LengthInt()
-		lengthKnown = true
+	if err := gocty.FromCtyValue(args[1], &startIndex); err != nil {
+		return 0, 0, fmt.Errorf("invalid start index: %s", err)
+	}
+	if err := gocty.FromCtyValue(args[2], &endIndex); err != nil {
+		return 0, 0, fmt.Errorf("invalid start index: %s", err)
 	}
 
-	if args[1].IsKnown() {
-		if err := gocty.FromCtyValue(args[1], &startIndex); err != nil {
-			return 0, 0, false, function.NewArgErrorf(1, "invalid start index: %s", err)
-		}
-		if startIndex < 0 {
-			return 0, 0, false, function.NewArgErrorf(1, "start index must not be less than zero")
-		}
-		if lengthKnown && startIndex > length {
-			return 0, 0, false, function.NewArgErrorf(1, "start index must not be greater than the length of the list")
-		}
-		startKnown = true
+	if startIndex < 0 {
+		return 0, 0, errors.New("from index must be greater than or equal to 0")
 	}
-	if args[2].IsKnown() {
-		if err := gocty.FromCtyValue(args[2], &endIndex); err != nil {
-			return 0, 0, false, function.NewArgErrorf(2, "invalid end index: %s", err)
-		}
-		if endIndex < 0 {
-			return 0, 0, false, function.NewArgErrorf(2, "end index must not be less than zero")
-		}
-		if lengthKnown && endIndex > length {
-			return 0, 0, false, function.NewArgErrorf(2, "end index must not be greater than the length of the list")
-		}
-		endKnown = true
+	if endIndex > max {
+		return 0, 0, errors.New("to index must be less than or equal to the length of the input list")
 	}
-	if startKnown && endKnown {
-		if startIndex > endIndex {
-			return 0, 0, false, function.NewArgErrorf(1, "start index must not be greater than end index")
-		}
+	if startIndex > endIndex {
+		return 0, 0, errors.New("from index must be less than or equal to index")
 	}
-	return startIndex, endIndex, startKnown && endKnown, nil
+	return startIndex, endIndex, nil
 }
 
 // TransposeFunc contructs a function that takes a map of lists of strings and

@@ -75,19 +75,11 @@ func (c *GameLift) AcceptMatchRequest(input *AcceptMatchInput) (req *request.Req
 //
 // If any player rejects the match, or if acceptances are not received before
 // a specified timeout, the proposed match is dropped. The matchmaking tickets
-// are then handled in one of two ways: For tickets where one or more players
-// rejected the match, the ticket status is returned to SEARCHING to find a
-// new match. For tickets where one or more players failed to respond, the ticket
-// status is set to CANCELLED, and processing is terminated. A new matchmaking
+// are then handled in one of two ways: For tickets where all players accepted
+// the match, the ticket status is returned to SEARCHING to find a new match.
+// For tickets where one or more players failed to accept the match, the ticket
+// status is set to FAILED, and processing is terminated. A new matchmaking
 // request for these players can be submitted as needed.
-//
-// Learn more
-//
-//  Add FlexMatch to a Game Client (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-client.html)
-//
-//  FlexMatch Events Reference (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-events.html)
-//
-// Related operations
 //
 //    * StartMatchmaking
 //
@@ -927,21 +919,21 @@ func (c *GameLift) CreateMatchmakingConfigurationRequest(input *CreateMatchmakin
 // game session for the match; and the maximum time allowed for a matchmaking
 // attempt.
 //
-// There are two ways to track the progress of matchmaking tickets: (1) polling
-// ticket status with DescribeMatchmaking; or (2) receiving notifications with
-// Amazon Simple Notification Service (SNS). To use notifications, you first
-// need to set up an SNS topic to receive the notifications, and provide the
-// topic ARN in the matchmaking configuration. Since notifications promise only
-// "best effort" delivery, we recommend calling DescribeMatchmaking if no notifications
-// are received within 30 seconds.
+// Player acceptance -- In each configuration, you have the option to require
+// that all players accept participation in a proposed match. To enable this
+// feature, set AcceptanceRequired to true and specify a time limit for player
+// acceptance. Players have the option to accept or reject a proposed match,
+// and a match does not move ahead to game session placement unless all matched
+// players accept.
 //
-// Learn more
-//
-//  Design a FlexMatch Matchmaker (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-configuration.html)
-//
-//  Setting up Notifications for Matchmaking (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-notification.html)
-//
-// Related operations
+// Matchmaking status notification -- There are two ways to track the progress
+// of matchmaking tickets: (1) polling ticket status with DescribeMatchmaking;
+// or (2) receiving notifications with Amazon Simple Notification Service (SNS).
+// To use notifications, you first need to set up an SNS topic to receive the
+// notifications, and provide the topic ARN in the matchmaking configuration
+// (see Setting up Notifications for Matchmaking (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-notification.html)).
+// Since notifications promise only "best effort" delivery, we recommend calling
+// DescribeMatchmaking if no notifications are received within 30 seconds.
 //
 //    * CreateMatchmakingConfiguration
 //
@@ -1060,7 +1052,7 @@ func (c *GameLift) CreateMatchmakingRuleSetRequest(input *CreateMatchmakingRuleS
 //
 // To create a matchmaking rule set, provide unique rule set name and the rule
 // set body in JSON format. Rule sets must be defined in the same region as
-// the matchmaking configuration they are used with.
+// the matchmaking configuration they will be used with.
 //
 // Since matchmaking rule sets cannot be edited, it is a good idea to check
 // the rule set syntax using ValidateMatchmakingRuleSet before creating a new
@@ -2053,11 +2045,6 @@ func (c *GameLift) DeleteFleetRequest(input *DeleteFleetInput) (req *request.Req
 // Deletes everything related to a fleet. Before deleting a fleet, you must
 // set the fleet's desired capacity to zero. See UpdateFleetCapacity.
 //
-// If the fleet being deleted has a VPC peering connection, you first need to
-// get a valid authorization (good for 24 hours) by calling CreateVpcPeeringAuthorization.
-// You do not need to explicitly delete the VPC peering connection--this is
-// done as part of the delete fleet process.
-//
 // This action removes the fleet's resources and the fleet record. Once a fleet
 // is deleted, you can no longer use that fleet.
 //
@@ -2284,8 +2271,6 @@ func (c *GameLift) DeleteMatchmakingConfigurationRequest(input *DeleteMatchmakin
 // Permanently removes a FlexMatch matchmaking configuration. To delete, specify
 // the configuration name. A matchmaking configuration cannot be deleted if
 // it is being used in any active matchmaking tickets.
-//
-// Related operations
 //
 //    * CreateMatchmakingConfiguration
 //
@@ -2737,8 +2722,9 @@ func (c *GameLift) DeleteVpcPeeringAuthorizationRequest(input *DeleteVpcPeeringA
 
 // DeleteVpcPeeringAuthorization API operation for Amazon GameLift.
 //
-// Cancels a pending VPC peering authorization for the specified VPC. If you
-// need to delete an existing VPC peering connection, call DeleteVpcPeeringConnection.
+// Cancels a pending VPC peering authorization for the specified VPC. If the
+// authorization has already been used to create a peering connection, call
+// DeleteVpcPeeringConnection to remove the connection.
 //
 //    * CreateVpcPeeringAuthorization
 //
@@ -4466,14 +4452,6 @@ func (c *GameLift) DescribeMatchmakingRequest(input *DescribeMatchmakingInput) (
 // the request is successful, a ticket object is returned for each requested
 // ID that currently exists.
 //
-// Learn more
-//
-//  Add FlexMatch to a Game Client (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-client.html)
-//
-//  Set Up FlexMatch Event Notification (https://docs.aws.amazon.com/gamelift/latest/developerguidematch-notification.html)
-//
-// Related operations
-//
 //    * StartMatchmaking
 //
 //    * DescribeMatchmaking
@@ -4570,7 +4548,7 @@ func (c *GameLift) DescribeMatchmakingConfigurationsRequest(input *DescribeMatch
 
 // DescribeMatchmakingConfigurations API operation for Amazon GameLift.
 //
-// Retrieves the details of FlexMatch matchmaking configurations. With this
+// Retrieves the details of FlexMatch matchmaking configurations. with this
 // operation, you have the following options: (1) retrieve all existing configurations,
 // (2) provide the names of one or more configurations to retrieve, or (3) retrieve
 // all configurations that use a specified rule set name. When requesting multiple
@@ -4578,12 +4556,6 @@ func (c *GameLift) DescribeMatchmakingConfigurationsRequest(input *DescribeMatch
 // pages. If successful, a configuration is returned for each requested name.
 // When specifying a list of names, only configurations that currently exist
 // are returned.
-//
-// Learn more
-//
-//  Setting Up FlexMatch Matchmakers (https://docs.aws.amazon.com/gamelift/latest/developerguide/matchmaker-build.html)
-//
-// Related operations
 //
 //    * CreateMatchmakingConfiguration
 //
@@ -6973,7 +6945,8 @@ func (c *GameLift) StartMatchBackfillRequest(input *StartMatchBackfillInput) (re
 // all current players in the game session. If successful, a match backfill
 // ticket is created and returned with status set to QUEUED. The ticket is placed
 // in the matchmaker's ticket pool and processed. Track the status of the ticket
-// to respond as needed.
+// to respond as needed. For more detail how to set up backfilling, see Backfill
+// Existing Games with FlexMatch (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-backfill.html).
 //
 // The process of finding backfill matches is essentially identical to the initial
 // matchmaking process. The matchmaker searches the pool and groups tickets
@@ -6983,15 +6956,7 @@ func (c *GameLift) StartMatchBackfillRequest(input *StartMatchBackfillInput) (re
 // game session's connection information, and the GameSession object is updated
 // to include matchmaker data on the new players. For more detail on how match
 // backfill requests are processed, see How Amazon GameLift FlexMatch Works
-// (https://docs.aws.amazon.com/gamelift/latest/developerguide/gamelift-match.html).
-//
-// Learn more
-//
-//  Backfill Existing Games with FlexMatch (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-backfill.html)
-//
-//  How GameLift FlexMatch Works (https://docs.aws.amazon.com/gamelift/latest/developerguide/gamelift-match.html)
-//
-// Related operations
+// (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-intro.html).
 //
 //    * StartMatchmaking
 //
@@ -7101,7 +7066,9 @@ func (c *GameLift) StartMatchmakingRequest(input *StartMatchmakingInput) (req *r
 // A matchmaking request might start with a single player or a group of players
 // who want to play together. FlexMatch finds additional players as needed to
 // fill the match. Match type, rules, and the queue used to place a new game
-// session are defined in a MatchmakingConfiguration.
+// session are defined in a MatchmakingConfiguration. For complete information
+// on setting up and using FlexMatch, see the topic Adding FlexMatch to Your
+// Game (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-intro.html).
 //
 // To start matchmaking, provide a unique ticket ID, specify a matchmaking configuration,
 // and include the players to be matched. You must also include a set of player
@@ -7152,18 +7119,6 @@ func (c *GameLift) StartMatchmakingRequest(input *StartMatchmakingInput) (req *r
 // COMPLETED status. Connection information (including game session endpoint
 // and player session) is added to the matchmaking tickets. Matched players
 // can use the connection information to join the game.
-//
-// Learn more
-//
-//  Add FlexMatch to a Game Client (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-client.html)
-//
-//  Set Up FlexMatch Event Notification (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-notification.html)
-//
-//  FlexMatch Integration Roadmap (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-tasks.html)
-//
-//  How GameLift FlexMatch Works (https://docs.aws.amazon.com/gamelift/latest/developerguide/gamelift-match.html)
-//
-// Related operations
 //
 //    * StartMatchmaking
 //
@@ -7498,23 +7453,9 @@ func (c *GameLift) StopMatchmakingRequest(input *StopMatchmakingInput) (req *req
 
 // StopMatchmaking API operation for Amazon GameLift.
 //
-// Cancels a matchmaking ticket or match backfill ticket that is currently being
-// processed. To stop the matchmaking operation, specify the ticket ID. If successful,
-// work on the ticket is stopped, and the ticket status is changed to CANCELLED.
-//
-// This call is also used to turn off automatic backfill for an individual game
-// session. This is for game sessions that are created with a matchmaking configuration
-// that has automatic backfill enabled. The ticket ID is included in the MatchmakerData
-// of an updated game session object, which is provided to the game server.
-//
-// If the action is successful, the service sends back an empty JSON struct
-// with the HTTP 200 response (not an empty HTTP body).
-//
-// Learn more
-//
-//  Add FlexMatch to a Game Client (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-client.html)
-//
-// Related operations
+// Cancels a matchmaking ticket that is currently being processed. To stop the
+// matchmaking operation, specify the ticket ID. If successful, work on the
+// ticket is stopped, and the ticket status is changed to CANCELLED.
 //
 //    * StartMatchmaking
 //
@@ -8463,16 +8404,8 @@ func (c *GameLift) UpdateMatchmakingConfigurationRequest(input *UpdateMatchmakin
 
 // UpdateMatchmakingConfiguration API operation for Amazon GameLift.
 //
-// Updates settings for a FlexMatch matchmaking configuration. These changes
-// affect all matches and game sessions that are created after the update. To
-// update settings, specify the configuration name to be updated and provide
-// the new settings.
-//
-// Learn more
-//
-//  Design a FlexMatch Matchmaker (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-configuration.html)
-//
-// Related operations
+// Updates settings for a FlexMatch matchmaking configuration. To update settings,
+// specify the configuration name to be updated and provide the new settings.
 //
 //    * CreateMatchmakingConfiguration
 //
@@ -8920,7 +8853,7 @@ type AcceptMatchInput struct {
 	// REQUIRES_ACCEPTANCE; otherwise this request will fail.
 	//
 	// TicketId is a required field
-	TicketId *string `type:"string" required:"true"`
+	TicketId *string `min:"1" type:"string" required:"true"`
 }
 
 // String returns the string representation
@@ -8944,6 +8877,9 @@ func (s *AcceptMatchInput) Validate() error {
 	}
 	if s.TicketId == nil {
 		invalidParams.Add(request.NewErrParamRequired("TicketId"))
+	}
+	if s.TicketId != nil && len(*s.TicketId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("TicketId", 1))
 	}
 
 	if invalidParams.Len() > 0 {
@@ -9079,7 +9015,7 @@ func (s *Alias) SetRoutingStrategy(v *RoutingStrategy) *Alias {
 
 // Values for use in Player attribute key:value pairs. This object lets you
 // specify an attribute value using any of the valid data types: string, number,
-// string array, or data map. Each AttributeValue object can use only one of
+// string array or data map. Each AttributeValue object can use only one of
 // the available properties.
 type AttributeValue struct {
 	_ struct{} `type:"structure"`
@@ -10132,7 +10068,7 @@ func (s *CreateGameSessionQueueOutput) SetGameSessionQueue(v *GameSessionQueue) 
 type CreateMatchmakingConfigurationInput struct {
 	_ struct{} `type:"structure"`
 
-	// Flag that determines whether a match that was created with this configuration
+	// Flag that determines whether or not a match that was created with this configuration
 	// must be accepted by the matched players. To require acceptance, set to TRUE.
 	//
 	// AcceptanceRequired is a required field
@@ -10149,15 +10085,7 @@ type CreateMatchmakingConfigurationInput struct {
 	// for the match.
 	AdditionalPlayerCount *int64 `type:"integer"`
 
-	// Method used to backfill game sessions created with this matchmaking configuration.
-	// Specify MANUAL when your game manages backfill requests manually or does
-	// not use the match backfill feature. Specify AUTOMATIC to have GameLift create
-	// a StartMatchBackfill request whenever a game session has one or more open
-	// slots. Learn more about manual and automatic backfill in Backfill Existing
-	// Games with FlexMatch (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-backfill.html).
-	BackfillMode *string `type:"string" enum:"BackfillMode"`
-
-	// Information to be added to all events related to this matchmaking configuration.
+	// Information to attached to all events related to the matchmaking configuration.
 	CustomEventData *string `type:"string"`
 
 	// Meaningful description of the matchmaking configuration.
@@ -10179,7 +10107,7 @@ type CreateMatchmakingConfigurationInput struct {
 
 	// Amazon Resource Name (ARN (https://docs.aws.amazon.com/AmazonS3/latest/dev/s3-arn-format.html))
 	// that is assigned to a game session queue and uniquely identifies it. Format
-	// is arn:aws:gamelift:<region>:<aws account>:gamesessionqueue/<queue name>.
+	// is arn:aws:gamelift:<region>::fleet/fleet-a1234567-b8c9-0d1e-2fa3-b45c6d7e8912.
 	// These queues are used when placing game sessions for matches that are created
 	// with this matchmaking configuration. Queues can be located in any region.
 	//
@@ -10190,14 +10118,13 @@ type CreateMatchmakingConfigurationInput struct {
 	// the configuration associated with a matchmaking request or ticket.
 	//
 	// Name is a required field
-	Name *string `type:"string" required:"true"`
+	Name *string `min:"1" type:"string" required:"true"`
 
 	// SNS topic ARN that is set up to receive matchmaking notifications.
 	NotificationTarget *string `type:"string"`
 
 	// Maximum duration, in seconds, that a matchmaking ticket can remain in process
-	// before timing out. Requests that fail due to timing out can be resubmitted
-	// as needed.
+	// before timing out. Requests that time out can be resubmitted as needed.
 	//
 	// RequestTimeoutSeconds is a required field
 	RequestTimeoutSeconds *int64 `min:"1" type:"integer" required:"true"`
@@ -10207,7 +10134,7 @@ type CreateMatchmakingConfigurationInput struct {
 	// same region.
 	//
 	// RuleSetName is a required field
-	RuleSetName *string `type:"string" required:"true"`
+	RuleSetName *string `min:"1" type:"string" required:"true"`
 }
 
 // String returns the string representation
@@ -10241,6 +10168,9 @@ func (s *CreateMatchmakingConfigurationInput) Validate() error {
 	if s.Name == nil {
 		invalidParams.Add(request.NewErrParamRequired("Name"))
 	}
+	if s.Name != nil && len(*s.Name) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Name", 1))
+	}
 	if s.RequestTimeoutSeconds == nil {
 		invalidParams.Add(request.NewErrParamRequired("RequestTimeoutSeconds"))
 	}
@@ -10249,6 +10179,9 @@ func (s *CreateMatchmakingConfigurationInput) Validate() error {
 	}
 	if s.RuleSetName == nil {
 		invalidParams.Add(request.NewErrParamRequired("RuleSetName"))
+	}
+	if s.RuleSetName != nil && len(*s.RuleSetName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("RuleSetName", 1))
 	}
 	if s.GameProperties != nil {
 		for i, v := range s.GameProperties {
@@ -10282,12 +10215,6 @@ func (s *CreateMatchmakingConfigurationInput) SetAcceptanceTimeoutSeconds(v int6
 // SetAdditionalPlayerCount sets the AdditionalPlayerCount field's value.
 func (s *CreateMatchmakingConfigurationInput) SetAdditionalPlayerCount(v int64) *CreateMatchmakingConfigurationInput {
 	s.AdditionalPlayerCount = &v
-	return s
-}
-
-// SetBackfillMode sets the BackfillMode field's value.
-func (s *CreateMatchmakingConfigurationInput) SetBackfillMode(v string) *CreateMatchmakingConfigurationInput {
-	s.BackfillMode = &v
 	return s
 }
 
@@ -10378,10 +10305,10 @@ type CreateMatchmakingRuleSetInput struct {
 	// is different from the optional "name" field in the rule set body.)
 	//
 	// Name is a required field
-	Name *string `type:"string" required:"true"`
+	Name *string `min:"1" type:"string" required:"true"`
 
-	// Collection of matchmaking rules, formatted as a JSON string. Comments are
-	// not allowed in JSON, but most elements support a description field.
+	// Collection of matchmaking rules, formatted as a JSON string. Note that comments
+	// are not allowed in JSON, but most elements support a description field.
 	//
 	// RuleSetBody is a required field
 	RuleSetBody *string `min:"1" type:"string" required:"true"`
@@ -10402,6 +10329,9 @@ func (s *CreateMatchmakingRuleSetInput) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "CreateMatchmakingRuleSetInput"}
 	if s.Name == nil {
 		invalidParams.Add(request.NewErrParamRequired("Name"))
+	}
+	if s.Name != nil && len(*s.Name) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Name", 1))
 	}
 	if s.RuleSetBody == nil {
 		invalidParams.Add(request.NewErrParamRequired("RuleSetBody"))
@@ -11167,7 +11097,7 @@ type DeleteMatchmakingConfigurationInput struct {
 	// Unique identifier for a matchmaking configuration
 	//
 	// Name is a required field
-	Name *string `type:"string" required:"true"`
+	Name *string `min:"1" type:"string" required:"true"`
 }
 
 // String returns the string representation
@@ -11185,6 +11115,9 @@ func (s *DeleteMatchmakingConfigurationInput) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "DeleteMatchmakingConfigurationInput"}
 	if s.Name == nil {
 		invalidParams.Add(request.NewErrParamRequired("Name"))
+	}
+	if s.Name != nil && len(*s.Name) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Name", 1))
 	}
 
 	if invalidParams.Len() > 0 {
@@ -11221,7 +11154,7 @@ type DeleteMatchmakingRuleSetInput struct {
 	// set name is different from the optional "name" field in the rule set body.)
 	//
 	// Name is a required field
-	Name *string `type:"string" required:"true"`
+	Name *string `min:"1" type:"string" required:"true"`
 }
 
 // String returns the string representation
@@ -11239,6 +11172,9 @@ func (s *DeleteMatchmakingRuleSetInput) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "DeleteMatchmakingRuleSetInput"}
 	if s.Name == nil {
 		invalidParams.Add(request.NewErrParamRequired("Name"))
+	}
+	if s.Name != nil && len(*s.Name) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Name", 1))
 	}
 
 	if invalidParams.Len() > 0 {
@@ -12780,7 +12716,7 @@ type DescribeMatchmakingConfigurationsInput struct {
 
 	// Unique identifier for a matchmaking rule set. Use this parameter to retrieve
 	// all matchmaking configurations that use this rule set.
-	RuleSetName *string `type:"string"`
+	RuleSetName *string `min:"1" type:"string"`
 }
 
 // String returns the string representation
@@ -12801,6 +12737,9 @@ func (s *DescribeMatchmakingConfigurationsInput) Validate() error {
 	}
 	if s.NextToken != nil && len(*s.NextToken) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("NextToken", 1))
+	}
+	if s.RuleSetName != nil && len(*s.RuleSetName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("RuleSetName", 1))
 	}
 
 	if invalidParams.Len() > 0 {
@@ -14910,7 +14849,7 @@ type GameSessionQueue struct {
 
 	// Amazon Resource Name (ARN (https://docs.aws.amazon.com/AmazonS3/latest/dev/s3-arn-format.html))
 	// that is assigned to a game session queue and uniquely identifies it. Format
-	// is arn:aws:gamelift:<region>:<aws account>:gamesessionqueue/<queue name>.
+	// is arn:aws:gamelift:<region>::fleet/fleet-a1234567-b8c9-0d1e-2fa3-b45c6d7e8912.
 	GameSessionQueueArn *string `min:"1" type:"string"`
 
 	// Descriptive label that is associated with game session queue. Queue names
@@ -15928,7 +15867,7 @@ func (s *MatchedPlayerSession) SetPlayerSessionId(v string) *MatchedPlayerSessio
 type MatchmakingConfiguration struct {
 	_ struct{} `type:"structure"`
 
-	// Flag that determines whether a match that was created with this configuration
+	// Flag that determines whether or not a match that was created with this configuration
 	// must be accepted by the matched players. To require acceptance, set to TRUE.
 	AcceptanceRequired *bool `type:"boolean"`
 
@@ -15943,18 +15882,11 @@ type MatchmakingConfiguration struct {
 	// for the match.
 	AdditionalPlayerCount *int64 `type:"integer"`
 
-	// Method used to backfill game sessions created with this matchmaking configuration.
-	// MANUAL indicates that the game makes backfill requests or does not use the
-	// match backfill feature. AUTOMATIC indicates that GameLift creates StartMatchBackfill
-	// requests whenever a game session has one or more open slots. Learn more about
-	// manual and automatic backfill in Backfill Existing Games with FlexMatch (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-backfill.html).
-	BackfillMode *string `type:"string" enum:"BackfillMode"`
-
 	// Time stamp indicating when this data object was created. Format is a number
 	// expressed in Unix time as milliseconds (for example "1469498468.057").
 	CreationTime *time.Time `type:"timestamp"`
 
-	// Information to attach to all events related to the matchmaking configuration.
+	// Information to attached to all events related to the matchmaking configuration.
 	CustomEventData *string `type:"string"`
 
 	// Descriptive label that is associated with matchmaking configuration.
@@ -15976,27 +15908,26 @@ type MatchmakingConfiguration struct {
 
 	// Amazon Resource Name (ARN (https://docs.aws.amazon.com/AmazonS3/latest/dev/s3-arn-format.html))
 	// that is assigned to a game session queue and uniquely identifies it. Format
-	// is arn:aws:gamelift:<region>:<aws account>:gamesessionqueue/<queue name>.
+	// is arn:aws:gamelift:<region>::fleet/fleet-a1234567-b8c9-0d1e-2fa3-b45c6d7e8912.
 	// These queues are used when placing game sessions for matches that are created
 	// with this matchmaking configuration. Queues can be located in any region.
 	GameSessionQueueArns []*string `type:"list"`
 
 	// Unique identifier for a matchmaking configuration. This name is used to identify
 	// the configuration associated with a matchmaking request or ticket.
-	Name *string `type:"string"`
+	Name *string `min:"1" type:"string"`
 
 	// SNS topic ARN that is set up to receive matchmaking notifications.
 	NotificationTarget *string `type:"string"`
 
 	// Maximum duration, in seconds, that a matchmaking ticket can remain in process
-	// before timing out. Requests that fail due to timing out can be resubmitted
-	// as needed.
+	// before timing out. Requests that time out can be resubmitted as needed.
 	RequestTimeoutSeconds *int64 `min:"1" type:"integer"`
 
 	// Unique identifier for a matchmaking rule set to use with this configuration.
 	// A matchmaking configuration can only use rule sets that are defined in the
 	// same region.
-	RuleSetName *string `type:"string"`
+	RuleSetName *string `min:"1" type:"string"`
 }
 
 // String returns the string representation
@@ -16024,12 +15955,6 @@ func (s *MatchmakingConfiguration) SetAcceptanceTimeoutSeconds(v int64) *Matchma
 // SetAdditionalPlayerCount sets the AdditionalPlayerCount field's value.
 func (s *MatchmakingConfiguration) SetAdditionalPlayerCount(v int64) *MatchmakingConfiguration {
 	s.AdditionalPlayerCount = &v
-	return s
-}
-
-// SetBackfillMode sets the BackfillMode field's value.
-func (s *MatchmakingConfiguration) SetBackfillMode(v string) *MatchmakingConfiguration {
-	s.BackfillMode = &v
 	return s
 }
 
@@ -16094,9 +16019,9 @@ func (s *MatchmakingConfiguration) SetRuleSetName(v string) *MatchmakingConfigur
 }
 
 // Set of rule statements, used with FlexMatch, that determine how to build
-// your player matches. Each rule set describes a type of group to be created
-// and defines the parameters for acceptable player matches. Rule sets are used
-// in MatchmakingConfiguration objects.
+// a certain kind of player match. Each rule set describes a type of group to
+// be created and defines the parameters for acceptable player matches. Rule
+// sets are used in MatchmakingConfiguration objects.
 //
 // A rule set may define the following elements for a match. For detailed information
 // and examples showing how to construct a rule set, see Build a FlexMatch Rule
@@ -16133,14 +16058,14 @@ type MatchmakingRuleSet struct {
 	// expressed in Unix time as milliseconds (for example "1469498468.057").
 	CreationTime *time.Time `type:"timestamp"`
 
-	// Collection of matchmaking rules, formatted as a JSON string. Comments are
-	// not allowed in JSON, but most elements support a description field.
+	// Collection of matchmaking rules, formatted as a JSON string. (Note that comments14
+	// are not allowed in JSON, but most elements support a description field.)
 	//
 	// RuleSetBody is a required field
 	RuleSetBody *string `min:"1" type:"string" required:"true"`
 
 	// Unique identifier for a matchmaking rule set
-	RuleSetName *string `type:"string"`
+	RuleSetName *string `min:"1" type:"string"`
 }
 
 // String returns the string representation
@@ -16181,7 +16106,7 @@ type MatchmakingTicket struct {
 	// Name of the MatchmakingConfiguration that is used with this ticket. Matchmaking
 	// configurations determine how players are grouped into a match and how a new
 	// game session is created for the match.
-	ConfigurationName *string `type:"string"`
+	ConfigurationName *string `min:"1" type:"string"`
 
 	// Time stamp indicating when this matchmaking request stopped being processed
 	// due to success, failure, or cancellation. Format is a number expressed in
@@ -16225,11 +16150,10 @@ type MatchmakingTicket struct {
 	//    host the players. A ticket in this state contains the necessary connection
 	//    information for players.
 	//
-	//    * FAILED -- The matchmaking request was not completed.
+	//    * FAILED -- The matchmaking request was not completed. Tickets with players
+	//    who fail to accept a proposed match are placed in FAILED status.
 	//
-	//    * CANCELLED -- The matchmaking request was canceled. This may be the result
-	//    of a call to StopMatchmaking or a proposed match that one or more players
-	//    failed to accept.
+	//    * CANCELLED -- The matchmaking request was canceled with a call to StopMatchmaking.
 	//
 	//    * TIMED_OUT -- The matchmaking request was not successful within the duration
 	//    specified in the matchmaking configuration.
@@ -16248,7 +16172,7 @@ type MatchmakingTicket struct {
 	StatusReason *string `type:"string"`
 
 	// Unique identifier for a matchmaking ticket.
-	TicketId *string `type:"string"`
+	TicketId *string `min:"1" type:"string"`
 }
 
 // String returns the string representation
@@ -17115,17 +17039,20 @@ func (s *ResourceCreationLimitPolicy) SetPolicyPeriodInMinutes(v int64) *Resourc
 
 // Routing configuration for a fleet alias.
 //
-//    * CreateAlias
+//    * CreateFleet
 //
-//    * ListAliases
+//    * ListFleets
 //
-//    * DescribeAlias
+//    * DeleteFleet
 //
-//    * UpdateAlias
+//    * Describe fleets: DescribeFleetAttributes DescribeFleetCapacity DescribeFleetPortSettings
+//    DescribeFleetUtilization DescribeRuntimeConfiguration DescribeEC2InstanceLimits
+//    DescribeFleetEvents
 //
-//    * DeleteAlias
+//    * Update fleets: UpdateFleetAttributes UpdateFleetCapacity UpdateFleetPortSettings
+//    UpdateRuntimeConfiguration
 //
-//    * ResolveAlias
+//    * Manage fleet actions: StartFleetActions StopFleetActions
 type RoutingStrategy struct {
 	_ struct{} `type:"structure"`
 
@@ -18184,7 +18111,7 @@ type StartMatchBackfillInput struct {
 	// parameter.
 	//
 	// ConfigurationName is a required field
-	ConfigurationName *string `type:"string" required:"true"`
+	ConfigurationName *string `min:"1" type:"string" required:"true"`
 
 	// Amazon Resource Name (ARN (https://docs.aws.amazon.com/AmazonS3/latest/dev/s3-arn-format.html))
 	// that is assigned to a game session and uniquely identifies it.
@@ -18211,7 +18138,7 @@ type StartMatchBackfillInput struct {
 	// Unique identifier for a matchmaking ticket. If no ticket ID is specified
 	// here, Amazon GameLift will generate one in the form of a UUID. Use this identifier
 	// to track the match backfill ticket status and retrieve match results.
-	TicketId *string `type:"string"`
+	TicketId *string `min:"1" type:"string"`
 }
 
 // String returns the string representation
@@ -18230,6 +18157,9 @@ func (s *StartMatchBackfillInput) Validate() error {
 	if s.ConfigurationName == nil {
 		invalidParams.Add(request.NewErrParamRequired("ConfigurationName"))
 	}
+	if s.ConfigurationName != nil && len(*s.ConfigurationName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ConfigurationName", 1))
+	}
 	if s.GameSessionArn == nil {
 		invalidParams.Add(request.NewErrParamRequired("GameSessionArn"))
 	}
@@ -18238,6 +18168,9 @@ func (s *StartMatchBackfillInput) Validate() error {
 	}
 	if s.Players == nil {
 		invalidParams.Add(request.NewErrParamRequired("Players"))
+	}
+	if s.TicketId != nil && len(*s.TicketId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("TicketId", 1))
 	}
 	if s.Players != nil {
 		for i, v := range s.Players {
@@ -18314,7 +18247,7 @@ type StartMatchmakingInput struct {
 	// configurations must exist in the same region as this request.
 	//
 	// ConfigurationName is a required field
-	ConfigurationName *string `type:"string" required:"true"`
+	ConfigurationName *string `min:"1" type:"string" required:"true"`
 
 	// Information on each player to be matched. This information must include a
 	// player ID, and may contain player attributes and latency data to be used
@@ -18327,7 +18260,7 @@ type StartMatchmakingInput struct {
 	// Unique identifier for a matchmaking ticket. If no ticket ID is specified
 	// here, Amazon GameLift will generate one in the form of a UUID. Use this identifier
 	// to track the matchmaking ticket status and retrieve match results.
-	TicketId *string `type:"string"`
+	TicketId *string `min:"1" type:"string"`
 }
 
 // String returns the string representation
@@ -18346,8 +18279,14 @@ func (s *StartMatchmakingInput) Validate() error {
 	if s.ConfigurationName == nil {
 		invalidParams.Add(request.NewErrParamRequired("ConfigurationName"))
 	}
+	if s.ConfigurationName != nil && len(*s.ConfigurationName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("ConfigurationName", 1))
+	}
 	if s.Players == nil {
 		invalidParams.Add(request.NewErrParamRequired("Players"))
+	}
+	if s.TicketId != nil && len(*s.TicketId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("TicketId", 1))
 	}
 	if s.Players != nil {
 		for i, v := range s.Players {
@@ -18553,7 +18492,7 @@ type StopMatchmakingInput struct {
 	// Unique identifier for a matchmaking ticket.
 	//
 	// TicketId is a required field
-	TicketId *string `type:"string" required:"true"`
+	TicketId *string `min:"1" type:"string" required:"true"`
 }
 
 // String returns the string representation
@@ -18571,6 +18510,9 @@ func (s *StopMatchmakingInput) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "StopMatchmakingInput"}
 	if s.TicketId == nil {
 		invalidParams.Add(request.NewErrParamRequired("TicketId"))
+	}
+	if s.TicketId != nil && len(*s.TicketId) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("TicketId", 1))
 	}
 
 	if invalidParams.Len() > 0 {
@@ -19399,7 +19341,7 @@ func (s *UpdateGameSessionQueueOutput) SetGameSessionQueue(v *GameSessionQueue) 
 type UpdateMatchmakingConfigurationInput struct {
 	_ struct{} `type:"structure"`
 
-	// Flag that determines whether a match that was created with this configuration
+	// Flag that determines whether or not a match that was created with this configuration
 	// must be accepted by the matched players. To require acceptance, set to TRUE.
 	AcceptanceRequired *bool `type:"boolean"`
 
@@ -19414,15 +19356,7 @@ type UpdateMatchmakingConfigurationInput struct {
 	// for the match.
 	AdditionalPlayerCount *int64 `type:"integer"`
 
-	// Method used to backfill game sessions created with this matchmaking configuration.
-	// Specify MANUAL when your game manages backfill requests manually or does
-	// not use the match backfill feature. Specify AUTOMATIC to have GameLift create
-	// a StartMatchBackfill request whenever a game session has one or more open
-	// slots. Learn more about manual and automatic backfill in Backfill Existing
-	// Games with FlexMatch (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-backfill.html).
-	BackfillMode *string `type:"string" enum:"BackfillMode"`
-
-	// Information to add to all events related to the matchmaking configuration.
+	// Information to attached to all events related to the matchmaking configuration.
 	CustomEventData *string `type:"string"`
 
 	// Descriptive label that is associated with matchmaking configuration.
@@ -19444,7 +19378,7 @@ type UpdateMatchmakingConfigurationInput struct {
 
 	// Amazon Resource Name (ARN (https://docs.aws.amazon.com/AmazonS3/latest/dev/s3-arn-format.html))
 	// that is assigned to a game session queue and uniquely identifies it. Format
-	// is arn:aws:gamelift:<region>:<aws account>:gamesessionqueue/<queue name>.
+	// is arn:aws:gamelift:<region>::fleet/fleet-a1234567-b8c9-0d1e-2fa3-b45c6d7e8912.
 	// These queues are used when placing game sessions for matches that are created
 	// with this matchmaking configuration. Queues can be located in any region.
 	GameSessionQueueArns []*string `type:"list"`
@@ -19452,7 +19386,7 @@ type UpdateMatchmakingConfigurationInput struct {
 	// Unique identifier for a matchmaking configuration to update.
 	//
 	// Name is a required field
-	Name *string `type:"string" required:"true"`
+	Name *string `min:"1" type:"string" required:"true"`
 
 	// SNS topic ARN that is set up to receive matchmaking notifications. See Setting
 	// up Notifications for Matchmaking (https://docs.aws.amazon.com/gamelift/latest/developerguide/match-notification.html)
@@ -19460,14 +19394,13 @@ type UpdateMatchmakingConfigurationInput struct {
 	NotificationTarget *string `type:"string"`
 
 	// Maximum duration, in seconds, that a matchmaking ticket can remain in process
-	// before timing out. Requests that fail due to timing out can be resubmitted
-	// as needed.
+	// before timing out. Requests that time out can be resubmitted as needed.
 	RequestTimeoutSeconds *int64 `min:"1" type:"integer"`
 
 	// Unique identifier for a matchmaking rule set to use with this configuration.
 	// A matchmaking configuration can only use rule sets that are defined in the
 	// same region.
-	RuleSetName *string `type:"string"`
+	RuleSetName *string `min:"1" type:"string"`
 }
 
 // String returns the string representation
@@ -19495,8 +19428,14 @@ func (s *UpdateMatchmakingConfigurationInput) Validate() error {
 	if s.Name == nil {
 		invalidParams.Add(request.NewErrParamRequired("Name"))
 	}
+	if s.Name != nil && len(*s.Name) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Name", 1))
+	}
 	if s.RequestTimeoutSeconds != nil && *s.RequestTimeoutSeconds < 1 {
 		invalidParams.Add(request.NewErrParamMinValue("RequestTimeoutSeconds", 1))
+	}
+	if s.RuleSetName != nil && len(*s.RuleSetName) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("RuleSetName", 1))
 	}
 	if s.GameProperties != nil {
 		for i, v := range s.GameProperties {
@@ -19530,12 +19469,6 @@ func (s *UpdateMatchmakingConfigurationInput) SetAcceptanceTimeoutSeconds(v int6
 // SetAdditionalPlayerCount sets the AdditionalPlayerCount field's value.
 func (s *UpdateMatchmakingConfigurationInput) SetAdditionalPlayerCount(v int64) *UpdateMatchmakingConfigurationInput {
 	s.AdditionalPlayerCount = &v
-	return s
-}
-
-// SetBackfillMode sets the BackfillMode field's value.
-func (s *UpdateMatchmakingConfigurationInput) SetBackfillMode(v string) *UpdateMatchmakingConfigurationInput {
-	s.BackfillMode = &v
 	return s
 }
 
@@ -19882,7 +19815,7 @@ func (s *ValidateMatchmakingRuleSetInput) SetRuleSetBody(v string) *ValidateMatc
 type ValidateMatchmakingRuleSetOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Response indicating whether the rule set is valid.
+	// Response indicating whether or not the rule set is valid.
 	Valid *bool `type:"boolean"`
 }
 
@@ -20121,14 +20054,6 @@ const (
 
 	// AcceptanceTypeReject is a AcceptanceType enum value
 	AcceptanceTypeReject = "REJECT"
-)
-
-const (
-	// BackfillModeAutomatic is a BackfillMode enum value
-	BackfillModeAutomatic = "AUTOMATIC"
-
-	// BackfillModeManual is a BackfillMode enum value
-	BackfillModeManual = "MANUAL"
 )
 
 const (

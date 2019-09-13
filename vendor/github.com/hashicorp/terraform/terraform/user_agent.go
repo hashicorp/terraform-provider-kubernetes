@@ -6,7 +6,8 @@ import (
 
 // Generate a UserAgent string
 //
-// Deprecated: Use httpclient.UserAgent(version) instead
+// Deprecated: Use httpclient.UserAgentString if you are setting your
+// own User-Agent header.
 func UserAgentString() string {
 	return httpclient.UserAgentString()
 }

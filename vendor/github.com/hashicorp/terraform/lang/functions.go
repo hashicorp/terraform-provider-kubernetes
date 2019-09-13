@@ -3,7 +3,6 @@ package lang
 import (
 	"fmt"
 
-	ctyyaml "github.com/zclconf/go-cty-yaml"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/function"
 	"github.com/zclconf/go-cty/cty/function/stdlib"
@@ -31,7 +30,6 @@ func (s *Scope) Functions() map[string]function.Function {
 
 		s.funcs = map[string]function.Function{
 			"abs":              stdlib.AbsoluteFunc,
-			"abspath":          funcs.AbsPathFunc,
 			"basename":         funcs.BasenameFunc,
 			"base64decode":     funcs.Base64DecodeFunc,
 			"base64encode":     funcs.Base64EncodeFunc,
@@ -56,7 +54,6 @@ func (s *Scope) Functions() map[string]function.Function {
 			"chunklist":        funcs.ChunklistFunc,
 			"file":             funcs.MakeFileFunc(s.BaseDir, false),
 			"fileexists":       funcs.MakeFileExistsFunc(s.BaseDir),
-			"fileset":          funcs.MakeFileSetFunc(s.BaseDir),
 			"filebase64":       funcs.MakeFileFunc(s.BaseDir, true),
 			"filebase64sha256": funcs.MakeFileBase64Sha256Func(s.BaseDir),
 			"filebase64sha512": funcs.MakeFileBase64Sha512Func(s.BaseDir),
@@ -88,9 +85,6 @@ func (s *Scope) Functions() map[string]function.Function {
 			"min":              stdlib.MinFunc,
 			"pathexpand":       funcs.PathExpandFunc,
 			"pow":              funcs.PowFunc,
-			"range":            stdlib.RangeFunc,
-			"regex":            stdlib.RegexFunc,
-			"regexall":         stdlib.RegexAllFunc,
 			"replace":          funcs.ReplaceFunc,
 			"reverse":          funcs.ReverseFunc,
 			"rsadecrypt":       funcs.RsaDecryptFunc,
@@ -120,10 +114,7 @@ func (s *Scope) Functions() map[string]function.Function {
 			"upper":            stdlib.UpperFunc,
 			"urlencode":        funcs.URLEncodeFunc,
 			"uuid":             funcs.UUIDFunc,
-			"uuidv5":           funcs.UUIDV5Func,
 			"values":           funcs.ValuesFunc,
-			"yamldecode":       ctyyaml.YAMLDecodeFunc,
-			"yamlencode":       ctyyaml.YAMLEncodeFunc,
 			"zipmap":           funcs.ZipmapFunc,
 		}
 

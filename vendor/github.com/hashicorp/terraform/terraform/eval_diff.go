@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"reflect"
 	"strings"
 
 	"github.com/hashicorp/hcl2/hcl"
@@ -133,8 +134,7 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 		// Should be caught during validation, so we don't bother with a pretty error here
 		return nil, fmt.Errorf("provider does not support resource type %q", n.Addr.Resource.Type)
 	}
-	forEach, _ := evaluateResourceForEachExpression(n.Config.ForEach, ctx)
-	keyData := EvalDataForInstanceKey(n.Addr.Key, forEach)
+	keyData := EvalDataForInstanceKey(n.Addr.Key)
 	configVal, _, configDiags := ctx.EvaluateBlock(config.Config, schema, nil, keyData)
 	diags = diags.Append(configDiags)
 	if configDiags.HasErrors() {
@@ -172,20 +172,6 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	log.Printf("[TRACE] Re-validating config for %q", n.Addr.Absolute(ctx.Path()))
-	// Allow the provider to validate the final set of values.
-	// The config was statically validated early on, but there may have been
-	// unknown values which the provider could not validate at the time.
-	validateResp := provider.ValidateResourceTypeConfig(
-		providers.ValidateResourceTypeConfigRequest{
-			TypeName: n.Addr.Resource.Type,
-			Config:   configVal,
-		},
-	)
-	if validateResp.Diagnostics.HasErrors() {
-		return nil, validateResp.Diagnostics.InConfigBody(config.Config).Err()
 	}
 
 	// The provider gets an opportunity to customize the proposed new value,
@@ -382,7 +368,7 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 		}
 		plannedNewVal = resp.PlannedState
 		plannedPrivate = resp.PlannedPrivate
-		for _, err := range plannedNewVal.Type().TestConformance(schema.ImpliedType()) {
+		for _, err := range schema.ImpliedType().TestConformance(plannedNewVal.Type()) {
 			diags = diags.Append(tfdiags.Sourceless(
 				tfdiags.Error,
 				"Provider produced invalid plan",
@@ -462,9 +448,8 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 			// must _also_ record the returned change in the active plan,
 			// which the expression evaluator will use in preference to this
 			// incomplete value recorded in the state.
-			Status:  states.ObjectPlanned,
-			Value:   plannedNewVal,
-			Private: plannedPrivate,
+			Status: states.ObjectPlanned,
+			Value:  plannedNewVal,
 		}
 	}
 
@@ -532,7 +517,7 @@ func processIgnoreChangesIndividual(prior, proposed cty.Value, ignoreChanges []h
 		// away any deeper values we already produced at that point.
 		var ignoreTraversal hcl.Traversal
 		for i, candidate := range ignoreChangesPath {
-			if path.Equals(candidate) {
+			if reflect.DeepEqual(path, candidate) {
 				ignoreTraversal = ignoreChanges[i]
 			}
 		}
@@ -805,7 +790,6 @@ func (n *EvalDiffDestroy) Eval(ctx EvalContext) (interface{}, error) {
 			Before: state.Value,
 			After:  cty.NullVal(cty.DynamicPseudoType),
 		},
-		Private:      state.Private,
 		ProviderAddr: n.ProviderAddr,
 	}
 

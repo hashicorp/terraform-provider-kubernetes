@@ -204,9 +204,6 @@ func (i *ProviderInstaller) Get(provider string, req Constraints) (PluginMeta, t
 	}
 
 	downloadURLs, err := i.listProviderDownloadURLs(providerSource, versionMeta.Version)
-	if err != nil {
-		return PluginMeta{}, diags, err
-	}
 	providerURL := downloadURLs.DownloadURL
 
 	if !i.SkipVerify {

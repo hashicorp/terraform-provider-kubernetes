@@ -3181,8 +3181,6 @@ type DescribeSecretOutput struct {
 	// The user-provided friendly name of the secret.
 	Name *string `min:"1" type:"string"`
 
-	OwningService *string `min:"1" type:"string"`
-
 	// Specifies whether automatic rotation is enabled for this secret.
 	//
 	// To enable rotation, use RotateSecret with AutomaticallyRotateAfterDays set
@@ -3265,12 +3263,6 @@ func (s *DescribeSecretOutput) SetLastRotatedDate(v time.Time) *DescribeSecretOu
 // SetName sets the Name field's value.
 func (s *DescribeSecretOutput) SetName(v string) *DescribeSecretOutput {
 	s.Name = &v
-	return s
-}
-
-// SetOwningService sets the OwningService field's value.
-func (s *DescribeSecretOutput) SetOwningService(v string) *DescribeSecretOutput {
-	s.OwningService = &v
 	return s
 }
 
@@ -3427,7 +3419,7 @@ type GetRandomPasswordOutput struct {
 	_ struct{} `type:"structure"`
 
 	// A string with the generated password.
-	RandomPassword *string `type:"string" sensitive:"true"`
+	RandomPassword *string `type:"string"`
 }
 
 // String returns the string representation
@@ -4655,8 +4647,6 @@ type SecretListEntry struct {
 	// in the folder prod.
 	Name *string `min:"1" type:"string"`
 
-	OwningService *string `min:"1" type:"string"`
-
 	// Indicated whether automatic, scheduled rotation is enabled for this secret.
 	RotationEnabled *bool `type:"boolean"`
 
@@ -4736,12 +4726,6 @@ func (s *SecretListEntry) SetLastRotatedDate(v time.Time) *SecretListEntry {
 // SetName sets the Name field's value.
 func (s *SecretListEntry) SetName(v string) *SecretListEntry {
 	s.Name = &v
-	return s
-}
-
-// SetOwningService sets the OwningService field's value.
-func (s *SecretListEntry) SetOwningService(v string) *SecretListEntry {
-	s.OwningService = &v
 	return s
 }
 

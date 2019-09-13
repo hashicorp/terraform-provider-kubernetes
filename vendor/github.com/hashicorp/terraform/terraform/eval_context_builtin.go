@@ -225,12 +225,14 @@ func (ctx *BuiltinEvalContext) InitProvisioner(n string) (provisioners.Interface
 	ctx.ProvisionerLock.Lock()
 	defer ctx.ProvisionerLock.Unlock()
 
-	p, err := ctx.Components.ResourceProvisioner(n, "")
+	key := PathObjectCacheKey(ctx.Path(), n)
+
+	p, err := ctx.Components.ResourceProvisioner(n, key)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx.ProvisionerCache[n] = p
+	ctx.ProvisionerCache[key] = p
 
 	return p, nil
 }
@@ -241,7 +243,8 @@ func (ctx *BuiltinEvalContext) Provisioner(n string) provisioners.Interface {
 	ctx.ProvisionerLock.Lock()
 	defer ctx.ProvisionerLock.Unlock()
 
-	return ctx.ProvisionerCache[n]
+	key := PathObjectCacheKey(ctx.Path(), n)
+	return ctx.ProvisionerCache[key]
 }
 
 func (ctx *BuiltinEvalContext) ProvisionerSchema(n string) *configschema.Block {
@@ -256,7 +259,9 @@ func (ctx *BuiltinEvalContext) CloseProvisioner(n string) error {
 	ctx.ProvisionerLock.Lock()
 	defer ctx.ProvisionerLock.Unlock()
 
-	prov := ctx.ProvisionerCache[n]
+	key := PathObjectCacheKey(ctx.Path(), n)
+
+	prov := ctx.ProvisionerCache[key]
 	if prov != nil {
 		return prov.Close()
 	}

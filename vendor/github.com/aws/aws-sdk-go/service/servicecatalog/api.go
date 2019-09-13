@@ -1055,11 +1055,6 @@ func (c *ServiceCatalog) CreatePortfolioShareRequest(input *CreatePortfolioShare
 //   * ErrCodeOperationNotSupportedException "OperationNotSupportedException"
 //   The operation is not supported.
 //
-//   * ErrCodeInvalidStateException "InvalidStateException"
-//   An attempt was made to modify a resource that is in a state that is not valid.
-//   Check your resources to ensure that they are in valid states before retrying
-//   the operation.
-//
 // See also, https://docs.aws.amazon.com/goto/WebAPI/servicecatalog-2015-12-10/CreatePortfolioShare
 func (c *ServiceCatalog) CreatePortfolioShare(input *CreatePortfolioShareInput) (*CreatePortfolioShareOutput, error) {
 	req, out := c.CreatePortfolioShareRequest(input)
@@ -1772,11 +1767,6 @@ func (c *ServiceCatalog) DeletePortfolioShareRequest(input *DeletePortfolioShare
 //
 //   * ErrCodeOperationNotSupportedException "OperationNotSupportedException"
 //   The operation is not supported.
-//
-//   * ErrCodeInvalidStateException "InvalidStateException"
-//   An attempt was made to modify a resource that is in a state that is not valid.
-//   Check your resources to ensure that they are in valid states before retrying
-//   the operation.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/servicecatalog-2015-12-10/DeletePortfolioShare
 func (c *ServiceCatalog) DeletePortfolioShare(input *DeletePortfolioShareInput) (*DeletePortfolioShareOutput, error) {
@@ -3305,86 +3295,6 @@ func (c *ServiceCatalog) DescribeServiceAction(input *DescribeServiceActionInput
 // for more information on using Contexts.
 func (c *ServiceCatalog) DescribeServiceActionWithContext(ctx aws.Context, input *DescribeServiceActionInput, opts ...request.Option) (*DescribeServiceActionOutput, error) {
 	req, out := c.DescribeServiceActionRequest(input)
-	req.SetContext(ctx)
-	req.ApplyOptions(opts...)
-	return out, req.Send()
-}
-
-const opDescribeServiceActionExecutionParameters = "DescribeServiceActionExecutionParameters"
-
-// DescribeServiceActionExecutionParametersRequest generates a "aws/request.Request" representing the
-// client's request for the DescribeServiceActionExecutionParameters operation. The "output" return
-// value will be populated with the request's response once the request completes
-// successfully.
-//
-// Use "Send" method on the returned Request to send the API call to the service.
-// the "output" return value is not valid until after Send returns without error.
-//
-// See DescribeServiceActionExecutionParameters for more information on using the DescribeServiceActionExecutionParameters
-// API call, and error handling.
-//
-// This method is useful when you want to inject custom logic or configuration
-// into the SDK's request lifecycle. Such as custom headers, or retry logic.
-//
-//
-//    // Example sending a request using the DescribeServiceActionExecutionParametersRequest method.
-//    req, resp := client.DescribeServiceActionExecutionParametersRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
-//
-// See also, https://docs.aws.amazon.com/goto/WebAPI/servicecatalog-2015-12-10/DescribeServiceActionExecutionParameters
-func (c *ServiceCatalog) DescribeServiceActionExecutionParametersRequest(input *DescribeServiceActionExecutionParametersInput) (req *request.Request, output *DescribeServiceActionExecutionParametersOutput) {
-	op := &request.Operation{
-		Name:       opDescribeServiceActionExecutionParameters,
-		HTTPMethod: "POST",
-		HTTPPath:   "/",
-	}
-
-	if input == nil {
-		input = &DescribeServiceActionExecutionParametersInput{}
-	}
-
-	output = &DescribeServiceActionExecutionParametersOutput{}
-	req = c.newRequest(op, input, output)
-	return
-}
-
-// DescribeServiceActionExecutionParameters API operation for AWS Service Catalog.
-//
-// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
-// with awserr.Error's Code and Message methods to get detailed information about
-// the error.
-//
-// See the AWS API reference guide for AWS Service Catalog's
-// API operation DescribeServiceActionExecutionParameters for usage and error information.
-//
-// Returned Error Codes:
-//   * ErrCodeInvalidParametersException "InvalidParametersException"
-//   One or more parameters provided to the operation are not valid.
-//
-//   * ErrCodeResourceNotFoundException "ResourceNotFoundException"
-//   The specified resource was not found.
-//
-// See also, https://docs.aws.amazon.com/goto/WebAPI/servicecatalog-2015-12-10/DescribeServiceActionExecutionParameters
-func (c *ServiceCatalog) DescribeServiceActionExecutionParameters(input *DescribeServiceActionExecutionParametersInput) (*DescribeServiceActionExecutionParametersOutput, error) {
-	req, out := c.DescribeServiceActionExecutionParametersRequest(input)
-	return out, req.Send()
-}
-
-// DescribeServiceActionExecutionParametersWithContext is the same as DescribeServiceActionExecutionParameters with the addition of
-// the ability to pass a context and additional request options.
-//
-// See DescribeServiceActionExecutionParameters for details on how to use this API operation.
-//
-// The context must be non-nil and will be used for request cancellation. If
-// the context is nil a panic will occur. In the future the SDK may create
-// sub-contexts for http.Requests. See https://golang.org/pkg/context/
-// for more information on using Contexts.
-func (c *ServiceCatalog) DescribeServiceActionExecutionParametersWithContext(ctx aws.Context, input *DescribeServiceActionExecutionParametersInput, opts ...request.Option) (*DescribeServiceActionExecutionParametersOutput, error) {
-	req, out := c.DescribeServiceActionExecutionParametersRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -6320,90 +6230,6 @@ func (c *ServiceCatalog) ListServiceActionsForProvisioningArtifactPagesWithConte
 		cont = fn(p.Page().(*ListServiceActionsForProvisioningArtifactOutput), !p.HasNextPage())
 	}
 	return p.Err()
-}
-
-const opListStackInstancesForProvisionedProduct = "ListStackInstancesForProvisionedProduct"
-
-// ListStackInstancesForProvisionedProductRequest generates a "aws/request.Request" representing the
-// client's request for the ListStackInstancesForProvisionedProduct operation. The "output" return
-// value will be populated with the request's response once the request completes
-// successfully.
-//
-// Use "Send" method on the returned Request to send the API call to the service.
-// the "output" return value is not valid until after Send returns without error.
-//
-// See ListStackInstancesForProvisionedProduct for more information on using the ListStackInstancesForProvisionedProduct
-// API call, and error handling.
-//
-// This method is useful when you want to inject custom logic or configuration
-// into the SDK's request lifecycle. Such as custom headers, or retry logic.
-//
-//
-//    // Example sending a request using the ListStackInstancesForProvisionedProductRequest method.
-//    req, resp := client.ListStackInstancesForProvisionedProductRequest(params)
-//
-//    err := req.Send()
-//    if err == nil { // resp is now filled
-//        fmt.Println(resp)
-//    }
-//
-// See also, https://docs.aws.amazon.com/goto/WebAPI/servicecatalog-2015-12-10/ListStackInstancesForProvisionedProduct
-func (c *ServiceCatalog) ListStackInstancesForProvisionedProductRequest(input *ListStackInstancesForProvisionedProductInput) (req *request.Request, output *ListStackInstancesForProvisionedProductOutput) {
-	op := &request.Operation{
-		Name:       opListStackInstancesForProvisionedProduct,
-		HTTPMethod: "POST",
-		HTTPPath:   "/",
-	}
-
-	if input == nil {
-		input = &ListStackInstancesForProvisionedProductInput{}
-	}
-
-	output = &ListStackInstancesForProvisionedProductOutput{}
-	req = c.newRequest(op, input, output)
-	return
-}
-
-// ListStackInstancesForProvisionedProduct API operation for AWS Service Catalog.
-//
-// Returns summary information about stack instances that are associated with
-// the specified CFN_STACKSET type provisioned product. You can filter for stack
-// instances that are associated with a specific AWS account name or region.
-//
-// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
-// with awserr.Error's Code and Message methods to get detailed information about
-// the error.
-//
-// See the AWS API reference guide for AWS Service Catalog's
-// API operation ListStackInstancesForProvisionedProduct for usage and error information.
-//
-// Returned Error Codes:
-//   * ErrCodeInvalidParametersException "InvalidParametersException"
-//   One or more parameters provided to the operation are not valid.
-//
-//   * ErrCodeResourceNotFoundException "ResourceNotFoundException"
-//   The specified resource was not found.
-//
-// See also, https://docs.aws.amazon.com/goto/WebAPI/servicecatalog-2015-12-10/ListStackInstancesForProvisionedProduct
-func (c *ServiceCatalog) ListStackInstancesForProvisionedProduct(input *ListStackInstancesForProvisionedProductInput) (*ListStackInstancesForProvisionedProductOutput, error) {
-	req, out := c.ListStackInstancesForProvisionedProductRequest(input)
-	return out, req.Send()
-}
-
-// ListStackInstancesForProvisionedProductWithContext is the same as ListStackInstancesForProvisionedProduct with the addition of
-// the ability to pass a context and additional request options.
-//
-// See ListStackInstancesForProvisionedProduct for details on how to use this API operation.
-//
-// The context must be non-nil and will be used for request cancellation. If
-// the context is nil a panic will occur. In the future the SDK may create
-// sub-contexts for http.Requests. See https://golang.org/pkg/context/
-// for more information on using Contexts.
-func (c *ServiceCatalog) ListStackInstancesForProvisionedProductWithContext(ctx aws.Context, input *ListStackInstancesForProvisionedProductInput, opts ...request.Option) (*ListStackInstancesForProvisionedProductOutput, error) {
-	req, out := c.ListStackInstancesForProvisionedProductRequest(input)
-	req.SetContext(ctx)
-	req.ApplyOptions(opts...)
-	return out, req.Send()
 }
 
 const opListTagOptions = "ListTagOptions"
@@ -9777,10 +9603,6 @@ type CreateProvisionedProductPlanInput struct {
 	ProvisioningParameters []*UpdateProvisioningParameter `type:"list"`
 
 	// One or more tags.
-	//
-	// If the plan is for an existing provisioned product, the product must have
-	// a RESOURCE_UPDATE constraint with TagUpdatesOnProvisionedProduct set to ALLOWED
-	// to allow tag updates.
 	Tags []*Tag `type:"list"`
 }
 
@@ -12244,90 +12066,6 @@ func (s *DescribeRecordOutput) SetRecordOutputs(v []*RecordOutput) *DescribeReco
 	return s
 }
 
-type DescribeServiceActionExecutionParametersInput struct {
-	_ struct{} `type:"structure"`
-
-	AcceptLanguage *string `type:"string"`
-
-	// ProvisionedProductId is a required field
-	ProvisionedProductId *string `min:"1" type:"string" required:"true"`
-
-	// ServiceActionId is a required field
-	ServiceActionId *string `min:"1" type:"string" required:"true"`
-}
-
-// String returns the string representation
-func (s DescribeServiceActionExecutionParametersInput) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s DescribeServiceActionExecutionParametersInput) GoString() string {
-	return s.String()
-}
-
-// Validate inspects the fields of the type to determine if they are valid.
-func (s *DescribeServiceActionExecutionParametersInput) Validate() error {
-	invalidParams := request.ErrInvalidParams{Context: "DescribeServiceActionExecutionParametersInput"}
-	if s.ProvisionedProductId == nil {
-		invalidParams.Add(request.NewErrParamRequired("ProvisionedProductId"))
-	}
-	if s.ProvisionedProductId != nil && len(*s.ProvisionedProductId) < 1 {
-		invalidParams.Add(request.NewErrParamMinLen("ProvisionedProductId", 1))
-	}
-	if s.ServiceActionId == nil {
-		invalidParams.Add(request.NewErrParamRequired("ServiceActionId"))
-	}
-	if s.ServiceActionId != nil && len(*s.ServiceActionId) < 1 {
-		invalidParams.Add(request.NewErrParamMinLen("ServiceActionId", 1))
-	}
-
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	}
-	return nil
-}
-
-// SetAcceptLanguage sets the AcceptLanguage field's value.
-func (s *DescribeServiceActionExecutionParametersInput) SetAcceptLanguage(v string) *DescribeServiceActionExecutionParametersInput {
-	s.AcceptLanguage = &v
-	return s
-}
-
-// SetProvisionedProductId sets the ProvisionedProductId field's value.
-func (s *DescribeServiceActionExecutionParametersInput) SetProvisionedProductId(v string) *DescribeServiceActionExecutionParametersInput {
-	s.ProvisionedProductId = &v
-	return s
-}
-
-// SetServiceActionId sets the ServiceActionId field's value.
-func (s *DescribeServiceActionExecutionParametersInput) SetServiceActionId(v string) *DescribeServiceActionExecutionParametersInput {
-	s.ServiceActionId = &v
-	return s
-}
-
-type DescribeServiceActionExecutionParametersOutput struct {
-	_ struct{} `type:"structure"`
-
-	ServiceActionParameters []*ExecutionParameter `type:"list"`
-}
-
-// String returns the string representation
-func (s DescribeServiceActionExecutionParametersOutput) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s DescribeServiceActionExecutionParametersOutput) GoString() string {
-	return s.String()
-}
-
-// SetServiceActionParameters sets the ServiceActionParameters field's value.
-func (s *DescribeServiceActionExecutionParametersOutput) SetServiceActionParameters(v []*ExecutionParameter) *DescribeServiceActionExecutionParametersOutput {
-	s.ServiceActionParameters = v
-	return s
-}
-
 type DescribeServiceActionInput struct {
 	_ struct{} `type:"structure"`
 
@@ -13055,8 +12793,6 @@ type ExecuteProvisionedProductServiceActionInput struct {
 	// An idempotency token that uniquely identifies the execute request.
 	ExecuteToken *string `min:"1" type:"string" idempotencyToken:"true"`
 
-	Parameters map[string][]*string `min:"1" type:"map"`
-
 	// The identifier of the provisioned product.
 	//
 	// ProvisionedProductId is a required field
@@ -13083,9 +12819,6 @@ func (s *ExecuteProvisionedProductServiceActionInput) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "ExecuteProvisionedProductServiceActionInput"}
 	if s.ExecuteToken != nil && len(*s.ExecuteToken) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("ExecuteToken", 1))
-	}
-	if s.Parameters != nil && len(s.Parameters) < 1 {
-		invalidParams.Add(request.NewErrParamMinLen("Parameters", 1))
 	}
 	if s.ProvisionedProductId == nil {
 		invalidParams.Add(request.NewErrParamRequired("ProvisionedProductId"))
@@ -13115,12 +12848,6 @@ func (s *ExecuteProvisionedProductServiceActionInput) SetAcceptLanguage(v string
 // SetExecuteToken sets the ExecuteToken field's value.
 func (s *ExecuteProvisionedProductServiceActionInput) SetExecuteToken(v string) *ExecuteProvisionedProductServiceActionInput {
 	s.ExecuteToken = &v
-	return s
-}
-
-// SetParameters sets the Parameters field's value.
-func (s *ExecuteProvisionedProductServiceActionInput) SetParameters(v map[string][]*string) *ExecuteProvisionedProductServiceActionInput {
-	s.Parameters = v
 	return s
 }
 
@@ -13157,44 +12884,6 @@ func (s ExecuteProvisionedProductServiceActionOutput) GoString() string {
 // SetRecordDetail sets the RecordDetail field's value.
 func (s *ExecuteProvisionedProductServiceActionOutput) SetRecordDetail(v *RecordDetail) *ExecuteProvisionedProductServiceActionOutput {
 	s.RecordDetail = v
-	return s
-}
-
-type ExecutionParameter struct {
-	_ struct{} `type:"structure"`
-
-	DefaultValues []*string `type:"list"`
-
-	Name *string `min:"1" type:"string"`
-
-	Type *string `min:"1" type:"string"`
-}
-
-// String returns the string representation
-func (s ExecutionParameter) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s ExecutionParameter) GoString() string {
-	return s.String()
-}
-
-// SetDefaultValues sets the DefaultValues field's value.
-func (s *ExecutionParameter) SetDefaultValues(v []*string) *ExecutionParameter {
-	s.DefaultValues = v
-	return s
-}
-
-// SetName sets the Name field's value.
-func (s *ExecutionParameter) SetName(v string) *ExecutionParameter {
-	s.Name = &v
-	return s
-}
-
-// SetType sets the Type field's value.
-func (s *ExecutionParameter) SetType(v string) *ExecutionParameter {
-	s.Type = &v
 	return s
 }
 
@@ -15056,114 +14745,6 @@ func (s *ListServiceActionsOutput) SetServiceActionSummaries(v []*ServiceActionS
 	return s
 }
 
-type ListStackInstancesForProvisionedProductInput struct {
-	_ struct{} `type:"structure"`
-
-	// The language code.
-	//
-	//    * en - English (default)
-	//
-	//    * jp - Japanese
-	//
-	//    * zh - Chinese
-	AcceptLanguage *string `type:"string"`
-
-	// The maximum number of items to return with this call.
-	PageSize *int64 `type:"integer"`
-
-	// The page token for the next set of results. To retrieve the first set of
-	// results, use null.
-	PageToken *string `type:"string"`
-
-	// The identifier of the provisioned product.
-	//
-	// ProvisionedProductId is a required field
-	ProvisionedProductId *string `min:"1" type:"string" required:"true"`
-}
-
-// String returns the string representation
-func (s ListStackInstancesForProvisionedProductInput) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s ListStackInstancesForProvisionedProductInput) GoString() string {
-	return s.String()
-}
-
-// Validate inspects the fields of the type to determine if they are valid.
-func (s *ListStackInstancesForProvisionedProductInput) Validate() error {
-	invalidParams := request.ErrInvalidParams{Context: "ListStackInstancesForProvisionedProductInput"}
-	if s.ProvisionedProductId == nil {
-		invalidParams.Add(request.NewErrParamRequired("ProvisionedProductId"))
-	}
-	if s.ProvisionedProductId != nil && len(*s.ProvisionedProductId) < 1 {
-		invalidParams.Add(request.NewErrParamMinLen("ProvisionedProductId", 1))
-	}
-
-	if invalidParams.Len() > 0 {
-		return invalidParams
-	}
-	return nil
-}
-
-// SetAcceptLanguage sets the AcceptLanguage field's value.
-func (s *ListStackInstancesForProvisionedProductInput) SetAcceptLanguage(v string) *ListStackInstancesForProvisionedProductInput {
-	s.AcceptLanguage = &v
-	return s
-}
-
-// SetPageSize sets the PageSize field's value.
-func (s *ListStackInstancesForProvisionedProductInput) SetPageSize(v int64) *ListStackInstancesForProvisionedProductInput {
-	s.PageSize = &v
-	return s
-}
-
-// SetPageToken sets the PageToken field's value.
-func (s *ListStackInstancesForProvisionedProductInput) SetPageToken(v string) *ListStackInstancesForProvisionedProductInput {
-	s.PageToken = &v
-	return s
-}
-
-// SetProvisionedProductId sets the ProvisionedProductId field's value.
-func (s *ListStackInstancesForProvisionedProductInput) SetProvisionedProductId(v string) *ListStackInstancesForProvisionedProductInput {
-	s.ProvisionedProductId = &v
-	return s
-}
-
-type ListStackInstancesForProvisionedProductOutput struct {
-	_ struct{} `type:"structure"`
-
-	// The page token to use to retrieve the next set of results. If there are no
-	// additional results, this value is null.
-	NextPageToken *string `type:"string"`
-
-	// List of stack instances.
-	StackInstances []*StackInstance `type:"list"`
-}
-
-// String returns the string representation
-func (s ListStackInstancesForProvisionedProductOutput) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s ListStackInstancesForProvisionedProductOutput) GoString() string {
-	return s.String()
-}
-
-// SetNextPageToken sets the NextPageToken field's value.
-func (s *ListStackInstancesForProvisionedProductOutput) SetNextPageToken(v string) *ListStackInstancesForProvisionedProductOutput {
-	s.NextPageToken = &v
-	return s
-}
-
-// SetStackInstances sets the StackInstances field's value.
-func (s *ListStackInstancesForProvisionedProductOutput) SetStackInstances(v []*StackInstance) *ListStackInstancesForProvisionedProductOutput {
-	s.StackInstances = v
-	return s
-}
-
 // Filters to use when listing TagOptions.
 type ListTagOptionsFilters struct {
 	_ struct{} `type:"structure"`
@@ -16433,10 +16014,6 @@ type ProvisioningArtifact struct {
 	// The description of the provisioning artifact.
 	Description *string `type:"string"`
 
-	// Information set by the administrator to provide guidance to end users about
-	// which provisioning artifacts to use.
-	Guidance *string `type:"string" enum:"ProvisioningArtifactGuidance"`
-
 	// The identifier of the provisioning artifact.
 	Id *string `min:"1" type:"string"`
 
@@ -16466,12 +16043,6 @@ func (s *ProvisioningArtifact) SetDescription(v string) *ProvisioningArtifact {
 	return s
 }
 
-// SetGuidance sets the Guidance field's value.
-func (s *ProvisioningArtifact) SetGuidance(v string) *ProvisioningArtifact {
-	s.Guidance = &v
-	return s
-}
-
 // SetId sets the Id field's value.
 func (s *ProvisioningArtifact) SetId(v string) *ProvisioningArtifact {
 	s.Id = &v
@@ -16497,10 +16068,6 @@ type ProvisioningArtifactDetail struct {
 
 	// The description of the provisioning artifact.
 	Description *string `type:"string"`
-
-	// Information set by the administrator to provide guidance to end users about
-	// which provisioning artifacts to use.
-	Guidance *string `type:"string" enum:"ProvisioningArtifactGuidance"`
 
 	// The identifier of the provisioning artifact.
 	Id *string `min:"1" type:"string"`
@@ -16543,12 +16110,6 @@ func (s *ProvisioningArtifactDetail) SetCreatedTime(v time.Time) *ProvisioningAr
 // SetDescription sets the Description field's value.
 func (s *ProvisioningArtifactDetail) SetDescription(v string) *ProvisioningArtifactDetail {
 	s.Description = &v
-	return s
-}
-
-// SetGuidance sets the Guidance field's value.
-func (s *ProvisioningArtifactDetail) SetGuidance(v string) *ProvisioningArtifactDetail {
-	s.Guidance = &v
 	return s
 }
 
@@ -18367,68 +17928,6 @@ func (s *ShareError) SetMessage(v string) *ShareError {
 	return s
 }
 
-// An AWS CloudFormation stack, in a specific account and region, that's part
-// of a stack set operation. A stack instance is a reference to an attempted
-// or actual stack in a given account within a given region. A stack instance
-// can exist without a stack—for example, if the stack couldn't be created
-// for some reason. A stack instance is associated with only one stack set.
-// Each stack instance contains the ID of its associated stack set, as well
-// as the ID of the actual stack and the stack status.
-type StackInstance struct {
-	_ struct{} `type:"structure"`
-
-	// The name of the AWS account that the stack instance is associated with.
-	Account *string `type:"string"`
-
-	// The name of the AWS region that the stack instance is associated with.
-	Region *string `type:"string"`
-
-	// The status of the stack instance, in terms of its synchronization with its
-	// associated stack set.
-	//
-	//    * INOPERABLE: A DeleteStackInstances operation has failed and left the
-	//    stack in an unstable state. Stacks in this state are excluded from further
-	//    UpdateStackSet operations. You might need to perform a DeleteStackInstances
-	//    operation, with RetainStacks set to true, to delete the stack instance,
-	//    and then delete the stack manually.
-	//
-	//    * OUTDATED: The stack isn't currently up to date with the stack set because
-	//    either the associated stack failed during a CreateStackSet or UpdateStackSet
-	//    operation, or the stack was part of a CreateStackSet or UpdateStackSet
-	//    operation that failed or was stopped before the stack was created or updated.
-	//
-	//    * CURRENT: The stack is currently up to date with the stack set.
-	StackInstanceStatus *string `type:"string" enum:"StackInstanceStatus"`
-}
-
-// String returns the string representation
-func (s StackInstance) String() string {
-	return awsutil.Prettify(s)
-}
-
-// GoString returns the string representation
-func (s StackInstance) GoString() string {
-	return s.String()
-}
-
-// SetAccount sets the Account field's value.
-func (s *StackInstance) SetAccount(v string) *StackInstance {
-	s.Account = &v
-	return s
-}
-
-// SetRegion sets the Region field's value.
-func (s *StackInstance) SetRegion(v string) *StackInstance {
-	s.Region = &v
-	return s
-}
-
-// SetStackInstanceStatus sets the StackInstanceStatus field's value.
-func (s *StackInstance) SetStackInstanceStatus(v string) *StackInstance {
-	s.StackInstanceStatus = &v
-	return s
-}
-
 // Information about a tag. A tag is a key-value pair. Tags are propagated to
 // the resources created when provisioning a product.
 type Tag struct {
@@ -19537,17 +19036,6 @@ type UpdateProvisioningArtifactInput struct {
 	// The updated description of the provisioning artifact.
 	Description *string `type:"string"`
 
-	// Information set by the administrator to provide guidance to end users about
-	// which provisioning artifacts to use.
-	//
-	// The DEFAULT value indicates that the product version is active.
-	//
-	// The administrator can set the guidance to DEPRECATED to inform users that
-	// the product version is deprecated. Users are able to make updates to a provisioned
-	// product of a deprecated version but cannot launch new provisioned products
-	// using a deprecated version.
-	Guidance *string `type:"string" enum:"ProvisioningArtifactGuidance"`
-
 	// The updated name of the provisioning artifact.
 	Name *string `type:"string"`
 
@@ -19609,12 +19097,6 @@ func (s *UpdateProvisioningArtifactInput) SetActive(v bool) *UpdateProvisioningA
 // SetDescription sets the Description field's value.
 func (s *UpdateProvisioningArtifactInput) SetDescription(v string) *UpdateProvisioningArtifactInput {
 	s.Description = &v
-	return s
-}
-
-// SetGuidance sets the Guidance field's value.
-func (s *UpdateProvisioningArtifactInput) SetGuidance(v string) *UpdateProvisioningArtifactInput {
-	s.Guidance = &v
 	return s
 }
 
@@ -20318,14 +19800,6 @@ const (
 )
 
 const (
-	// ProvisioningArtifactGuidanceDefault is a ProvisioningArtifactGuidance enum value
-	ProvisioningArtifactGuidanceDefault = "DEFAULT"
-
-	// ProvisioningArtifactGuidanceDeprecated is a ProvisioningArtifactGuidance enum value
-	ProvisioningArtifactGuidanceDeprecated = "DEPRECATED"
-)
-
-const (
 	// ProvisioningArtifactPropertyNameId is a ProvisioningArtifactPropertyName enum value
 	ProvisioningArtifactPropertyNameId = "Id"
 )
@@ -20459,17 +19933,6 @@ const (
 
 	// SortOrderDescending is a SortOrder enum value
 	SortOrderDescending = "DESCENDING"
-)
-
-const (
-	// StackInstanceStatusCurrent is a StackInstanceStatus enum value
-	StackInstanceStatusCurrent = "CURRENT"
-
-	// StackInstanceStatusOutdated is a StackInstanceStatus enum value
-	StackInstanceStatusOutdated = "OUTDATED"
-
-	// StackInstanceStatusInoperable is a StackInstanceStatus enum value
-	StackInstanceStatusInoperable = "INOPERABLE"
 )
 
 const (

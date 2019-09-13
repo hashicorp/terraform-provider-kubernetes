@@ -55,6 +55,15 @@ func resourceKubernetesStorageClass() *schema.Resource {
 				Optional:    true,
 				Default:     true,
 			},
+			"mount_options": {
+				Type:        schema.TypeList,
+				Description: "Indicates a map of mount options needed for some storage classes",
+				Optional:    true,
+				ForceNew:    false,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }
@@ -76,6 +85,10 @@ func resourceKubernetesStorageClassCreate(d *schema.ResourceData, meta interface
 
 	if v, ok := d.GetOk("parameters"); ok {
 		storageClass.Parameters = expandStringMap(v.(map[string]interface{}))
+	}
+
+	if v, ok := d.GetOk("mount_options"); ok {
+		storageClass.MountOptions = expandStringSlice(v.([]interface{}))
 	}
 
 	log.Printf("[INFO] Creating new storage class: %#v", storageClass)
@@ -108,6 +121,8 @@ func resourceKubernetesStorageClassRead(d *schema.ResourceData, meta interface{}
 	d.Set("storage_provisioner", storageClass.Provisioner)
 	d.Set("reclaim_policy", storageClass.ReclaimPolicy)
 	d.Set("volume_binding_mode", storageClass.VolumeBindingMode)
+	d.Set("mount_options", storageClass.MountOptions)
+
 	if storageClass.AllowVolumeExpansion != nil {
 		d.Set("allow_volume_expansion", *storageClass.AllowVolumeExpansion)
 	}

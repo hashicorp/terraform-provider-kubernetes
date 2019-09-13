@@ -29,6 +29,14 @@ func dataSourceKubernetesStorageClass() *schema.Resource {
 				Description: "Indicates whether the storage class allow volume expand",
 				Computed:    true,
 			},
+			"mount_options": {
+				Type:        schema.TypeList,
+				Description: "Indicates a map of mount options needed for some storage classes",
+				Computed:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 }

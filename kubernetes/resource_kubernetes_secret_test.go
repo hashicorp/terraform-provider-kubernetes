@@ -67,6 +67,7 @@ func TestAccKubernetesSecret_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.one", "first"),
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.two", "second"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "base64data.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "base64data.three", base64.StdEncoding.EncodeToString([]byte("third"))),
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "type", "Opaque"),
 					testAccCheckSecretData(&conf, map[string]string{"one": "first", "two": "second", "three": "third"}),
@@ -167,7 +168,7 @@ func TestAccKubernetesSecret_importBasic(t *testing.T) {
 		CheckDestroy: testAccCheckKubernetesSecretDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesSecretConfig_basic(name),
+				Config: testAccKubernetesSecretConfig_noBase64(name),
 			},
 
 			{
@@ -247,14 +248,14 @@ func TestAccKubernetesSecret_binaryData(t *testing.T) {
 				Config: testAccKubernetesSecretConfig_binaryData(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "base64data.%", "1"),
 				),
 			},
 			{
 				Config: testAccKubernetesSecretConfig_binaryData2(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "2"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "base64data.%", "2"),
 				),
 			},
 		},
@@ -353,6 +354,32 @@ resource "kubernetes_secret" "test" {
 `, name)
 }
 
+func testAccKubernetesSecretConfig_noBase64(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_secret" "test" {
+  metadata {
+    annotations = {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels = {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  data = {
+    one = "first"
+    two = "second"
+  }
+}
+`, name)
+}
+
 func testAccKubernetesSecretConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_secret" "test" {
@@ -374,6 +401,10 @@ resource "kubernetes_secret" "test" {
   data = {
     one = "first"
     two = "second"
+  }
+
+  base64data = {
+    three = base64encode("third")
   }
 }
 `, name)
@@ -455,10 +486,7 @@ resource "kubernetes_secret" "test" {
   }
 
   base64data = {
-		one =<<EOF
-"${filebase64("./test-fixtures/binary.data")}"
-EOF
-
+		one = "${filebase64("./test-fixtures/binary.data")}"
   }
 }
 `, prefix)
@@ -472,14 +500,8 @@ resource "kubernetes_secret" "test" {
   }
 
   base64data = {
-		one =<<EOF
-"${filebase64("./test-fixtures/binary2.data")}"
-EOF
-
-		two =<<EOF
-"${filebase64("./test-fixtures/binary.data")}"
-EOF
-
+		one = "${filebase64("./test-fixtures/binary2.data")}"
+		two = "${filebase64("./test-fixtures/binary.data")}"
   }
 }
 `, prefix)

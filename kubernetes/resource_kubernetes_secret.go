@@ -113,8 +113,15 @@ func resourceKubernetesSecretRead(d *schema.ResourceData, meta interface{}) erro
 		return err
 	}
 
-	d.Set("data", flattenByteMapToStringMap(secret.Data))
 	d.Set("type", secret.Type)
+
+	secretData := flattenByteMapToStringMap(secret.Data)
+	// Remove base64data keys from the payload before setting the data key on the resource. If
+	// these keys are not removed, they will always show in the diff at update.
+	for key, _ := range d.Get("base64data").(map[string]interface{}) {
+		delete(secretData, key)
+	}
+	d.Set("data", secretData)
 
 	return nil
 }
@@ -128,11 +135,18 @@ func resourceKubernetesSecretUpdate(d *schema.ResourceData, meta interface{}) er
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
-	if d.HasChange("data") {
+	if d.HasChange("data") || d.HasChange("base64data") {
 		oldV, newV := d.GetChange("data")
-
 		oldV = base64EncodeStringMap(oldV.(map[string]interface{}))
 		newV = base64EncodeStringMap(newV.(map[string]interface{}))
+
+		oldVB64, newVB64 := d.GetChange("base64data")
+		for key, value := range oldVB64.(map[string]interface{}) {
+			oldV.(map[string]interface{})[key] = value
+		}
+		for key, value := range newVB64.(map[string]interface{}) {
+			newV.(map[string]interface{})[key] = value
+		}
 
 		diffOps := diffStringMap("/data/", oldV.(map[string]interface{}), newV.(map[string]interface{}))
 

@@ -42,6 +42,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.parallelism", "2"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", "alpine"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "wait_for_completion", "true"),
 				),
 			},
 			{
@@ -63,6 +64,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.manual_selector", "true"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", "alpine"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "wait_for_completion", "true"),
 				),
 			},
 		},

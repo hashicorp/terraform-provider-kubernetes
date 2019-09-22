@@ -8,9 +8,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesJob() *schema.Resource {
@@ -39,6 +41,10 @@ func resourceKubernetesJob() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: jobSpecFields(),
 				},
+			},
+			"wait_for_completion": {
+				Type:     schema.TypeBool,
+				Optional: true,
 			},
 		},
 	}
@@ -159,6 +165,10 @@ func resourceKubernetesJobRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
+	if d.Get("wait_for_completion").(bool) {
+		return resource.Retry(d.Timeout(schema.TimeoutCreate),
+			waitForJobCondition(conn, namespace, name, batchv1.JobComplete))
+	}
 	return nil
 }
 
@@ -221,4 +231,25 @@ func resourceKubernetesJobExists(d *schema.ResourceData, meta interface{}) (bool
 		log.Printf("[DEBUG] Received error: %#v", err)
 	}
 	return true, err
+}
+
+func waitForJobCondition(conn *kubernetes.Clientset, ns, name string, condition batchv1.JobConditionType) resource.RetryFunc {
+	return func() *resource.RetryError {
+		job, err := conn.BatchV1().Jobs(ns).Get(name, metav1.GetOptions{})
+		if err != nil {
+			return resource.NonRetryableError(err)
+		}
+
+		for _, c := range job.Status.Conditions {
+			if c.Status != corev1.ConditionTrue {
+				continue
+			}
+			log.Printf("[DEBUG] Current contions of job: %s/%s: %s\n", ns, name, c.Type)
+			if c.Type == condition {
+				return nil
+			}
+		}
+
+		return resource.RetryableError(fmt.Errorf("job: %s/%s is not in: %s condition", ns, name, condition))
+	}
 }

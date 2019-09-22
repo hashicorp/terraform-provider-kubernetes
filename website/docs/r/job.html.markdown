@@ -14,7 +14,7 @@ description: |-
 
   You can also use a Job to run multiple Pods in parallel.
 
-## Example Usage
+## Example Usage - No waiting
 
 ```hcl
 resource "kubernetes_job" "demo" {
@@ -38,12 +38,39 @@ resource "kubernetes_job" "demo" {
 }
 ```
 
+## Example Usage - waiting for job successful completion
+
+```hcl
+resource "kubernetes_job" "demo" {
+  metadata {
+    name = "demo"
+  }
+  spec {
+    template {
+      metadata {}
+      spec {
+        container {
+          name    = "pi"
+          image   = "perl"
+          command = ["perl", "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+        }
+        restart_policy = "Never"
+      }
+    }
+    backoff_limit = 4
+  }
+  wait_for_completion = true
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
 
 * `metadata` - (Required) Standard resource's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 * `spec` - (Required) Specification of the desired behavior of a job. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
+* `wait_for_completion` - 
+(Optional) If `true` blocks job `create` or `update` until the status of the job reached the `Complete` condition. 
 
 ## Nested Blocks
 

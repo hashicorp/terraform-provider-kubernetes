@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	gversion "github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform/config"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
@@ -50,13 +49,9 @@ func TestProvider_configure(t *testing.T) {
 	os.Setenv("KUBECONFIG", "test-fixtures/kube-config.yaml")
 	os.Setenv("KUBE_CTX", "gcp")
 
-	c, err := config.NewRawConfig(map[string]interface{}{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	rc := terraform.NewResourceConfig(c)
+	rc := terraform.NewResourceConfigRaw(map[string]interface{}{})
 	p := Provider()
-	err = p.Configure(rc)
+	err := p.Configure(rc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +177,7 @@ func testAccPreCheck(t *testing.T) {
 			}, ", "))
 	}
 
-	err := testAccProvider.Configure(terraform.NewResourceConfig(nil))
+	err := testAccProvider.Configure(terraform.NewResourceConfigRaw(nil))
 	if err != nil {
 		t.Fatal(err)
 	}

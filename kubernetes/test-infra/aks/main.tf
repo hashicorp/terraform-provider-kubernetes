@@ -3,7 +3,7 @@ locals {
 }
 
 provider "azurerm" {
-  version = "~> 1.28.0"
+  version = ">= 1.28.0"
 }
 
 data "azurerm_kubernetes_service_versions" "current" {

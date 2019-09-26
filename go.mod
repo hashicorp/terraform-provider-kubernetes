@@ -10,7 +10,7 @@ require (
 	github.com/google/go-cmp v0.2.0
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/gophercloud/gophercloud v0.3.1-0.20190807175045-25a84d593c97 // indirect
-	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
+	github.com/gregjones/httpcache 901d90724c79 // indirect
 	github.com/hashicorp/go-hclog v0.7.0 // indirect
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/hcl v1.0.0 // indirect

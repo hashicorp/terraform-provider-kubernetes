@@ -17,7 +17,7 @@ require (
 	github.com/hashicorp/hil v0.0.0-20190212132231-97b3a9cdfa93 // indirect
 	github.com/hashicorp/terraform v0.12.8
 	github.com/hashicorp/vault v1.1.2 // indirect
-	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
+	github.com/hashicorp/yamux df201c70410d // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/keybase/go-crypto v0.0.0-20190523171820-b785b22cc757 // indirect
 	github.com/mitchellh/go-homedir v1.1.0

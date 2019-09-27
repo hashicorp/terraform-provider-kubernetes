@@ -27,7 +27,7 @@ func resourceKubernetesAPIService() *schema.Resource {
 			"metadata": metadataSchema("api_service", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: "Spec contains information for locating and communicating with a server. https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#spec-and-status",
+				Description: "Spec contains information for locating and communicating with a server. https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{

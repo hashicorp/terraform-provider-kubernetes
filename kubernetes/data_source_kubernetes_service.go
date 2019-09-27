@@ -14,7 +14,7 @@ func dataSourceKubernetesService() *schema.Resource {
 			"metadata": namespacedMetadataSchema("service", false),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: "Spec defines the behavior of a service. https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#spec-and-status",
+				Description: "Spec defines the behavior of a service. https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
 				MaxItems:    1,
 				Computed:    true,
 				Elem: &schema.Resource{

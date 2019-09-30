@@ -373,13 +373,13 @@ func resourceKubernetesPodSecurityPolicyCreate(d *schema.ResourceData, meta inte
 		return err
 	}
 
-	binding := &api.PodSecurityPolicy{
+	psp := &api.PodSecurityPolicy{
 		ObjectMeta: metadata,
 		Spec:       spec,
 	}
 
-	log.Printf("[INFO] Creating new PodSecurityPolicy: %#v", binding)
-	out, err := conn.ExtensionsV1beta1().PodSecurityPolicies().Create(binding)
+	log.Printf("[INFO] Creating new PodSecurityPolicy: %#v", psp)
+	out, err := conn.ExtensionsV1beta1().PodSecurityPolicies().Create(psp)
 
 	if err != nil {
 		return err
@@ -396,19 +396,19 @@ func resourceKubernetesPodSecurityPolicyRead(d *schema.ResourceData, meta interf
 	name := d.Id()
 
 	log.Printf("[INFO] Reading PodSecurityPolicy %s", name)
-	binding, err := conn.ExtensionsV1beta1().PodSecurityPolicies().Get(name, meta_v1.GetOptions{})
+	psp, err := conn.ExtensionsV1beta1().PodSecurityPolicies().Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
 	}
 
-	log.Printf("[INFO] Received PodSecurityPolicy: %#v", binding)
-	err = d.Set("metadata", flattenMetadata(binding.ObjectMeta, d))
+	log.Printf("[INFO] Received PodSecurityPolicy: %#v", psp)
+	err = d.Set("metadata", flattenMetadata(psp.ObjectMeta, d))
 	if err != nil {
 		return err
 	}
 
-	flattenedSpec := flattenPodSecurityPolicySpec(binding.Spec)
+	flattenedSpec := flattenPodSecurityPolicySpec(psp.Spec)
 	log.Printf("[DEBUG] Flattened PodSecurityPolicy roleRef: %#v", flattenedSpec)
 	err = d.Set("spec", flattenedSpec)
 	if err != nil {

@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
+	"github.com/hashicorp/terraform/helper/logging"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/mitchellh/go-homedir"
@@ -244,6 +246,13 @@ func providerConfigure(d *schema.ResourceData, terraformVersion string) (interfa
 			return nil, fmt.Errorf("Failed to parse exec")
 		}
 		cfg.ExecProvider = exec
+	}
+
+	if logging.IsDebugOrHigher() {
+		log.Printf("[DEBUG] Enabling HTTP requests/responses tracing")
+		cfg.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+			return logging.NewTransport("Kubernetes", rt)
+		}
 	}
 
 	k, err := kubernetes.NewForConfig(cfg)

@@ -251,7 +251,9 @@ func (s *FileShareConfig) MarshalJSON() ([]byte, error) {
 //     "foo": "bar"
 //   },
 //   "state": READY,
-//   "software_version": "cloud-sql-09-28-2018",
+//   "software_versions": {
+//     "software_update": "cloud-sql-09-28-2018",
+//   },
 //   "maintenance_policy_names": {
 //     "UpdatePolicy":
 //
@@ -269,7 +271,7 @@ func (s *FileShareConfig) MarshalJSON() ([]byte, error) {
 //
 // "projects/cloud-sql/locations/us-east1/rollouts/cloud-sql-09-28-2018-c
 // anary",
-//     }
+//     },
 //
 // "projects/cloud-sql/locations/global/rolloutTypes/instance_restart":
 // {
@@ -297,9 +299,38 @@ func (s *FileShareConfig) MarshalJSON() ([]byte, error) {
 // t1-b/instances/vm-1",
 //     }
 //   ],
+//   "maintenance_schedules": {
+//     "csa_rollout": {
+//        "start_time": {
+//           "seconds": 1526406431,
+//        },
+//        "end_time": {
+//           "seconds": 1535406431,
+//        },
+//     },
+//     "ncsa_rollout": {
+//        "start_time": {
+//           "seconds": 1526406431,
+//        },
+//        "end_time": {
+//           "seconds": 1535406431,
+//        },
+//     }
+//   },
+//   "consumer_defined_name": "my-sql-instance1",
 // }
 // ```
 type GoogleCloudSaasacceleratorManagementProvidersV1Instance struct {
+	// ConsumerDefinedName: consumer_defined_name is the name that is set by
+	// the consumer. On the other
+	// hand Name field represents system-assigned id of an instance so
+	// consumers
+	// are not necessarily aware of it.
+	// consumer_defined_name is used for notification/UI purposes for
+	// consumer to
+	// recognize their instances.
+	ConsumerDefinedName string `json:"consumerDefinedName,omitempty"`
+
 	// CreateTime: Output only. Timestamp when the resource was created.
 	CreateTime string `json:"createTime,omitempty"`
 
@@ -318,9 +349,13 @@ type GoogleCloudSaasacceleratorManagementProvidersV1Instance struct {
 	// policy
 	// type. For complete details of MaintenancePolicy, please refer
 	// to
-	// //depot/google3/google/cloud/saasaccelerator/maintenancepolicy/api/
-	// v1/maintenance_policy_resources.proto
+	// go/cloud-saas-mw-ug.
 	MaintenancePolicyNames map[string]string `json:"maintenancePolicyNames,omitempty"`
+
+	// MaintenanceSchedules: The MaintenanceSchedule contains the scheduling
+	// information of published
+	// maintenance schedule.
+	MaintenanceSchedules map[string]GoogleCloudSaasacceleratorManagementProvidersV1MaintenanceSchedule `json:"maintenanceSchedules,omitempty"`
 
 	// Name: Unique name of the resource. It uses the form:
 	//
@@ -384,7 +419,48 @@ type GoogleCloudSaasacceleratorManagementProvidersV1Instance struct {
 	// modified.
 	UpdateTime string `json:"updateTime,omitempty"`
 
-	// ForceSendFields is a list of field names (e.g. "CreateTime") to
+	// ForceSendFields is a list of field names (e.g. "ConsumerDefinedName")
+	// to unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "ConsumerDefinedName") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *GoogleCloudSaasacceleratorManagementProvidersV1Instance) MarshalJSON() ([]byte, error) {
+	type NoMethod GoogleCloudSaasacceleratorManagementProvidersV1Instance
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// GoogleCloudSaasacceleratorManagementProvidersV1MaintenanceSchedule:
+// Maintenance schedule which is exposed to customer and potentially end
+// user,
+// indicating published upcoming future maintenance schedule
+type GoogleCloudSaasacceleratorManagementProvidersV1MaintenanceSchedule struct {
+	// CanReschedule: Can this scheduled update be rescheduled?
+	// By default, it's true and API needs to do explicitly check whether
+	// it's
+	// set, if it's set as false explicitly, it's false
+	CanReschedule bool `json:"canReschedule,omitempty"`
+
+	// EndTime: The scheduled end time for the maintenance.
+	EndTime string `json:"endTime,omitempty"`
+
+	// StartTime: The scheduled start time for the maintenance.
+	StartTime string `json:"startTime,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "CanReschedule") to
 	// unconditionally include in API requests. By default, fields with
 	// empty values are omitted from API requests. However, any non-pointer,
 	// non-interface field appearing in ForceSendFields will be sent to the
@@ -392,7 +468,55 @@ type GoogleCloudSaasacceleratorManagementProvidersV1Instance struct {
 	// used to include empty fields in Patch requests.
 	ForceSendFields []string `json:"-"`
 
-	// NullFields is a list of field names (e.g. "CreateTime") to include in
+	// NullFields is a list of field names (e.g. "CanReschedule") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *GoogleCloudSaasacceleratorManagementProvidersV1MaintenanceSchedule) MarshalJSON() ([]byte, error) {
+	type NoMethod GoogleCloudSaasacceleratorManagementProvidersV1MaintenanceSchedule
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// GoogleCloudSaasacceleratorManagementProvidersV1NodeSloMetadata: Node
+// information for custom per-node SLO implementations.
+// SSA does not support per-node SLO, but producers can populate
+// per-node
+// information in SloMetadata for custom precomputations.
+// SSA Eligibility Exporter will emit per-node metric based on this
+// information.
+type GoogleCloudSaasacceleratorManagementProvidersV1NodeSloMetadata struct {
+	// Exclusions: By default node is eligible if instance is eligible.
+	// But individual node might be excluded from SLO by adding entry
+	// here.
+	// For semantic see SloMetadata.exclusions.
+	// If both instance and node level exclusions are present for time
+	// period,
+	// the node level's reason will be reported by Eligibility Exporter.
+	Exclusions []*GoogleCloudSaasacceleratorManagementProvidersV1SloExclusion `json:"exclusions,omitempty"`
+
+	// Location: The location of the node, if different from instance
+	// location.
+	Location string `json:"location,omitempty"`
+
+	// NodeId: The id of the node.
+	// This should be equal to SaasInstanceNode.node_id.
+	NodeId string `json:"nodeId,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Exclusions") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Exclusions") to include in
 	// API requests with the JSON null value. By default, fields with empty
 	// values are omitted from API requests. However, any field with an
 	// empty value appearing in NullFields will be sent to the server as
@@ -401,8 +525,8 @@ type GoogleCloudSaasacceleratorManagementProvidersV1Instance struct {
 	NullFields []string `json:"-"`
 }
 
-func (s *GoogleCloudSaasacceleratorManagementProvidersV1Instance) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleCloudSaasacceleratorManagementProvidersV1Instance
+func (s *GoogleCloudSaasacceleratorManagementProvidersV1NodeSloMetadata) MarshalJSON() ([]byte, error) {
+	type NoMethod GoogleCloudSaasacceleratorManagementProvidersV1NodeSloMetadata
 	raw := NoMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
@@ -529,8 +653,9 @@ func (s *GoogleCloudSaasacceleratorManagementProvidersV1RolloutMetadata) Marshal
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// GoogleCloudSaasacceleratorManagementProvidersV1SloExclusion: A
-// temporal SLO exclusion specification.
+// GoogleCloudSaasacceleratorManagementProvidersV1SloExclusion:
+// SloExclusion represents an excusion in SLI calculation applies to all
+// SLOs.
 type GoogleCloudSaasacceleratorManagementProvidersV1SloExclusion struct {
 	// ExclusionDuration: Exclusion duration. No restrictions on the
 	// possible values.
@@ -560,12 +685,12 @@ type GoogleCloudSaasacceleratorManagementProvidersV1SloExclusion struct {
 	// Can be left empty.
 	Reason string `json:"reason,omitempty"`
 
-	// SloName: Name of an SLI/SLO that this exclusion applies to. Can be
-	// left empty,
-	// signaling that the instance should be excluded from all SLI/SLOs
+	// SliName: Name of an SLI that this exclusion applies to. Can be left
+	// empty,
+	// signaling that the instance should be excluded from all SLIs
 	// defined
 	// in the service SLO configuration.
-	SloName string `json:"sloName,omitempty"`
+	SliName string `json:"sliName,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "ExclusionDuration")
 	// to unconditionally include in API requests. By default, fields with
@@ -620,6 +745,15 @@ type GoogleCloudSaasacceleratorManagementProvidersV1SloMetadata struct {
 	// in the service SLO configuration.
 	Exclusions []*GoogleCloudSaasacceleratorManagementProvidersV1SloExclusion `json:"exclusions,omitempty"`
 
+	// Nodes: Optional: list of nodes.
+	// Some producers need to use per-node metadata to calculate SLO.
+	// This field allows such producers to publish per-node SLO meta
+	// data,
+	// which will be consumed by SSA Eligibility Exporter and published in
+	// the
+	// form of per node metric to Monarch.
+	Nodes []*GoogleCloudSaasacceleratorManagementProvidersV1NodeSloMetadata `json:"nodes,omitempty"`
+
 	// Tier: Name of the SLO tier the Instance belongs to. This name will be
 	// expected to
 	// match the tiers specified in the service SLO configuration.
@@ -652,8 +786,7 @@ func (s *GoogleCloudSaasacceleratorManagementProvidersV1SloMetadata) MarshalJSON
 
 // Instance: A Cloud Filestore instance.
 type Instance struct {
-	// CreateTime: Output only.
-	// The time when the instance was created.
+	// CreateTime: Output only. The time when the instance was created.
 	CreateTime string `json:"createTime,omitempty"`
 
 	// Description: Optional. A description of the instance (2048 characters
@@ -672,8 +805,7 @@ type Instance struct {
 	// Labels: Resource labels to represent user provided metadata.
 	Labels map[string]string `json:"labels,omitempty"`
 
-	// Name: Output only.
-	// The resource name of the instance, in the
+	// Name: Output only. The resource name of the instance, in the
 	// format
 	// projects/{project_id}/locations/{location_id}/instances/{instan
 	// ce_id}.
@@ -683,8 +815,7 @@ type Instance struct {
 	// For this version, only a single network is supported.
 	Networks []*NetworkConfig `json:"networks,omitempty"`
 
-	// State: Output only.
-	// The instance state.
+	// State: Output only. The instance state.
 	//
 	// Possible values:
 	//   "STATE_UNSPECIFIED" - State not set.
@@ -701,8 +832,8 @@ type Instance struct {
 	// resource.
 	State string `json:"state,omitempty"`
 
-	// StatusMessage: Output only.
-	// Additional information about the instance state, if available.
+	// StatusMessage: Output only. Additional information about the instance
+	// state, if available.
 	StatusMessage string `json:"statusMessage,omitempty"`
 
 	// Tier: The service tier of the instance.
@@ -920,11 +1051,11 @@ func (s *Location) MarshalJSON() ([]byte, error) {
 
 // NetworkConfig: Network configuration for the instance.
 type NetworkConfig struct {
-	// IpAddresses: Output only.
-	// IPv4 addresses in the format
+	// IpAddresses: Output only. IPv4 addresses in the format
 	// {octet 1}.{octet 2}.{octet 3}.{octet 4} or IPv6 addresses in the
 	// format
-	// {block 1}:{block 2}:{block 3}:{block 4}:{block 5}:{block 6}:{block
+	// {block 1}:{block 2}:{block 3}:{block 4}:{block 5}:{block
+	// 6}:{block
 	// 7}:{block 8}.
 	IpAddresses []string `json:"ipAddresses,omitempty"`
 
@@ -944,14 +1075,17 @@ type NetworkConfig struct {
 	Network string `json:"network,omitempty"`
 
 	// ReservedIpRange: A /29 CIDR block in one of the
-	// [internal IP address
+	// [internal IP
+	// address
 	// ranges](https://www.arin.net/knowledge/address_filters.html)
-	// that identifies the range of IP addresses reserved for this
-	// instance. For example, 10.0.0.0/29 or 192.168.0.0/29. The range you
-	// specify
-	// can't overlap with either existing subnets or assigned IP address
-	// ranges
-	// for other Cloud Filestore instances in the selected VPC network.
+	// that
+	// identifies the range of IP addresses reserved for this instance.
+	// For
+	// example, 10.0.0.0/29 or 192.168.0.0/29. The range you specify can't
+	// overlap
+	// with either existing subnets or assigned IP address ranges for other
+	// Cloud
+	// Filestore instances in the selected VPC network.
 	ReservedIpRange string `json:"reservedIpRange,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "IpAddresses") to
@@ -1005,7 +1139,8 @@ type Operation struct {
 	// service that
 	// originally returns it. If you use the default HTTP mapping,
 	// the
-	// `name` should have the format of `operations/some/unique/name`.
+	// `name` should be a resource name ending with
+	// `operations/{unique_id}`.
 	Name string `json:"name,omitempty"`
 
 	// Response: The normal response of the operation in case of success.
@@ -1111,81 +1246,14 @@ func (s *OperationMetadata) MarshalJSON() ([]byte, error) {
 // suitable for
 // different programming environments, including REST APIs and RPC APIs.
 // It is
-// used by [gRPC](https://github.com/grpc). The error model is designed
-// to be:
+// used by [gRPC](https://github.com/grpc). Each `Status` message
+// contains
+// three pieces of data: error code, error message, and error
+// details.
 //
-// - Simple to use and understand for most users
-// - Flexible enough to meet unexpected needs
-//
-// # Overview
-//
-// The `Status` message contains three pieces of data: error code,
-// error
-// message, and error details. The error code should be an enum value
-// of
-// google.rpc.Code, but it may accept additional error codes if needed.
-// The
-// error message should be a developer-facing English message that
-// helps
-// developers *understand* and *resolve* the error. If a localized
-// user-facing
-// error message is needed, put the localized message in the error
-// details or
-// localize it in the client. The optional error details may contain
-// arbitrary
-// information about the error. There is a predefined set of error
-// detail types
-// in the package `google.rpc` that can be used for common error
-// conditions.
-//
-// # Language mapping
-//
-// The `Status` message is the logical representation of the error
-// model, but it
-// is not necessarily the actual wire format. When the `Status` message
-// is
-// exposed in different client libraries and different wire protocols,
-// it can be
-// mapped differently. For example, it will likely be mapped to some
-// exceptions
-// in Java, but more likely mapped to some error codes in C.
-//
-// # Other uses
-//
-// The error model and the `Status` message can be used in a variety
-// of
-// environments, either with or without APIs, to provide a
-// consistent developer experience across different
-// environments.
-//
-// Example uses of this error model include:
-//
-// - Partial errors. If a service needs to return partial errors to the
-// client,
-//     it may embed the `Status` in the normal response to indicate the
-// partial
-//     errors.
-//
-// - Workflow errors. A typical workflow has multiple steps. Each step
-// may
-//     have a `Status` message for error reporting.
-//
-// - Batch operations. If a client uses batch request and batch
-// response, the
-//     `Status` message should be used directly inside batch response,
-// one for
-//     each error sub-response.
-//
-// - Asynchronous operations. If an API call embeds asynchronous
-// operation
-//     results in its response, the status of those operations should
-// be
-//     represented directly using the `Status` message.
-//
-// - Logging. If some API errors are stored in logs, the message
-// `Status` could
-//     be used directly after any stripping needed for security/privacy
-// reasons.
+// You can find out more about this error model and how to work with it
+// in the
+// [API Design Guide](https://cloud.google.com/apis/design/errors).
 type Status struct {
 	// Code: The status code, which should be an enum value of
 	// google.rpc.Code.
@@ -1281,6 +1349,7 @@ func (c *ProjectsLocationsGetCall) Header() http.Header {
 
 func (c *ProjectsLocationsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1446,6 +1515,7 @@ func (c *ProjectsLocationsListCall) Header() http.Header {
 
 func (c *ProjectsLocationsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1625,6 +1695,7 @@ func (c *ProjectsLocationsInstancesCreateCall) Header() http.Header {
 
 func (c *ProjectsLocationsInstancesCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1767,6 +1838,7 @@ func (c *ProjectsLocationsInstancesDeleteCall) Header() http.Header {
 
 func (c *ProjectsLocationsInstancesDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1907,6 +1979,7 @@ func (c *ProjectsLocationsInstancesGetCall) Header() http.Header {
 
 func (c *ProjectsLocationsInstancesGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2080,6 +2153,7 @@ func (c *ProjectsLocationsInstancesListCall) Header() http.Header {
 
 func (c *ProjectsLocationsInstancesListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2267,6 +2341,7 @@ func (c *ProjectsLocationsInstancesPatchCall) Header() http.Header {
 
 func (c *ProjectsLocationsInstancesPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2339,7 +2414,7 @@ func (c *ProjectsLocationsInstancesPatchCall) Do(opts ...googleapi.CallOption) (
 	//   ],
 	//   "parameters": {
 	//     "name": {
-	//       "description": "Output only.\nThe resource name of the instance, in the format\nprojects/{project_id}/locations/{location_id}/instances/{instance_id}.",
+	//       "description": "Output only. The resource name of the instance, in the format\nprojects/{project_id}/locations/{location_id}/instances/{instance_id}.",
 	//       "location": "path",
 	//       "pattern": "^projects/[^/]+/locations/[^/]+/instances/[^/]+$",
 	//       "required": true,
@@ -2429,6 +2504,7 @@ func (c *ProjectsLocationsOperationsCancelCall) Header() http.Header {
 
 func (c *ProjectsLocationsOperationsCancelCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2572,6 +2648,7 @@ func (c *ProjectsLocationsOperationsDeleteCall) Header() http.Header {
 
 func (c *ProjectsLocationsOperationsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2716,6 +2793,7 @@ func (c *ProjectsLocationsOperationsGetCall) Header() http.Header {
 
 func (c *ProjectsLocationsOperationsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2896,6 +2974,7 @@ func (c *ProjectsLocationsOperationsListCall) Header() http.Header {
 
 func (c *ProjectsLocationsOperationsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}

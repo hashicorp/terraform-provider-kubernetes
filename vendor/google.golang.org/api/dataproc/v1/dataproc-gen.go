@@ -272,10 +272,10 @@ func (s *AcceleratorConfig) MarshalJSON() ([]byte, error) {
 
 // Binding: Associates members with a role.
 type Binding struct {
-	// Condition: Unimplemented. The condition that is associated with this
-	// binding. NOTE: an unsatisfied condition will not allow user access
-	// via current binding. Different bindings, including their conditions,
-	// are examined independently.
+	// Condition: The condition that is associated with this binding. NOTE:
+	// An unsatisfied condition will not allow user access via current
+	// binding. Different bindings, including their conditions, are examined
+	// independently.
 	Condition *Expr `json:"condition,omitempty"`
 
 	// Members: Specifies the identities requesting access for a Cloud
@@ -286,7 +286,7 @@ type Binding struct {
 	// who is authenticated with a Google account or a service
 	// account.
 	// user:{emailid}: An email address that represents a specific Google
-	// account. For example, alice@gmail.com .
+	// account. For example, alice@example.com .
 	// serviceAccount:{emailid}: An email address that represents a service
 	// account. For example,
 	// my-other-app@appspot.gserviceaccount.com.
@@ -416,9 +416,10 @@ type ClusterConfig struct {
 	// and all worker nodes. You can test a node's role metadata to run an
 	// executable on a master or worker node, as shown below using curl (you
 	// can also use wget):
-	// ROLE=$(curl -H Metadata-Flavor:Google
-	// http://metadata/computeMetadata/v1/instance/attributes/dataproc-role)
-	//
+	// ROLE=$(curl -H
+	// Metadata-Flavor:Google
+	// http://metadata/computeMetadata/v1/instance/att
+	// ributes/dataproc-role)
 	// if [[ "${ROLE}" == 'Master' ]]; then
 	//   ... master specific actions ...
 	// else
@@ -427,6 +428,9 @@ type ClusterConfig struct {
 	//
 	InitializationActions []*NodeInitializationAction `json:"initializationActions,omitempty"`
 
+	// LifecycleConfig: Optional. Lifecycle setting for the cluster.
+	LifecycleConfig *LifecycleConfig `json:"lifecycleConfig,omitempty"`
+
 	// MasterConfig: Optional. The Compute Engine config settings for the
 	// master instance in a cluster.
 	MasterConfig *InstanceGroupConfig `json:"masterConfig,omitempty"`
@@ -434,6 +438,9 @@ type ClusterConfig struct {
 	// SecondaryWorkerConfig: Optional. The Compute Engine config settings
 	// for additional worker instances in a cluster.
 	SecondaryWorkerConfig *InstanceGroupConfig `json:"secondaryWorkerConfig,omitempty"`
+
+	// SecurityConfig: Optional. Security settings for the cluster.
+	SecurityConfig *SecurityConfig `json:"securityConfig,omitempty"`
 
 	// SoftwareConfig: Optional. The config settings for software inside the
 	// cluster.
@@ -963,8 +970,9 @@ type GceClusterConfig struct {
 	// URL, partial URI, or short name are valid.
 	// Examples:
 	// https://www.googleapis.com/compute/v1/projects/[project_id]/
-	// regions/us-east1/sub0
-	// projects/[project_id]/regions/us-east1/sub0
+	// regions/us-east1/subnetworks/sub0
+	// projects/[project_id]/regions/us-eas
+	// t1/subnetworks/sub0
 	// sub0
 	SubnetworkUri string `json:"subnetworkUri,omitempty"`
 
@@ -1011,6 +1019,63 @@ func (s *GceClusterConfig) MarshalJSON() ([]byte, error) {
 
 // GetIamPolicyRequest: Request message for GetIamPolicy method.
 type GetIamPolicyRequest struct {
+	// Options: OPTIONAL: A GetPolicyOptions object for specifying options
+	// to GetIamPolicy. This field is only used by Cloud IAM.
+	Options *GetPolicyOptions `json:"options,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Options") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Options") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *GetIamPolicyRequest) MarshalJSON() ([]byte, error) {
+	type NoMethod GetIamPolicyRequest
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// GetPolicyOptions: Encapsulates settings provided to GetIamPolicy.
+type GetPolicyOptions struct {
+	// RequestedPolicyVersion: Optional. The policy format version to be
+	// returned. Acceptable values are 0 and 1. If the value is 0, or the
+	// field is omitted, policy format version 1 will be returned.
+	RequestedPolicyVersion int64 `json:"requestedPolicyVersion,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g.
+	// "RequestedPolicyVersion") to unconditionally include in API requests.
+	// By default, fields with empty values are omitted from API requests.
+	// However, any non-pointer, non-interface field appearing in
+	// ForceSendFields will be sent to the server regardless of whether the
+	// field is empty or not. This may be used to include empty fields in
+	// Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "RequestedPolicyVersion")
+	// to include in API requests with the JSON null value. By default,
+	// fields with empty values are omitted from API requests. However, any
+	// field with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *GetPolicyOptions) MarshalJSON() ([]byte, error) {
+	type NoMethod GetPolicyOptions
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
 // HadoopJob: A Cloud Dataproc job for running Apache Hadoop MapReduce
@@ -1142,8 +1207,7 @@ func (s *HiveJob) MarshalJSON() ([]byte, error) {
 // resources in an instance group, such as a master or worker group.
 type InstanceGroupConfig struct {
 	// Accelerators: Optional. The Compute Engine accelerator configuration
-	// for these instances.Beta Feature: This feature is still under
-	// development. It may be changed before final release.
+	// for these instances.
 	Accelerators []*AcceleratorConfig `json:"accelerators,omitempty"`
 
 	// DiskConfig: Optional. Disk option config settings.
@@ -1523,6 +1587,147 @@ func (s *JobStatus) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// KerberosConfig: Specifies Kerberos related configuration.
+type KerberosConfig struct {
+	// CrossRealmTrustAdminServer: Optional. The admin server (IP or
+	// hostname) for the remote trusted realm in a cross realm trust
+	// relationship.
+	CrossRealmTrustAdminServer string `json:"crossRealmTrustAdminServer,omitempty"`
+
+	// CrossRealmTrustKdc: Optional. The KDC (IP or hostname) for the remote
+	// trusted realm in a cross realm trust relationship.
+	CrossRealmTrustKdc string `json:"crossRealmTrustKdc,omitempty"`
+
+	// CrossRealmTrustRealm: Optional. The remote realm the Dataproc
+	// on-cluster KDC will trust, should the user enable cross realm trust.
+	CrossRealmTrustRealm string `json:"crossRealmTrustRealm,omitempty"`
+
+	// CrossRealmTrustSharedPasswordUri: Optional. The Cloud Storage URI of
+	// a KMS encrypted file containing the shared password between the
+	// on-cluster Kerberos realm and the remote trusted realm, in a cross
+	// realm trust relationship.
+	CrossRealmTrustSharedPasswordUri string `json:"crossRealmTrustSharedPasswordUri,omitempty"`
+
+	// EnableKerberos: Optional. Flag to indicate whether to Kerberize the
+	// cluster.
+	EnableKerberos bool `json:"enableKerberos,omitempty"`
+
+	// KdcDbKeyUri: Optional. The Cloud Storage URI of a KMS encrypted file
+	// containing the master key of the KDC database.
+	KdcDbKeyUri string `json:"kdcDbKeyUri,omitempty"`
+
+	// KeyPasswordUri: Optional. The Cloud Storage URI of a KMS encrypted
+	// file containing the password to the user provided key. For the
+	// self-signed certificate, this password is generated by Dataproc.
+	KeyPasswordUri string `json:"keyPasswordUri,omitempty"`
+
+	// KeystorePasswordUri: Optional. The Cloud Storage URI of a KMS
+	// encrypted file containing the password to the user provided keystore.
+	// For the self-signed certificate, this password is generated by
+	// Dataproc.
+	KeystorePasswordUri string `json:"keystorePasswordUri,omitempty"`
+
+	// KeystoreUri: Optional. The Cloud Storage URI of the keystore file
+	// used for SSL encryption. If not provided, Dataproc will provide a
+	// self-signed certificate.
+	KeystoreUri string `json:"keystoreUri,omitempty"`
+
+	// KmsKeyUri: Required. The uri of the KMS key used to encrypt various
+	// sensitive files.
+	KmsKeyUri string `json:"kmsKeyUri,omitempty"`
+
+	// RootPrincipalPasswordUri: Required. The Cloud Storage URI of a KMS
+	// encrypted file containing the root principal password.
+	RootPrincipalPasswordUri string `json:"rootPrincipalPasswordUri,omitempty"`
+
+	// TgtLifetimeHours: Optional. The lifetime of the ticket granting
+	// ticket, in hours. If not specified, or user specifies 0, then default
+	// value 10 will be used.
+	TgtLifetimeHours int64 `json:"tgtLifetimeHours,omitempty"`
+
+	// TruststorePasswordUri: Optional. The Cloud Storage URI of a KMS
+	// encrypted file containing the password to the user provided
+	// truststore. For the self-signed certificate, this password is
+	// generated by Dataproc.
+	TruststorePasswordUri string `json:"truststorePasswordUri,omitempty"`
+
+	// TruststoreUri: Optional. The Cloud Storage URI of the truststore file
+	// used for SSL encryption. If not provided, Dataproc will provide a
+	// self-signed certificate.
+	TruststoreUri string `json:"truststoreUri,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g.
+	// "CrossRealmTrustAdminServer") to unconditionally include in API
+	// requests. By default, fields with empty values are omitted from API
+	// requests. However, any non-pointer, non-interface field appearing in
+	// ForceSendFields will be sent to the server regardless of whether the
+	// field is empty or not. This may be used to include empty fields in
+	// Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g.
+	// "CrossRealmTrustAdminServer") to include in API requests with the
+	// JSON null value. By default, fields with empty values are omitted
+	// from API requests. However, any field with an empty value appearing
+	// in NullFields will be sent to the server as null. It is an error if a
+	// field in this list has a non-empty value. This may be used to include
+	// null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *KerberosConfig) MarshalJSON() ([]byte, error) {
+	type NoMethod KerberosConfig
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// LifecycleConfig: Specifies the cluster auto-delete schedule
+// configuration.
+type LifecycleConfig struct {
+	// AutoDeleteTime: Optional. The time when cluster will be auto-deleted.
+	AutoDeleteTime string `json:"autoDeleteTime,omitempty"`
+
+	// AutoDeleteTtl: Optional. The lifetime duration of cluster. The
+	// cluster will be auto-deleted at the end of this period. Valid range:
+	// 10m, 14d.Example: "1d", to delete the cluster 1 day after its
+	// creation..
+	AutoDeleteTtl string `json:"autoDeleteTtl,omitempty"`
+
+	// IdleDeleteTtl: Optional. The duration to keep the cluster alive while
+	// idling. Passing this threshold will cause the cluster to be deleted.
+	// Valid range: 10m, 14d.Example: "10m", the minimum value, to delete
+	// the cluster when it has had no jobs running for 10 minutes.
+	IdleDeleteTtl string `json:"idleDeleteTtl,omitempty"`
+
+	// IdleStartTime: Output only. The time when cluster became idle (most
+	// recent job finished) and became eligible for deletion due to
+	// idleness.
+	IdleStartTime string `json:"idleStartTime,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "AutoDeleteTime") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "AutoDeleteTime") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *LifecycleConfig) MarshalJSON() ([]byte, error) {
+	type NoMethod LifecycleConfig
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // ListClustersResponse: The list of all clusters in a project.
 type ListClustersResponse struct {
 	// Clusters: Output only. The clusters in the project.
@@ -1842,8 +2047,8 @@ type Operation struct {
 
 	// Name: The server-assigned name, which is only unique within the same
 	// service that originally returns it. If you use the default HTTP
-	// mapping, the name should have the format of
-	// operations/some/unique/name.
+	// mapping, the name should be a resource name ending with
+	// operations/{unique_id}.
 	Name string `json:"name,omitempty"`
 
 	// Response: The normal response of the operation in case of success. If
@@ -2088,7 +2293,7 @@ type Policy struct {
 	// getIamPolicy, and systems are expected to put that etag in the
 	// request to setIamPolicy to ensure that their change will be applied
 	// to the same version of the policy.If no etag is provided in the call
-	// to setIamPolicy, then the existing policy is overwritten blindly.
+	// to setIamPolicy, then the existing policy is overwritten.
 	Etag string `json:"etag,omitempty"`
 
 	// Version: Deprecated.
@@ -2255,6 +2460,35 @@ func (s *RegexValidation) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// SecurityConfig: Security related configuration, including Kerberos.
+type SecurityConfig struct {
+	// KerberosConfig: Kerberos related configuration.
+	KerberosConfig *KerberosConfig `json:"kerberosConfig,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "KerberosConfig") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "KerberosConfig") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *SecurityConfig) MarshalJSON() ([]byte, error) {
+	type NoMethod SecurityConfig
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // SetIamPolicyRequest: Request message for SetIamPolicy method.
 type SetIamPolicyRequest struct {
 	// Policy: REQUIRED: The complete policy to be applied to the resource.
@@ -2292,7 +2526,8 @@ type SoftwareConfig struct {
 	// ImageVersion: Optional. The version of software inside the cluster.
 	// It must be one of the supported Cloud Dataproc Versions, such as
 	// "1.2" (including a subminor version, such as "1.2.29"), or the
-	// "preview" version. If unspecified, it defaults to the latest version.
+	// "preview" version. If unspecified, it defaults to the latest Debian
+	// version.
 	ImageVersion string `json:"imageVersion,omitempty"`
 
 	// OptionalComponents: The set of optional components to activate on the
@@ -2458,43 +2693,11 @@ func (s *SparkSqlJob) MarshalJSON() ([]byte, error) {
 
 // Status: The Status type defines a logical error model that is
 // suitable for different programming environments, including REST APIs
-// and RPC APIs. It is used by gRPC (https://github.com/grpc). The error
-// model is designed to be:
-// Simple to use and understand for most users
-// Flexible enough to meet unexpected needsOverviewThe Status message
-// contains three pieces of data: error code, error message, and error
-// details. The error code should be an enum value of google.rpc.Code,
-// but it may accept additional error codes if needed. The error message
-// should be a developer-facing English message that helps developers
-// understand and resolve the error. If a localized user-facing error
-// message is needed, put the localized message in the error details or
-// localize it in the client. The optional error details may contain
-// arbitrary information about the error. There is a predefined set of
-// error detail types in the package google.rpc that can be used for
-// common error conditions.Language mappingThe Status message is the
-// logical representation of the error model, but it is not necessarily
-// the actual wire format. When the Status message is exposed in
-// different client libraries and different wire protocols, it can be
-// mapped differently. For example, it will likely be mapped to some
-// exceptions in Java, but more likely mapped to some error codes in
-// C.Other usesThe error model and the Status message can be used in a
-// variety of environments, either with or without APIs, to provide a
-// consistent developer experience across different environments.Example
-// uses of this error model include:
-// Partial errors. If a service needs to return partial errors to the
-// client, it may embed the Status in the normal response to indicate
-// the partial errors.
-// Workflow errors. A typical workflow has multiple steps. Each step may
-// have a Status message for error reporting.
-// Batch operations. If a client uses batch request and batch response,
-// the Status message should be used directly inside batch response, one
-// for each error sub-response.
-// Asynchronous operations. If an API call embeds asynchronous operation
-// results in its response, the status of those operations should be
-// represented directly using the Status message.
-// Logging. If some API errors are stored in logs, the message Status
-// could be used directly after any stripping needed for
-// security/privacy reasons.
+// and RPC APIs. It is used by gRPC (https://github.com/grpc). Each
+// Status message contains three pieces of data: error code, error
+// message, and error details.You can find out more about this error
+// model and how to work with it in the API Design Guide
+// (https://cloud.google.com/apis/design/errors).
 type Status struct {
 	// Code: The status code, which should be an enum value of
 	// google.rpc.Code.
@@ -3130,6 +3333,7 @@ func (c *ProjectsLocationsWorkflowTemplatesCreateCall) Header() http.Header {
 
 func (c *ProjectsLocationsWorkflowTemplatesCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3276,6 +3480,7 @@ func (c *ProjectsLocationsWorkflowTemplatesDeleteCall) Header() http.Header {
 
 func (c *ProjectsLocationsWorkflowTemplatesDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3431,6 +3636,7 @@ func (c *ProjectsLocationsWorkflowTemplatesGetCall) Header() http.Header {
 
 func (c *ProjectsLocationsWorkflowTemplatesGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3573,6 +3779,7 @@ func (c *ProjectsLocationsWorkflowTemplatesGetIamPolicyCall) Header() http.Heade
 
 func (c *ProjectsLocationsWorkflowTemplatesGetIamPolicyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3683,8 +3890,8 @@ type ProjectsLocationsWorkflowTemplatesInstantiateCall struct {
 // workflow is finished.The running workflow can be aborted via
 // operations.cancel. This will cause any inflight jobs to be cancelled
 // and workflow-owned clusters to be deleted.The Operation.metadata will
-// be WorkflowMetadata.On successful completion, Operation.response will
-// be Empty.
+// be WorkflowMetadata. Also see Using WorkflowMetadata.On successful
+// completion, Operation.response will be Empty.
 func (r *ProjectsLocationsWorkflowTemplatesService) Instantiate(name string, instantiateworkflowtemplaterequest *InstantiateWorkflowTemplateRequest) *ProjectsLocationsWorkflowTemplatesInstantiateCall {
 	c := &ProjectsLocationsWorkflowTemplatesInstantiateCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.name = name
@@ -3719,6 +3926,7 @@ func (c *ProjectsLocationsWorkflowTemplatesInstantiateCall) Header() http.Header
 
 func (c *ProjectsLocationsWorkflowTemplatesInstantiateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3782,7 +3990,7 @@ func (c *ProjectsLocationsWorkflowTemplatesInstantiateCall) Do(opts ...googleapi
 	}
 	return ret, nil
 	// {
-	//   "description": "Instantiates a template and begins execution.The returned Operation can be used to track execution of workflow by polling operations.get. The Operation will complete when entire workflow is finished.The running workflow can be aborted via operations.cancel. This will cause any inflight jobs to be cancelled and workflow-owned clusters to be deleted.The Operation.metadata will be WorkflowMetadata.On successful completion, Operation.response will be Empty.",
+	//   "description": "Instantiates a template and begins execution.The returned Operation can be used to track execution of workflow by polling operations.get. The Operation will complete when entire workflow is finished.The running workflow can be aborted via operations.cancel. This will cause any inflight jobs to be cancelled and workflow-owned clusters to be deleted.The Operation.metadata will be WorkflowMetadata. Also see Using WorkflowMetadata.On successful completion, Operation.response will be Empty.",
 	//   "flatPath": "v1/projects/{projectsId}/locations/{locationsId}/workflowTemplates/{workflowTemplatesId}:instantiate",
 	//   "httpMethod": "POST",
 	//   "id": "dataproc.projects.locations.workflowTemplates.instantiate",
@@ -3831,8 +4039,9 @@ type ProjectsLocationsWorkflowTemplatesInstantiateInlineCall struct {
 // complete when entire workflow is finished.The running workflow can be
 // aborted via operations.cancel. This will cause any inflight jobs to
 // be cancelled and workflow-owned clusters to be deleted.The
-// Operation.metadata will be WorkflowMetadata.On successful completion,
-// Operation.response will be Empty.
+// Operation.metadata will be WorkflowMetadata. Also see Using
+// WorkflowMetadata.On successful completion, Operation.response will be
+// Empty.
 func (r *ProjectsLocationsWorkflowTemplatesService) InstantiateInline(parent string, workflowtemplate *WorkflowTemplate) *ProjectsLocationsWorkflowTemplatesInstantiateInlineCall {
 	c := &ProjectsLocationsWorkflowTemplatesInstantiateInlineCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.parent = parent
@@ -3879,6 +4088,7 @@ func (c *ProjectsLocationsWorkflowTemplatesInstantiateInlineCall) Header() http.
 
 func (c *ProjectsLocationsWorkflowTemplatesInstantiateInlineCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3942,7 +4152,7 @@ func (c *ProjectsLocationsWorkflowTemplatesInstantiateInlineCall) Do(opts ...goo
 	}
 	return ret, nil
 	// {
-	//   "description": "Instantiates a template and begins execution.This method is equivalent to executing the sequence CreateWorkflowTemplate, InstantiateWorkflowTemplate, DeleteWorkflowTemplate.The returned Operation can be used to track execution of workflow by polling operations.get. The Operation will complete when entire workflow is finished.The running workflow can be aborted via operations.cancel. This will cause any inflight jobs to be cancelled and workflow-owned clusters to be deleted.The Operation.metadata will be WorkflowMetadata.On successful completion, Operation.response will be Empty.",
+	//   "description": "Instantiates a template and begins execution.This method is equivalent to executing the sequence CreateWorkflowTemplate, InstantiateWorkflowTemplate, DeleteWorkflowTemplate.The returned Operation can be used to track execution of workflow by polling operations.get. The Operation will complete when entire workflow is finished.The running workflow can be aborted via operations.cancel. This will cause any inflight jobs to be cancelled and workflow-owned clusters to be deleted.The Operation.metadata will be WorkflowMetadata. Also see Using WorkflowMetadata.On successful completion, Operation.response will be Empty.",
 	//   "flatPath": "v1/projects/{projectsId}/locations/{locationsId}/workflowTemplates:instantiateInline",
 	//   "httpMethod": "POST",
 	//   "id": "dataproc.projects.locations.workflowTemplates.instantiateInline",
@@ -4046,6 +4256,7 @@ func (c *ProjectsLocationsWorkflowTemplatesListCall) Header() http.Header {
 
 func (c *ProjectsLocationsWorkflowTemplatesListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4213,6 +4424,7 @@ func (c *ProjectsLocationsWorkflowTemplatesSetIamPolicyCall) Header() http.Heade
 
 func (c *ProjectsLocationsWorkflowTemplatesSetIamPolicyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4357,6 +4569,7 @@ func (c *ProjectsLocationsWorkflowTemplatesTestIamPermissionsCall) Header() http
 
 func (c *ProjectsLocationsWorkflowTemplatesTestIamPermissionsCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4497,6 +4710,7 @@ func (c *ProjectsLocationsWorkflowTemplatesUpdateCall) Header() http.Header {
 
 func (c *ProjectsLocationsWorkflowTemplatesUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4652,6 +4866,7 @@ func (c *ProjectsRegionsClustersCreateCall) Header() http.Header {
 
 func (c *ProjectsRegionsClustersCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4827,6 +5042,7 @@ func (c *ProjectsRegionsClustersDeleteCall) Header() http.Header {
 
 func (c *ProjectsRegionsClustersDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4989,6 +5205,7 @@ func (c *ProjectsRegionsClustersDiagnoseCall) Header() http.Header {
 
 func (c *ProjectsRegionsClustersDiagnoseCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5156,6 +5373,7 @@ func (c *ProjectsRegionsClustersGetCall) Header() http.Header {
 
 func (c *ProjectsRegionsClustersGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5307,6 +5525,7 @@ func (c *ProjectsRegionsClustersGetIamPolicyCall) Header() http.Header {
 
 func (c *ProjectsRegionsClustersGetIamPolicyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5489,6 +5708,7 @@ func (c *ProjectsRegionsClustersListCall) Header() http.Header {
 
 func (c *ProjectsRegionsClustersListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5737,6 +5957,7 @@ func (c *ProjectsRegionsClustersPatchCall) Header() http.Header {
 
 func (c *ProjectsRegionsClustersPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5909,6 +6130,7 @@ func (c *ProjectsRegionsClustersSetIamPolicyCall) Header() http.Header {
 
 func (c *ProjectsRegionsClustersSetIamPolicyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6053,6 +6275,7 @@ func (c *ProjectsRegionsClustersTestIamPermissionsCall) Header() http.Header {
 
 func (c *ProjectsRegionsClustersTestIamPermissionsCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6198,6 +6421,7 @@ func (c *ProjectsRegionsJobsCancelCall) Header() http.Header {
 
 func (c *ProjectsRegionsJobsCancelCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6355,6 +6579,7 @@ func (c *ProjectsRegionsJobsDeleteCall) Header() http.Header {
 
 func (c *ProjectsRegionsJobsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6514,6 +6739,7 @@ func (c *ProjectsRegionsJobsGetCall) Header() http.Header {
 
 func (c *ProjectsRegionsJobsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6665,6 +6891,7 @@ func (c *ProjectsRegionsJobsGetIamPolicyCall) Header() http.Header {
 
 func (c *ProjectsRegionsJobsGetIamPolicyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6863,6 +7090,7 @@ func (c *ProjectsRegionsJobsListCall) Header() http.Header {
 
 func (c *ProjectsRegionsJobsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7072,6 +7300,7 @@ func (c *ProjectsRegionsJobsPatchCall) Header() http.Header {
 
 func (c *ProjectsRegionsJobsPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7233,6 +7462,7 @@ func (c *ProjectsRegionsJobsSetIamPolicyCall) Header() http.Header {
 
 func (c *ProjectsRegionsJobsSetIamPolicyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7374,6 +7604,7 @@ func (c *ProjectsRegionsJobsSubmitCall) Header() http.Header {
 
 func (c *ProjectsRegionsJobsSubmitCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7525,6 +7756,7 @@ func (c *ProjectsRegionsJobsTestIamPermissionsCall) Header() http.Header {
 
 func (c *ProjectsRegionsJobsTestIamPermissionsCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7671,6 +7903,7 @@ func (c *ProjectsRegionsOperationsCancelCall) Header() http.Header {
 
 func (c *ProjectsRegionsOperationsCancelCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7803,6 +8036,7 @@ func (c *ProjectsRegionsOperationsDeleteCall) Header() http.Header {
 
 func (c *ProjectsRegionsOperationsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7945,6 +8179,7 @@ func (c *ProjectsRegionsOperationsGetCall) Header() http.Header {
 
 func (c *ProjectsRegionsOperationsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -8081,6 +8316,7 @@ func (c *ProjectsRegionsOperationsGetIamPolicyCall) Header() http.Header {
 
 func (c *ProjectsRegionsOperationsGetIamPolicyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -8259,6 +8495,7 @@ func (c *ProjectsRegionsOperationsListCall) Header() http.Header {
 
 func (c *ProjectsRegionsOperationsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -8431,6 +8668,7 @@ func (c *ProjectsRegionsOperationsSetIamPolicyCall) Header() http.Header {
 
 func (c *ProjectsRegionsOperationsSetIamPolicyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -8575,6 +8813,7 @@ func (c *ProjectsRegionsOperationsTestIamPermissionsCall) Header() http.Header {
 
 func (c *ProjectsRegionsOperationsTestIamPermissionsCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -8714,6 +8953,7 @@ func (c *ProjectsRegionsWorkflowTemplatesCreateCall) Header() http.Header {
 
 func (c *ProjectsRegionsWorkflowTemplatesCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -8860,6 +9100,7 @@ func (c *ProjectsRegionsWorkflowTemplatesDeleteCall) Header() http.Header {
 
 func (c *ProjectsRegionsWorkflowTemplatesDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -9015,6 +9256,7 @@ func (c *ProjectsRegionsWorkflowTemplatesGetCall) Header() http.Header {
 
 func (c *ProjectsRegionsWorkflowTemplatesGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -9157,6 +9399,7 @@ func (c *ProjectsRegionsWorkflowTemplatesGetIamPolicyCall) Header() http.Header 
 
 func (c *ProjectsRegionsWorkflowTemplatesGetIamPolicyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -9267,8 +9510,8 @@ type ProjectsRegionsWorkflowTemplatesInstantiateCall struct {
 // workflow is finished.The running workflow can be aborted via
 // operations.cancel. This will cause any inflight jobs to be cancelled
 // and workflow-owned clusters to be deleted.The Operation.metadata will
-// be WorkflowMetadata.On successful completion, Operation.response will
-// be Empty.
+// be WorkflowMetadata. Also see Using WorkflowMetadata.On successful
+// completion, Operation.response will be Empty.
 func (r *ProjectsRegionsWorkflowTemplatesService) Instantiate(name string, instantiateworkflowtemplaterequest *InstantiateWorkflowTemplateRequest) *ProjectsRegionsWorkflowTemplatesInstantiateCall {
 	c := &ProjectsRegionsWorkflowTemplatesInstantiateCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.name = name
@@ -9303,6 +9546,7 @@ func (c *ProjectsRegionsWorkflowTemplatesInstantiateCall) Header() http.Header {
 
 func (c *ProjectsRegionsWorkflowTemplatesInstantiateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -9366,7 +9610,7 @@ func (c *ProjectsRegionsWorkflowTemplatesInstantiateCall) Do(opts ...googleapi.C
 	}
 	return ret, nil
 	// {
-	//   "description": "Instantiates a template and begins execution.The returned Operation can be used to track execution of workflow by polling operations.get. The Operation will complete when entire workflow is finished.The running workflow can be aborted via operations.cancel. This will cause any inflight jobs to be cancelled and workflow-owned clusters to be deleted.The Operation.metadata will be WorkflowMetadata.On successful completion, Operation.response will be Empty.",
+	//   "description": "Instantiates a template and begins execution.The returned Operation can be used to track execution of workflow by polling operations.get. The Operation will complete when entire workflow is finished.The running workflow can be aborted via operations.cancel. This will cause any inflight jobs to be cancelled and workflow-owned clusters to be deleted.The Operation.metadata will be WorkflowMetadata. Also see Using WorkflowMetadata.On successful completion, Operation.response will be Empty.",
 	//   "flatPath": "v1/projects/{projectsId}/regions/{regionsId}/workflowTemplates/{workflowTemplatesId}:instantiate",
 	//   "httpMethod": "POST",
 	//   "id": "dataproc.projects.regions.workflowTemplates.instantiate",
@@ -9415,8 +9659,9 @@ type ProjectsRegionsWorkflowTemplatesInstantiateInlineCall struct {
 // complete when entire workflow is finished.The running workflow can be
 // aborted via operations.cancel. This will cause any inflight jobs to
 // be cancelled and workflow-owned clusters to be deleted.The
-// Operation.metadata will be WorkflowMetadata.On successful completion,
-// Operation.response will be Empty.
+// Operation.metadata will be WorkflowMetadata. Also see Using
+// WorkflowMetadata.On successful completion, Operation.response will be
+// Empty.
 func (r *ProjectsRegionsWorkflowTemplatesService) InstantiateInline(parent string, workflowtemplate *WorkflowTemplate) *ProjectsRegionsWorkflowTemplatesInstantiateInlineCall {
 	c := &ProjectsRegionsWorkflowTemplatesInstantiateInlineCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.parent = parent
@@ -9463,6 +9708,7 @@ func (c *ProjectsRegionsWorkflowTemplatesInstantiateInlineCall) Header() http.He
 
 func (c *ProjectsRegionsWorkflowTemplatesInstantiateInlineCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -9526,7 +9772,7 @@ func (c *ProjectsRegionsWorkflowTemplatesInstantiateInlineCall) Do(opts ...googl
 	}
 	return ret, nil
 	// {
-	//   "description": "Instantiates a template and begins execution.This method is equivalent to executing the sequence CreateWorkflowTemplate, InstantiateWorkflowTemplate, DeleteWorkflowTemplate.The returned Operation can be used to track execution of workflow by polling operations.get. The Operation will complete when entire workflow is finished.The running workflow can be aborted via operations.cancel. This will cause any inflight jobs to be cancelled and workflow-owned clusters to be deleted.The Operation.metadata will be WorkflowMetadata.On successful completion, Operation.response will be Empty.",
+	//   "description": "Instantiates a template and begins execution.This method is equivalent to executing the sequence CreateWorkflowTemplate, InstantiateWorkflowTemplate, DeleteWorkflowTemplate.The returned Operation can be used to track execution of workflow by polling operations.get. The Operation will complete when entire workflow is finished.The running workflow can be aborted via operations.cancel. This will cause any inflight jobs to be cancelled and workflow-owned clusters to be deleted.The Operation.metadata will be WorkflowMetadata. Also see Using WorkflowMetadata.On successful completion, Operation.response will be Empty.",
 	//   "flatPath": "v1/projects/{projectsId}/regions/{regionsId}/workflowTemplates:instantiateInline",
 	//   "httpMethod": "POST",
 	//   "id": "dataproc.projects.regions.workflowTemplates.instantiateInline",
@@ -9630,6 +9876,7 @@ func (c *ProjectsRegionsWorkflowTemplatesListCall) Header() http.Header {
 
 func (c *ProjectsRegionsWorkflowTemplatesListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -9797,6 +10044,7 @@ func (c *ProjectsRegionsWorkflowTemplatesSetIamPolicyCall) Header() http.Header 
 
 func (c *ProjectsRegionsWorkflowTemplatesSetIamPolicyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -9941,6 +10189,7 @@ func (c *ProjectsRegionsWorkflowTemplatesTestIamPermissionsCall) Header() http.H
 
 func (c *ProjectsRegionsWorkflowTemplatesTestIamPermissionsCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -10081,6 +10330,7 @@ func (c *ProjectsRegionsWorkflowTemplatesUpdateCall) Header() http.Header {
 
 func (c *ProjectsRegionsWorkflowTemplatesUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}

@@ -290,8 +290,10 @@ type EnvironmentConfig struct {
 	// AirflowUri: Output only.
 	// The URI of the Apache Airflow Web UI hosted within this environment
 	// (see
-	// [Airflow web
-	// interface](/composer/docs/how-to/accessing/airflow-web-interface)).
+	// [Airflow
+	// web
+	// interface](/composer/docs/how-to/accessing/airflow-web-interface))
+	// .
 	AirflowUri string `json:"airflowUri,omitempty"`
 
 	// DagGcsPrefix: Output only.
@@ -507,9 +509,11 @@ type NodeConfig struct {
 	// [zone](/compute/docs/regions-zones) in which
 	// to deploy the VMs used to run the Apache Airflow software, specified
 	// as a
-	// [relative resource
-	// name](/apis/design/resource_names#relative_resource_name).
-	// For example: "projects/{projectId}/zones/{zoneId}".
+	// [relative
+	// resource
+	// name](/apis/design/resource_names#relative_resource_name). For
+	// example:
+	// "projects/{projectId}/zones/{zoneId}".
 	//
 	// This `location` must belong to the enclosing environment's project
 	// and
@@ -532,9 +536,9 @@ type NodeConfig struct {
 	// [machine type](/compute/docs/machine-types) used for cluster
 	// instances,
 	// specified as a
-	// [relative resource
-	// name](/apis/design/resource_names#relative_resource_name).
-	// For
+	// [relative
+	// resource
+	// name](/apis/design/resource_names#relative_resource_name). For
 	// example:
 	// "projects/{projectId}/zones/{zoneId}/machineTypes/{machineTyp
 	// eId}".
@@ -562,9 +566,10 @@ type NodeConfig struct {
 	// Network: Optional. The Compute Engine network to be used for
 	// machine
 	// communications, specified as a
-	// [relative resource
-	// name](/apis/design/resource_names#relative_resource_name).
-	// For example:
+	// [relative
+	// resource
+	// name](/apis/design/resource_names#relative_resource_name). For
+	// example:
 	// "projects/{projectId}/global/networks/{networkId}".
 	//
 	// [Shared VPC](/vpc/docs/shared-vpc) is not currently supported.
@@ -595,9 +600,9 @@ type NodeConfig struct {
 	// Subnetwork: Optional. The Compute Engine subnetwork to be used for
 	// machine
 	// communications, specified as a
-	// [relative resource
-	// name](/apis/design/resource_names#relative_resource_name).
-	// For
+	// [relative
+	// resource
+	// name](/apis/design/resource_names#relative_resource_name). For
 	// example:
 	// "projects/{projectId}/regions/{regionId}/subnetworks/{subnetw
 	// orkId}"
@@ -669,7 +674,8 @@ type Operation struct {
 	// service that
 	// originally returns it. If you use the default HTTP mapping,
 	// the
-	// `name` should have the format of `operations/some/unique/name`.
+	// `name` should be a resource name ending with
+	// `operations/{unique_id}`.
 	Name string `json:"name,omitempty"`
 
 	// Response: The normal response of the operation in case of success.
@@ -789,23 +795,24 @@ type SoftwareConfig struct {
 	// AirflowConfigOverrides: Optional. Apache Airflow configuration
 	// properties to override.
 	//
-	// Property keys contain the section and property names, separated by a
-	// hyphen,
-	// for example "core-dags_are_paused_at_creation". Section names must
-	// not
-	// contain hyphens ("-"), opening square brackets ("["),  or closing
-	// square
-	// brackets ("]"). The property name must not be empty and must not
-	// contain
-	// an equals sign ("=") or semicolon (";"). Section and property names
+	// Property keys contain the section and property names, separated by
+	// a
+	// hyphen, for example "core-dags_are_paused_at_creation". Section names
 	// must
-	// not contain a period ("."). Apache Airflow configuration property
+	// not contain hyphens ("-"), opening square brackets ("["),  or
+	// closing
+	// square brackets ("]"). The property name must not be empty and must
+	// not
+	// contain an equals sign ("=") or semicolon (";"). Section and property
 	// names
-	// must be written in
-	// [snake_case](https://en.wikipedia.org/wiki/Snake_case).
-	// Property values can contain any character, and can be written in
-	// any
-	// lower/upper case format.
+	// must not contain a period ("."). Apache Airflow configuration
+	// property
+	// names must be written
+	// in
+	// [snake_case](https://en.wikipedia.org/wiki/Snake_case). Property
+	// values can
+	// contain any character, and can be written in any lower/upper case
+	// format.
 	//
 	// Certain Apache Airflow configuration property values
 	// are
@@ -870,7 +877,8 @@ type SoftwareConfig struct {
 	// [release
 	// name](https://github.com/apache/incubator-airflow/releases).
 	//
-	// See also [Version
+	// See also
+	// [Version
 	// List](/composer/docs/concepts/versioning/composer-versions).
 	ImageVersion string `json:"imageVersion,omitempty"`
 
@@ -926,81 +934,14 @@ func (s *SoftwareConfig) MarshalJSON() ([]byte, error) {
 // suitable for
 // different programming environments, including REST APIs and RPC APIs.
 // It is
-// used by [gRPC](https://github.com/grpc). The error model is designed
-// to be:
+// used by [gRPC](https://github.com/grpc). Each `Status` message
+// contains
+// three pieces of data: error code, error message, and error
+// details.
 //
-// - Simple to use and understand for most users
-// - Flexible enough to meet unexpected needs
-//
-// # Overview
-//
-// The `Status` message contains three pieces of data: error code,
-// error
-// message, and error details. The error code should be an enum value
-// of
-// google.rpc.Code, but it may accept additional error codes if needed.
-// The
-// error message should be a developer-facing English message that
-// helps
-// developers *understand* and *resolve* the error. If a localized
-// user-facing
-// error message is needed, put the localized message in the error
-// details or
-// localize it in the client. The optional error details may contain
-// arbitrary
-// information about the error. There is a predefined set of error
-// detail types
-// in the package `google.rpc` that can be used for common error
-// conditions.
-//
-// # Language mapping
-//
-// The `Status` message is the logical representation of the error
-// model, but it
-// is not necessarily the actual wire format. When the `Status` message
-// is
-// exposed in different client libraries and different wire protocols,
-// it can be
-// mapped differently. For example, it will likely be mapped to some
-// exceptions
-// in Java, but more likely mapped to some error codes in C.
-//
-// # Other uses
-//
-// The error model and the `Status` message can be used in a variety
-// of
-// environments, either with or without APIs, to provide a
-// consistent developer experience across different
-// environments.
-//
-// Example uses of this error model include:
-//
-// - Partial errors. If a service needs to return partial errors to the
-// client,
-//     it may embed the `Status` in the normal response to indicate the
-// partial
-//     errors.
-//
-// - Workflow errors. A typical workflow has multiple steps. Each step
-// may
-//     have a `Status` message for error reporting.
-//
-// - Batch operations. If a client uses batch request and batch
-// response, the
-//     `Status` message should be used directly inside batch response,
-// one for
-//     each error sub-response.
-//
-// - Asynchronous operations. If an API call embeds asynchronous
-// operation
-//     results in its response, the status of those operations should
-// be
-//     represented directly using the `Status` message.
-//
-// - Logging. If some API errors are stored in logs, the message
-// `Status` could
-//     be used directly after any stripping needed for security/privacy
-// reasons.
+// You can find out more about this error model and how to work with it
+// in the
+// [API Design Guide](https://cloud.google.com/apis/design/errors).
 type Status struct {
 	// Code: The status code, which should be an enum value of
 	// google.rpc.Code.
@@ -1087,6 +1028,7 @@ func (c *ProjectsLocationsEnvironmentsCreateCall) Header() http.Header {
 
 func (c *ProjectsLocationsEnvironmentsCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1159,7 +1101,7 @@ func (c *ProjectsLocationsEnvironmentsCreateCall) Do(opts ...googleapi.CallOptio
 	//   ],
 	//   "parameters": {
 	//     "parent": {
-	//       "description": "The parent must be of the form \"projects/{projectId}/locations/{locationId}\".",
+	//       "description": "The parent must be of the form\n\"projects/{projectId}/locations/{locationId}\".",
 	//       "location": "path",
 	//       "pattern": "^projects/[^/]+/locations/[^/]+$",
 	//       "required": true,
@@ -1224,6 +1166,7 @@ func (c *ProjectsLocationsEnvironmentsDeleteCall) Header() http.Header {
 
 func (c *ProjectsLocationsEnvironmentsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1364,6 +1307,7 @@ func (c *ProjectsLocationsEnvironmentsGetCall) Header() http.Header {
 
 func (c *ProjectsLocationsEnvironmentsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1521,6 +1465,7 @@ func (c *ProjectsLocationsEnvironmentsListCall) Header() http.Header {
 
 func (c *ProjectsLocationsEnvironmentsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1784,7 +1729,8 @@ func (r *ProjectsLocationsEnvironmentsService) Patch(name string, environment *E
 //  <td>Horizontally scale the number of nodes in the environment. An
 // integer
 //  greater than or equal to 3 must be provided in the
-// `config.nodeCount` field.
+// `config.nodeCount`
+//  field.
 //  </td>
 //  </tr>
 //  <tr>
@@ -1857,6 +1803,7 @@ func (c *ProjectsLocationsEnvironmentsPatchCall) Header() http.Header {
 
 func (c *ProjectsLocationsEnvironmentsPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1936,7 +1883,7 @@ func (c *ProjectsLocationsEnvironmentsPatchCall) Do(opts ...googleapi.CallOption
 	//       "type": "string"
 	//     },
 	//     "updateMask": {
-	//       "description": "Required. A comma-separated list of paths, relative to `Environment`, of\nfields to update.\nFor example, to set the version of scikit-learn to install in the\nenvironment to 0.19.0 and to remove an existing installation of\nnumpy, the `updateMask` parameter would include the following two\n`paths` values: \"config.softwareConfig.pypiPackages.scikit-learn\" and\n\"config.softwareConfig.pypiPackages.numpy\". The included patch\nenvironment would specify the scikit-learn version as follows:\n\n    {\n      \"config\":{\n        \"softwareConfig\":{\n          \"pypiPackages\":{\n            \"scikit-learn\":\"==0.19.0\"\n          }\n        }\n      }\n    }\n\nNote that in the above example, any existing PyPI packages\nother than scikit-learn and numpy will be unaffected.\n\nOnly one update type may be included in a single request's `updateMask`.\nFor example, one cannot update both the PyPI packages and\nlabels in the same request. However, it is possible to update multiple\nmembers of a map field simultaneously in the same request. For example,\nto set the labels \"label1\" and \"label2\" while clearing \"label3\" (assuming\nit already exists), one can\nprovide the paths \"labels.label1\", \"labels.label2\", and \"labels.label3\"\nand populate the patch environment as follows:\n\n    {\n      \"labels\":{\n        \"label1\":\"new-label1-value\"\n        \"label2\":\"new-label2-value\"\n      }\n    }\n\nNote that in the above example, any existing labels that are not\nincluded in the `updateMask` will be unaffected.\n\nIt is also possible to replace an entire map field by providing the\nmap field's path in the `updateMask`. The new value of the field will\nbe that which is provided in the patch environment. For example, to\ndelete all pre-existing user-specified PyPI packages and\ninstall botocore at version 1.7.14, the `updateMask` would contain\nthe path \"config.softwareConfig.pypiPackages\", and\nthe patch environment would be the following:\n\n    {\n      \"config\":{\n        \"softwareConfig\":{\n          \"pypiPackages\":{\n            \"botocore\":\"==1.7.14\"\n          }\n        }\n      }\n    }\n\n**Note:** Only the following fields can be updated:\n\n \u003ctable\u003e\n \u003ctbody\u003e\n \u003ctr\u003e\n \u003ctd\u003e\u003cstrong\u003eMask\u003c/strong\u003e\u003c/td\u003e\n \u003ctd\u003e\u003cstrong\u003ePurpose\u003c/strong\u003e\u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003econfig.softwareConfig.pypiPackages\n \u003c/td\u003e\n \u003ctd\u003eReplace all custom custom PyPI packages. If a replacement\n package map is not included in `environment`, all custom\n PyPI packages are cleared. It is an error to provide both this mask and a\n mask specifying an individual package.\u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003econfig.softwareConfig.pypiPackages.\u003cvar\u003epackagename\u003c/var\u003e\u003c/td\u003e\n \u003ctd\u003eUpdate the custom PyPI package \u003cvar\u003epackagename\u003c/var\u003e,\n preserving other packages. To delete the package, include it in\n `updateMask`, and omit the mapping for it in\n `environment.config.softwareConfig.pypiPackages`. It is an error\n to provide both a mask of this form and the\n \"config.softwareConfig.pypiPackages\" mask.\u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003elabels\u003c/td\u003e\n \u003ctd\u003eReplace all environment labels. If a replacement labels map is not\n included in `environment`, all labels are cleared. It is an error to\n provide both this mask and a mask specifying one or more individual\n labels.\u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003elabels.\u003cvar\u003elabelName\u003c/var\u003e\u003c/td\u003e\n \u003ctd\u003eSet the label named \u003cvar\u003elabelName\u003c/var\u003e, while preserving other\n labels. To delete the label, include it in `updateMask` and omit its\n mapping in `environment.labels`. It is an error to provide both a\n mask of this form and the \"labels\" mask.\u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003econfig.nodeCount\u003c/td\u003e\n \u003ctd\u003eHorizontally scale the number of nodes in the environment. An integer\n greater than or equal to 3 must be provided in the `config.nodeCount` field.\n \u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003econfig.softwareConfig.airflowConfigOverrides\u003c/td\u003e\n \u003ctd\u003eReplace all Apache Airflow config overrides. If a replacement config\n overrides map is not included in `environment`, all config overrides\n are cleared.\n It is an error to provide both this mask and a mask specifying one or\n more individual config overrides.\u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003econfig.softwareConfig.airflowConfigOverrides.\u003cvar\u003esection\u003c/var\u003e-\u003cvar\u003ename\n \u003c/var\u003e\u003c/td\u003e\n \u003ctd\u003eOverride the Apache Airflow config property \u003cvar\u003ename\u003c/var\u003e in the\n section named \u003cvar\u003esection\u003c/var\u003e, preserving other properties. To delete\n the property override, include it in `updateMask` and omit its mapping\n in `environment.config.softwareConfig.airflowConfigOverrides`.\n It is an error to provide both a mask of this form and the\n \"config.softwareConfig.airflowConfigOverrides\" mask.\u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003econfig.softwareConfig.envVariables\u003c/td\u003e\n \u003ctd\u003eReplace all environment variables. If a replacement environment\n variable map is not included in `environment`, all custom environment\n variables  are cleared.\n It is an error to provide both this mask and a mask specifying one or\n more individual environment variables.\u003c/td\u003e\n \u003c/tr\u003e\n \u003c/tbody\u003e\n \u003c/table\u003e",
+	//       "description": "Required. A comma-separated list of paths, relative to `Environment`, of\nfields to update.\nFor example, to set the version of scikit-learn to install in the\nenvironment to 0.19.0 and to remove an existing installation of\nnumpy, the `updateMask` parameter would include the following two\n`paths` values: \"config.softwareConfig.pypiPackages.scikit-learn\" and\n\"config.softwareConfig.pypiPackages.numpy\". The included patch\nenvironment would specify the scikit-learn version as follows:\n\n    {\n      \"config\":{\n        \"softwareConfig\":{\n          \"pypiPackages\":{\n            \"scikit-learn\":\"==0.19.0\"\n          }\n        }\n      }\n    }\n\nNote that in the above example, any existing PyPI packages\nother than scikit-learn and numpy will be unaffected.\n\nOnly one update type may be included in a single request's `updateMask`.\nFor example, one cannot update both the PyPI packages and\nlabels in the same request. However, it is possible to update multiple\nmembers of a map field simultaneously in the same request. For example,\nto set the labels \"label1\" and \"label2\" while clearing \"label3\" (assuming\nit already exists), one can\nprovide the paths \"labels.label1\", \"labels.label2\", and \"labels.label3\"\nand populate the patch environment as follows:\n\n    {\n      \"labels\":{\n        \"label1\":\"new-label1-value\"\n        \"label2\":\"new-label2-value\"\n      }\n    }\n\nNote that in the above example, any existing labels that are not\nincluded in the `updateMask` will be unaffected.\n\nIt is also possible to replace an entire map field by providing the\nmap field's path in the `updateMask`. The new value of the field will\nbe that which is provided in the patch environment. For example, to\ndelete all pre-existing user-specified PyPI packages and\ninstall botocore at version 1.7.14, the `updateMask` would contain\nthe path \"config.softwareConfig.pypiPackages\", and\nthe patch environment would be the following:\n\n    {\n      \"config\":{\n        \"softwareConfig\":{\n          \"pypiPackages\":{\n            \"botocore\":\"==1.7.14\"\n          }\n        }\n      }\n    }\n\n**Note:** Only the following fields can be updated:\n\n \u003ctable\u003e\n \u003ctbody\u003e\n \u003ctr\u003e\n \u003ctd\u003e\u003cstrong\u003eMask\u003c/strong\u003e\u003c/td\u003e\n \u003ctd\u003e\u003cstrong\u003ePurpose\u003c/strong\u003e\u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003econfig.softwareConfig.pypiPackages\n \u003c/td\u003e\n \u003ctd\u003eReplace all custom custom PyPI packages. If a replacement\n package map is not included in `environment`, all custom\n PyPI packages are cleared. It is an error to provide both this mask and a\n mask specifying an individual package.\u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003econfig.softwareConfig.pypiPackages.\u003cvar\u003epackagename\u003c/var\u003e\u003c/td\u003e\n \u003ctd\u003eUpdate the custom PyPI package \u003cvar\u003epackagename\u003c/var\u003e,\n preserving other packages. To delete the package, include it in\n `updateMask`, and omit the mapping for it in\n `environment.config.softwareConfig.pypiPackages`. It is an error\n to provide both a mask of this form and the\n \"config.softwareConfig.pypiPackages\" mask.\u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003elabels\u003c/td\u003e\n \u003ctd\u003eReplace all environment labels. If a replacement labels map is not\n included in `environment`, all labels are cleared. It is an error to\n provide both this mask and a mask specifying one or more individual\n labels.\u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003elabels.\u003cvar\u003elabelName\u003c/var\u003e\u003c/td\u003e\n \u003ctd\u003eSet the label named \u003cvar\u003elabelName\u003c/var\u003e, while preserving other\n labels. To delete the label, include it in `updateMask` and omit its\n mapping in `environment.labels`. It is an error to provide both a\n mask of this form and the \"labels\" mask.\u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003econfig.nodeCount\u003c/td\u003e\n \u003ctd\u003eHorizontally scale the number of nodes in the environment. An integer\n greater than or equal to 3 must be provided in the `config.nodeCount`\n field.\n \u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003econfig.softwareConfig.airflowConfigOverrides\u003c/td\u003e\n \u003ctd\u003eReplace all Apache Airflow config overrides. If a replacement config\n overrides map is not included in `environment`, all config overrides\n are cleared.\n It is an error to provide both this mask and a mask specifying one or\n more individual config overrides.\u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003econfig.softwareConfig.airflowConfigOverrides.\u003cvar\u003esection\u003c/var\u003e-\u003cvar\u003ename\n \u003c/var\u003e\u003c/td\u003e\n \u003ctd\u003eOverride the Apache Airflow config property \u003cvar\u003ename\u003c/var\u003e in the\n section named \u003cvar\u003esection\u003c/var\u003e, preserving other properties. To delete\n the property override, include it in `updateMask` and omit its mapping\n in `environment.config.softwareConfig.airflowConfigOverrides`.\n It is an error to provide both a mask of this form and the\n \"config.softwareConfig.airflowConfigOverrides\" mask.\u003c/td\u003e\n \u003c/tr\u003e\n \u003ctr\u003e\n \u003ctd\u003econfig.softwareConfig.envVariables\u003c/td\u003e\n \u003ctd\u003eReplace all environment variables. If a replacement environment\n variable map is not included in `environment`, all custom environment\n variables  are cleared.\n It is an error to provide both this mask and a mask specifying one or\n more individual environment variables.\u003c/td\u003e\n \u003c/tr\u003e\n \u003c/tbody\u003e\n \u003c/table\u003e",
 	//       "format": "google-fieldmask",
 	//       "location": "query",
 	//       "type": "string"
@@ -2025,6 +1972,7 @@ func (c *ProjectsLocationsImageVersionsListCall) Header() http.Header {
 
 func (c *ProjectsLocationsImageVersionsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2195,6 +2143,7 @@ func (c *ProjectsLocationsOperationsDeleteCall) Header() http.Header {
 
 func (c *ProjectsLocationsOperationsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2339,6 +2288,7 @@ func (c *ProjectsLocationsOperationsGetCall) Header() http.Header {
 
 func (c *ProjectsLocationsOperationsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2519,6 +2469,7 @@ func (c *ProjectsLocationsOperationsListCall) Header() http.Header {
 
 func (c *ProjectsLocationsOperationsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190802")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}

@@ -24,6 +24,11 @@ func resourceKubernetesResourceQuota() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(1 * time.Minute),
+			Update: schema.DefaultTimeout(1 * time.Minute),
+		},
+
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("resource quota", true),
 			"spec": {
@@ -75,7 +80,7 @@ func resourceKubernetesResourceQuotaCreate(d *schema.ResourceData, meta interfac
 	log.Printf("[INFO] Submitted new resource quota: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	err = resource.Retry(1*time.Minute, func() *resource.RetryError {
+	err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
 		quota, err := conn.CoreV1().ResourceQuotas(out.Namespace).Get(out.Name, meta_v1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
@@ -165,7 +170,7 @@ func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interfac
 	d.SetId(buildId(out.ObjectMeta))
 
 	if waitForChangedSpec {
-		err = resource.Retry(1*time.Minute, func() *resource.RetryError {
+		err = resource.Retry(d.Timeout(schema.TimeoutUpdate), func() *resource.RetryError {
 			quota, err := conn.CoreV1().ResourceQuotas(namespace).Get(name, meta_v1.GetOptions{})
 			if err != nil {
 				return resource.NonRetryableError(err)

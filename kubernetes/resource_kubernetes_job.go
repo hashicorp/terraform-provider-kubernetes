@@ -16,7 +16,7 @@ import (
 )
 
 func resourceKubernetesJob() *schema.Resource {
-	s := &schema.Resource{
+	return &schema.Resource{
 		Create: resourceKubernetesJobCreate,
 		Read:   resourceKubernetesJobRead,
 		Update: resourceKubernetesJobUpdate,
@@ -27,6 +27,7 @@ func resourceKubernetesJob() *schema.Resource {
 		},
 
 		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(1 * time.Minute),
 			Delete: schema.DefaultTimeout(1 * time.Minute),
 		},
 
@@ -48,8 +49,6 @@ func resourceKubernetesJob() *schema.Resource {
 			},
 		},
 	}
-
-	return s
 }
 
 func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error {
@@ -78,6 +77,15 @@ func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error
 	log.Printf("[INFO] Submitted new job: %#v", out)
 
 	d.SetId(buildId(out.ObjectMeta))
+
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
+	if d.Get("wait_for_completion").(bool) {
+		return resource.Retry(d.Timeout(schema.TimeoutCreate),
+			waitForJobCondition(conn, namespace, name, batchv1.JobComplete))
+	}
 
 	return resourceKubernetesJobRead(d, meta)
 }
@@ -109,6 +117,11 @@ func resourceKubernetesJobUpdate(d *schema.ResourceData, meta interface{}) error
 	log.Printf("[INFO] Submitted updated job: %#v", out)
 
 	d.SetId(buildId(out.ObjectMeta))
+
+	if d.Get("wait_for_completion").(bool) {
+		return resource.Retry(d.Timeout(schema.TimeoutCreate),
+			waitForJobCondition(conn, namespace, name, batchv1.JobComplete))
+	}
 	return resourceKubernetesJobRead(d, meta)
 }
 
@@ -160,16 +173,7 @@ func resourceKubernetesJobRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	err = d.Set("spec", jobSpec)
-	if err != nil {
-		return err
-	}
-
-	if d.Get("wait_for_completion").(bool) {
-		return resource.Retry(d.Timeout(schema.TimeoutCreate),
-			waitForJobCondition(conn, namespace, name, batchv1.JobComplete))
-	}
-	return nil
+	return d.Set("spec", jobSpec)
 }
 
 func resourceKubernetesJobDelete(d *schema.ResourceData, meta interface{}) error {

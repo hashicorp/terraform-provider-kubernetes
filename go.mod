@@ -17,7 +17,7 @@ require (
 	github.com/hashicorp/terraform v0.12.10
 	github.com/hashicorp/vault v1.1.2 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
-	github.com/keybase/go-crypto v0.0.0-20190523171820-b785b22cc757 // indirect
+	github.com/keybase/go-crypto a05457805304 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pierrec/lz4 v2.3.0+incompatible // indirect

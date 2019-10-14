@@ -4,7 +4,7 @@ require (
 	cloud.google.com/go/bigtable v1.0.0 // indirect
 	cloud.google.com/go/pubsub v1.0.1 // indirect
 	contrib.go.opencensus.io/exporter/ocagent v0.5.0 // indirect
-	github.com/Azure/go-autorest v11.9.0+incompatible // indirect
+	github.com/Azure/go-autorest v13.2.0 // indirect
 	github.com/dustinkirkland/golang-petname v0.0.0-20170921220637-d3c2ba80e75e // indirect
 	github.com/frankban/quicktest v1.4.2 // indirect
 	github.com/gogo/protobuf v1.3.0 // indirect

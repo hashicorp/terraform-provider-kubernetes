@@ -1,28 +1,28 @@
 package google
 
-import "github.com/hashicorp/terraform/helper/schema"
+import "github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 
 func dataSourceDnsManagedZone() *schema.Resource {
 	return &schema.Resource{
 		Read: dataSourceDnsManagedZoneRead,
 
 		Schema: map[string]*schema.Schema{
-			"dns_name": &schema.Schema{
+			"dns_name": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
 
-			"name": &schema.Schema{
+			"name": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
 
-			"description": &schema.Schema{
+			"description": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
 
-			"name_servers": &schema.Schema{
+			"name_servers": {
 				Type:     schema.TypeSet,
 				Computed: true,
 				Elem: &schema.Schema{
@@ -32,7 +32,7 @@ func dataSourceDnsManagedZone() *schema.Resource {
 
 			// Google Cloud DNS ManagedZone resources do not have a SelfLink attribute.
 
-			"project": &schema.Schema{
+			"project": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},

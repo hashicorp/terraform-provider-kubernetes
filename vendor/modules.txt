@@ -1,5 +1,4 @@
-# cloud.google.com/go v0.45.1
-cloud.google.com/go/storage
+# cloud.google.com/go v0.46.3
 cloud.google.com/go/compute/metadata
 cloud.google.com/go
 cloud.google.com/go/iam
@@ -9,9 +8,11 @@ cloud.google.com/go/internal/version
 cloud.google.com/go/longrunning
 cloud.google.com/go/longrunning/autogen
 cloud.google.com/go/internal
-# cloud.google.com/go/bigtable v1.0.0
+# cloud.google.com/go/bigtable v1.0.1-0.20190930151326-312d69ccea6e
 cloud.google.com/go/bigtable
 cloud.google.com/go/bigtable/internal/option
+# cloud.google.com/go/storage v1.0.0
+cloud.google.com/go/storage
 # contrib.go.opencensus.io/exporter/ocagent v0.5.0
 contrib.go.opencensus.io/exporter/ocagent
 # github.com/Azure/go-autorest v11.9.0+incompatible
@@ -224,6 +225,10 @@ github.com/davecgh/go-spew/spew
 github.com/dgrijalva/jwt-go
 # github.com/fatih/color v1.7.0
 github.com/fatih/color
+# github.com/gammazero/deque v0.0.0-20180920172122-f6adf94963e4
+github.com/gammazero/deque
+# github.com/gammazero/workerpool v0.0.0-20181230203049-86a96b5d5d92
+github.com/gammazero/workerpool
 # github.com/gogo/protobuf v1.3.0
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
@@ -387,10 +392,6 @@ github.com/hashicorp/terraform/internal/earlyconfig
 github.com/hashicorp/terraform/helper/hilmapstructure
 github.com/hashicorp/terraform/lang/blocktoattr
 github.com/hashicorp/terraform/lang/funcs
-github.com/hashicorp/terraform/helper/customdiff
-github.com/hashicorp/terraform/helper/encryption
-github.com/hashicorp/terraform/helper/mutexkv
-github.com/hashicorp/terraform/helper/pathorcontents
 github.com/hashicorp/terraform/svchost
 github.com/hashicorp/terraform/svchost/auth
 # github.com/hashicorp/terraform-config-inspect v0.0.0-20190821133035-82a99dc22ef4
@@ -406,6 +407,8 @@ github.com/hashicorp/terraform-plugin-sdk/helper/schema
 github.com/hashicorp/terraform-plugin-sdk/helper/structure
 github.com/hashicorp/terraform-plugin-sdk/helper/validation
 github.com/hashicorp/terraform-plugin-sdk/terraform
+github.com/hashicorp/terraform-plugin-sdk/helper/pathorcontents
+github.com/hashicorp/terraform-plugin-sdk/httpclient
 github.com/hashicorp/terraform-plugin-sdk/internal/vault/helper/pgpkeys
 github.com/hashicorp/terraform-plugin-sdk/internal/addrs
 github.com/hashicorp/terraform-plugin-sdk/internal/command/format
@@ -431,6 +434,7 @@ github.com/hashicorp/terraform-plugin-sdk/internal/plugin/discovery
 github.com/hashicorp/terraform-plugin-sdk/internal/provisioners
 github.com/hashicorp/terraform-plugin-sdk/internal/states/statefile
 github.com/hashicorp/terraform-plugin-sdk/internal/version
+github.com/hashicorp/terraform-plugin-sdk/meta
 github.com/hashicorp/terraform-plugin-sdk/internal/vault/sdk/helper/jsonutil
 github.com/hashicorp/terraform-plugin-sdk/internal/modsdir
 github.com/hashicorp/terraform-plugin-sdk/internal/registry
@@ -446,10 +450,6 @@ github.com/hashicorp/terraform-plugin-sdk/internal/registry/response
 github.com/hashicorp/terraform-plugin-sdk/internal/vault/sdk/helper/compressutil
 github.com/hashicorp/terraform-plugin-sdk/internal/svchost
 github.com/hashicorp/terraform-plugin-sdk/internal/svchost/auth
-# github.com/hashicorp/vault v1.1.2
-github.com/hashicorp/vault/helper/pgpkeys
-github.com/hashicorp/vault/helper/jsonutil
-github.com/hashicorp/vault/helper/compressutil
 # github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d
 github.com/hashicorp/yamux
 # github.com/imdario/mergo v0.3.7
@@ -532,7 +532,7 @@ github.com/stoewer/go-strcase
 github.com/terraform-providers/terraform-provider-aws/aws
 github.com/terraform-providers/terraform-provider-aws/aws/internal/flatmap
 github.com/terraform-providers/terraform-provider-aws/aws/internal/keyvaluetags
-# github.com/terraform-providers/terraform-provider-google v1.20.0
+# github.com/terraform-providers/terraform-provider-google v2.17.0+incompatible
 github.com/terraform-providers/terraform-provider-google/google
 github.com/terraform-providers/terraform-provider-google/version
 # github.com/ulikunitz/xz v0.5.6
@@ -591,10 +591,10 @@ golang.org/x/crypto/cast5
 golang.org/x/crypto/openpgp/elgamal
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/internal/subtle
-# golang.org/x/exp v0.0.0-20190510132918-efd6b22b2522
+# golang.org/x/exp v0.0.0-20190912063710-ac5d2bfcbfe0
 golang.org/x/exp/cmd/apidiff
 golang.org/x/exp/apidiff
-# golang.org/x/lint v0.0.0-20190409202823-959b441ac422
+# golang.org/x/lint v0.0.0-20190909230951-414d861bb4ac
 golang.org/x/lint/golint
 golang.org/x/lint
 # golang.org/x/net v0.0.0-20190923162816-aa69164e4478
@@ -646,6 +646,7 @@ golang.org/x/tools/internal/fastwalk
 # google.golang.org/api v0.9.0
 google.golang.org/api/appengine/v1
 google.golang.org/api/bigquery/v2
+google.golang.org/api/bigtableadmin/v2
 google.golang.org/api/cloudbilling/v1
 google.golang.org/api/cloudbuild/v1
 google.golang.org/api/cloudfunctions/v1
@@ -653,29 +654,32 @@ google.golang.org/api/cloudiot/v1
 google.golang.org/api/cloudkms/v1
 google.golang.org/api/cloudresourcemanager/v1
 google.golang.org/api/cloudresourcemanager/v2beta1
-google.golang.org/api/composer/v1
+google.golang.org/api/composer/v1beta1
 google.golang.org/api/compute/v0.beta
 google.golang.org/api/compute/v1
 google.golang.org/api/container/v1
 google.golang.org/api/container/v1beta1
 google.golang.org/api/dataflow/v1b3
 google.golang.org/api/dataproc/v1
+google.golang.org/api/dataproc/v1beta2
 google.golang.org/api/dns/v1
 google.golang.org/api/dns/v1beta2
 google.golang.org/api/file/v1beta1
 google.golang.org/api/googleapi
 google.golang.org/api/iam/v1
+google.golang.org/api/iamcredentials/v1
 google.golang.org/api/logging/v2
 google.golang.org/api/option
 google.golang.org/api/pubsub/v1
-google.golang.org/api/redis/v1beta1
 google.golang.org/api/runtimeconfig/v1beta1
 google.golang.org/api/servicemanagement/v1
-google.golang.org/api/serviceusage/v1beta1
+google.golang.org/api/servicenetworking/v1
+google.golang.org/api/serviceusage/v1
 google.golang.org/api/sourcerepo/v1
 google.golang.org/api/spanner/v1
 google.golang.org/api/sqladmin/v1beta4
 google.golang.org/api/storage/v1
+google.golang.org/api/storagetransfer/v1
 google.golang.org/api/iterator
 google.golang.org/api/transport/grpc
 google.golang.org/api/gensupport
@@ -702,7 +706,7 @@ google.golang.org/appengine/internal/base
 google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/socket
-# google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
+# google.golang.org/genproto v0.0.0-20190911173649-1774047e7e51
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/bigtable/admin/v2
 google.golang.org/genproto/googleapis/bigtable/v2

@@ -24,8 +24,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform/helper/schema"
-	compute "google.golang.org/api/compute/v1"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"google.golang.org/api/compute/v1"
 )
 
 // validatePeerAddr returns false if a tunnel's peer_ip property
@@ -44,7 +44,7 @@ func validatePeerAddr(i interface{}, val string) ([]string, []error) {
 	return nil, nil
 }
 
-// invalidPeerAddrs is a collection of IP addres ranges that represent
+// invalidPeerAddrs is a collection of IP address ranges that represent
 // a conflict with RFC 5735 (https://tools.ietf.org/html/rfc5735#page-3).
 // CIDR range notations in the RFC were converted to a (from, to) pair
 // for easy checking with bytes.Compare.
@@ -115,7 +115,7 @@ var invalidPeerAddrs = []struct {
 }
 
 func getVpnTunnelLink(config *Config, project string, region string, tunnel string) (string, error) {
-	if !strings.HasPrefix(tunnel, "https://www.googleapis.com/compute/") {
+	if !strings.Contains(tunnel, "/") {
 		// Tunnel value provided is just the name, lookup the tunnel SelfLink
 		tunnelData, err := config.clientCompute.VpnTunnels.Get(
 			project, region, tunnel).Do()
@@ -133,7 +133,6 @@ func resourceComputeVpnTunnel() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceComputeVpnTunnelCreate,
 		Read:   resourceComputeVpnTunnelRead,
-		Update: resourceComputeVpnTunnelUpdate,
 		Delete: resourceComputeVpnTunnelDelete,
 
 		Importer: &schema.ResourceImporter{
@@ -141,9 +140,8 @@ func resourceComputeVpnTunnel() *schema.Resource {
 		},
 
 		Timeouts: &schema.ResourceTimeout{
-			Create: schema.DefaultTimeout(240 * time.Second),
-			Update: schema.DefaultTimeout(240 * time.Second),
-			Delete: schema.DefaultTimeout(240 * time.Second),
+			Create: schema.DefaultTimeout(4 * time.Minute),
+			Delete: schema.DefaultTimeout(4 * time.Minute),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -152,23 +150,11 @@ func resourceComputeVpnTunnel() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"peer_ip": {
-				Type:         schema.TypeString,
-				Required:     true,
-				ForceNew:     true,
-				ValidateFunc: validatePeerAddr,
-			},
 			"shared_secret": {
 				Type:      schema.TypeString,
 				Required:  true,
 				ForceNew:  true,
 				Sensitive: true,
-			},
-			"target_vpn_gateway": {
-				Type:             schema.TypeString,
-				Required:         true,
-				ForceNew:         true,
-				DiffSuppressFunc: compareSelfLinkOrResourceName,
 			},
 			"description": {
 				Type:     schema.TypeString,
@@ -181,11 +167,6 @@ func resourceComputeVpnTunnel() *schema.Resource {
 				ForceNew: true,
 				Default:  2,
 			},
-			"labels": {
-				Type:     schema.TypeMap,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-			},
 			"local_traffic_selector": {
 				Type:     schema.TypeSet,
 				Computed: true,
@@ -195,6 +176,13 @@ func resourceComputeVpnTunnel() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Set: schema.HashString,
+			},
+			"peer_ip": {
+				Type:         schema.TypeString,
+				Computed:     true,
+				Optional:     true,
+				ForceNew:     true,
+				ValidateFunc: validatePeerAddr,
 			},
 			"region": {
 				Type:             schema.TypeString,
@@ -219,6 +207,12 @@ func resourceComputeVpnTunnel() *schema.Resource {
 				ForceNew:         true,
 				DiffSuppressFunc: compareSelfLinkOrResourceName,
 			},
+			"target_vpn_gateway": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ForceNew:         true,
+				DiffSuppressFunc: compareSelfLinkOrResourceName,
+			},
 			"creation_timestamp": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -227,11 +221,11 @@ func resourceComputeVpnTunnel() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"label_fingerprint": {
+			"shared_secret_hash": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"shared_secret_hash": {
+			"tunnel_id": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -307,12 +301,6 @@ func resourceComputeVpnTunnelCreate(d *schema.ResourceData, meta interface{}) er
 	} else if v, ok := d.GetOkExists("remote_traffic_selector"); !isEmptyValue(reflect.ValueOf(remoteTrafficSelectorProp)) && (ok || !reflect.DeepEqual(v, remoteTrafficSelectorProp)) {
 		obj["remoteTrafficSelector"] = remoteTrafficSelectorProp
 	}
-	labelsProp, err := expandComputeVpnTunnelLabels(d.Get("labels"), d, config)
-	if err != nil {
-		return err
-	} else if v, ok := d.GetOkExists("labels"); !isEmptyValue(reflect.ValueOf(labelsProp)) && (ok || !reflect.DeepEqual(v, labelsProp)) {
-		obj["labels"] = labelsProp
-	}
 	regionProp, err := expandComputeVpnTunnelRegion(d.Get("region"), d, config)
 	if err != nil {
 		return err
@@ -320,13 +308,22 @@ func resourceComputeVpnTunnelCreate(d *schema.ResourceData, meta interface{}) er
 		obj["region"] = regionProp
 	}
 
-	url, err := replaceVars(d, config, "https://www.googleapis.com/compute/beta/projects/{{project}}/regions/{{region}}/vpnTunnels")
+	obj, err = resourceComputeVpnTunnelEncoder(d, meta, obj)
+	if err != nil {
+		return err
+	}
+
+	url, err := replaceVars(d, config, "{{ComputeBasePath}}projects/{{project}}/regions/{{region}}/vpnTunnels")
 	if err != nil {
 		return err
 	}
 
 	log.Printf("[DEBUG] Creating new VpnTunnel: %#v", obj)
-	res, err := sendRequest(config, "POST", url, obj)
+	project, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
+	res, err := sendRequestWithTimeout(config, "POST", project, url, obj, d.Timeout(schema.TimeoutCreate))
 	if err != nil {
 		return fmt.Errorf("Error creating VpnTunnel: %s", err)
 	}
@@ -338,10 +335,6 @@ func resourceComputeVpnTunnelCreate(d *schema.ResourceData, meta interface{}) er
 	}
 	d.SetId(id)
 
-	project, err := getProject(d, config)
-	if err != nil {
-		return err
-	}
 	op := &compute.Operation{}
 	err = Convert(res, op)
 	if err != nil {
@@ -366,143 +359,91 @@ func resourceComputeVpnTunnelCreate(d *schema.ResourceData, meta interface{}) er
 func resourceComputeVpnTunnelRead(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
-	url, err := replaceVars(d, config, "https://www.googleapis.com/compute/beta/projects/{{project}}/regions/{{region}}/vpnTunnels/{{name}}")
+	url, err := replaceVars(d, config, "{{ComputeBasePath}}projects/{{project}}/regions/{{region}}/vpnTunnels/{{name}}")
 	if err != nil {
 		return err
 	}
 
-	res, err := sendRequest(config, "GET", url, nil)
-	if err != nil {
-		return handleNotFoundError(err, d, fmt.Sprintf("ComputeVpnTunnel %q", d.Id()))
-	}
-
-	if err := d.Set("creation_timestamp", flattenComputeVpnTunnelCreationTimestamp(res["creationTimestamp"])); err != nil {
-		return fmt.Errorf("Error reading VpnTunnel: %s", err)
-	}
-	if err := d.Set("name", flattenComputeVpnTunnelName(res["name"])); err != nil {
-		return fmt.Errorf("Error reading VpnTunnel: %s", err)
-	}
-	if err := d.Set("description", flattenComputeVpnTunnelDescription(res["description"])); err != nil {
-		return fmt.Errorf("Error reading VpnTunnel: %s", err)
-	}
-	if err := d.Set("target_vpn_gateway", flattenComputeVpnTunnelTargetVpnGateway(res["targetVpnGateway"])); err != nil {
-		return fmt.Errorf("Error reading VpnTunnel: %s", err)
-	}
-	if err := d.Set("router", flattenComputeVpnTunnelRouter(res["router"])); err != nil {
-		return fmt.Errorf("Error reading VpnTunnel: %s", err)
-	}
-	if err := d.Set("peer_ip", flattenComputeVpnTunnelPeerIp(res["peerIp"])); err != nil {
-		return fmt.Errorf("Error reading VpnTunnel: %s", err)
-	}
-	if err := d.Set("shared_secret_hash", flattenComputeVpnTunnelSharedSecretHash(res["sharedSecretHash"])); err != nil {
-		return fmt.Errorf("Error reading VpnTunnel: %s", err)
-	}
-	if err := d.Set("ike_version", flattenComputeVpnTunnelIkeVersion(res["ikeVersion"])); err != nil {
-		return fmt.Errorf("Error reading VpnTunnel: %s", err)
-	}
-	if err := d.Set("local_traffic_selector", flattenComputeVpnTunnelLocalTrafficSelector(res["localTrafficSelector"])); err != nil {
-		return fmt.Errorf("Error reading VpnTunnel: %s", err)
-	}
-	if err := d.Set("remote_traffic_selector", flattenComputeVpnTunnelRemoteTrafficSelector(res["remoteTrafficSelector"])); err != nil {
-		return fmt.Errorf("Error reading VpnTunnel: %s", err)
-	}
-	if err := d.Set("labels", flattenComputeVpnTunnelLabels(res["labels"])); err != nil {
-		return fmt.Errorf("Error reading VpnTunnel: %s", err)
-	}
-	if err := d.Set("label_fingerprint", flattenComputeVpnTunnelLabelFingerprint(res["labelFingerprint"])); err != nil {
-		return fmt.Errorf("Error reading VpnTunnel: %s", err)
-	}
-	if err := d.Set("detailed_status", flattenComputeVpnTunnelDetailedStatus(res["detailedStatus"])); err != nil {
-		return fmt.Errorf("Error reading VpnTunnel: %s", err)
-	}
-	if err := d.Set("region", flattenComputeVpnTunnelRegion(res["region"])); err != nil {
-		return fmt.Errorf("Error reading VpnTunnel: %s", err)
-	}
-	if err := d.Set("self_link", ConvertSelfLinkToV1(res["selfLink"].(string))); err != nil {
-		return fmt.Errorf("Error reading VpnTunnel: %s", err)
-	}
 	project, err := getProject(d, config)
 	if err != nil {
 		return err
 	}
+	res, err := sendRequest(config, "GET", project, url, nil)
+	if err != nil {
+		return handleNotFoundError(err, d, fmt.Sprintf("ComputeVpnTunnel %q", d.Id()))
+	}
+
 	if err := d.Set("project", project); err != nil {
+		return fmt.Errorf("Error reading VpnTunnel: %s", err)
+	}
+
+	if err := d.Set("tunnel_id", flattenComputeVpnTunnelTunnelId(res["id"], d)); err != nil {
+		return fmt.Errorf("Error reading VpnTunnel: %s", err)
+	}
+	if err := d.Set("creation_timestamp", flattenComputeVpnTunnelCreationTimestamp(res["creationTimestamp"], d)); err != nil {
+		return fmt.Errorf("Error reading VpnTunnel: %s", err)
+	}
+	if err := d.Set("name", flattenComputeVpnTunnelName(res["name"], d)); err != nil {
+		return fmt.Errorf("Error reading VpnTunnel: %s", err)
+	}
+	if err := d.Set("description", flattenComputeVpnTunnelDescription(res["description"], d)); err != nil {
+		return fmt.Errorf("Error reading VpnTunnel: %s", err)
+	}
+	if err := d.Set("target_vpn_gateway", flattenComputeVpnTunnelTargetVpnGateway(res["targetVpnGateway"], d)); err != nil {
+		return fmt.Errorf("Error reading VpnTunnel: %s", err)
+	}
+	if err := d.Set("router", flattenComputeVpnTunnelRouter(res["router"], d)); err != nil {
+		return fmt.Errorf("Error reading VpnTunnel: %s", err)
+	}
+	if err := d.Set("peer_ip", flattenComputeVpnTunnelPeerIp(res["peerIp"], d)); err != nil {
+		return fmt.Errorf("Error reading VpnTunnel: %s", err)
+	}
+	if err := d.Set("shared_secret_hash", flattenComputeVpnTunnelSharedSecretHash(res["sharedSecretHash"], d)); err != nil {
+		return fmt.Errorf("Error reading VpnTunnel: %s", err)
+	}
+	if err := d.Set("ike_version", flattenComputeVpnTunnelIkeVersion(res["ikeVersion"], d)); err != nil {
+		return fmt.Errorf("Error reading VpnTunnel: %s", err)
+	}
+	if err := d.Set("local_traffic_selector", flattenComputeVpnTunnelLocalTrafficSelector(res["localTrafficSelector"], d)); err != nil {
+		return fmt.Errorf("Error reading VpnTunnel: %s", err)
+	}
+	if err := d.Set("remote_traffic_selector", flattenComputeVpnTunnelRemoteTrafficSelector(res["remoteTrafficSelector"], d)); err != nil {
+		return fmt.Errorf("Error reading VpnTunnel: %s", err)
+	}
+	if err := d.Set("detailed_status", flattenComputeVpnTunnelDetailedStatus(res["detailedStatus"], d)); err != nil {
+		return fmt.Errorf("Error reading VpnTunnel: %s", err)
+	}
+	if err := d.Set("region", flattenComputeVpnTunnelRegion(res["region"], d)); err != nil {
+		return fmt.Errorf("Error reading VpnTunnel: %s", err)
+	}
+	if err := d.Set("self_link", ConvertSelfLinkToV1(res["selfLink"].(string))); err != nil {
 		return fmt.Errorf("Error reading VpnTunnel: %s", err)
 	}
 
 	return nil
 }
 
-func resourceComputeVpnTunnelUpdate(d *schema.ResourceData, meta interface{}) error {
-	config := meta.(*Config)
-
-	d.Partial(true)
-
-	if d.HasChange("labels") || d.HasChange("label_fingerprint") {
-		obj := make(map[string]interface{})
-		labelsProp, err := expandComputeVpnTunnelLabels(d.Get("labels"), d, config)
-		if err != nil {
-			return err
-		} else if v, ok := d.GetOkExists("labels"); !isEmptyValue(reflect.ValueOf(v)) && (ok || !reflect.DeepEqual(v, labelsProp)) {
-			obj["labels"] = labelsProp
-		}
-		labelFingerprintProp := d.Get("label_fingerprint")
-		obj["labelFingerprint"] = labelFingerprintProp
-
-		url, err := replaceVars(d, config, "https://www.googleapis.com/compute/beta/projects/{{project}}/regions/{{region}}/vpnTunnels/{{name}}/setLabels")
-		if err != nil {
-			return err
-		}
-		res, err := sendRequest(config, "POST", url, obj)
-		if err != nil {
-			return fmt.Errorf("Error updating VpnTunnel %q: %s", d.Id(), err)
-		}
-
-		project, err := getProject(d, config)
-		if err != nil {
-			return err
-		}
-		op := &compute.Operation{}
-		err = Convert(res, op)
-		if err != nil {
-			return err
-		}
-
-		err = computeOperationWaitTime(
-			config.clientCompute, op, project, "Updating VpnTunnel",
-			int(d.Timeout(schema.TimeoutUpdate).Minutes()))
-
-		if err != nil {
-			return err
-		}
-
-		d.SetPartial("labels")
-		d.SetPartial("label_fingerprint")
-	}
-
-	d.Partial(false)
-
-	return resourceComputeVpnTunnelRead(d, meta)
-}
-
 func resourceComputeVpnTunnelDelete(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
-	url, err := replaceVars(d, config, "https://www.googleapis.com/compute/beta/projects/{{project}}/regions/{{region}}/vpnTunnels/{{name}}")
+	project, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
+
+	url, err := replaceVars(d, config, "{{ComputeBasePath}}projects/{{project}}/regions/{{region}}/vpnTunnels/{{name}}")
 	if err != nil {
 		return err
 	}
 
 	var obj map[string]interface{}
 	log.Printf("[DEBUG] Deleting VpnTunnel %q", d.Id())
-	res, err := sendRequest(config, "DELETE", url, obj)
+
+	res, err := sendRequestWithTimeout(config, "DELETE", project, url, obj, d.Timeout(schema.TimeoutDelete))
 	if err != nil {
 		return handleNotFoundError(err, d, "VpnTunnel")
 	}
 
-	project, err := getProject(d, config)
-	if err != nil {
-		return err
-	}
 	op := &compute.Operation{}
 	err = Convert(res, op)
 	if err != nil {
@@ -523,7 +464,14 @@ func resourceComputeVpnTunnelDelete(d *schema.ResourceData, meta interface{}) er
 
 func resourceComputeVpnTunnelImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	config := meta.(*Config)
-	parseImportId([]string{"projects/(?P<project>[^/]+)/regions/(?P<region>[^/]+)/vpnTunnels/(?P<name>[^/]+)", "(?P<project>[^/]+)/(?P<region>[^/]+)/(?P<name>[^/]+)", "(?P<name>[^/]+)"}, d, config)
+	if err := parseImportId([]string{
+		"projects/(?P<project>[^/]+)/regions/(?P<region>[^/]+)/vpnTunnels/(?P<name>[^/]+)",
+		"(?P<project>[^/]+)/(?P<region>[^/]+)/(?P<name>[^/]+)",
+		"(?P<region>[^/]+)/(?P<name>[^/]+)",
+		"(?P<name>[^/]+)",
+	}, d, config); err != nil {
+		return nil, err
+	}
 
 	// Replace import id for the resource id
 	id, err := replaceVars(d, config, "{{name}}")
@@ -535,41 +483,45 @@ func resourceComputeVpnTunnelImport(d *schema.ResourceData, meta interface{}) ([
 	return []*schema.ResourceData{d}, nil
 }
 
-func flattenComputeVpnTunnelCreationTimestamp(v interface{}) interface{} {
+func flattenComputeVpnTunnelTunnelId(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenComputeVpnTunnelName(v interface{}) interface{} {
+func flattenComputeVpnTunnelCreationTimestamp(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenComputeVpnTunnelDescription(v interface{}) interface{} {
+func flattenComputeVpnTunnelName(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenComputeVpnTunnelTargetVpnGateway(v interface{}) interface{} {
+func flattenComputeVpnTunnelDescription(v interface{}, d *schema.ResourceData) interface{} {
+	return v
+}
+
+func flattenComputeVpnTunnelTargetVpnGateway(v interface{}, d *schema.ResourceData) interface{} {
 	if v == nil {
 		return v
 	}
 	return ConvertSelfLinkToV1(v.(string))
 }
 
-func flattenComputeVpnTunnelRouter(v interface{}) interface{} {
+func flattenComputeVpnTunnelRouter(v interface{}, d *schema.ResourceData) interface{} {
 	if v == nil {
 		return v
 	}
 	return ConvertSelfLinkToV1(v.(string))
 }
 
-func flattenComputeVpnTunnelPeerIp(v interface{}) interface{} {
+func flattenComputeVpnTunnelPeerIp(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenComputeVpnTunnelSharedSecretHash(v interface{}) interface{} {
+func flattenComputeVpnTunnelSharedSecretHash(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenComputeVpnTunnelIkeVersion(v interface{}) interface{} {
+func flattenComputeVpnTunnelIkeVersion(v interface{}, d *schema.ResourceData) interface{} {
 	// Handles the string fixed64 format
 	if strVal, ok := v.(string); ok {
 		if intVal, err := strconv.ParseInt(strVal, 10, 64); err == nil {
@@ -579,48 +531,40 @@ func flattenComputeVpnTunnelIkeVersion(v interface{}) interface{} {
 	return v
 }
 
-func flattenComputeVpnTunnelLocalTrafficSelector(v interface{}) interface{} {
+func flattenComputeVpnTunnelLocalTrafficSelector(v interface{}, d *schema.ResourceData) interface{} {
 	if v == nil {
 		return v
 	}
 	return schema.NewSet(schema.HashString, v.([]interface{}))
 }
 
-func flattenComputeVpnTunnelRemoteTrafficSelector(v interface{}) interface{} {
+func flattenComputeVpnTunnelRemoteTrafficSelector(v interface{}, d *schema.ResourceData) interface{} {
 	if v == nil {
 		return v
 	}
 	return schema.NewSet(schema.HashString, v.([]interface{}))
 }
 
-func flattenComputeVpnTunnelLabels(v interface{}) interface{} {
+func flattenComputeVpnTunnelDetailedStatus(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenComputeVpnTunnelLabelFingerprint(v interface{}) interface{} {
-	return v
-}
-
-func flattenComputeVpnTunnelDetailedStatus(v interface{}) interface{} {
-	return v
-}
-
-func flattenComputeVpnTunnelRegion(v interface{}) interface{} {
+func flattenComputeVpnTunnelRegion(v interface{}, d *schema.ResourceData) interface{} {
 	if v == nil {
 		return v
 	}
 	return NameFromSelfLinkStateFunc(v)
 }
 
-func expandComputeVpnTunnelName(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandComputeVpnTunnelName(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandComputeVpnTunnelDescription(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandComputeVpnTunnelDescription(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandComputeVpnTunnelTargetVpnGateway(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandComputeVpnTunnelTargetVpnGateway(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	f, err := parseRegionalFieldValue("targetVpnGateways", v.(string), "project", "region", "zone", d, config, true)
 	if err != nil {
 		return nil, fmt.Errorf("Invalid value for target_vpn_gateway: %s", err)
@@ -628,7 +572,7 @@ func expandComputeVpnTunnelTargetVpnGateway(v interface{}, d *schema.ResourceDat
 	return f.RelativeLink(), nil
 }
 
-func expandComputeVpnTunnelRouter(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandComputeVpnTunnelRouter(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	if v == nil || v.(string) == "" {
 		return "", nil
 	}
@@ -639,43 +583,47 @@ func expandComputeVpnTunnelRouter(v interface{}, d *schema.ResourceData, config 
 	return "https://www.googleapis.com/compute/v1/" + f.RelativeLink(), nil
 }
 
-func expandComputeVpnTunnelPeerIp(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandComputeVpnTunnelPeerIp(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandComputeVpnTunnelSharedSecret(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandComputeVpnTunnelSharedSecret(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandComputeVpnTunnelIkeVersion(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandComputeVpnTunnelIkeVersion(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandComputeVpnTunnelLocalTrafficSelector(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandComputeVpnTunnelLocalTrafficSelector(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	v = v.(*schema.Set).List()
 	return v, nil
 }
 
-func expandComputeVpnTunnelRemoteTrafficSelector(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandComputeVpnTunnelRemoteTrafficSelector(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	v = v.(*schema.Set).List()
 	return v, nil
 }
 
-func expandComputeVpnTunnelLabels(v interface{}, d *schema.ResourceData, config *Config) (map[string]string, error) {
-	if v == nil {
-		return map[string]string{}, nil
-	}
-	m := make(map[string]string)
-	for k, val := range v.(map[string]interface{}) {
-		m[k] = val.(string)
-	}
-	return m, nil
-}
-
-func expandComputeVpnTunnelRegion(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandComputeVpnTunnelRegion(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	f, err := parseGlobalFieldValue("regions", v.(string), "project", d, config, true)
 	if err != nil {
 		return nil, fmt.Errorf("Invalid value for region: %s", err)
 	}
 	return f.RelativeLink(), nil
+}
+
+func resourceComputeVpnTunnelEncoder(d *schema.ResourceData, meta interface{}, obj map[string]interface{}) (map[string]interface{}, error) {
+	config := meta.(*Config)
+	f, err := parseRegionalFieldValue("targetVpnGateways", d.Get("target_vpn_gateway").(string), "project", "region", "zone", d, config, true)
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := d.GetOk("project"); !ok {
+		d.Set("project", f.Project)
+	}
+	if _, ok := d.GetOk("region"); !ok {
+		d.Set("region", f.Region)
+	}
+	return obj, nil
 }

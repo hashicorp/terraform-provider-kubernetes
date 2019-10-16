@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 func resourceComputeFirewallMigrateState(
@@ -36,7 +36,7 @@ func migrateFirewallStateV0toV1(is *terraform.InstanceState) (*terraform.Instanc
 	portCount := 0
 	newPorts := make(map[string]string)
 	keys := make([]string, len(is.Attributes))
-	for k, _ := range is.Attributes {
+	for k := range is.Attributes {
 		keys[idx] = k
 		idx++
 

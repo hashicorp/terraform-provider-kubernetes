@@ -1,14 +1,15 @@
+//
 package google
 
 import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
+	"regexp"
 
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/structure"
-	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/structure"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"google.golang.org/api/bigquery/v2"
 )
 
@@ -62,6 +63,140 @@ func resourceBigQueryTable() *schema.Resource {
 				Computed: true,
 			},
 
+			// ExternalDataConfiguration [Optional] Describes the data format,
+			// location, and other properties of a table stored outside of BigQuery.
+			// By defining these properties, the data source can then be queried as
+			// if it were a standard BigQuery table.
+			"external_data_configuration": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						// Autodetect : [Required] If true, let BigQuery try to autodetect the
+						// schema and format of the table.
+						"autodetect": {
+							Type:     schema.TypeBool,
+							Required: true,
+						},
+						// SourceFormat [Required] The data format.
+						"source_format": {
+							Type:     schema.TypeString,
+							Required: true,
+							ValidateFunc: validation.StringInSlice([]string{
+								"CSV", "GOOGLE_SHEETS", "NEWLINE_DELIMITED_JSON", "AVRO", "DATSTORE_BACKUP",
+							}, false),
+						},
+						// SourceURIs [Required] The fully-qualified URIs that point to your data in Google Cloud.
+						"source_uris": {
+							Type:     schema.TypeList,
+							Required: true,
+							Elem:     &schema.Schema{Type: schema.TypeString},
+						},
+						// Compression: [Optional] The compression type of the data source.
+						"compression": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							ValidateFunc: validation.StringInSlice([]string{"NONE", "GZIP"}, false),
+							Default:      "NONE",
+						},
+						// CsvOptions: [Optional] Additional properties to set if
+						// sourceFormat is set to CSV.
+						"csv_options": {
+							Type:     schema.TypeList,
+							Optional: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									// Quote: [Required] The value that is used to quote data
+									// sections in a CSV file.
+									"quote": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									// AllowJaggedRows: [Optional] Indicates if BigQuery should
+									// accept rows that are missing trailing optional columns.
+									"allow_jagged_rows": {
+										Type:     schema.TypeBool,
+										Optional: true,
+										Default:  false,
+									},
+									// AllowQuotedNewlines: [Optional] Indicates if BigQuery
+									// should allow quoted data sections that contain newline
+									// characters in a CSV file. The default value is false.
+									"allow_quoted_newlines": {
+										Type:     schema.TypeBool,
+										Optional: true,
+										Default:  false,
+									},
+									// Encoding: [Optional] The character encoding of the data.
+									// The supported values are UTF-8 or ISO-8859-1.
+									"encoding": {
+										Type:         schema.TypeString,
+										Optional:     true,
+										ValidateFunc: validation.StringInSlice([]string{"ISO-8859-1", "UTF-8"}, false),
+										Default:      "UTF-8",
+									},
+									// FieldDelimiter: [Optional] The separator for fields in a CSV file.
+									"field_delimiter": {
+										Type:     schema.TypeString,
+										Optional: true,
+										Default:  ",",
+									},
+									// SkipLeadingRows: [Optional] The number of rows at the top
+									// of a CSV file that BigQuery will skip when reading the data.
+									"skip_leading_rows": {
+										Type:     schema.TypeInt,
+										Optional: true,
+										Default:  0,
+									},
+								},
+							},
+						},
+						// GoogleSheetsOptions: [Optional] Additional options if sourceFormat is set to GOOGLE_SHEETS.
+						"google_sheets_options": {
+							Type:     schema.TypeList,
+							Optional: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									// Range: [Optional] Range of a sheet to query from. Only used when non-empty.
+									// Typical format: !:
+									"range": {
+										Removed:  "This field is in beta. Use it in the the google-beta provider instead. See https://terraform.io/docs/providers/google/provider_versions.html for more details.",
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									// SkipLeadingRows: [Optional] The number of rows at the top
+									// of the sheet that BigQuery will skip when reading the data.
+									"skip_leading_rows": {
+										Type:     schema.TypeInt,
+										Optional: true,
+									},
+								},
+							},
+						},
+
+						// IgnoreUnknownValues: [Optional] Indicates if BigQuery should
+						// allow extra values that are not represented in the table schema.
+						// If true, the extra values are ignored. If false, records with
+						// extra columns are treated as bad records, and if there are too
+						// many bad records, an invalid error is returned in the job result.
+						// The default value is false.
+						"ignore_unknown_values": {
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
+						// MaxBadRecords: [Optional] The maximum number of bad records that
+						// BigQuery can ignore when reading data.
+						"max_bad_records": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
+					},
+				},
+			},
+
 			// FriendlyName: [Optional] A descriptive name for this table.
 			"friendly_name": {
 				Type:     schema.TypeString,
@@ -75,13 +210,16 @@ func resourceBigQueryTable() *schema.Resource {
 			// characters are allowed. Label values are optional. Label keys must
 			// start with a letter and each label in the list must have a different
 			// key.
-			"labels": &schema.Schema{
+			"labels": {
 				Type:     schema.TypeMap,
 				Optional: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
 
 			// Schema: [Optional] Describes the schema of this table.
+			// Schema is required for external tables in CSV and JSON formats
+			// and disallowed for Google Cloud Bigtable, Cloud Datastore backups,
+			// and Avro formats.
 			"schema": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -94,7 +232,7 @@ func resourceBigQueryTable() *schema.Resource {
 			},
 
 			// View: [Optional] If specified, configures this table as a view.
-			"view": &schema.Schema{
+			"view": {
 				Type:     schema.TypeList,
 				Optional: true,
 				MaxItems: 1,
@@ -121,7 +259,7 @@ func resourceBigQueryTable() *schema.Resource {
 
 			// TimePartitioning: [Experimental] If specified, configures time-based
 			// partitioning for this table.
-			"time_partitioning": &schema.Schema{
+			"time_partitioning": {
 				Type:     schema.TypeList,
 				Optional: true,
 				MaxItems: 1,
@@ -142,7 +280,7 @@ func resourceBigQueryTable() *schema.Resource {
 							ValidateFunc: validation.StringInSlice([]string{"DAY"}, false),
 						},
 
-						// Type: [Optional] The field used to determine how to create a time-based
+						// Field: [Optional] The field used to determine how to create a time-based
 						// partition. If time-based partitioning is enabled without this value, the
 						// table is partitioned based on the load time.
 						"field": {
@@ -150,8 +288,26 @@ func resourceBigQueryTable() *schema.Resource {
 							Optional: true,
 							ForceNew: true,
 						},
+
+						// RequirePartitionFilter: [Optional] If set to true, queries over this table
+						// require a partition filter that can be used for partition elimination to be
+						// specified.
+						"require_partition_filter": {
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
 					},
 				},
+			},
+
+			// Clustering: [Optional] Specifies column names to use for data clustering.  Up to four
+			// top-level columns are allowed, and should be specified in descending priority order.
+			"clustering": {
+				Type:     schema.TypeList,
+				Optional: true,
+				ForceNew: true,
+				MaxItems: 4,
+				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
 
 			// CreationTime: [Output-only] The time when this table was created, in
@@ -250,6 +406,15 @@ func resourceTable(d *schema.ResourceData, meta interface{}) (*bigquery.Table, e
 		table.ExpirationTime = int64(v.(int))
 	}
 
+	if v, ok := d.GetOk("external_data_configuration"); ok {
+		externalDataConfiguration, err := expandExternalDataConfiguration(v)
+		if err != nil {
+			return nil, err
+		}
+
+		table.ExternalDataConfiguration = externalDataConfiguration
+	}
+
 	if v, ok := d.GetOk("friendly_name"); ok {
 		table.FriendlyName = v.(string)
 	}
@@ -275,6 +440,13 @@ func resourceTable(d *schema.ResourceData, meta interface{}) (*bigquery.Table, e
 
 	if v, ok := d.GetOk("time_partitioning"); ok {
 		table.TimePartitioning = expandTimePartitioning(v)
+	}
+
+	if v, ok := d.GetOk("clustering"); ok {
+		table.Clustering = &bigquery.Clustering{
+			Fields:          convertStringArr(v.([]interface{})),
+			ForceSendFields: []string{"Fields"},
+		}
 	}
 
 	return table, nil
@@ -341,10 +513,23 @@ func resourceBigQueryTableRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("self_link", res.SelfLink)
 	d.Set("type", res.Type)
 
+	if res.ExternalDataConfiguration != nil {
+		externalDataConfiguration, err := flattenExternalDataConfiguration(res.ExternalDataConfiguration)
+		if err != nil {
+			return err
+		}
+
+		d.Set("external_data_configuration", externalDataConfiguration)
+	}
+
 	if res.TimePartitioning != nil {
 		if err := d.Set("time_partitioning", flattenTimePartitioning(res.TimePartitioning)); err != nil {
 			return err
 		}
+	}
+
+	if res.Clustering != nil {
+		d.Set("clustering", res.Clustering.Fields)
 	}
 
 	if res.Schema != nil {
@@ -405,8 +590,182 @@ func resourceBigQueryTableDelete(d *schema.ResourceData, meta interface{}) error
 	return nil
 }
 
+func expandExternalDataConfiguration(cfg interface{}) (*bigquery.ExternalDataConfiguration, error) {
+	raw := cfg.([]interface{})[0].(map[string]interface{})
+
+	edc := &bigquery.ExternalDataConfiguration{
+		Autodetect: raw["autodetect"].(bool),
+	}
+
+	sourceUris := []string{}
+	for _, rawSourceUri := range raw["source_uris"].([]interface{}) {
+		sourceUris = append(sourceUris, rawSourceUri.(string))
+	}
+	if len(sourceUris) > 0 {
+		edc.SourceUris = sourceUris
+	}
+
+	if v, ok := raw["compression"]; ok {
+		edc.Compression = v.(string)
+	}
+	if v, ok := raw["csv_options"]; ok {
+		edc.CsvOptions = expandCsvOptions(v)
+	}
+	if v, ok := raw["google_sheets_options"]; ok {
+		edc.GoogleSheetsOptions = expandGoogleSheetsOptions(v)
+	}
+	if v, ok := raw["ignore_unknown_values"]; ok {
+		edc.IgnoreUnknownValues = v.(bool)
+	}
+	if v, ok := raw["max_bad_records"]; ok {
+		edc.MaxBadRecords = int64(v.(int))
+	}
+	if v, ok := raw["source_format"]; ok {
+		edc.SourceFormat = v.(string)
+	}
+
+	return edc, nil
+
+}
+
+func flattenExternalDataConfiguration(edc *bigquery.ExternalDataConfiguration) ([]map[string]interface{}, error) {
+	result := map[string]interface{}{}
+
+	result["autodetect"] = edc.Autodetect
+	result["source_uris"] = edc.SourceUris
+
+	if edc.Compression != "" {
+		result["compression"] = edc.Compression
+	}
+
+	if edc.CsvOptions != nil {
+		result["csv_options"] = flattenCsvOptions(edc.CsvOptions)
+	}
+
+	if edc.GoogleSheetsOptions != nil {
+		result["google_sheets_options"] = flattenGoogleSheetsOptions(edc.GoogleSheetsOptions)
+	}
+
+	if edc.IgnoreUnknownValues == true {
+		result["ignore_unknown_values"] = edc.IgnoreUnknownValues
+	}
+	if edc.MaxBadRecords != 0 {
+		result["max_bad_records"] = edc.MaxBadRecords
+	}
+
+	if edc.SourceFormat != "" {
+		result["source_format"] = edc.SourceFormat
+	}
+
+	return []map[string]interface{}{result}, nil
+}
+
+func expandCsvOptions(configured interface{}) *bigquery.CsvOptions {
+	if len(configured.([]interface{})) == 0 {
+		return nil
+	}
+
+	raw := configured.([]interface{})[0].(map[string]interface{})
+	opts := &bigquery.CsvOptions{}
+
+	if v, ok := raw["allow_jagged_rows"]; ok {
+		opts.AllowJaggedRows = v.(bool)
+	}
+
+	if v, ok := raw["allow_quoted_newlines"]; ok {
+		opts.AllowQuotedNewlines = v.(bool)
+	}
+
+	if v, ok := raw["encoding"]; ok {
+		opts.Encoding = v.(string)
+	}
+
+	if v, ok := raw["field_delimiter"]; ok {
+		opts.FieldDelimiter = v.(string)
+	}
+
+	if v, ok := raw["skip_leading_rows"]; ok {
+		opts.SkipLeadingRows = int64(v.(int))
+	}
+
+	if v, ok := raw["quote"]; ok {
+		quote := v.(string)
+		opts.Quote = &quote
+	}
+
+	opts.ForceSendFields = []string{"Quote"}
+
+	return opts
+}
+
+func flattenCsvOptions(opts *bigquery.CsvOptions) []map[string]interface{} {
+	result := map[string]interface{}{}
+
+	if opts.AllowJaggedRows == true {
+		result["allow_jagged_rows"] = opts.AllowJaggedRows
+	}
+
+	if opts.AllowQuotedNewlines == true {
+		result["allow_quoted_newlines"] = opts.AllowQuotedNewlines
+	}
+
+	if opts.Encoding != "" {
+		result["encoding"] = opts.Encoding
+	}
+
+	if opts.FieldDelimiter != "" {
+		result["field_delimiter"] = opts.FieldDelimiter
+	}
+
+	if opts.SkipLeadingRows != 0 {
+		result["skip_leading_rows"] = opts.SkipLeadingRows
+	}
+
+	if opts.Quote != nil {
+		result["quote"] = *opts.Quote
+	}
+
+	return []map[string]interface{}{result}
+}
+
+func expandGoogleSheetsOptions(configured interface{}) *bigquery.GoogleSheetsOptions {
+	if len(configured.([]interface{})) == 0 {
+		return nil
+	}
+
+	raw := configured.([]interface{})[0].(map[string]interface{})
+	opts := &bigquery.GoogleSheetsOptions{}
+
+	if v, ok := raw["range"]; ok {
+		opts.Range = v.(string)
+	}
+
+	if v, ok := raw["skip_leading_rows"]; ok {
+		opts.SkipLeadingRows = int64(v.(int))
+	}
+	return opts
+}
+
+func flattenGoogleSheetsOptions(opts *bigquery.GoogleSheetsOptions) []map[string]interface{} {
+	result := map[string]interface{}{}
+
+	if opts.Range != "" {
+		result["range"] = opts.Range
+	}
+
+	if opts.SkipLeadingRows != 0 {
+		result["skip_leading_rows"] = opts.SkipLeadingRows
+	}
+
+	return []map[string]interface{}{result}
+}
+
 func expandSchema(raw interface{}) (*bigquery.TableSchema, error) {
 	var fields []*bigquery.TableFieldSchema
+
+	if len(raw.(string)) == 0 {
+		return nil, nil
+	}
 
 	if err := json.Unmarshal([]byte(raw.(string)), &fields); err != nil {
 		return nil, err
@@ -436,6 +795,10 @@ func expandTimePartitioning(configured interface{}) *bigquery.TimePartitioning {
 		tp.ExpirationMs = int64(v.(int))
 	}
 
+	if v, ok := raw["require_partition_filter"]; ok {
+		tp.RequirePartitionFilter = v.(bool)
+	}
+
 	return tp
 }
 
@@ -448,6 +811,10 @@ func flattenTimePartitioning(tp *bigquery.TimePartitioning) []map[string]interfa
 
 	if tp.ExpirationMs != 0 {
 		result["expiration_ms"] = tp.ExpirationMs
+	}
+
+	if tp.RequirePartitionFilter == true {
+		result["require_partition_filter"] = tp.RequirePartitionFilter
 	}
 
 	return []map[string]interface{}{result}
@@ -477,15 +844,16 @@ type bigQueryTableId struct {
 }
 
 func parseBigQueryTableId(id string) (*bigQueryTableId, error) {
-	parts := strings.FieldsFunc(id, func(r rune) bool { return r == ':' || r == '.' })
-
-	if len(parts) != 3 {
+	// Expected format is "PROJECT:DATASET.TABLE", but the project can itself have . and : in it.
+	// Those characters are not valid dataset or table components, so just split on the last two.
+	matchRegex := regexp.MustCompile("^(.+):([^:.]+)\\.([^:.]+)$")
+	subMatches := matchRegex.FindStringSubmatch(id)
+	if subMatches == nil {
 		return nil, fmt.Errorf("Invalid BigQuery table specifier. Expecting {project}:{dataset-id}.{table-id}, got %s", id)
 	}
-
 	return &bigQueryTableId{
-		Project:   parts[0],
-		DatasetId: parts[1],
-		TableId:   parts[2],
+		Project:   subMatches[1],
+		DatasetId: subMatches[2],
+		TableId:   subMatches[3],
 	}, nil
 }

@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	containerBeta "google.golang.org/api/container/v1beta1"
 )
 
@@ -43,23 +43,26 @@ var schemaNodeConfig = &schema.Schema{
 				ValidateFunc: validation.StringInSlice([]string{"pd-standard", "pd-ssd"}, false),
 			},
 
-			"guest_accelerator": &schema.Schema{
+			"guest_accelerator": {
 				Type:     schema.TypeList,
 				Optional: true,
 				Computed: true,
 				ForceNew: true,
+				// Legacy config mode allows removing GPU's from an existing resource
+				// See https://www.terraform.io/docs/configuration/attr-as-blocks.html
+				ConfigMode: schema.SchemaConfigModeAttr,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"count": &schema.Schema{
+						"count": {
 							Type:     schema.TypeInt,
 							Required: true,
 							ForceNew: true,
 						},
-						"type": &schema.Schema{
+						"type": {
 							Type:             schema.TypeString,
 							Required:         true,
 							ForceNew:         true,
-							DiffSuppressFunc: linkDiffSuppress,
+							DiffSuppressFunc: compareSelfLinkOrResourceName,
 						},
 					},
 				},
@@ -74,6 +77,8 @@ var schemaNodeConfig = &schema.Schema{
 			"labels": {
 				Type:     schema.TypeMap,
 				Optional: true,
+				// Computed=true because GKE Sandbox will automatically add labels to nodes that can/cannot run sandboxed pods.
+				Computed: true,
 				ForceNew: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
@@ -96,6 +101,7 @@ var schemaNodeConfig = &schema.Schema{
 			"metadata": {
 				Type:     schema.TypeMap,
 				Optional: true,
+				Computed: true,
 				ForceNew: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 			},
@@ -142,9 +148,11 @@ var schemaNodeConfig = &schema.Schema{
 			},
 
 			"taint": {
-				Deprecated:       "This field is in beta and will be removed from this provider. Use it in the the google-beta provider instead. See https://terraform.io/docs/providers/google/provider_versions.html for more details.",
-				Type:             schema.TypeList,
-				Optional:         true,
+				Removed:  "This field is in beta. Use it in the the google-beta provider instead. See https://terraform.io/docs/providers/google/provider_versions.html for more details.",
+				Type:     schema.TypeList,
+				Optional: true,
+				// Computed=true because GKE Sandbox will automatically add taints to nodes that can/cannot run sandboxed pods.
+				Computed:         true,
 				ForceNew:         true,
 				DiffSuppressFunc: taintDiffSuppress,
 				Elem: &schema.Resource{
@@ -170,18 +178,35 @@ var schemaNodeConfig = &schema.Schema{
 			},
 
 			"workload_metadata_config": {
-				Deprecated: "This field is in beta and will be removed from this provider. Use it in the the google-beta provider instead. See https://terraform.io/docs/providers/google/provider_versions.html for more details.",
-				Type:       schema.TypeList,
-				Optional:   true,
-				ForceNew:   true,
-				MaxItems:   1,
+				Removed:  "This field is in beta. Use it in the the google-beta provider instead. See https://terraform.io/docs/providers/google/provider_versions.html for more details.",
+				Type:     schema.TypeList,
+				Optional: true,
+				ForceNew: true,
+				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"node_metadata": {
 							Type:         schema.TypeString,
 							Required:     true,
 							ForceNew:     true,
-							ValidateFunc: validation.StringInSlice([]string{"UNSPECIFIED", "SECURE", "EXPOSE"}, false),
+							ValidateFunc: validation.StringInSlice([]string{"UNSPECIFIED", "SECURE", "EXPOSE", "GKE_METADATA_SERVER"}, false),
+						},
+					},
+				},
+			},
+
+			"sandbox_config": {
+				Removed:  "This field is in beta. Use it in the the google-beta provider instead. See https://terraform.io/docs/providers/google/provider_versions.html for more details.",
+				Type:     schema.TypeList,
+				Optional: true,
+				ForceNew: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"sandbox_type": {
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validation.StringInSlice([]string{"gvisor"}, false),
 						},
 					},
 				},
@@ -283,28 +308,6 @@ func expandNodeConfig(v interface{}) *containerBeta.NodeConfig {
 		nc.MinCpuPlatform = v.(string)
 	}
 
-	if v, ok := nodeConfig["taint"]; ok && len(v.([]interface{})) > 0 {
-		taints := v.([]interface{})
-		nodeTaints := make([]*containerBeta.NodeTaint, 0, len(taints))
-		for _, raw := range taints {
-			data := raw.(map[string]interface{})
-			taint := &containerBeta.NodeTaint{
-				Key:    data["key"].(string),
-				Value:  data["value"].(string),
-				Effect: data["effect"].(string),
-			}
-			nodeTaints = append(nodeTaints, taint)
-		}
-		nc.Taints = nodeTaints
-	}
-
-	if v, ok := nodeConfig["workload_metadata_config"]; ok && len(v.([]interface{})) > 0 {
-		conf := v.([]interface{})[0].(map[string]interface{})
-		nc.WorkloadMetadataConfig = &containerBeta.WorkloadMetadataConfig{
-			NodeMetadata: conf["node_metadata"].(string),
-		}
-	}
-
 	return nc
 }
 
@@ -316,20 +319,18 @@ func flattenNodeConfig(c *containerBeta.NodeConfig) []map[string]interface{} {
 	}
 
 	config = append(config, map[string]interface{}{
-		"machine_type":             c.MachineType,
-		"disk_size_gb":             c.DiskSizeGb,
-		"disk_type":                c.DiskType,
-		"guest_accelerator":        flattenContainerGuestAccelerators(c.Accelerators),
-		"local_ssd_count":          c.LocalSsdCount,
-		"service_account":          c.ServiceAccount,
-		"metadata":                 c.Metadata,
-		"image_type":               c.ImageType,
-		"labels":                   c.Labels,
-		"tags":                     c.Tags,
-		"preemptible":              c.Preemptible,
-		"min_cpu_platform":         c.MinCpuPlatform,
-		"taint":                    flattenTaints(c.Taints),
-		"workload_metadata_config": flattenWorkloadMetadataConfig(c.WorkloadMetadataConfig),
+		"machine_type":      c.MachineType,
+		"disk_size_gb":      c.DiskSizeGb,
+		"disk_type":         c.DiskType,
+		"guest_accelerator": flattenContainerGuestAccelerators(c.Accelerators),
+		"local_ssd_count":   c.LocalSsdCount,
+		"service_account":   c.ServiceAccount,
+		"metadata":          c.Metadata,
+		"image_type":        c.ImageType,
+		"labels":            c.Labels,
+		"tags":              c.Tags,
+		"preemptible":       c.Preemptible,
+		"min_cpu_platform":  c.MinCpuPlatform,
 	})
 
 	if len(c.OauthScopes) > 0 {
@@ -345,28 +346,6 @@ func flattenContainerGuestAccelerators(c []*containerBeta.AcceleratorConfig) []m
 		result = append(result, map[string]interface{}{
 			"count": accel.AcceleratorCount,
 			"type":  accel.AcceleratorType,
-		})
-	}
-	return result
-}
-
-func flattenTaints(c []*containerBeta.NodeTaint) []map[string]interface{} {
-	result := []map[string]interface{}{}
-	for _, taint := range c {
-		result = append(result, map[string]interface{}{
-			"key":    taint.Key,
-			"value":  taint.Value,
-			"effect": taint.Effect,
-		})
-	}
-	return result
-}
-
-func flattenWorkloadMetadataConfig(c *containerBeta.WorkloadMetadataConfig) []map[string]interface{} {
-	result := []map[string]interface{}{}
-	if c != nil {
-		result = append(result, map[string]interface{}{
-			"node_metadata": c.NodeMetadata,
 		})
 	}
 	return result

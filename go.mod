@@ -1,11 +1,8 @@
 module github.com/terraform-providers/terraform-provider-kubernetes
 
 require (
-	cloud.google.com/go/bigtable v1.0.0 // indirect
-	cloud.google.com/go/pubsub v1.0.1 // indirect
 	contrib.go.opencensus.io/exporter/ocagent v0.5.0 // indirect
 	github.com/Azure/go-autorest v11.9.0+incompatible // indirect
-	github.com/dustinkirkland/golang-petname v0.0.0-20170921220637-d3c2ba80e75e // indirect
 	github.com/frankban/quicktest v1.4.2 // indirect
 	github.com/gogo/protobuf v1.3.0 // indirect
 	github.com/google/go-cmp v0.3.1
@@ -22,9 +19,8 @@ require (
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pierrec/lz4 v2.3.0+incompatible // indirect
 	github.com/robfig/cron v1.2.0
-	github.com/stoewer/go-strcase v1.0.2 // indirect
 	github.com/terraform-providers/terraform-provider-aws v2.32.0+incompatible
-	github.com/terraform-providers/terraform-provider-google v1.20.0
+	github.com/terraform-providers/terraform-provider-google v2.17.0+incompatible
 	github.com/terraform-providers/terraform-provider-random v2.2.1+incompatible // indirect
 	github.com/ulikunitz/xz v0.5.6 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect

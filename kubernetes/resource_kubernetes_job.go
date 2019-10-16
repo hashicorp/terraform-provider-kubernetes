@@ -162,11 +162,7 @@ func resourceKubernetesJobDelete(d *schema.ResourceData, meta interface{}) error
 	}
 
 	log.Printf("[INFO] Deleting job: %#v", name)
-	policy := metav1.DeletePropagationBackground
-	options := &metav1.DeleteOptions{
-		PropagationPolicy: &policy,
-	}
-	err = conn.BatchV1().Jobs(namespace).Delete(name, options)
+	err = conn.BatchV1().Jobs(namespace).Delete(name, &deleteOptions)
 	if err != nil {
 		return fmt.Errorf("Failed to delete Job! API error: %s", err)
 	}

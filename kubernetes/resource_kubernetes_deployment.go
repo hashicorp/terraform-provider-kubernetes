@@ -315,7 +315,7 @@ func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}
 
 	log.Printf("[INFO] Deleting deployment: %#v", name)
 
-	err = conn.AppsV1().Deployments(namespace).Delete(name, &metav1.DeleteOptions{})
+	err = conn.AppsV1().Deployments(namespace).Delete(name, &deleteOptions)
 	if err != nil {
 		return err
 	}

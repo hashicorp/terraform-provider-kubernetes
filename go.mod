@@ -14,7 +14,7 @@ require (
 	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/hil v0.0.0-20190212132231-97b3a9cdfa93 // indirect
-	github.com/hashicorp/terraform v0.12.10
+	github.com/hashicorp/terraform v0.12.11
 	github.com/hashicorp/vault v1.1.2 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/keybase/go-crypto v0.0.0-20190523171820-b785b22cc757 // indirect

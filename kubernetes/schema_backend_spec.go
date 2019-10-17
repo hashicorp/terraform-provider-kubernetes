@@ -1,6 +1,6 @@
 package kubernetes
 
-import "github.com/hashicorp/terraform/helper/schema"
+import "github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 
 const defaultBackendDescription = `A default backend capable of servicing requests that don't match any rule. At least one of 'backend' or 'rules' must be specified. This field is optional to allow the loadbalancer controller or defaulting logic to specify a global default.`
 const ruleBackedDescription = `Backend defines the referenced service endpoint to which the traffic will be forwarded to.`

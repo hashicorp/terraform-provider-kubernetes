@@ -3,8 +3,7 @@ package google
 import (
 	"fmt"
 
-	"github.com/hashicorp/terraform/helper/schema"
-	computeBeta "google.golang.org/api/compute/v0.beta"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"google.golang.org/api/compute/v1"
 )
 
@@ -13,58 +12,58 @@ func dataSourceGoogleComputeSubnetwork() *schema.Resource {
 		Read: dataSourceGoogleComputeSubnetworkRead,
 
 		Schema: map[string]*schema.Schema{
-			"name": &schema.Schema{
+			"name": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 			},
-
-			"description": &schema.Schema{
+			"self_link": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+			"description": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"self_link": &schema.Schema{
+			"ip_cidr_range": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"ip_cidr_range": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"private_ip_google_access": &schema.Schema{
+			"private_ip_google_access": {
 				Type:     schema.TypeBool,
 				Computed: true,
 			},
-			"secondary_ip_range": &schema.Schema{
+			"secondary_ip_range": {
 				Type:     schema.TypeList,
 				Computed: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"range_name": &schema.Schema{
+						"range_name": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
-						"ip_cidr_range": &schema.Schema{
+						"ip_cidr_range": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
 					},
 				},
 			},
-			"network": &schema.Schema{
+			"network": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"gateway_address": &schema.Schema{
+			"gateway_address": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"region": &schema.Schema{
+			"region": {
 				Type:     schema.TypeString,
 				Computed: true,
 				Optional: true,
 			},
 
-			"project": &schema.Schema{
+			"project": {
 				Type:     schema.TypeString,
 				Computed: true,
 				Optional: true,
@@ -76,15 +75,10 @@ func dataSourceGoogleComputeSubnetwork() *schema.Resource {
 func dataSourceGoogleComputeSubnetworkRead(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
-	project, err := getProject(d, config)
+	project, region, name, err := GetRegionalResourcePropertiesFromSelfLinkOrSchema(d, config)
 	if err != nil {
 		return err
 	}
-	region, err := getRegion(d, config)
-	if err != nil {
-		return err
-	}
-	name := d.Get("name").(string)
 
 	subnetwork, err := config.clientCompute.Subnetworks.Get(project, region, name).Do()
 	if err != nil {
@@ -99,12 +93,9 @@ func dataSourceGoogleComputeSubnetworkRead(d *schema.ResourceData, meta interfac
 	d.Set("network", subnetwork.Network)
 	d.Set("project", project)
 	d.Set("region", region)
-	// Flattening code defined in resource_compute_subnetwork.go
 	d.Set("secondary_ip_range", flattenSecondaryRanges(subnetwork.SecondaryIpRanges))
 
-	//Subnet id creation is defined in resource_compute_subnetwork.go
-	subnetwork.Region = region
-	d.SetId(createSubnetID(subnetwork))
+	d.SetId(fmt.Sprintf("%s/%s", region, name))
 	return nil
 }
 
@@ -119,12 +110,4 @@ func flattenSecondaryRanges(secondaryRanges []*compute.SubnetworkSecondaryRange)
 		secondaryRangesSchema = append(secondaryRangesSchema, data)
 	}
 	return secondaryRangesSchema
-}
-
-func createSubnetID(s *compute.Subnetwork) string {
-	return fmt.Sprintf("%s/%s", s.Region, s.Name)
-}
-
-func createSubnetIDBeta(s *computeBeta.Subnetwork) string {
-	return fmt.Sprintf("%s/%s", s.Region, s.Name)
 }

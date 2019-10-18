@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	resourceManagerV2Beta1 "google.golang.org/api/cloudresourcemanager/v2beta1"
 )
 
@@ -13,15 +13,15 @@ func dataSourceGoogleActiveFolder() *schema.Resource {
 		Read: dataSourceGoogleActiveFolderRead,
 
 		Schema: map[string]*schema.Schema{
-			"parent": &schema.Schema{
+			"parent": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"display_name": &schema.Schema{
+			"display_name": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"name": &schema.Schema{
+			"name": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},

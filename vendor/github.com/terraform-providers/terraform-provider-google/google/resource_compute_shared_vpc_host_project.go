@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
 func resourceComputeSharedVpcHostProject() *schema.Resource {
@@ -17,7 +17,7 @@ func resourceComputeSharedVpcHostProject() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"project": &schema.Schema{
+			"project": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -30,14 +30,14 @@ func resourceComputeSharedVpcHostProjectCreate(d *schema.ResourceData, meta inte
 	config := meta.(*Config)
 
 	hostProject := d.Get("project").(string)
-	op, err := config.clientCompute.Projects.EnableXpnHost(hostProject).Do()
+	op, err := config.clientComputeBeta.Projects.EnableXpnHost(hostProject).Do()
 	if err != nil {
 		return fmt.Errorf("Error enabling Shared VPC Host %q: %s", hostProject, err)
 	}
 
 	d.SetId(hostProject)
 
-	err = computeOperationWait(config.clientCompute, op, hostProject, "Enabling Shared VPC Host")
+	err = computeBetaOperationWaitTime(config.clientCompute, op, hostProject, "Enabling Shared VPC Host", int(d.Timeout(schema.TimeoutCreate).Minutes()))
 	if err != nil {
 		d.SetId("")
 		return err
@@ -51,7 +51,7 @@ func resourceComputeSharedVpcHostProjectRead(d *schema.ResourceData, meta interf
 
 	hostProject := d.Id()
 
-	project, err := config.clientCompute.Projects.Get(hostProject).Do()
+	project, err := config.clientComputeBeta.Projects.Get(hostProject).Do()
 	if err != nil {
 		return handleNotFoundError(err, d, fmt.Sprintf("Project data for project %q", hostProject))
 	}
@@ -70,12 +70,12 @@ func resourceComputeSharedVpcHostProjectDelete(d *schema.ResourceData, meta inte
 	config := meta.(*Config)
 	hostProject := d.Get("project").(string)
 
-	op, err := config.clientCompute.Projects.DisableXpnHost(hostProject).Do()
+	op, err := config.clientComputeBeta.Projects.DisableXpnHost(hostProject).Do()
 	if err != nil {
 		return fmt.Errorf("Error disabling Shared VPC Host %q: %s", hostProject, err)
 	}
 
-	err = computeOperationWait(config.clientCompute, op, hostProject, "Disabling Shared VPC Host")
+	err = computeBetaOperationWaitTime(config.clientCompute, op, hostProject, "Disabling Shared VPC Host", int(d.Timeout(schema.TimeoutCreate).Minutes()))
 	if err != nil {
 		return err
 	}

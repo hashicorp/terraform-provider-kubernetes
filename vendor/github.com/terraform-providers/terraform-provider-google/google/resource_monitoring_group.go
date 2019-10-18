@@ -18,8 +18,9 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"time"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
 func resourceMonitoringGroup() *schema.Resource {
@@ -31,6 +32,12 @@ func resourceMonitoringGroup() *schema.Resource {
 
 		Importer: &schema.ResourceImporter{
 			State: resourceMonitoringGroupImport,
+		},
+
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(4 * time.Minute),
+			Update: schema.DefaultTimeout(4 * time.Minute),
+			Delete: schema.DefaultTimeout(4 * time.Minute),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -101,13 +108,17 @@ func resourceMonitoringGroupCreate(d *schema.ResourceData, meta interface{}) err
 	mutexKV.Lock(lockName)
 	defer mutexKV.Unlock(lockName)
 
-	url, err := replaceVars(d, config, "https://monitoring.googleapis.com/v3/projects/{{project}}/groups")
+	url, err := replaceVars(d, config, "{{MonitoringBasePath}}projects/{{project}}/groups")
 	if err != nil {
 		return err
 	}
 
 	log.Printf("[DEBUG] Creating new Group: %#v", obj)
-	res, err := sendRequest(config, "POST", url, obj)
+	project, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
+	res, err := sendRequestWithTimeout(config, "POST", project, url, obj, d.Timeout(schema.TimeoutCreate))
 	if err != nil {
 		return fmt.Errorf("Error creating Group: %s", err)
 	}
@@ -135,36 +146,37 @@ func resourceMonitoringGroupCreate(d *schema.ResourceData, meta interface{}) err
 func resourceMonitoringGroupRead(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
-	url, err := replaceVars(d, config, "https://monitoring.googleapis.com/v3/{{name}}")
+	url, err := replaceVars(d, config, "{{MonitoringBasePath}}{{name}}")
 	if err != nil {
 		return err
 	}
 
-	res, err := sendRequest(config, "GET", url, nil)
-	if err != nil {
-		return handleNotFoundError(err, d, fmt.Sprintf("MonitoringGroup %q", d.Id()))
-	}
-
-	if err := d.Set("parent_name", flattenMonitoringGroupParentName(res["parentName"])); err != nil {
-		return fmt.Errorf("Error reading Group: %s", err)
-	}
-	if err := d.Set("name", flattenMonitoringGroupName(res["name"])); err != nil {
-		return fmt.Errorf("Error reading Group: %s", err)
-	}
-	if err := d.Set("is_cluster", flattenMonitoringGroupIsCluster(res["isCluster"])); err != nil {
-		return fmt.Errorf("Error reading Group: %s", err)
-	}
-	if err := d.Set("display_name", flattenMonitoringGroupDisplayName(res["displayName"])); err != nil {
-		return fmt.Errorf("Error reading Group: %s", err)
-	}
-	if err := d.Set("filter", flattenMonitoringGroupFilter(res["filter"])); err != nil {
-		return fmt.Errorf("Error reading Group: %s", err)
-	}
 	project, err := getProject(d, config)
 	if err != nil {
 		return err
 	}
+	res, err := sendRequest(config, "GET", project, url, nil)
+	if err != nil {
+		return handleNotFoundError(err, d, fmt.Sprintf("MonitoringGroup %q", d.Id()))
+	}
+
 	if err := d.Set("project", project); err != nil {
+		return fmt.Errorf("Error reading Group: %s", err)
+	}
+
+	if err := d.Set("parent_name", flattenMonitoringGroupParentName(res["parentName"], d)); err != nil {
+		return fmt.Errorf("Error reading Group: %s", err)
+	}
+	if err := d.Set("name", flattenMonitoringGroupName(res["name"], d)); err != nil {
+		return fmt.Errorf("Error reading Group: %s", err)
+	}
+	if err := d.Set("is_cluster", flattenMonitoringGroupIsCluster(res["isCluster"], d)); err != nil {
+		return fmt.Errorf("Error reading Group: %s", err)
+	}
+	if err := d.Set("display_name", flattenMonitoringGroupDisplayName(res["displayName"], d)); err != nil {
+		return fmt.Errorf("Error reading Group: %s", err)
+	}
+	if err := d.Set("filter", flattenMonitoringGroupFilter(res["filter"], d)); err != nil {
 		return fmt.Errorf("Error reading Group: %s", err)
 	}
 
@@ -173,6 +185,11 @@ func resourceMonitoringGroupRead(d *schema.ResourceData, meta interface{}) error
 
 func resourceMonitoringGroupUpdate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
+
+	project, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
 
 	obj := make(map[string]interface{})
 	parentNameProp, err := expandMonitoringGroupParentName(d.Get("parent_name"), d, config)
@@ -207,13 +224,13 @@ func resourceMonitoringGroupUpdate(d *schema.ResourceData, meta interface{}) err
 	mutexKV.Lock(lockName)
 	defer mutexKV.Unlock(lockName)
 
-	url, err := replaceVars(d, config, "https://monitoring.googleapis.com/v3/{{name}}")
+	url, err := replaceVars(d, config, "{{MonitoringBasePath}}{{name}}")
 	if err != nil {
 		return err
 	}
 
 	log.Printf("[DEBUG] Updating Group %q: %#v", d.Id(), obj)
-	_, err = sendRequest(config, "PUT", url, obj)
+	_, err = sendRequestWithTimeout(config, "PUT", project, url, obj, d.Timeout(schema.TimeoutUpdate))
 
 	if err != nil {
 		return fmt.Errorf("Error updating Group %q: %s", d.Id(), err)
@@ -225,6 +242,11 @@ func resourceMonitoringGroupUpdate(d *schema.ResourceData, meta interface{}) err
 func resourceMonitoringGroupDelete(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
+	project, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
+
 	lockName, err := replaceVars(d, config, "stackdriver/groups/{{project}}")
 	if err != nil {
 		return err
@@ -232,14 +254,15 @@ func resourceMonitoringGroupDelete(d *schema.ResourceData, meta interface{}) err
 	mutexKV.Lock(lockName)
 	defer mutexKV.Unlock(lockName)
 
-	url, err := replaceVars(d, config, "https://monitoring.googleapis.com/v3/{{name}}")
+	url, err := replaceVars(d, config, "{{MonitoringBasePath}}{{name}}")
 	if err != nil {
 		return err
 	}
 
 	var obj map[string]interface{}
 	log.Printf("[DEBUG] Deleting Group %q", d.Id())
-	res, err := sendRequest(config, "DELETE", url, obj)
+
+	res, err := sendRequestWithTimeout(config, "DELETE", project, url, obj, d.Timeout(schema.TimeoutDelete))
 	if err != nil {
 		return handleNotFoundError(err, d, "Group")
 	}
@@ -252,44 +275,46 @@ func resourceMonitoringGroupImport(d *schema.ResourceData, meta interface{}) ([]
 
 	config := meta.(*Config)
 
-	// current import_formats can't import id's with forward slashes in them.
-	parseImportId([]string{"(?P<name>.+)"}, d, config)
+	// current import_formats can't import fields with forward slashes in their value
+	if err := parseImportId([]string{"(?P<name>.+)"}, d, config); err != nil {
+		return nil, err
+	}
 
 	return []*schema.ResourceData{d}, nil
 }
 
-func flattenMonitoringGroupParentName(v interface{}) interface{} {
+func flattenMonitoringGroupParentName(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenMonitoringGroupName(v interface{}) interface{} {
+func flattenMonitoringGroupName(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenMonitoringGroupIsCluster(v interface{}) interface{} {
+func flattenMonitoringGroupIsCluster(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenMonitoringGroupDisplayName(v interface{}) interface{} {
+func flattenMonitoringGroupDisplayName(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenMonitoringGroupFilter(v interface{}) interface{} {
+func flattenMonitoringGroupFilter(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func expandMonitoringGroupParentName(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringGroupParentName(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringGroupIsCluster(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringGroupIsCluster(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringGroupDisplayName(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringGroupDisplayName(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringGroupFilter(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringGroupFilter(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }

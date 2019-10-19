@@ -45,6 +45,9 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "reclaim_policy", "Delete"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "volume_binding_mode", "Immediate"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "allow_volume_expansion", "true"),
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "mount_options.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "mount_options.2356372769", "foo"),
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "mount_options.1996459178", "bar"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.type", "pd-ssd"),
 					testAccCheckStorageClassParameters(&conf, map[string]string{"type": "pd-ssd"}),
@@ -71,6 +74,8 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "reclaim_policy", "Retain"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "volume_binding_mode", "WaitForFirstConsumer"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "allow_volume_expansion", "false"),
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "mount_options.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "mount_options.2356372769", "foo"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.type", "pd-standard"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.zones", "us-west1-a,us-west1-b"),
@@ -94,6 +99,7 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "reclaim_policy", "Delete"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "volume_binding_mode", "Immediate"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "allow_volume_expansion", "true"),
+					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "mount_options.#", "0"),
 					resource.TestCheckResourceAttr("kubernetes_storage_class.test", "parameters.%", "0"),
 					testAccCheckStorageClassParameters(&conf, map[string]string{}),
 				),
@@ -252,6 +258,8 @@ resource "kubernetes_storage_class" "test" {
   volume_binding_mode    = "Immediate"
   allow_volume_expansion = true
 
+  mount_options			 = ["foo", "bar"]
+
   parameters = {
     type = "pd-ssd"
   }
@@ -280,6 +288,8 @@ resource "kubernetes_storage_class" "test" {
   reclaim_policy         = "Retain"
   volume_binding_mode    = "WaitForFirstConsumer"
   allow_volume_expansion = false
+
+  mount_options			 = ["foo"]
 
   parameters = {
     type  = "pd-standard"

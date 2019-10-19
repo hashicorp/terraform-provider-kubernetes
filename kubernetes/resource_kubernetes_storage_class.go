@@ -153,7 +153,7 @@ func resourceKubernetesStorageClassDelete(d *schema.ResourceData, meta interface
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting storage class: %#v", name)
-	err := conn.StorageV1().StorageClasses().Delete(name, &metav1.DeleteOptions{})
+	err := conn.StorageV1().StorageClasses().Delete(name, &deleteOptions)
 	if err != nil {
 		return err
 	}

@@ -256,7 +256,7 @@ func resourceKubernetesReplicationControllerDelete(d *schema.ResourceData, meta 
 		return err
 	}
 
-	err = conn.CoreV1().ReplicationControllers(namespace).Delete(name, &metav1.DeleteOptions{})
+	err = conn.CoreV1().ReplicationControllers(namespace).Delete(name, &deleteOptions)
 	if err != nil {
 		return err
 	}

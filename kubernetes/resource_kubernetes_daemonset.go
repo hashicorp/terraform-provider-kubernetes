@@ -234,8 +234,7 @@ func resourceKubernetesDaemonSetDelete(d *schema.ResourceData, meta interface{})
 
 	log.Printf("[INFO] Deleting daemonset: %#v", name)
 
-	policy := metav1.DeletePropagationForeground
-	err = conn.AppsV1().DaemonSets(namespace).Delete(name, &metav1.DeleteOptions{PropagationPolicy: &policy})
+	err = conn.AppsV1().DaemonSets(namespace).Delete(name, &deleteOptions)
 	if err != nil {
 		return err
 	}

@@ -1,8 +1,6 @@
 package kubernetes
 
 import (
-	"strconv"
-
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -90,20 +88,6 @@ func flattenHTTPHeader(in []v1.HTTPHeader) []interface{} {
 		att[i] = m
 	}
 	return att
-}
-
-func expandPort(v string) intstr.IntOrString {
-	i, err := strconv.Atoi(v)
-	if err != nil {
-		return intstr.IntOrString{
-			Type:   intstr.String,
-			StrVal: v,
-		}
-	}
-	return intstr.IntOrString{
-		Type:   intstr.Int,
-		IntVal: int32(i),
-	}
 }
 
 func flattenHTTPGet(in *v1.HTTPGetAction) []interface{} {
@@ -607,7 +591,7 @@ func expandTCPSocket(l []interface{}) *v1.TCPSocketAction {
 	in := l[0].(map[string]interface{})
 	obj := v1.TCPSocketAction{}
 	if v, ok := in["port"].(string); ok && len(v) > 0 {
-		obj.Port = expandPort(v)
+		obj.Port = intstr.Parse(v)
 	}
 	return &obj
 }
@@ -629,7 +613,7 @@ func expandHTTPGet(l []interface{}) *v1.HTTPGetAction {
 	}
 
 	if v, ok := in["port"].(string); ok && len(v) > 0 {
-		obj.Port = expandPort(v)
+		obj.Port = intstr.Parse(v)
 	}
 
 	if v, ok := in["http_header"].([]interface{}); ok && len(v) > 0 {

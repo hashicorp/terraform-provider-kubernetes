@@ -26,6 +26,6 @@ require (
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	k8s.io/api v0.0.0-20190222213804-5cb15d344471
 	k8s.io/apimachinery v0.0.0-20190221213512-86fb29eff628
-	k8s.io/client-go v10.0.0+incompatible
+	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/kube-aggregator v0.0.0-20190508191239-c5c2b08eec9f
 )

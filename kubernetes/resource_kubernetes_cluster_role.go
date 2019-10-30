@@ -70,7 +70,7 @@ func resourceKubernetesClusterRoleUpdate(d *schema.ResourceData, meta interface{
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating ClusterRole %q: %v", name, string(data))
-	out, err := conn.Rbac().ClusterRoles().Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.RbacV1().ClusterRoles().Patch(name, pkgApi.JSONPatchType, data)
 	if err != nil {
 		return fmt.Errorf("Failed to update ClusterRole: %s", err)
 	}

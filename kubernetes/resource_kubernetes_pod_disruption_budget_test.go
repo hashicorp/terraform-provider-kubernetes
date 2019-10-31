@@ -174,11 +174,11 @@ func testAccKubernetesPodDisruptionBudgetConfig_maxUnavailable(name string) stri
 	return fmt.Sprintf(`
 resource "kubernetes_pod_disruption_budget" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelThree = "three"
       TestLabelFour  = "four"
@@ -190,7 +190,7 @@ resource "kubernetes_pod_disruption_budget" "test" {
   spec {
     max_unavailable = 1
     selector {
-      match_labels {
+      match_labels = {
         foo = "bar"
       }
     }
@@ -204,11 +204,11 @@ func testAccKubernetesPodDisruptionBudgetConfig_minAvailable(name string) string
 	return fmt.Sprintf(`
 resource "kubernetes_pod_disruption_budget" "test" {
   metadata {
-    annotations {
+    annotations = {
       TestAnnotationOne = "one"
     }
 
-    labels {
+    labels = {
       TestLabelOne   = "one"
       TestLabelThree = "three"
       TestLabelFour  = "four"

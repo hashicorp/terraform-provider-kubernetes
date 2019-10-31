@@ -73,6 +73,13 @@ func resourceKubernetesAPIService() *schema.Resource {
 										Description: "Namespace is the namespace of the service.",
 										Required:    true,
 									},
+									"port": {
+										Type:         schema.TypeInt,
+										Description:  "If specified, the port on the service that is hosting the service. Defaults to 443 for backward compatibility. Should be a valid port number (1-65535, inclusive).",
+										Optional:     true,
+										Default:      443,
+										ValidateFunc: validatePortNum,
+									},
 								},
 							},
 						},

@@ -81,6 +81,7 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 
 * `name` - (Required) Name is the name of the service.
 * `namespace` - (Required) Namespace is the namespace of the service.
+* `port` - (Optional) If specified, the port on the service that is hosting the service. Defaults to 443 for backward compatibility. Should be a valid port number (1-65535, inclusive).
 
 ## Import
 

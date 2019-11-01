@@ -10,7 +10,6 @@ require (
 	github.com/gophercloud/gophercloud v0.3.1-0.20190807175045-25a84d593c97 // indirect
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/hil v0.0.0-20190212132231-97b3a9cdfa93 // indirect
-	github.com/hashicorp/terraform v0.12.13
 	github.com/hashicorp/terraform-plugin-sdk v1.2.0
 	github.com/hashicorp/vault v1.1.2 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
@@ -23,6 +22,7 @@ require (
 	github.com/terraform-providers/terraform-provider-random v2.2.1+incompatible // indirect
 	github.com/ulikunitz/xz v0.5.6 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
+	golang.org/x/net v0.0.0-20191009170851-d66e71096ffb // indirect
 	k8s.io/api v0.0.0-20191025225708-5524a3672fbb
 	k8s.io/apimachinery v0.0.0-20191025225532-af6325b3a843
 	k8s.io/client-go v12.0.0+incompatible

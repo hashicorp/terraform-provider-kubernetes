@@ -22,7 +22,7 @@ require (
 	github.com/terraform-providers/terraform-provider-random v2.2.1+incompatible // indirect
 	github.com/ulikunitz/xz v0.5.6 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	k8s.io/api v0.0.0-20191025225708-5524a3672fbb
+	k8s.io/api b98ecd433b91
 	k8s.io/apimachinery v0.0.0-20191025225532-af6325b3a843
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/kube-aggregator v0.0.0-20191025230902-aa872b06629d

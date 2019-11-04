@@ -225,7 +225,7 @@ github.com/fatih/color
 github.com/gammazero/deque
 # github.com/gammazero/workerpool v0.0.0-20181230203049-86a96b5d5d92
 github.com/gammazero/workerpool
-# github.com/gogo/protobuf v1.3.0
+# github.com/gogo/protobuf v1.3.1
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
 # github.com/golang/protobuf v1.3.2
@@ -258,7 +258,7 @@ github.com/google/gofuzz
 github.com/google/uuid
 # github.com/googleapis/gax-go/v2 v2.0.5
 github.com/googleapis/gax-go/v2
-# github.com/googleapis/gnostic v0.2.0
+# github.com/googleapis/gnostic v0.3.1
 github.com/googleapis/gnostic/OpenAPIv2
 github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
@@ -296,7 +296,7 @@ github.com/hashicorp/go-safetemp
 github.com/hashicorp/go-uuid
 # github.com/hashicorp/go-version v1.2.0
 github.com/hashicorp/go-version
-# github.com/hashicorp/golang-lru v0.5.1
+# github.com/hashicorp/golang-lru v0.5.3
 github.com/hashicorp/golang-lru/simplelru
 # github.com/hashicorp/hcl v1.0.0
 github.com/hashicorp/hcl
@@ -388,7 +388,7 @@ github.com/imdario/mergo
 github.com/jen20/awspolicyequivalence
 # github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af
 github.com/jmespath/go-jmespath
-# github.com/json-iterator/go v1.1.7
+# github.com/json-iterator/go v1.1.8
 github.com/json-iterator/go
 # github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024
 github.com/jstemmer/go-junit-report
@@ -501,7 +501,7 @@ go.opencensus.io/metric/metricproducer
 go.opencensus.io/stats/internal
 go.opencensus.io/internal
 go.opencensus.io/trace/internal
-# golang.org/x/crypto v0.0.0-20190923035154-9ee001bba392
+# golang.org/x/crypto v0.0.0-20191029031824-8986dd9e96cf
 golang.org/x/crypto/ssh/terminal
 golang.org/x/crypto/openpgp
 golang.org/x/crypto/ssh
@@ -525,7 +525,7 @@ golang.org/x/exp/apidiff
 # golang.org/x/lint v0.0.0-20190909230951-414d861bb4ac
 golang.org/x/lint/golint
 golang.org/x/lint
-# golang.org/x/net v0.0.0-20190923162816-aa69164e4478
+# golang.org/x/net v0.0.0-20191101175033-0deb6923b6d9
 golang.org/x/net/http2
 golang.org/x/net/context
 golang.org/x/net/trace
@@ -540,9 +540,9 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/jwt
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
-# golang.org/x/sync v0.0.0-20190423024810-112230192c58
+# golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20190922100055-0a153f010e69
+# golang.org/x/sys v0.0.0-20191104094858-e8c54fb511f6
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/cpu
@@ -553,7 +553,7 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/unicode/bidi
 # golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20190930201159-7c411dea38b0
+# golang.org/x/tools v0.0.0-20191101200257-8dbcdeb83d3f
 golang.org/x/tools/cmd/goimports
 golang.org/x/tools/go/gcexportdata
 golang.org/x/tools/go/packages
@@ -563,6 +563,7 @@ golang.org/x/tools/go/internal/gcimporter
 golang.org/x/tools/go/internal/packagesdriver
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/semver
+golang.org/x/tools/internal/span
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/internal/module
 golang.org/x/tools/go/types/objectpath
@@ -723,7 +724,7 @@ honnef.co/go/tools/ssautil
 honnef.co/go/tools/staticcheck/vrp
 honnef.co/go/tools/go/types/typeutil
 honnef.co/go/tools/internal/renameio
-# k8s.io/api v0.0.0-20191025225708-5524a3672fbb
+# k8s.io/api v0.0.0-20191031065753-b19d8caf39be
 k8s.io/api/apps/v1
 k8s.io/api/autoscaling/v1
 k8s.io/api/batch/v1
@@ -760,7 +761,7 @@ k8s.io/api/scheduling/v1beta1
 k8s.io/api/settings/v1alpha1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
-# k8s.io/apimachinery v0.0.0-20191025225532-af6325b3a843
+# k8s.io/apimachinery v0.0.0-20191030190112-bb31b70367b7
 k8s.io/apimachinery/pkg/api/errors
 k8s.io/apimachinery/pkg/api/resource
 k8s.io/apimachinery/pkg/api/validation
@@ -868,7 +869,7 @@ k8s.io/client-go/tools/clientcmd/api/v1
 k8s.io/client-go/third_party/forked/golang/template
 # k8s.io/klog v1.0.0
 k8s.io/klog
-# k8s.io/kube-aggregator v0.0.0-20191025230902-aa872b06629d
+# k8s.io/kube-aggregator v0.0.0-20191101230916-cb14a565d3e3
 k8s.io/kube-aggregator/pkg/apis/apiregistration/v1
 k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset
 k8s.io/kube-aggregator/pkg/apis/apiregistration
@@ -876,7 +877,7 @@ k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/typed/apiregistr
 k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/typed/apiregistration/v1beta1
 k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme
 k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1
-# k8s.io/utils v0.0.0-20191010214722-8d271d903fe4
+# k8s.io/utils v0.0.0-20191030222137-2b95a09bc58d
 k8s.io/utils/pointer
 k8s.io/utils/integer
 # sigs.k8s.io/yaml v1.1.0

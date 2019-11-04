@@ -18,6 +18,9 @@ func flattenAPIServiceSpec(in v1.APIServiceSpec) []interface{} {
 		m := make(map[string]interface{})
 		m["name"] = in.Service.Name
 		m["namespace"] = in.Service.Namespace
+		if in.Service.Port != nil {
+			m["port"] = *in.Service.Port
+		}
 		att["service"] = []interface{}{m}
 	}
 
@@ -53,6 +56,10 @@ func expandAPIServiceSpec(l []interface{}) v1.APIServiceSpec {
 		obj.Service = &v1.ServiceReference{
 			Name:      m["name"].(string),
 			Namespace: m["namespace"].(string),
+		}
+
+		if v, ok := m["port"].(int); ok && v > 0 {
+			obj.Service.Port = ptrToInt32(int32(v))
 		}
 	}
 	if v, ok := in["version"].(string); ok {

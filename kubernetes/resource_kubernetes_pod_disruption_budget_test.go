@@ -77,25 +77,6 @@ func TestAccKubernetesPodDisruptionBudget_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "spec.0.selector.0.match_expressions.0.values.2356372769", "foo"),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "spec.0.selector.0.match_expressions.0.values.270302810", "apps")),
 			},
-			{
-				Config: testAccKubernetesPodDisruptionBudgetConfig_noSelector(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodDisruptionBudgetExists("kubernetes_pod_disruption_budget.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "metadata.0.annotations.%", "0"),
-					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
-					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "metadata.0.labels.%", "0"),
-					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
-					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_pod_disruption_budget.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod_disruption_budget.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod_disruption_budget.test", "metadata.0.self_link"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod_disruption_budget.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "spec.0.max_unavailable", "10%"),
-					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "spec.0.min_available", ""),
-					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "spec.0.selector.#", "0"),
-				),
-			},
 		},
 	})
 }
@@ -225,21 +206,6 @@ resource "kubernetes_pod_disruption_budget" "test" {
         values = ["foo", "apps"]
       }
     }
-  }
-}
-`, name)
-}
-
-func testAccKubernetesPodDisruptionBudgetConfig_noSelector(name string) string {
-	// Note the percent sign in max_unavailable is golang-escaped to be double percent signs
-	return fmt.Sprintf(`
-resource "kubernetes_pod_disruption_budget" "test" {
-  metadata {
-    name = "%s"
-  }
-
-  spec {
-    max_unavailable = "10%%"
   }
 }
 `, name)

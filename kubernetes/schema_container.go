@@ -1,6 +1,9 @@
 package kubernetes
 
-import "github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+import (
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+)
 
 func handlerFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
@@ -190,6 +193,13 @@ func volumeMountFields() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: `Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).`,
+		},
+		"mount_propagation": {
+			Type:         schema.TypeString,
+			Description:  "Mount propagation mode. mount_propagation determines how mounts are propagated from the host to container and the other way around. Valid values are None (default), HostToContainer and Bidirectional.",
+			Optional:     true,
+			Default:      "None",
+			ValidateFunc: validation.StringInSlice([]string{"None", "HostToContainer", "Bidirectional"}, false),
 		},
 	}
 }

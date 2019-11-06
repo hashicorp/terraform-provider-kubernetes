@@ -789,6 +789,7 @@ The `items` block supports the following:
 * `name` - (Required) This must match the Name of a Volume.
 * `read_only` - (Optional) Mounted read-only if true, read-write otherwise (false or unspecified). Defaults to false.
 * `sub_path` - (Optional) Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).
+* `mount_propagation` - (Optional) Mount propagation mode. Defaults to "None". For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation)
 
 ### `vsphere_volume`
 

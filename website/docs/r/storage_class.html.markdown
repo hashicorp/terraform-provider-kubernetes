@@ -37,8 +37,8 @@ The following arguments are supported:
 	Read more about [available parameters](https://kubernetes.io/docs/concepts/storage/storage-classes/#parameters).
 * `storage_provisioner` - (Required) Indicates the type of the provisioner
 * `reclaim_policy` - (Optional) Indicates the reclaim policy to use.  If no reclaimPolicy is specified when a StorageClass object is created, it will default to Delete.
-* `allow_volume_expansion` - (Optional) Indicates whether the storage class allow volume expand, default true
-* `mount_options` - (Optional) Persistent Volumes that are dynamically created by a storage class will have the mount options specified
+* `allow_volume_expansion` - (Optional) Indicates whether the storage class allow volume expand, default true.
+* `mount_options` - (Optional) Persistent Volumes that are dynamically created by a storage class will have the mount options specified.
 
 ## Nested Blocks
 

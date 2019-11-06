@@ -74,7 +74,7 @@ func resourceKubernetesReplicationController() *schema.Resource {
 }
 
 func replicationControllerTemplateFieldSpec() map[string]*schema.Schema {
-	metadata := namespacedMetadataSchema("replication controller's template", true)
+	metadata := namespacedMetadataSchemaIsTemplate("replication controller's template", true, true)
 	// TODO: make this required once the legacy fields are removed
 	metadata.Computed = true
 	metadata.Required = false

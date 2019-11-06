@@ -80,13 +80,17 @@ func metadataSchema(objectName string, generatableName bool) *schema.Schema {
 }
 
 func namespacedMetadataSchema(objectName string, generatableName bool) *schema.Schema {
+	return namespacedMetadataSchemaIsTemplate(objectName, generatableName, false)
+}
+
+func namespacedMetadataSchemaIsTemplate(objectName string, generatableName, isTemplate bool) *schema.Schema {
 	fields := metadataFields(objectName)
 	fields["namespace"] = &schema.Schema{
 		Type:        schema.TypeString,
 		Description: fmt.Sprintf("Namespace defines the space within which name of the %s must be unique.", objectName),
 		Optional:    true,
 		ForceNew:    true,
-		Default:     "default",
+		Default:     conditionalDefault(!isTemplate, "default"),
 	}
 	if generatableName {
 		fields["generate_name"] = &schema.Schema{

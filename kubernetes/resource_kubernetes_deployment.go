@@ -174,7 +174,7 @@ func resourceKubernetesDeployment() *schema.Resource {
 							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"metadata": namespacedMetadataSchema("pod", true),
+									"metadata": namespacedMetadataSchemaIsTemplate("pod", true, true),
 									"spec": {
 										Type:        schema.TypeList,
 										Description: "Spec defines the specification of the desired behavior of the deployment. More info: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.9/#deployment-v1-apps",

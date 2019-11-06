@@ -28,6 +28,7 @@ func resourceKubernetesJob() *schema.Resource {
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(1 * time.Minute),
+			Update: schema.DefaultTimeout(1 * time.Minute),
 			Delete: schema.DefaultTimeout(1 * time.Minute),
 		},
 
@@ -119,7 +120,7 @@ func resourceKubernetesJobUpdate(d *schema.ResourceData, meta interface{}) error
 	d.SetId(buildId(out.ObjectMeta))
 
 	if d.Get("wait_for_completion").(bool) {
-		return resource.Retry(d.Timeout(schema.TimeoutCreate),
+		return resource.Retry(d.Timeout(schema.TimeoutUpdate),
 			waitForJobCondition(conn, namespace, name, batchv1.JobComplete))
 	}
 	return resourceKubernetesJobRead(d, meta)

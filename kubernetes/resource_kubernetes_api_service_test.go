@@ -34,6 +34,7 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.name", "metrics-server"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.namespace", "kube-system"),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.port", "443"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group", group),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group_priority_minimum", "1"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version", version),
@@ -55,6 +56,7 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.name", "metrics-server"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.namespace", "kube-system"),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.port", "8443"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group", group),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group_priority_minimum", "100"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version", version),
@@ -95,6 +97,7 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.name", "metrics-server"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.namespace", "kube-system"),
+					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.port", "443"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group", group),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group_priority_minimum", "1"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version", version),
@@ -229,6 +232,7 @@ func testAccKubernetesAPIServiceConfig_modified(name, group, version string) str
       service {
         name        = "metrics-server"
         namespace   = "kube-system"
+        port        = 8443
       }
 
       group                  = "%s"

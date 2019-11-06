@@ -165,7 +165,7 @@ func testAccCheckKubernetesClusterRoleBindingDestroy(s *terraform.State) error {
 			continue
 		}
 		name := rs.Primary.ID
-		resp, err := conn.Rbac().ClusterRoleBindings().Get(name, meta_v1.GetOptions{})
+		resp, err := conn.RbacV1().ClusterRoleBindings().Get(name, meta_v1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("ClusterRoleBinding still exists: %s", rs.Primary.ID)
@@ -185,7 +185,7 @@ func testAccCheckKubernetesClusterRoleBindingExists(n string, obj *api.ClusterRo
 
 		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 		name := rs.Primary.ID
-		resp, err := conn.Rbac().ClusterRoleBindings().Get(name, meta_v1.GetOptions{})
+		resp, err := conn.RbacV1().ClusterRoleBindings().Get(name, meta_v1.GetOptions{})
 		if err != nil {
 			return err
 		}

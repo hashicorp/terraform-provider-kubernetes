@@ -26,7 +26,7 @@ It will not work out-of-the-box with Terraform 0.11.x and lower.*
 
 ### Kubernetes
 
-This example expects you to already have a running K8S cluster
+This example expects you to already have a running K8S cluster on GCP
 and credentials set up in a config or environment variables.
 
 See [related docs](../google-gke-cluster/README.md) if you don't have any of those.
@@ -64,9 +64,10 @@ Not respecting this condition will trigger errors such as `persistentvolumes "my
 
 ```sh
 terraform apply \
-	-var 'mysql_password=MindTheWeakness' \
+	-var 'gcp_project=my-project' \
 	-var 'gcp_region=us-west1' \
-	-var 'gcp_zone=us-west1-b'
+	-var 'gcp_zone=us-west1-b' \
+	-var 'mysql_password=MindTheWeakness'
 ```
 
 You may also specify version of WordPress and/or MySQL
@@ -75,9 +76,10 @@ You may also specify version of WordPress and/or MySQL
 terraform apply \
 	-var 'mysql_version=5.6' \
 	-var 'wordpress_version=4.7.3' \
-	-var 'mysql_password=MindTheWeakness' \
+	-var 'gcp_project=my-project' \
 	-var 'gcp_region=us-west1' \
-	-var 'gcp_zone=us-west1-b'
+	-var 'gcp_zone=us-west1-b' \
+	-var 'mysql_password=MindTheWeakness'
 ```
 
 After the `apply` operation has finished you should see output
@@ -103,6 +105,7 @@ open "http://$(terraform output lb_ip)"
 
 ```
 terraform destroy \
+	-var 'gcp_project=my-project' \
 	-var 'gcp_region=us-west1' \
 	-var 'gcp_zone=us-west1-b' \
 	-var 'mysql_password='

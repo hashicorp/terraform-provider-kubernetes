@@ -1,9 +1,3 @@
-variable "gcp_region" {
-}
-
-variable "gcp_zone" {
-}
-
 resource "google_compute_disk" "mysql" {
   name = "wordpress-mysql"
   type = "pd-ssd"

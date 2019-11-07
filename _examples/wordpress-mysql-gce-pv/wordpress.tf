@@ -23,7 +23,7 @@ resource "kubernetes_service" "wordpress" {
 }
 
 output "lb_ip" {
-  value = kubernetes_service.wordpress.load_balancer_ingress[0].ip
+  value = formatlist("%s ", kubernetes_service.wordpress.load_balancer_ingress.*.ip)
 }
 
 resource "kubernetes_persistent_volume_claim" "wordpress" {

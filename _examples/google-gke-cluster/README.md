@@ -24,23 +24,25 @@ terraform init
 ```
 
 then we carry on by creating the real infrastructure which
-requires region, cluster username and password.
+requires GCP project, region, cluster username and password.
 
 ```sh
 terraform apply \
-	-var 'region=us-west1' \
+	-var 'gcp_project=my-project' \
+	-var 'gcp_region=us-west1' \
 	-var 'username=MySecretUsername' \
 	-var 'password=MySecretPassword'
 ```
 
-You may also specify the minimal K8S version (see [available versions](https://cloud.google.com/container-engine/release-notes))
+You may also specify the minimal K8S version (see [available versions](https://cloud.google.com/kubernetes-engine/docs/release-notes))
 and name of the cluster.
 
 ```sh
 terraform apply \
-	-var 'kubernetes_version=1.12' \
+	-var 'kubernetes_version=1.14' \
 	-var 'cluster_name=terraform-example-cluster' \
-	-var 'region=us-west1' \
+	-var 'gcp_project=my-project' \
+	-var 'gcp_region=us-west1' \
 	-var 'username=MySecretUsername' \
 	-var 'password=MySecretPassword'
 ```
@@ -52,12 +54,12 @@ Afterwards you should see output similar to this one in your console
 
 Outputs:
 
-node_locations = [
-    us-west1-b
-]
 cluster_name = terraform-example-cluster
 endpoint = 102.186.121.2
-node_version = 1.12.8-gke.7
+node_locations = [
+  "us-west1-b",
+]
+node_version = 1.14.8-gke.2
 primary_zone = us-west1-a
 ```
 
@@ -93,38 +95,20 @@ which should provide output similar to the one below
 
 ```
 Kubernetes master is running at https://102.186.121.2
-GLBCDefaultBackend is running at https://102.186.121.2/api/v1/namespaces/kube-system/services/default-http-backend/proxy
+GLBCDefaultBackend is running at https://102.186.121.2/api/v1/namespaces/kube-system/services/default-http-backend:http/proxy
 Heapster is running at https://102.186.121.2/api/v1/namespaces/kube-system/services/heapster/proxy
-KubeDNS is running at https://102.186.121.2/api/v1/namespaces/kube-system/services/kube-dns/proxy
-kubernetes-dashboard is running at https://102.186.121.2/api/v1/namespaces/kube-system/services/kubernetes-dashboard/proxy
+KubeDNS is running at https://102.186.121.2/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+Metrics-server is running at https://102.186.121.2/api/v1/namespaces/kube-system/services/https:metrics-server:/proxy
 
 To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
-```
-
-You can also visit the Kubernetes dashboard by opening a proxy
-
-```sh
-kubectl proxy
-```
-
-which will print out the IP & port on which the proxy is listening
-
-```
-Starting to serve on 127.0.0.1:8001
-```
-
-then you can either copy & paste that into your browser
-or just do this in a separate console session (while keeping the proxy running)
-
-```
-open http://127.0.0.1:8001/ui/
 ```
 
 ## Destroying cluster
 
 ```sh
 terraform destroy \
-	-var 'region=us-west1' \
+	-var 'gcp_project=my-project' \
+	-var 'gcp_region=us-west1' \
 	-var 'username=' \
 	-var 'password='
 ```

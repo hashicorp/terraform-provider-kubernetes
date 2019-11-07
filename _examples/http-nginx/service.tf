@@ -17,6 +17,6 @@ resource "kubernetes_service" "example" {
 }
 
 output "lb_ip" {
-  value = kubernetes_service.example.load_balancer_ingress[0].ip
+  value = formatlist("%s ", kubernetes_service.example.load_balancer_ingress.*.ip)
 }
 

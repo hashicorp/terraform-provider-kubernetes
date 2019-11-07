@@ -211,5 +211,5 @@ resource "kubernetes_service" "stilton" {
 }
 
 output "ingress_ip" {
-  value = kubernetes_ingress.example.load_balancer_ingress.*.ip
+  value = formatlist("%s ", kubernetes_ingress.example.load_balancer_ingress.*.ip)
 }

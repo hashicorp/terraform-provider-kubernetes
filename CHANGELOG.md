@@ -1,4 +1,27 @@
 ## 1.9.1 (Unreleased)
+
+FEATURES:
+
+* New resource: `kubernetes_pod_disruption_budget` (#644 / PR #338)
+* New resource: `kubernetes_priority_class` (PR #495)
+
+IMPROVEMENTS:
+
+* Add `mount_propagation` attribute to container volume mount
+* Add support for `.spec.service.port` to `kubernetes_api_service` (#665)
+* Update `k8s.io/client-go` to v12
+* Set option to cascade delete job resources (#534 / PR #635)
+* Support in-cluster configuration with service accounts (PR #497)
+* Parametrize all existing timeout values (PR #607)
+* Enable HTTP requests/responses tracing in debug mode (PR #630)
+
+BUG FIXES:
+
+* Do not set default namespace for replication controller and deployment pod templates (#275)
+* Updated host_alias property name to host_aliases (PR #670)
+* Docs - updated all broken and commit-specific Kubernetes links to point to master branch (PR #626)
+* Allow 0 for `backoff_limit` on `kubernetes_job` (PR #632)
+
 ## 1.9.0 (August 22, 2019)
 
 FEATURES:

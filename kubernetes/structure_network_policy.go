@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/core/v1"
@@ -62,11 +61,7 @@ func flattenNetworkPolicyPorts(in []v1.NetworkPolicyPort) []interface{} {
 	for i, port := range in {
 		m := make(map[string]interface{})
 		if port.Port != nil {
-			if (*port.Port).Type == intstr.Int {
-				m["port"] = strconv.Itoa(int((*port.Port).IntVal))
-			} else {
-				m["port"] = (*port.Port).StrVal
-			}
+			m["port"] = port.Port.String()
 		}
 		if port.Protocol != nil {
 			m["protocol"] = string(*port.Protocol)
@@ -207,20 +202,13 @@ func expandNetworkPolicyPorts(l []interface{}) (*[]v1.NetworkPolicyPort, error) 
 		if !ok {
 			continue
 		}
-		if in["port"] != nil && in["port"] != "" {
-			portStr := in["port"].(string)
-			if portInt, err := strconv.Atoi(portStr); err == nil && strconv.Itoa(portInt) == portStr {
-				v := intstr.FromInt(portInt)
-				policyPorts[i].Port = &v
-			} else {
-				v := intstr.FromString(portStr)
-				policyPorts[i].Port = &v
-			}
+		if v, ok := in["port"].(string); ok && len(v) > 0 {
+			val := intstr.Parse(v)
+			policyPorts[i].Port = &val
 		}
 		if in["protocol"] != nil && in["protocol"] != "" {
 			v := api.Protocol(in["protocol"].(string))
 			policyPorts[i].Protocol = &v
-
 		}
 	}
 	return &policyPorts, nil

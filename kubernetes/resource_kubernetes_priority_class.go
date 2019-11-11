@@ -67,7 +67,7 @@ func resourceKubernetesPriorityClassCreate(d *schema.ResourceData, meta interfac
 		return fmt.Errorf("Failed to create priority class: %s", err)
 	}
 	log.Printf("[INFO] Submitted new priority class: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(out.ObjectMeta.Name)
 
 	return resourceKubernetesPriorityClassRead(d, meta)
 }
@@ -75,10 +75,7 @@ func resourceKubernetesPriorityClassCreate(d *schema.ResourceData, meta interfac
 func resourceKubernetesPriorityClassRead(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*KubeClientsets).MainClientset
 
-	_, name, err := idParts(d.Id())
-	if err != nil {
-		return err
-	}
+	name := d.Id()
 
 	log.Printf("[INFO] Reading priority class %s", name)
 	priorityClass, err := conn.SchedulingV1().PriorityClasses().Get(name, meta_v1.GetOptions{})
@@ -114,10 +111,7 @@ func resourceKubernetesPriorityClassRead(d *schema.ResourceData, meta interface{
 func resourceKubernetesPriorityClassUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*KubeClientsets).MainClientset
 
-	_, name, err := idParts(d.Id())
-	if err != nil {
-		return err
-	}
+	name := d.Id()
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
@@ -147,7 +141,7 @@ func resourceKubernetesPriorityClassUpdate(d *schema.ResourceData, meta interfac
 		return fmt.Errorf("Failed to update priority class: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated priority class: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(out.ObjectMeta.Name)
 
 	return resourceKubernetesPriorityClassRead(d, meta)
 }
@@ -155,13 +149,10 @@ func resourceKubernetesPriorityClassUpdate(d *schema.ResourceData, meta interfac
 func resourceKubernetesPriorityClassDelete(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*KubeClientsets).MainClientset
 
-	_, name, err := idParts(d.Id())
-	if err != nil {
-		return err
-	}
+	name := d.Id()
 
 	log.Printf("[INFO] Deleting priority class: %#v", name)
-	err = conn.SchedulingV1().PriorityClasses().Delete(name, &meta_v1.DeleteOptions{})
+	err := conn.SchedulingV1().PriorityClasses().Delete(name, &meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -175,13 +166,10 @@ func resourceKubernetesPriorityClassDelete(d *schema.ResourceData, meta interfac
 func resourceKubernetesPriorityClassExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn := meta.(*KubeClientsets).MainClientset
 
-	_, name, err := idParts(d.Id())
-	if err != nil {
-		return false, err
-	}
+	name := d.Id()
 
 	log.Printf("[INFO] Checking priority class %s", name)
-	_, err = conn.SchedulingV1().PriorityClasses().Get(name, meta_v1.GetOptions{})
+	_, err := conn.SchedulingV1().PriorityClasses().Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

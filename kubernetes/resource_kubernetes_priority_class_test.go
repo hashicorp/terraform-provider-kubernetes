@@ -144,10 +144,7 @@ func testAccCheckKubernetesPriorityClassDestroy(s *terraform.State) error {
 			continue
 		}
 
-		_, name, err := idParts(rs.Primary.ID)
-		if err != nil {
-			return err
-		}
+		name := rs.Primary.ID
 
 		resp, err := conn.SchedulingV1().PriorityClasses().Get(name, meta_v1.GetOptions{})
 		if err == nil {
@@ -169,10 +166,7 @@ func testAccCheckKubernetesPriorityClassExists(n string, obj *api.PriorityClass)
 
 		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
 
-		_, name, err := idParts(rs.Primary.ID)
-		if err != nil {
-			return err
-		}
+		name := rs.Primary.ID
 
 		out, err := conn.SchedulingV1().PriorityClasses().Get(name, meta_v1.GetOptions{})
 		if err != nil {

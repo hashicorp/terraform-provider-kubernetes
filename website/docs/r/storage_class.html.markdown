@@ -21,6 +21,7 @@ resource "kubernetes_storage_class" "example" {
   }
   storage_provisioner = "kubernetes.io/gce-pd"
   reclaim_policy      = "Retain"
+  volume_binding_mode = "WaitForFirstConsumer"
   parameters = {
     type = "pd-standard"
   }
@@ -37,6 +38,7 @@ The following arguments are supported:
 * `storage_provisioner` - (Required) Indicates the type of the provisioner
 * `reclaim_policy` - (Optional) Indicates the reclaim policy to use.  If no reclaimPolicy is specified when a StorageClass object is created, it will default to Delete.
 * `allow_volume_expansion` - (Optional) Indicates whether the storage class allow volume expand, default true
+* `volume_binding_mode` - (Optional) Indicates when volume binding and dynamic provisioning should occur, default Immediate
 
 ## Nested Blocks
 

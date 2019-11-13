@@ -244,6 +244,7 @@ func providerConfigure(d *schema.ResourceData, terraformVersion string) (interfa
 	if v, ok := d.GetOk("token"); ok {
 		hasConfig = true
 		cfg.BearerToken = v.(string)
+		cfg.BearerTokenFile = ""
 	}
 
 	if v, ok := d.GetOk("exec"); ok {

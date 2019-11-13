@@ -88,9 +88,14 @@ provider "kubernetes" {
 }
 ```
 
-
 If you have **both** valid configuration in a config file and static configuration, the static one is used as override.
 i.e. any static field will override its counterpart loaded from the config.
+
+### In-cluster service account token
+
+As a last resort, if no other configuration is available, and when it detects it is running in a kubernetes pod, the provider will try to use the service account token from the `/var/run/secrets/kubernetes.io/serviceaccount/token` path. Detection of in-cluster execution is based on the sole availability of the `KUBERNETES_SERVICE_HOST` and `KUBERNETES_SERVICE_PORT` environment variables, with non empty values.
+
+If you have any of valid configuration in a config file or static configuration, in-cluster service account token will not be tried.
 
 ## Argument Reference
 

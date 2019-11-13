@@ -202,48 +202,52 @@ func providerConfigure(d *schema.ResourceData, terraformVersion string) (interfa
 	if err != nil {
 		return nil, err
 	}
+
+	hasConfig := false
 	if cfg == nil {
-		// Attempt to load in-cluster config
-		cfg, err = restclient.InClusterConfig()
-		if err != nil {
-			// Fallback to standard config if we are not running inside a cluster
-			if err == restclient.ErrNotInCluster {
-				cfg = &restclient.Config{}
-			} else {
-				return nil, fmt.Errorf("Failed to configure: %s", err)
-			}
-		}
+		cfg = &restclient.Config{}
+	} else {
+		hasConfig = true
 	}
 
 	// Overriding with static configuration
 	cfg.UserAgent = fmt.Sprintf("HashiCorp/1.0 Terraform/%s", terraformVersion)
 
 	if v, ok := d.GetOk("host"); ok {
+		hasConfig = true
 		cfg.Host = v.(string)
 	}
 	if v, ok := d.GetOk("username"); ok {
+		hasConfig = true
 		cfg.Username = v.(string)
 	}
 	if v, ok := d.GetOk("password"); ok {
+		hasConfig = true
 		cfg.Password = v.(string)
 	}
 	if v, ok := d.GetOk("insecure"); ok {
+		hasConfig = true
 		cfg.Insecure = v.(bool)
 	}
 	if v, ok := d.GetOk("cluster_ca_certificate"); ok {
+		hasConfig = true
 		cfg.CAData = bytes.NewBufferString(v.(string)).Bytes()
 	}
 	if v, ok := d.GetOk("client_certificate"); ok {
+		hasConfig = true
 		cfg.CertData = bytes.NewBufferString(v.(string)).Bytes()
 	}
 	if v, ok := d.GetOk("client_key"); ok {
+		hasConfig = true
 		cfg.KeyData = bytes.NewBufferString(v.(string)).Bytes()
 	}
 	if v, ok := d.GetOk("token"); ok {
+		hasConfig = true
 		cfg.BearerToken = v.(string)
 	}
 
 	if v, ok := d.GetOk("exec"); ok {
+		hasConfig = true
 		exec := &clientcmdapi.ExecConfig{}
 		if spec, ok := v.([]interface{})[0].(map[string]interface{}); ok {
 			exec.APIVersion = spec["api_version"].(string)
@@ -256,6 +260,14 @@ func providerConfigure(d *schema.ResourceData, terraformVersion string) (interfa
 			return nil, fmt.Errorf("Failed to parse exec")
 		}
 		cfg.ExecProvider = exec
+	}
+
+	// Attempt to load in-cluster config if no other configuration was provided
+	if !hasConfig {
+		cfg, err = restclient.InClusterConfig()
+		if err != nil && err != restclient.ErrNotInCluster {
+			return nil, fmt.Errorf("Failed to configure with in-cluster config: %s", err)
+		}
 	}
 
 	if logging.IsDebugOrHigher() {

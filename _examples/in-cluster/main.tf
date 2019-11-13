@@ -18,7 +18,7 @@ resource "kubernetes_config_map" "terraform" {
   data = {
     "main.tf" = <<-EOT
       provider "kubernetes" {
-        version = "1.10"
+        version = "1.10.1-dev"
       }
 
       resource "kubernetes_namespace" "test" {
@@ -40,9 +40,13 @@ resource "kubernetes_job" "terraform" {
       metadata {}
       spec {
         container {
-          name    = "terraform"
-          image   = "hashicorp/terraform:0.12.13"
-          command = ["sh", "-c", "mkdir /tf && cd /tf && cp /configuration/* . && KUBERNETES_SERVICE_HOST= && terraform init && terraform plan && terraform apply -auto-approve && sleep 10 && terraform destroy -auto-approve"]
+          name  = "terraform"
+          image = "hashicorp/terraform:0.12.13"
+          command = [
+            "sh",
+            "-c",
+            "set -x && apk --no-cache add curl && mkdir /tf && cd /tf && cp /configuration/main.tf . && mkdir -p ~/.terraform.d/plugins && curl https://storage.googleapis.com/pdecat-builds/terraform-provider-kubernetes_v1.10.1-dev > ~/.terraform.d/plugins/terraform-provider-kubernetes_v1.10.1-dev && chmod +x ~/.terraform.d/plugins/* && terraform init && terraform plan && terraform apply -auto-approve && sleep 10 && terraform destroy -auto-approve"
+          ]
 
           env {
             name  = "KUBE_HOST"

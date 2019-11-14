@@ -191,61 +191,16 @@ type KubeClientsets struct {
 
 func providerConfigure(d *schema.ResourceData, terraformVersion string) (interface{}, error) {
 
-	var cfg *restclient.Config
-	var err error
-
 	// Config initialization
-	cfg, err = initializeConfiguration(d)
-
+	cfg, err := initializeConfiguration(d)
 	if err != nil {
 		return nil, err
 	}
 	if cfg == nil {
-		cfg = &restclient.Config{}
+		return nil, fmt.Errorf("Failed to initialize config")
 	}
 
-	// Overriding with static configuration
 	cfg.UserAgent = fmt.Sprintf("HashiCorp/1.0 Terraform/%s", terraformVersion)
-
-	if v, ok := d.GetOk("host"); ok {
-		cfg.Host = v.(string)
-	}
-	if v, ok := d.GetOk("username"); ok {
-		cfg.Username = v.(string)
-	}
-	if v, ok := d.GetOk("password"); ok {
-		cfg.Password = v.(string)
-	}
-	if v, ok := d.GetOk("insecure"); ok {
-		cfg.Insecure = v.(bool)
-	}
-	if v, ok := d.GetOk("cluster_ca_certificate"); ok {
-		cfg.CAData = bytes.NewBufferString(v.(string)).Bytes()
-	}
-	if v, ok := d.GetOk("client_certificate"); ok {
-		cfg.CertData = bytes.NewBufferString(v.(string)).Bytes()
-	}
-	if v, ok := d.GetOk("client_key"); ok {
-		cfg.KeyData = bytes.NewBufferString(v.(string)).Bytes()
-	}
-	if v, ok := d.GetOk("token"); ok {
-		cfg.BearerToken = v.(string)
-	}
-
-	if v, ok := d.GetOk("exec"); ok {
-		exec := &clientcmdapi.ExecConfig{}
-		if spec, ok := v.([]interface{})[0].(map[string]interface{}); ok {
-			exec.APIVersion = spec["api_version"].(string)
-			exec.Command = spec["command"].(string)
-			exec.Args = expandStringSlice(spec["args"].([]interface{}))
-			for kk, vv := range spec["env"].(map[string]interface{}) {
-				exec.Env = append(exec.Env, clientcmdapi.ExecEnvVar{Name: kk, Value: vv.(string)})
-			}
-		} else {
-			return nil, fmt.Errorf("Failed to parse exec")
-		}
-		cfg.ExecProvider = exec
-	}
 
 	if logging.IsDebugOrHigher() {
 		log.Printf("[DEBUG] Enabling HTTP requests/responses tracing")
@@ -304,6 +259,47 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 				log.Printf("[DEBUG] Using overidden context: %#v", overrides.Context)
 			}
 		}
+	}
+
+	// Overriding with static configuration
+	if v, ok := d.GetOk("host"); ok {
+		overrides.ClusterInfo.Server = v.(string)
+	}
+	if v, ok := d.GetOk("username"); ok {
+		overrides.AuthInfo.Username = v.(string)
+	}
+	if v, ok := d.GetOk("password"); ok {
+		overrides.AuthInfo.Password = v.(string)
+	}
+	if v, ok := d.GetOk("insecure"); ok {
+		overrides.ClusterInfo.InsecureSkipTLSVerify = v.(bool)
+	}
+	if v, ok := d.GetOk("cluster_ca_certificate"); ok {
+		overrides.ClusterInfo.CertificateAuthorityData = bytes.NewBufferString(v.(string)).Bytes()
+	}
+	if v, ok := d.GetOk("client_certificate"); ok {
+		overrides.AuthInfo.ClientCertificateData = bytes.NewBufferString(v.(string)).Bytes()
+	}
+	if v, ok := d.GetOk("client_key"); ok {
+		overrides.AuthInfo.ClientKeyData = bytes.NewBufferString(v.(string)).Bytes()
+	}
+	if v, ok := d.GetOk("token"); ok {
+		overrides.AuthInfo.Token = v.(string)
+	}
+
+	if v, ok := d.GetOk("exec"); ok {
+		exec := &clientcmdapi.ExecConfig{}
+		if spec, ok := v.([]interface{})[0].(map[string]interface{}); ok {
+			exec.APIVersion = spec["api_version"].(string)
+			exec.Command = spec["command"].(string)
+			exec.Args = expandStringSlice(spec["args"].([]interface{}))
+			for kk, vv := range spec["env"].(map[string]interface{}) {
+				exec.Env = append(exec.Env, clientcmdapi.ExecEnvVar{Name: kk, Value: vv.(string)})
+			}
+		} else {
+			return nil, fmt.Errorf("Failed to parse exec")
+		}
+		overrides.AuthInfo.Exec = exec
 	}
 
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)

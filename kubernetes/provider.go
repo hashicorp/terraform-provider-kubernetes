@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -194,10 +193,9 @@ func providerConfigure(d *schema.ResourceData, terraformVersion string) (interfa
 
 	var cfg *restclient.Config
 	var err error
-	if d.Get("load_config_file").(bool) {
-		// Config file loading
-		cfg, err = tryLoadingConfigFile(d)
-	}
+
+	// Config initialization
+	cfg, err = initializeConfiguration(d)
 
 	if err != nil {
 		return nil, err
@@ -269,52 +267,51 @@ func providerConfigure(d *schema.ResourceData, terraformVersion string) (interfa
 	return &KubeClientsets{k, a}, nil
 }
 
-func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
-	path, err := homedir.Expand(d.Get("config_path").(string))
-	if err != nil {
-		return nil, err
-	}
-
-	loader := &clientcmd.ClientConfigLoadingRules{
-		ExplicitPath: path,
-	}
-
+func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error) {
 	overrides := &clientcmd.ConfigOverrides{}
-	ctxSuffix := "; default context"
+	loader := &clientcmd.ClientConfigLoadingRules{}
 
-	ctx, ctxOk := d.GetOk("config_context")
-	authInfo, authInfoOk := d.GetOk("config_context_auth_info")
-	cluster, clusterOk := d.GetOk("config_context_cluster")
-	if ctxOk || authInfoOk || clusterOk {
-		ctxSuffix = "; overriden context"
-		if ctxOk {
-			overrides.CurrentContext = ctx.(string)
-			ctxSuffix += fmt.Sprintf("; config ctx: %s", overrides.CurrentContext)
-			log.Printf("[DEBUG] Using custom current context: %q", overrides.CurrentContext)
-		}
+	if d.Get("load_config_file").(bool) {
+		if configPath, ok := d.GetOk("config_path"); ok && configPath.(string) != "" {
+			path, err := homedir.Expand(configPath.(string))
+			if err != nil {
+				return nil, err
+			}
+			loader.ExplicitPath = path
 
-		overrides.Context = clientcmdapi.Context{}
-		if authInfoOk {
-			overrides.Context.AuthInfo = authInfo.(string)
-			ctxSuffix += fmt.Sprintf("; auth_info: %s", overrides.Context.AuthInfo)
+			ctxSuffix := "; default context"
+
+			ctx, ctxOk := d.GetOk("config_context")
+			authInfo, authInfoOk := d.GetOk("config_context_auth_info")
+			cluster, clusterOk := d.GetOk("config_context_cluster")
+			if ctxOk || authInfoOk || clusterOk {
+				ctxSuffix = "; overriden context"
+				if ctxOk {
+					overrides.CurrentContext = ctx.(string)
+					ctxSuffix += fmt.Sprintf("; config ctx: %s", overrides.CurrentContext)
+					log.Printf("[DEBUG] Using custom current context: %q", overrides.CurrentContext)
+				}
+
+				overrides.Context = clientcmdapi.Context{}
+				if authInfoOk {
+					overrides.Context.AuthInfo = authInfo.(string)
+					ctxSuffix += fmt.Sprintf("; auth_info: %s", overrides.Context.AuthInfo)
+				}
+				if clusterOk {
+					overrides.Context.Cluster = cluster.(string)
+					ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
+				}
+				log.Printf("[DEBUG] Using overidden context: %#v", overrides.Context)
+			}
 		}
-		if clusterOk {
-			overrides.Context.Cluster = cluster.(string)
-			ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
-		}
-		log.Printf("[DEBUG] Using overidden context: %#v", overrides.Context)
 	}
 
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 	cfg, err := cc.ClientConfig()
 	if err != nil {
-		if pathErr, ok := err.(*os.PathError); ok && os.IsNotExist(pathErr.Err) {
-			log.Printf("[INFO] Unable to load config file as it doesn't exist at %q", path)
-			return nil, nil
-		}
-		return nil, fmt.Errorf("Failed to load config (%s%s): %s", path, ctxSuffix, err)
+		return nil, fmt.Errorf("Failed to initialize config: %s", err)
 	}
 
-	log.Printf("[INFO] Successfully loaded config file (%s%s)", path, ctxSuffix)
+	log.Printf("[INFO] Successfully initialized config")
 	return cfg, nil
 }

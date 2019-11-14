@@ -10,9 +10,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/mitchellh/go-homedir"
+	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
 	kubernetes "k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	restclient "k8s.io/client-go/rest"
+
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	aggregator "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
@@ -263,7 +265,12 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 
 	// Overriding with static configuration
 	if v, ok := d.GetOk("host"); ok {
-		overrides.ClusterInfo.Server = v.(string)
+		host, _, err := restclient.DefaultServerURL(v.(string), "", apimachineryschema.GroupVersion{}, true)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse host: %s", err)
+		}
+
+		overrides.ClusterInfo.Server = host.String()
 	}
 	if v, ok := d.GetOk("username"); ok {
 		overrides.AuthInfo.Username = v.(string)

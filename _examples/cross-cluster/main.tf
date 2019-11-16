@@ -54,7 +54,7 @@ resource "kubernetes_job" "terraform" {
           command = [
             "sh",
             "-c",
-            "set && set -x && ${var.in_cluster_provider_url != "" ? "apk --no-cache add curl && mkdir -p ~/.terraform.d/plugins && curl ${var.in_cluster_provider_url} > ~/.terraform.d/plugins/terraform-provider-kubernetes_v${var.in_cluster_provider_version} && chmod +x ~/.terraform.d/plugins/* &&" : "&&"} mkdir /tf && cd /tf && cp /configuration/main.tf . && terraform init && TF_LOG=debug terraform plan && TF_LOG=debug terraform apply -auto-approve && sleep 10 && terraform destroy -auto-approve"
+            "set && set -x && ${var.in_cluster_provider_url != "" ? "apk --no-cache add curl && mkdir -p ~/.terraform.d/plugins && curl ${var.in_cluster_provider_url} > ~/.terraform.d/plugins/terraform-provider-kubernetes_v${var.in_cluster_provider_version} && chmod +x ~/.terraform.d/plugins/* &&" : ""} mkdir /tf && cd /tf && cp /configuration/main.tf . && terraform init && TF_LOG=debug terraform plan && TF_LOG=debug terraform apply -auto-approve && sleep 10 && terraform destroy -auto-approve"
           ]
 
           env {

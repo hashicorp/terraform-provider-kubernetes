@@ -264,8 +264,24 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	}
 
 	// Overriding with static configuration
+	if v, ok := d.GetOk("insecure"); ok {
+		overrides.ClusterInfo.InsecureSkipTLSVerify = v.(bool)
+	}
+	if v, ok := d.GetOk("cluster_ca_certificate"); ok {
+		overrides.ClusterInfo.CertificateAuthorityData = bytes.NewBufferString(v.(string)).Bytes()
+	}
+	if v, ok := d.GetOk("client_certificate"); ok {
+		overrides.AuthInfo.ClientCertificateData = bytes.NewBufferString(v.(string)).Bytes()
+	}
 	if v, ok := d.GetOk("host"); ok {
-		host, _, err := restclient.DefaultServerURL(v.(string), "", apimachineryschema.GroupVersion{}, true)
+		// Server has to be the complete address of the kubernetes cluster (scheme://hostname:port), not just the hostname,
+		// because `overrides` are processed too late to be taken into account by `defaultServerUrlFor()`.
+		// This basically replicates what defaultServerUrlFor() does with config but for overrides,
+		// see https://github.com/kubernetes/client-go/blob/v12.0.0/rest/url_utils.go#L85-L87
+		hasCA := len(overrides.ClusterInfo.CertificateAuthorityData) != 0
+		hasCert := len(overrides.AuthInfo.ClientCertificateData) != 0
+		defaultTLS := hasCA || hasCert || overrides.ClusterInfo.InsecureSkipTLSVerify
+		host, _, err := restclient.DefaultServerURL(v.(string), "", apimachineryschema.GroupVersion{}, defaultTLS)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to parse host: %s", err)
 		}
@@ -277,15 +293,6 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	}
 	if v, ok := d.GetOk("password"); ok {
 		overrides.AuthInfo.Password = v.(string)
-	}
-	if v, ok := d.GetOk("insecure"); ok {
-		overrides.ClusterInfo.InsecureSkipTLSVerify = v.(bool)
-	}
-	if v, ok := d.GetOk("cluster_ca_certificate"); ok {
-		overrides.ClusterInfo.CertificateAuthorityData = bytes.NewBufferString(v.(string)).Bytes()
-	}
-	if v, ok := d.GetOk("client_certificate"); ok {
-		overrides.AuthInfo.ClientCertificateData = bytes.NewBufferString(v.(string)).Bytes()
 	}
 	if v, ok := d.GetOk("client_key"); ok {
 		overrides.AuthInfo.ClientKeyData = bytes.NewBufferString(v.(string)).Bytes()

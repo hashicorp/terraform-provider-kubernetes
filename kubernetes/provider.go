@@ -96,7 +96,7 @@ func Provider() terraform.ResourceProvider {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_TOKEN", ""),
-				Description: "Token to authenticate an service account",
+				Description: "Token to authenticate a service account",
 			},
 			"load_config_file": {
 				Type:        schema.TypeBool,

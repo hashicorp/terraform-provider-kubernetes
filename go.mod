@@ -17,7 +17,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pierrec/lz4 v2.3.0+incompatible // indirect
 	github.com/robfig/cron v1.2.0
-	github.com/terraform-providers/terraform-provider-aws v2.32.0+incompatible
+	github.com/terraform-providers/terraform-provider-aws v2.39.0+incompatible
 	github.com/terraform-providers/terraform-provider-google v2.17.0+incompatible
 	github.com/terraform-providers/terraform-provider-random v2.2.1+incompatible // indirect
 	github.com/ulikunitz/xz v0.5.6 // indirect

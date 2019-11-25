@@ -26,18 +26,18 @@ variable "workers_count" {
 }
 
 data "google_container_engine_versions" "supported" {
-  zone           = data.google_compute_zones.available.names[0]
+  location           = data.google_compute_zones.available.names[0]
   version_prefix = var.kubernetes_version
 }
 
 resource "google_container_cluster" "primary" {
   name               = "tf-acc-test-${random_id.cluster_name.hex}"
-  zone               = data.google_compute_zones.available.names[0]
+  location           = data.google_compute_zones.available.names[0]
   initial_node_count = var.workers_count
   node_version       = data.google_container_engine_versions.supported.latest_node_version
   min_master_version = data.google_container_engine_versions.supported.latest_master_version
 
-  additional_zones = [
+  node_locations = [
     data.google_compute_zones.available.names[1],
   ]
 

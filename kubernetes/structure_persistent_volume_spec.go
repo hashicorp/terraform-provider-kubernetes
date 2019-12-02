@@ -373,9 +373,9 @@ func flattenPersistentVolumeSpec(in v1.PersistentVolumeSpec) []interface{} {
 	if in.PersistentVolumeReclaimPolicy != "" {
 		att["persistent_volume_reclaim_policy"] = in.PersistentVolumeReclaimPolicy
 	}
-	if in.StorageClassName != "" {
-		att["storage_class_name"] = in.StorageClassName
-	}
+
+	att["storage_class_name"] = in.StorageClassName
+
 	if in.NodeAffinity != nil {
 		att["node_affinity"] = flattenVolumeNodeAffinity(in.NodeAffinity)
 	}

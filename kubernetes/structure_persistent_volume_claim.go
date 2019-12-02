@@ -79,7 +79,7 @@ func expandPersistentVolumeClaimSpec(l []interface{}) (*v1.PersistentVolumeClaim
 	if v, ok := in["volume_name"].(string); ok {
 		obj.VolumeName = v
 	}
-	if v, ok := in["storage_class_name"].(string); ok && v != "" {
+	if v, ok := in["storage_class_name"].(string); ok {
 		obj.StorageClassName = ptrToString(v)
 	}
 	return obj, nil

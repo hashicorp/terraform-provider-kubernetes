@@ -34,6 +34,7 @@ func resourceKubernetesSecret() *schema.Resource {
 			"base64data": {
 				Type:        schema.TypeMap,
 				Description: "A map of the base64-encoded secret data.",
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Optional:    true,
 				Sensitive:   true,
 			},
@@ -48,6 +49,14 @@ func resourceKubernetesSecret() *schema.Resource {
 	}
 }
 
+func decodeBase64Value(value interface{}) ([]byte, error) {
+	enc, ok := value.(string)
+	if !ok {
+		return nil, fmt.Errorf("base64data cannot decode type %T", value)
+	}
+	return base64.StdEncoding.DecodeString(enc)
+}
+
 func resourceKubernetesSecretCreate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*KubeClientsets).MainClientset
 
@@ -55,16 +64,7 @@ func resourceKubernetesSecretCreate(d *schema.ResourceData, meta interface{}) er
 	dataMap := d.Get("data").(map[string]interface{})
 	for key, value := range d.Get("base64data").(map[string]interface{}) {
 		// Decode Terraform's base64 representation to avoid double-encoding in Kubernetes.
-		var decodedValue []byte
-		var err error
-		switch value.(type) {
-		case string:
-			decodedValue, err = base64.StdEncoding.DecodeString(value.(string))
-		case []uint8:
-			decodedValue, err = base64.StdEncoding.DecodeString(string(value.([]uint8)))
-		default:
-			err = fmt.Errorf("base64data cannot decode type %T", value)
-		}
+		decodedValue, err := decodeBase64Value(value)
 		if err != nil {
 			return err
 		}
@@ -118,7 +118,10 @@ func resourceKubernetesSecretRead(d *schema.ResourceData, meta interface{}) erro
 	secretData := flattenByteMapToStringMap(secret.Data)
 	// Remove base64data keys from the payload before setting the data key on the resource. If
 	// these keys are not removed, they will always show in the diff at update.
-	for key, _ := range d.Get("base64data").(map[string]interface{}) {
+	for key, value := range d.Get("base64data").(map[string]interface{}) {
+		if _, err := decodeBase64Value(value); err != nil {
+			continue
+		}
 		delete(secretData, key)
 	}
 	d.Set("data", secretData)

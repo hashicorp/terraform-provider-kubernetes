@@ -132,18 +132,18 @@ func patchRbacSubject(d *schema.ResourceData) PatchOperations {
 	if common > len(oldsubjects) {
 		common = len(oldsubjects)
 	}
-	for i, v := range newsubjects[:common] {
-		ops = append(ops, &ReplaceOperation{
-			Path:  "/subjects/" + strconv.Itoa(i),
-			Value: v,
-		})
-	}
 	if len(oldsubjects) > len(newsubjects) {
 		for i := len(newsubjects); i < len(oldsubjects); i++ {
 			ops = append(ops, &RemoveOperation{
 				Path: "/subjects/" + strconv.Itoa(len(oldsubjects)-i),
 			})
 		}
+	}
+	for i, v := range newsubjects[:common] {
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/subjects/" + strconv.Itoa(i),
+			Value: v,
+		})
 	}
 	if len(newsubjects) > len(oldsubjects) {
 		for i, v := range newsubjects[common:] {

@@ -209,7 +209,7 @@ func TestAccKubernetesClusterRoleBinding_importBasic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRoleBindingBug(t *testing.T) {
+func TestAccKubernetesClusterRoleBindingUpdatePatchOperationsOrderWithRemovals(t *testing.T) {
 	var conf api.ClusterRoleBinding
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 

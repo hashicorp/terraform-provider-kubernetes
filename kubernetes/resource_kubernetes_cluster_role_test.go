@@ -77,7 +77,7 @@ func TestAccKubernetesClusterRole_importBasic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRoleBug(t *testing.T) {
+func TestAccKubernetesClusterRoleUpdatePatchOperationsOrderWithRemovals(t *testing.T) {
 	var conf api.ClusterRole
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.Test(t, resource.TestCase{

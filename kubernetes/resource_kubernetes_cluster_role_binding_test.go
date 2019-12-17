@@ -168,7 +168,7 @@ func TestAccKubernetesClusterRoleBindingBug(t *testing.T) {
 		CheckDestroy:  testAccCheckKubernetesClusterRoleBindingDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesClusterRoleBindingConfigBug_step_1(name),
+				Config: testAccKubernetesClusterRoleBindingConfigBug_step_0(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesClusterRoleBindingExists("kubernetes_cluster_role_binding.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "metadata.0.name", name),
@@ -193,7 +193,7 @@ func TestAccKubernetesClusterRoleBindingBug(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesClusterRoleBindingConfigBug_step_2(name),
+				Config: testAccKubernetesClusterRoleBindingConfigBug_step_1(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesClusterRoleBindingExists("kubernetes_cluster_role_binding.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "metadata.0.name", name),
@@ -215,7 +215,7 @@ func TestAccKubernetesClusterRoleBindingBug(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesClusterRoleBindingConfigBug_step_3(name),
+				Config: testAccKubernetesClusterRoleBindingConfigBug_step_2(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesClusterRoleBindingExists("kubernetes_cluster_role_binding.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "metadata.0.name", name),
@@ -384,7 +384,7 @@ resource "kubernetes_cluster_role_binding" "test" {
 `, name)
 }
 
-func testAccKubernetesClusterRoleBindingConfigBug_step_1(name string) string {
+func testAccKubernetesClusterRoleBindingConfigBug_step_0(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_cluster_role_binding" "test" {
     metadata {
@@ -416,7 +416,7 @@ resource "kubernetes_cluster_role_binding" "test" {
 `, name)
 }
 
-func testAccKubernetesClusterRoleBindingConfigBug_step_2(name string) string {
+func testAccKubernetesClusterRoleBindingConfigBug_step_1(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_cluster_role_binding" "test" {
     metadata {
@@ -443,7 +443,7 @@ resource "kubernetes_cluster_role_binding" "test" {
 `, name)
 }
 
-func testAccKubernetesClusterRoleBindingConfigBug_step_3(name string) string {
+func testAccKubernetesClusterRoleBindingConfigBug_step_2(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_cluster_role_binding" "test" {
     metadata {

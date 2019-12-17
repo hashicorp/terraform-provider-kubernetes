@@ -166,18 +166,18 @@ func patchRbacRule(d *schema.ResourceData) PatchOperations {
 	if common > len(oldrules) {
 		common = len(oldrules)
 	}
-	for i, v := range newrules[:common] {
-		ops = append(ops, &ReplaceOperation{
-			Path:  "/rules/" + strconv.Itoa(i),
-			Value: v,
-		})
-	}
 	if len(oldrules) > len(newrules) {
 		for i := len(newrules); i < len(oldrules); i++ {
 			ops = append(ops, &RemoveOperation{
 				Path: "/rules/" + strconv.Itoa(len(oldrules)-i),
 			})
 		}
+	}
+	for i, v := range newrules[:common] {
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/rules/" + strconv.Itoa(i),
+			Value: v,
+		})
 	}
 	if len(newrules) > len(oldrules) {
 		for i, v := range newrules[common:] {

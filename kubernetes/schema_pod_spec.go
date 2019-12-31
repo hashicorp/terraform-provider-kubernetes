@@ -112,7 +112,6 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 		"host_aliases": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			ForceNew:    true,
 			Computed:    isComputed,
 			Description: "List of hosts and IPs that will be injected into the pod's hosts file if specified. Optional: Defaults to empty.",
 			Deprecated:  deprecatedMessage,

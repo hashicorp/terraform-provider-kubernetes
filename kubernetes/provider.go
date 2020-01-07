@@ -13,7 +13,6 @@ import (
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
 	kubernetes "k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
 
 	"k8s.io/client-go/tools/clientcmd"
@@ -137,10 +136,11 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"kubernetes_config_map":    dataSourceKubernetesConfigMap(),
-			"kubernetes_secret":        dataSourceKubernetesSecret(),
-			"kubernetes_service":       dataSourceKubernetesService(),
-			"kubernetes_storage_class": dataSourceKubernetesStorageClass(),
+			"kubernetes_config_map":      dataSourceKubernetesConfigMap(),
+			"kubernetes_secret":          dataSourceKubernetesSecret(),
+			"kubernetes_service":         dataSourceKubernetesService(),
+			"kubernetes_service_account": dataSourceKubernetesServiceAccount(),
+			"kubernetes_storage_class":   dataSourceKubernetesStorageClass(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
@@ -194,7 +194,7 @@ type KubeClientsets interface {
 }
 
 type kubeClientsets struct {
-	config              *rest.Config
+	config              *restclient.Config
 	mainClientset       *kubernetes.Clientset
 	aggregatorClientset *aggregator.Clientset
 }

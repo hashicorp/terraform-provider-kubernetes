@@ -61,7 +61,7 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 
 #### Arguments
 
-* `hard` - (Optional) The set of desired hard limits for each named resource. For more info see http://releases.k8s.io/HEAD/docs/design/admission_control_resource_quota.md#admissioncontrol-plugin-resourcequota
+* `hard` - (Optional) The set of desired hard limits for each named resource. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/policy/resource-quotas)
 * `scopes` - (Optional) A collection of filters that must match each object tracked by a quota. If not specified, the quota matches all objects.
 
 ## Import

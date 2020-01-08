@@ -1,8 +1,10 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesServiceAccount() *schema.Resource {
@@ -12,7 +14,7 @@ func dataSourceKubernetesServiceAccount() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("service account", false),
 			"image_pull_secret": {
-				Type:        schema.TypeSet,
+				Type:        schema.TypeList,
 				Description: "A list of references to secrets in the same namespace to use for pulling any images in pods that reference this Service Account. More info: http://kubernetes.io/docs/user-guide/secrets#manually-specifying-an-imagepullsecret",
 				Computed:    true,
 				Elem: &schema.Resource{
@@ -26,7 +28,7 @@ func dataSourceKubernetesServiceAccount() *schema.Resource {
 				},
 			},
 			"secret": {
-				Type:        schema.TypeSet,
+				Type:        schema.TypeList,
 				Description: "A list of secrets allowed to be used by pods running using this Service Account. More info: http://kubernetes.io/docs/user-guide/secrets",
 				Computed:    true,
 				Elem: &schema.Resource{
@@ -53,11 +55,27 @@ func dataSourceKubernetesServiceAccount() *schema.Resource {
 }
 
 func dataSourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interface{}) error {
-	om := meta_v1.ObjectMeta{
-		Namespace: d.Get("metadata.0.namespace").(string),
-		Name:      d.Get("metadata.0.name").(string),
+	conn := meta.(*KubeClientsets).MainClientset
+
+	namespace := d.Get("metadata.0.namespace").(string)
+	name := d.Get("metadata.0.name").(string)
+
+	sa, err := conn.CoreV1().ServiceAccounts(namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("Unable to fetch service account from Kubernetes: %s", err)
 	}
-	d.SetId(buildId(om))
+
+	defaultSecret, err := findDefaultServiceAccount(sa, conn)
+	if err != nil {
+		return fmt.Errorf("Failed to discover the default service account token: %s", err)
+	}
+
+	err = d.Set("default_secret_name", defaultSecret)
+	if err != nil {
+		return fmt.Errorf("Unable to set default_secret_name: %s", err)
+	}
+
+	d.SetId(buildId(sa.ObjectMeta))
 
 	return resourceKubernetesServiceAccountRead(d, meta)
 }

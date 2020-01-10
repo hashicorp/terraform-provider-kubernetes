@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -13,7 +13,7 @@ func dataSourceKubernetesIngress() *schema.Resource {
 			"metadata": namespacedMetadataSchema("ingress", false),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: "Spec defines the behavior of an ingress. https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#spec-and-status",
+				Description: "Spec defines the behavior of an ingress. https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
 				MaxItems:    1,
 				Computed:    true,
 				Elem: &schema.Resource{

@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	gversion "github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-plugin-sdk/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
@@ -330,4 +332,9 @@ type currentEnv struct {
 	ClientCertData    string
 	ClientKeyData     string
 	ClusterCACertData string
+}
+
+func TestMain(m *testing.M) {
+	acctest.UseBinaryDriver("kubernetes", Provider)
+	resource.TestMain(m)
 }

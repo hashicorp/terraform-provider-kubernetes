@@ -158,7 +158,7 @@ func isKeyInMap(key string, d map[string]interface{}) bool {
 
 func isInternalKey(annotationKey string) bool {
 	u, err := url.Parse("//" + annotationKey)
-	if err == nil && strings.HasSuffix(u.Hostname(), "kubernetes.io") {
+	if err == nil && (strings.HasSuffix(u.Hostname(), "kubernetes.io") || strings.HasSuffix(u.Hostname(), "projectcalico.org")) {
 		return true
 	}
 

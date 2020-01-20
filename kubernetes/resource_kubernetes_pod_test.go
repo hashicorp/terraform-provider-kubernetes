@@ -1574,15 +1574,15 @@ resource "kubernetes_pod" "test" {
       image = "%s"
       name  = "containername"
 
-	  startup_probe {
-		http_get {
-		  path = "/index.html"
-		  port = 80
-		}
+      startup_probe {
+        http_get {
+          path = "/index.html"
+          port = 80
+        }
 
-		initial_delay_seconds = 1
-		timeout_seconds       = 2
-	  }
+        initial_delay_seconds = 1
+        timeout_seconds       = 2
+      }
     }
   }
 }

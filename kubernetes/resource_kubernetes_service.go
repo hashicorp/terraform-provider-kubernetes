@@ -97,7 +97,7 @@ func resourceKubernetesService() *schema.Resource {
 									"port": {
 										Type:        schema.TypeInt,
 										Description: "The port that will be exposed by this service.",
-										Required:    true,
+										Optional:    true,
 									},
 									"protocol": {
 										Type:        schema.TypeString,

@@ -87,7 +87,29 @@ provider "kubernetes" {
   password = "password"
 }
 ```
+or dinamically based on container cluster:
 
+```hcl
+resource "google_container_cluster" "cluster" {
+  name     = "my-gke-cluster"
+  location = "europe-west1"
+  remove_default_node_pool = true
+  initial_node_count       = 1
+  master_auth {
+    username = ""
+    password = ""
+    client_certificate_config {
+      issue_client_certificate = true
+    }
+  }
+}
+provider "kubernetes" {
+  host = google_container_cluster.cluster.endpoint
+  client_certificate     = "${base64decode(google_container_cluster.cluster.master_auth.0.client_certificate)}"
+  client_key             = "${base64decode(google_container_cluster.cluster.master_auth.0.client_key)}"
+  cluster_ca_certificate = "${base64decode(google_container_cluster.cluster.master_auth.0.cluster_ca_certificate)}"
+}
+```
 
 If you have **both** valid configuration in a config file and static configuration, the static one is used as override.
 i.e. any static field will override its counterpart loaded from the config.

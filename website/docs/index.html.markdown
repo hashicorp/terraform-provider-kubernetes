@@ -87,7 +87,7 @@ provider "kubernetes" {
   password = "password"
 }
 ```
-or dinamically based on container cluster:
+or dynamically based on container cluster:
 
 ```hcl
 resource "google_container_cluster" "cluster" {

@@ -32,6 +32,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_job.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.active_deadline_seconds", "120"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "10"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.backoff_limit", "10"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.completions", "10"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.parallelism", "2"),
@@ -52,6 +53,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.labels.foo", "bar"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.active_deadline_seconds", "0"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "0"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.backoff_limit", "0"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.completions", "1"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.parallelism", "1"),
@@ -120,6 +122,7 @@ resource "kubernetes_job" "test" {
 	}
 	spec {
 		active_deadline_seconds = 120
+		ttl_seconds_after_finished = 10
 		backoff_limit = 10
 		completions = 10
 		parallelism = 2

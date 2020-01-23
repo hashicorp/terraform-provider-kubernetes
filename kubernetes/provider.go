@@ -17,6 +17,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	aggregator "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
+
+	"k8s.io/client-go/dynamic"
 )
 
 func Provider() terraform.ResourceProvider {
@@ -169,6 +171,7 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_service_account":           resourceKubernetesServiceAccount(),
 			"kubernetes_stateful_set":              resourceKubernetesStatefulSet(),
 			"kubernetes_storage_class":             resourceKubernetesStorageClass(),
+			"kubernetes_custom":                    resourceKubernetesCustom(),
 		},
 	}
 
@@ -188,6 +191,7 @@ func Provider() terraform.ResourceProvider {
 type KubeClientsets struct {
 	MainClientset       *kubernetes.Clientset
 	AggregatorClientset *aggregator.Clientset
+	DynamicClient       dynamic.Interface
 }
 
 func providerConfigure(d *schema.ResourceData, terraformVersion string) (interface{}, error) {
@@ -275,7 +279,12 @@ func providerConfigure(d *schema.ResourceData, terraformVersion string) (interfa
 		return nil, fmt.Errorf("Failed to configure: %s", err)
 	}
 
-	return &KubeClientsets{k, a}, nil
+	dyn, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to configure: %s", err)
+	}
+
+	return &KubeClientsets{k, a, dyn}, nil
 }
 
 func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {

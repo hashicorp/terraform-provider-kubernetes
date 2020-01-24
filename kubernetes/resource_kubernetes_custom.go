@@ -126,10 +126,38 @@ func resourceKubernetesCustomUpdate(d *schema.ResourceData, m interface{}) error
 
 		clientset := m.(*KubeClientsets).MainClientset
 		dclient := m.(*KubeClientsets).DynamicClient
-		resource, _, _ := createResourceInterfaceFromUnstructured(u, clientset, dclient)
-		name := u.GetName()
+		resource, namespace, _ := createResourceInterfaceFromUnstructured(u, clientset, dclient)
+
+		name := nameFromId(d.Id())
+		nameChanged := name != u.GetName()
+
+		currentNamespace, exists := namespaceFromId(d.Id())
+		namespaceChanged := exists && namespace != currentNamespace
+
+		// HACK recreate if the name or namespace has changed
+		// This will re-create the resource with a new id, but it won't
+		// show in the diff as forcing a new resource.
+		if nameChanged || namespaceChanged {
+			old, new := d.GetChange("json")
+
+			// HACK we have to pass the old json config so the correct
+			// resource gets deleted
+			d.Set("json", old)
+			err := resourceKubernetesCustomDelete(d, m)
+
+			if err != nil {
+				return fmt.Errorf("Could not delete old resource: %v", err)
+			}
+
+			d.Set("json", new)
+			return resourceKubernetesCustomCreate(d, m)
+		}
 
 		res, err := resource.Get(name, metav1.GetOptions{})
+
+		if err != nil {
+			return fmt.Errorf("Could not get resource before updating: %v", err)
+		}
 
 		resourceVersion := res.GetResourceVersion()
 		u.SetResourceVersion(resourceVersion)
@@ -152,7 +180,7 @@ func resourceKubernetesCustomDelete(d *schema.ResourceData, m interface{}) error
 	dclient := m.(*KubeClientsets).DynamicClient
 
 	resource, _, _ := createResourceInterfaceFromUnstructured(u, clientset, dclient)
-	name := u.GetName()
+	name := nameFromId(d.Id())
 
 	err := resource.Delete(name, &metav1.DeleteOptions{})
 
@@ -181,6 +209,20 @@ func resourceKubernetesCustomExists(d *schema.ResourceData, m interface{}) (bool
 	}
 
 	return true, nil
+}
+
+func nameFromId(id string) string {
+	if strings.Contains(id, "/") {
+		return strings.Split(id, "/")[1]
+	}
+	return id
+}
+
+func namespaceFromId(id string) (string, bool) {
+	if strings.Contains(id, "/") {
+		return strings.Split(id, "/")[0], true
+	}
+	return "", false
 }
 
 var ignoredFields = [][]string{

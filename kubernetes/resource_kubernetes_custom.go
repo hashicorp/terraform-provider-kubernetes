@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -91,7 +92,11 @@ func resourceKubernetesCustomRead(d *schema.ResourceData, m interface{}) error {
 	dclient := m.(*KubeClientsets).DynamicClient
 
 	resource, _, _ := createResourceInterfaceFromUnstructured(u, clientset, dclient)
-	name := u.GetName()
+
+	name := d.Id()
+	if strings.Contains(name, "/") {
+		name = strings.Split(name, "/")[1]
+	}
 
 	res, err := resource.Get(name, metav1.GetOptions{})
 

@@ -35,7 +35,7 @@ func resourceKubernetesCustom() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"json": {
 				Type:        schema.TypeString,
-				Description: "The raw JSON for a kubernetes API resource.",
+				Description: "The raw JSON config for a Kubernetes API resource.",
 				Required:    true,
 
 				DiffSuppressFunc: func(k, oldJSON, newJSON string, d *schema.ResourceData) bool {

@@ -9,6 +9,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/hashicorp/terraform-plugin-sdk/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
@@ -23,6 +24,21 @@ func resourceKubernetesCustom() *schema.Resource {
 		Update: resourceKubernetesCustomUpdate,
 		Delete: resourceKubernetesCustomDelete,
 		Exists: resourceKubernetesCustomExists,
+		CustomizeDiff: customdiff.ForceNewIfChange("json", func(oldJSON, newJSON, m interface{}) bool {
+			old, err := decodeJSONToUnstructured(oldJSON.(string))
+
+			if err != nil {
+				return false
+			}
+
+			new, err := decodeJSONToUnstructured(newJSON.(string))
+
+			if err != nil {
+				return false
+			}
+
+			return (old.GetNamespace() != new.GetNamespace()) || (old.GetName() != new.GetName())
+		}),
 		// FIXME
 		// Importer: &schema.ResourceImporter{
 		// 	State: schema.ImportStatePassthrough,
@@ -31,13 +47,11 @@ func resourceKubernetesCustom() *schema.Resource {
 			Create: schema.DefaultTimeout(5 * time.Minute),
 			Delete: schema.DefaultTimeout(5 * time.Minute),
 		},
-
 		Schema: map[string]*schema.Schema{
 			"json": {
 				Type:        schema.TypeString,
 				Description: "The raw JSON config for a Kubernetes API resource.",
 				Required:    true,
-
 				DiffSuppressFunc: func(k, oldJSON, newJSON string, d *schema.ResourceData) bool {
 					// FIXME handle errors
 					old, _ := decodeJSONToUnstructured(oldJSON)
@@ -126,32 +140,9 @@ func resourceKubernetesCustomUpdate(d *schema.ResourceData, m interface{}) error
 
 		clientset := m.(*KubeClientsets).MainClientset
 		dclient := m.(*KubeClientsets).DynamicClient
-		resource, namespace, _ := createResourceInterfaceFromUnstructured(u, clientset, dclient)
+		resource, _, _ := createResourceInterfaceFromUnstructured(u, clientset, dclient)
 
 		name := nameFromId(d.Id())
-		nameChanged := name != u.GetName()
-
-		currentNamespace, exists := namespaceFromId(d.Id())
-		namespaceChanged := exists && namespace != currentNamespace
-
-		// HACK recreate if the name or namespace has changed
-		// This will re-create the resource with a new id, but it won't
-		// show in the diff as forcing a new resource.
-		if nameChanged || namespaceChanged {
-			old, new := d.GetChange("json")
-
-			// HACK we have to pass the old json config so the correct
-			// resource gets deleted
-			d.Set("json", old)
-			err := resourceKubernetesCustomDelete(d, m)
-
-			if err != nil {
-				return fmt.Errorf("Could not delete old resource: %v", err)
-			}
-
-			d.Set("json", new)
-			return resourceKubernetesCustomCreate(d, m)
-		}
 
 		res, err := resource.Get(name, metav1.GetOptions{})
 
@@ -216,13 +207,6 @@ func nameFromId(id string) string {
 		return strings.Split(id, "/")[1]
 	}
 	return id
-}
-
-func namespaceFromId(id string) (string, bool) {
-	if strings.Contains(id, "/") {
-		return strings.Split(id, "/")[0], true
-	}
-	return "", false
 }
 
 var ignoredFields = [][]string{

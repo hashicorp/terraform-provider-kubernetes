@@ -61,7 +61,6 @@ provider "kubernetes" {}
 ```
 
 If you wish to configure the provider statically you can do so by providing TLS certificates:
-
 ```hcl
 provider "kubernetes" {
   host = "https://104.196.242.174"
@@ -69,6 +68,8 @@ provider "kubernetes" {
   client_certificate     = file("~/.kube/client-cert.pem")
   client_key             = file("~/.kube/client-key.pem")
   cluster_ca_certificate = file("~/.kube/cluster-ca-cert.pem")
+
+  load_config_file = false    # when you wish not to load the local config file
 }
 ```
 
@@ -80,6 +81,8 @@ provider "kubernetes" {
 
   username = "ClusterMaster"
   password = "MindTheGap"
+
+  load_config_file = false    # when you wish not to load the local config file
 }
 ```
 

@@ -372,6 +372,9 @@ func flattenContainers(in []v1.Container) ([]interface{}, error) {
 		if v.ReadinessProbe != nil {
 			c["readiness_probe"] = flattenProbe(v.ReadinessProbe)
 		}
+		if v.StartupProbe != nil {
+			c["startup_probe"] = flattenProbe(v.StartupProbe)
+		}
 		if v.Lifecycle != nil {
 			c["lifecycle"] = flattenLifeCycle(v.Lifecycle)
 		}
@@ -470,6 +473,9 @@ func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 
 		if v, ok := ctr["readiness_probe"].([]interface{}); ok && len(v) > 0 {
 			cs[i].ReadinessProbe = expandProbe(v)
+		}
+		if v, ok := ctr["startup_probe"].([]interface{}); ok && len(v) > 0 {
+			cs[i].StartupProbe = expandProbe(v)
 		}
 		if v, ok := ctr["stdin"]; ok {
 			cs[i].Stdin = v.(bool)

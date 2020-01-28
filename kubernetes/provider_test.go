@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -197,6 +198,41 @@ func skipIfNoAwsSettingsFound(t *testing.T) {
 	}
 }
 
+func getClusterVersion() (*gversion.Version, error) {
+	meta := testAccProvider.Meta()
+
+	if meta == nil {
+		return nil, fmt.Errorf("Provider not initialized, unable to check cluster version")
+	}
+
+	conn := meta.(*KubeClientsets).MainClientset
+	serverVersion, err := conn.ServerVersion()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return gversion.NewVersion(serverVersion.String())
+}
+
+func skipIfClusterVersionLessThan(t *testing.T, vs string) {
+	cv, err := getClusterVersion()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	v, err := gversion.NewVersion(vs)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cv.LessThan(v) {
+		t.Skip(fmt.Sprintf("This test will only run on cluster versions %v and above", v))
+	}
+}
+
 func skipIfNoLoadBalancersAvailable(t *testing.T) {
 	isInGke, err := isRunningInGke()
 	if err != nil {
@@ -223,25 +259,7 @@ func skipIfNotRunningInGke(t *testing.T) {
 }
 
 func skipIfUnsupportedSecurityContextRunAsGroup(t *testing.T) {
-	meta := testAccProvider.Meta()
-	if meta == nil {
-		t.Fatal("Provider not initialized, unable to check cluster capabilities")
-	}
-	conn := meta.(*KubeClientsets).MainClientset
-	serverVersion, err := conn.ServerVersion()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	k8sVersion, err := gversion.NewVersion(serverVersion.String())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	v1_14_0, _ := gversion.NewVersion("1.14.0")
-	if k8sVersion.LessThan(v1_14_0) {
-		t.Skip("The Kubernetes version must be 1.14.0 or newer for this test to run - skipping")
-	}
+	skipIfClusterVersionLessThan(t, "1.14.0")
 }
 
 func isRunningInMinikube() (bool, error) {

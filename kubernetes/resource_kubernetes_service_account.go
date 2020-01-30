@@ -337,7 +337,7 @@ func findDefaultServiceAccount(sa *api.ServiceAccount, conn *kubernetes.Clientse
 			continue
 		}
 
-		if secret.CreationTimestamp.Sub(sa.CreationTimestamp.Time) > (1 * time.Second) {
+		if secret.CreationTimestamp.Sub(sa.CreationTimestamp.Time) > (3 * time.Second) {
 			log.Printf("[DEBUG] Skipping %s as it wasn't created at the same time as the service account", saSecret.Name)
 			continue
 		}

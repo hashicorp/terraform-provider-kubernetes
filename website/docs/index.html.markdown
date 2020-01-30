@@ -16,8 +16,7 @@ Use the navigation to the left to read about the available resources.
 
 ```hcl
 provider "kubernetes" {
-  config_context_auth_info = "ops"
-  config_context_cluster   = "mycluster"
+  config_context = "my-context"
 }
 
 resource "kubernetes_namespace" "example" {

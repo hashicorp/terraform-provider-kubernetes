@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	gversion "github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
@@ -216,20 +217,8 @@ func getClusterVersion() (*gversion.Version, error) {
 }
 
 func skipIfClusterVersionLessThan(t *testing.T, vs string) {
-	cv, err := getClusterVersion()
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	v, err := gversion.NewVersion(vs)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if cv.LessThan(v) {
-		t.Skip(fmt.Sprintf("This test will only run on cluster versions %v and above", v))
+	if clusterVersionLessThan(vs) {
+		t.Skip(fmt.Sprintf("This test will only run on cluster versions %v and above", vs))
 	}
 }
 
@@ -317,6 +306,32 @@ func getFirstNode() (api.Node, error) {
 	}
 
 	return resp.Items[0], nil
+}
+
+func clusterVersionLessThan(vs string) bool {
+	cv, err := getClusterVersion()
+
+	if err != nil {
+		return false
+	}
+
+	v, err := gversion.NewVersion(vs)
+
+	if err != nil {
+		return false
+	}
+
+	return cv.LessThan(v)
+}
+
+func skipCheckIf(skip func() bool, check resource.TestCheckFunc) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if skip() {
+			fmt.Println("Skipping check")
+			return nil
+		}
+		return check(s)
+	}
 }
 
 type currentEnv struct {

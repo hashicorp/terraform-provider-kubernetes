@@ -101,7 +101,7 @@ func Provider() terraform.ResourceProvider {
 			"load_config_file": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_LOAD_CONFIG_FILE", true),
+				DefaultFunc: schema.EnvDefaultFunc("KUBE_LOAD_CONFIG_FILE", nil),
 				Description: "Load local kubeconfig.",
 			},
 			"exec": {
@@ -194,7 +194,8 @@ func providerConfigure(d *schema.ResourceData, terraformVersion string) (interfa
 
 	var cfg *restclient.Config
 	var err error
-	if d.Get("load_config_file").(bool) {
+
+	if v, ok := d.GetOk("load_config_file"); ok && v.(bool) {
 		// Config file loading
 		cfg, err = tryLoadingConfigFile(d)
 	}

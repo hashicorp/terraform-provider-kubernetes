@@ -75,7 +75,7 @@ resource "kubernetes_secret" "example" {
     password = "P4ssw0rd"
   }
 
-  base64data = {
+  base64_data = {
     keystore = filebase64("${path.module}/client.keystore.p12")
   }
 
@@ -89,7 +89,7 @@ resource "kubernetes_secret" "example" {
 The following arguments are supported:
 
 * `data` - (Optional) A map of the secret data. This data must not be base64-encoded.
-* `base64data` - (Optional) A map of secret data that is already base64-encoded. Keys in the `base64data` map always take precedence over those in `data`.
+* `base64_data` - (Optional) A map of secret data that is already base64-encoded. Keys in the `base64_data` map always take precedence over those in `data`.
 * `metadata` - (Required) Standard secret's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 * `type` - (Optional) The secret type. Defaults to `Opaque`. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/c7151dd8dd7e487e96e5ce34c6a416bb3b037609/contributors/design-proposals/auth/secrets.md#proposed-design)
 

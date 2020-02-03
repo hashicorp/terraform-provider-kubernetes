@@ -31,7 +31,7 @@ func resourceKubernetesSecret() *schema.Resource {
 				Optional:    true,
 				Sensitive:   true,
 			},
-			"base64data": {
+			"base64_data": {
 				Type:        schema.TypeMap,
 				Description: "A map of the base64-encoded secret data.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
@@ -52,7 +52,7 @@ func resourceKubernetesSecret() *schema.Resource {
 func decodeBase64Value(value interface{}) ([]byte, error) {
 	enc, ok := value.(string)
 	if !ok {
-		return nil, fmt.Errorf("base64data cannot decode type %T", value)
+		return nil, fmt.Errorf("base64_data cannot decode type %T", value)
 	}
 	return base64.StdEncoding.DecodeString(enc)
 }
@@ -62,7 +62,7 @@ func resourceKubernetesSecretCreate(d *schema.ResourceData, meta interface{}) er
 
 	// Merge data and base64-encoded data into a single data map
 	dataMap := d.Get("data").(map[string]interface{})
-	for key, value := range d.Get("base64data").(map[string]interface{}) {
+	for key, value := range d.Get("base64_data").(map[string]interface{}) {
 		// Decode Terraform's base64 representation to avoid double-encoding in Kubernetes.
 		decodedValue, err := decodeBase64Value(value)
 		if err != nil {
@@ -116,9 +116,9 @@ func resourceKubernetesSecretRead(d *schema.ResourceData, meta interface{}) erro
 	d.Set("type", secret.Type)
 
 	secretData := flattenByteMapToStringMap(secret.Data)
-	// Remove base64data keys from the payload before setting the data key on the resource. If
+	// Remove base64_data keys from the payload before setting the data key on the resource. If
 	// these keys are not removed, they will always show in the diff at update.
-	for key, value := range d.Get("base64data").(map[string]interface{}) {
+	for key, value := range d.Get("base64_data").(map[string]interface{}) {
 		if _, err := decodeBase64Value(value); err != nil {
 			continue
 		}
@@ -138,12 +138,12 @@ func resourceKubernetesSecretUpdate(d *schema.ResourceData, meta interface{}) er
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
-	if d.HasChange("data") || d.HasChange("base64data") {
+	if d.HasChange("data") || d.HasChange("base64_data") {
 		oldV, newV := d.GetChange("data")
 		oldV = base64EncodeStringMap(oldV.(map[string]interface{}))
 		newV = base64EncodeStringMap(newV.(map[string]interface{}))
 
-		oldVB64, newVB64 := d.GetChange("base64data")
+		oldVB64, newVB64 := d.GetChange("base64_data")
 		for key, value := range oldVB64.(map[string]interface{}) {
 			oldV.(map[string]interface{})[key] = value
 		}

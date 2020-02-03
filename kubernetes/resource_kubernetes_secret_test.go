@@ -67,8 +67,8 @@ func TestAccKubernetesSecret_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.one", "first"),
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.two", "second"),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "base64data.%", "1"),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "base64data.three", base64.StdEncoding.EncodeToString([]byte("third"))),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "base64_data.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "base64_data.three", base64.StdEncoding.EncodeToString([]byte("third"))),
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "type", "Opaque"),
 					testAccCheckSecretData(&conf, map[string]string{"one": "first", "two": "second", "three": "third"}),
 				),
@@ -248,17 +248,17 @@ func TestAccKubernetesSecret_binaryData(t *testing.T) {
 				Config: testAccKubernetesSecretConfig_binaryData(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "base64data.%", "1"),
-					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "base64data.one"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "base64_data.%", "1"),
+					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "base64_data.one"),
 				),
 			},
 			{
 				Config: testAccKubernetesSecretConfig_binaryData2(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "base64data.%", "2"),
-					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "base64data.one"),
-					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "base64data.two"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "base64_data.%", "2"),
+					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "base64_data.one"),
+					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "base64_data.two"),
 				),
 			},
 			{
@@ -267,9 +267,9 @@ func TestAccKubernetesSecret_binaryData(t *testing.T) {
 					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "3"),
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.two", "second"),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "base64data.%", "2"),
-					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "base64data.one"),
-					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "base64data.three"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "base64_data.%", "2"),
+					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "base64_data.one"),
+					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "base64_data.three"),
 				),
 			},
 		},
@@ -391,7 +391,7 @@ resource "kubernetes_secret" "test" {
     two = "second"
   }
 
-  base64data = {
+  base64_data = {
     three = base64encode("third")
   }
 }
@@ -473,7 +473,7 @@ resource "kubernetes_secret" "test" {
     generate_name = "%s"
   }
 
-  base64data = {
+  base64_data = {
     one = "${filebase64("./test-fixtures/binary.data")}"
   }
 }
@@ -487,7 +487,7 @@ resource "kubernetes_secret" "test" {
     generate_name = "%s"
   }
 
-  base64data = {
+  base64_data = {
     one = "${filebase64("./test-fixtures/binary2.data")}"
     two = "${filebase64("./test-fixtures/binary.data")}"
   }
@@ -506,7 +506,7 @@ resource "kubernetes_secret" "test" {
     one = "to be overwritten"
     two = "second"
   }
-  base64data = {
+  base64_data = {
     one = "${filebase64("./test-fixtures/binary2.data")}"
     three = "${filebase64("./test-fixtures/binary.data")}"
   }

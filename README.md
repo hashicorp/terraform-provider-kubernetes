@@ -30,6 +30,12 @@ $ cd $GOPATH/src/github.com/terraform-providers/terraform-provider-kubernetes
 $ make build
 ```
 
+Statically linking binaries can be required for testing development builds in containers not providing all dependencies, e.g.:
+
+```
+# CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"'
+```
+
 ## Developing the Provider
 
 ### Contributing Resources

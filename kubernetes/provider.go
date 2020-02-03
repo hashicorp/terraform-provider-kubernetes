@@ -229,11 +229,13 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	loader := &clientcmd.ClientConfigLoadingRules{}
 
 	if d.Get("load_config_file").(bool) {
+		log.Printf("[DEBUG] Trying to load configuration from file")
 		if configPath, ok := d.GetOk("config_path"); ok && configPath.(string) != "" {
 			path, err := homedir.Expand(configPath.(string))
 			if err != nil {
 				return nil, err
 			}
+			log.Printf("[DEBUG] Configuration file is: %s", path)
 			loader.ExplicitPath = path
 
 			ctxSuffix := "; default context"

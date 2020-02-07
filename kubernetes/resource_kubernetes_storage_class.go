@@ -47,6 +47,7 @@ func resourceKubernetesStorageClass() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "Indicates when volume binding and dynamic provisioning should occur",
 				Optional:    true,
+				ForceNew:    true,
 				Default:     "Immediate",
 			},
 			"allow_volume_expansion": {

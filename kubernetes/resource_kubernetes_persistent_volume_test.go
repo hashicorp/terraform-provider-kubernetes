@@ -578,7 +578,7 @@ func TestAccKubernetesPersistentVolume_hostPath_mountOptions(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.mount_options.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.mount_options.0", "rw"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.mount_options.2356372769", "foo"),
 				),
 			},
 		},
@@ -1067,7 +1067,7 @@ resource "kubernetes_persistent_volume" "test" {
       storage = "1Gi"
     }
     access_modes = ["ReadWriteMany"]
-    mount_options = ["rw"]
+    mount_options = ["foo"]
     persistent_volume_source {
       host_path {
         path = "/mnt/local-volume"

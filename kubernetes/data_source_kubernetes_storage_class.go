@@ -29,6 +29,13 @@ func dataSourceKubernetesStorageClass() *schema.Resource {
 				Description: "Indicates whether the storage class allow volume expand",
 				Computed:    true,
 			},
+			"mount_options": {
+				Type:        schema.TypeSet,
+				Description: "Persistent Volumes that are dynamically created by a storage class will have the mount options specified",
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Set:         schema.HashString,
+				Computed:    true,
+			},
 		},
 	}
 }

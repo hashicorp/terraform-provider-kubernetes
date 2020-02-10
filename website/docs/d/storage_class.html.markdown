@@ -56,3 +56,4 @@ The following attributes are exported:
 * `reclaim_policy` - Indicates the reclaim policy used.
 * `volume_binding_mode` - Indicates when volume binding and dynamic provisioning should occur.
 * `allow_volume_expansion` - Indicates whether the storage class allow volume expand.
+* `mount_options` - Persistent Volumes that are dynamically created by a storage class will have the mount options specified.

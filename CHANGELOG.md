@@ -1,4 +1,21 @@
-## 1.10.1 (Unreleased)
+## 1.11.1 (Unreleased)
+## 1.11.0 (February 10, 2020)
+
+IMPROVEMENTS:
+
+ * Add `mount_options` attribute to `kubernetes_persistent_volume` and `kubernetes_storage_class`
+ * Refactor client config initialization and fix in-cluster config (#679) (#497)
+
+BUG FIXES:
+
+ * Do not force base64 encoding for the `ca_bundle` on `kubernetes_api_service` (#679)
+ * Allow 3s age gap between `service account` and `secret` [(issue)](https://github.com/terraform-providers/terraform-provider-kubernetes/pull/377#issuecomment-540126765)
+ * Add `load_config_file = false` to documented provider configurations
+ * Add support for `startup_probe` on container spec
+ * Fix (cluster-)role bindings and rules updates (#713)
+ * Fix namespacing issues on kubernetes_priority_class (#680) **See [comment](https://github.com/terraform-providers/terraform-provider-kubernetes/pull/682#issuecomment-576475875) on backward compatibility**
+  * Documentation fixes
+
 ## 1.10.0 (November 08, 2019)
 
 FEATURES:

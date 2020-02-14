@@ -70,6 +70,7 @@ provider "kubernetes" {
 ```
 
 If you wish to configure the provider statically you can do so by providing TLS certificates:
+
 ```hcl
 provider "kubernetes" {
   load_config_file = "false"

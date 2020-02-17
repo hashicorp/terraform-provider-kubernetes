@@ -299,7 +299,7 @@ func testAccCheckMetaLabels(om *meta_v1.ObjectMeta, expected map[string]string) 
 }
 
 func testAccCheckKubernetesNamespaceDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+	conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_namespace" {
@@ -324,7 +324,7 @@ func testAccCheckKubernetesNamespaceExists(n string, obj *api.Namespace) resourc
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+		conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
 		out, err := conn.CoreV1().Namespaces().Get(rs.Primary.ID, meta_v1.GetOptions{})
 		if err != nil {
 			return err

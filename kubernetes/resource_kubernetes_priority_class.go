@@ -47,7 +47,7 @@ func resourceKubernetesPriorityClass() *schema.Resource {
 }
 
 func resourceKubernetesPriorityClassCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	value := d.Get("value").(int)
@@ -73,7 +73,7 @@ func resourceKubernetesPriorityClassCreate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesPriorityClassRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	name := d.Id()
 
@@ -109,7 +109,7 @@ func resourceKubernetesPriorityClassRead(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesPriorityClassUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	name := d.Id()
 
@@ -147,7 +147,7 @@ func resourceKubernetesPriorityClassUpdate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesPriorityClassDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	name := d.Id()
 
@@ -164,7 +164,7 @@ func resourceKubernetesPriorityClassDelete(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesPriorityClassExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	name := d.Id()
 

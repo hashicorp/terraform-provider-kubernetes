@@ -300,7 +300,7 @@ func TestAccKubernetesRoleBindingBug(t *testing.T) {
 }
 
 func testAccCheckKubernetesRoleBindingDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+	conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_role_binding" {
@@ -330,7 +330,7 @@ func testAccCheckKubernetesRoleBindingExists(n string, obj *api.RoleBinding) res
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+		conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {

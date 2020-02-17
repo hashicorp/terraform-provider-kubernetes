@@ -151,7 +151,7 @@ func TestAccKubernetesClusterRoleUpdatePatchOperationsOrderWithRemovals(t *testi
 }
 
 func testAccCheckKubernetesClusterRoleDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+	conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_cluster_role" {
 			continue
@@ -172,7 +172,7 @@ func testAccCheckKubernetesClusterRoleExists(n string, obj *api.ClusterRole) res
 		if !ok {
 			return fmt.Errorf("Not found: %s", n)
 		}
-		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+		conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
 		out, err := conn.RbacV1().ClusterRoles().Get(rs.Primary.ID, meta_v1.GetOptions{})
 		if err != nil {
 			return err

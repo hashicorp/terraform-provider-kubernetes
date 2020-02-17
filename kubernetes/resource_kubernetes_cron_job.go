@@ -43,7 +43,7 @@ func resourceKubernetesCronJob() *schema.Resource {
 }
 
 func resourceKubernetesCronJobCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandCronJobSpec(d.Get("spec").([]interface{}))
@@ -70,7 +70,7 @@ func resourceKubernetesCronJobCreate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesCronJobUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, _, err := idParts(d.Id())
 	if err != nil {
@@ -102,7 +102,7 @@ func resourceKubernetesCronJobUpdate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesCronJobRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -158,7 +158,7 @@ func resourceKubernetesCronJobRead(d *schema.ResourceData, meta interface{}) err
 }
 
 func resourceKubernetesCronJobDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -194,7 +194,7 @@ func resourceKubernetesCronJobDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesCronJobExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

@@ -461,7 +461,7 @@ func TestAccKubernetesReplicationController_with_empty_dir_volume(t *testing.T) 
 }
 
 func testAccCheckKubernetesReplicationControllerDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+	conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_replication_controller" {
@@ -491,7 +491,7 @@ func testAccCheckKubernetesReplicationControllerExists(n string, obj *api.Replic
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+		conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {

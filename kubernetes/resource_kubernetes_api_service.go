@@ -101,7 +101,7 @@ func resourceKubernetesAPIService() *schema.Resource {
 }
 
 func resourceKubernetesAPIServiceCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).AggregatorClientset
+	conn := meta.(KubeClientsets).AggregatorClientset()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svc := v1.APIService{
@@ -120,7 +120,7 @@ func resourceKubernetesAPIServiceCreate(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesAPIServiceRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).AggregatorClientset
+	conn := meta.(KubeClientsets).AggregatorClientset()
 
 	name := d.Id()
 
@@ -147,7 +147,7 @@ func resourceKubernetesAPIServiceRead(d *schema.ResourceData, meta interface{}) 
 }
 
 func resourceKubernetesAPIServiceUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).AggregatorClientset
+	conn := meta.(KubeClientsets).AggregatorClientset()
 
 	name := d.Id()
 
@@ -174,7 +174,7 @@ func resourceKubernetesAPIServiceUpdate(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesAPIServiceDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).AggregatorClientset
+	conn := meta.(KubeClientsets).AggregatorClientset()
 
 	name := d.Id()
 
@@ -191,7 +191,7 @@ func resourceKubernetesAPIServiceDelete(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesAPIServiceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*KubeClientsets).AggregatorClientset
+	conn := meta.(KubeClientsets).AggregatorClientset()
 
 	name := d.Id()
 

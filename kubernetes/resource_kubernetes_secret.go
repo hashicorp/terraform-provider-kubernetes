@@ -42,7 +42,7 @@ func resourceKubernetesSecret() *schema.Resource {
 }
 
 func resourceKubernetesSecretCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	secret := api.Secret{
@@ -67,7 +67,7 @@ func resourceKubernetesSecretCreate(d *schema.ResourceData, meta interface{}) er
 }
 
 func resourceKubernetesSecretRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -93,7 +93,7 @@ func resourceKubernetesSecretRead(d *schema.ResourceData, meta interface{}) erro
 }
 
 func resourceKubernetesSecretUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -130,7 +130,7 @@ func resourceKubernetesSecretUpdate(d *schema.ResourceData, meta interface{}) er
 }
 
 func resourceKubernetesSecretDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -151,7 +151,7 @@ func resourceKubernetesSecretDelete(d *schema.ResourceData, meta interface{}) er
 }
 
 func resourceKubernetesSecretExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

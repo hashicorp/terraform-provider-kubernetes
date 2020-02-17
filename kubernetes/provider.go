@@ -205,7 +205,7 @@ func (k kubeClientsets) MainClientset() *kubernetes.Clientset {
 	if k.config != nil {
 		kc, err := kubernetes.NewForConfig(k.config)
 		if err != nil {
-			log.Printf("[DEBUG] %s", fmt.Errorf("Failed to configure: %s", err))
+			log.Printf("[DEBUG] %s", fmt.Errorf("Failed to configure client: %s", err))
 			return nil
 		}
 		k.mainClientset = kc
@@ -220,7 +220,7 @@ func (k kubeClientsets) AggregatorClientset() *aggregator.Clientset {
 	if k.config != nil {
 		ac, err := aggregator.NewForConfig(k.config)
 		if err != nil {
-			log.Printf("[DEBUG] %s", fmt.Errorf("Failed to configure: %s", err))
+			log.Printf("[DEBUG] %s", fmt.Errorf("Failed to configure client: %s", err))
 			return nil
 		}
 		k.aggregatorClientset = ac
@@ -236,7 +236,11 @@ func providerConfigure(d *schema.ResourceData, terraformVersion string) (interfa
 		return nil, err
 	}
 	if cfg == nil {
-		return nil, fmt.Errorf("Failed to initialize config")
+		// This is a TEMPORARY measure to work around https://github.com/hashicorp/terraform/issues/24055
+		// IMPORTANT: this will NOT enable a workaround of issue: https://github.com/hashicorp/terraform/issues/4149
+		// IMPORTANT: if the supplied configuration is incomplete or invalid
+		///IMPORTANT: provider operations will fail or attempt to connect to localhost endpoints
+		cfg = &restclient.Config{}
 	}
 
 	cfg.UserAgent = fmt.Sprintf("HashiCorp/1.0 Terraform/%s", terraformVersion)
@@ -353,7 +357,8 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 	cfg, err := cc.ClientConfig()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to initialize config: %s", err)
+		log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail.")
+		return nil, nil
 	}
 
 	log.Printf("[INFO] Successfully initialized config")

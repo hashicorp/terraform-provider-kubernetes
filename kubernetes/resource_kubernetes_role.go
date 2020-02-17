@@ -66,7 +66,7 @@ func resourceKubernetesRole() *schema.Resource {
 }
 
 func resourceKubernetesRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	rules := expandRules(d.Get("rule").([]interface{}))
@@ -88,7 +88,7 @@ func resourceKubernetesRoleCreate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func resourceKubernetesRoleRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -117,7 +117,7 @@ func resourceKubernetesRoleRead(d *schema.ResourceData, meta interface{}) error 
 }
 
 func resourceKubernetesRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -150,7 +150,7 @@ func resourceKubernetesRoleUpdate(d *schema.ResourceData, meta interface{}) erro
 }
 
 func resourceKubernetesRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -169,7 +169,7 @@ func resourceKubernetesRoleDelete(d *schema.ResourceData, meta interface{}) erro
 }
 
 func resourceKubernetesRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

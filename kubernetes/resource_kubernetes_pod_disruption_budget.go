@@ -75,7 +75,7 @@ func resourceKubernetesPodDisruptionBudget() *schema.Resource {
 }
 
 func resourceKubernetesPodDisruptionBudgetUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -101,7 +101,7 @@ func resourceKubernetesPodDisruptionBudgetUpdate(d *schema.ResourceData, meta in
 }
 
 func resourceKubernetesPodDisruptionBudgetCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandPodDisruptionBudgetSpec(d.Get("spec").([]interface{}))
@@ -126,7 +126,7 @@ func resourceKubernetesPodDisruptionBudgetCreate(d *schema.ResourceData, meta in
 }
 
 func resourceKubernetesPodDisruptionBudgetRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -155,7 +155,7 @@ func resourceKubernetesPodDisruptionBudgetRead(d *schema.ResourceData, meta inte
 }
 
 func resourceKubernetesPodDisruptionBudgetDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -176,7 +176,7 @@ func resourceKubernetesPodDisruptionBudgetDelete(d *schema.ResourceData, meta in
 }
 
 func resourceKubernetesPodDisruptionBudgetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

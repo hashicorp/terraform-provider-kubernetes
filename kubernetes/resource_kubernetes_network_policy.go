@@ -235,7 +235,7 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 }
 
 func resourceKubernetesNetworkPolicyCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandNetworkPolicySpec(d.Get("spec").([]interface{}))
@@ -260,7 +260,7 @@ func resourceKubernetesNetworkPolicyCreate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesNetworkPolicyRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -289,7 +289,7 @@ func resourceKubernetesNetworkPolicyRead(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesNetworkPolicyUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -320,7 +320,7 @@ func resourceKubernetesNetworkPolicyUpdate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesNetworkPolicyDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -338,7 +338,7 @@ func resourceKubernetesNetworkPolicyDelete(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesNetworkPolicyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

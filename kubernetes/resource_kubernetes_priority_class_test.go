@@ -137,7 +137,7 @@ func TestAccKubernetesPriorityClass_importBasic(t *testing.T) {
 }
 
 func testAccCheckKubernetesPriorityClassDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+	conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_priority_class" {
@@ -164,7 +164,7 @@ func testAccCheckKubernetesPriorityClassExists(n string, obj *api.PriorityClass)
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+		conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 		name := rs.Primary.ID
 

@@ -112,7 +112,7 @@ func TestAccKubernetesCronJob_extra(t *testing.T) {
 }
 
 func testAccCheckKubernetesCronJobDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+	conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_cron_job" {
@@ -142,7 +142,7 @@ func testAccCheckKubernetesCronJobExists(n string, obj *v1beta1.CronJob) resourc
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+		conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {

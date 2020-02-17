@@ -312,7 +312,7 @@ func matchObjectReferenceName(lor []api.ObjectReference, expected []*regexp.Rege
 }
 
 func testAccCheckKubernetesServiceAccountDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+	conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_service_account" {
@@ -342,7 +342,7 @@ func testAccCheckKubernetesServiceAccountExists(n string, obj *api.ServiceAccoun
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+		conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {

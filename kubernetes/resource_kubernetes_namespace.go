@@ -34,7 +34,7 @@ func resourceKubernetesNamespace() *schema.Resource {
 }
 
 func resourceKubernetesNamespaceCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	namespace := api.Namespace{
@@ -52,7 +52,7 @@ func resourceKubernetesNamespaceCreate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesNamespaceRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	name := d.Id()
 	log.Printf("[INFO] Reading namespace %s", name)
@@ -71,7 +71,7 @@ func resourceKubernetesNamespaceRead(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesNamespaceUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	data, err := ops.MarshalJSON()
@@ -91,7 +91,7 @@ func resourceKubernetesNamespaceUpdate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesNamespaceDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting namespace: %#v", name)
@@ -130,7 +130,7 @@ func resourceKubernetesNamespaceDelete(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesNamespaceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	name := d.Id()
 	log.Printf("[INFO] Checking namespace %s", name)

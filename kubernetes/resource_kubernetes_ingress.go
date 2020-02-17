@@ -114,7 +114,7 @@ func resourceKubernetesIngress() *schema.Resource {
 }
 
 func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	ing := &v1beta1.Ingress{
@@ -133,7 +133,7 @@ func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -168,7 +168,7 @@ func resourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) err
 }
 
 func resourceKubernetesIngressUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, _, err := idParts(d.Id())
 	if err != nil {
@@ -197,7 +197,7 @@ func resourceKubernetesIngressUpdate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesIngressDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -217,7 +217,7 @@ func resourceKubernetesIngressDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesIngressExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn := meta.(KubeClientsets).MainClientset()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

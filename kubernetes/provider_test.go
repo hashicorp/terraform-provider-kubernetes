@@ -158,12 +158,11 @@ func testAccPreCheck(t *testing.T) {
 		os.Getenv("KUBE_CTX") != "" ||
 		os.Getenv("KUBECONFIG") != "" ||
 		os.Getenv("KUBE_CONFIG") != ""
+	hasUserCredentials := os.Getenv("KUBE_USER") != "" && os.Getenv("KUBE_PASSWORD") != ""
+	hasClientCert := os.Getenv("KUBE_CLIENT_CERT_DATA") != "" && os.Getenv("KUBE_CLIENT_KEY_DATA") != ""
 	hasStaticCfg := (os.Getenv("KUBE_HOST") != "" &&
-		os.Getenv("KUBE_USER") != "" &&
-		os.Getenv("KUBE_PASSWORD") != "" &&
-		os.Getenv("KUBE_CLIENT_CERT_DATA") != "" &&
-		os.Getenv("KUBE_CLIENT_KEY_DATA") != "" &&
-		os.Getenv("KUBE_CLUSTER_CA_CERT_DATA") != "")
+		os.Getenv("KUBE_CLUSTER_CA_CERT_DATA") != "") &&
+		(hasUserCredentials || hasClientCert || os.Getenv("KUBE_TOKEN") != "")
 
 	if !hasFileCfg && !hasStaticCfg {
 		t.Fatalf("File config (KUBE_CTX_AUTH_INFO and KUBE_CTX_CLUSTER) or static configuration"+

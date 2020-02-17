@@ -187,18 +187,18 @@ func Provider() terraform.ResourceProvider {
 	return p
 }
 
+type KubeClientsets interface {
+	MainClientset() *kubernetes.Clientset
+	AggregatorClientset() *aggregator.Clientset
+}
+
 type kubeClientsets struct {
 	config              *rest.Config
 	mainClientset       *kubernetes.Clientset
 	aggregatorClientset *aggregator.Clientset
 }
 
-type KubeClientsets interface {
-	MainClientset() *kubernetes.Clientset
-	AggregatorClientset() *aggregator.Clientset
-}
-
-func (k *kubeClientsets) MainClientset() *kubernetes.Clientset {
+func (k kubeClientsets) MainClientset() *kubernetes.Clientset {
 	if k.mainClientset != nil {
 		return k.mainClientset
 	}
@@ -213,7 +213,7 @@ func (k *kubeClientsets) MainClientset() *kubernetes.Clientset {
 	return k.mainClientset
 }
 
-func (k *kubeClientsets) AggregatorClientset() *aggregator.Clientset {
+func (k kubeClientsets) AggregatorClientset() *aggregator.Clientset {
 	if k.aggregatorClientset != nil {
 		return k.aggregatorClientset
 	}

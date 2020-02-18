@@ -394,6 +394,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 		},
 		"image": {
 			Type:        schema.TypeString,
+			ForceNew:    !isUpdatable,
 			Optional:    true,
 			Description: "Docker image name. More info: http://kubernetes.io/docs/user-guide/images",
 		},

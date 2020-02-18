@@ -112,5 +112,21 @@ func patchJobSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOpera
 		})
 	}
 
+	if d.HasChange(prefix + "backoff_limit") {
+		v := d.Get(prefix + "backoff_limit").(int)
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "/backoffLimit",
+			Value: v,
+		})
+	}
+
+	if d.HasChange(prefix + "parallelism") {
+		v := d.Get(prefix + "parallelism").(int)
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "/parallelism",
+			Value: v,
+		})
+	}
+
 	return ops, nil
 }

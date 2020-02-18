@@ -97,14 +97,57 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.labels.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.labels.foo", "bar"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.active_deadline_seconds", "60"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.backoff_limit", "5"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.completions", "10"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.parallelism", "4"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", "alpine"),
+				),
+			},
+			{
+				Config: testAccKubernetesJobConfig_recreated_selector(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_job.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_job.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_job.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_job.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.labels.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.labels.foo", "bar"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.active_deadline_seconds", "0"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.backoff_limit", "0"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.completions", "1"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.manual_selector", "true"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.selector.0.match_labels.foo", "bar"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", "alpine"),
 					resource.TestCheckNoResourceAttr("kubernetes_job.test", "wait_for_completion"),
+				),
+			},
+			{
+				Config: testAccKubernetesJobConfig_recreated_image(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_job.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_job.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_job.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_job.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.labels.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.labels.foo", "bar"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.active_deadline_seconds", "0"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.backoff_limit", "0"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.completions", "1"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.parallelism", "1"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.manual_selector", "true"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.selector.0.match_labels.foo", "bar"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", "alpine:latest"),
 				),
 			},
 		},
@@ -275,6 +318,34 @@ func testAccKubernetesJobConfig_modified(name string) string {
 		}
 	}
 	spec {
+		active_deadline_seconds = 60
+		backoff_limit = 5
+		completions = 10 # Immutable
+		parallelism = 4
+		template {
+			metadata {}
+			spec {
+				container {
+					name = "hello"
+					image = "alpine"
+					command = ["echo", "'hello'"]
+				}
+			}
+		}
+	}
+}`, name)
+}
+
+func testAccKubernetesJobConfig_recreated_selector(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_job" "test" {
+	metadata {
+		name = "%s"
+		labels = {
+			"foo" = "bar"
+		}
+	}
+	spec {
 		manual_selector = true
 		selector {
 			match_labels = {
@@ -291,6 +362,40 @@ func testAccKubernetesJobConfig_modified(name string) string {
 				container {
 					name = "hello"
 					image = "alpine"
+					command = ["echo", "'hello'"]
+				}
+			}
+		}
+	}
+}`, name)
+}
+
+func testAccKubernetesJobConfig_recreated_image(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_job" "test" {
+	metadata {
+		name = "%s"
+		labels = {
+			"foo" = "bar"
+		}
+	}
+	spec {
+		manual_selector = true
+		selector {
+			match_labels = {
+				"foo" = "bar"
+			}
+		}
+		template {
+			metadata {
+				labels = {
+					"foo" = "bar"
+				}
+			}
+			spec {
+				container {
+					name = "hello"
+					image = "alpine:latest"
 					command = ["echo", "'hello'"]
 				}
 			}

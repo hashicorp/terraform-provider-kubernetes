@@ -36,14 +36,12 @@ func jobSpecFields() map[string]*schema.Schema {
 		"active_deadline_seconds": {
 			Type:         schema.TypeInt,
 			Optional:     true,
-			ForceNew:     true,
 			ValidateFunc: validatePositiveInteger,
 			Description:  "Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.",
 		},
 		"backoff_limit": {
 			Type:         schema.TypeInt,
 			Optional:     true,
-			ForceNew:     true,
 			ValidateFunc: validateNonNegativeInteger,
 			Description:  "Specifies the number of retries before marking this job failed. Defaults to 6",
 		},
@@ -64,7 +62,6 @@ func jobSpecFields() map[string]*schema.Schema {
 		"parallelism": {
 			Type:         schema.TypeInt,
 			Optional:     true,
-			ForceNew:     true,
 			Default:      1,
 			ValidateFunc: validatePositiveInteger,
 			Description:  "Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",

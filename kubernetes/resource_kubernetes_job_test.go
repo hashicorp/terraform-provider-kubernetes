@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
@@ -10,6 +11,10 @@ import (
 	api "k8s.io/api/batch/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func ttlAfterDisabled() (bool, string) {
+	return os.Getenv("FEATURE_GATE_TTL_AFTER_FINISHED") != "enabled", "TTLAfterFinished is not enabled"
+}
 
 func TestAccKubernetesJob_basic(t *testing.T) {
 	var conf api.Job
@@ -38,7 +43,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", "alpine"),
 
-					skipCheckIf(func() bool { return clusterVersionLessThan("1.16.0") },
+					skipCheckIf(ttlAfterDisabled,
 						resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "10")),
 				),
 			},
@@ -62,7 +67,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", "alpine"),
 
-					skipCheckIf(func() bool { return clusterVersionLessThan("1.16.0") },
+					skipCheckIf(ttlAfterDisabled,
 						resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "0")),
 				),
 			},

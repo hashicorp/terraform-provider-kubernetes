@@ -324,10 +324,10 @@ func clusterVersionLessThan(vs string) bool {
 	return cv.LessThan(v)
 }
 
-func skipCheckIf(skip func() bool, check resource.TestCheckFunc) resource.TestCheckFunc {
+func skipCheckIf(skip func() (bool, string), check resource.TestCheckFunc) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		if skip() {
-			fmt.Println("Skipping check")
+		if s, reason := skip(); s {
+			fmt.Println("Skipping check:", reason)
 			return nil
 		}
 		return check(s)

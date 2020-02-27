@@ -47,7 +47,10 @@ func resourceKubernetesPriorityClass() *schema.Resource {
 }
 
 func resourceKubernetesPriorityClassCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	value := d.Get("value").(int)
@@ -73,7 +76,10 @@ func resourceKubernetesPriorityClassCreate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesPriorityClassRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 
@@ -109,7 +115,10 @@ func resourceKubernetesPriorityClassRead(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesPriorityClassUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 
@@ -147,12 +156,15 @@ func resourceKubernetesPriorityClassUpdate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesPriorityClassDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 
 	log.Printf("[INFO] Deleting priority class: %#v", name)
-	err := conn.SchedulingV1().PriorityClasses().Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.SchedulingV1().PriorityClasses().Delete(name, &meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -164,12 +176,15 @@ func resourceKubernetesPriorityClassDelete(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesPriorityClassExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	name := d.Id()
 
 	log.Printf("[INFO] Checking priority class %s", name)
-	_, err := conn.SchedulingV1().PriorityClasses().Get(name, meta_v1.GetOptions{})
+	_, err = conn.SchedulingV1().PriorityClasses().Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

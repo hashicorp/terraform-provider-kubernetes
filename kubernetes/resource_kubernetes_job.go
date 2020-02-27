@@ -47,7 +47,10 @@ func resourceKubernetesJob() *schema.Resource {
 }
 
 func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandJobSpec(d.Get("spec").([]interface{}))
@@ -74,7 +77,10 @@ func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error
 }
 
 func resourceKubernetesJobUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -101,7 +107,10 @@ func resourceKubernetesJobUpdate(d *schema.ResourceData, meta interface{}) error
 }
 
 func resourceKubernetesJobRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -154,7 +163,10 @@ func resourceKubernetesJobRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceKubernetesJobDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -190,7 +202,10 @@ func resourceKubernetesJobDelete(d *schema.ResourceData, meta interface{}) error
 }
 
 func resourceKubernetesJobExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

@@ -79,7 +79,10 @@ func resourceKubernetesLimitRange() *schema.Resource {
 }
 
 func resourceKubernetesLimitRangeCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandLimitRangeSpec(d.Get("spec").([]interface{}), d.IsNewResource())
@@ -102,7 +105,10 @@ func resourceKubernetesLimitRangeCreate(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesLimitRangeRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -129,7 +135,10 @@ func resourceKubernetesLimitRangeRead(d *schema.ResourceData, meta interface{}) 
 }
 
 func resourceKubernetesLimitRangeUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -163,7 +172,10 @@ func resourceKubernetesLimitRangeUpdate(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesLimitRangeDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -183,7 +195,10 @@ func resourceKubernetesLimitRangeDelete(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesLimitRangeExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

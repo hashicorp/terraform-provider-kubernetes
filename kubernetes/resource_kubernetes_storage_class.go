@@ -68,7 +68,10 @@ func resourceKubernetesStorageClass() *schema.Resource {
 }
 
 func resourceKubernetesStorageClassCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	reclaimPolicy := v1.PersistentVolumeReclaimPolicy(d.Get("reclaim_policy").(string))
@@ -102,7 +105,10 @@ func resourceKubernetesStorageClassCreate(d *schema.ResourceData, meta interface
 }
 
 func resourceKubernetesStorageClassRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 	log.Printf("[INFO] Reading storage class %s", name)
@@ -129,7 +135,10 @@ func resourceKubernetesStorageClassRead(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesStorageClassUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -149,11 +158,14 @@ func resourceKubernetesStorageClassUpdate(d *schema.ResourceData, meta interface
 }
 
 func resourceKubernetesStorageClassDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting storage class: %#v", name)
-	err := conn.StorageV1().StorageClasses().Delete(name, &deleteOptions)
+	err = conn.StorageV1().StorageClasses().Delete(name, &deleteOptions)
 	if err != nil {
 		return err
 	}
@@ -165,11 +177,14 @@ func resourceKubernetesStorageClassDelete(d *schema.ResourceData, meta interface
 }
 
 func resourceKubernetesStorageClassExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	name := d.Id()
 	log.Printf("[INFO] Checking storage class %s", name)
-	_, err := conn.StorageV1().StorageClasses().Get(name, metav1.GetOptions{})
+	_, err = conn.StorageV1().StorageClasses().Get(name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

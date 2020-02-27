@@ -101,7 +101,10 @@ func resourceKubernetesAPIService() *schema.Resource {
 }
 
 func resourceKubernetesAPIServiceCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).AggregatorClientset()
+	conn, err := meta.(KubeClientsets).AggregatorClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svc := v1.APIService{
@@ -120,7 +123,10 @@ func resourceKubernetesAPIServiceCreate(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesAPIServiceRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).AggregatorClientset()
+	conn, err := meta.(KubeClientsets).AggregatorClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 
@@ -147,7 +153,10 @@ func resourceKubernetesAPIServiceRead(d *schema.ResourceData, meta interface{}) 
 }
 
 func resourceKubernetesAPIServiceUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).AggregatorClientset()
+	conn, err := meta.(KubeClientsets).AggregatorClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 
@@ -174,12 +183,15 @@ func resourceKubernetesAPIServiceUpdate(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesAPIServiceDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).AggregatorClientset()
+	conn, err := meta.(KubeClientsets).AggregatorClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 
 	log.Printf("[INFO] Deleting API service: %#v", name)
-	err := conn.ApiregistrationV1().APIServices().Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.ApiregistrationV1().APIServices().Delete(name, &meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -191,12 +203,15 @@ func resourceKubernetesAPIServiceDelete(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesAPIServiceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(KubeClientsets).AggregatorClientset()
+	conn, err := meta.(KubeClientsets).AggregatorClientset()
+	if err != nil {
+		return false, err
+	}
 
 	name := d.Id()
 
 	log.Printf("[INFO] Checking API service %s", name)
-	_, err := conn.ApiregistrationV1().APIServices().Get(name, meta_v1.GetOptions{})
+	_, err = conn.ApiregistrationV1().APIServices().Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

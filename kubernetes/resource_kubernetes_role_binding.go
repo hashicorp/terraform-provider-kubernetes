@@ -48,7 +48,10 @@ func resourceKubernetesRoleBinding() *schema.Resource {
 }
 
 func resourceKubernetesRoleBindingCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	binding := &api.RoleBinding{
@@ -69,7 +72,10 @@ func resourceKubernetesRoleBindingCreate(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesRoleBindingRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -107,7 +113,10 @@ func resourceKubernetesRoleBindingRead(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesRoleBindingUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -135,7 +144,10 @@ func resourceKubernetesRoleBindingUpdate(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesRoleBindingDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -153,7 +165,10 @@ func resourceKubernetesRoleBindingDelete(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesRoleBindingExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

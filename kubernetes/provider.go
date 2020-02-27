@@ -188,8 +188,8 @@ func Provider() terraform.ResourceProvider {
 }
 
 type KubeClientsets interface {
-	MainClientset() *kubernetes.Clientset
-	AggregatorClientset() *aggregator.Clientset
+	MainClientset() (*kubernetes.Clientset, error)
+	AggregatorClientset() (*aggregator.Clientset, error)
 }
 
 type kubeClientsets struct {
@@ -198,34 +198,32 @@ type kubeClientsets struct {
 	aggregatorClientset *aggregator.Clientset
 }
 
-func (k kubeClientsets) MainClientset() *kubernetes.Clientset {
+func (k kubeClientsets) MainClientset() (*kubernetes.Clientset, error) {
 	if k.mainClientset != nil {
-		return k.mainClientset
+		return k.mainClientset, nil
 	}
 	if k.config != nil {
 		kc, err := kubernetes.NewForConfig(k.config)
 		if err != nil {
-			log.Printf("[DEBUG] %s", fmt.Errorf("Failed to configure client: %s", err))
-			return nil
+			return nil, fmt.Errorf("Failed to configure client: %s", err)
 		}
 		k.mainClientset = kc
 	}
-	return k.mainClientset
+	return k.mainClientset, nil
 }
 
-func (k kubeClientsets) AggregatorClientset() *aggregator.Clientset {
+func (k kubeClientsets) AggregatorClientset() (*aggregator.Clientset, error) {
 	if k.aggregatorClientset != nil {
-		return k.aggregatorClientset
+		return k.aggregatorClientset, nil
 	}
 	if k.config != nil {
 		ac, err := aggregator.NewForConfig(k.config)
 		if err != nil {
-			log.Printf("[DEBUG] %s", fmt.Errorf("Failed to configure client: %s", err))
-			return nil
+			return nil, fmt.Errorf("Failed to configure client: %s", err)
 		}
 		k.aggregatorClientset = ac
 	}
-	return k.aggregatorClientset
+	return k.aggregatorClientset, nil
 }
 
 func providerConfigure(d *schema.ResourceData, terraformVersion string) (interface{}, error) {

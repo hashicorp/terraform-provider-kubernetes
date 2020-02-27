@@ -204,7 +204,10 @@ func getClusterVersion() (*gversion.Version, error) {
 		return nil, fmt.Errorf("Provider not initialized, unable to check cluster version")
 	}
 
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 	serverVersion, err := conn.ServerVersion()
 
 	if err != nil {
@@ -305,7 +308,10 @@ func getFirstNode() (api.Node, error) {
 	if meta == nil {
 		return api.Node{}, errors.New("Provider not initialized, unable to get cluster node")
 	}
-	conn := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 	resp, err := conn.CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
 		return api.Node{}, err

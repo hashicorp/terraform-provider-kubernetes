@@ -266,7 +266,10 @@ func TestAccKubernetesDaemonSet_with_tolerations_unset_toleration_seconds(t *tes
 }
 
 func testAccCheckKubernetesDaemonSetDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_daemonset" {
@@ -296,7 +299,10 @@ func testAccCheckKubernetesDaemonSetExists(n string, obj *appsv1.DaemonSet) reso
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {

@@ -198,7 +198,10 @@ func testAccCheckStorageClassParameters(m *api.StorageClass, expected map[string
 }
 
 func testAccCheckKubernetesStorageClassDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_storage_class" {
@@ -223,7 +226,11 @@ func testAccCheckKubernetesStorageClassExists(n string, obj *api.StorageClass) r
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
+
 		name := rs.Primary.ID
 		out, err := conn.StorageV1().StorageClasses().Get(name, meta_v1.GetOptions{})
 		if err != nil {

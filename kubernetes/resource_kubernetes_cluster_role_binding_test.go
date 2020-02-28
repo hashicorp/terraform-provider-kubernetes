@@ -299,7 +299,10 @@ func TestAccKubernetesClusterRoleBindingUpdatePatchOperationsOrderWithRemovals(t
 }
 
 func testAccCheckKubernetesClusterRoleBindingDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_cluster_role_binding" {
@@ -324,7 +327,11 @@ func testAccCheckKubernetesClusterRoleBindingExists(n string, obj *api.ClusterRo
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
+
 		name := rs.Primary.ID
 		resp, err := conn.RbacV1().ClusterRoleBindings().Get(name, meta_v1.GetOptions{})
 		if err != nil {

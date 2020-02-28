@@ -206,7 +206,7 @@ func getClusterVersion() (*gversion.Version, error) {
 
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	serverVersion, err := conn.ServerVersion()
 
@@ -310,8 +310,9 @@ func getFirstNode() (api.Node, error) {
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return api.Node{}, err
 	}
+
 	resp, err := conn.CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
 		return api.Node{}, err

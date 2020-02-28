@@ -136,7 +136,10 @@ func TestAccKubernetesAPIService_importBasic(t *testing.T) {
 }
 
 func testAccCheckKubernetesAPIServiceDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(KubeClientsets).AggregatorClientset()
+	conn, err := testAccProvider.Meta().(KubeClientsets).AggregatorClientset()
+	if err != nil {
+		return err
+	}
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_api_service" {
@@ -163,11 +166,14 @@ func testAccCheckKubernetesAPIServiceExists(n string) resource.TestCheckFunc {
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(KubeClientsets).AggregatorClientset()
+		conn, err := testAccProvider.Meta().(KubeClientsets).AggregatorClientset()
+		if err != nil {
+			return err
+		}
 
 		name := rs.Primary.ID
 
-		_, err := conn.ApiregistrationV1().APIServices().Get(name, meta_v1.GetOptions{})
+		_, err = conn.ApiregistrationV1().APIServices().Get(name, meta_v1.GetOptions{})
 		if err != nil {
 			return err
 		}

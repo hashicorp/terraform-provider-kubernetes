@@ -40,7 +40,10 @@ func resourceKubernetesConfigMap() *schema.Resource {
 }
 
 func resourceKubernetesConfigMapCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	cfgMap := api.ConfigMap{
@@ -60,7 +63,10 @@ func resourceKubernetesConfigMapCreate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesConfigMapRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -85,7 +91,10 @@ func resourceKubernetesConfigMapRead(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesConfigMapUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -122,7 +131,10 @@ func resourceKubernetesConfigMapUpdate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesConfigMapDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -141,7 +153,10 @@ func resourceKubernetesConfigMapDelete(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesConfigMapExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

@@ -158,12 +158,11 @@ func testAccPreCheck(t *testing.T) {
 		os.Getenv("KUBE_CTX") != "" ||
 		os.Getenv("KUBECONFIG") != "" ||
 		os.Getenv("KUBE_CONFIG") != ""
+	hasUserCredentials := os.Getenv("KUBE_USER") != "" && os.Getenv("KUBE_PASSWORD") != ""
+	hasClientCert := os.Getenv("KUBE_CLIENT_CERT_DATA") != "" && os.Getenv("KUBE_CLIENT_KEY_DATA") != ""
 	hasStaticCfg := (os.Getenv("KUBE_HOST") != "" &&
-		os.Getenv("KUBE_USER") != "" &&
-		os.Getenv("KUBE_PASSWORD") != "" &&
-		os.Getenv("KUBE_CLIENT_CERT_DATA") != "" &&
-		os.Getenv("KUBE_CLIENT_KEY_DATA") != "" &&
-		os.Getenv("KUBE_CLUSTER_CA_CERT_DATA") != "")
+		os.Getenv("KUBE_CLUSTER_CA_CERT_DATA") != "") &&
+		(hasUserCredentials || hasClientCert || os.Getenv("KUBE_TOKEN") != "")
 
 	if !hasFileCfg && !hasStaticCfg {
 		t.Fatalf("File config (KUBE_CTX_AUTH_INFO and KUBE_CTX_CLUSTER) or static configuration"+
@@ -205,7 +204,10 @@ func getClusterVersion() (*gversion.Version, error) {
 		return nil, fmt.Errorf("Provider not initialized, unable to check cluster version")
 	}
 
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return nil, err
+	}
 	serverVersion, err := conn.ServerVersion()
 
 	if err != nil {
@@ -306,7 +308,11 @@ func getFirstNode() (api.Node, error) {
 	if meta == nil {
 		return api.Node{}, errors.New("Provider not initialized, unable to get cluster node")
 	}
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return api.Node{}, err
+	}
+
 	resp, err := conn.CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
 		return api.Node{}, err

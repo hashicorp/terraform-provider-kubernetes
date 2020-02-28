@@ -1,4 +1,13 @@
 ## 1.11.1 (Unreleased)
+
+IMPROVEMENTS:
+
+* Bump provider SDK to v1.7.0
+
+BUG FIXES:
+
+* Defer client initialization to improve resilience (#759)
+
 ## 1.11.0 (February 10, 2020)
 
 IMPROVEMENTS:

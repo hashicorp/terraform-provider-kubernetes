@@ -25,7 +25,7 @@ resource "kubernetes_limit_range" "example" {
       type = "Pod"
       max = {
         cpu    = "200m"
-        memory = "1024M"
+        memory = "1024Mi"
       }
     }
     limit {
@@ -38,7 +38,7 @@ resource "kubernetes_limit_range" "example" {
       type = "Container"
       default = {
         cpu    = "50m"
-        memory = "24M"
+        memory = "24Mi"
       }
     }
   }

@@ -1,4 +1,4 @@
-# Terraform Provider
+# Terraform Provider for Kubernetes
 
 - Website: https://www.terraform.io
 - [![Gitter chat](https://badges.gitter.im/hashicorp-terraform/Lobby.png)](https://gitter.im/hashicorp-terraform/Lobby)
@@ -28,6 +28,12 @@ Enter the provider directory and build the provider
 ```sh
 $ cd $GOPATH/src/github.com/terraform-providers/terraform-provider-kubernetes
 $ make build
+```
+
+Statically linking binaries can be required for testing development builds in containers not providing all dependencies, e.g.:
+
+```
+# CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"'
 ```
 
 ## Developing the Provider

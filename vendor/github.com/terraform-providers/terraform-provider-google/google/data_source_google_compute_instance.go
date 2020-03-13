@@ -2,18 +2,16 @@ package google
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform/helper/schema"
+
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
 func dataSourceGoogleComputeInstance() *schema.Resource {
 	// Generate datasource schema from resource
 	dsSchema := datasourceSchemaFromResourceSchema(resourceComputeInstance().Schema)
 
-	// Set 'Required' schema elements
-	addRequiredFieldsToSchema(dsSchema, "name")
-
 	// Set 'Optional' schema elements
-	addOptionalFieldsToSchema(dsSchema, "project", "zone")
+	addOptionalFieldsToSchema(dsSchema, "name", "self_link", "project", "zone")
 
 	return &schema.Resource{
 		Read:   dataSourceGoogleComputeInstanceRead,
@@ -103,6 +101,7 @@ func dataSourceGoogleComputeInstanceRead(d *schema.ResourceData, meta interface{
 			}
 			if key := disk.DiskEncryptionKey; key != nil {
 				di["disk_encryption_key_sha256"] = key.Sha256
+				di["kms_key_self_link"] = key.KmsKeyName
 			}
 			attachedDisks = append(attachedDisks, di)
 		}
@@ -132,6 +131,11 @@ func dataSourceGoogleComputeInstanceRead(d *schema.ResourceData, meta interface{
 	}
 
 	err = d.Set("scratch_disk", scratchDisks)
+	if err != nil {
+		return err
+	}
+
+	err = d.Set("shielded_instance_config", flattenShieldedVmConfig(instance.ShieldedVmConfig))
 	if err != nil {
 		return err
 	}

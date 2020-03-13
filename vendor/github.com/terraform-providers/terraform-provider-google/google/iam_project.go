@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"google.golang.org/api/cloudresourcemanager/v1"
 )
 
@@ -12,6 +12,7 @@ var IamProjectSchema = map[string]*schema.Schema{
 	"project": {
 		Type:     schema.TypeString,
 		Optional: true,
+		Computed: true,
 		ForceNew: true,
 	},
 }
@@ -26,6 +27,8 @@ func NewProjectIamUpdater(d *schema.ResourceData, config *Config) (ResourceIamUp
 	if err != nil {
 		return nil, err
 	}
+
+	d.Set("project", pid)
 
 	return &ProjectIamUpdater{
 		resourceId: pid,
@@ -51,7 +54,8 @@ func (u *ProjectIamUpdater) GetResourceIamPolicy() (*cloudresourcemanager.Policy
 
 func (u *ProjectIamUpdater) SetResourceIamPolicy(policy *cloudresourcemanager.Policy) error {
 	_, err := u.Config.clientResourceManager.Projects.SetIamPolicy(u.resourceId, &cloudresourcemanager.SetIamPolicyRequest{
-		Policy: policy,
+		Policy:     policy,
+		UpdateMask: "bindings,etag,auditConfigs",
 	}).Do()
 
 	if err != nil {

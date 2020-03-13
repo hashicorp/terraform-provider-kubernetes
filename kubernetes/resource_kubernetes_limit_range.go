@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesLimitRange() *schema.Resource {
@@ -27,7 +26,7 @@ func resourceKubernetesLimitRange() *schema.Resource {
 			"metadata": namespacedMetadataSchema("limit range", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: "Spec defines the limits enforced. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#spec-and-status",
+				Description: "Spec defines the limits enforced. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
 				Optional:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
@@ -80,7 +79,10 @@ func resourceKubernetesLimitRange() *schema.Resource {
 }
 
 func resourceKubernetesLimitRangeCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandLimitRangeSpec(d.Get("spec").([]interface{}), d.IsNewResource())
@@ -103,7 +105,10 @@ func resourceKubernetesLimitRangeCreate(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesLimitRangeRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -130,7 +135,10 @@ func resourceKubernetesLimitRangeRead(d *schema.ResourceData, meta interface{}) 
 }
 
 func resourceKubernetesLimitRangeUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -164,7 +172,10 @@ func resourceKubernetesLimitRangeUpdate(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesLimitRangeDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -184,7 +195,10 @@ func resourceKubernetesLimitRangeDelete(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesLimitRangeExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

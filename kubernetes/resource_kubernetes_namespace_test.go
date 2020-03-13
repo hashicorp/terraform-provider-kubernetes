@@ -6,12 +6,11 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform/helper/acctest"
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func TestAccKubernetesNamespace_basic(t *testing.T) {
@@ -226,6 +225,33 @@ func TestAccKubernetesNamespace_importGeneratedName(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesNamespace_deleteTimeout(t *testing.T) {
+	var conf api.Namespace
+	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_namespace.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesNamespaceDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesNamespaceConfig_deleteTimeout(nsName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesNamespaceExists("kubernetes_namespace.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.name", nsName),
+					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.uid"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckMetaAnnotations(om *meta_v1.ObjectMeta, expected map[string]string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(om.Annotations) == 0 {
@@ -273,7 +299,10 @@ func testAccCheckMetaLabels(om *meta_v1.ObjectMeta, expected map[string]string) 
 }
 
 func testAccCheckKubernetesNamespaceDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_namespace" {
@@ -298,7 +327,11 @@ func testAccCheckKubernetesNamespaceExists(n string, obj *api.Namespace) resourc
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
+
 		out, err := conn.CoreV1().Namespaces().Get(rs.Primary.ID, meta_v1.GetOptions{})
 		if err != nil {
 			return err
@@ -408,6 +441,19 @@ resource "kubernetes_namespace" "test" {
     }
 
     name = "%s"
+  }
+}
+`, nsName)
+}
+
+func testAccKubernetesNamespaceConfig_deleteTimeout(nsName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_namespace" "test" {
+  metadata {
+    name = "%s"
+  }
+  timeouts{
+    delete = "30m"
   }
 }
 `, nsName)

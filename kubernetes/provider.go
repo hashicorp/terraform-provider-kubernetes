@@ -4,20 +4,25 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"os"
+	"net/http"
 
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/logging"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/mitchellh/go-homedir"
+	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
 	kubernetes "k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
+
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	aggregator "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
 
 func Provider() terraform.ResourceProvider {
-	return &schema.Provider{
+	p := &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"host": {
 				Type:        schema.TypeString,
@@ -138,6 +143,7 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
+			"kubernetes_api_service":               resourceKubernetesAPIService(),
 			"kubernetes_cluster_role":              resourceKubernetesClusterRole(),
 			"kubernetes_cluster_role_binding":      resourceKubernetesClusterRoleBinding(),
 			"kubernetes_config_map":                resourceKubernetesConfigMap(),
@@ -154,6 +160,8 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_persistent_volume":         resourceKubernetesPersistentVolume(),
 			"kubernetes_persistent_volume_claim":   resourceKubernetesPersistentVolumeClaim(),
 			"kubernetes_pod":                       resourceKubernetesPod(),
+			"kubernetes_pod_disruption_budget":     resourceKubernetesPodDisruptionBudget(),
+			"kubernetes_priority_class":            resourceKubernetesPriorityClass(),
 			"kubernetes_replication_controller":    resourceKubernetesReplicationController(),
 			"kubernetes_role_binding":              resourceKubernetesRoleBinding(),
 			"kubernetes_resource_quota":            resourceKubernetesResourceQuota(),
@@ -164,52 +172,169 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_stateful_set":              resourceKubernetesStatefulSet(),
 			"kubernetes_storage_class":             resourceKubernetesStorageClass(),
 		},
-		ConfigureFunc: providerConfigure,
 	}
+
+	p.ConfigureFunc = func(d *schema.ResourceData) (interface{}, error) {
+		terraformVersion := p.TerraformVersion
+		if terraformVersion == "" {
+			// Terraform 0.12 introduced this field to the protocol
+			// We can therefore assume that if it's missing it's 0.10 or 0.11
+			terraformVersion = "0.11+compatible"
+		}
+		return providerConfigure(d, terraformVersion)
+	}
+
+	return p
 }
 
-func providerConfigure(d *schema.ResourceData) (interface{}, error) {
+type KubeClientsets interface {
+	MainClientset() (*kubernetes.Clientset, error)
+	AggregatorClientset() (*aggregator.Clientset, error)
+}
 
-	var cfg *restclient.Config
-	var err error
-	if d.Get("load_config_file").(bool) {
-		// Config file loading
-		cfg, err = tryLoadingConfigFile(d)
+type kubeClientsets struct {
+	config              *rest.Config
+	mainClientset       *kubernetes.Clientset
+	aggregatorClientset *aggregator.Clientset
+}
+
+func (k kubeClientsets) MainClientset() (*kubernetes.Clientset, error) {
+	if k.mainClientset != nil {
+		return k.mainClientset, nil
 	}
+	if k.config != nil {
+		kc, err := kubernetes.NewForConfig(k.config)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to configure client: %s", err)
+		}
+		k.mainClientset = kc
+	}
+	return k.mainClientset, nil
+}
 
+func (k kubeClientsets) AggregatorClientset() (*aggregator.Clientset, error) {
+	if k.aggregatorClientset != nil {
+		return k.aggregatorClientset, nil
+	}
+	if k.config != nil {
+		ac, err := aggregator.NewForConfig(k.config)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to configure client: %s", err)
+		}
+		k.aggregatorClientset = ac
+	}
+	return k.aggregatorClientset, nil
+}
+
+func providerConfigure(d *schema.ResourceData, terraformVersion string) (interface{}, error) {
+
+	// Config initialization
+	cfg, err := initializeConfiguration(d)
 	if err != nil {
 		return nil, err
 	}
 	if cfg == nil {
+		// This is a TEMPORARY measure to work around https://github.com/hashicorp/terraform/issues/24055
+		// IMPORTANT: this will NOT enable a workaround of issue: https://github.com/hashicorp/terraform/issues/4149
+		// IMPORTANT: if the supplied configuration is incomplete or invalid
+		///IMPORTANT: provider operations will fail or attempt to connect to localhost endpoints
 		cfg = &restclient.Config{}
 	}
 
-	// Overriding with static configuration
-	cfg.UserAgent = fmt.Sprintf("HashiCorp/1.0 Terraform/%s", terraform.VersionString())
+	cfg.UserAgent = fmt.Sprintf("HashiCorp/1.0 Terraform/%s", terraformVersion)
 
-	if v, ok := d.GetOk("host"); ok {
-		cfg.Host = v.(string)
+	if logging.IsDebugOrHigher() {
+		log.Printf("[DEBUG] Enabling HTTP requests/responses tracing")
+		cfg.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+			return logging.NewTransport("Kubernetes", rt)
+		}
 	}
-	if v, ok := d.GetOk("username"); ok {
-		cfg.Username = v.(string)
+
+	m := kubeClientsets{
+		config:              cfg,
+		mainClientset:       nil,
+		aggregatorClientset: nil,
 	}
-	if v, ok := d.GetOk("password"); ok {
-		cfg.Password = v.(string)
+	return m, nil
+}
+
+func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error) {
+	overrides := &clientcmd.ConfigOverrides{}
+	loader := &clientcmd.ClientConfigLoadingRules{}
+
+	if d.Get("load_config_file").(bool) {
+		log.Printf("[DEBUG] Trying to load configuration from file")
+		if configPath, ok := d.GetOk("config_path"); ok && configPath.(string) != "" {
+			path, err := homedir.Expand(configPath.(string))
+			if err != nil {
+				return nil, err
+			}
+			log.Printf("[DEBUG] Configuration file is: %s", path)
+			loader.ExplicitPath = path
+
+			ctxSuffix := "; default context"
+
+			ctx, ctxOk := d.GetOk("config_context")
+			authInfo, authInfoOk := d.GetOk("config_context_auth_info")
+			cluster, clusterOk := d.GetOk("config_context_cluster")
+			if ctxOk || authInfoOk || clusterOk {
+				ctxSuffix = "; overriden context"
+				if ctxOk {
+					overrides.CurrentContext = ctx.(string)
+					ctxSuffix += fmt.Sprintf("; config ctx: %s", overrides.CurrentContext)
+					log.Printf("[DEBUG] Using custom current context: %q", overrides.CurrentContext)
+				}
+
+				overrides.Context = clientcmdapi.Context{}
+				if authInfoOk {
+					overrides.Context.AuthInfo = authInfo.(string)
+					ctxSuffix += fmt.Sprintf("; auth_info: %s", overrides.Context.AuthInfo)
+				}
+				if clusterOk {
+					overrides.Context.Cluster = cluster.(string)
+					ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
+				}
+				log.Printf("[DEBUG] Using overidden context: %#v", overrides.Context)
+			}
+		}
 	}
+
+	// Overriding with static configuration
 	if v, ok := d.GetOk("insecure"); ok {
-		cfg.Insecure = v.(bool)
+		overrides.ClusterInfo.InsecureSkipTLSVerify = v.(bool)
 	}
 	if v, ok := d.GetOk("cluster_ca_certificate"); ok {
-		cfg.CAData = bytes.NewBufferString(v.(string)).Bytes()
+		overrides.ClusterInfo.CertificateAuthorityData = bytes.NewBufferString(v.(string)).Bytes()
 	}
 	if v, ok := d.GetOk("client_certificate"); ok {
-		cfg.CertData = bytes.NewBufferString(v.(string)).Bytes()
+		overrides.AuthInfo.ClientCertificateData = bytes.NewBufferString(v.(string)).Bytes()
+	}
+	if v, ok := d.GetOk("host"); ok {
+		// Server has to be the complete address of the kubernetes cluster (scheme://hostname:port), not just the hostname,
+		// because `overrides` are processed too late to be taken into account by `defaultServerUrlFor()`.
+		// This basically replicates what defaultServerUrlFor() does with config but for overrides,
+		// see https://github.com/kubernetes/client-go/blob/v12.0.0/rest/url_utils.go#L85-L87
+		hasCA := len(overrides.ClusterInfo.CertificateAuthorityData) != 0
+		hasCert := len(overrides.AuthInfo.ClientCertificateData) != 0
+		defaultTLS := hasCA || hasCert || overrides.ClusterInfo.InsecureSkipTLSVerify
+		host, _, err := restclient.DefaultServerURL(v.(string), "", apimachineryschema.GroupVersion{}, defaultTLS)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse host: %s", err)
+		}
+
+		overrides.ClusterInfo.Server = host.String()
+	}
+	if v, ok := d.GetOk("username"); ok {
+		overrides.AuthInfo.Username = v.(string)
+	}
+	if v, ok := d.GetOk("password"); ok {
+		overrides.AuthInfo.Password = v.(string)
 	}
 	if v, ok := d.GetOk("client_key"); ok {
-		cfg.KeyData = bytes.NewBufferString(v.(string)).Bytes()
+		overrides.AuthInfo.ClientKeyData = bytes.NewBufferString(v.(string)).Bytes()
 	}
 	if v, ok := d.GetOk("token"); ok {
-		cfg.BearerToken = v.(string)
+		overrides.AuthInfo.Token = v.(string)
 	}
 
 	if v, ok := d.GetOk("exec"); ok {
@@ -224,63 +349,16 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		} else {
 			return nil, fmt.Errorf("Failed to parse exec")
 		}
-		cfg.ExecProvider = exec
-	}
-
-	k, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to configure: %s", err)
-	}
-
-	return k, nil
-}
-
-func tryLoadingConfigFile(d *schema.ResourceData) (*restclient.Config, error) {
-	path, err := homedir.Expand(d.Get("config_path").(string))
-	if err != nil {
-		return nil, err
-	}
-
-	loader := &clientcmd.ClientConfigLoadingRules{
-		ExplicitPath: path,
-	}
-
-	overrides := &clientcmd.ConfigOverrides{}
-	ctxSuffix := "; default context"
-
-	ctx, ctxOk := d.GetOk("config_context")
-	authInfo, authInfoOk := d.GetOk("config_context_auth_info")
-	cluster, clusterOk := d.GetOk("config_context_cluster")
-	if ctxOk || authInfoOk || clusterOk {
-		ctxSuffix = "; overriden context"
-		if ctxOk {
-			overrides.CurrentContext = ctx.(string)
-			ctxSuffix += fmt.Sprintf("; config ctx: %s", overrides.CurrentContext)
-			log.Printf("[DEBUG] Using custom current context: %q", overrides.CurrentContext)
-		}
-
-		overrides.Context = clientcmdapi.Context{}
-		if authInfoOk {
-			overrides.Context.AuthInfo = authInfo.(string)
-			ctxSuffix += fmt.Sprintf("; auth_info: %s", overrides.Context.AuthInfo)
-		}
-		if clusterOk {
-			overrides.Context.Cluster = cluster.(string)
-			ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
-		}
-		log.Printf("[DEBUG] Using overidden context: %#v", overrides.Context)
+		overrides.AuthInfo.Exec = exec
 	}
 
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 	cfg, err := cc.ClientConfig()
 	if err != nil {
-		if pathErr, ok := err.(*os.PathError); ok && os.IsNotExist(pathErr.Err) {
-			log.Printf("[INFO] Unable to load config file as it doesn't exist at %q", path)
-			return nil, nil
-		}
-		return nil, fmt.Errorf("Failed to load config (%s%s): %s", path, ctxSuffix, err)
+		log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail.")
+		return nil, nil
 	}
 
-	log.Printf("[INFO] Successfully loaded config file (%s%s)", path, ctxSuffix)
+	log.Printf("[INFO] Successfully initialized config")
 	return cfg, nil
 }

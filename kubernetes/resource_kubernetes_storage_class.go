@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform/helper/schema"
-	"k8s.io/api/core/v1"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	v1 "k8s.io/api/core/v1"
 	api "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesStorageClass() *schema.Resource {
@@ -56,12 +55,23 @@ func resourceKubernetesStorageClass() *schema.Resource {
 				Optional:    true,
 				Default:     true,
 			},
+			"mount_options": {
+				Type:        schema.TypeSet,
+				Description: "Persistent Volumes that are dynamically created by a storage class will have the mount options specified",
+				Optional:    true,
+				ForceNew:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Set:         schema.HashString,
+			},
 		},
 	}
 }
 
 func resourceKubernetesStorageClassCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	reclaimPolicy := v1.PersistentVolumeReclaimPolicy(d.Get("reclaim_policy").(string))
@@ -79,6 +89,10 @@ func resourceKubernetesStorageClassCreate(d *schema.ResourceData, meta interface
 		storageClass.Parameters = expandStringMap(v.(map[string]interface{}))
 	}
 
+	if v, ok := d.GetOk("mount_options"); ok {
+		storageClass.MountOptions = schemaSetToStringArray(v.(*schema.Set))
+	}
+
 	log.Printf("[INFO] Creating new storage class: %#v", storageClass)
 	out, err := conn.StorageV1().StorageClasses().Create(&storageClass)
 	if err != nil {
@@ -91,7 +105,10 @@ func resourceKubernetesStorageClassCreate(d *schema.ResourceData, meta interface
 }
 
 func resourceKubernetesStorageClassRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 	log.Printf("[INFO] Reading storage class %s", name)
@@ -109,6 +126,7 @@ func resourceKubernetesStorageClassRead(d *schema.ResourceData, meta interface{}
 	d.Set("storage_provisioner", storageClass.Provisioner)
 	d.Set("reclaim_policy", storageClass.ReclaimPolicy)
 	d.Set("volume_binding_mode", storageClass.VolumeBindingMode)
+	d.Set("mount_options", newStringSet(schema.HashString, storageClass.MountOptions))
 	if storageClass.AllowVolumeExpansion != nil {
 		d.Set("allow_volume_expansion", *storageClass.AllowVolumeExpansion)
 	}
@@ -117,7 +135,10 @@ func resourceKubernetesStorageClassRead(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesStorageClassUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -137,11 +158,14 @@ func resourceKubernetesStorageClassUpdate(d *schema.ResourceData, meta interface
 }
 
 func resourceKubernetesStorageClassDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting storage class: %#v", name)
-	err := conn.StorageV1().StorageClasses().Delete(name, &metav1.DeleteOptions{})
+	err = conn.StorageV1().StorageClasses().Delete(name, &deleteOptions)
 	if err != nil {
 		return err
 	}
@@ -153,11 +177,14 @@ func resourceKubernetesStorageClassDelete(d *schema.ResourceData, meta interface
 }
 
 func resourceKubernetesStorageClassExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	name := d.Id()
 	log.Printf("[INFO] Checking storage class %s", name)
-	_, err := conn.StorageV1().StorageClasses().Get(name, metav1.GetOptions{})
+	_, err = conn.StorageV1().StorageClasses().Get(name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

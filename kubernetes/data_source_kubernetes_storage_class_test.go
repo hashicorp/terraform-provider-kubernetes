@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform/helper/acctest"
-	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 )
 
 func TestAccKubernetesDataSourceStorageClass_basic(t *testing.T) {
@@ -32,6 +32,9 @@ func TestAccKubernetesDataSourceStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("data.kubernetes_storage_class.test", "reclaim_policy", "Delete"),
 					resource.TestCheckResourceAttr("data.kubernetes_storage_class.test", "storage_provisioner", "kubernetes.io/gce-pd"),
 					resource.TestCheckResourceAttr("data.kubernetes_storage_class.test", "allow_volume_expansion", "true"),
+					resource.TestCheckResourceAttr("data.kubernetes_storage_class.test", "mount_options.#", "2"),
+					resource.TestCheckResourceAttr("data.kubernetes_storage_class.test", "mount_options.2356372769", "foo"),
+					resource.TestCheckResourceAttr("data.kubernetes_storage_class.test", "mount_options.1996459178", "bar"),
 					resource.TestCheckResourceAttr("data.kubernetes_storage_class.test", "parameters.%", "1"),
 					resource.TestCheckResourceAttr("data.kubernetes_storage_class.test", "parameters.type", "pd-ssd"),
 				),

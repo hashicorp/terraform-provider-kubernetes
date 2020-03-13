@@ -19,9 +19,10 @@ import (
 	"log"
 	"reflect"
 	"strconv"
+	"time"
 
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 )
 
 func resourceStorageObjectAccessControl() *schema.Resource {
@@ -33,6 +34,12 @@ func resourceStorageObjectAccessControl() *schema.Resource {
 
 		Importer: &schema.ResourceImporter{
 			State: resourceStorageObjectAccessControlImport,
+		},
+
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(4 * time.Minute),
+			Update: schema.DefaultTimeout(4 * time.Minute),
+			Delete: schema.DefaultTimeout(4 * time.Minute),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -121,13 +128,13 @@ func resourceStorageObjectAccessControlCreate(d *schema.ResourceData, meta inter
 		obj["role"] = roleProp
 	}
 
-	url, err := replaceVars(d, config, "https://www.googleapis.com/storage/v1/b/{{bucket}}/o/{{object}}/acl")
+	url, err := replaceVars(d, config, "{{StorageBasePath}}b/{{bucket}}/o/{{object}}/acl")
 	if err != nil {
 		return err
 	}
 
 	log.Printf("[DEBUG] Creating new ObjectAccessControl: %#v", obj)
-	res, err := sendRequest(config, "POST", url, obj)
+	res, err := sendRequestWithTimeout(config, "POST", "", url, obj, d.Timeout(schema.TimeoutCreate))
 	if err != nil {
 		return fmt.Errorf("Error creating ObjectAccessControl: %s", err)
 	}
@@ -147,41 +154,41 @@ func resourceStorageObjectAccessControlCreate(d *schema.ResourceData, meta inter
 func resourceStorageObjectAccessControlRead(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
-	url, err := replaceVars(d, config, "https://www.googleapis.com/storage/v1/b/{{bucket}}/o/{{object}}/acl/{{entity}}")
+	url, err := replaceVars(d, config, "{{StorageBasePath}}b/{{bucket}}/o/{{object}}/acl/{{entity}}")
 	if err != nil {
 		return err
 	}
 
-	res, err := sendRequest(config, "GET", url, nil)
+	res, err := sendRequest(config, "GET", "", url, nil)
 	if err != nil {
 		return handleNotFoundError(err, d, fmt.Sprintf("StorageObjectAccessControl %q", d.Id()))
 	}
 
-	if err := d.Set("bucket", flattenStorageObjectAccessControlBucket(res["bucket"])); err != nil {
+	if err := d.Set("bucket", flattenStorageObjectAccessControlBucket(res["bucket"], d)); err != nil {
 		return fmt.Errorf("Error reading ObjectAccessControl: %s", err)
 	}
-	if err := d.Set("domain", flattenStorageObjectAccessControlDomain(res["domain"])); err != nil {
+	if err := d.Set("domain", flattenStorageObjectAccessControlDomain(res["domain"], d)); err != nil {
 		return fmt.Errorf("Error reading ObjectAccessControl: %s", err)
 	}
-	if err := d.Set("email", flattenStorageObjectAccessControlEmail(res["email"])); err != nil {
+	if err := d.Set("email", flattenStorageObjectAccessControlEmail(res["email"], d)); err != nil {
 		return fmt.Errorf("Error reading ObjectAccessControl: %s", err)
 	}
-	if err := d.Set("entity", flattenStorageObjectAccessControlEntity(res["entity"])); err != nil {
+	if err := d.Set("entity", flattenStorageObjectAccessControlEntity(res["entity"], d)); err != nil {
 		return fmt.Errorf("Error reading ObjectAccessControl: %s", err)
 	}
-	if err := d.Set("entity_id", flattenStorageObjectAccessControlEntityId(res["entityId"])); err != nil {
+	if err := d.Set("entity_id", flattenStorageObjectAccessControlEntityId(res["entityId"], d)); err != nil {
 		return fmt.Errorf("Error reading ObjectAccessControl: %s", err)
 	}
-	if err := d.Set("generation", flattenStorageObjectAccessControlGeneration(res["generation"])); err != nil {
+	if err := d.Set("generation", flattenStorageObjectAccessControlGeneration(res["generation"], d)); err != nil {
 		return fmt.Errorf("Error reading ObjectAccessControl: %s", err)
 	}
-	if err := d.Set("object", flattenStorageObjectAccessControlObject(res["object"])); err != nil {
+	if err := d.Set("object", flattenStorageObjectAccessControlObject(res["object"], d)); err != nil {
 		return fmt.Errorf("Error reading ObjectAccessControl: %s", err)
 	}
-	if err := d.Set("project_team", flattenStorageObjectAccessControlProjectTeam(res["projectTeam"])); err != nil {
+	if err := d.Set("project_team", flattenStorageObjectAccessControlProjectTeam(res["projectTeam"], d)); err != nil {
 		return fmt.Errorf("Error reading ObjectAccessControl: %s", err)
 	}
-	if err := d.Set("role", flattenStorageObjectAccessControlRole(res["role"])); err != nil {
+	if err := d.Set("role", flattenStorageObjectAccessControlRole(res["role"], d)); err != nil {
 		return fmt.Errorf("Error reading ObjectAccessControl: %s", err)
 	}
 
@@ -217,13 +224,13 @@ func resourceStorageObjectAccessControlUpdate(d *schema.ResourceData, meta inter
 		obj["role"] = roleProp
 	}
 
-	url, err := replaceVars(d, config, "https://www.googleapis.com/storage/v1/b/{{bucket}}/o/{{object}}/acl/{{entity}}")
+	url, err := replaceVars(d, config, "{{StorageBasePath}}b/{{bucket}}/o/{{object}}/acl/{{entity}}")
 	if err != nil {
 		return err
 	}
 
 	log.Printf("[DEBUG] Updating ObjectAccessControl %q: %#v", d.Id(), obj)
-	_, err = sendRequest(config, "PUT", url, obj)
+	_, err = sendRequestWithTimeout(config, "PUT", "", url, obj, d.Timeout(schema.TimeoutUpdate))
 
 	if err != nil {
 		return fmt.Errorf("Error updating ObjectAccessControl %q: %s", d.Id(), err)
@@ -235,14 +242,15 @@ func resourceStorageObjectAccessControlUpdate(d *schema.ResourceData, meta inter
 func resourceStorageObjectAccessControlDelete(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
-	url, err := replaceVars(d, config, "https://www.googleapis.com/storage/v1/b/{{bucket}}/o/{{object}}/acl/{{entity}}")
+	url, err := replaceVars(d, config, "{{StorageBasePath}}b/{{bucket}}/o/{{object}}/acl/{{entity}}")
 	if err != nil {
 		return err
 	}
 
 	var obj map[string]interface{}
 	log.Printf("[DEBUG] Deleting ObjectAccessControl %q", d.Id())
-	res, err := sendRequest(config, "DELETE", url, obj)
+
+	res, err := sendRequestWithTimeout(config, "DELETE", "", url, obj, d.Timeout(schema.TimeoutDelete))
 	if err != nil {
 		return handleNotFoundError(err, d, "ObjectAccessControl")
 	}
@@ -253,7 +261,11 @@ func resourceStorageObjectAccessControlDelete(d *schema.ResourceData, meta inter
 
 func resourceStorageObjectAccessControlImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	config := meta.(*Config)
-	parseImportId([]string{"(?P<bucket>[^/]+)/(?P<object>[^/]+)/(?P<entity>[^/]+)"}, d, config)
+	if err := parseImportId([]string{
+		"(?P<bucket>[^/]+)/(?P<object>[^/]+)/(?P<entity>[^/]+)",
+	}, d, config); err != nil {
+		return nil, err
+	}
 
 	// Replace import id for the resource id
 	id, err := replaceVars(d, config, "{{bucket}}/{{object}}/{{entity}}")
@@ -265,30 +277,30 @@ func resourceStorageObjectAccessControlImport(d *schema.ResourceData, meta inter
 	return []*schema.ResourceData{d}, nil
 }
 
-func flattenStorageObjectAccessControlBucket(v interface{}) interface{} {
+func flattenStorageObjectAccessControlBucket(v interface{}, d *schema.ResourceData) interface{} {
 	if v == nil {
 		return v
 	}
 	return ConvertSelfLinkToV1(v.(string))
 }
 
-func flattenStorageObjectAccessControlDomain(v interface{}) interface{} {
+func flattenStorageObjectAccessControlDomain(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenStorageObjectAccessControlEmail(v interface{}) interface{} {
+func flattenStorageObjectAccessControlEmail(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenStorageObjectAccessControlEntity(v interface{}) interface{} {
+func flattenStorageObjectAccessControlEntity(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenStorageObjectAccessControlEntityId(v interface{}) interface{} {
+func flattenStorageObjectAccessControlEntityId(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenStorageObjectAccessControlGeneration(v interface{}) interface{} {
+func flattenStorageObjectAccessControlGeneration(v interface{}, d *schema.ResourceData) interface{} {
 	// Handles the string fixed64 format
 	if strVal, ok := v.(string); ok {
 		if intVal, err := strconv.ParseInt(strVal, 10, 64); err == nil {
@@ -298,46 +310,49 @@ func flattenStorageObjectAccessControlGeneration(v interface{}) interface{} {
 	return v
 }
 
-func flattenStorageObjectAccessControlObject(v interface{}) interface{} {
+func flattenStorageObjectAccessControlObject(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenStorageObjectAccessControlProjectTeam(v interface{}) interface{} {
+func flattenStorageObjectAccessControlProjectTeam(v interface{}, d *schema.ResourceData) interface{} {
 	if v == nil {
 		return nil
 	}
 	original := v.(map[string]interface{})
+	if len(original) == 0 {
+		return nil
+	}
 	transformed := make(map[string]interface{})
 	transformed["project_number"] =
-		flattenStorageObjectAccessControlProjectTeamProjectNumber(original["projectNumber"])
+		flattenStorageObjectAccessControlProjectTeamProjectNumber(original["projectNumber"], d)
 	transformed["team"] =
-		flattenStorageObjectAccessControlProjectTeamTeam(original["team"])
+		flattenStorageObjectAccessControlProjectTeamTeam(original["team"], d)
 	return []interface{}{transformed}
 }
-func flattenStorageObjectAccessControlProjectTeamProjectNumber(v interface{}) interface{} {
+func flattenStorageObjectAccessControlProjectTeamProjectNumber(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenStorageObjectAccessControlProjectTeamTeam(v interface{}) interface{} {
+func flattenStorageObjectAccessControlProjectTeamTeam(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenStorageObjectAccessControlRole(v interface{}) interface{} {
+func flattenStorageObjectAccessControlRole(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func expandStorageObjectAccessControlBucket(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandStorageObjectAccessControlBucket(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandStorageObjectAccessControlEntity(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandStorageObjectAccessControlEntity(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandStorageObjectAccessControlObject(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandStorageObjectAccessControlObject(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandStorageObjectAccessControlRole(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandStorageObjectAccessControlRole(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }

@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 )
 
 // Use generated swagger docs from kubernetes' client-go to avoid copy/pasting them here
@@ -236,7 +235,10 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 }
 
 func resourceKubernetesNetworkPolicyCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandNetworkPolicySpec(d.Get("spec").([]interface{}))
@@ -261,7 +263,10 @@ func resourceKubernetesNetworkPolicyCreate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesNetworkPolicyRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -290,7 +295,10 @@ func resourceKubernetesNetworkPolicyRead(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesNetworkPolicyUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -321,7 +329,10 @@ func resourceKubernetesNetworkPolicyUpdate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesNetworkPolicyDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -339,7 +350,10 @@ func resourceKubernetesNetworkPolicyDelete(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesNetworkPolicyExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

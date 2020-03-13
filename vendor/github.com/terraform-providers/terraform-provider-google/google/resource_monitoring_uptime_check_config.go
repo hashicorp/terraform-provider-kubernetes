@@ -19,9 +19,11 @@ import (
 	"log"
 	"reflect"
 	"strconv"
+	"strings"
+	"time"
 
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 )
 
 func resourceMonitoringUptimeCheckConfig() *schema.Resource {
@@ -33,6 +35,12 @@ func resourceMonitoringUptimeCheckConfig() *schema.Resource {
 
 		Importer: &schema.ResourceImporter{
 			State: resourceMonitoringUptimeCheckConfigImport,
+		},
+
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(4 * time.Minute),
+			Update: schema.DefaultTimeout(4 * time.Minute),
+			Delete: schema.DefaultTimeout(4 * time.Minute),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -96,8 +104,8 @@ func resourceMonitoringUptimeCheckConfig() *schema.Resource {
 						},
 						"port": {
 							Type:     schema.TypeInt,
+							Computed: true,
 							Optional: true,
-							Default:  80,
 						},
 						"use_ssl": {
 							Type:     schema.TypeBool,
@@ -107,52 +115,23 @@ func resourceMonitoringUptimeCheckConfig() *schema.Resource {
 				},
 				ConflictsWith: []string{"tcp_check"},
 			},
-			"internal_checkers": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"display_name": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"gcp_zone": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"name": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"network": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"peer_project_id": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-					},
-				},
-			},
-			"is_internal": {
-				Type:     schema.TypeBool,
-				Optional: true,
-			},
 			"monitored_resource": {
 				Type:     schema.TypeList,
 				Optional: true,
+				ForceNew: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"labels": {
 							Type:     schema.TypeMap,
 							Required: true,
+							ForceNew: true,
 							Elem:     &schema.Schema{Type: schema.TypeString},
 						},
 						"type": {
 							Type:     schema.TypeString,
 							Required: true,
+							ForceNew: true,
 						},
 					},
 				},
@@ -161,11 +140,13 @@ func resourceMonitoringUptimeCheckConfig() *schema.Resource {
 			"period": {
 				Type:     schema.TypeString,
 				Optional: true,
+				ForceNew: true,
 				Default:  "300s",
 			},
 			"resource_group": {
 				Type:     schema.TypeList,
 				Optional: true,
+				ForceNew: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -178,6 +159,7 @@ func resourceMonitoringUptimeCheckConfig() *schema.Resource {
 						"resource_type": {
 							Type:         schema.TypeString,
 							Optional:     true,
+							ForceNew:     true,
 							ValidateFunc: validation.StringInSlice([]string{"RESOURCE_TYPE_UNSPECIFIED", "INSTANCE", "AWS_ELB_LOAD_BALANCER", ""}, false),
 						},
 					},
@@ -208,6 +190,51 @@ func resourceMonitoringUptimeCheckConfig() *schema.Resource {
 			"name": {
 				Type:     schema.TypeString,
 				Computed: true,
+			},
+			"uptime_check_id": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"is_internal": {
+				Type:       schema.TypeBool,
+				Optional:   true,
+				Computed:   true,
+				Deprecated: "This field never worked, and will be removed in 3.0.0.",
+			},
+			"internal_checkers": {
+				Type:       schema.TypeList,
+				Optional:   true,
+				Computed:   true,
+				Deprecated: "This field never worked, and will be removed in 3.0.0.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"display_name": {
+							Type:       schema.TypeString,
+							Optional:   true,
+							Deprecated: "This field never worked, and will be removed in 3.0.0.",
+						},
+						"gcp_zone": {
+							Type:       schema.TypeString,
+							Optional:   true,
+							Deprecated: "This field never worked, and will be removed in 3.0.0.",
+						},
+						"name": {
+							Type:       schema.TypeString,
+							Optional:   true,
+							Deprecated: "This field never worked, and will be removed in 3.0.0.",
+						},
+						"network": {
+							Type:       schema.TypeString,
+							Optional:   true,
+							Deprecated: "This field never worked, and will be removed in 3.0.0.",
+						},
+						"peer_project_id": {
+							Type:       schema.TypeString,
+							Optional:   true,
+							Deprecated: "This field never worked, and will be removed in 3.0.0.",
+						},
+					},
+				},
 			},
 			"project": {
 				Type:     schema.TypeString,
@@ -253,18 +280,6 @@ func resourceMonitoringUptimeCheckConfigCreate(d *schema.ResourceData, meta inte
 	} else if v, ok := d.GetOkExists("selected_regions"); !isEmptyValue(reflect.ValueOf(selectedRegionsProp)) && (ok || !reflect.DeepEqual(v, selectedRegionsProp)) {
 		obj["selectedRegions"] = selectedRegionsProp
 	}
-	isInternalProp, err := expandMonitoringUptimeCheckConfigIsInternal(d.Get("is_internal"), d, config)
-	if err != nil {
-		return err
-	} else if v, ok := d.GetOkExists("is_internal"); !isEmptyValue(reflect.ValueOf(isInternalProp)) && (ok || !reflect.DeepEqual(v, isInternalProp)) {
-		obj["isInternal"] = isInternalProp
-	}
-	internalCheckersProp, err := expandMonitoringUptimeCheckConfigInternalCheckers(d.Get("internal_checkers"), d, config)
-	if err != nil {
-		return err
-	} else if v, ok := d.GetOkExists("internal_checkers"); !isEmptyValue(reflect.ValueOf(internalCheckersProp)) && (ok || !reflect.DeepEqual(v, internalCheckersProp)) {
-		obj["internalCheckers"] = internalCheckersProp
-	}
 	httpCheckProp, err := expandMonitoringUptimeCheckConfigHttpCheck(d.Get("http_check"), d, config)
 	if err != nil {
 		return err
@@ -290,13 +305,17 @@ func resourceMonitoringUptimeCheckConfigCreate(d *schema.ResourceData, meta inte
 		obj["monitoredResource"] = monitoredResourceProp
 	}
 
-	url, err := replaceVars(d, config, "https://monitoring.googleapis.com/v3/projects/{{project}}/uptimeCheckConfigs")
+	url, err := replaceVars(d, config, "{{MonitoringBasePath}}projects/{{project}}/uptimeCheckConfigs")
 	if err != nil {
 		return err
 	}
 
 	log.Printf("[DEBUG] Creating new UptimeCheckConfig: %#v", obj)
-	res, err := sendRequest(config, "POST", url, obj)
+	project, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
+	res, err := sendRequestWithTimeout(config, "POST", project, url, obj, d.Timeout(schema.TimeoutCreate))
 	if err != nil {
 		return fmt.Errorf("Error creating UptimeCheckConfig: %s", err)
 	}
@@ -324,25 +343,40 @@ func resourceMonitoringUptimeCheckConfigCreate(d *schema.ResourceData, meta inte
 func resourceMonitoringUptimeCheckConfigRead(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
-	url, err := replaceVars(d, config, "https://monitoring.googleapis.com/v3/{{name}}")
+	url, err := replaceVars(d, config, "{{MonitoringBasePath}}{{name}}")
 	if err != nil {
 		return err
-	}
-
-	res, err := sendRequest(config, "GET", url, nil)
-	if err != nil {
-		return handleNotFoundError(err, d, fmt.Sprintf("MonitoringUptimeCheckConfig %q", d.Id()))
 	}
 
 	project, err := getProject(d, config)
 	if err != nil {
 		return err
 	}
+	res, err := sendRequest(config, "GET", project, url, nil)
+	if err != nil {
+		return handleNotFoundError(err, d, fmt.Sprintf("MonitoringUptimeCheckConfig %q", d.Id()))
+	}
+
+	res, err = resourceMonitoringUptimeCheckConfigDecoder(d, meta, res)
+	if err != nil {
+		return err
+	}
+
+	if res == nil {
+		// Decoding the object has resulted in it being gone. It may be marked deleted
+		log.Printf("[DEBUG] Removing MonitoringUptimeCheckConfig because it no longer exists.")
+		d.SetId("")
+		return nil
+	}
+
 	if err := d.Set("project", project); err != nil {
 		return fmt.Errorf("Error reading UptimeCheckConfig: %s", err)
 	}
 
 	if err := d.Set("name", flattenMonitoringUptimeCheckConfigName(res["name"], d)); err != nil {
+		return fmt.Errorf("Error reading UptimeCheckConfig: %s", err)
+	}
+	if err := d.Set("uptime_check_id", flattenMonitoringUptimeCheckConfigUptimeCheckId(res["id"], d)); err != nil {
 		return fmt.Errorf("Error reading UptimeCheckConfig: %s", err)
 	}
 	if err := d.Set("display_name", flattenMonitoringUptimeCheckConfigDisplayName(res["displayName"], d)); err != nil {
@@ -358,12 +392,6 @@ func resourceMonitoringUptimeCheckConfigRead(d *schema.ResourceData, meta interf
 		return fmt.Errorf("Error reading UptimeCheckConfig: %s", err)
 	}
 	if err := d.Set("selected_regions", flattenMonitoringUptimeCheckConfigSelectedRegions(res["selectedRegions"], d)); err != nil {
-		return fmt.Errorf("Error reading UptimeCheckConfig: %s", err)
-	}
-	if err := d.Set("is_internal", flattenMonitoringUptimeCheckConfigIsInternal(res["isInternal"], d)); err != nil {
-		return fmt.Errorf("Error reading UptimeCheckConfig: %s", err)
-	}
-	if err := d.Set("internal_checkers", flattenMonitoringUptimeCheckConfigInternalCheckers(res["internalCheckers"], d)); err != nil {
 		return fmt.Errorf("Error reading UptimeCheckConfig: %s", err)
 	}
 	if err := d.Set("http_check", flattenMonitoringUptimeCheckConfigHttpCheck(res["httpCheck"], d)); err != nil {
@@ -385,18 +413,17 @@ func resourceMonitoringUptimeCheckConfigRead(d *schema.ResourceData, meta interf
 func resourceMonitoringUptimeCheckConfigUpdate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
+	project, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
+
 	obj := make(map[string]interface{})
 	displayNameProp, err := expandMonitoringUptimeCheckConfigDisplayName(d.Get("display_name"), d, config)
 	if err != nil {
 		return err
 	} else if v, ok := d.GetOkExists("display_name"); !isEmptyValue(reflect.ValueOf(v)) && (ok || !reflect.DeepEqual(v, displayNameProp)) {
 		obj["displayName"] = displayNameProp
-	}
-	periodProp, err := expandMonitoringUptimeCheckConfigPeriod(d.Get("period"), d, config)
-	if err != nil {
-		return err
-	} else if v, ok := d.GetOkExists("period"); !isEmptyValue(reflect.ValueOf(v)) && (ok || !reflect.DeepEqual(v, periodProp)) {
-		obj["period"] = periodProp
 	}
 	timeoutProp, err := expandMonitoringUptimeCheckConfigTimeout(d.Get("timeout"), d, config)
 	if err != nil {
@@ -416,18 +443,6 @@ func resourceMonitoringUptimeCheckConfigUpdate(d *schema.ResourceData, meta inte
 	} else if v, ok := d.GetOkExists("selected_regions"); !isEmptyValue(reflect.ValueOf(v)) && (ok || !reflect.DeepEqual(v, selectedRegionsProp)) {
 		obj["selectedRegions"] = selectedRegionsProp
 	}
-	isInternalProp, err := expandMonitoringUptimeCheckConfigIsInternal(d.Get("is_internal"), d, config)
-	if err != nil {
-		return err
-	} else if v, ok := d.GetOkExists("is_internal"); !isEmptyValue(reflect.ValueOf(v)) && (ok || !reflect.DeepEqual(v, isInternalProp)) {
-		obj["isInternal"] = isInternalProp
-	}
-	internalCheckersProp, err := expandMonitoringUptimeCheckConfigInternalCheckers(d.Get("internal_checkers"), d, config)
-	if err != nil {
-		return err
-	} else if v, ok := d.GetOkExists("internal_checkers"); !isEmptyValue(reflect.ValueOf(v)) && (ok || !reflect.DeepEqual(v, internalCheckersProp)) {
-		obj["internalCheckers"] = internalCheckersProp
-	}
 	httpCheckProp, err := expandMonitoringUptimeCheckConfigHttpCheck(d.Get("http_check"), d, config)
 	if err != nil {
 		return err
@@ -440,26 +455,45 @@ func resourceMonitoringUptimeCheckConfigUpdate(d *schema.ResourceData, meta inte
 	} else if v, ok := d.GetOkExists("tcp_check"); !isEmptyValue(reflect.ValueOf(v)) && (ok || !reflect.DeepEqual(v, tcpCheckProp)) {
 		obj["tcpCheck"] = tcpCheckProp
 	}
-	resourceGroupProp, err := expandMonitoringUptimeCheckConfigResourceGroup(d.Get("resource_group"), d, config)
-	if err != nil {
-		return err
-	} else if v, ok := d.GetOkExists("resource_group"); !isEmptyValue(reflect.ValueOf(v)) && (ok || !reflect.DeepEqual(v, resourceGroupProp)) {
-		obj["resourceGroup"] = resourceGroupProp
-	}
-	monitoredResourceProp, err := expandMonitoringUptimeCheckConfigMonitoredResource(d.Get("monitored_resource"), d, config)
-	if err != nil {
-		return err
-	} else if v, ok := d.GetOkExists("monitored_resource"); !isEmptyValue(reflect.ValueOf(v)) && (ok || !reflect.DeepEqual(v, monitoredResourceProp)) {
-		obj["monitoredResource"] = monitoredResourceProp
-	}
 
-	url, err := replaceVars(d, config, "https://monitoring.googleapis.com/v3/{{name}}")
+	url, err := replaceVars(d, config, "{{MonitoringBasePath}}{{name}}")
 	if err != nil {
 		return err
 	}
 
 	log.Printf("[DEBUG] Updating UptimeCheckConfig %q: %#v", d.Id(), obj)
-	_, err = sendRequest(config, "PATCH", url, obj)
+	updateMask := []string{}
+
+	if d.HasChange("display_name") {
+		updateMask = append(updateMask, "displayName")
+	}
+
+	if d.HasChange("timeout") {
+		updateMask = append(updateMask, "timeout")
+	}
+
+	if d.HasChange("content_matchers") {
+		updateMask = append(updateMask, "contentMatchers")
+	}
+
+	if d.HasChange("selected_regions") {
+		updateMask = append(updateMask, "selectedRegions")
+	}
+
+	if d.HasChange("http_check") {
+		updateMask = append(updateMask, "httpCheck")
+	}
+
+	if d.HasChange("tcp_check") {
+		updateMask = append(updateMask, "tcpCheck")
+	}
+	// updateMask is a URL parameter but not present in the schema, so replaceVars
+	// won't set it
+	url, err = addQueryParams(url, map[string]string{"updateMask": strings.Join(updateMask, ",")})
+	if err != nil {
+		return err
+	}
+	_, err = sendRequestWithTimeout(config, "PATCH", project, url, obj, d.Timeout(schema.TimeoutUpdate))
 
 	if err != nil {
 		return fmt.Errorf("Error updating UptimeCheckConfig %q: %s", d.Id(), err)
@@ -471,14 +505,20 @@ func resourceMonitoringUptimeCheckConfigUpdate(d *schema.ResourceData, meta inte
 func resourceMonitoringUptimeCheckConfigDelete(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
-	url, err := replaceVars(d, config, "https://monitoring.googleapis.com/v3/{{name}}")
+	project, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
+
+	url, err := replaceVars(d, config, "{{MonitoringBasePath}}{{name}}")
 	if err != nil {
 		return err
 	}
 
 	var obj map[string]interface{}
 	log.Printf("[DEBUG] Deleting UptimeCheckConfig %q", d.Id())
-	res, err := sendRequest(config, "DELETE", url, obj)
+
+	res, err := sendRequestWithTimeout(config, "DELETE", project, url, obj, d.Timeout(schema.TimeoutDelete))
 	if err != nil {
 		return handleNotFoundError(err, d, "UptimeCheckConfig")
 	}
@@ -491,14 +531,21 @@ func resourceMonitoringUptimeCheckConfigImport(d *schema.ResourceData, meta inte
 
 	config := meta.(*Config)
 
-	// current import_formats can't import id's with forward slashes in them.
-	parseImportId([]string{"(?P<name>.+)"}, d, config)
+	// current import_formats can't import fields with forward slashes in their value
+	if err := parseImportId([]string{"(?P<name>.+)"}, d, config); err != nil {
+		return nil, err
+	}
 
 	return []*schema.ResourceData{d}, nil
 }
 
 func flattenMonitoringUptimeCheckConfigName(v interface{}, d *schema.ResourceData) interface{} {
 	return v
+}
+
+func flattenMonitoringUptimeCheckConfigUptimeCheckId(v interface{}, d *schema.ResourceData) interface{} {
+	parts := strings.Split(d.Get("name").(string), "/")
+	return parts[len(parts)-1]
 }
 
 func flattenMonitoringUptimeCheckConfigDisplayName(v interface{}, d *schema.ResourceData) interface{} {
@@ -536,52 +583,6 @@ func flattenMonitoringUptimeCheckConfigContentMatchersContent(v interface{}, d *
 }
 
 func flattenMonitoringUptimeCheckConfigSelectedRegions(v interface{}, d *schema.ResourceData) interface{} {
-	return v
-}
-
-func flattenMonitoringUptimeCheckConfigIsInternal(v interface{}, d *schema.ResourceData) interface{} {
-	return v
-}
-
-func flattenMonitoringUptimeCheckConfigInternalCheckers(v interface{}, d *schema.ResourceData) interface{} {
-	if v == nil {
-		return v
-	}
-	l := v.([]interface{})
-	transformed := make([]interface{}, 0, len(l))
-	for _, raw := range l {
-		original := raw.(map[string]interface{})
-		if len(original) < 1 {
-			// Do not include empty json objects coming back from the api
-			continue
-		}
-		transformed = append(transformed, map[string]interface{}{
-			"gcp_zone":        flattenMonitoringUptimeCheckConfigInternalCheckersGcpZone(original["gcpZone"], d),
-			"peer_project_id": flattenMonitoringUptimeCheckConfigInternalCheckersPeerProjectId(original["peerProjectId"], d),
-			"name":            flattenMonitoringUptimeCheckConfigInternalCheckersName(original["name"], d),
-			"network":         flattenMonitoringUptimeCheckConfigInternalCheckersNetwork(original["network"], d),
-			"display_name":    flattenMonitoringUptimeCheckConfigInternalCheckersDisplayName(original["displayName"], d),
-		})
-	}
-	return transformed
-}
-func flattenMonitoringUptimeCheckConfigInternalCheckersGcpZone(v interface{}, d *schema.ResourceData) interface{} {
-	return v
-}
-
-func flattenMonitoringUptimeCheckConfigInternalCheckersPeerProjectId(v interface{}, d *schema.ResourceData) interface{} {
-	return v
-}
-
-func flattenMonitoringUptimeCheckConfigInternalCheckersName(v interface{}, d *schema.ResourceData) interface{} {
-	return v
-}
-
-func flattenMonitoringUptimeCheckConfigInternalCheckersNetwork(v interface{}, d *schema.ResourceData) interface{} {
-	return v
-}
-
-func flattenMonitoringUptimeCheckConfigInternalCheckersDisplayName(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
@@ -727,19 +728,19 @@ func flattenMonitoringUptimeCheckConfigMonitoredResourceLabels(v interface{}, d 
 	return v
 }
 
-func expandMonitoringUptimeCheckConfigDisplayName(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigDisplayName(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringUptimeCheckConfigPeriod(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigPeriod(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringUptimeCheckConfigTimeout(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigTimeout(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringUptimeCheckConfigContentMatchers(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigContentMatchers(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	l := v.([]interface{})
 	req := make([]interface{}, 0, len(l))
 	for _, raw := range l {
@@ -761,89 +762,15 @@ func expandMonitoringUptimeCheckConfigContentMatchers(v interface{}, d *schema.R
 	return req, nil
 }
 
-func expandMonitoringUptimeCheckConfigContentMatchersContent(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigContentMatchersContent(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringUptimeCheckConfigSelectedRegions(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigSelectedRegions(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringUptimeCheckConfigIsInternal(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
-	return v, nil
-}
-
-func expandMonitoringUptimeCheckConfigInternalCheckers(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
-	l := v.([]interface{})
-	req := make([]interface{}, 0, len(l))
-	for _, raw := range l {
-		if raw == nil {
-			continue
-		}
-		original := raw.(map[string]interface{})
-		transformed := make(map[string]interface{})
-
-		transformedGcpZone, err := expandMonitoringUptimeCheckConfigInternalCheckersGcpZone(original["gcp_zone"], d, config)
-		if err != nil {
-			return nil, err
-		} else if val := reflect.ValueOf(transformedGcpZone); val.IsValid() && !isEmptyValue(val) {
-			transformed["gcpZone"] = transformedGcpZone
-		}
-
-		transformedPeerProjectId, err := expandMonitoringUptimeCheckConfigInternalCheckersPeerProjectId(original["peer_project_id"], d, config)
-		if err != nil {
-			return nil, err
-		} else if val := reflect.ValueOf(transformedPeerProjectId); val.IsValid() && !isEmptyValue(val) {
-			transformed["peerProjectId"] = transformedPeerProjectId
-		}
-
-		transformedName, err := expandMonitoringUptimeCheckConfigInternalCheckersName(original["name"], d, config)
-		if err != nil {
-			return nil, err
-		} else if val := reflect.ValueOf(transformedName); val.IsValid() && !isEmptyValue(val) {
-			transformed["name"] = transformedName
-		}
-
-		transformedNetwork, err := expandMonitoringUptimeCheckConfigInternalCheckersNetwork(original["network"], d, config)
-		if err != nil {
-			return nil, err
-		} else if val := reflect.ValueOf(transformedNetwork); val.IsValid() && !isEmptyValue(val) {
-			transformed["network"] = transformedNetwork
-		}
-
-		transformedDisplayName, err := expandMonitoringUptimeCheckConfigInternalCheckersDisplayName(original["display_name"], d, config)
-		if err != nil {
-			return nil, err
-		} else if val := reflect.ValueOf(transformedDisplayName); val.IsValid() && !isEmptyValue(val) {
-			transformed["displayName"] = transformedDisplayName
-		}
-
-		req = append(req, transformed)
-	}
-	return req, nil
-}
-
-func expandMonitoringUptimeCheckConfigInternalCheckersGcpZone(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
-	return v, nil
-}
-
-func expandMonitoringUptimeCheckConfigInternalCheckersPeerProjectId(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
-	return v, nil
-}
-
-func expandMonitoringUptimeCheckConfigInternalCheckersName(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
-	return v, nil
-}
-
-func expandMonitoringUptimeCheckConfigInternalCheckersNetwork(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
-	return v, nil
-}
-
-func expandMonitoringUptimeCheckConfigInternalCheckersDisplayName(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
-	return v, nil
-}
-
-func expandMonitoringUptimeCheckConfigHttpCheck(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigHttpCheck(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	l := v.([]interface{})
 	if len(l) == 0 || l[0] == nil {
 		return nil, nil
@@ -897,7 +824,7 @@ func expandMonitoringUptimeCheckConfigHttpCheck(v interface{}, d *schema.Resourc
 	return transformed, nil
 }
 
-func expandMonitoringUptimeCheckConfigHttpCheckAuthInfo(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigHttpCheckAuthInfo(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	l := v.([]interface{})
 	if len(l) == 0 || l[0] == nil {
 		return nil, nil
@@ -923,19 +850,19 @@ func expandMonitoringUptimeCheckConfigHttpCheckAuthInfo(v interface{}, d *schema
 	return transformed, nil
 }
 
-func expandMonitoringUptimeCheckConfigHttpCheckAuthInfoPassword(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigHttpCheckAuthInfoPassword(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringUptimeCheckConfigHttpCheckAuthInfoUsername(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigHttpCheckAuthInfoUsername(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringUptimeCheckConfigHttpCheckPort(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigHttpCheckPort(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringUptimeCheckConfigHttpCheckHeaders(v interface{}, d *schema.ResourceData, config *Config) (map[string]string, error) {
+func expandMonitoringUptimeCheckConfigHttpCheckHeaders(v interface{}, d TerraformResourceData, config *Config) (map[string]string, error) {
 	if v == nil {
 		return map[string]string{}, nil
 	}
@@ -946,19 +873,19 @@ func expandMonitoringUptimeCheckConfigHttpCheckHeaders(v interface{}, d *schema.
 	return m, nil
 }
 
-func expandMonitoringUptimeCheckConfigHttpCheckPath(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigHttpCheckPath(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringUptimeCheckConfigHttpCheckUseSsl(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigHttpCheckUseSsl(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringUptimeCheckConfigHttpCheckMaskHeaders(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigHttpCheckMaskHeaders(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringUptimeCheckConfigTcpCheck(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigTcpCheck(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	l := v.([]interface{})
 	if len(l) == 0 || l[0] == nil {
 		return nil, nil
@@ -977,11 +904,11 @@ func expandMonitoringUptimeCheckConfigTcpCheck(v interface{}, d *schema.Resource
 	return transformed, nil
 }
 
-func expandMonitoringUptimeCheckConfigTcpCheckPort(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigTcpCheckPort(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringUptimeCheckConfigResourceGroup(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigResourceGroup(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	l := v.([]interface{})
 	if len(l) == 0 || l[0] == nil {
 		return nil, nil
@@ -1007,15 +934,15 @@ func expandMonitoringUptimeCheckConfigResourceGroup(v interface{}, d *schema.Res
 	return transformed, nil
 }
 
-func expandMonitoringUptimeCheckConfigResourceGroupResourceType(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigResourceGroupResourceType(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringUptimeCheckConfigResourceGroupGroupId(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigResourceGroupGroupId(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return GetResourceNameFromSelfLink(v.(string)), nil
 }
 
-func expandMonitoringUptimeCheckConfigMonitoredResource(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigMonitoredResource(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	l := v.([]interface{})
 	if len(l) == 0 || l[0] == nil {
 		return nil, nil
@@ -1041,11 +968,11 @@ func expandMonitoringUptimeCheckConfigMonitoredResource(v interface{}, d *schema
 	return transformed, nil
 }
 
-func expandMonitoringUptimeCheckConfigMonitoredResourceType(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandMonitoringUptimeCheckConfigMonitoredResourceType(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandMonitoringUptimeCheckConfigMonitoredResourceLabels(v interface{}, d *schema.ResourceData, config *Config) (map[string]string, error) {
+func expandMonitoringUptimeCheckConfigMonitoredResourceLabels(v interface{}, d TerraformResourceData, config *Config) (map[string]string, error) {
 	if v == nil {
 		return map[string]string{}, nil
 	}
@@ -1054,4 +981,9 @@ func expandMonitoringUptimeCheckConfigMonitoredResourceLabels(v interface{}, d *
 		m[k] = val.(string)
 	}
 	return m, nil
+}
+
+func resourceMonitoringUptimeCheckConfigDecoder(d *schema.ResourceData, meta interface{}, res map[string]interface{}) (map[string]interface{}, error) {
+	d.Set("internal_checkers", nil)
+	return res, nil
 }

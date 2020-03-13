@@ -1,8 +1,6 @@
 package kubernetes
 
 import (
-	"strconv"
-
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -90,20 +88,6 @@ func flattenHTTPHeader(in []v1.HTTPHeader) []interface{} {
 		att[i] = m
 	}
 	return att
-}
-
-func expandPort(v string) intstr.IntOrString {
-	i, err := strconv.Atoi(v)
-	if err != nil {
-		return intstr.IntOrString{
-			Type:   intstr.String,
-			StrVal: v,
-		}
-	}
-	return intstr.IntOrString{
-		Type:   intstr.Int,
-		IntVal: int32(i),
-	}
 }
 
 func flattenHTTPGet(in *v1.HTTPGetAction) []interface{} {
@@ -280,6 +264,9 @@ func flattenContainerVolumeMounts(in []v1.VolumeMount) ([]interface{}, error) {
 		if v.SubPath != "" {
 			m["sub_path"] = v.SubPath
 		}
+		if v.MountPropagation != nil {
+			m["mount_propagation"] = string(*v.MountPropagation)
+		}
 		att[i] = m
 	}
 	return att, nil
@@ -385,6 +372,9 @@ func flattenContainers(in []v1.Container) ([]interface{}, error) {
 		if v.ReadinessProbe != nil {
 			c["readiness_probe"] = flattenProbe(v.ReadinessProbe)
 		}
+		if v.StartupProbe != nil {
+			c["startup_probe"] = flattenProbe(v.StartupProbe)
+		}
 		if v.Lifecycle != nil {
 			c["lifecycle"] = flattenLifeCycle(v.Lifecycle)
 		}
@@ -483,6 +473,9 @@ func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 
 		if v, ok := ctr["readiness_probe"].([]interface{}); ok && len(v) > 0 {
 			cs[i].ReadinessProbe = expandProbe(v)
+		}
+		if v, ok := ctr["startup_probe"].([]interface{}); ok && len(v) > 0 {
+			cs[i].StartupProbe = expandProbe(v)
 		}
 		if v, ok := ctr["stdin"]; ok {
 			cs[i].Stdin = v.(bool)
@@ -607,7 +600,7 @@ func expandTCPSocket(l []interface{}) *v1.TCPSocketAction {
 	in := l[0].(map[string]interface{})
 	obj := v1.TCPSocketAction{}
 	if v, ok := in["port"].(string); ok && len(v) > 0 {
-		obj.Port = expandPort(v)
+		obj.Port = intstr.Parse(v)
 	}
 	return &obj
 }
@@ -629,7 +622,7 @@ func expandHTTPGet(l []interface{}) *v1.HTTPGetAction {
 	}
 
 	if v, ok := in["port"].(string); ok && len(v) > 0 {
-		obj.Port = expandPort(v)
+		obj.Port = intstr.Parse(v)
 	}
 
 	if v, ok := in["http_header"].([]interface{}); ok && len(v) > 0 {
@@ -723,6 +716,10 @@ func expandContainerVolumeMounts(in []interface{}) ([]v1.VolumeMount, error) {
 		}
 		if subPath, ok := p["sub_path"]; ok {
 			vmp[i].SubPath = subPath.(string)
+		}
+		if mountPropagation, ok := p["mount_propagation"]; ok {
+			mp := v1.MountPropagationMode(mountPropagation.(string))
+			vmp[i].MountPropagation = &mp
 		}
 	}
 	return vmp, nil

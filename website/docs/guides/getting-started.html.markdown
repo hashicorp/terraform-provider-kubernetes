@@ -53,22 +53,35 @@ orchestration with Terraform presents a few benefits.
 ## Provider Setup
 
 The easiest way to configure the provider is by creating/generating a config
-in a default location (`~/.kube/config`). That allows you to leave the
-provider block completely empty.
+in a default location (`~/.kube/config`). That allows you
+to leave the provider block completely empty.
 
 ```hcl
 provider "kubernetes" {}
+```
+
+If running in-cluster with an appropriate service account token available, you 
+just need to disable config file loading:
+
+```hcl
+provider "kubernetes" {
+  load_config_file = "false"
+}
 ```
 
 If you wish to configure the provider statically you can do so by providing TLS certificates:
 
 ```hcl
 provider "kubernetes" {
+  load_config_file = "false"
+
   host = "https://104.196.242.174"
 
   client_certificate     = file("~/.kube/client-cert.pem")
   client_key             = file("~/.kube/client-key.pem")
   cluster_ca_certificate = file("~/.kube/cluster-ca-cert.pem")
+
+  load_config_file = false    # when you wish not to load the local config file
 }
 ```
 
@@ -76,10 +89,14 @@ or by providing username and password (HTTP Basic Authorization):
 
 ```hcl
 provider "kubernetes" {
+  load_config_file = "false"
+
   host = "https://104.196.242.174"
 
   username = "ClusterMaster"
   password = "MindTheGap"
+
+  load_config_file = false    # when you wish not to load the local config file
 }
 ```
 
@@ -93,7 +110,7 @@ Initializing the backend...
 
 Initializing provider plugins...
 - Checking for available provider plugins...
-- Downloading plugin for provider "kubernetes" (terraform-providers/kubernetes) 1.8.0...
+- Downloading plugin for provider "kubernetes" (terraform-providers/kubernetes) 1.10.1...
 
 The following providers do not have any version constraints in configuration,
 so the latest version was installed.
@@ -103,7 +120,7 @@ changes, it is recommended to add version = "..." constraints to the
 corresponding provider blocks in configuration, with the constraint strings
 suggested below.
 
-* provider.kubernetes: version = "~> 1.8"
+* provider.kubernetes: version = "~> 1.10.1"
 
 Terraform has been successfully initialized!
 

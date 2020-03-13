@@ -5,7 +5,7 @@ import (
 
 	"google.golang.org/api/dns/v1"
 
-	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 )
 
 type DnsChangeWaiter struct {
@@ -32,14 +32,11 @@ func (w *DnsChangeWaiter) RefreshFunc() resource.StateRefreshFunc {
 }
 
 func (w *DnsChangeWaiter) Conf() *resource.StateChangeConf {
-	state := &resource.StateChangeConf{
-		Pending: []string{"pending"},
-		Target:  []string{"done"},
-		Refresh: w.RefreshFunc(),
+	return &resource.StateChangeConf{
+		Pending:    []string{"pending"},
+		Target:     []string{"done"},
+		Refresh:    w.RefreshFunc(),
+		Timeout:    10 * time.Minute,
+		MinTimeout: 2 * time.Second,
 	}
-	state.Delay = 10 * time.Second
-	state.Timeout = 10 * time.Minute
-	state.MinTimeout = 2 * time.Second
-	return state
-
 }

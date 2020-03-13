@@ -26,7 +26,7 @@ data "kubernetes_storage_class" "example" {
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard storage class's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#metadata)
+* `metadata` - (Required) Standard storage class's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 
 
 ## Nested Blocks
@@ -41,7 +41,7 @@ The following arguments are supported:
 
 
 * `generation` - A sequence number representing a specific generation of the desired state.
-* `resource_version` - An opaque value that represents the internal version of this storage class that can be used by clients to determine when storage class has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#concurrency-control-and-consistency)
+* `resource_version` - An opaque value that represents the internal version of this storage class that can be used by clients to determine when storage class has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
 * `self_link` - A URL representing this storage class.
 * `uid` - The unique in time and space value for this storage class. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
@@ -56,3 +56,4 @@ The following attributes are exported:
 * `reclaim_policy` - Indicates the reclaim policy used.
 * `volume_binding_mode` - Indicates when volume binding and dynamic provisioning should occur.
 * `allow_volume_expansion` - Indicates whether the storage class allow volume expand.
+* `mount_options` - Persistent Volumes that are dynamically created by a storage class will have the mount options specified.

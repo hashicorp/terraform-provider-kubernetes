@@ -1,6 +1,9 @@
 package kubernetes
 
-import "github.com/hashicorp/terraform/helper/schema"
+import (
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+)
 
 func handlerFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
@@ -190,6 +193,13 @@ func volumeMountFields() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: `Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).`,
+		},
+		"mount_propagation": {
+			Type:         schema.TypeString,
+			Description:  "Mount propagation mode. mount_propagation determines how mounts are propagated from the host to container and the other way around. Valid values are None (default), HostToContainer and Bidirectional.",
+			Optional:     true,
+			Default:      "None",
+			ValidateFunc: validation.StringInSlice([]string{"None", "HostToContainer", "Bidirectional"}, false),
 		},
 	}
 }
@@ -475,13 +485,19 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 				Schema: resourcesField(),
 			},
 		},
-
 		"security_context": {
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
 			Description: "Security options the pod should run with. More info: http://releases.k8s.io/HEAD/docs/design/security_context.md",
 			Elem:        securityContextSchema(),
+		},
+		"startup_probe": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			MaxItems:    1,
+			Description: "StartupProbe indicates that the Pod has successfully initialized. If specified, no other probes are executed until this completes successfully. If this probe fails, the Pod will be restarted, just as if the livenessProbe failed. This can be used to provide different probe parameters at the beginning of a Pod's lifecycle, when it might take a long time to load data or warm a cache, than during steady-state operation. This cannot be updated. This is an alpha feature enabled by the StartupProbe feature flag. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes",
+			Elem:        probeSchema(),
 		},
 		"stdin": {
 			Type:        schema.TypeBool,

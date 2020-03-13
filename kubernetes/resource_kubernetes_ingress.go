@@ -1,15 +1,13 @@
 package kubernetes
 
 import (
+	"fmt"
 	"log"
 
-	"fmt"
-
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesIngress() *schema.Resource {
@@ -27,7 +25,7 @@ func resourceKubernetesIngress() *schema.Resource {
 			"metadata": namespacedMetadataSchema("ingress", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: "Spec defines the behavior of an ingress. https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#spec-and-status",
+				Description: "Spec defines the behavior of an ingress. https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
@@ -116,7 +114,10 @@ func resourceKubernetesIngress() *schema.Resource {
 }
 
 func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	ing := &v1beta1.Ingress{
@@ -135,7 +136,10 @@ func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -170,7 +174,10 @@ func resourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) err
 }
 
 func resourceKubernetesIngressUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, _, err := idParts(d.Id())
 	if err != nil {
@@ -199,7 +206,10 @@ func resourceKubernetesIngressUpdate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesIngressDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -219,7 +229,10 @@ func resourceKubernetesIngressDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesIngressExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

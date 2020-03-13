@@ -5,13 +5,12 @@ import (
 	"log"
 	"time"
 
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesNamespace() *schema.Resource {
@@ -28,11 +27,17 @@ func resourceKubernetesNamespace() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("namespace", true),
 		},
+		Timeouts: &schema.ResourceTimeout{
+			Delete: schema.DefaultTimeout(5 * time.Minute),
+		},
 	}
 }
 
 func resourceKubernetesNamespaceCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	namespace := api.Namespace{
@@ -50,7 +55,10 @@ func resourceKubernetesNamespaceCreate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesNamespaceRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 	log.Printf("[INFO] Reading namespace %s", name)
@@ -69,7 +77,10 @@ func resourceKubernetesNamespaceRead(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesNamespaceUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	data, err := ops.MarshalJSON()
@@ -89,11 +100,14 @@ func resourceKubernetesNamespaceUpdate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesNamespaceDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting namespace: %#v", name)
-	err := conn.CoreV1().Namespaces().Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().Namespaces().Delete(name, &meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -101,7 +115,7 @@ func resourceKubernetesNamespaceDelete(d *schema.ResourceData, meta interface{})
 	stateConf := &resource.StateChangeConf{
 		Target:  []string{},
 		Pending: []string{"Terminating"},
-		Timeout: 5 * time.Minute,
+		Timeout: d.Timeout(schema.TimeoutDelete),
 		Refresh: func() (interface{}, string, error) {
 			out, err := conn.CoreV1().Namespaces().Get(name, meta_v1.GetOptions{})
 			if err != nil {
@@ -128,11 +142,14 @@ func resourceKubernetesNamespaceDelete(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesNamespaceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	name := d.Id()
 	log.Printf("[INFO] Checking namespace %s", name)
-	_, err := conn.CoreV1().Namespaces().Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().Namespaces().Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

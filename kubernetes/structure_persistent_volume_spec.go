@@ -3,7 +3,7 @@ package kubernetes
 import (
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
 // Flatteners
@@ -217,6 +217,9 @@ func flattenGlusterfsVolumeSource(in *v1.GlusterfsVolumeSource) []interface{} {
 func flattenHostPathVolumeSource(in *v1.HostPathVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["path"] = in.Path
+	if in.Type != nil {
+		att["type"] = string(*in.Type)
+	}
 	return []interface{}{att}
 }
 
@@ -375,6 +378,9 @@ func flattenPersistentVolumeSpec(in v1.PersistentVolumeSpec) []interface{} {
 	}
 	if in.NodeAffinity != nil {
 		att["node_affinity"] = flattenVolumeNodeAffinity(in.NodeAffinity)
+	}
+	if in.MountOptions != nil {
+		att["mount_options"] = flattenPersistentVolumeMountOptions(in.MountOptions)
 	}
 	return []interface{}{att}
 }
@@ -752,8 +758,10 @@ func expandHostPathVolumeSource(l []interface{}) *v1.HostPathVolumeSource {
 		return &v1.HostPathVolumeSource{}
 	}
 	in := l[0].(map[string]interface{})
+	typ := v1.HostPathType(in["type"].(string))
 	obj := &v1.HostPathVolumeSource{
 		Path: in["path"].(string),
+		Type: &typ,
 	}
 	return obj
 }
@@ -947,6 +955,9 @@ func expandPersistentVolumeSpec(l []interface{}) (*v1.PersistentVolumeSpec, erro
 	if v, ok := in["node_affinity"].([]interface{}); ok && len(v) > 0 {
 		obj.NodeAffinity = expandVolumeNodeAffinity(v)
 	}
+	if v, ok := in["mount_options"].(*schema.Set); ok && v.Len() > 0 {
+		obj.MountOptions = schemaSetToStringArray(v)
+	}
 	return obj, nil
 }
 
@@ -1117,6 +1128,13 @@ func patchPersistentVolumeSpec(pathPrefix, prefix string, d *schema.ResourceData
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/nodeAffinity",
 			Value: nodeAffinity,
+		})
+	}
+	if d.HasChange(prefix + "mount_options") {
+		v := d.Get(prefix + "mount_options").(*schema.Set)
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "/mountOptions",
+			Value: expandPersistentVolumeAccessModes(v.List()),
 		})
 	}
 

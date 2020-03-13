@@ -2,19 +2,19 @@ package kubernetes
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
 
 	gversion "github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform/config"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
 	"github.com/terraform-providers/terraform-provider-google/google"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 var testAccProviders map[string]terraform.ResourceProvider
@@ -51,13 +51,9 @@ func TestProvider_configure(t *testing.T) {
 	os.Setenv("KUBECONFIG", "test-fixtures/kube-config.yaml")
 	os.Setenv("KUBE_CTX", "gcp")
 
-	c, err := config.NewRawConfig(map[string]interface{}{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	rc := terraform.NewResourceConfig(c)
+	rc := terraform.NewResourceConfigRaw(map[string]interface{}{})
 	p := Provider()
-	err = p.Configure(rc)
+	err := p.Configure(rc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,12 +159,11 @@ func testAccPreCheck(t *testing.T) {
 		os.Getenv("KUBE_CTX") != "" ||
 		os.Getenv("KUBECONFIG") != "" ||
 		os.Getenv("KUBE_CONFIG") != ""
+	hasUserCredentials := os.Getenv("KUBE_USER") != "" && os.Getenv("KUBE_PASSWORD") != ""
+	hasClientCert := os.Getenv("KUBE_CLIENT_CERT_DATA") != "" && os.Getenv("KUBE_CLIENT_KEY_DATA") != ""
 	hasStaticCfg := (os.Getenv("KUBE_HOST") != "" &&
-		os.Getenv("KUBE_USER") != "" &&
-		os.Getenv("KUBE_PASSWORD") != "" &&
-		os.Getenv("KUBE_CLIENT_CERT_DATA") != "" &&
-		os.Getenv("KUBE_CLIENT_KEY_DATA") != "" &&
-		os.Getenv("KUBE_CLUSTER_CA_CERT_DATA") != "")
+		os.Getenv("KUBE_CLUSTER_CA_CERT_DATA") != "") &&
+		(hasUserCredentials || hasClientCert || os.Getenv("KUBE_TOKEN") != "")
 
 	if !hasFileCfg && !hasStaticCfg {
 		t.Fatalf("File config (KUBE_CTX_AUTH_INFO and KUBE_CTX_CLUSTER) or static configuration"+
@@ -183,7 +178,7 @@ func testAccPreCheck(t *testing.T) {
 			}, ", "))
 	}
 
-	err := testAccProvider.Configure(terraform.NewResourceConfig(nil))
+	err := testAccProvider.Configure(terraform.NewResourceConfigRaw(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,6 +195,32 @@ func skipIfNoAwsSettingsFound(t *testing.T) {
 	if os.Getenv("AWS_DEFAULT_REGION") == "" || os.Getenv("AWS_ZONE") == "" || os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
 		t.Skip("The environment variables AWS_DEFAULT_REGION, AWS_ZONE, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY" +
 			" must be set to run AWS tests - skipping")
+	}
+}
+
+func getClusterVersion() (*gversion.Version, error) {
+	meta := testAccProvider.Meta()
+
+	if meta == nil {
+		return nil, fmt.Errorf("Provider not initialized, unable to check cluster version")
+	}
+
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return nil, err
+	}
+	serverVersion, err := conn.ServerVersion()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return gversion.NewVersion(serverVersion.String())
+}
+
+func skipIfClusterVersionLessThan(t *testing.T, vs string) {
+	if clusterVersionLessThan(vs) {
+		t.Skip(fmt.Sprintf("This test will only run on cluster versions %v and above", vs))
 	}
 }
 
@@ -229,25 +250,7 @@ func skipIfNotRunningInGke(t *testing.T) {
 }
 
 func skipIfUnsupportedSecurityContextRunAsGroup(t *testing.T) {
-	meta := testAccProvider.Meta()
-	if meta == nil {
-		t.Fatal("Provider not initialized, unable to check cluster capabilities")
-	}
-	conn := meta.(*kubernetes.Clientset)
-	serverVersion, err := conn.ServerVersion()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	k8sVersion, err := gversion.NewVersion(serverVersion.String())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	v1_14_0, _ := gversion.NewVersion("1.14.0")
-	if k8sVersion.LessThan(v1_14_0) {
-		t.Skip("The Kubernetes version must be 1.14.0 or newer for this test to run - skipping")
-	}
+	skipIfClusterVersionLessThan(t, "1.14.0")
 }
 
 func isRunningInMinikube() (bool, error) {
@@ -294,7 +297,11 @@ func getFirstNode() (api.Node, error) {
 	if meta == nil {
 		return api.Node{}, errors.New("Provider not initialized, unable to get cluster node")
 	}
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return api.Node{}, err
+	}
+
 	resp, err := conn.CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
 		return api.Node{}, err
@@ -305,6 +312,32 @@ func getFirstNode() (api.Node, error) {
 	}
 
 	return resp.Items[0], nil
+}
+
+func clusterVersionLessThan(vs string) bool {
+	cv, err := getClusterVersion()
+
+	if err != nil {
+		return false
+	}
+
+	v, err := gversion.NewVersion(vs)
+
+	if err != nil {
+		return false
+	}
+
+	return cv.LessThan(v)
+}
+
+func skipCheckIf(skip func() (bool, string), check resource.TestCheckFunc) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if s, reason := skip(); s {
+			fmt.Println("Skipping check:", reason)
+			return nil
+		}
+		return check(s)
+	}
 }
 
 type currentEnv struct {

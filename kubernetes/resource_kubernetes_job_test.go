@@ -2,15 +2,19 @@ package kubernetes
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
-	"github.com/hashicorp/terraform/helper/acctest"
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/batch/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
+
+func ttlAfterDisabled() (bool, string) {
+	return os.Getenv("FEATURE_GATE_TTL_AFTER_FINISHED") != "enabled", "TTLAfterFinished is not enabled"
+}
 
 func TestAccKubernetesJob_basic(t *testing.T) {
 	var conf api.Job
@@ -38,6 +42,9 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.parallelism", "2"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", "alpine"),
+
+					skipCheckIf(ttlAfterDisabled,
+						resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "10")),
 				),
 			},
 			{
@@ -59,6 +66,9 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.manual_selector", "true"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", "alpine"),
+
+					skipCheckIf(ttlAfterDisabled,
+						resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "0")),
 				),
 			},
 		},
@@ -66,7 +76,10 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 }
 
 func testAccCheckKubernetesJobDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_job" {
@@ -96,7 +109,10 @@ func testAccCheckKubernetesJobExists(n string, obj *api.Job) resource.TestCheckF
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
@@ -121,6 +137,7 @@ resource "kubernetes_job" "test" {
 	}
 	spec {
 		active_deadline_seconds = 120
+		ttl_seconds_after_finished = 10
 		backoff_limit = 10
 		completions = 10
 		parallelism = 2

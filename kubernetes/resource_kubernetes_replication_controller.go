@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -74,7 +74,7 @@ func resourceKubernetesReplicationController() *schema.Resource {
 }
 
 func replicationControllerTemplateFieldSpec() map[string]*schema.Schema {
-	metadata := namespacedMetadataSchema("replication controller's template", true)
+	metadata := namespacedMetadataSchemaIsTemplate("replication controller's template", true, true)
 	// TODO: make this required once the legacy fields are removed
 	metadata.Computed = true
 	metadata.Required = false
@@ -110,7 +110,10 @@ func useDeprecatedSpecFields(d *schema.ResourceData) (deprecatedSpecFieldsExist 
 }
 
 func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
@@ -150,7 +153,10 @@ func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta 
 }
 
 func resourceKubernetesReplicationControllerRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -184,7 +190,10 @@ func resourceKubernetesReplicationControllerRead(d *schema.ResourceData, meta in
 }
 
 func resourceKubernetesReplicationControllerUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -225,7 +234,10 @@ func resourceKubernetesReplicationControllerUpdate(d *schema.ResourceData, meta 
 }
 
 func resourceKubernetesReplicationControllerDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -256,7 +268,7 @@ func resourceKubernetesReplicationControllerDelete(d *schema.ResourceData, meta 
 		return err
 	}
 
-	err = conn.CoreV1().ReplicationControllers(namespace).Delete(name, &metav1.DeleteOptions{})
+	err = conn.CoreV1().ReplicationControllers(namespace).Delete(name, &deleteOptions)
 	if err != nil {
 		return err
 	}
@@ -268,7 +280,10 @@ func resourceKubernetesReplicationControllerDelete(d *schema.ResourceData, meta 
 }
 
 func resourceKubernetesReplicationControllerExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

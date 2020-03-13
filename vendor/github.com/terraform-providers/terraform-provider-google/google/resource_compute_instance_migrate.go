@@ -8,8 +8,8 @@ import (
 
 	"google.golang.org/api/compute/v1"
 
-	"github.com/hashicorp/terraform/helper/hashcode"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 func resourceComputeInstanceMigrateState(
@@ -119,7 +119,7 @@ func migrateStateV0toV1(is *terraform.InstanceState) (*terraform.InstanceState, 
 func migrateStateV1toV2(is *terraform.InstanceState) (*terraform.InstanceState, error) {
 	log.Printf("[DEBUG] Attributes before migration: %#v", is.Attributes)
 
-	// Maps service account index to list of scopes for that sccount
+	// Maps service account index to list of scopes for that account
 	newScopesMap := make(map[string][]string)
 
 	for k, v := range is.Attributes {
@@ -218,9 +218,12 @@ func migrateStateV3toV4(is *terraform.InstanceState, meta interface{}) (*terrafo
 		}
 	}
 
-	disks, err := strconv.Atoi(is.Attributes["disk.#"])
-	if err != nil {
-		return is, fmt.Errorf("migration error: found disk.# value in unexpected format: %s", err)
+	disks := 0
+	if v := is.Attributes["disk.#"]; v != "" {
+		disks, err = strconv.Atoi(is.Attributes["disk.#"])
+		if err != nil {
+			return is, fmt.Errorf("migration error: found disk.# value in unexpected format: %s", err)
+		}
 	}
 
 	for i := 0; i < disks; i++ {
@@ -283,7 +286,7 @@ func migrateStateV3toV4(is *terraform.InstanceState, meta interface{}) (*terrafo
 		}
 	}
 
-	for k, _ := range is.Attributes {
+	for k := range is.Attributes {
 		if !strings.HasPrefix(k, "disk.") {
 			continue
 		}
@@ -320,7 +323,11 @@ func getInstanceFromInstanceState(config *Config, is *terraform.InstanceState) (
 
 	zone, ok := is.Attributes["zone"]
 	if !ok {
-		return nil, fmt.Errorf("could not determine 'zone'")
+		if config.Zone == "" {
+			return nil, fmt.Errorf("could not determine 'zone'")
+		} else {
+			zone = config.Zone
+		}
 	}
 
 	instance, err := config.clientCompute.Instances.Get(
@@ -344,7 +351,11 @@ func getAllDisksFromInstanceState(config *Config, is *terraform.InstanceState) (
 
 	zone, ok := is.Attributes["zone"]
 	if !ok {
-		return nil, fmt.Errorf("could not determine 'zone'")
+		if config.Zone == "" {
+			return nil, fmt.Errorf("could not determine 'zone'")
+		} else {
+			zone = config.Zone
+		}
 	}
 
 	diskList := []*compute.Disk{}

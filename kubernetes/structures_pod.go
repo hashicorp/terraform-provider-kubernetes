@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -63,6 +63,9 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	}
 	if len(in.NodeSelector) > 0 {
 		att["node_selector"] = in.NodeSelector
+	}
+	if in.PriorityClassName != "" {
+		att["priority_class_name"] = in.PriorityClassName
 	}
 	if in.RestartPolicy != "" {
 		att["restart_policy"] = in.RestartPolicy
@@ -509,6 +512,10 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 			}
 		}
 		obj.NodeSelector = nodeSelectors
+	}
+
+	if v, ok := in["priority_class_name"].(string); ok {
+		obj.PriorityClassName = v
 	}
 
 	if v, ok := in["restart_policy"].(string); ok {

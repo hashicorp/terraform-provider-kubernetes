@@ -42,9 +42,6 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.parallelism", "2"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", "alpine"),
-
-					skipCheckIf(ttlAfterDisabled,
-						resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "10")),
 				),
 			},
 			{
@@ -66,9 +63,31 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.manual_selector", "true"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", "alpine"),
+				),
+			},
+		},
+	})
+}
 
-					skipCheckIf(ttlAfterDisabled,
-						resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "0")),
+func TestAccKubernetesJob_ttl_seconds_after_finished(t *testing.T) {
+	if skip, reason := ttlAfterDisabled(); skip {
+		t.Skip(reason)
+	}
+
+	var conf api.Job
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_job.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesJobDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesJobConfig_ttl_seconds_after_finished(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "10"),
 				),
 			},
 		},
@@ -137,10 +156,34 @@ resource "kubernetes_job" "test" {
 	}
 	spec {
 		active_deadline_seconds = 120
-		ttl_seconds_after_finished = 10
 		backoff_limit = 10
 		completions = 10
 		parallelism = 2
+		template {
+			metadata {}
+			spec {
+				container {
+					name = "hello"
+					image = "alpine"
+					command = ["echo", "'hello'"]
+				}
+			}
+		}
+	}
+}`, name)
+}
+
+func testAccKubernetesJobConfig_ttl_seconds_after_finished(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_job" "test" {
+	metadata {
+		name = "%s"
+	}
+	spec {
+		backoff_limit = 10
+		completions = 10
+		parallelism = 2
+		ttl_seconds_after_finished = 10
 		template {
 			metadata {}
 			spec {

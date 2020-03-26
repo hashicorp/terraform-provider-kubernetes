@@ -25,10 +25,10 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"admission_review_versions": {
-							Type: schema.TypeList,
-							Description: `AdmissionReviewVersions is an ordered list of preferred `AdmissionReview` versions the Webhook expects. API server will try to use first version in the list which it supports. If none of the versions specified in this list supported by API server, validation will fail for this object. If a persisted webhook configuration specifies allowed versions and does not include any versions known to the API Server, calls to the webhook will fail and be subject to the failure policy.`,
-							Optional: true,
-							Elem: &schema.Resource{schema: schema.TypeString},
+							Type:        schema.TypeList,
+							Description: `AdmissionReviewVersions is an ordered list of preferred AdmissionReview versions the Webhook expects. API server will try to use first version in the list which it supports. If none of the versions specified in this list supported by API server, validation will fail for this object. If a persisted webhook configuration specifies allowed versions and does not include any versions known to the API Server, calls to the webhook will fail and be subject to the failure policy.`,
+							Optional:    true,
+							Elem:        &schema.Schema{Type: schema.TypeString},
 						},
 						"client_config": {
 							Type:        schema.TypeList,

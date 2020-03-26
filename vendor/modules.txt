@@ -450,11 +450,11 @@ github.com/spf13/afero/mem
 github.com/spf13/pflag
 # github.com/stoewer/go-strcase v1.0.2
 github.com/stoewer/go-strcase
-# github.com/terraform-providers/terraform-provider-aws v2.32.0+incompatible
+# github.com/terraform-providers/terraform-provider-aws v1.60.1-0.20191010190908-1261a98537f2
 github.com/terraform-providers/terraform-provider-aws/aws
 github.com/terraform-providers/terraform-provider-aws/aws/internal/flatmap
 github.com/terraform-providers/terraform-provider-aws/aws/internal/keyvaluetags
-# github.com/terraform-providers/terraform-provider-google v2.17.0+incompatible
+# github.com/terraform-providers/terraform-provider-google v1.20.1-0.20191008212436-363f2d283518
 github.com/terraform-providers/terraform-provider-google/google
 github.com/terraform-providers/terraform-provider-google/version
 # github.com/ulikunitz/xz v0.5.6
@@ -788,7 +788,7 @@ k8s.io/apimachinery/pkg/util/yaml
 k8s.io/apimachinery/pkg/version
 k8s.io/apimachinery/pkg/watch
 k8s.io/apimachinery/third_party/forked/golang/reflect
-# k8s.io/client-go v12.0.0+incompatible
+# k8s.io/client-go v10.0.0+incompatible => k8s.io/client-go v0.0.0-20190620085101-78d2af792bab
 k8s.io/client-go/discovery
 k8s.io/client-go/kubernetes
 k8s.io/client-go/kubernetes/scheme

@@ -42,7 +42,6 @@ resource "kubernetes_cron_job" "demo" {
               image   = "busybox"
               command = ["/bin/sh", "-c", "date; echo Hello from the Kubernetes cluster"]
             }
-            restart_policy = "OnFailure"
           }
         }
       }

@@ -1,0 +1,23 @@
+name: Automate project columns
+
+on: [issues, pull_request]
+
+jobs:
+  automate-project-columns:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Move new issues into Triage
+        if: github.event_name == 'issues' && github.event.action == 'opened'
+        uses: aareet/github-project-automation-plus@v0.1.0
+        with:
+          project: Kubernetes Triage
+          column: Needs triage
+          repo-token: ${{ secrets.k8s_github_actions }}
+
+      - name: Move new pull requests into Triage
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+        uses: aareet/github-project-automation-plus@v0.1.0
+        with:
+          project: Kubernetes Triage
+          column: Needs triage
+          repo-token: ${{ secrets.k8s_github_actions }}

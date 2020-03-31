@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -20,7 +21,7 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("validating webhook configuration", true),
+			"metadata": metadataSchema("validating webhook configuration", true),
 			"webhook": {
 				Type:        schema.TypeList,
 				Description: "A list of webhooks and the affected resources and operations.",
@@ -178,5 +179,21 @@ func resourceKubernetesValidatingWebhookConfigurationDelete(d *schema.ResourceDa
 }
 
 func resourceKubernetesValidatingWebhookConfigurationExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	return false, nil
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
+
+	name := d.Id()
+
+	log.Printf("[INFO] Checking ValidatingWebhookConfiguration %s", name)
+	_, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }

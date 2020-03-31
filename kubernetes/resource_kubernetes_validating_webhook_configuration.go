@@ -175,6 +175,22 @@ func resourceKubernetesValidatingWebhookConfigurationUpdate(d *schema.ResourceDa
 }
 
 func resourceKubernetesValidatingWebhookConfigurationDelete(d *schema.ResourceData, meta interface{}) error {
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+
+	name := d.Id()
+
+	log.Printf("[INFO] Deleting ValidatingWebhookConfiguration: %#v", name)
+	err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(name, &metav1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+
+	log.Printf("[INFO] ValidatingWebhookConfiguration %#v is deleted", name)
+
+	d.SetId("")
 	return nil
 }
 

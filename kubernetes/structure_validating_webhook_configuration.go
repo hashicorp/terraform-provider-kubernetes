@@ -138,7 +138,7 @@ func expandRuleWithOperations(l []interface{}) admissionregistrationv1.RuleWithO
 	return obj
 }
 
-func flattenValidatingWebhook(in admissionregistrationv1.ValidatingWebhook) ([]interface{}, error) {
+func flattenValidatingWebhook(in admissionregistrationv1.ValidatingWebhook) []interface{} {
 	att := map[string]interface{}{}
 
 	att["admission_review_versions"] = in.AdmissionReviewVersions
@@ -177,7 +177,7 @@ func flattenValidatingWebhook(in admissionregistrationv1.ValidatingWebhook) ([]i
 		att["timeout_seconds"] = *in.TimeoutSeconds
 	}
 
-	return []interface{}{att}, nil
+	return []interface{}{att}
 }
 
 func expandValidatingWebhook(l []interface{}) admissionregistrationv1.ValidatingWebhook {

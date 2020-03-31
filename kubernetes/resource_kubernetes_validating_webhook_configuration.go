@@ -1,7 +1,10 @@
 package kubernetes
 
 import (
+	"log"
+
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 )
 
 func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
@@ -102,6 +105,36 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 }
 
 func resourceKubernetesValidatingWebhookConfigurationCreate(d *schema.ResourceData, meta interface{}) error {
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+
+	webhooks := []admissionregistrationv1.ValidatingWebhook{}
+
+	for _, h := range d.Get("webhook").([][]interface{}) {
+		webhooks = append(webhooks, expandValidatingWebhook(h))
+	}
+
+	cfg := admissionregistrationv1.ValidatingWebhookConfiguration{
+		ObjectMeta: metadata,
+		Webhooks:   webhooks,
+	}
+
+	log.Printf("[INFO] Creating new ValidatingWebhookConfiguration: %#v", cfg)
+
+	res, err := conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(&cfg)
+
+	if err != nil {
+		return err
+	}
+
+	log.Printf("[INFO] Submitted new ValidatingWebhookConfiguration: %#v", res)
+
+	d.SetId(buildId(res.ObjectMeta))
+
 	return resourceKubernetesValidatingWebhookConfigurationRead(d, meta)
 }
 

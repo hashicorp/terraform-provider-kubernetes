@@ -38,12 +38,12 @@ func expandServiceReference(l []interface{}) *admissionregistrationv1.ServiceRef
 		obj.Namespace = v
 	}
 
-	if v, ok := in["path"].(string); ok {
+	if v, ok := in["path"].(string); ok && v != "" {
 		obj.Path = ptrToString(v)
 	}
 
-	if v, ok := in["port"].(int32); ok {
-		obj.Port = ptrToInt32(v)
+	if v, ok := in["port"].(int); ok {
+		obj.Port = ptrToInt32(int32(v))
 	}
 
 	return obj
@@ -70,7 +70,7 @@ func flattenWebhookClientConfig(in admissionregistrationv1.WebhookClientConfig) 
 func expandWebhookClientConfig(l []interface{}) admissionregistrationv1.WebhookClientConfig {
 	obj := admissionregistrationv1.WebhookClientConfig{}
 
-	if len(l) == 0 || l[0] != nil {
+	if len(l) == 0 || l[0] == nil {
 		return obj
 	}
 
@@ -84,7 +84,7 @@ func expandWebhookClientConfig(l []interface{}) admissionregistrationv1.WebhookC
 		obj.Service = expandServiceReference(v)
 	}
 
-	if v, ok := in["url"].(string); ok {
+	if v, ok := in["url"].(string); ok && v != "" {
 		obj.URL = ptrToString(v)
 	}
 
@@ -106,33 +106,44 @@ func flattenRuleWithOperations(in admissionregistrationv1.RuleWithOperations) []
 	return []interface{}{att}
 }
 
-func expandRuleWithOperations(l []interface{}) admissionregistrationv1.RuleWithOperations {
+func expandRuleWithOperations(in map[string]interface{}) admissionregistrationv1.RuleWithOperations {
 	obj := admissionregistrationv1.RuleWithOperations{}
 
-	if len(l) == 0 || l[0] != nil {
-		return obj
+	if v, ok := in["api_groups"].([]interface{}); ok {
+		for _, g := range v {
+			if g != nil {
+				obj.APIGroups = append(obj.APIGroups, g.(string))
+			}
+		}
 	}
 
-	in := l[0].(map[string]interface{})
-
-	if v, ok := in["api_groups"].([]string); ok {
-		obj.APIGroups = v
+	if v, ok := in["api_versions"].([]interface{}); ok {
+		for _, ver := range v {
+			if ver != nil {
+				obj.APIVersions = append(obj.APIVersions, ver.(string))
+			}
+		}
 	}
 
-	if v, ok := in["api_versions"].([]string); ok {
-		obj.APIVersions = v
+	if v, ok := in["operations"].([]interface{}); ok {
+		for _, op := range v {
+			if op != nil {
+				obj.Operations = append(obj.Operations, admissionregistrationv1.OperationType(op.(string)))
+			}
+		}
 	}
 
-	if v, ok := in["operations"].([]admissionregistrationv1.OperationType); ok {
-		obj.Operations = v
+	if v, ok := in["resources"].([]interface{}); ok {
+		for _, r := range v {
+			if r != nil {
+				obj.Resources = append(obj.Resources, r.(string))
+			}
+		}
 	}
 
-	if v, ok := in["resources"].([]string); ok {
-		obj.Resources = v
-	}
-
-	if v, ok := in["scope"].(admissionregistrationv1.ScopeType); ok {
-		obj.Scope = &v
+	if v, ok := in["scope"].(string); ok {
+		scope := admissionregistrationv1.ScopeType(v)
+		obj.Scope = &scope
 	}
 
 	return obj
@@ -180,29 +191,29 @@ func flattenValidatingWebhook(in admissionregistrationv1.ValidatingWebhook) []in
 	return []interface{}{att}
 }
 
-func expandValidatingWebhook(l []interface{}) admissionregistrationv1.ValidatingWebhook {
+func expandValidatingWebhook(in map[string]interface{}) admissionregistrationv1.ValidatingWebhook {
 	obj := admissionregistrationv1.ValidatingWebhook{}
 
-	if len(l) == 0 || l[0] != nil {
-		return obj
-	}
-
-	in := l[0].(map[string]interface{})
-
-	if v, ok := in["admission_review_versions"].([]string); ok {
-		obj.AdmissionReviewVersions = v
+	if v, ok := in["admission_review_versions"].([]interface{}); ok {
+		for _, ver := range v {
+			if ver != nil {
+				obj.AdmissionReviewVersions = append(obj.AdmissionReviewVersions, ver.(string))
+			}
+		}
 	}
 
 	if v, ok := in["client_config"].([]interface{}); ok {
 		obj.ClientConfig = expandWebhookClientConfig(v)
 	}
 
-	if v, ok := in["failure_policy"].(admissionregistrationv1.FailurePolicyType); ok {
-		obj.FailurePolicy = &v
+	if v, ok := in["failure_policy"].(string); ok {
+		policy := admissionregistrationv1.FailurePolicyType(v)
+		obj.FailurePolicy = &policy
 	}
 
-	if v, ok := in["match_policy"].(admissionregistrationv1.MatchPolicyType); ok {
-		obj.MatchPolicy = &v
+	if v, ok := in["match_policy"].(string); ok {
+		policy := admissionregistrationv1.MatchPolicyType(v)
+		obj.MatchPolicy = &policy
 	}
 
 	if v, ok := in["name"].(string); ok {
@@ -217,20 +228,21 @@ func expandValidatingWebhook(l []interface{}) admissionregistrationv1.Validating
 		obj.ObjectSelector = expandLabelSelector(v)
 	}
 
-	if v, ok := in["rule"].([][]interface{}); ok {
+	if v, ok := in["rule"].([]interface{}); ok {
 		rules := []admissionregistrationv1.RuleWithOperations{}
 		for _, r := range v {
-			rules = append(rules, expandRuleWithOperations((r)))
+			rules = append(rules, expandRuleWithOperations(r.(map[string]interface{})))
 		}
 		obj.Rules = rules
 	}
 
-	if v, ok := in["side_effects"].(admissionregistrationv1.SideEffectClass); ok {
-		obj.SideEffects = &v
+	if v, ok := in["side_effects"].(string); ok {
+		sideEffects := admissionregistrationv1.SideEffectClass(v)
+		obj.SideEffects = &sideEffects
 	}
 
-	if v, ok := in["timeout_seconds"].(int32); ok {
-		obj.TimeoutSeconds = ptrToInt32(v)
+	if v, ok := in["timeout_seconds"].(int); ok {
+		obj.TimeoutSeconds = ptrToInt32(int32(v))
 	}
 
 	return obj

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,6 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package discovery provides ways to discover server-supported
-// API groups, versions and resources.
-package discovery // import "k8s.io/client-go/discovery"
+// +k8s:deepcopy-gen=package
+// +k8s:protobuf-gen=package
+// +k8s:openapi-gen=true
+// +groupName=admissionregistration.k8s.io
+
+// Package v1 is the v1 version of the API.
+// AdmissionConfiguration and AdmissionPluginConfiguration are legacy static admission plugin configuration
+// MutatingWebhookConfiguration and ValidatingWebhookConfiguration are for the
+// new dynamic admission controller configuration.
+package v1 // import "k8s.io/api/admissionregistration/v1"

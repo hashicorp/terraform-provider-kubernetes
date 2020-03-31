@@ -24,7 +24,7 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 			"webhook": {
 				Type:        schema.TypeList,
 				Description: "A list of webhooks and the affected resources and operations.",
-				Optional:    false,
+				Required:    true,
 				MinItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -115,8 +115,9 @@ func resourceKubernetesValidatingWebhookConfigurationCreate(d *schema.ResourceDa
 
 	webhooks := []admissionregistrationv1.ValidatingWebhook{}
 
-	for _, h := range d.Get("webhook").([][]interface{}) {
-		webhooks = append(webhooks, expandValidatingWebhook(h))
+	for _, h := range d.Get("webhook").([]interface{}) {
+		log.Printf("[DEBUG] hook: %#v", h)
+		webhooks = append(webhooks, expandValidatingWebhook(h.(map[string]interface{})))
 	}
 
 	cfg := admissionregistrationv1.ValidatingWebhookConfiguration{

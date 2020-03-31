@@ -110,19 +110,11 @@ func expandRuleWithOperations(in map[string]interface{}) admissionregistrationv1
 	obj := admissionregistrationv1.RuleWithOperations{}
 
 	if v, ok := in["api_groups"].([]interface{}); ok {
-		for _, g := range v {
-			if g != nil {
-				obj.APIGroups = append(obj.APIGroups, g.(string))
-			}
-		}
+		obj.APIGroups = expandStringSlice(v)
 	}
 
 	if v, ok := in["api_versions"].([]interface{}); ok {
-		for _, ver := range v {
-			if ver != nil {
-				obj.APIVersions = append(obj.APIVersions, ver.(string))
-			}
-		}
+		obj.APIVersions = expandStringSlice(v)
 	}
 
 	if v, ok := in["operations"].([]interface{}); ok {
@@ -134,11 +126,7 @@ func expandRuleWithOperations(in map[string]interface{}) admissionregistrationv1
 	}
 
 	if v, ok := in["resources"].([]interface{}); ok {
-		for _, r := range v {
-			if r != nil {
-				obj.Resources = append(obj.Resources, r.(string))
-			}
-		}
+		obj.Resources = expandStringSlice(v)
 	}
 
 	if v, ok := in["scope"].(string); ok {
@@ -195,11 +183,7 @@ func expandValidatingWebhook(in map[string]interface{}) admissionregistrationv1.
 	obj := admissionregistrationv1.ValidatingWebhook{}
 
 	if v, ok := in["admission_review_versions"].([]interface{}); ok {
-		for _, ver := range v {
-			if ver != nil {
-				obj.AdmissionReviewVersions = append(obj.AdmissionReviewVersions, ver.(string))
-			}
-		}
+		obj.AdmissionReviewVersions = expandStringSlice(v)
 	}
 
 	if v, ok := in["client_config"].([]interface{}); ok {

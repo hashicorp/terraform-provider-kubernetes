@@ -153,7 +153,10 @@ func resourceKubernetesValidatingWebhookConfigurationRead(d *schema.ResourceData
 		return nil
 	}
 
-	d.Set("webhook", flattenValidatingWebhooks(cfg.Webhooks))
+	err = d.Set("webhook", flattenValidatingWebhooks(cfg.Webhooks))
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

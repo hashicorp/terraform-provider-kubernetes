@@ -91,7 +91,7 @@ func expandWebhookClientConfig(l []interface{}) admissionregistrationv1.WebhookC
 	return obj
 }
 
-func flattenRuleWithOperations(in admissionregistrationv1.RuleWithOperations) []interface{} {
+func flattenRuleWithOperations(in admissionregistrationv1.RuleWithOperations) map[string]interface{} {
 	att := map[string]interface{}{}
 
 	att["api_groups"] = in.APIGroups
@@ -103,7 +103,7 @@ func flattenRuleWithOperations(in admissionregistrationv1.RuleWithOperations) []
 		att["scope"] = *in.Scope
 	}
 
-	return []interface{}{att}
+	return att
 }
 
 func expandRuleWithOperations(in map[string]interface{}) admissionregistrationv1.RuleWithOperations {
@@ -137,7 +137,7 @@ func expandRuleWithOperations(in map[string]interface{}) admissionregistrationv1
 	return obj
 }
 
-func flattenValidatingWebhook(in admissionregistrationv1.ValidatingWebhook) []interface{} {
+func flattenValidatingWebhook(in admissionregistrationv1.ValidatingWebhook) map[string]interface{} {
 	att := map[string]interface{}{}
 
 	att["admission_review_versions"] = in.AdmissionReviewVersions
@@ -155,11 +155,15 @@ func flattenValidatingWebhook(in admissionregistrationv1.ValidatingWebhook) []in
 	att["name"] = in.Name
 
 	if in.NamespaceSelector != nil {
-		att["namespace_selector"] = flattenLabelSelector(in.NamespaceSelector)
+		if in.NamespaceSelector.MatchExpressions != nil || in.NamespaceSelector.MatchLabels != nil {
+			att["namespace_selector"] = flattenLabelSelector(in.NamespaceSelector)
+		}
 	}
 
 	if in.ObjectSelector != nil {
-		att["object_selector"] = flattenLabelSelector(in.ObjectSelector)
+		if in.ObjectSelector.MatchExpressions != nil || in.ObjectSelector.MatchLabels != nil {
+			att["object_selector"] = flattenLabelSelector(in.ObjectSelector)
+		}
 	}
 
 	rules := []interface{}{}
@@ -176,7 +180,7 @@ func flattenValidatingWebhook(in admissionregistrationv1.ValidatingWebhook) []in
 		att["timeout_seconds"] = *in.TimeoutSeconds
 	}
 
-	return []interface{}{att}
+	return att
 }
 
 func expandValidatingWebhook(in map[string]interface{}) admissionregistrationv1.ValidatingWebhook {
@@ -204,11 +208,11 @@ func expandValidatingWebhook(in map[string]interface{}) admissionregistrationv1.
 		obj.Name = v
 	}
 
-	if v, ok := in["namespace_selector"].([]interface{}); ok {
+	if v, ok := in["namespace_selector"].([]interface{}); ok && len(v) != 0 {
 		obj.NamespaceSelector = expandLabelSelector(v)
 	}
 
-	if v, ok := in["object_selector"].([]interface{}); ok {
+	if v, ok := in["object_selector"].([]interface{}); ok && len(v) != 0 {
 		obj.ObjectSelector = expandLabelSelector(v)
 	}
 

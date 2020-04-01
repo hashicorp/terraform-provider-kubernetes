@@ -231,3 +231,19 @@ func expandValidatingWebhook(in map[string]interface{}) admissionregistrationv1.
 
 	return obj
 }
+
+func expandValidatingWebhooks(in []interface{}) []admissionregistrationv1.ValidatingWebhook {
+	webhooks := []admissionregistrationv1.ValidatingWebhook{}
+	for _, h := range in {
+		webhooks = append(webhooks, expandValidatingWebhook(h.(map[string]interface{})))
+	}
+	return webhooks
+}
+
+func flattenValidatingWebhooks(in []admissionregistrationv1.ValidatingWebhook) []interface{} {
+	webhooks := []interface{}{}
+	for _, h := range in {
+		webhooks = append(webhooks, flattenValidatingWebhook(h))
+	}
+	return webhooks
+}

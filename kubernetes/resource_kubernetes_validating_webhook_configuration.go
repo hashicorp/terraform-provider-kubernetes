@@ -1,12 +1,14 @@
 package kubernetes
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	types "k8s.io/apimachinery/pkg/types"
 )
 
 func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
@@ -112,18 +114,9 @@ func resourceKubernetesValidatingWebhookConfigurationCreate(d *schema.ResourceDa
 		return err
 	}
 
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-
-	webhooks := []admissionregistrationv1.ValidatingWebhook{}
-
-	for _, h := range d.Get("webhook").([]interface{}) {
-		log.Printf("[DEBUG] hook: %#v", h)
-		webhooks = append(webhooks, expandValidatingWebhook(h.(map[string]interface{})))
-	}
-
 	cfg := admissionregistrationv1.ValidatingWebhookConfiguration{
-		ObjectMeta: metadata,
-		Webhooks:   webhooks,
+		ObjectMeta: expandMetadata(d.Get("metadata").([]interface{})),
+		Webhooks:   expandValidatingWebhooks(d.Get("webhook").([]interface{})),
 	}
 
 	log.Printf("[INFO] Creating new ValidatingWebhookConfiguration: %#v", cfg)
@@ -160,17 +153,40 @@ func resourceKubernetesValidatingWebhookConfigurationRead(d *schema.ResourceData
 		return nil
 	}
 
-	webhooks := []interface{}{}
-	for _, h := range cfg.Webhooks {
-		webhooks = append(webhooks, flattenValidatingWebhook(h))
-	}
-
-	d.Set("webhook", webhooks)
+	d.Set("webhook", flattenValidatingWebhooks(cfg.Webhooks))
 
 	return nil
 }
 
 func resourceKubernetesValidatingWebhookConfigurationUpdate(d *schema.ResourceData, meta interface{}) error {
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+
+	ops := patchMetadata("metadata.0.", "/metadata/", d)
+
+	if d.HasChange("webhook") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/webhooks",
+			Value: expandValidatingWebhooks(d.Get("webhook").([]interface{})),
+		})
+	}
+
+	data, err := ops.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("Failed to marshal update operations: %s", err)
+	}
+
+	name := d.Id()
+	log.Printf("[INFO] Updating ValidatingWebhookConfiguration %q: %v", name, string(data))
+	res, err := conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Patch(name, types.JSONPatchType, data)
+	if err != nil {
+		return fmt.Errorf("Failed to update ValidatingWebhookConfiguration: %s", err)
+	}
+
+	log.Printf("[INFO] Submitted updated ValidatingWebhookConfiguration: %#v", res)
+
 	return resourceKubernetesValidatingWebhookConfigurationRead(d, meta)
 }
 

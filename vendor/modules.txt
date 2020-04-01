@@ -380,6 +380,8 @@ github.com/hashicorp/yamux
 github.com/imdario/mergo
 # github.com/jen20/awspolicyequivalence v1.0.0
 github.com/jen20/awspolicyequivalence
+# github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
+github.com/jinzhu/copier
 # github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af
 github.com/jmespath/go-jmespath
 # github.com/json-iterator/go v1.1.7

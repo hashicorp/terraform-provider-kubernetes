@@ -39,6 +39,7 @@ The following arguments are supported:
 * `reclaim_policy` - (Optional) Indicates the reclaim policy to use.  If no reclaimPolicy is specified when a StorageClass object is created, it will default to Delete.
 * `allow_volume_expansion` - (Optional) Indicates whether the storage class allow volume expand, default true.
 * `mount_options` - (Optional) Persistent Volumes that are dynamically created by a storage class will have the mount options specified.
+* `volume_binding_mode` - (Optional) Determines when volume binding and dynamic provisioning should occur. Defaults to `Immediate`.
 
 ## Nested Blocks
 

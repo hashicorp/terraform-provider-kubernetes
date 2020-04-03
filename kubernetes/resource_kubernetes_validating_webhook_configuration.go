@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -13,6 +12,7 @@ import (
 	types "k8s.io/apimachinery/pkg/types"
 	kubernetes "k8s.io/client-go/kubernetes"
 
+	gversion "github.com/hashicorp/go-version"
 	copier "github.com/jinzhu/copier"
 )
 
@@ -300,11 +300,22 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) bool {
 		return false
 	}
 
-	major, err := strconv.Atoi(ver.Major)
-	if major < 16 {
+	clusterVer, err := gversion.NewVersion(ver.String())
+
+	if err != nil {
 		return false
 	}
 
-	log.Printf("[INFO] Falling back to admissionregistration/v1beta1")
-	return true
+	v1ver, err := gversion.NewVersion("1.16.0")
+
+	if err != nil {
+		return false
+	}
+
+	if clusterVer.LessThan(v1ver) {
+		log.Printf("[INFO] Falling back to admissionregistration/v1beta1")
+		return true
+	}
+
+	return false
 }

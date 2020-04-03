@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 func TestAccKubernetesValidatingWebhookConfiguration_basic(t *testing.T) {
@@ -139,12 +141,20 @@ func testAccCheckKubernetesValdiatingWebhookConfigurationDestroy(s *terraform.St
 
 		name := rs.Primary.ID
 
-		resp, err := conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
-		if err == nil {
-			if resp.Name == name {
-				return fmt.Errorf("ValidatingWebhookConfiguration still exists: %s", rs.Primary.ID)
-			}
+		if useAdmissionregistrationV1beta1(conn) {
+			_, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		} else {
+			_, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
 		}
+
+		if err != nil {
+			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+				return nil
+			}
+			return err
+		}
+
+		return fmt.Errorf("ValidatingWebhookConfiguration still exists: %s", rs.Primary.ID)
 	}
 
 	return nil
@@ -164,7 +174,11 @@ func testAccCheckKubernetesValdiatingWebhookConfigurationExists(n string) resour
 
 		name := rs.Primary.ID
 
-		_, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		if useAdmissionregistrationV1beta1(conn) {
+			_, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		} else {
+			_, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		}
 		if err != nil {
 			return err
 		}

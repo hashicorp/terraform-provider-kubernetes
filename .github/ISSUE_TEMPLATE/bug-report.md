@@ -29,7 +29,7 @@ Thank you for opening an issue. Please note that we try to keep the Terraform is
 * Please do not leave "+1" or other comments that do not add relevant new information or questions, they generate extra noise for issue followers and do not help prioritize the request
 * If you are interested in working on this issue or have submitted a pull request, please leave a comment
 
-### Terraform Version
+### Terraform Version and Provider Version
 <!--- Run `terraform -v` to show the version. If you are not running the latest version of Terraform, please upgrade because your issue may have already been fixed. --->
 
 ### Affected Resource(s)

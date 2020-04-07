@@ -137,6 +137,7 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
+			"kubernetes_config_map":    dataSourceKubernetesConfigMap(),
 			"kubernetes_ingress":       dataSourceKubernetesIngress(),
 			"kubernetes_secret":        dataSourceKubernetesSecret(),
 			"kubernetes_service":       dataSourceKubernetesService(),

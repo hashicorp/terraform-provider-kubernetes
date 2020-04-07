@@ -48,6 +48,10 @@ func flattenJobSpec(in batchv1.JobSpec, d *schema.ResourceData, prefix ...string
 	}
 	att["template"] = podSpec
 
+	if in.TTLSecondsAfterFinished != nil {
+		att["ttl_seconds_after_finished"] = *in.TTLSecondsAfterFinished
+	}
+
 	return []interface{}{att}, nil
 }
 
@@ -89,6 +93,10 @@ func expandJobSpec(j []interface{}) (batchv1.JobSpec, error) {
 		return obj, err
 	}
 	obj.Template = *template
+
+	if v, ok := in["ttl_seconds_after_finished"].(int); ok && v > 0 {
+		obj.TTLSecondsAfterFinished = ptrToInt32(int32(v))
+	}
 
 	return obj, nil
 }

@@ -55,12 +55,13 @@ func dataSourceKubernetesServiceAccount() *schema.Resource {
 }
 
 func dataSourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
-	namespace := d.Get("metadata.0.namespace").(string)
-	name := d.Get("metadata.0.name").(string)
-
-	sa, err := conn.CoreV1().ServiceAccounts(namespace).Get(name, metav1.GetOptions{})
+	sa, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(metadata.Name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Unable to fetch service account from Kubernetes: %s", err)
 	}

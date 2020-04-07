@@ -8,7 +8,7 @@ description: |-
 
 # kubernetes_service_account
 
-A service account provides an identity for processes that run in a Pod.
+A service account provides an identity for processes that run in a Pod.  This data source reads the service account and makes specific attributes available to Terraform.
 
 Read more at [Kubernetes reference](https://kubernetes.io/docs/admin/service-accounts-admin/)
 
@@ -23,7 +23,7 @@ data "kubernetes_service_account" "example" {
 
 data "kubernetes_secret" "example" {
   metadata {
-    name = "${kubernetes_service_account.example.default_secret_name}"
+    name = "${data.kubernetes_service_account.example.default_secret_name}"
   }
 }
 ```
@@ -52,8 +52,8 @@ The following arguments are supported:
 
 ## Attribute Reference
 
-* `image_pull_secret` - A list of image pull secrets associated with the service account
-* `secret` - A list of secrets associated with the service account
+* `image_pull_secret` - A list of image pull secrets associated with the service account.
+* `secret` - A list of secrets associated with the service account.
 * `default_secret_name` - Name of the default secret, containing service account token, created & managed by the service.
 
 ### `image_pull_secret`

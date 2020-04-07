@@ -161,7 +161,10 @@ func resourceKubernetesService() *schema.Resource {
 }
 
 func resourceKubernetesServiceCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svc := api.Service{
@@ -209,7 +212,10 @@ func resourceKubernetesServiceCreate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesServiceRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -244,7 +250,10 @@ func resourceKubernetesServiceRead(d *schema.ResourceData, meta interface{}) err
 }
 
 func resourceKubernetesServiceUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -279,7 +288,10 @@ func resourceKubernetesServiceUpdate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesServiceDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -299,7 +311,10 @@ func resourceKubernetesServiceDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesServiceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

@@ -447,7 +447,10 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_storageClass(t *testing.
 }
 
 func testAccCheckKubernetesPersistentVolumeClaimDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_persistent_volume_claim" {
@@ -488,7 +491,10 @@ func testAccCheckKubernetesPersistentVolumeClaimExists(n string, obj *api.Persis
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {

@@ -137,11 +137,12 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"kubernetes_config_map":    dataSourceKubernetesConfigMap(),
-			"kubernetes_ingress":       dataSourceKubernetesIngress(),
-			"kubernetes_secret":        dataSourceKubernetesSecret(),
-			"kubernetes_service":       dataSourceKubernetesService(),
-			"kubernetes_storage_class": dataSourceKubernetesStorageClass(),
+			"kubernetes_config_map":      dataSourceKubernetesConfigMap(),
+			"kubernetes_ingress":         dataSourceKubernetesIngress(),
+			"kubernetes_secret":          dataSourceKubernetesSecret(),
+			"kubernetes_service":         dataSourceKubernetesService(),
+			"kubernetes_service_account": dataSourceKubernetesServiceAccount(),
+			"kubernetes_storage_class":   dataSourceKubernetesStorageClass(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{

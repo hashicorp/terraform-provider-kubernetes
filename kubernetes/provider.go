@@ -13,7 +13,6 @@ import (
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
 	kubernetes "k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
 
 	"k8s.io/client-go/tools/clientcmd"
@@ -196,7 +195,7 @@ type KubeClientsets interface {
 }
 
 type kubeClientsets struct {
-	config              *rest.Config
+	config              *restclient.Config
 	mainClientset       *kubernetes.Clientset
 	aggregatorClientset *aggregator.Clientset
 }

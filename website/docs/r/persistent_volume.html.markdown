@@ -151,6 +151,17 @@ The following arguments are supported:
 * `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to false (read/write). For more info see http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
 * `volume_id` - (Required) Volume ID used to identify the volume in Cinder. For more info see http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
 
+### `csi`
+
+#### Arguments
+
+* `driver` - (Required) the name of the volume driver to use. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes/#csi).
+* `volume_handle` - (Required) A map that specifies static properties of a volume. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes/#csi).
+* `volume_attributes` - (Optional) Attributes of the volume to publish.
+* `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. `ext4`, `xfs`, `ntfs`.
+* `read_only` - (Optional) Whether to set the read-only property in VolumeMounts to `true`. If omitted, the default is `false`.
+
+
 ### `fc`
 
 #### Arguments

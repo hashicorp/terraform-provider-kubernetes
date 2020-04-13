@@ -218,6 +218,41 @@ func commonVolumeSources() map[string]*schema.Schema {
 				},
 			},
 		},
+		"csi": {
+			Type:        schema.TypeList,
+			Description: "Represents a CSI Volume. More info: http://kubernetes.io/docs/user-guide/volumes#csi",
+			Optional:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"driver": {
+						Type:        schema.TypeString,
+						Description: "the name of the volume driver to use. More info: https://kubernetes.io/docs/concepts/storage/volumes/#csi",
+						Required:    true,
+					},
+					"volume_handle": {
+						Type:        schema.TypeString,
+						Description: "A map that specifies static properties of a volume. More info: https://kubernetes.io/docs/concepts/storage/volumes/#csi",
+						Required:    true,
+					},
+					"volume_attributes": {
+						Type:        schema.TypeMap,
+						Description: "Attributes of the volume to publish.",
+						Optional:    true,
+					},
+					"fs_type": {
+						Type:        schema.TypeString,
+						Description: "Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified.",
+						Optional:    true,
+					},
+					"read_only": {
+						Type:        schema.TypeBool,
+						Description: "Whether to set the read-only property in VolumeMounts to \"true\". If omitted, the default is \"false\". More info: http://kubernetes.io/docs/user-guide/volumes#csi",
+						Optional:    true,
+					},
+				},
+			},
+		},
 		"fc": {
 			Type:        schema.TypeList,
 			Description: "Represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.",

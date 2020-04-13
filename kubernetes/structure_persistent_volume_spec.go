@@ -357,6 +357,9 @@ func flattenPersistentVolumeSource(in v1.PersistentVolumeSource) []interface{} {
 	if in.PhotonPersistentDisk != nil {
 		att["photon_persistent_disk"] = flattenPhotonPersistentDiskVolumeSource(in.PhotonPersistentDisk)
 	}
+	if in.CSI != nil {
+		att["csi"] = flattenCSIVolumeSource(in.CSI)
+	}
 	return []interface{}{att}
 }
 
@@ -390,6 +393,20 @@ func flattenPhotonPersistentDiskVolumeSource(in *v1.PhotonPersistentDiskVolumeSo
 	att["pd_id"] = in.PdID
 	if in.FSType != "" {
 		att["fs_type"] = in.FSType
+	}
+	return []interface{}{att}
+}
+
+func flattenCSIVolumeSource(in *v1.CSIPersistentVolumeSource) []interface{} {
+	att := make(map[string]interface{})
+	att["driver"] = in.Driver
+	att["volume_handle"] = in.VolumeHandle
+	att["read_only"] = in.ReadOnly
+	if in.FSType != "" {
+		att["fs_type"] = in.FSType
+	}
+	if len(in.VolumeAttributes) > 0 {
+		att["volume_attributes"] = in.VolumeAttributes
 	}
 	return []interface{}{att}
 }
@@ -924,6 +941,9 @@ func expandPersistentVolumeSource(l []interface{}) v1.PersistentVolumeSource {
 	if v, ok := in["photon_persistent_disk"].([]interface{}); ok && len(v) > 0 {
 		obj.PhotonPersistentDisk = expandPhotonPersistentDiskVolumeSource(v)
 	}
+	if v, ok := in["csi"].([]interface{}); ok && len(v) > 0 {
+		obj.CSI = expandCSIPersistentDiskVolumeSource(v)
+	}
 	return obj
 }
 
@@ -971,6 +991,27 @@ func expandPhotonPersistentDiskVolumeSource(l []interface{}) *v1.PhotonPersisten
 	}
 	if v, ok := in["fs_type"].(string); ok {
 		obj.FSType = v
+	}
+	return obj
+}
+
+func expandCSIPersistentDiskVolumeSource(l []interface{}) *v1.CSIPersistentVolumeSource {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.CSIPersistentVolumeSource{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.CSIPersistentVolumeSource{
+		Driver:       in["driver"].(string),
+		VolumeHandle: in["volume_handle"].(string),
+	}
+	if v, ok := in["read_only"].(bool); ok {
+		obj.ReadOnly = v
+	}
+	if v, ok := in["fs_type"].(string); ok {
+		obj.FSType = v
+	}
+	if v, ok := in["volume_attributes"].(map[string]interface{}); ok && len(v) > 0 {
+		obj.VolumeAttributes = expandStringMap(v)
 	}
 	return obj
 }
@@ -1515,6 +1556,28 @@ func patchPersistentVolumeSource(pathPrefix, prefix string, d *schema.ResourceDa
 			}
 		} else if oldOk && len(oldV) > 0 {
 			ops = append(ops, &RemoveOperation{Path: pathPrefix + "/photonPersistentDisk"})
+		}
+	}
+
+	if d.HasChange(prefix + "csi") {
+		oldIn, newIn := d.GetChange(prefix + "csi")
+		oldV, oldOk := oldIn.([]interface{})
+		newV, newOk := newIn.([]interface{})
+
+		if newOk && len(newV) > 0 {
+			if oldOk && len(oldV) > 0 {
+				ops = append(ops, &ReplaceOperation{
+					Path:  pathPrefix + "/csi",
+					Value: expandCSIPersistentDiskVolumeSource(newV),
+				})
+			} else {
+				ops = append(ops, &AddOperation{
+					Path:  pathPrefix + "/csi",
+					Value: expandCSIPersistentDiskVolumeSource(newV),
+				})
+			}
+		} else if oldOk && len(oldV) > 0 {
+			ops = append(ops, &RemoveOperation{Path: pathPrefix + "/csi"})
 		}
 	}
 

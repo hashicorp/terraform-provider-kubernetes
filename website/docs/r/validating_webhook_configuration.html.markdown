@@ -3,7 +3,7 @@ layout: "kubernetes"
 page_title: "Kubernetes: validating_webhook_configuration"
 sidebar_current: "docs-kubernetes-resource-validating-webhook-configuration"
 description: |-
-  validating webhook configuration automatically scales the number of pods in a replication controller, deployment or replica set based on observed CPU utilization.
+  Validating Webhook Configuration automatically scales the number of pods in a replication controller, deployment or replica set based on observed CPU utilization.
 ---
 
 # validating_webhook_configuration
@@ -50,7 +50,7 @@ The provider supports clusters running either `v1` or `v1beta` of the Admission 
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard validating webhook configuration metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
+* `metadata` - (Required) Standard Validating Webhook Configuration metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 * `webhook` - (Required) A list of webhooks and the affected resources and operations.
 
 ## Nested Blocks
@@ -59,23 +59,23 @@ The following arguments are supported:
 
 #### Arguments
 
-* `annotations` - (Optional) An unstructured key value map stored with the validating webhook configuration that may be used to store arbitrary metadata. 
+* `annotations` - (Optional) An unstructured key value map stored with the Validating Webhook Configuration that may be used to store arbitrary metadata. 
 **By default, the provider ignores any annotations whose key names end with *kubernetes.io*. This is necessary because such annotations can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such annotations in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem).**
 For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/annotations)
 * `generate_name` - (Optional) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency)
-* `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the validating webhook configuration. May match selectors of replication controllers and services. 
+* `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the Validating Webhook Configuration. May match selectors of replication controllers and services. 
 **By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem).**
 For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
-* `name` - (Optional) Name of the validating webhook configuration, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
-* `namespace` - (Optional) Namespace defines the space within which name of the validating webhook configuration must be unique.
+* `name` - (Optional) Name of the Validating Webhook Configuration, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+* `namespace` - (Optional) Namespace defines the space within which name of the Validating Webhook Configuration must be unique.
 
 #### Attributes
 
 
 * `generation` - A sequence number representing a specific generation of the desired state.
-* `resource_version` - An opaque value that represents the internal version of this validating webhook configuration that can be used by clients to determine when validating webhook configuration has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
-* `self_link` - A URL representing this validating webhook configuration.
-* `uid` - The unique in time and space value for this validating webhook configuration. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
+* `resource_version` - An opaque value that represents the internal version of this Validating Webhook Configuration that can be used by clients to determine when Validating Webhook Configuration has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
+* `self_link` - A URL representing this Validating Webhook Configuration.
+* `uid` - The unique in time and space value for this Validating Webhook Configuration. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
 ### `webhook`
 
@@ -122,7 +122,7 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 
 ## Import
 
-validating webhook configuration can be imported using the name, e.g.
+Validating Webhook Configuration can be imported using the name, e.g.
 
 ```
 $ terraform import validating_webhook_configuration.example terraform-example

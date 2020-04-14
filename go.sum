@@ -759,6 +759,7 @@ howett.net/plist v0.0.0-20181124034731-591f970eefbb/go.mod h1:vMygbs4qMhSZSc4lCU
 k8s.io/api v0.0.0-20190918155943-95b840bb6a1f/go.mod h1:uWuOHnjmNrtQomJrvEBg0c0HRNyQ+8KTEERVsK0PW48=
 k8s.io/api v0.0.0-20191025225708-5524a3672fbb h1:XpnI7Pjlb0pMfI0hmHgWgaKqkp/JIL3JYYFN21AYCP8=
 k8s.io/api v0.0.0-20191025225708-5524a3672fbb/go.mod h1:NMIXwlJTrA+pXie6lv562GUPkluJ4oRGzQfqWBLaceY=
+k8s.io/api v0.18.1 h1:pnHr0LH69kvL29eHldoepUDKTuiOejNZI2A1gaxve3Q=
 k8s.io/apimachinery v0.0.0-20190204010555-a98ff070d70e/go.mod h1:ccL7Eh7zubPUSh9A3USN90/OzHNSVN6zxzde07TDCL0=
 k8s.io/apimachinery v0.0.0-20190913080033-27d36303b655/go.mod h1:nL6pwRT8NgfF8TT68DBI8uEePRt89cSvoXUVqbkWHq4=
 k8s.io/apimachinery v0.0.0-20191025225532-af6325b3a843 h1:Ge6Np+ecN6pKYcAaFXR53I88+UL5ch+KpLxkKREpsJ4=

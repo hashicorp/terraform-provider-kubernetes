@@ -162,6 +162,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T
 	claimName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	volumeName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	volumeNameModified := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	volumeNameEmptyStorageClass := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	diskName := fmt.Sprintf("tf-acc-test-disk-%s", acctest.RandString(10))
 	zone := os.Getenv("GOOGLE_ZONE")
 
@@ -215,6 +216,31 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.volume_name", volumeNameModified),
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test2", &pvConf),
 					testAccCheckMetaAnnotations(&pvConf.ObjectMeta, map[string]string{"pv.kubernetes.io/bound-by-controller": "yes"}),
+				),
+			},
+			// Empty storage class. Allowed as per https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class-1
+			{
+				Config: testAccKubernetesPersistentVolumeClaimConfig_volumeMatchEmptyStorageClass(volumeNameEmptyStorageClass, claimName, diskName, zone),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &pvcConf),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.annotations.%", "0"),
+					testAccCheckMetaAnnotations(&pvcConf.ObjectMeta, map[string]string{"pv.kubernetes.io/bind-completed": "yes"}),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.labels.%", "0"),
+					testAccCheckMetaLabels(&pvcConf.ObjectMeta, map[string]string{}),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", claimName),
+					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.volume_name", volumeNameEmptyStorageClass),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.storage_class_name", ""),
+					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &pvConf),
+					testAccCheckMetaAnnotations(&pvConf.ObjectMeta, map[string]string{}),
 				),
 			},
 		},
@@ -987,4 +1013,57 @@ resource "kubernetes_persistent_volume_claim" "test" {
   }
 }
 `, className, className, claimName)
+}
+
+// Allowed as per https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class-1
+func testAccKubernetesPersistentVolumeClaimConfig_volumeMatchEmptyStorageClass(volumeName, claimName, diskName, zone string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_persistent_volume" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    capacity = {
+      storage = "10Gi"
+    }
+
+    access_modes       = ["ReadWriteOnce"]
+    storage_class_name = ""
+
+    persistent_volume_source {
+      gce_persistent_disk {
+        pd_name = "${google_compute_disk.test.name}"
+      }
+    }
+  }
+}
+
+resource "google_compute_disk" "test" {
+  name  = "%s"
+  type  = "pd-ssd"
+  zone  = "%s"
+  image = "debian-8-jessie-v20170523"
+  size  = 10
+}
+
+resource "kubernetes_persistent_volume_claim" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    access_modes       = ["ReadWriteOnce"]
+    storage_class_name = ""
+
+    resources {
+      requests = {
+        storage = "5Gi"
+      }
+    }
+
+    volume_name = "${kubernetes_persistent_volume.test.metadata.0.name}"
+  }
+}
+`, volumeName, diskName, zone, claimName)
 }

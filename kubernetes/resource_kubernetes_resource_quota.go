@@ -61,7 +61,10 @@ func resourceKubernetesResourceQuota() *schema.Resource {
 }
 
 func resourceKubernetesResourceQuotaCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandResourceQuotaSpec(d.Get("spec").([]interface{}))
@@ -100,7 +103,10 @@ func resourceKubernetesResourceQuotaCreate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesResourceQuotaRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -136,7 +142,10 @@ func resourceKubernetesResourceQuotaRead(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -191,7 +200,10 @@ func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesResourceQuotaDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -211,7 +223,10 @@ func resourceKubernetesResourceQuotaDelete(d *schema.ResourceData, meta interfac
 }
 
 func resourceKubernetesResourceQuotaExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

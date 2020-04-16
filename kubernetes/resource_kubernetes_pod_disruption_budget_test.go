@@ -103,7 +103,10 @@ func TestAccKubernetesPodDisruptionBudget_importBasic(t *testing.T) {
 }
 
 func testAccCheckKubernetesPodDisruptionBudgetDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_pod_disruption_budget" {
@@ -133,7 +136,10 @@ func testAccCheckKubernetesPodDisruptionBudgetExists(n string, obj *api.PodDisru
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {

@@ -74,7 +74,10 @@ func resourceKubernetesServiceAccount() *schema.Resource {
 }
 
 func resourceKubernetesServiceAccountCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svcAcc := api.ServiceAccount{
@@ -154,7 +157,10 @@ func diffObjectReferences(origOrs []api.ObjectReference, ors []api.ObjectReferen
 }
 
 func resourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -196,7 +202,10 @@ func resourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interface
 }
 
 func resourceKubernetesServiceAccountUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -243,7 +252,10 @@ func resourceKubernetesServiceAccountUpdate(d *schema.ResourceData, meta interfa
 }
 
 func resourceKubernetesServiceAccountDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -263,7 +275,10 @@ func resourceKubernetesServiceAccountDelete(d *schema.ResourceData, meta interfa
 }
 
 func resourceKubernetesServiceAccountExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -282,7 +297,10 @@ func resourceKubernetesServiceAccountExists(d *schema.ResourceData, meta interfa
 }
 
 func resourceKubernetesServiceAccountImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return nil, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

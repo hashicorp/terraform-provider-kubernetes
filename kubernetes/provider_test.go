@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	gversion "github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
@@ -158,12 +159,11 @@ func testAccPreCheck(t *testing.T) {
 		os.Getenv("KUBE_CTX") != "" ||
 		os.Getenv("KUBECONFIG") != "" ||
 		os.Getenv("KUBE_CONFIG") != ""
+	hasUserCredentials := os.Getenv("KUBE_USER") != "" && os.Getenv("KUBE_PASSWORD") != ""
+	hasClientCert := os.Getenv("KUBE_CLIENT_CERT_DATA") != "" && os.Getenv("KUBE_CLIENT_KEY_DATA") != ""
 	hasStaticCfg := (os.Getenv("KUBE_HOST") != "" &&
-		os.Getenv("KUBE_USER") != "" &&
-		os.Getenv("KUBE_PASSWORD") != "" &&
-		os.Getenv("KUBE_CLIENT_CERT_DATA") != "" &&
-		os.Getenv("KUBE_CLIENT_KEY_DATA") != "" &&
-		os.Getenv("KUBE_CLUSTER_CA_CERT_DATA") != "")
+		os.Getenv("KUBE_CLUSTER_CA_CERT_DATA") != "") &&
+		(hasUserCredentials || hasClientCert || os.Getenv("KUBE_TOKEN") != "")
 
 	if !hasFileCfg && !hasStaticCfg {
 		t.Fatalf("File config (KUBE_CTX_AUTH_INFO and KUBE_CTX_CLUSTER) or static configuration"+
@@ -205,7 +205,10 @@ func getClusterVersion() (*gversion.Version, error) {
 		return nil, fmt.Errorf("Provider not initialized, unable to check cluster version")
 	}
 
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return nil, err
+	}
 	serverVersion, err := conn.ServerVersion()
 
 	if err != nil {
@@ -216,20 +219,8 @@ func getClusterVersion() (*gversion.Version, error) {
 }
 
 func skipIfClusterVersionLessThan(t *testing.T, vs string) {
-	cv, err := getClusterVersion()
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	v, err := gversion.NewVersion(vs)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if cv.LessThan(v) {
-		t.Skip(fmt.Sprintf("This test will only run on cluster versions %v and above", v))
+	if clusterVersionLessThan(vs) {
+		t.Skip(fmt.Sprintf("This test will only run on cluster versions %v and above", vs))
 	}
 }
 
@@ -306,7 +297,11 @@ func getFirstNode() (api.Node, error) {
 	if meta == nil {
 		return api.Node{}, errors.New("Provider not initialized, unable to get cluster node")
 	}
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return api.Node{}, err
+	}
+
 	resp, err := conn.CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
 		return api.Node{}, err
@@ -317,6 +312,32 @@ func getFirstNode() (api.Node, error) {
 	}
 
 	return resp.Items[0], nil
+}
+
+func clusterVersionLessThan(vs string) bool {
+	cv, err := getClusterVersion()
+
+	if err != nil {
+		return false
+	}
+
+	v, err := gversion.NewVersion(vs)
+
+	if err != nil {
+		return false
+	}
+
+	return cv.LessThan(v)
+}
+
+func skipCheckIf(skip func() (bool, string), check resource.TestCheckFunc) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if s, reason := skip(); s {
+			fmt.Println("Skipping check:", reason)
+			return nil
+		}
+		return check(s)
+	}
 }
 
 type currentEnv struct {

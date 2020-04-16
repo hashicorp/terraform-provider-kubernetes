@@ -1,4 +1,23 @@
-## 1.11.1 (Unreleased)
+## 1.11.2 (Unreleased)
+
+IMPROVEMENTS:
+
+* Add data source for config map (#76)
+* Add data source for service account (#523)
+
+BUG FIXES:
+* Update Go module versions to work with Go 1.13
+
+## 1.11.1 (February 28, 2020)
+
+IMPROVEMENTS:
+
+* Bump provider SDK to v1.7.0
+
+BUG FIXES:
+
+* Defer client initialization to improve resilience (#759)
+
 ## 1.11.0 (February 10, 2020)
 
 IMPROVEMENTS:

@@ -586,7 +586,11 @@ func TestAccKubernetesPersistentVolume_hostPath_mountOptions(t *testing.T) {
 }
 
 func waitForPersistenceVolumeDeleted(pvName string, poll, timeout time.Duration) error {
-	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(poll) {
 		_, err := conn.CoreV1().PersistentVolumes().Get(pvName, meta_v1.GetOptions{})
 		if err != nil && apierrs.IsNotFound(err) {
@@ -597,7 +601,11 @@ func waitForPersistenceVolumeDeleted(pvName string, poll, timeout time.Duration)
 }
 
 func testAccCheckKubernetesPersistentVolumeDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+
 	timeout := 5 * time.Second
 	poll := 1 * time.Second
 
@@ -624,7 +632,11 @@ func testAccCheckKubernetesPersistentVolumeExists(n string, obj *api.PersistentV
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*KubeClientsets).MainClientset
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
+
 		name := rs.Primary.ID
 		out, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
 		if err != nil {

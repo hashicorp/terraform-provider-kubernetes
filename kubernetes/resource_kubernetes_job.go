@@ -249,7 +249,7 @@ func waitForJobCondition(conn *kubernetes.Clientset, ns, name string, condition 
 			if c.Status != corev1.ConditionTrue {
 				continue
 			}
-			log.Printf("[DEBUG] Current contions of job: %s/%s: %s\n", ns, name, c.Type)
+			log.Printf("[DEBUG] Current condition of job: %s/%s: %s\n", ns, name, c.Type)
 			if c.Type == condition {
 				return nil
 			}

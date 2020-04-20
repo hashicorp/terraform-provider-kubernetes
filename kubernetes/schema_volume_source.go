@@ -232,7 +232,7 @@ func commonVolumeSources() map[string]*schema.Schema {
 					},
 					"volume_handle": {
 						Type:        schema.TypeString,
-						Description: "A map that specifies static properties of a volume. More info: https://kubernetes.io/docs/concepts/storage/volumes/#csi",
+						Description: "A string value that uniquely identifies the volume. More info: https://kubernetes.io/docs/concepts/storage/volumes/#csi",
 						Required:    true,
 					},
 					"volume_attributes": {

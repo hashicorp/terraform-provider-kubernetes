@@ -381,7 +381,9 @@ func flattenConfigMapVolumeSource(in *v1.ConfigMapVolumeSource) []interface{} {
 		}
 		att["items"] = items
 	}
-
+	if in.Optional != nil {
+		att["optional"] = *in.Optional
+	}
 	return []interface{}{att}
 }
 
@@ -730,6 +732,9 @@ func expandConfigMapVolumeSource(l []interface{}) (*v1.ConfigMapVolumeSource, er
 		obj.Name = v
 	}
 
+	if opt, ok := in["optional"].(bool); ok {
+		obj.Optional = ptrToBool(opt)
+	}
 	if v, ok := in["items"].([]interface{}); ok && len(v) > 0 {
 		obj.Items = expandKeyPath(v)
 	}

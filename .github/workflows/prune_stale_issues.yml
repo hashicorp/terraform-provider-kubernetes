@@ -1,0 +1,15 @@
+name: "Close stale issues"
+on:
+  schedule:
+  - cron: "0 0 * * *"
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/stale@v1.1.0
+      with:
+        repo-token: ${{ secrets.k8s_github_actions }}
+        stale-issue-message: 'This issue has been open 180 days with no activity. If this issue is reproducible with the latest version of the provider and with Terraform 0.12, please comment. Otherwise this issue will be closed in 30 days.'
+        days-before-stale: 180
+        days-before-close: 30

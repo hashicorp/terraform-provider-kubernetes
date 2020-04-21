@@ -414,6 +414,7 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 
 * `key` - (Optional) The key to select.
 * `name` - (Optional) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+* `optional` - (Optional) Specify whether the Secret or its key must be defined
 
 ### `dns_config`
 
@@ -746,6 +747,7 @@ The `items` block supports the following:
 
 * `key` - (Optional) The key of the secret to select from. Must be a valid secret key.
 * `name` - (Optional) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+* `optional` - (Optional) Specify whether the Secret or its key must be defined
 
 ### `secret_ref`
 
@@ -805,9 +807,9 @@ The `items` block supports the following:
 #### Arguments
 
 * `config_map_key_ref` - (Optional) Selects a key of a ConfigMap.
-* `field_ref` - (Optional) Selects a field of the pod: supports metadata.name, metadata.namespace, metadata.labels, metadata.annotations, spec.nodeName, spec.serviceAccountName, status.podIP..
-* `resource_field_ref` - (Optional) Selects a field of the pod: supports metadata.name, metadata.namespace, metadata.labels, metadata.annotations, spec.nodeName, spec.serviceAccountName, status.podIP..
-* `secret_key_ref` - (Optional) Selects a field of the pod: supports metadata.name, metadata.namespace, metadata.labels, metadata.annotations, spec.nodeName, spec.serviceAccountName, status.podIP..
+* `field_ref` - (Optional) Selects a field of the pod: supports metadata.name, metadata.namespace, metadata.labels, metadata.annotations, spec.nodeName, spec.serviceAccountName, status.podIP.
+* `resource_field_ref` - (Optional) Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
+* `secret_key_ref` - (Optional) Selects a key of a secret in the pod's namespace.
 
 ### `volume`
 

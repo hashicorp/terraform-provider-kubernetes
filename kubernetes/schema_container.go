@@ -259,6 +259,11 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 												Optional:    true,
 												Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
 											},
+											"optional": {
+												Type:        schema.TypeBool,
+												Optional:    true,
+												Description: "Specify whether the ConfigMap or its key must be defined.",
+											},
 										},
 									},
 								},
@@ -266,7 +271,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 									Type:        schema.TypeList,
 									Optional:    true,
 									MaxItems:    1,
-									Description: "Selects a field of the pod: supports metadata.name, metadata.namespace, metadata.labels, metadata.annotations, spec.nodeName, spec.serviceAccountName, status.podIP..",
+									Description: "Selects a field of the pod: supports metadata.name, metadata.namespace, metadata.labels, metadata.annotations, spec.nodeName, spec.serviceAccountName, status.podIP.",
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"api_version": {
@@ -287,7 +292,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 									Type:        schema.TypeList,
 									Optional:    true,
 									MaxItems:    1,
-									Description: "Selects a field of the pod: supports metadata.name, metadata.namespace, metadata.labels, metadata.annotations, spec.nodeName, spec.serviceAccountName, status.podIP..",
+									Description: "Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.",
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"container_name": {
@@ -306,7 +311,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 									Type:        schema.TypeList,
 									Optional:    true,
 									MaxItems:    1,
-									Description: "Selects a field of the pod: supports metadata.name, metadata.namespace, metadata.labels, metadata.annotations, spec.nodeName, spec.serviceAccountName, status.podIP..",
+									Description: "Selects a key of a secret in the pod's namespace.",
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"key": {
@@ -318,6 +323,11 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 												Type:        schema.TypeString,
 												Optional:    true,
 												Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+											},
+											"optional": {
+												Type:        schema.TypeBool,
+												Optional:    true,
+												Description: "Specify whether the Secret or its key must be defined.",
 											},
 										},
 									},

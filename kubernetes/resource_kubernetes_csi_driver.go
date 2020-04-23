@@ -34,17 +34,17 @@ func resourceKubernetesCSIDriver() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"attach_required": {
 							Type:        schema.TypeBool,
-							Description: "The parameters for the provisioner that should create volumes of this CSIDriver",
+							Description: "Indicates if the CSI volume driver requires an attach operation",
 							Required:    true,
 						},
 						"pod_info_on_mount": {
 							Type:        schema.TypeBool,
-							Description: "The parameters for the provisioner that should create volumes of this CSIDriver",
+							Description: "Indicates that the CSI volume driver requires additional pod information (like podName, podUID, etc.) during mount operations",
 							Optional:    true,
 						},
 						"volume_lifecycle_modes": {
 							Type:        schema.TypeList,
-							Description: "The parameters for the provisioner that should create volumes of this CSIDriver",
+							Description: "Defines what kind of volumes this CSI volume driver supports",
 							Optional:    true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,

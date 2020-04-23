@@ -1,4 +1,13 @@
 ## 1.11.2 (Unreleased)
+
+IMPROVEMENTS:
+
+* Add data source for config map (#76)
+* Add data source for service account (#523)
+
+BUG FIXES:
+* Update Go module versions to work with Go 1.13
+
 ## 1.11.1 (February 28, 2020)
 
 IMPROVEMENTS:

@@ -17,9 +17,11 @@ func dataSourceKubernetesIngress() *schema.Resource {
 }
 
 func dataSourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) error {
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+
 	om := meta_v1.ObjectMeta{
-		Namespace: d.Get("metadata.0.namespace").(string),
-		Name:      d.Get("metadata.0.name").(string),
+		Namespace: metadata.Namespace,
+		Name:      metadata.Name,
 	}
 	d.SetId(buildId(om))
 

@@ -1,19 +1,19 @@
 ---
 layout: "kubernetes"
-page_title: "Kubernetes: validating_webhook_configuration"
-sidebar_current: "docs-kubernetes-resource-validating-webhook-configuration"
+page_title: "Kubernetes: mutating_webhook_configuration"
+sidebar_current: "docs-kubernetes-resource-mutating-webhook-configuration"
 description: |-
-  Validating Webhook Configuration configures a validating admission webhook
+  Mutating Webhook Configuration configures a mutating admission webhook
 ---
 
-# validating_webhook_configuration
+# mutating_webhook_configuration
 
-Validating Webhook Configuration configures a [validating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks).
+Mutating Webhook Configuration configures a [mutating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks).
 
 ## Example Usage
 
 ```hcl
-resource "kubernetes_validating_webhook_configuration" "example" {
+resource "kubernetes_mutating_webhook_configuration" "example" {
   metadata {
     name = "test.terraform.io"
   }
@@ -38,6 +38,7 @@ resource "kubernetes_validating_webhook_configuration" "example" {
       scope = "Namespaced"
     }
 
+    reinvocation_policy = "IfNeeded"
     side_effects = "None"
   }
 }
@@ -52,7 +53,7 @@ The provider supports clusters running either `v1` or `v1beta1` of the Admission
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard Validating Webhook Configuration metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
+* `metadata` - (Required) Standard Mutating Webhook Configuration metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 * `webhook` - (Required) A list of webhooks and the affected resources and operations.
 
 ## Nested Blocks
@@ -61,23 +62,23 @@ The following arguments are supported:
 
 #### Arguments
 
-* `annotations` - (Optional) An unstructured key value map stored with the Validating Webhook Configuration that may be used to store arbitrary metadata. 
+* `annotations` - (Optional) An unstructured key value map stored with the Mutating Webhook Configuration that may be used to store arbitrary metadata. 
 **By default, the provider ignores any annotations whose key names end with *kubernetes.io*. This is necessary because such annotations can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such annotations in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem).**
 For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/annotations)
 * `generate_name` - (Optional) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency)
-* `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the Validating Webhook Configuration. May match selectors of replication controllers and services. 
+* `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the Mutating Webhook Configuration. May match selectors of replication controllers and services. 
 **By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem).**
 For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
-* `name` - (Optional) Name of the Validating Webhook Configuration, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
-* `namespace` - (Optional) Namespace defines the space within which name of the Validating Webhook Configuration must be unique.
+* `name` - (Optional) Name of the Mutating Webhook Configuration, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+* `namespace` - (Optional) Namespace defines the space within which name of the Mutating Webhook Configuration must be unique.
 
 #### Attributes
 
 
 * `generation` - A sequence number representing a specific generation of the desired state.
-* `resource_version` - An opaque value that represents the internal version of this Validating Webhook Configuration that can be used by clients to determine when Validating Webhook Configuration has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
-* `self_link` - A URL representing this Validating Webhook Configuration.
-* `uid` - The unique in time and space value for this Validating Webhook Configuration. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
+* `resource_version` - An opaque value that represents the internal version of this Mutating Webhook Configuration that can be used by clients to determine when Mutating Webhook Configuration has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
+* `self_link` - A URL representing this Mutating Webhook Configuration.
+* `uid` - The unique in time and space value for this Mutating Webhook Configuration. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
 ### `webhook`
 
@@ -90,6 +91,7 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 * `name` - (Required) The name of the admission webhook. Name should be fully qualified, e.g., imagepolicy.kubernetes.io, where "imagepolicy" is the name of the webhook, and kubernetes.io is the name of the organization.
 * `namespace_selector` - (Optional) NamespaceSelector decides whether to run the webhook on an object based on whether the namespace for that object matches the selector. If the object itself is a namespace, the matching is performed on object.metadata.labels. If the object is another cluster scoped resource, it never skips the webhook. For example, to run the webhook on any objects whose namespace is not associated with "runlevel" of "0" or "1"; you will set the selector as follows: "namespaceSelector": { "matchExpressions": [ { "key": "runlevel", "operator": "NotIn", "values": [ "0", "1" ] } ] } If instead you want to only run the webhook on any objects whose namespace is associated with the "environment" of "prod" or "staging"; you will set the selector as follows: "namespaceSelector": { "matchExpressions": [ { "key": "environment", "operator": "In", "values": [ "prod", "staging" ] } ] } See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels for more examples of label selectors. Default to the empty LabelSelector, which matches everything.
 * `object_selector` - (Optional) ObjectSelector decides whether to run the webhook based on if the object has matching labels. objectSelector is evaluated against both the oldObject and newObject that would be sent to the webhook, and is considered to match if either object matches the selector. A null object (oldObject in the case of create, or newObject in the case of delete) or an object that cannot have labels (like a DeploymentRollback or a PodProxyOptions object) is not considered to match. Use the object selector only if the webhook is opt-in, because end users may skip the admission webhook by setting the labels. Default to the empty LabelSelector, which matches everything.
+*  `reincovation_policy` - (Optional) reinvocationPolicy indicates whether this webhook should be called multiple times as part of a single admission evaluation. Allowed values are "Never" and "IfNeeded". Never: the webhook will not be called more than once in a single admission evaluation. IfNeeded: the webhook will be called at least one additional time as part of the admission evaluation if the object being admitted is modified by other admission plugins after the initial webhook call. Webhooks that specify this option *must* be idempotent, able to process objects they previously admitted. Note: * the number of additional invocations is not guaranteed to be exactly one. * if additional invocations result in further modifications to the object, webhooks are not guaranteed to be invoked again. * webhooks that use this option may be reordered to minimize the number of additional invocations. * to validate an object after all mutations are guaranteed complete, use a validating admission webhook instead. Defaults to "Never".
 * `rule` - (Optional) Describes what operations on what resources/subresources the webhook cares about. The webhook cares about an operation if it matches _any_ Rule. However, in order to prevent ValidatingAdmissionWebhooks and MutatingAdmissionWebhooks from putting the cluster in a state which cannot be recovered from without completely disabling the plugin, ValidatingAdmissionWebhooks and MutatingAdmissionWebhooks are never called on admission requests for ValidatingWebhookConfiguration and MutatingWebhookConfiguration objects.
 * `side_effects` - (Required) SideEffects states whether this webhook has side effects. Acceptable values are: None, NoneOnDryRun (webhooks created via v1beta1 may also specify Some or Unknown). Webhooks with side effects MUST implement a reconciliation system, since a request may be rejected by a future step in the admission change and the side effects therefore need to be undone. Requests with the dryRun attribute will be auto-rejected if they match a webhook with sideEffects == Unknown or Some.
 * `timeout_seconds` - (Optional) TimeoutSeconds specifies the timeout for this webhook. After the timeout passes, the webhook call will be ignored or the API call will fail based on the failure policy. The timeout value must be between 1 and 30 seconds. Default to 10 seconds.
@@ -124,8 +126,8 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 
 ## Import
 
-Validating Webhook Configuration can be imported using the name, e.g.
+Mutating Webhook Configuration can be imported using the name, e.g.
 
 ```
-$ terraform import validating_webhook_configuration.example terraform-example
+$ terraform import mutating_webhook_configuration.example terraform-example
 ```

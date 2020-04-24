@@ -173,6 +173,7 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_stateful_set":                     resourceKubernetesStatefulSet(),
 			"kubernetes_storage_class":                    resourceKubernetesStorageClass(),
 			"kubernetes_validating_webhook_configuration": resourceKubernetesValidatingWebhookConfiguration(),
+			"kubernetes_mutating_webhook_configuration":   resourceKubernetesMutatingWebhookConfiguration(),
 		},
 	}
 
@@ -363,4 +364,50 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 
 	log.Printf("[INFO] Successfully initialized config")
 	return cfg, nil
+}
+
+var useadmissionregistrationv1beta1 *bool
+
+func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
+	if useadmissionregistrationv1beta1 != nil {
+		return *useadmissionregistrationv1beta1, nil
+	}
+
+	d := conn.Discovery()
+	groups, err := d.ServerGroups()
+	if err != nil {
+		return false, err
+	}
+
+	apiGroup := "admissionregistration.k8s.io"
+	use, err := func() (bool, error) {
+		for _, g := range groups.Groups {
+			if g.Name == apiGroup {
+				preferredVersion := g.PreferredVersion.Version
+				if preferredVersion == "v1" {
+					return false, nil
+				} else if preferredVersion == "v1beta1" {
+					return true, nil
+				} else {
+					// see if v1 or v1beta are there even if they are not preferred
+					for _, v := range g.Versions {
+						if v.Version == "v1" {
+							return false, nil
+						} else if v.Version == "v1beta1" {
+							return true, nil
+						}
+					}
+				}
+				return false, fmt.Errorf("Provider does not support any of the cluster's versions of %v", apiGroup)
+			}
+		}
+		return false, fmt.Errorf("Cluster does not support %v", apiGroup)
+	}()
+
+	if err != nil {
+		return false, err
+	}
+
+	useadmissionregistrationv1beta1 = ptrToBool(use)
+	return use, nil
 }

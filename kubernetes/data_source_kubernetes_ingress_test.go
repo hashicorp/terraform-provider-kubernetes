@@ -41,11 +41,34 @@ func TestAccKubernetesDataSourceIngress_basic(t *testing.T) {
 }
 
 func testAccKubernetesDataSourceIngressConfig_basic(name string) string {
-	return testAccKubernetesIngressConfig_basic(name) + `
+	return fmt.Sprintf(`
+resource "kubernetes_ingress" "test" {
+	metadata {
+		name = "%s"
+	}
+	spec {
+		backend {
+			service_name = "app1"
+			service_port = 443
+		}
+		rule {
+			host = "server.domain.com"
+			http {
+				path {
+					backend {
+						service_name = "app2"
+						service_port = 80
+					}
+					path = "/.*"
+				}
+			}
+		}
+	}
+}
+
 data "kubernetes_ingress" "test" {
 	metadata {
 		name = "${kubernetes_ingress.test.metadata.0.name}"
 	}
-}
-`
+}`, name)
 }

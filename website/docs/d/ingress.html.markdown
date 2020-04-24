@@ -9,7 +9,7 @@ description: |-
 # kubernetes_ingress
 
 Ingress is a collection of rules that allow inbound connections to reach the endpoints defined by a backend. An Ingress can be configured to give services externally-reachable urls, load balance traffic, terminate SSL, offer name based virtual hosting etc.
-This data source allows you to pull data about such ingress, especially the loadbalancer dns.
+This data source allows you to pull data about such ingress.
 
 ## Example Usage
 
@@ -21,11 +21,11 @@ data "kubernetes_ingress" "example" {
 }
 
 resource "aws_route53_record" "example" {
-  zone_id = "${data.aws_route53_zone.k8.zone_id}"
+  zone_id = data.aws_route53_zone.k8.zone_id
   name    = "example"
   type    = "CNAME"
   ttl     = "300"
-  records = ["${data.kubernetes_ingress.example.load_balancer_ingress.0.hostname}"]
+  records = [data.kubernetes_ingress.example.load_balancer_ingress.0.hostname]
 }
 ```
 

@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/mitchellh/go-homedir"
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
+	discovery "k8s.io/client-go/discovery"
 	kubernetes "k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	restclient "k8s.io/client-go/rest"
@@ -374,40 +375,32 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 	}
 
 	d := conn.Discovery()
-	groups, err := d.ServerGroups()
+
+	group := "admissionregistration.k8s.io"
+
+	v1, err := apimachineryschema.ParseGroupVersion(fmt.Sprintf("%s/v1", group))
 	if err != nil {
 		return false, err
 	}
 
-	apiGroup := "admissionregistration.k8s.io"
-	use, err := func() (bool, error) {
-		for _, g := range groups.Groups {
-			if g.Name == apiGroup {
-				preferredVersion := g.PreferredVersion.Version
-				if preferredVersion == "v1" {
-					return false, nil
-				} else if preferredVersion == "v1beta1" {
-					return true, nil
-				} else {
-					// see if v1 or v1beta are there even if they are not preferred
-					for _, v := range g.Versions {
-						if v.Version == "v1" {
-							return false, nil
-						} else if v.Version == "v1beta1" {
-							return true, nil
-						}
-					}
-				}
-				return false, fmt.Errorf("Provider does not support any of the cluster's versions of %v", apiGroup)
-			}
-		}
-		return false, fmt.Errorf("Cluster does not support %v", apiGroup)
-	}()
+	err = discovery.ServerSupportsVersion(d, v1)
+	if err == nil {
+		log.Printf("[INFO] Using %s/v1", group)
+		useadmissionregistrationv1beta1 = ptrToBool(false)
+		return false, nil
+	}
 
+	v1beta1, err := apimachineryschema.ParseGroupVersion(fmt.Sprintf("%s/v1beta1", group))
 	if err != nil {
 		return false, err
 	}
 
-	useadmissionregistrationv1beta1 = ptrToBool(use)
-	return use, nil
+	err = discovery.ServerSupportsVersion(d, v1beta1)
+	if err != nil {
+		return false, err
+	}
+
+	log.Printf("[INFO] Using %s/v1beta1", group)
+	useadmissionregistrationv1beta1 = ptrToBool(true)
+	return true, nil
 }

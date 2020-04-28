@@ -73,8 +73,6 @@ If you wish to configure the provider statically you can do so by providing TLS 
 
 ```hcl
 provider "kubernetes" {
-  load_config_file = "false"
-
   host = "https://104.196.242.174"
 
   client_certificate     = file("~/.kube/client-cert.pem")
@@ -89,8 +87,6 @@ or by providing username and password (HTTP Basic Authorization):
 
 ```hcl
 provider "kubernetes" {
-  load_config_file = "false"
-
   host = "https://104.196.242.174"
 
   username = "ClusterMaster"

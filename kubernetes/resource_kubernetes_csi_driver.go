@@ -3,11 +3,13 @@ package kubernetes
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	api "k8s.io/api/storage/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
@@ -159,10 +161,32 @@ func resourceKubernetesCSIDriverDelete(d *schema.ResourceData, meta interface{})
 		return err
 	}
 
+	timeout := 5 * time.Second
+	poll := 1 * time.Second
+
+	if err := waitForCSIDriverDeleted(meta, d.Id(), poll, timeout); err != nil {
+		return err
+	}
+
 	log.Printf("[INFO] CSIDriver %s deleted", name)
 
 	d.SetId("")
 	return nil
+}
+
+func waitForCSIDriverDeleted(meta interface{}, csiDriverName string, poll, timeout time.Duration) error {
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+
+	for start := time.Now(); time.Since(start) < timeout; time.Sleep(poll) {
+		_, err := conn.StorageV1beta1().CSIDrivers().Get(csiDriverName, metav1.GetOptions{})
+		if err != nil && apierrs.IsNotFound(err) {
+			return nil
+		}
+	}
+	return fmt.Errorf("CSIDriver still exists: %s", csiDriverName)
 }
 
 func resourceKubernetesCSIDriverExists(d *schema.ResourceData, meta interface{}) (bool, error) {

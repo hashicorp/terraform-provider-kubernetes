@@ -36,6 +36,7 @@ func resourceKubernetesCSIDriver() *schema.Resource {
 							Type:        schema.TypeBool,
 							Description: "Indicates if the CSI volume driver requires an attach operation",
 							Required:    true,
+							ForceNew:    true,
 						},
 						"pod_info_on_mount": {
 							Type:        schema.TypeBool,
@@ -190,11 +191,11 @@ func expandCSIDriverSpec(l []interface{}) api.CSIDriverSpec {
 	obj := api.CSIDriverSpec{}
 
 	if v, ok := in["attach_required"].(bool); ok {
-		obj.AttachRequired = &v
+		obj.AttachRequired = ptrToBool(v)
 	}
 
 	if v, ok := in["pod_info_on_mount"].(bool); ok {
-		obj.PodInfoOnMount = &v
+		obj.PodInfoOnMount = ptrToBool(v)
 	}
 
 	if v, ok := in["volume_lifecycle_modes"].([]interface{}); ok && len(v) > 0 {

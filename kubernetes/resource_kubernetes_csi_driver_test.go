@@ -35,22 +35,6 @@ func TestAccKubernetesCSIDriver_basic(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
-			{
-				Config: testAccKubernetesCSIDriverBasicConfig(name, false),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesCSIDriverExists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.attach_required", "false"),
-				),
-			},
-			{
-				Config: testAccKubernetesCSIDriverBasicConfig(name, true),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesCSIDriverExists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.attach_required", "true"),
-				),
-			},
 		},
 	})
 }

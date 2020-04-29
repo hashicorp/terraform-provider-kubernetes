@@ -155,6 +155,7 @@ func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) e
 			return resource.NonRetryableError(resourceKubernetesIngressRead(d, meta))
 		}
 
+		log.Printf("[INFO] Load Balancer not ready yet...")
 		return resource.RetryableError(fmt.Errorf("Load Balancer is not ready yet"))
 	})
 }

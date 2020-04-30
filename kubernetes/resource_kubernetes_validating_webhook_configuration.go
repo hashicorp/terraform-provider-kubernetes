@@ -114,8 +114,6 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 }
 
 func resourceKubernetesValidatingWebhookConfigurationCreate(d *schema.ResourceData, meta interface{}) error {
-	var err error
-
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return err
@@ -156,8 +154,6 @@ func resourceKubernetesValidatingWebhookConfigurationCreate(d *schema.ResourceDa
 }
 
 func resourceKubernetesValidatingWebhookConfigurationRead(d *schema.ResourceData, meta interface{}) error {
-	var err error
-
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return err
@@ -199,8 +195,6 @@ func resourceKubernetesValidatingWebhookConfigurationRead(d *schema.ResourceData
 }
 
 func resourceKubernetesValidatingWebhookConfigurationUpdate(d *schema.ResourceData, meta interface{}) error {
-	var err error
-
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return err

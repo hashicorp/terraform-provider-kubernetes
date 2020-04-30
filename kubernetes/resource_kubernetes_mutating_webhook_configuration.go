@@ -120,8 +120,6 @@ func resourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 }
 
 func resourceKubernetesMutatingWebhookConfigurationCreate(d *schema.ResourceData, meta interface{}) error {
-	var err error
-
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return err
@@ -162,8 +160,6 @@ func resourceKubernetesMutatingWebhookConfigurationCreate(d *schema.ResourceData
 }
 
 func resourceKubernetesMutatingWebhookConfigurationRead(d *schema.ResourceData, meta interface{}) error {
-	var err error
-
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return err
@@ -205,8 +201,6 @@ func resourceKubernetesMutatingWebhookConfigurationRead(d *schema.ResourceData, 
 }
 
 func resourceKubernetesMutatingWebhookConfigurationUpdate(d *schema.ResourceData, meta interface{}) error {
-	var err error
-
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return err

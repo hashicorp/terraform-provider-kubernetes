@@ -242,7 +242,7 @@ func resourceKubernetesMutatingWebhookConfigurationUpdate(d *schema.ResourceData
 	}
 
 	name := d.Id()
-	log.Printf("[INFO] Updating MutatingWebhookCoßnfiguration %q: %v", name, string(data))
+	log.Printf("[INFO] Updating MutatingWebhookConfiguration %q: %v", name, string(data))
 
 	res := &admissionregistrationv1.MutatingWebhookConfiguration{}
 

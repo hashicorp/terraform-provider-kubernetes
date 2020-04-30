@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/mitchellh/go-homedir"
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
+	discovery "k8s.io/client-go/discovery"
 	kubernetes "k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	restclient "k8s.io/client-go/rest"
@@ -173,6 +174,7 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_stateful_set":                     resourceKubernetesStatefulSet(),
 			"kubernetes_storage_class":                    resourceKubernetesStorageClass(),
 			"kubernetes_validating_webhook_configuration": resourceKubernetesValidatingWebhookConfiguration(),
+			"kubernetes_mutating_webhook_configuration":   resourceKubernetesMutatingWebhookConfiguration(),
 		},
 	}
 
@@ -363,4 +365,42 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 
 	log.Printf("[INFO] Successfully initialized config")
 	return cfg, nil
+}
+
+var useadmissionregistrationv1beta1 *bool
+
+func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
+	if useadmissionregistrationv1beta1 != nil {
+		return *useadmissionregistrationv1beta1, nil
+	}
+
+	d := conn.Discovery()
+
+	group := "admissionregistration.k8s.io"
+
+	v1, err := apimachineryschema.ParseGroupVersion(fmt.Sprintf("%s/v1", group))
+	if err != nil {
+		return false, err
+	}
+
+	err = discovery.ServerSupportsVersion(d, v1)
+	if err == nil {
+		log.Printf("[INFO] Using %s/v1", group)
+		useadmissionregistrationv1beta1 = ptrToBool(false)
+		return false, nil
+	}
+
+	v1beta1, err := apimachineryschema.ParseGroupVersion(fmt.Sprintf("%s/v1beta1", group))
+	if err != nil {
+		return false, err
+	}
+
+	err = discovery.ServerSupportsVersion(d, v1beta1)
+	if err != nil {
+		return false, err
+	}
+
+	log.Printf("[INFO] Using %s/v1beta1", group)
+	useadmissionregistrationv1beta1 = ptrToBool(true)
+	return true, nil
 }

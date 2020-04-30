@@ -4,7 +4,7 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 )
 
-func flattenValidatingWebhook(in admissionregistrationv1.ValidatingWebhook) map[string]interface{} {
+func flattenMutatingWebhook(in admissionregistrationv1.MutatingWebhook) map[string]interface{} {
 	att := map[string]interface{}{}
 
 	att["admission_review_versions"] = in.AdmissionReviewVersions
@@ -33,6 +33,10 @@ func flattenValidatingWebhook(in admissionregistrationv1.ValidatingWebhook) map[
 		}
 	}
 
+	if in.ReinvocationPolicy != nil {
+		att["reinvocation_policy"] = *in.ReinvocationPolicy
+	}
+
 	rules := []interface{}{}
 	for _, rule := range in.Rules {
 		rules = append(rules, flattenRuleWithOperations(rule))
@@ -50,8 +54,8 @@ func flattenValidatingWebhook(in admissionregistrationv1.ValidatingWebhook) map[
 	return att
 }
 
-func expandValidatingWebhook(in map[string]interface{}) admissionregistrationv1.ValidatingWebhook {
-	obj := admissionregistrationv1.ValidatingWebhook{}
+func expandMutatingWebhook(in map[string]interface{}) admissionregistrationv1.MutatingWebhook {
+	obj := admissionregistrationv1.MutatingWebhook{}
 
 	if v, ok := in["admission_review_versions"].([]interface{}); ok {
 		obj.AdmissionReviewVersions = expandStringSlice(v)
@@ -83,6 +87,11 @@ func expandValidatingWebhook(in map[string]interface{}) admissionregistrationv1.
 		obj.ObjectSelector = expandLabelSelector(v)
 	}
 
+	if v, ok := in["reinvocation_policy"].(string); ok {
+		policy := admissionregistrationv1.ReinvocationPolicyType(v)
+		obj.ReinvocationPolicy = &policy
+	}
+
 	if v, ok := in["rule"].([]interface{}); ok {
 		rules := []admissionregistrationv1.RuleWithOperations{}
 		for _, r := range v {
@@ -103,18 +112,18 @@ func expandValidatingWebhook(in map[string]interface{}) admissionregistrationv1.
 	return obj
 }
 
-func expandValidatingWebhooks(in []interface{}) []admissionregistrationv1.ValidatingWebhook {
-	webhooks := []admissionregistrationv1.ValidatingWebhook{}
+func expandMutatingWebhooks(in []interface{}) []admissionregistrationv1.MutatingWebhook {
+	webhooks := []admissionregistrationv1.MutatingWebhook{}
 	for _, h := range in {
-		webhooks = append(webhooks, expandValidatingWebhook(h.(map[string]interface{})))
+		webhooks = append(webhooks, expandMutatingWebhook(h.(map[string]interface{})))
 	}
 	return webhooks
 }
 
-func flattenValidatingWebhooks(in []admissionregistrationv1.ValidatingWebhook) []interface{} {
+func flattenMutatingWebhooks(in []admissionregistrationv1.MutatingWebhook) []interface{} {
 	webhooks := []interface{}{}
 	for _, h := range in {
-		webhooks = append(webhooks, flattenValidatingWebhook(h))
+		webhooks = append(webhooks, flattenMutatingWebhook(h))
 	}
 	return webhooks
 }

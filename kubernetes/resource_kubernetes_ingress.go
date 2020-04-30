@@ -147,6 +147,11 @@ func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) e
 	return resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
 		res, err := conn.ExtensionsV1beta1().Ingresses(metadata.Namespace).Get(metadata.Name, metav1.GetOptions{})
 		if err != nil {
+			// NOTE it possible in some HA apiserver setups that are eventually consistent
+			// that we could get a 404 when doing a Get immediately after a Create
+			if errors.IsNotFound(err) {
+				return resource.RetryableError(err)
+			}
 			return resource.NonRetryableError(err)
 		}
 

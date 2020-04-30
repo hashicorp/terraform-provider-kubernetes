@@ -143,11 +143,11 @@ func testAccCheckKubernetesMutatingWebhookConfigurationDestroy(s *terraform.Stat
 
 		name := rs.Primary.ID
 
-		usev1beta1, err := useAdmissionregistrationV1beta1(conn)
+		useadmissionregistrationv1beta1, err := useAdmissionregistrationV1beta1(conn)
 		if err != nil {
 			return err
 		}
-		if usev1beta1 {
+		if useadmissionregistrationv1beta1 {
 			_, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})
 		} else {
 			_, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})
@@ -180,11 +180,11 @@ func testAccCheckKubernetesMutatingWebhookConfigurationExists(n string) resource
 
 		name := rs.Primary.ID
 
-		usev1beta1, err := useAdmissionregistrationV1beta1(conn)
+		useadmissionregistrationv1beta1, err := useAdmissionregistrationV1beta1(conn)
 		if err != nil {
 			return err
 		}
-		if usev1beta1 {
+		if useadmissionregistrationv1beta1 {
 			_, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})
 		} else {
 			_, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})

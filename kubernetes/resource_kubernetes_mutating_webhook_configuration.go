@@ -28,7 +28,7 @@ func resourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("validating webhook configuration", true),
+			"metadata": metadataSchema("mutating webhook configuration", true),
 			"webhook": {
 				Type:        schema.TypeList,
 				Description: apiDoc["webhooks"],

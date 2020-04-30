@@ -153,7 +153,7 @@ func TestAccKubernetesIngress_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) /*skipIfNoGoogleCloudSettingsFound(t)*/ },
+		PreCheck:      func() { testAccPreCheck(t) skipIfNoGoogleCloudSettingsFound(t) },
 		IDRefreshName: "kubernetes_ingress.test",
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesIngressDestroy,
@@ -162,7 +162,6 @@ func TestAccKubernetesIngress_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 				Config: testAccKubernetesIngressConfig_waitForLoadBalancer(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "load_balancer_ingress.0.host"),
 					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "load_balancer_ingress.0.ip"),
 				),
 			},
@@ -360,16 +359,67 @@ resource "kubernetes_ingress" "test" {
 
 func testAccKubernetesIngressConfig_waitForLoadBalancer(name string) string {
 	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
+resource "kubernetes_service" "test" {
 	metadata {
-		name = "%s"
+		name = %q
+	}
+	spec {
+		type = "NodePort"
+		selector = {
+			app = %q
+		}
+		port {
+			port = 8000
+			target_port = 80
+			protocol = "TCP"
+		}
+	}
+}
+
+resource "kubernetes_deployment" "test" {
+	metadata {
+		name = %q
+	}
+	spec {
+		selector {
+			match_labels = {
+				app = %q
+			}
+		}
+		template {
+			metadata {
+				labels = {
+					app = %q
+				}
+			}
+			spec {
+				container {
+					name = "test"
+					image = "gcr.io/google-samples/hello-app:2.0"
+					env {
+						name = "PORT"
+						value = "80"
+					}	
+				}
+			}
+		}
+	}
+}
+
+resource "kubernetes_ingress" "test" {
+	depends_on = [
+		kubernetes_service.test, 
+		kubernetes_deployment.test
+	]
+	metadata {
+		name = %q
 	}
 	spec {
 		backend {
-			service_name = "app1"
-			service_port = 443
+			service_name = %q
+			service_port = 8000
 		}
 	}
 	wait_for_load_balancer = true
-}`, name)
+}`, name, name, name, name, name, name, name)
 }

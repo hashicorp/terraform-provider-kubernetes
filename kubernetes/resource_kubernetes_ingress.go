@@ -8,8 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func resourceKubernetesIngress() *schema.Resource {
@@ -146,7 +145,7 @@ func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) e
 
 	log.Printf("[INFO] Waiting for load balancer to become ready: %#v", out)
 	return resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
-		res, err := conn.ExtensionsV1beta1().Ingresses(metadata.Namespace).Get(metadata.Name, v1.GetOptions{})
+		res, err := conn.ExtensionsV1beta1().Ingresses(metadata.Namespace).Get(metadata.Name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
 		}
@@ -172,7 +171,7 @@ func resourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) err
 	}
 
 	log.Printf("[INFO] Reading ingress %s", name)
-	ing, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(name, meta_v1.GetOptions{})
+	ing, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return fmt.Errorf("Failed to read Ingress '%s' because: %s", buildId(ing.ObjectMeta), err)
@@ -242,7 +241,7 @@ func resourceKubernetesIngressDelete(d *schema.ResourceData, meta interface{}) e
 	}
 
 	log.Printf("[INFO] Deleting ingress: %#v", name)
-	err = conn.ExtensionsV1beta1().Ingresses(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.ExtensionsV1beta1().Ingresses(namespace).Delete(name, &metav1.DeleteOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to delete Ingress %s because: %s", d.Id(), err)
 	}
@@ -265,7 +264,7 @@ func resourceKubernetesIngressExists(d *schema.ResourceData, meta interface{}) (
 	}
 
 	log.Printf("[INFO] Checking ingress %s", name)
-	_, err = conn.ExtensionsV1beta1().Ingresses(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.ExtensionsV1beta1().Ingresses(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

@@ -139,11 +139,11 @@ func resourceKubernetesMutatingWebhookConfigurationCreate(d *schema.ResourceData
 		return err
 	}
 	if useadmissionregistrationv1beta1 {
-		resv1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
-		reqv1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
-		copier.Copy(reqv1beta1, cfg)
-		resv1beta1, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Create(reqv1beta1)
-		copier.Copy(res, resv1beta1)
+		requestv1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
+		responsev1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
+		copier.Copy(requestv1beta1, cfg)
+		responsev1beta1, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Create(requestv1beta1)
+		copier.Copy(res, responsev1beta1)
 	} else {
 		res, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Create(&cfg)
 	}
@@ -245,9 +245,9 @@ func resourceKubernetesMutatingWebhookConfigurationUpdate(d *schema.ResourceData
 		return err
 	}
 	if useadmissionregistrationv1beta1 {
-		resv1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
-		resv1beta1, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Patch(name, types.JSONPatchType, data)
-		copier.Copy(res, resv1beta1)
+		responsev1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
+		responsev1beta1, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Patch(name, types.JSONPatchType, data)
+		copier.Copy(res, responsev1beta1)
 	} else {
 		res, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Patch(name, types.JSONPatchType, data)
 	}

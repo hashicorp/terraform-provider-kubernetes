@@ -1,4 +1,4 @@
-# Terraform Provider for Kubernetes
+# Terraform Provider for Kubernetes [![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/terraform-providers/terraform-provider-kubernetes?label=release)](https://github.com/terraform-providers/terraform-provider-kubernetes/releases) [![license](https://img.shields.io/github/license/terraform-providers/terraform-provider-kubernetes.svg)]()
 
 - Website: https://www.terraform.io
 - [![Gitter chat](https://badges.gitter.im/hashicorp-terraform/Lobby.png)](https://gitter.im/hashicorp-terraform/Lobby)

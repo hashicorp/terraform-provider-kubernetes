@@ -6,9 +6,9 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -152,14 +152,14 @@ func resourceKubernetesDeployment() *schema.Resource {
 													Description:  "The maximum number of pods that can be scheduled above the desired number of pods. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). This can not be 0 if MaxUnavailable is 0. Absolute number is calculated from percentage by rounding up. Defaults to 25%. Example: when this is set to 30%, the new RC can be scaled up immediately when the rolling update starts, such that the total number of old and new pods do not exceed 130% of desired pods. Once old pods have been killed, new RC can be scaled up further, ensuring that total number of pods running at any time during the update is atmost 130% of desired pods.",
 													Optional:     true,
 													Default:      "25%",
-													ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([0-9]+|[1-9][0-9]%|[1-9]%|100%)$`), ""),
+													ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([0-9]+|[0-9]+%|)$`), ""),
 												},
 												"max_unavailable": {
 													Type:         schema.TypeString,
 													Description:  "The maximum number of pods that can be unavailable during the update. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). Absolute number is calculated from percentage by rounding down. This can not be 0 if MaxSurge is 0. Defaults to 25%. Example: when this is set to 30%, the old RC can be scaled down to 70% of desired pods immediately when the rolling update starts. Once new pods are ready, old RC can be scaled down further, followed by scaling up the new RC, ensuring that the total number of pods available at all times during the update is at least 70% of desired pods.",
 													Optional:     true,
 													Default:      "25%",
-													ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([0-9]+|[1-9][0-9]%|[1-9]%|100%)$`), ""),
+													ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([0-9]+|[0-9]+%|)$`), ""),
 												},
 											},
 										},
@@ -174,7 +174,7 @@ func resourceKubernetesDeployment() *schema.Resource {
 							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"metadata": namespacedMetadataSchema("pod", true),
+									"metadata": namespacedMetadataSchemaIsTemplate("pod", true, true),
 									"spec": {
 										Type:        schema.TypeList,
 										Description: "Spec defines the specification of the desired behavior of the deployment. More info: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.9/#deployment-v1-apps",
@@ -195,7 +195,10 @@ func resourceKubernetesDeployment() *schema.Resource {
 }
 
 func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandDeploymentSpec(d.Get("spec").([]interface{}))
@@ -231,7 +234,10 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesDeploymentUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -272,7 +278,10 @@ func resourceKubernetesDeploymentUpdate(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesDeploymentRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -306,7 +315,10 @@ func resourceKubernetesDeploymentRead(d *schema.ResourceData, meta interface{}) 
 }
 
 func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -315,7 +327,7 @@ func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}
 
 	log.Printf("[INFO] Deleting deployment: %#v", name)
 
-	err = conn.AppsV1().Deployments(namespace).Delete(name, &metav1.DeleteOptions{})
+	err = conn.AppsV1().Deployments(namespace).Delete(name, &deleteOptions)
 	if err != nil {
 		return err
 	}
@@ -327,7 +339,10 @@ func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesDeploymentExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

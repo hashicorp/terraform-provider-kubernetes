@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesClusterRole() *schema.Resource {
@@ -24,7 +23,7 @@ func resourceKubernetesClusterRole() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchemaClusterRole(),
+			"metadata": metadataSchemaRBAC("clusterRole", false, false),
 			"rule": {
 				Type:        schema.TypeList,
 				Description: "List of PolicyRules for this ClusterRole",
@@ -39,7 +38,10 @@ func resourceKubernetesClusterRole() *schema.Resource {
 }
 
 func resourceKubernetesClusterRoleCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	cRole := api.ClusterRole{
@@ -58,7 +60,10 @@ func resourceKubernetesClusterRoleCreate(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesClusterRoleUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -71,7 +76,7 @@ func resourceKubernetesClusterRoleUpdate(d *schema.ResourceData, meta interface{
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating ClusterRole %q: %v", name, string(data))
-	out, err := conn.Rbac().ClusterRoles().Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.RbacV1().ClusterRoles().Patch(name, pkgApi.JSONPatchType, data)
 	if err != nil {
 		return fmt.Errorf("Failed to update ClusterRole: %s", err)
 	}
@@ -82,7 +87,10 @@ func resourceKubernetesClusterRoleUpdate(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesClusterRoleRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 	log.Printf("[INFO] Reading cluster role %s", name)
@@ -106,11 +114,14 @@ func resourceKubernetesClusterRoleRead(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesClusterRoleDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting cluster role: %#v", name)
-	err := conn.RbacV1().ClusterRoles().Delete(name, &metav1.DeleteOptions{})
+	err = conn.RbacV1().ClusterRoles().Delete(name, &metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -121,11 +132,14 @@ func resourceKubernetesClusterRoleDelete(d *schema.ResourceData, meta interface{
 }
 
 func resourceKubernetesClusterRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	name := d.Id()
 	log.Printf("[INFO] Checking cluster role %s", name)
-	_, err := conn.RbacV1().ClusterRoles().Get(name, metav1.GetOptions{})
+	_, err = conn.RbacV1().ClusterRoles().Get(name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return false, nil

@@ -1,15 +1,16 @@
 package kubernetes
 
 import (
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/core/v1"
 )
 
-func expandEndpointsAddresses(in []interface{}) []api.EndpointAddress {
-	if len(in) == 0 {
+func expandEndpointsAddresses(in *schema.Set) []api.EndpointAddress {
+	if in == nil || in.Len() == 0 {
 		return []api.EndpointAddress{}
 	}
-	addresses := make([]api.EndpointAddress, len(in))
-	for i, addr := range in {
+	addresses := make([]api.EndpointAddress, in.Len())
+	for i, addr := range in.List() {
 		r := api.EndpointAddress{}
 		addrCfg := addr.(map[string]interface{})
 		if v, ok := addrCfg["hostname"].(string); ok {
@@ -26,12 +27,12 @@ func expandEndpointsAddresses(in []interface{}) []api.EndpointAddress {
 	return addresses
 }
 
-func expandEndpointsPorts(in []interface{}) []api.EndpointPort {
-	if len(in) == 0 {
+func expandEndpointsPorts(in *schema.Set) []api.EndpointPort {
+	if in == nil || in.Len() == 0 {
 		return []api.EndpointPort{}
 	}
-	ports := make([]api.EndpointPort, len(in))
-	for i, port := range in {
+	ports := make([]api.EndpointPort, in.Len())
+	for i, port := range in.List() {
 		r := api.EndpointPort{}
 		portCfg := port.(map[string]interface{})
 		if v, ok := portCfg["name"].(string); ok {
@@ -48,29 +49,29 @@ func expandEndpointsPorts(in []interface{}) []api.EndpointPort {
 	return ports
 }
 
-func expandEndpointsSubsets(in []interface{}) []api.EndpointSubset {
-	if len(in) == 0 {
+func expandEndpointsSubsets(in *schema.Set) []api.EndpointSubset {
+	if in == nil || in.Len() == 0 {
 		return []api.EndpointSubset{}
 	}
-	subsets := make([]api.EndpointSubset, len(in))
-	for i, subset := range in {
+	subsets := make([]api.EndpointSubset, in.Len())
+	for i, subset := range in.List() {
 		r := api.EndpointSubset{}
 		subsetCfg := subset.(map[string]interface{})
-		if v, ok := subsetCfg["address"].([]interface{}); ok {
+		if v, ok := subsetCfg["address"].(*schema.Set); ok {
 			r.Addresses = expandEndpointsAddresses(v)
 		}
-		if v, ok := subsetCfg["not_ready_address"].([]interface{}); ok {
+		if v, ok := subsetCfg["not_ready_address"].(*schema.Set); ok {
 			r.NotReadyAddresses = expandEndpointsAddresses(v)
 		}
 		if v, ok := subsetCfg["port"]; ok {
-			r.Ports = expandEndpointsPorts(v.([]interface{}))
+			r.Ports = expandEndpointsPorts(v.(*schema.Set))
 		}
 		subsets[i] = r
 	}
 	return subsets
 }
 
-func flattenEndpointsAddresses(in []api.EndpointAddress) []interface{} {
+func flattenEndpointsAddresses(in []api.EndpointAddress) *schema.Set {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
@@ -83,10 +84,10 @@ func flattenEndpointsAddresses(in []api.EndpointAddress) []interface{} {
 		}
 		att[i] = m
 	}
-	return att
+	return schema.NewSet(hashEndpointsSubsetAddress(), att)
 }
 
-func flattenEndpointsPorts(in []api.EndpointPort) []interface{} {
+func flattenEndpointsPorts(in []api.EndpointPort) *schema.Set {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
@@ -97,10 +98,10 @@ func flattenEndpointsPorts(in []api.EndpointPort) []interface{} {
 		m["protocol"] = string(n.Protocol)
 		att[i] = m
 	}
-	return att
+	return schema.NewSet(hashEndpointsSubsetPort(), att)
 }
 
-func flattenEndpointsSubsets(in []api.EndpointSubset) []interface{} {
+func flattenEndpointsSubsets(in []api.EndpointSubset) *schema.Set {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
@@ -115,5 +116,5 @@ func flattenEndpointsSubsets(in []api.EndpointSubset) []interface{} {
 		}
 		att[i] = m
 	}
-	return att
+	return schema.NewSet(hashEndpointsSubset(), att)
 }

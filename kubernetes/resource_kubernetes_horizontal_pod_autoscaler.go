@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/autoscaling/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
@@ -22,12 +21,11 @@ func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("horizontal pod autoscaler", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: "Behaviour of the autoscaler. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#spec-and-status",
+				Description: "Behaviour of the autoscaler. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
@@ -36,6 +34,12 @@ func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
 							Type:        schema.TypeInt,
 							Description: "Upper limit for the number of pods that can be set by the autoscaler.",
 							Required:    true,
+						},
+						"metric": {
+							Type:        schema.TypeList,
+							Optional:    true,
+							Description: "The specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used). The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods. Ergo, metrics used must decrease as the pod count is increased, and vice-versa. See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization.",
+							Elem:        metricSpecFields(),
 						},
 						"min_replicas": {
 							Type:        schema.TypeInt,
@@ -82,7 +86,14 @@ func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
 }
 
 func resourceKubernetesHorizontalPodAutoscalerCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	if useV2(d) {
+		return resourceKubernetesHorizontalPodAutoscalerV2Create(d, meta)
+	}
+
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandHorizontalPodAutoscalerSpec(d.Get("spec").([]interface{}))
@@ -107,25 +118,38 @@ func resourceKubernetesHorizontalPodAutoscalerCreate(d *schema.ResourceData, met
 }
 
 func resourceKubernetesHorizontalPodAutoscalerRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	if useV2(d) {
+		return resourceKubernetesHorizontalPodAutoscalerV2Read(d, meta)
+	}
+
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
 		return err
 	}
 	log.Printf("[INFO] Reading horizontal pod autoscaler %s", name)
-	svc, err := conn.AutoscalingV1().HorizontalPodAutoscalers(namespace).Get(name, meta_v1.GetOptions{})
+	hpa, err := conn.AutoscalingV1().HorizontalPodAutoscalers(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
 	}
-	log.Printf("[INFO] Received horizontal pod autoscaler: %#v", svc)
-	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta, d))
+
+	// NOTE: this is needed for import
+	if _, exists := hpa.ObjectMeta.GetAnnotations()["autoscaling.alpha.kubernetes.io/metrics"]; exists {
+		return resourceKubernetesHorizontalPodAutoscalerV2Read(d, meta)
+	}
+
+	log.Printf("[INFO] Received horizontal pod autoscaler: %#v", hpa)
+	err = d.Set("metadata", flattenMetadata(hpa.ObjectMeta, d))
 	if err != nil {
 		return err
 	}
 
-	flattened := flattenHorizontalPodAutoscalerSpec(svc.Spec)
+	flattened := flattenHorizontalPodAutoscalerSpec(hpa.Spec)
 	log.Printf("[DEBUG] Flattened horizontal pod autoscaler spec: %#v", flattened)
 	err = d.Set("spec", flattened)
 	if err != nil {
@@ -136,7 +160,14 @@ func resourceKubernetesHorizontalPodAutoscalerRead(d *schema.ResourceData, meta 
 }
 
 func resourceKubernetesHorizontalPodAutoscalerUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	if useV2(d) {
+		return resourceKubernetesHorizontalPodAutoscalerV2Update(d, meta)
+	}
+
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -164,7 +195,14 @@ func resourceKubernetesHorizontalPodAutoscalerUpdate(d *schema.ResourceData, met
 }
 
 func resourceKubernetesHorizontalPodAutoscalerDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	if useV2(d) {
+		return resourceKubernetesHorizontalPodAutoscalerV2Delete(d, meta)
+	}
+
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -183,7 +221,14 @@ func resourceKubernetesHorizontalPodAutoscalerDelete(d *schema.ResourceData, met
 }
 
 func resourceKubernetesHorizontalPodAutoscalerExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	if useV2(d) {
+		return resourceKubernetesHorizontalPodAutoscalerV2Exists(d, meta)
+	}
+
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -199,4 +244,12 @@ func resourceKubernetesHorizontalPodAutoscalerExists(d *schema.ResourceData, met
 		log.Printf("[DEBUG] Received error: %#v", err)
 	}
 	return true, err
+}
+
+func useV2(d *schema.ResourceData) bool {
+	if len(d.Get("spec.0.metric").([]interface{})) > 0 {
+		log.Printf("[INFO] Using autoscaling/v2beta2 because this resource has a metric field")
+		return true
+	}
+	return false
 }

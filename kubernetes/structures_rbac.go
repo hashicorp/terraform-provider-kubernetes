@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"strconv"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/rbac/v1"
 )
 
@@ -132,18 +132,18 @@ func patchRbacSubject(d *schema.ResourceData) PatchOperations {
 	if common > len(oldsubjects) {
 		common = len(oldsubjects)
 	}
-	for i, v := range newsubjects[:common] {
-		ops = append(ops, &ReplaceOperation{
-			Path:  "/subjects/" + strconv.Itoa(i),
-			Value: v,
-		})
-	}
 	if len(oldsubjects) > len(newsubjects) {
 		for i := len(newsubjects); i < len(oldsubjects); i++ {
 			ops = append(ops, &RemoveOperation{
 				Path: "/subjects/" + strconv.Itoa(len(oldsubjects)-i),
 			})
 		}
+	}
+	for i, v := range newsubjects[:common] {
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/subjects/" + strconv.Itoa(i),
+			Value: v,
+		})
 	}
 	if len(newsubjects) > len(oldsubjects) {
 		for i, v := range newsubjects[common:] {
@@ -166,18 +166,18 @@ func patchRbacRule(d *schema.ResourceData) PatchOperations {
 	if common > len(oldrules) {
 		common = len(oldrules)
 	}
-	for i, v := range newrules[:common] {
-		ops = append(ops, &ReplaceOperation{
-			Path:  "/rules/" + strconv.Itoa(i),
-			Value: v,
-		})
-	}
 	if len(oldrules) > len(newrules) {
 		for i := len(newrules); i < len(oldrules); i++ {
 			ops = append(ops, &RemoveOperation{
 				Path: "/rules/" + strconv.Itoa(len(oldrules)-i),
 			})
 		}
+	}
+	for i, v := range newrules[:common] {
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/rules/" + strconv.Itoa(i),
+			Value: v,
+		})
 	}
 	if len(newrules) > len(oldrules) {
 		for i, v := range newrules[common:] {

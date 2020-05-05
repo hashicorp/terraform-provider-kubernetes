@@ -1,4 +1,80 @@
-## 1.8.2 (Unreleased)
+## 1.11.2 (Unreleased)
+
+IMPROVEMENTS:
+
+* Add data source for config map (#76)
+* Add data source for service account (#523)
+
+BUG FIXES:
+* Update Go module versions to work with Go 1.13
+
+## 1.11.1 (February 28, 2020)
+
+IMPROVEMENTS:
+
+* Bump provider SDK to v1.7.0
+
+BUG FIXES:
+
+* Defer client initialization to improve resilience (#759)
+
+## 1.11.0 (February 10, 2020)
+
+IMPROVEMENTS:
+
+ * Add `mount_options` attribute to `kubernetes_persistent_volume` and `kubernetes_storage_class`
+ * Refactor client config initialization and fix in-cluster config (#679) (#497)
+
+BUG FIXES:
+
+ * Do not force base64 encoding for the `ca_bundle` on `kubernetes_api_service` (#679)
+ * Allow 3s age gap between `service account` and `secret` [(issue)](https://github.com/terraform-providers/terraform-provider-kubernetes/pull/377#issuecomment-540126765)
+ * Add `load_config_file = false` to documented provider configurations
+ * Add support for `startup_probe` on container spec
+ * Fix (cluster-)role bindings and rules updates (#713)
+ * Fix namespacing issues on kubernetes_priority_class (#680) **See [comment](https://github.com/terraform-providers/terraform-provider-kubernetes/pull/682#issuecomment-576475875) on backward compatibility**
+  * Documentation fixes
+
+## 1.10.0 (November 08, 2019)
+
+FEATURES:
+
+* New resource: `kubernetes_pod_disruption_budget` (#644 / PR #338)
+* New resource: `kubernetes_priority_class` (PR #495)
+
+IMPROVEMENTS:
+
+* Add `mount_propagation` attribute to container volume mount
+* Add support for `.spec.service.port` to `kubernetes_api_service` (#665)
+* Update `k8s.io/client-go` to v12
+* Set option to cascade delete job resources (#534 / PR #635)
+* Support in-cluster configuration with service accounts (PR #497)
+* Parametrize all existing timeout values (PR #607)
+* Enable HTTP requests/responses tracing in debug mode (PR #630)
+
+BUG FIXES:
+
+* Do not set default namespace for replication controller and deployment pod templates (#275)
+* Updated host_alias property name to host_aliases (PR #670)
+* Docs - updated all broken and commit-specific Kubernetes links to point to master branch (PR #626)
+* Allow 0 for `backoff_limit` on `kubernetes_job` (PR #632)
+
+## 1.9.0 (August 22, 2019)
+
+FEATURES:
+
+* New resource: `kubernetes_api_service` (PR #487)
+
+IMPROVEMENTS:
+
+* Add `type` attribute to volume hostPath (#358)
+* Configurable delete timeout for `kubernetes_namespace` resource
+
+BUG FIXES:
+
+* Allow all values for deployment rolling update config (PR #587)
+* Align validation of `role_binding` and `cluster_role_binding` names to Kubernetes rules (PR #583)
+
 ## 1.8.1 (July 19, 2019)
 
 FEATURES:

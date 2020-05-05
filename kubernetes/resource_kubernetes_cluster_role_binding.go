@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesClusterRoleBinding() *schema.Resource {
@@ -24,7 +23,7 @@ func resourceKubernetesClusterRoleBinding() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("clusterRoleBinding", false),
+			"metadata": metadataSchemaRBAC("clusterRoleBinding", false, false),
 			"role_ref": {
 				Type:        schema.TypeList,
 				Description: "RoleRef references the Cluster Role for this binding",
@@ -49,7 +48,10 @@ func resourceKubernetesClusterRoleBinding() *schema.Resource {
 }
 
 func resourceKubernetesClusterRoleBindingCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	binding := &api.ClusterRoleBinding{
@@ -58,7 +60,7 @@ func resourceKubernetesClusterRoleBindingCreate(d *schema.ResourceData, meta int
 		Subjects:   expandRBACSubjects(d.Get("subject").([]interface{})),
 	}
 	log.Printf("[INFO] Creating new ClusterRoleBinding: %#v", binding)
-	binding, err := conn.Rbac().ClusterRoleBindings().Create(binding)
+	binding, err = conn.RbacV1().ClusterRoleBindings().Create(binding)
 
 	if err != nil {
 		return err
@@ -70,11 +72,14 @@ func resourceKubernetesClusterRoleBindingCreate(d *schema.ResourceData, meta int
 }
 
 func resourceKubernetesClusterRoleBindingRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 	log.Printf("[INFO] Reading ClusterRoleBinding %s", name)
-	binding, err := conn.Rbac().ClusterRoleBindings().Get(name, meta_v1.GetOptions{})
+	binding, err := conn.RbacV1().ClusterRoleBindings().Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -104,7 +109,10 @@ func resourceKubernetesClusterRoleBindingRead(d *schema.ResourceData, meta inter
 }
 
 func resourceKubernetesClusterRoleBindingUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 
@@ -118,7 +126,7 @@ func resourceKubernetesClusterRoleBindingUpdate(d *schema.ResourceData, meta int
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating ClusterRoleBinding %q: %v", name, string(data))
-	out, err := conn.Rbac().ClusterRoleBindings().Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.RbacV1().ClusterRoleBindings().Patch(name, pkgApi.JSONPatchType, data)
 	if err != nil {
 		return fmt.Errorf("Failed to update ClusterRoleBinding: %s", err)
 	}
@@ -129,11 +137,14 @@ func resourceKubernetesClusterRoleBindingUpdate(d *schema.ResourceData, meta int
 }
 
 func resourceKubernetesClusterRoleBindingDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting ClusterRoleBinding: %#v", name)
-	err := conn.Rbac().ClusterRoleBindings().Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.RbacV1().ClusterRoleBindings().Delete(name, &meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -144,11 +155,14 @@ func resourceKubernetesClusterRoleBindingDelete(d *schema.ResourceData, meta int
 }
 
 func resourceKubernetesClusterRoleBindingExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	name := d.Id()
 	log.Printf("[INFO] Checking ClusterRoleBinding %s", name)
-	_, err := conn.Rbac().ClusterRoleBindings().Get(name, meta_v1.GetOptions{})
+	_, err = conn.RbacV1().ClusterRoleBindings().Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

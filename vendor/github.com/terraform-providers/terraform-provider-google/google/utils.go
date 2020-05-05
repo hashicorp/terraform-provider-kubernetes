@@ -3,26 +3,33 @@
 package google
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/terraform"
-	computeBeta "google.golang.org/api/compute/v0.beta"
-	"google.golang.org/api/compute/v1"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"google.golang.org/api/googleapi"
 )
 
 type TerraformResourceData interface {
 	HasChange(string) bool
+	GetOkExists(string) (interface{}, bool)
 	GetOk(string) (interface{}, bool)
+	Get(string) interface{}
 	Set(string, interface{}) error
 	SetId(string)
 	Id() string
+}
+
+type TerraformResourceDiff interface {
+	GetChange(string) (interface{}, interface{})
+	Clear(string) error
 }
 
 // getRegionFromZone returns the region from a zone for Google cloud.
@@ -41,20 +48,6 @@ func getRegionFromZone(zone string) string {
 // - region extracted from the provider-level zone
 func getRegion(d TerraformResourceData, config *Config) (string, error) {
 	return getRegionFromSchema("region", "zone", d, config)
-}
-
-func getRegionFromInstanceState(is *terraform.InstanceState, config *Config) (string, error) {
-	res, ok := is.Attributes["region"]
-
-	if ok && res != "" {
-		return res, nil
-	}
-
-	if config.Region != "" {
-		return config.Region, nil
-	}
-
-	return "", fmt.Errorf("region: required field is not set")
 }
 
 // getProject reads the "project" field from the given resource data and falls
@@ -76,68 +69,6 @@ func getProjectFromDiff(d *schema.ResourceDiff, config *Config) (string, error) 
 		return config.Project, nil
 	}
 	return "", fmt.Errorf("%s: required field is not set", "project")
-}
-
-func getProjectFromInstanceState(is *terraform.InstanceState, config *Config) (string, error) {
-	res, ok := is.Attributes["project"]
-
-	if ok && res != "" {
-		return res, nil
-	}
-
-	if config.Project != "" {
-		return config.Project, nil
-	}
-
-	return "", fmt.Errorf("project: required field is not set")
-}
-
-func getZonalResourceFromRegion(getResource func(string) (interface{}, error), region string, compute *compute.Service, project string) (interface{}, error) {
-	zoneList, err := compute.Zones.List(project).Do()
-	if err != nil {
-		return nil, err
-	}
-	var resource interface{}
-	for _, zone := range zoneList.Items {
-		if strings.Contains(zone.Name, region) {
-			resource, err = getResource(zone.Name)
-			if err != nil {
-				if gerr, ok := err.(*googleapi.Error); ok && gerr.Code == 404 {
-					// Resource was not found in this zone
-					continue
-				}
-				return nil, fmt.Errorf("Error reading Resource: %s", err)
-			}
-			// Resource was found
-			return resource, nil
-		}
-	}
-	// Resource does not exist in this region
-	return nil, nil
-}
-
-func getZonalBetaResourceFromRegion(getResource func(string) (interface{}, error), region string, compute *computeBeta.Service, project string) (interface{}, error) {
-	zoneList, err := compute.Zones.List(project).Do()
-	if err != nil {
-		return nil, err
-	}
-	var resource interface{}
-	for _, zone := range zoneList.Items {
-		if strings.Contains(zone.Name, region) {
-			resource, err = getResource(zone.Name)
-			if err != nil {
-				if gerr, ok := err.(*googleapi.Error); ok && gerr.Code == 404 {
-					// Resource was not found in this zone
-					continue
-				}
-				return nil, fmt.Errorf("Error reading Resource: %s", err)
-			}
-			// Resource was found
-			return resource, nil
-		}
-	}
-	// Resource does not exist in this region
-	return nil, nil
 }
 
 func getRouterLockName(region string, router string) string {
@@ -199,6 +130,20 @@ func isFailedPreconditionError(err error) bool {
 	return false
 }
 
+var FINGERPRINT_FAIL_ERRORS = []string{"Invalid fingerprint.", "Supplied fingerprint does not match current metadata fingerprint."}
+
+// We've encountered a few common fingerprint-related strings; if this is one of
+// them, we're confident this is an error due to fingerprints.
+func isFingerprintError(err error) bool {
+	for _, msg := range FINGERPRINT_FAIL_ERRORS {
+		if strings.Contains(err.Error(), msg) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func isConflictError(err error) bool {
 	if e, ok := err.(*googleapi.Error); ok && e.Code == 409 {
 		return true
@@ -207,13 +152,6 @@ func isConflictError(err error) bool {
 		if e.Code == 409 {
 			return true
 		}
-	}
-	return false
-}
-
-func linkDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
-	if GetResourceNameFromSelfLink(old) == new {
-		return true
 	}
 	return false
 }
@@ -258,6 +196,12 @@ func ipCidrRangeDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
 	return false
 }
 
+// sha256DiffSuppress
+// if old is the hex-encoded sha256 sum of new, treat them as equal
+func sha256DiffSuppress(_, old, new string, _ *schema.ResourceData) bool {
+	return hex.EncodeToString(sha256.New().Sum([]byte(old))) == new
+}
+
 func caseDiffSuppress(_, old, new string, _ *schema.ResourceData) bool {
 	return strings.ToUpper(old) == strings.ToUpper(new)
 }
@@ -281,8 +225,8 @@ func rfc3339TimeDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
 	return false
 }
 
-// expandLabels pulls the value of "labels" out of a schema.ResourceData as a map[string]string.
-func expandLabels(d *schema.ResourceData) map[string]string {
+// expandLabels pulls the value of "labels" out of a TerraformResourceData as a map[string]string.
+func expandLabels(d TerraformResourceData) map[string]string {
 	return expandStringMap(d, "labels")
 }
 
@@ -291,8 +235,8 @@ func expandEnvironmentVariables(d *schema.ResourceData) map[string]string {
 	return expandStringMap(d, "environment_variables")
 }
 
-// expandStringMap pulls the value of key out of a schema.ResourceData as a map[string]string.
-func expandStringMap(d *schema.ResourceData, key string) map[string]string {
+// expandStringMap pulls the value of key out of a TerraformResourceData as a map[string]string.
+func expandStringMap(d TerraformResourceData, key string) map[string]string {
 	v, ok := d.GetOk(key)
 
 	if !ok {
@@ -325,6 +269,14 @@ func convertAndMapStringArr(ifaceArr []interface{}, f func(string) string) []str
 	return arr
 }
 
+func mapStringArr(original []string, f func(string) string) []string {
+	var arr []string
+	for _, v := range original {
+		arr = append(arr, f(v))
+	}
+	return arr
+}
+
 func convertStringArrToInterface(strs []string) []interface{} {
 	arr := make([]interface{}, len(strs))
 	for i, str := range strs {
@@ -341,6 +293,46 @@ func convertStringSet(set *schema.Set) []string {
 	return s
 }
 
+func golangSetFromStringSlice(strings []string) map[string]struct{} {
+	set := map[string]struct{}{}
+	for _, v := range strings {
+		set[v] = struct{}{}
+	}
+
+	return set
+}
+
+func stringSliceFromGolangSet(sset map[string]struct{}) []string {
+	ls := make([]string, 0, len(sset))
+	for s := range sset {
+		ls = append(ls, s)
+	}
+
+	return ls
+}
+
+func reverseStringMap(m map[string]string) map[string]string {
+	o := map[string]string{}
+	for k, v := range m {
+		o[v] = k
+	}
+	return o
+}
+
+func mergeStringMaps(a, b map[string]string) map[string]string {
+	merged := make(map[string]string)
+
+	for k, v := range a {
+		merged[k] = v
+	}
+
+	for k, v := range b {
+		merged[k] = v
+	}
+
+	return merged
+}
+
 func mergeSchemas(a, b map[string]*schema.Schema) map[string]*schema.Schema {
 	merged := make(map[string]*schema.Schema)
 
@@ -355,16 +347,26 @@ func mergeSchemas(a, b map[string]*schema.Schema) map[string]*schema.Schema {
 	return merged
 }
 
-func mergeResourceMaps(ms ...map[string]*schema.Resource) map[string]*schema.Resource {
+func mergeResourceMaps(ms ...map[string]*schema.Resource) (map[string]*schema.Resource, error) {
 	merged := make(map[string]*schema.Resource)
+	duplicates := []string{}
 
 	for _, m := range ms {
 		for k, v := range m {
+			if _, ok := merged[k]; ok {
+				duplicates = append(duplicates, k)
+			}
+
 			merged[k] = v
 		}
 	}
 
-	return merged
+	var err error
+	if len(duplicates) > 0 {
+		err = fmt.Errorf("saw duplicates in mergeResourceMaps: %v", duplicates)
+	}
+
+	return merged, err
 }
 
 func retry(retryFunc func() error) error {
@@ -375,19 +377,70 @@ func retryTime(retryFunc func() error, minutes int) error {
 	return retryTimeDuration(retryFunc, time.Duration(minutes)*time.Minute)
 }
 
-func retryTimeDuration(retryFunc func() error, duration time.Duration) error {
+func retryTimeDuration(retryFunc func() error, duration time.Duration, errorRetryPredicates ...func(e error) (bool, string)) error {
 	return resource.Retry(duration, func() *resource.RetryError {
 		err := retryFunc()
 		if err == nil {
 			return nil
 		}
-		for _, e := range errwrap.GetAllType(err, &googleapi.Error{}) {
-			if gerr, ok := e.(*googleapi.Error); ok && (gerr.Code == 429 || gerr.Code == 500 || gerr.Code == 502 || gerr.Code == 503) {
-				return resource.RetryableError(gerr)
+		for _, e := range getAllTypes(err, &googleapi.Error{}, &url.Error{}) {
+			if isRetryableError(e, errorRetryPredicates) {
+				return resource.RetryableError(e)
 			}
 		}
 		return resource.NonRetryableError(err)
 	})
+}
+
+func getAllTypes(err error, args ...interface{}) []error {
+	var result []error
+	for _, v := range args {
+		subResult := errwrap.GetAllType(err, v)
+		if subResult != nil {
+			result = append(result, subResult...)
+		}
+	}
+	return result
+}
+
+func isRetryableError(err error, retryPredicates []func(e error) (bool, string)) bool {
+
+	// These operations are always hitting googleapis.com - they should rarely
+	// time out, and if they do, that timeout is retryable.
+	if urlerr, ok := err.(*url.Error); ok && urlerr.Timeout() {
+		log.Printf("[DEBUG] Dismissed an error as retryable based on googleapis.com target: %s", err)
+		return true
+	}
+
+	if gerr, ok := err.(*googleapi.Error); ok {
+		if gerr.Code == 429 || gerr.Code == 500 || gerr.Code == 502 || gerr.Code == 503 {
+			log.Printf("[DEBUG] Dismissed an error as retryable based on error code: %s", err)
+			return true
+		}
+
+		if gerr.Code == 409 && strings.Contains(gerr.Body, "operationInProgress") {
+			// 409's are retried because cloud sql throws a 409 when concurrent calls are made.
+			// The only way right now to determine it is a SQL 409 due to concurrent calls is to
+			// look at the contents of the error message.
+			// See https://github.com/terraform-providers/terraform-provider-google/issues/3279
+			log.Printf("[DEBUG] Dismissed an error as retryable based on error code 409 and error reason 'operationInProgress': %s", err)
+			return true
+		}
+
+		if gerr.Code == 412 && isFingerprintError(err) {
+			log.Printf("[DEBUG] Dismissed an error as retryable as a fingerprint mismatch: %s", err)
+			return true
+		}
+
+	}
+	for _, pred := range retryPredicates {
+		if retry, reason := (pred(err)); retry {
+			log.Printf("[DEBUG] Dismissed an error as retryable. %s - %s", reason, err)
+			return true
+		}
+	}
+
+	return false
 }
 
 func extractFirstMapConfig(m []interface{}) map[string]interface{} {
@@ -403,6 +456,17 @@ func lockedCall(lockKey string, f func() error) error {
 	defer mutexKV.Unlock(lockKey)
 
 	return f()
+}
+
+// This is a Printf sibling (Nprintf; Named Printf), which handles strings like
+// Nprintf("Hello %{target}!", map[string]interface{}{"target":"world"}) == "Hello world!".
+// This is particularly useful for generated tests, where we don't want to use Printf,
+// since that would require us to generate a very particular ordering of arguments.
+func Nprintf(format string, params map[string]interface{}) string {
+	for key, val := range params {
+		format = strings.Replace(format, "%{"+key+"}", fmt.Sprintf("%v", val), -1)
+	}
+	return format
 }
 
 // serviceAccountFQN will attempt to generate the fully qualified name in the format of:
@@ -429,4 +493,41 @@ func serviceAccountFQN(serviceAccount string, d TerraformResourceData, config *C
 	}
 
 	return fmt.Sprintf("projects/-/serviceAccounts/%s@%s.iam.gserviceaccount.com", serviceAccount, project), nil
+}
+
+func paginatedListRequest(project, baseUrl string, config *Config, flattener func(map[string]interface{}) []interface{}) ([]interface{}, error) {
+	res, err := sendRequest(config, "GET", project, baseUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	ls := flattener(res)
+	pageToken, ok := res["pageToken"]
+	for ok {
+		if pageToken.(string) == "" {
+			break
+		}
+		url := fmt.Sprintf("%s?pageToken=%s", baseUrl, pageToken.(string))
+		res, err = sendRequest(config, "GET", project, url, nil)
+		if err != nil {
+			return nil, err
+		}
+		ls = append(ls, flattener(res))
+		pageToken, ok = res["pageToken"]
+	}
+
+	return ls, nil
+}
+
+func getInterconnectAttachmentLink(config *Config, project, region, ic string) (string, error) {
+	if !strings.Contains(ic, "/") {
+		icData, err := config.clientCompute.InterconnectAttachments.Get(
+			project, region, ic).Do()
+		if err != nil {
+			return "", fmt.Errorf("Error reading interconnect attachment: %s", err)
+		}
+		ic = icData.SelfLink
+	}
+
+	return ic, nil
 }

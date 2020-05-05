@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
 func dataSourceKubernetesStorageClass() *schema.Resource {
@@ -27,6 +27,13 @@ func dataSourceKubernetesStorageClass() *schema.Resource {
 			"allow_volume_expansion": {
 				Type:        schema.TypeBool,
 				Description: "Indicates whether the storage class allow volume expand",
+				Computed:    true,
+			},
+			"mount_options": {
+				Type:        schema.TypeSet,
+				Description: "Persistent Volumes that are dynamically created by a storage class will have the mount options specified",
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Set:         schema.HashString,
 				Computed:    true,
 			},
 		},

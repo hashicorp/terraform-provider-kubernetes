@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform/helper/customdiff"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/customdiff"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	appengine "google.golang.org/api/appengine/v1"
 )
 
@@ -26,37 +26,23 @@ func resourceAppEngineApplication() *schema.Resource {
 		),
 
 		Schema: map[string]*schema.Schema{
-			"project": &schema.Schema{
+			"project": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
 				ForceNew:     true,
 				ValidateFunc: validateProjectID(),
 			},
-			"auth_domain": &schema.Schema{
+			"auth_domain": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 			},
-			"location_id": &schema.Schema{
+			"location_id": {
 				Type:     schema.TypeString,
 				Required: true,
-				ValidateFunc: validation.StringInSlice([]string{
-					"northamerica-northeast1",
-					"us-central",
-					"us-west2",
-					"us-east1",
-					"us-east4",
-					"southamerica-east1",
-					"europe-west",
-					"europe-west2",
-					"europe-west3",
-					"asia-northeast1",
-					"asia-south1",
-					"australia-southeast1",
-				}, false),
 			},
-			"serving_status": &schema.Schema{
+			"serving_status": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ValidateFunc: validation.StringInSlice([]string{
@@ -67,35 +53,39 @@ func resourceAppEngineApplication() *schema.Resource {
 				}, false),
 				Computed: true,
 			},
-			"feature_settings": &schema.Schema{
+			"feature_settings": {
 				Type:     schema.TypeList,
 				Optional: true,
 				Computed: true,
 				MaxItems: 1,
 				Elem:     appEngineApplicationFeatureSettingsResource(),
 			},
-			"name": &schema.Schema{
+			"name": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"url_dispatch_rule": &schema.Schema{
+			"app_id": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"url_dispatch_rule": {
 				Type:     schema.TypeList,
 				Computed: true,
 				Elem:     appEngineApplicationURLDispatchRuleResource(),
 			},
-			"code_bucket": &schema.Schema{
+			"code_bucket": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"default_hostname": &schema.Schema{
+			"default_hostname": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"default_bucket": &schema.Schema{
+			"default_bucket": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"gcr_domain": &schema.Schema{
+			"gcr_domain": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -106,15 +96,15 @@ func resourceAppEngineApplication() *schema.Resource {
 func appEngineApplicationURLDispatchRuleResource() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
-			"domain": &schema.Schema{
+			"domain": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"path": &schema.Schema{
+			"path": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"service": &schema.Schema{
+			"service": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -125,7 +115,7 @@ func appEngineApplicationURLDispatchRuleResource() *schema.Resource {
 func appEngineApplicationFeatureSettingsResource() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
-			"split_health_checks": &schema.Schema{
+			"split_health_checks": {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
@@ -185,7 +175,9 @@ func resourceAppEngineApplicationRead(d *schema.ResourceData, meta interface{}) 
 	d.Set("default_hostname", app.DefaultHostname)
 	d.Set("location_id", app.LocationId)
 	d.Set("name", app.Name)
+	d.Set("app_id", app.Id)
 	d.Set("serving_status", app.ServingStatus)
+	d.Set("gcr_domain", app.GcrDomain)
 	d.Set("project", pid)
 	dispatchRules, err := flattenAppEngineApplicationDispatchRules(app.DispatchRules)
 	if err != nil {

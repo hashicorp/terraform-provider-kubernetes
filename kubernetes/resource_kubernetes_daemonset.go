@@ -6,9 +6,9 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -117,7 +117,10 @@ func resourceKubernetesDaemonSet() *schema.Resource {
 }
 
 func resourceKubernetesDaemonSetCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandDaemonSetSpec(d.Get("spec").([]interface{}))
@@ -145,7 +148,10 @@ func resourceKubernetesDaemonSetCreate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesDaemonSetUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -187,7 +193,10 @@ func resourceKubernetesDaemonSetUpdate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesDaemonSetRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -225,7 +234,10 @@ func resourceKubernetesDaemonSetRead(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesDaemonSetDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -234,8 +246,7 @@ func resourceKubernetesDaemonSetDelete(d *schema.ResourceData, meta interface{})
 
 	log.Printf("[INFO] Deleting daemonset: %#v", name)
 
-	policy := metav1.DeletePropagationForeground
-	err = conn.AppsV1().DaemonSets(namespace).Delete(name, &metav1.DeleteOptions{PropagationPolicy: &policy})
+	err = conn.AppsV1().DaemonSets(namespace).Delete(name, &deleteOptions)
 	if err != nil {
 		return err
 	}
@@ -246,7 +257,10 @@ func resourceKubernetesDaemonSetDelete(d *schema.ResourceData, meta interface{})
 }
 
 func resourceKubernetesDaemonSetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

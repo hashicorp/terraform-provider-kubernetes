@@ -6,7 +6,7 @@ import (
 
 	"strings"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
 )
@@ -20,37 +20,46 @@ func resourceComputeRouterInterface() *schema.Resource {
 			State: resourceComputeRouterInterfaceImportState,
 		},
 
-		Schema: map[string]*schema.Schema{
-			"name": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
-			"router": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
-			"vpn_tunnel": &schema.Schema{
-				Type:             schema.TypeString,
-				Required:         true,
-				ForceNew:         true,
-				DiffSuppressFunc: linkDiffSuppress,
-			},
+		CustomizeDiff: routerInterfaceDiffOneOfCheck,
 
-			"ip_range": &schema.Schema{
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"router": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"vpn_tunnel": {
+				Type:             schema.TypeString,
+				ConflictsWith:    []string{"interconnect_attachment"},
+				Optional:         true,
+				ForceNew:         true,
+				DiffSuppressFunc: compareSelfLinkOrResourceName,
+			},
+			"interconnect_attachment": {
+				Type:             schema.TypeString,
+				ConflictsWith:    []string{"vpn_tunnel"},
+				Optional:         true,
+				ForceNew:         true,
+				DiffSuppressFunc: compareSelfLinkOrResourceName,
+			},
+			"ip_range": {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
 			},
-			"project": &schema.Schema{
+			"project": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
 				ForceNew: true,
 			},
 
-			"region": &schema.Schema{
+			"region": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
@@ -102,16 +111,26 @@ func resourceComputeRouterInterfaceCreate(d *schema.ResourceData, meta interface
 		}
 	}
 
-	vpnTunnel, err := getVpnTunnelLink(config, project, region, d.Get("vpn_tunnel").(string))
-	if err != nil {
-		return err
+	iface := &compute.RouterInterface{Name: ifaceName}
+
+	if ipVal, ok := d.GetOk("ip_range"); ok {
+		iface.IpRange = ipVal.(string)
 	}
 
-	iface := &compute.RouterInterface{Name: ifaceName,
-		LinkedVpnTunnel: vpnTunnel}
+	if vpnVal, ok := d.GetOk("vpn_tunnel"); ok {
+		vpnTunnel, err := getVpnTunnelLink(config, project, region, vpnVal.(string))
+		if err != nil {
+			return err
+		}
+		iface.LinkedVpnTunnel = vpnTunnel
+	}
 
-	if v, ok := d.GetOk("ip_range"); ok {
-		iface.IpRange = v.(string)
+	if icVal, ok := d.GetOk("interconnect_attachment"); ok {
+		interconnectAttachment, err := getInterconnectAttachmentLink(config, project, region, icVal.(string))
+		if err != nil {
+			return err
+		}
+		iface.LinkedInterconnectAttachment = interconnectAttachment
 	}
 
 	log.Printf("[INFO] Adding interface %s", ifaceName)
@@ -170,6 +189,7 @@ func resourceComputeRouterInterfaceRead(d *schema.ResourceData, meta interface{}
 		if iface.Name == ifaceName {
 			d.SetId(fmt.Sprintf("%s/%s/%s", region, routerName, ifaceName))
 			d.Set("vpn_tunnel", iface.LinkedVpnTunnel)
+			d.Set("interconnect_attachment", iface.LinkedInterconnectAttachment)
 			d.Set("ip_range", iface.IpRange)
 			d.Set("region", region)
 			d.Set("project", project)
@@ -270,4 +290,14 @@ func resourceComputeRouterInterfaceImportState(d *schema.ResourceData, meta inte
 	d.Set("name", parts[2])
 
 	return []*schema.ResourceData{d}, nil
+}
+
+func routerInterfaceDiffOneOfCheck(d *schema.ResourceDiff, meta interface{}) error {
+	_, ipOk := d.GetOk("ip_range")
+	_, vpnOk := d.GetOk("vpn_tunnel")
+	_, icOk := d.GetOk("interconnect_attachment")
+	if !(ipOk || vpnOk || icOk) {
+		return fmt.Errorf("Each interface requires one linked resource or an ip range, or both.")
+	}
+	return nil
 }

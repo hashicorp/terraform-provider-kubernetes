@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/hashicorp/terraform/helper/schema"
-	"google.golang.org/api/runtimeconfig/v1beta1"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	runtimeconfig "google.golang.org/api/runtimeconfig/v1beta1"
 )
 
 var runtimeConfigFullName *regexp.Regexp = regexp.MustCompile("^projects/([^/]+)/configs/(.+)$")
@@ -26,7 +26,7 @@ func resourceRuntimeconfigConfig() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     true,
 				ForceNew:     true,
-				ValidateFunc: validateGCPName,
+				ValidateFunc: validateRegexp("[0-9A-Za-z](?:[_.A-Za-z0-9-]{0,62}[_.A-Za-z0-9])?"),
 			},
 
 			"description": {
@@ -137,7 +137,9 @@ func resourceRuntimeconfigConfigDelete(d *schema.ResourceData, meta interface{})
 
 func resourceRuntimeconfigConfigImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	config := meta.(*Config)
-	parseImportId([]string{"projects/(?P<project>[^/]+)/configs/(?P<name>[^/]+)", "(?P<name>[^/]+)"}, d, config)
+	if err := parseImportId([]string{"projects/(?P<project>[^/]+)/configs/(?P<name>[^/]+)", "(?P<name>[^/]+)"}, d, config); err != nil {
+		return nil, err
+	}
 
 	// Replace import id for the resource id
 	id, err := replaceVars(d, config, "projects/{{project}}/configs/{{name}}")

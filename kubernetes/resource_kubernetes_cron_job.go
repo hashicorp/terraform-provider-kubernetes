@@ -5,12 +5,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"k8s.io/api/batch/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesCronJob() *schema.Resource {
@@ -23,6 +22,11 @@ func resourceKubernetesCronJob() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+
+		Timeouts: &schema.ResourceTimeout{
+			Delete: schema.DefaultTimeout(1 * time.Minute),
+		},
+
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("cronjob", true),
 			"spec": {
@@ -39,7 +43,10 @@ func resourceKubernetesCronJob() *schema.Resource {
 }
 
 func resourceKubernetesCronJobCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandCronJobSpec(d.Get("spec").([]interface{}))
@@ -66,7 +73,10 @@ func resourceKubernetesCronJobCreate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesCronJobUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, _, err := idParts(d.Id())
 	if err != nil {
@@ -98,7 +108,10 @@ func resourceKubernetesCronJobUpdate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesCronJobRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -154,7 +167,10 @@ func resourceKubernetesCronJobRead(d *schema.ResourceData, meta interface{}) err
 }
 
 func resourceKubernetesCronJobDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -167,7 +183,7 @@ func resourceKubernetesCronJobDelete(d *schema.ResourceData, meta interface{}) e
 		return err
 	}
 
-	err = resource.Retry(1*time.Minute, func() *resource.RetryError {
+	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		_, err := conn.BatchV1beta1().CronJobs(namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
@@ -190,7 +206,10 @@ func resourceKubernetesCronJobDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesCronJobExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

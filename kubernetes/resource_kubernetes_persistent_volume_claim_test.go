@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
-	"github.com/hashicorp/terraform/helper/acctest"
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/core/v1"
 	storageapi "k8s.io/api/storage/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func TestAccKubernetesPersistentVolumeClaim_basic(t *testing.T) {
@@ -446,7 +447,10 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_storageClass(t *testing.
 }
 
 func testAccCheckKubernetesPersistentVolumeClaimDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_persistent_volume_claim" {
@@ -458,8 +462,19 @@ func testAccCheckKubernetesPersistentVolumeClaimDestroy(s *terraform.State) erro
 			return err
 		}
 
-		resp, err := conn.CoreV1().PersistentVolumeClaims(namespace).Get(name, meta_v1.GetOptions{})
-		if err == nil {
+		var resp *api.PersistentVolumeClaim
+		err = resource.Retry(3*time.Minute, func() *resource.RetryError {
+			resp, err = conn.CoreV1().PersistentVolumeClaims(namespace).Get(name, meta_v1.GetOptions{})
+			if errors.IsNotFound(err) {
+				return nil
+			}
+			if err == nil && resp != nil {
+				return resource.RetryableError(err)
+			}
+			return resource.NonRetryableError(err)
+		})
+
+		if err != nil {
 			if resp.Namespace == namespace && resp.Name == name {
 				return fmt.Errorf("Persistent Volume still exists: %s", rs.Primary.ID)
 			}
@@ -476,7 +491,10 @@ func testAccCheckKubernetesPersistentVolumeClaimExists(n string, obj *api.Persis
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {

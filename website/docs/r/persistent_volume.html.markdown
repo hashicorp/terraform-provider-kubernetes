@@ -37,7 +37,7 @@ resource "kubernetes_persistent_volume" "example" {
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard persistent volume's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#metadata)
+* `metadata` - (Required) Standard persistent volume's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 * `spec` - (Required) Spec of the persistent volume owned by the cluster. See below.
 
 ## Nested Blocks
@@ -52,6 +52,7 @@ The following arguments are supported:
 * `persistent_volume_reclaim_policy` - (Optional) What happens to a persistent volume when released from its claim. Valid options are Retain (default) and Recycle. Recycling must be supported by the volume plugin underlying this persistent volume. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/persistent-volumes#recycling-policy)
 * `persistent_volume_source` - (Required) The specification of a persistent volume.
 * `storage_class_name` - (Optional) The name of the persistent volume's storage class. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class)
+* `mount_options` - (Options) A Kubernetes administrator can specify additional mount options for when a Persistent Volume is mounted on a node. *Note: Not all Persistent Volume types support mount options.* For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#mount-options)
 
 ### `node_affinity`
 
@@ -199,6 +200,7 @@ The following arguments are supported:
 #### Arguments
 
 * `path` - (Optional) Path of the directory on the host. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#hostpath)
+* `type` - (Optional) Type for HostPath volume. Defaults to "". For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#hostpath)
 
 ### `iscsi`
 
@@ -232,7 +234,7 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 #### Attributes
 
 * `generation` - A sequence number representing a specific generation of the desired state.
-* `resource_version` - An opaque value that represents the internal version of this persistent volume that can be used by clients to determine when persistent volume has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#concurrency-control-and-consistency)
+* `resource_version` - An opaque value that represents the internal version of this persistent volume that can be used by clients to determine when persistent volume has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
 * `self_link` - A URL representing this persistent volume.
 * `uid` - The unique in time and space value for this persistent volume. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 

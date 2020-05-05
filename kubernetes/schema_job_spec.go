@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
 func jobMetadataSchema() *schema.Schema {
@@ -44,7 +44,7 @@ func jobSpecFields() map[string]*schema.Schema {
 			Type:         schema.TypeInt,
 			Optional:     true,
 			ForceNew:     true,
-			ValidateFunc: validatePositiveInteger,
+			ValidateFunc: validateNonNegativeInteger,
 			Description:  "Specifies the number of retries before marking this job failed. Defaults to 6",
 		},
 		"completions": {
@@ -126,6 +126,13 @@ func jobSpecFields() map[string]*schema.Schema {
 			Elem: &schema.Resource{
 				Schema: podTemplateFields,
 			},
+		},
+		"ttl_seconds_after_finished": {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			ForceNew:     true,
+			ValidateFunc: validatePositiveInteger,
+			Description:  "ttlSecondsAfterFinished limits the lifetime of a Job that has finished execution (either Complete or Failed). If this field is set, ttlSecondsAfterFinished after the Job finishes, it is eligible to be automatically deleted. When the Job is being deleted, its lifecycle guarantees (e.g. finalizers) will be honored. If this field is unset, the Job won't be automatically deleted. If this field is set to zero, the Job becomes eligible to be deleted immediately after it finishes.",
 		},
 	}
 

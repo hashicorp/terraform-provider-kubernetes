@@ -7,11 +7,10 @@ import (
 
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 
-	"github.com/hashicorp/terraform/helper/acctest"
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 func TestAccKubernetesPod_basic(t *testing.T) {
@@ -487,6 +486,7 @@ func TestAccKubernetesPod_with_volume_mount(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.name", "db"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.read_only", "false"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.sub_path", ""),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.mount_propagation", "HostToContainer"),
 				),
 			},
 		},
@@ -516,6 +516,7 @@ func TestAccKubernetesPod_with_cfg_map_volume_mount(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.name", "cfg"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.read_only", "false"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.sub_path", ""),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.mount_propagation", "None"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.1.mount_path", "/tmp/my_raw_path"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.1.name", "cfg-binary"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.1.read_only", "false"),
@@ -692,8 +693,40 @@ func TestAccKubernetesPod_config_container_working_dir(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPod_config_container_startup_probe(t *testing.T) {
+	var confPod api.Pod
+
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.17.0")
+		},
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodContainerStartupProbe(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists("kubernetes_pod.test", &confPod),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "metadata.0.generation", "0"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.startup_probe.0.http_get.0.path", "/index.html"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.startup_probe.0.http_get.0.port", "80"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.startup_probe.0.initial_delay_seconds", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.startup_probe.0.timeout_seconds", "2"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesPodDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_pod" {
@@ -723,7 +756,10 @@ func testAccCheckKubernetesPodExists(n string, obj *api.Pod) resource.TestCheckF
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
@@ -1175,8 +1211,9 @@ resource "kubernetes_pod" "test" {
       name  = "containername"
 
       volume_mount {
-        mount_path = "/tmp/my_path"
-        name       = "db"
+        mount_path        = "/tmp/my_path"
+        name              = "db"
+        mount_propagation = "HostToContainer"
       }
     }
 
@@ -1529,4 +1566,31 @@ resource "kubernetes_pod" "test" {
   }
 }
 `, podName, imageName, val)
+}
+
+func testAccKubernetesPodContainerStartupProbe(podName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_pod" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+
+      startup_probe {
+        http_get {
+          path = "/index.html"
+          port = 80
+        }
+
+        initial_delay_seconds = 1
+        timeout_seconds       = 2
+      }
+    }
+  }
+}
+`, podName, imageName)
 }

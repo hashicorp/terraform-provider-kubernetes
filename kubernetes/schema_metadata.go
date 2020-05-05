@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"fmt"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
 func metadataFields(objectName string) map[string]*schema.Schema {
@@ -37,7 +37,7 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 		},
 		"resource_version": {
 			Type:        schema.TypeString,
-			Description: fmt.Sprintf("An opaque value that represents the internal version of this %s that can be used by clients to determine when %s has changed. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#concurrency-control-and-consistency", objectName, objectName),
+			Description: fmt.Sprintf("An opaque value that represents the internal version of this %s that can be used by clients to determine when %s has changed. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency", objectName, objectName),
 			Computed:    true,
 		},
 		"self_link": {
@@ -59,7 +59,7 @@ func metadataSchema(objectName string, generatableName bool) *schema.Schema {
 	if generatableName {
 		fields["generate_name"] = &schema.Schema{
 			Type:          schema.TypeString,
-			Description:   "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#idempotency",
+			Description:   "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
 			Optional:      true,
 			ForceNew:      true,
 			ValidateFunc:  validateGenerateName,
@@ -70,7 +70,7 @@ func metadataSchema(objectName string, generatableName bool) *schema.Schema {
 
 	return &schema.Schema{
 		Type:        schema.TypeList,
-		Description: fmt.Sprintf("Standard %s's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata", objectName),
+		Description: fmt.Sprintf("Standard %s's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata", objectName),
 		Required:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{
@@ -80,18 +80,22 @@ func metadataSchema(objectName string, generatableName bool) *schema.Schema {
 }
 
 func namespacedMetadataSchema(objectName string, generatableName bool) *schema.Schema {
+	return namespacedMetadataSchemaIsTemplate(objectName, generatableName, false)
+}
+
+func namespacedMetadataSchemaIsTemplate(objectName string, generatableName, isTemplate bool) *schema.Schema {
 	fields := metadataFields(objectName)
 	fields["namespace"] = &schema.Schema{
 		Type:        schema.TypeString,
 		Description: fmt.Sprintf("Namespace defines the space within which name of the %s must be unique.", objectName),
 		Optional:    true,
 		ForceNew:    true,
-		Default:     "default",
+		Default:     conditionalDefault(!isTemplate, "default"),
 	}
 	if generatableName {
 		fields["generate_name"] = &schema.Schema{
 			Type:          schema.TypeString,
-			Description:   "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#idempotency",
+			Description:   "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
 			Optional:      true,
 			ForceNew:      true,
 			ValidateFunc:  validateGenerateName,
@@ -102,7 +106,7 @@ func namespacedMetadataSchema(objectName string, generatableName bool) *schema.S
 
 	return &schema.Schema{
 		Type:        schema.TypeList,
-		Description: fmt.Sprintf("Standard %s's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#metadata", objectName),
+		Description: fmt.Sprintf("Standard %s's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata", objectName),
 		Required:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{

@@ -1,15 +1,14 @@
 package kubernetes
 
 import (
+	"fmt"
 	"log"
 
-	"fmt"
-
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func resourceKubernetesIngress() *schema.Resource {
@@ -27,7 +26,7 @@ func resourceKubernetesIngress() *schema.Resource {
 			"metadata": namespacedMetadataSchema("ingress", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: "Spec defines the behavior of an ingress. https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#spec-and-status",
+				Description: "Spec defines the behavior of an ingress. https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
@@ -111,12 +110,21 @@ func resourceKubernetesIngress() *schema.Resource {
 					},
 				},
 			},
+			"wait_for_load_balancer": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Terraform will wait for the load balancer to have at least 1 endpoint before considering the resource created.",
+			},
 		},
 	}
 }
 
 func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	ing := &v1beta1.Ingress{
@@ -131,11 +139,36 @@ func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) e
 	log.Printf("[INFO] Submitted new ingress: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesIngressRead(d, meta)
+	if !d.Get("wait_for_load_balancer").(bool) {
+		return resourceKubernetesIngressRead(d, meta)
+	}
+
+	log.Printf("[INFO] Waiting for load balancer to become ready: %#v", out)
+	return resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+		res, err := conn.ExtensionsV1beta1().Ingresses(metadata.Namespace).Get(metadata.Name, metav1.GetOptions{})
+		if err != nil {
+			// NOTE it is possible in some HA apiserver setups that are eventually consistent
+			// that we could get a 404 when doing a Get immediately after a Create
+			if errors.IsNotFound(err) {
+				return resource.RetryableError(err)
+			}
+			return resource.NonRetryableError(err)
+		}
+
+		if len(res.Status.LoadBalancer.Ingress) > 0 {
+			return resource.NonRetryableError(resourceKubernetesIngressRead(d, meta))
+		}
+
+		log.Printf("[INFO] Load Balancer not ready yet...")
+		return resource.RetryableError(fmt.Errorf("Load Balancer is not ready yet"))
+	})
 }
 
 func resourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -143,7 +176,7 @@ func resourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) err
 	}
 
 	log.Printf("[INFO] Reading ingress %s", name)
-	ing, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(name, meta_v1.GetOptions{})
+	ing, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return fmt.Errorf("Failed to read Ingress '%s' because: %s", buildId(ing.ObjectMeta), err)
@@ -170,7 +203,10 @@ func resourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) err
 }
 
 func resourceKubernetesIngressUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, _, err := idParts(d.Id())
 	if err != nil {
@@ -199,7 +235,10 @@ func resourceKubernetesIngressUpdate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesIngressDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -207,7 +246,7 @@ func resourceKubernetesIngressDelete(d *schema.ResourceData, meta interface{}) e
 	}
 
 	log.Printf("[INFO] Deleting ingress: %#v", name)
-	err = conn.ExtensionsV1beta1().Ingresses(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.ExtensionsV1beta1().Ingresses(namespace).Delete(name, &metav1.DeleteOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to delete Ingress %s because: %s", d.Id(), err)
 	}
@@ -219,7 +258,10 @@ func resourceKubernetesIngressDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesIngressExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -227,7 +269,7 @@ func resourceKubernetesIngressExists(d *schema.ResourceData, meta interface{}) (
 	}
 
 	log.Printf("[INFO] Checking ingress %s", name)
-	_, err = conn.ExtensionsV1beta1().Ingresses(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.ExtensionsV1beta1().Ingresses(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

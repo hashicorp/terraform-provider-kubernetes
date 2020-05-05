@@ -5,13 +5,12 @@ import (
 	"log"
 	"time"
 
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesJob() *schema.Resource {
@@ -24,6 +23,11 @@ func resourceKubernetesJob() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+
+		Timeouts: &schema.ResourceTimeout{
+			Delete: schema.DefaultTimeout(1 * time.Minute),
+		},
+
 		Schema: map[string]*schema.Schema{
 			"metadata": jobMetadataSchema(),
 			"spec": {
@@ -43,7 +47,10 @@ func resourceKubernetesJob() *schema.Resource {
 }
 
 func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandJobSpec(d.Get("spec").([]interface{}))
@@ -70,7 +77,10 @@ func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error
 }
 
 func resourceKubernetesJobUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -97,7 +107,10 @@ func resourceKubernetesJobUpdate(d *schema.ResourceData, meta interface{}) error
 }
 
 func resourceKubernetesJobRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -150,7 +163,10 @@ func resourceKubernetesJobRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceKubernetesJobDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -158,12 +174,12 @@ func resourceKubernetesJobDelete(d *schema.ResourceData, meta interface{}) error
 	}
 
 	log.Printf("[INFO] Deleting job: %#v", name)
-	err = conn.BatchV1().Jobs(namespace).Delete(name, nil)
+	err = conn.BatchV1().Jobs(namespace).Delete(name, &deleteOptions)
 	if err != nil {
 		return fmt.Errorf("Failed to delete Job! API error: %s", err)
 	}
 
-	err = resource.Retry(1*time.Minute, func() *resource.RetryError {
+	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		_, err := conn.BatchV1().Jobs(namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
@@ -186,7 +202,10 @@ func resourceKubernetesJobDelete(d *schema.ResourceData, meta interface{}) error
 }
 
 func resourceKubernetesJobExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

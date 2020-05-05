@@ -5,14 +5,13 @@ import (
 	"log"
 	"time"
 
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesService() *schema.Resource {
@@ -26,11 +25,15 @@ func resourceKubernetesService() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(10 * time.Minute),
+		},
+
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("service", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: "Spec defines the behavior of a service. https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#spec-and-status",
+				Description: "Spec defines the behavior of a service. https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
@@ -158,7 +161,10 @@ func resourceKubernetesService() *schema.Resource {
 }
 
 func resourceKubernetesServiceCreate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svc := api.Service{
@@ -176,7 +182,7 @@ func resourceKubernetesServiceCreate(d *schema.ResourceData, meta interface{}) e
 	if out.Spec.Type == api.ServiceTypeLoadBalancer {
 		log.Printf("[DEBUG] Waiting for load balancer to assign IP/hostname")
 
-		err = resource.Retry(10*time.Minute, func() *resource.RetryError {
+		err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
 			svc, err := conn.CoreV1().Services(out.Namespace).Get(out.Name, meta_v1.GetOptions{})
 			if err != nil {
 				log.Printf("[DEBUG] Received error: %#v", err)
@@ -206,7 +212,10 @@ func resourceKubernetesServiceCreate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesServiceRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -241,7 +250,10 @@ func resourceKubernetesServiceRead(d *schema.ResourceData, meta interface{}) err
 }
 
 func resourceKubernetesServiceUpdate(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -276,7 +288,10 @@ func resourceKubernetesServiceUpdate(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesServiceDelete(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -296,7 +311,10 @@ func resourceKubernetesServiceDelete(d *schema.ResourceData, meta interface{}) e
 }
 
 func resourceKubernetesServiceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn := meta.(*kubernetes.Clientset)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

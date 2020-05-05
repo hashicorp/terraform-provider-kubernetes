@@ -22,9 +22,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
-	filestore "google.golang.org/api/file/v1beta1"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 )
 
 func resourceFilestoreInstance() *schema.Resource {
@@ -37,14 +36,11 @@ func resourceFilestoreInstance() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: resourceFilestoreInstanceImport,
 		},
-		DeprecationMessage: `This resource is in beta and will be removed from this provider.
-Use the FilestoreInstance resource in the terraform-provider-google-beta provider to continue using it.
-See https://terraform.io/docs/providers/google/provider_versions.html for more details on beta resources.`,
 
 		Timeouts: &schema.ResourceTimeout{
-			Create: schema.DefaultTimeout(300 * time.Second),
-			Update: schema.DefaultTimeout(240 * time.Second),
-			Delete: schema.DefaultTimeout(240 * time.Second),
+			Create: schema.DefaultTimeout(6 * time.Minute),
+			Update: schema.DefaultTimeout(6 * time.Minute),
+			Delete: schema.DefaultTimeout(6 * time.Minute),
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -178,13 +174,17 @@ func resourceFilestoreInstanceCreate(d *schema.ResourceData, meta interface{}) e
 		obj["networks"] = networksProp
 	}
 
-	url, err := replaceVars(d, config, "https://file.googleapis.com/v1beta1/projects/{{project}}/locations/{{zone}}/instances?instanceId={{name}}")
+	url, err := replaceVars(d, config, "{{FilestoreBasePath}}projects/{{project}}/locations/{{zone}}/instances?instanceId={{name}}")
 	if err != nil {
 		return err
 	}
 
 	log.Printf("[DEBUG] Creating new Instance: %#v", obj)
-	res, err := sendRequest(config, "POST", url, obj)
+	project, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
+	res, err := sendRequestWithTimeout(config, "POST", project, url, obj, d.Timeout(schema.TimeoutCreate))
 	if err != nil {
 		return fmt.Errorf("Error creating Instance: %s", err)
 	}
@@ -196,18 +196,8 @@ func resourceFilestoreInstanceCreate(d *schema.ResourceData, meta interface{}) e
 	}
 	d.SetId(id)
 
-	project, err := getProject(d, config)
-	if err != nil {
-		return err
-	}
-	op := &filestore.Operation{}
-	err = Convert(res, op)
-	if err != nil {
-		return err
-	}
-
 	waitErr := filestoreOperationWaitTime(
-		config.clientFilestore, op, project, "Creating Instance",
+		config, res, project, "Creating Instance",
 		int(d.Timeout(schema.TimeoutCreate).Minutes()))
 
 	if waitErr != nil {
@@ -224,45 +214,43 @@ func resourceFilestoreInstanceCreate(d *schema.ResourceData, meta interface{}) e
 func resourceFilestoreInstanceRead(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
-	url, err := replaceVars(d, config, "https://file.googleapis.com/v1beta1/projects/{{project}}/locations/{{zone}}/instances/{{name}}")
+	url, err := replaceVars(d, config, "{{FilestoreBasePath}}projects/{{project}}/locations/{{zone}}/instances/{{name}}")
 	if err != nil {
 		return err
 	}
 
-	res, err := sendRequest(config, "GET", url, nil)
-	if err != nil {
-		return handleNotFoundError(err, d, fmt.Sprintf("FilestoreInstance %q", d.Id()))
-	}
-
-	if err := d.Set("name", flattenFilestoreInstanceName(res["name"])); err != nil {
-		return fmt.Errorf("Error reading Instance: %s", err)
-	}
-	if err := d.Set("description", flattenFilestoreInstanceDescription(res["description"])); err != nil {
-		return fmt.Errorf("Error reading Instance: %s", err)
-	}
-	if err := d.Set("create_time", flattenFilestoreInstanceCreateTime(res["createTime"])); err != nil {
-		return fmt.Errorf("Error reading Instance: %s", err)
-	}
-	if err := d.Set("tier", flattenFilestoreInstanceTier(res["tier"])); err != nil {
-		return fmt.Errorf("Error reading Instance: %s", err)
-	}
-	if err := d.Set("labels", flattenFilestoreInstanceLabels(res["labels"])); err != nil {
-		return fmt.Errorf("Error reading Instance: %s", err)
-	}
-	if err := d.Set("file_shares", flattenFilestoreInstanceFileShares(res["fileShares"])); err != nil {
-		return fmt.Errorf("Error reading Instance: %s", err)
-	}
-	if err := d.Set("networks", flattenFilestoreInstanceNetworks(res["networks"])); err != nil {
-		return fmt.Errorf("Error reading Instance: %s", err)
-	}
-	if err := d.Set("etag", flattenFilestoreInstanceEtag(res["etag"])); err != nil {
-		return fmt.Errorf("Error reading Instance: %s", err)
-	}
 	project, err := getProject(d, config)
 	if err != nil {
 		return err
 	}
+	res, err := sendRequest(config, "GET", project, url, nil)
+	if err != nil {
+		return handleNotFoundError(err, d, fmt.Sprintf("FilestoreInstance %q", d.Id()))
+	}
+
 	if err := d.Set("project", project); err != nil {
+		return fmt.Errorf("Error reading Instance: %s", err)
+	}
+
+	if err := d.Set("description", flattenFilestoreInstanceDescription(res["description"], d)); err != nil {
+		return fmt.Errorf("Error reading Instance: %s", err)
+	}
+	if err := d.Set("create_time", flattenFilestoreInstanceCreateTime(res["createTime"], d)); err != nil {
+		return fmt.Errorf("Error reading Instance: %s", err)
+	}
+	if err := d.Set("tier", flattenFilestoreInstanceTier(res["tier"], d)); err != nil {
+		return fmt.Errorf("Error reading Instance: %s", err)
+	}
+	if err := d.Set("labels", flattenFilestoreInstanceLabels(res["labels"], d)); err != nil {
+		return fmt.Errorf("Error reading Instance: %s", err)
+	}
+	if err := d.Set("file_shares", flattenFilestoreInstanceFileShares(res["fileShares"], d)); err != nil {
+		return fmt.Errorf("Error reading Instance: %s", err)
+	}
+	if err := d.Set("networks", flattenFilestoreInstanceNetworks(res["networks"], d)); err != nil {
+		return fmt.Errorf("Error reading Instance: %s", err)
+	}
+	if err := d.Set("etag", flattenFilestoreInstanceEtag(res["etag"], d)); err != nil {
 		return fmt.Errorf("Error reading Instance: %s", err)
 	}
 
@@ -272,18 +260,17 @@ func resourceFilestoreInstanceRead(d *schema.ResourceData, meta interface{}) err
 func resourceFilestoreInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
+	project, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
+
 	obj := make(map[string]interface{})
 	descriptionProp, err := expandFilestoreInstanceDescription(d.Get("description"), d, config)
 	if err != nil {
 		return err
 	} else if v, ok := d.GetOkExists("description"); !isEmptyValue(reflect.ValueOf(v)) && (ok || !reflect.DeepEqual(v, descriptionProp)) {
 		obj["description"] = descriptionProp
-	}
-	tierProp, err := expandFilestoreInstanceTier(d.Get("tier"), d, config)
-	if err != nil {
-		return err
-	} else if v, ok := d.GetOkExists("tier"); !isEmptyValue(reflect.ValueOf(v)) && (ok || !reflect.DeepEqual(v, tierProp)) {
-		obj["tier"] = tierProp
 	}
 	labelsProp, err := expandFilestoreInstanceLabels(d.Get("labels"), d, config)
 	if err != nil {
@@ -297,14 +284,8 @@ func resourceFilestoreInstanceUpdate(d *schema.ResourceData, meta interface{}) e
 	} else if v, ok := d.GetOkExists("file_shares"); !isEmptyValue(reflect.ValueOf(v)) && (ok || !reflect.DeepEqual(v, fileSharesProp)) {
 		obj["fileShares"] = fileSharesProp
 	}
-	networksProp, err := expandFilestoreInstanceNetworks(d.Get("networks"), d, config)
-	if err != nil {
-		return err
-	} else if v, ok := d.GetOkExists("networks"); !isEmptyValue(reflect.ValueOf(v)) && (ok || !reflect.DeepEqual(v, networksProp)) {
-		obj["networks"] = networksProp
-	}
 
-	url, err := replaceVars(d, config, "https://file.googleapis.com/v1beta1/projects/{{project}}/locations/{{zone}}/instances/{{name}}")
+	url, err := replaceVars(d, config, "{{FilestoreBasePath}}projects/{{project}}/locations/{{zone}}/instances/{{name}}")
 	if err != nil {
 		return err
 	}
@@ -316,10 +297,6 @@ func resourceFilestoreInstanceUpdate(d *schema.ResourceData, meta interface{}) e
 		updateMask = append(updateMask, "description")
 	}
 
-	if d.HasChange("tier") {
-		updateMask = append(updateMask, "tier")
-	}
-
 	if d.HasChange("labels") {
 		updateMask = append(updateMask, "labels")
 	}
@@ -327,34 +304,20 @@ func resourceFilestoreInstanceUpdate(d *schema.ResourceData, meta interface{}) e
 	if d.HasChange("file_shares") {
 		updateMask = append(updateMask, "fileShares")
 	}
-
-	if d.HasChange("networks") {
-		updateMask = append(updateMask, "networks")
-	}
 	// updateMask is a URL parameter but not present in the schema, so replaceVars
 	// won't set it
 	url, err = addQueryParams(url, map[string]string{"updateMask": strings.Join(updateMask, ",")})
 	if err != nil {
 		return err
 	}
-	res, err := sendRequest(config, "PATCH", url, obj)
+	res, err := sendRequestWithTimeout(config, "PATCH", project, url, obj, d.Timeout(schema.TimeoutUpdate))
 
 	if err != nil {
 		return fmt.Errorf("Error updating Instance %q: %s", d.Id(), err)
 	}
 
-	project, err := getProject(d, config)
-	if err != nil {
-		return err
-	}
-	op := &filestore.Operation{}
-	err = Convert(res, op)
-	if err != nil {
-		return err
-	}
-
 	err = filestoreOperationWaitTime(
-		config.clientFilestore, op, project, "Updating Instance",
+		config, res, project, "Updating Instance",
 		int(d.Timeout(schema.TimeoutUpdate).Minutes()))
 
 	if err != nil {
@@ -367,30 +330,26 @@ func resourceFilestoreInstanceUpdate(d *schema.ResourceData, meta interface{}) e
 func resourceFilestoreInstanceDelete(d *schema.ResourceData, meta interface{}) error {
 	config := meta.(*Config)
 
-	url, err := replaceVars(d, config, "https://file.googleapis.com/v1beta1/projects/{{project}}/locations/{{zone}}/instances/{{name}}")
+	project, err := getProject(d, config)
+	if err != nil {
+		return err
+	}
+
+	url, err := replaceVars(d, config, "{{FilestoreBasePath}}projects/{{project}}/locations/{{zone}}/instances/{{name}}")
 	if err != nil {
 		return err
 	}
 
 	var obj map[string]interface{}
 	log.Printf("[DEBUG] Deleting Instance %q", d.Id())
-	res, err := sendRequest(config, "DELETE", url, obj)
+
+	res, err := sendRequestWithTimeout(config, "DELETE", project, url, obj, d.Timeout(schema.TimeoutDelete))
 	if err != nil {
 		return handleNotFoundError(err, d, "Instance")
 	}
 
-	project, err := getProject(d, config)
-	if err != nil {
-		return err
-	}
-	op := &filestore.Operation{}
-	err = Convert(res, op)
-	if err != nil {
-		return err
-	}
-
 	err = filestoreOperationWaitTime(
-		config.clientFilestore, op, project, "Deleting Instance",
+		config, res, project, "Deleting Instance",
 		int(d.Timeout(schema.TimeoutDelete).Minutes()))
 
 	if err != nil {
@@ -403,7 +362,14 @@ func resourceFilestoreInstanceDelete(d *schema.ResourceData, meta interface{}) e
 
 func resourceFilestoreInstanceImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	config := meta.(*Config)
-	parseImportId([]string{"projects/(?P<project>[^/]+)/locations/(?P<zone>[^/]+)/instances/(?P<name>[^/]+)", "(?P<project>[^/]+)/(?P<zone>[^/]+)/(?P<name>[^/]+)", "(?P<name>[^/]+)"}, d, config)
+	if err := parseImportId([]string{
+		"projects/(?P<project>[^/]+)/locations/(?P<zone>[^/]+)/instances/(?P<name>[^/]+)",
+		"(?P<project>[^/]+)/(?P<zone>[^/]+)/(?P<name>[^/]+)",
+		"(?P<zone>[^/]+)/(?P<name>[^/]+)",
+		"(?P<name>[^/]+)",
+	}, d, config); err != nil {
+		return nil, err
+	}
 
 	// Replace import id for the resource id
 	id, err := replaceVars(d, config, "{{project}}/{{zone}}/{{name}}")
@@ -415,30 +381,23 @@ func resourceFilestoreInstanceImport(d *schema.ResourceData, meta interface{}) (
 	return []*schema.ResourceData{d}, nil
 }
 
-func flattenFilestoreInstanceName(v interface{}) interface{} {
-	if v == nil {
-		return v
-	}
-	return NameFromSelfLinkStateFunc(v)
-}
-
-func flattenFilestoreInstanceDescription(v interface{}) interface{} {
+func flattenFilestoreInstanceDescription(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenFilestoreInstanceCreateTime(v interface{}) interface{} {
+func flattenFilestoreInstanceCreateTime(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenFilestoreInstanceTier(v interface{}) interface{} {
+func flattenFilestoreInstanceTier(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenFilestoreInstanceLabels(v interface{}) interface{} {
+func flattenFilestoreInstanceLabels(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenFilestoreInstanceFileShares(v interface{}) interface{} {
+func flattenFilestoreInstanceFileShares(v interface{}, d *schema.ResourceData) interface{} {
 	if v == nil {
 		return v
 	}
@@ -446,18 +405,22 @@ func flattenFilestoreInstanceFileShares(v interface{}) interface{} {
 	transformed := make([]interface{}, 0, len(l))
 	for _, raw := range l {
 		original := raw.(map[string]interface{})
+		if len(original) < 1 {
+			// Do not include empty json objects coming back from the api
+			continue
+		}
 		transformed = append(transformed, map[string]interface{}{
-			"name":        flattenFilestoreInstanceFileSharesName(original["name"]),
-			"capacity_gb": flattenFilestoreInstanceFileSharesCapacityGb(original["capacityGb"]),
+			"name":        flattenFilestoreInstanceFileSharesName(original["name"], d),
+			"capacity_gb": flattenFilestoreInstanceFileSharesCapacityGb(original["capacityGb"], d),
 		})
 	}
 	return transformed
 }
-func flattenFilestoreInstanceFileSharesName(v interface{}) interface{} {
+func flattenFilestoreInstanceFileSharesName(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenFilestoreInstanceFileSharesCapacityGb(v interface{}) interface{} {
+func flattenFilestoreInstanceFileSharesCapacityGb(v interface{}, d *schema.ResourceData) interface{} {
 	// Handles the string fixed64 format
 	if strVal, ok := v.(string); ok {
 		if intVal, err := strconv.ParseInt(strVal, 10, 64); err == nil {
@@ -467,7 +430,7 @@ func flattenFilestoreInstanceFileSharesCapacityGb(v interface{}) interface{} {
 	return v
 }
 
-func flattenFilestoreInstanceNetworks(v interface{}) interface{} {
+func flattenFilestoreInstanceNetworks(v interface{}, d *schema.ResourceData) interface{} {
 	if v == nil {
 		return v
 	}
@@ -475,44 +438,48 @@ func flattenFilestoreInstanceNetworks(v interface{}) interface{} {
 	transformed := make([]interface{}, 0, len(l))
 	for _, raw := range l {
 		original := raw.(map[string]interface{})
+		if len(original) < 1 {
+			// Do not include empty json objects coming back from the api
+			continue
+		}
 		transformed = append(transformed, map[string]interface{}{
-			"network":           flattenFilestoreInstanceNetworksNetwork(original["network"]),
-			"modes":             flattenFilestoreInstanceNetworksModes(original["modes"]),
-			"reserved_ip_range": flattenFilestoreInstanceNetworksReservedIpRange(original["reservedIpRange"]),
-			"ip_addresses":      flattenFilestoreInstanceNetworksIpAddresses(original["ipAddresses"]),
+			"network":           flattenFilestoreInstanceNetworksNetwork(original["network"], d),
+			"modes":             flattenFilestoreInstanceNetworksModes(original["modes"], d),
+			"reserved_ip_range": flattenFilestoreInstanceNetworksReservedIpRange(original["reservedIpRange"], d),
+			"ip_addresses":      flattenFilestoreInstanceNetworksIpAddresses(original["ipAddresses"], d),
 		})
 	}
 	return transformed
 }
-func flattenFilestoreInstanceNetworksNetwork(v interface{}) interface{} {
+func flattenFilestoreInstanceNetworksNetwork(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenFilestoreInstanceNetworksModes(v interface{}) interface{} {
+func flattenFilestoreInstanceNetworksModes(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenFilestoreInstanceNetworksReservedIpRange(v interface{}) interface{} {
+func flattenFilestoreInstanceNetworksReservedIpRange(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenFilestoreInstanceNetworksIpAddresses(v interface{}) interface{} {
+func flattenFilestoreInstanceNetworksIpAddresses(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func flattenFilestoreInstanceEtag(v interface{}) interface{} {
+func flattenFilestoreInstanceEtag(v interface{}, d *schema.ResourceData) interface{} {
 	return v
 }
 
-func expandFilestoreInstanceDescription(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandFilestoreInstanceDescription(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandFilestoreInstanceTier(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandFilestoreInstanceTier(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandFilestoreInstanceLabels(v interface{}, d *schema.ResourceData, config *Config) (map[string]string, error) {
+func expandFilestoreInstanceLabels(v interface{}, d TerraformResourceData, config *Config) (map[string]string, error) {
 	if v == nil {
 		return map[string]string{}, nil
 	}
@@ -523,7 +490,7 @@ func expandFilestoreInstanceLabels(v interface{}, d *schema.ResourceData, config
 	return m, nil
 }
 
-func expandFilestoreInstanceFileShares(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandFilestoreInstanceFileShares(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	l := v.([]interface{})
 	req := make([]interface{}, 0, len(l))
 	for _, raw := range l {
@@ -552,15 +519,15 @@ func expandFilestoreInstanceFileShares(v interface{}, d *schema.ResourceData, co
 	return req, nil
 }
 
-func expandFilestoreInstanceFileSharesName(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandFilestoreInstanceFileSharesName(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandFilestoreInstanceFileSharesCapacityGb(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandFilestoreInstanceFileSharesCapacityGb(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandFilestoreInstanceNetworks(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandFilestoreInstanceNetworks(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	l := v.([]interface{})
 	req := make([]interface{}, 0, len(l))
 	for _, raw := range l {
@@ -603,18 +570,18 @@ func expandFilestoreInstanceNetworks(v interface{}, d *schema.ResourceData, conf
 	return req, nil
 }
 
-func expandFilestoreInstanceNetworksNetwork(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandFilestoreInstanceNetworksNetwork(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandFilestoreInstanceNetworksModes(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandFilestoreInstanceNetworksModes(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandFilestoreInstanceNetworksReservedIpRange(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandFilestoreInstanceNetworksReservedIpRange(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }
 
-func expandFilestoreInstanceNetworksIpAddresses(v interface{}, d *schema.ResourceData, config *Config) (interface{}, error) {
+func expandFilestoreInstanceNetworksIpAddresses(v interface{}, d TerraformResourceData, config *Config) (interface{}, error) {
 	return v, nil
 }

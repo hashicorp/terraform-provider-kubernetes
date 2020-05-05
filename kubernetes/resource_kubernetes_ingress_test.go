@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform/helper/acctest"
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/extensions/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 func TestAccKubernetesIngress_basic(t *testing.T) {
@@ -107,6 +106,7 @@ func TestAccKubernetesIngress_TLS(t *testing.T) {
 		},
 	})
 }
+
 func TestAccKubernetesIngress_InternalKey(t *testing.T) {
 	var conf api.Ingress
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -148,8 +148,32 @@ func TestAccKubernetesIngress_InternalKey(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesIngress_WaitForLoadBalancerGoogleCloud(t *testing.T) {
+	var conf api.Ingress
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
+		IDRefreshName: "kubernetes_ingress.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesIngressDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressConfig_waitForLoadBalancer(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "load_balancer_ingress.0.ip"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesIngressDestroy(s *terraform.State) error {
-	conn := testAccProvider.Meta().(*kubernetes.Clientset)
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_ingress" {
@@ -179,7 +203,10 @@ func testAccCheckKubernetesIngressExists(n string, obj *api.Ingress) resource.Te
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn := testAccProvider.Meta().(*kubernetes.Clientset)
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
@@ -328,4 +355,71 @@ resource "kubernetes_ingress" "test" {
 		}
 	}
 }`, name)
+}
+
+func testAccKubernetesIngressConfig_waitForLoadBalancer(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service" "test" {
+	metadata {
+		name = %q
+	}
+	spec {
+		type = "NodePort"
+		selector = {
+			app = %q
+		}
+		port {
+			port = 8000
+			target_port = 80
+			protocol = "TCP"
+		}
+	}
+}
+
+resource "kubernetes_deployment" "test" {
+	metadata {
+		name = %q
+	}
+	spec {
+		selector {
+			match_labels = {
+				app = %q
+			}
+		}
+		template {
+			metadata {
+				labels = {
+					app = %q
+				}
+			}
+			spec {
+				container {
+					name = "test"
+					image = "gcr.io/google-samples/hello-app:2.0"
+					env {
+						name = "PORT"
+						value = "80"
+					}	
+				}
+			}
+		}
+	}
+}
+
+resource "kubernetes_ingress" "test" {
+	depends_on = [
+		kubernetes_service.test, 
+		kubernetes_deployment.test
+	]
+	metadata {
+		name = %q
+	}
+	spec {
+		backend {
+			service_name = %q
+			service_port = 8000
+		}
+	}
+	wait_for_load_balancer = true
+}`, name, name, name, name, name, name, name)
 }

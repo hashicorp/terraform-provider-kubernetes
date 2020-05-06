@@ -1,4 +1,4 @@
-# Google GKE (Google Container Enginer) cluster
+# Google GKE (Google Container Engine) cluster
 
 In case you don't have a K8S cluster yet the easiest way
 to create one from scratch is to use GKE (Google Container Service).

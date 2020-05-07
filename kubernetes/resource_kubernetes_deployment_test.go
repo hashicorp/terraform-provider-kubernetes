@@ -955,6 +955,7 @@ resource "kubernetes_deployment" "test" {
       }
     }
   }
+  wait_for_rollout = true
 }
 `, name)
 }

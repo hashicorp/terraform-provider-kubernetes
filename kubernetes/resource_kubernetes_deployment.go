@@ -31,13 +31,11 @@ func resourceKubernetesDeployment() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
 			Update: schema.DefaultTimeout(10 * time.Minute),
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
-
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("deployment", true),
 			"spec": {
@@ -190,6 +188,12 @@ func resourceKubernetesDeployment() *schema.Resource {
 					},
 				},
 			},
+			"wait_for_rollout": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Whether to wait for resource changes to rollout. If false, consider a create/update to succeed as soon as accepted by the Kubernetes master.",
+			},
 		},
 	}
 }
@@ -219,13 +223,15 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 
 	d.SetId(buildId(out.ObjectMeta))
 
-	log.Printf("[DEBUG] Waiting for deployment %s to schedule %d replicas", d.Id(), *out.Spec.Replicas)
+	if d.Get("wait_for_rollout").(bool) {
+		log.Printf("[DEBUG] Waiting for deployment %s to schedule %d replicas", d.Id(), *out.Spec.Replicas)
 
-	// 10 mins should be sufficient for scheduling ~10k replicas
-	err = resource.Retry(d.Timeout(schema.TimeoutCreate),
-		waitForDeploymentReplicasFunc(conn, out.GetNamespace(), out.GetName()))
-	if err != nil {
-		return err
+		// 10 mins should be sufficient for scheduling ~10k replicas
+		err = resource.Retry(d.Timeout(schema.TimeoutCreate),
+			waitForDeploymentReplicasFunc(conn, out.GetNamespace(), out.GetName()))
+		if err != nil {
+			return err
+		}
 	}
 
 	log.Printf("[INFO] Submitted new deployment: %#v", out)
@@ -268,10 +274,12 @@ func resourceKubernetesDeploymentUpdate(d *schema.ResourceData, meta interface{}
 	}
 	log.Printf("[INFO] Submitted updated deployment: %#v", out)
 
-	err = resource.Retry(d.Timeout(schema.TimeoutUpdate),
-		waitForDeploymentReplicasFunc(conn, namespace, name))
-	if err != nil {
-		return err
+	if d.Get("wait_for_rollout").(bool) {
+		err = resource.Retry(d.Timeout(schema.TimeoutUpdate),
+			waitForDeploymentReplicasFunc(conn, namespace, name))
+		if err != nil {
+			return err
+		}
 	}
 
 	return resourceKubernetesDeploymentRead(d, meta)

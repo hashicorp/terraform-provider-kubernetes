@@ -10,7 +10,7 @@ You will need the following environment variables to be set:
 
 For example:
 ```
-[myuser@linux ~]$ env |grep GOOGLE
+[myuser@linux ~]$ env | grep GOOGLE
 GOOGLE_REGION=us-west1
 GOOGLE_CREDENTIALS=/home/myuser/.config/gcloud/legacy_credentials/mygoogleuser/adc.json
 GOOGLE_PROJECT=my-gcp-project
@@ -45,4 +45,3 @@ export GOOGLE_ZONE=$(terraform output google_zone)
 ```
 
 Now you can access the cluster via `kubectl`.
-

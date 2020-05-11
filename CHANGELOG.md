@@ -5,6 +5,7 @@ IMPROVEMENTS:
 
 * Add data source for config map (#76)
 * Add data source for service account (#523)
+* Add resource for ValidatingWebHookConfiguration and MutatingWebhookConfiguration (#791)
 
 BUG FIXES:
 * Update Go module versions to work with Go 1.13

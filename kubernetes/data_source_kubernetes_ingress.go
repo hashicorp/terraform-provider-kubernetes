@@ -7,12 +7,12 @@ import (
 )
 
 func dataSourceKubernetesIngress() *schema.Resource {
-	docHTTPIngressPath      := networking.HTTPIngressPath{}.SwaggerDoc()
+	docHTTPIngressPath := networking.HTTPIngressPath{}.SwaggerDoc()
 	docHTTPIngressRuleValue := networking.HTTPIngressPath{}.SwaggerDoc()
-	docIngress              := networking.Ingress{}.SwaggerDoc()
-	docIngressTLS           := networking.IngressTLS{}.SwaggerDoc()
-	docIngressRule          := networking.IngressRule{}.SwaggerDoc()
-	docIngressSpec          := networking.IngressSpec{}.SwaggerDoc()
+	docIngress := networking.Ingress{}.SwaggerDoc()
+	docIngressTLS := networking.IngressTLS{}.SwaggerDoc()
+	docIngressRule := networking.IngressRule{}.SwaggerDoc()
+	docIngressSpec := networking.IngressSpec{}.SwaggerDoc()
 
 	return &schema.Resource{
 		Read: dataSourceKubernetesIngressRead,
@@ -41,7 +41,7 @@ func dataSourceKubernetesIngress() *schema.Resource {
 									},
 									"http": {
 										Type:        schema.TypeList,
-										Computed: true,
+										Computed:    true,
 										MaxItems:    1,
 										Description: docIngressRule[""],
 										Elem: &schema.Resource{

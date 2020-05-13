@@ -12,12 +12,12 @@ import (
 )
 
 func resourceKubernetesIngress() *schema.Resource {
-	docHTTPIngressPath      := networking.HTTPIngressPath{}.SwaggerDoc()
+	docHTTPIngressPath := networking.HTTPIngressPath{}.SwaggerDoc()
 	docHTTPIngressRuleValue := networking.HTTPIngressPath{}.SwaggerDoc()
-	docIngress              := networking.Ingress{}.SwaggerDoc()
-	docIngressTLS           := networking.IngressTLS{}.SwaggerDoc()
-	docIngressRule          := networking.IngressRule{}.SwaggerDoc()
-	docIngressSpec          := networking.IngressSpec{}.SwaggerDoc()
+	docIngress := networking.Ingress{}.SwaggerDoc()
+	docIngressTLS := networking.IngressTLS{}.SwaggerDoc()
+	docIngressRule := networking.IngressRule{}.SwaggerDoc()
+	docIngressSpec := networking.IngressSpec{}.SwaggerDoc()
 	return &schema.Resource{
 		Create: resourceKubernetesIngressCreate,
 		Read:   resourceKubernetesIngressRead,
@@ -61,7 +61,7 @@ func resourceKubernetesIngress() *schema.Resource {
 												"path": {
 													Type:        schema.TypeList,
 													Required:    true,
-													Description:  docHTTPIngressRuleValue["paths"],
+													Description: docHTTPIngressRuleValue["paths"],
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
 															"path": {

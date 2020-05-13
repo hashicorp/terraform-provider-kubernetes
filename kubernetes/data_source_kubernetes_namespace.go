@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"k8s.io/client-go/metadata"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -46,7 +45,6 @@ func dataSourceKubernetesNamespaceRead(d *schema.ResourceData, meta interface{})
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	d.SetId(metadata.Name)
 
-	log.Printf("[INFO] Reading namespace %s", name)
 	namespace, err := conn.CoreV1().Namespaces().Get(metadata.Name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)

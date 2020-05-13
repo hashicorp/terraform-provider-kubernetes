@@ -26,7 +26,10 @@ func dataSourceKubernetesAllNamespaces() *schema.Resource {
 }
 
 func dataSourceKubernetesAllNamespacesRead(d *schema.ResourceData, meta interface{}) error {
-	conn := meta.(*KubeClientsets).MainClientset
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
 
 	log.Printf("[INFO] Listing namespaces")
 	nsRaw, err := conn.CoreV1().Namespaces().List(metav1.ListOptions{})

@@ -1,4 +1,9 @@
 ## 1.11.3 (Unreleased)
+
+IMPROVEMENTS:
+
+* Add data source for ingress (#514)
+
 ## 1.11.2 (May 06, 2020)
 
 IMPROVEMENTS:

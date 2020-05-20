@@ -1,12 +1,13 @@
+
 # Terraform Provider for Kubernetes [![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/terraform-providers/terraform-provider-kubernetes?label=release)](https://github.com/terraform-providers/terraform-provider-kubernetes/releases) [![license](https://img.shields.io/github/license/terraform-providers/terraform-provider-kubernetes.svg)]()
 
-- Website: https://www.terraform.io
-- [![Gitter chat](https://badges.gitter.im/hashicorp-terraform/Lobby.png)](https://gitter.im/hashicorp-terraform/Lobby)
+<a href="https://terraform.io">
+    <img src="https://cdn.rawgit.com/hashicorp/terraform-website/master/content/source/assets/images/logo-hashicorp.svg" alt="Terraform logo" title="Terrafpr," align="right" height="50" />
+</a>
+
+- Documentation: https://www.terraform.io/docs/providers/kubernetes/index.html
 - Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
 - Slack channel: [#terraform-providers in Kubernetes](https://kubernetes.slack.com/messages/CJY6ATQH4) ([Sign up here](http://slack.k8s.io/))
-
-<img src="https://cdn.rawgit.com/hashicorp/terraform-website/master/content/source/assets/images/logo-hashicorp.svg" width="600px">
-
 
 ## Requirements
 
@@ -14,7 +15,9 @@
 -	[Terraform](https://www.terraform.io/downloads.html) 0.10.x
 -	[Go](https://golang.org/doc/install) 1.14.x (to build the provider plugin)
 
-## Building The Provider
+## Developing the provider
+
+## Building the provider
 
 Clone repository to: `$GOPATH/src/github.com/terraform-providers/terraform-provider-kubernetes`
 
@@ -36,7 +39,7 @@ Statically linking binaries can be required for testing development builds in co
 # CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"'
 ```
 
-## Developing the Provider
+## Contributing to the provider
 
 ### Contributing Resources
 

@@ -5,12 +5,12 @@
     <img src="https://cdn.rawgit.com/hashicorp/terraform-website/master/content/source/assets/images/logo-hashicorp.svg" alt="Terraform logo" title="Terrafpr," align="right" height="50" />
 </a>
 
-- Getting Started: https://learn.hashicorp.com/terraform?track=kubernetes#kubernetes
+- [Getting Started](https://learn.hashicorp.com/terraform?track=kubernetes#kubernetes)
 - Usage 
-  - Documentation: https://www.terraform.io/docs/providers/kubernetes/index.html
-  - Examples: https://github.com/terraform-providers/terraform-provider-kubernetes/tree/master/_examples
+  - [Documentation](https://www.terraform.io/docs/providers/kubernetes/index.html)
+  - [Examples](https://github.com/terraform-providers/terraform-provider-kubernetes/tree/master/_examples)
 - Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
-- Slack channel: [#terraform-providers in Kubernetes](https://kubernetes.slack.com/messages/CJY6ATQH4) ([Sign up here](http://slack.k8s.io/))
+- Slack: [#terraform-providers in Kubernetes](https://kubernetes.slack.com/messages/CJY6ATQH4) ([Sign up here](http://slack.k8s.io/))
 
 The Kubernetes provider for Terraform is a plugin that enables full lifecycle management of Kubernetes resources. This provider is maintained internally by HashiCorp.
 
@@ -26,4 +26,4 @@ Please note: We take Terraform's security and our users' trust very seriously. I
 
 The Terraform Kubernetes Provider is the work of many contributors. We appreciate your help!
 
-To contribute, please read the [contribution guidelines](https://github.com/terraform-providers/terraform-provider-kubernetes/blob/master/docs/CONTRIBUTING.md).
+To contribute, please read the [contribution guidelines](https://github.com/terraform-providers/terraform-provider-kubernetes/blob/master/_about/CONTRIBUTING.md).

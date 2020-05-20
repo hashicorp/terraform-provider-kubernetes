@@ -1,4 +1,4 @@
-## 1.11.3 (Unreleased)
+## 1.11.3 (May 20, 2020)
 
 IMPROVEMENTS:
 

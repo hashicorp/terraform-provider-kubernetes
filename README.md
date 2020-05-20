@@ -26,4 +26,4 @@ Please note: We take Terraform's security and our users' trust very seriously. I
 
 The Terraform Kubernetes Provider is the work of many contributors. We appreciate your help!
 
-To contribute, please read the [contribution guidelines](https://github.com/terraform-providers/terraform-provider-kubernetes/blob/master/_about/CONTRIBUTING.md).
+To contribute, please read the [contribution guidelines](_about/CONTRIBUTING.md).

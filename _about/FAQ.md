@@ -2,7 +2,7 @@
 
 ### Who are the maintainers?
 
-The HashiCorp Terraform AWS provider team is :
+The HashiCorp Terraform Kubernetes provider team is :
 
 * Phil Sautter, Product Manager - [@redeux](https://github.com/redeux)
 * Alex Somesan, Engineer - [@alexsomesan](https://github.com/alexsomesan)

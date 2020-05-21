@@ -5,7 +5,7 @@
 We welcome your feature requests and bug reports. Below you'll find short checklists with guidelines for well-formed
 issues of each type.
 
-### [Bug Reports](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/new?template=bug-report.md)
+### [Bug Reports](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/new/choose)
 
  - [ ] __Test against the latest release__: Make sure you test against the latest
    released version. It is possible we already fixed the bug you're experiencing.
@@ -23,7 +23,7 @@ issues of each type.
    create a [gist](https://gist.github.com) of the *entire* generated crash log
    for us to look at. Double check no sensitive items were in the log.
 
-### [Feature Requests](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/new?labels=enhancement&template=feature-request.md)
+### [Feature Requests](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/new/choose)
 
  - [ ] __Search for possible duplicate requests__: It's helpful to keep requests
    consolidated to one thread, so do a quick search on existing requests to

@@ -16,7 +16,7 @@ Unfortunately, due to the volume of issues and new pull requests we receive, we 
 
 ### How do you decide what gets merged for each release?
 
-The number one factor we look at when deciding what issues to look at are your 👍 [reactions](https://blog.github.com/2016-03-10-add-reactions-to-pull-requests-issues-and-comments/) to the original issue/PR description as these can be easily discovered. Comments that further explain desired use cases or poor user experience are also heavily factored. The items with the most support are always on our radar, and we commit to keep the community updated on their status and potential timelines.
+The number one factor we look at when deciding what issues to look at are your 👍 [reactions](https://blog.github.com/2016-03-10-add-reactions-to-pull-requests-issues-and-comments/) to the original issue/PR description as these can be easily discovered. Comments that further explain desired use cases or poor user experience are also heavily factored. The items with the most support are always on our radar, and we do our best to keep the community updated on their status and potential timelines.
 
 We also are investing time to improve the contributing experience by improving documentation.
 

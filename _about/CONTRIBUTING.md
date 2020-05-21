@@ -9,7 +9,6 @@ Our [provider development documentation](https://www.terraform.io/docs/extend/) 
 To learn more about how to create issues and pull requests in this repository, and what happens after they are created, you may refer to the resources below:
 - [Issue creation and lifecycle](ISSUES.md)
 - [Pull Request creation and lifecycle](PULL_REQUESTS.md)
-- [Frequently Asked Questions](FAQ.md)
 
 
 ## Building the provider

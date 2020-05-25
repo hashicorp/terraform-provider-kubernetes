@@ -29,11 +29,11 @@ resource "kubernetes_cron_job" "demo" {
     starting_deadline_seconds     = 10
     successful_jobs_history_limit = 10
     suspend                       = true
-    ttl_seconds_after_finished    = 10
     job_template {
       metadata {}
       spec {
         backoff_limit = 2
+        ttl_seconds_after_finished    = 10
         template {
           metadata {}
           spec {

@@ -109,6 +109,12 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 				},
 			},
 		},
+		"enable_service_links": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     true,
+			Description: "Enables generating environment variables for service discovery. Optional: Defaults to true.",
+		},
 		"host_aliases": {
 			Type:        schema.TypeList,
 			Optional:    true,

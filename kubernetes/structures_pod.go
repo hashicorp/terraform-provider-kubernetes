@@ -47,6 +47,12 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["dns_config"] = v
 	}
 
+	if in.EnableServiceLinks != nil {
+		att["enable_service_links"] = *in.EnableServiceLinks
+	} else {
+		att["enable_service_links"] = true
+	}
+
 	att["host_aliases"] = flattenHostaliases(in.HostAliases)
 
 	att["host_ipc"] = in.HostIPC
@@ -471,6 +477,10 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 			return obj, nil
 		}
 		obj.DNSConfig = dnsConfig
+	}
+
+	if v, ok := in["enable_service_links"].(bool); ok {
+		obj.EnableServiceLinks = ptrToBool(v)
 	}
 
 	if v, ok := in["host_aliases"].([]interface{}); ok && len(v) > 0 {

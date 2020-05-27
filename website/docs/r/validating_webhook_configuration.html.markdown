@@ -69,7 +69,6 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/an
 **By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem).**
 For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
 * `name` - (Optional) Name of the Validating Webhook Configuration, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
-* `namespace` - (Optional) Namespace defines the space within which name of the Validating Webhook Configuration must be unique.
 
 #### Attributes
 

@@ -12,7 +12,9 @@ expect:
 
 ## Pull Request Lifecycle
 
-1. [Fork the GitHub repository](https://help.github.com/en/articles/fork-a-repo),
+1. If you're interested in working on an existing issue, please begin by commenting on that issue to state your intention and plan for implementation. This will give the team a chance to review your proposal and provide feedback on your implementation plan before you go too deep into the work. Consider this a thumb rule - waiting for maintainer feedback may not be necessary for small changes such as corrections to documentation. Please use your judgement of the complexity of the issue to avoid wasted effort.
+
+1. Then, you can [fork the GitHub repository](https://help.github.com/en/articles/fork-a-repo),
    modify the code, and [create a pull request](https://help.github.com/en/articles/creating-a-pull-request-from-a-fork).
    You are welcome to submit your pull request for commentary or review before
    it is fully completed by creating a [draft pull request](https://help.github.com/en/articles/about-pull-requests#draft-pull-requests).

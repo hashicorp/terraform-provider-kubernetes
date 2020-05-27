@@ -47,7 +47,7 @@ issues of each type.
 3. An initial triage process determines whether the issue is critical and must
     be addressed immediately, or can be left open for community discussion. In this step, we typically assign a size estimate to the work involved for that issue for our reference. We'll label the issue `acknowledged` when we've run through this step.
 
-4. The issue queued in our backlog to be addressed in a pull request or commit. The issue number will be
+4. The issue is queued in our backlog and will be addressed in a pull request or commit. The issue number will be
    referenced in the commit message so that the code that fixes it is clearly
    linked.
 

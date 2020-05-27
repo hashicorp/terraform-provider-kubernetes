@@ -12,7 +12,7 @@ expect:
 
 ## Pull Request Lifecycle
 
-1. If you're interested in working on an existing issue, please begin by commenting on that issue to state your intention and plan for implementation. This will give the team a chance to review your proposal and provide feedback on your implementation plan before you go too deep into the work. Consider this a thumb rule - waiting for maintainer feedback may not be necessary for small changes such as corrections to documentation. Please use your judgement of the complexity of the issue to avoid wasted effort.
+1. If you'd like to work on an enhancement or bug that is not yet filed in our issue tracked, please create a new issue describing the problem you're solving before starting work on coding. Similarly, if you're interested in working on an existing issue, please begin by commenting on that issue to state your intention and plan for implementation. This will give the team a chance to review your proposal and provide feedback on your implementation plan before you go too deep into the work. Consider this a thumb rule - waiting for maintainer feedback may not be necessary for small changes such as corrections to documentation. Please use your judgement of the complexity of the issue to avoid wasted effort.
 
 1. Then, you can [fork the GitHub repository](https://help.github.com/en/articles/fork-a-repo),
    modify the code, and [create a pull request](https://help.github.com/en/articles/creating-a-pull-request-from-a-fork).

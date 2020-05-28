@@ -1,70 +1,33 @@
+
 # Terraform Provider for Kubernetes [![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/terraform-providers/terraform-provider-kubernetes?label=release)](https://github.com/terraform-providers/terraform-provider-kubernetes/releases) [![license](https://img.shields.io/github/license/terraform-providers/terraform-provider-kubernetes.svg)]()
 
-- Website: https://www.terraform.io
-- [![Gitter chat](https://badges.gitter.im/hashicorp-terraform/Lobby.png)](https://gitter.im/hashicorp-terraform/Lobby)
-- Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
-- Slack channel: [#terraform-providers in Kubernetes](https://kubernetes.slack.com/messages/CJY6ATQH4) ([Sign up here](http://slack.k8s.io/))
+<a href="https://terraform.io">
+    <img src="https://cdn.rawgit.com/hashicorp/terraform-website/master/content/source/assets/images/logo-hashicorp.svg" alt="Terraform logo" title="Terrafpr," align="right" height="50" />
+</a>
 
-<img src="https://cdn.rawgit.com/hashicorp/terraform-website/master/content/source/assets/images/logo-hashicorp.svg" width="600px">
+- [Getting Started](https://learn.hashicorp.com/terraform?track=kubernetes#kubernetes)
+- Usage 
+  - [Documentation](https://www.terraform.io/docs/providers/kubernetes/index.html)
+  - [Examples](https://github.com/terraform-providers/terraform-provider-kubernetes/tree/master/_examples)
+- Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
+- Chat: [#terraform-providers in Kubernetes](https://kubernetes.slack.com/messages/CJY6ATQH4) ([Sign up here](http://slack.k8s.io/))
+
+The Kubernetes provider for Terraform is a plugin that enables full lifecycle management of Kubernetes resources. This provider is maintained internally by HashiCorp.
+
+Please note: We take Terraform's security and our users' trust very seriously. If you believe you have found a security issue in the Terraform Kubernetes Provider, please responsibly disclose by contacting us at security@hashicorp.com.
 
 
 ## Requirements
 
-
--	[Terraform](https://www.terraform.io/downloads.html) 0.10.x
+-	[Terraform](https://www.terraform.io/downloads.html) 0.12.x
+    - Note that version 0.11.x currently works, but is [deprecated](https://www.hashicorp.com/blog/deprecating-terraform-0-11-support-in-terraform-providers/)
 -	[Go](https://golang.org/doc/install) 1.14.x (to build the provider plugin)
 
-## Building The Provider
+## Contributing to the provider
 
-Clone repository to: `$GOPATH/src/github.com/terraform-providers/terraform-provider-kubernetes`
+The Terraform Kubernetes Provider is the work of many contributors. We appreciate your help!
 
-```sh
-$ mkdir -p $GOPATH/src/github.com/terraform-providers; cd $GOPATH/src/github.com/terraform-providers
-$ git clone git@github.com:terraform-providers/terraform-provider-kubernetes
-```
+To contribute, please read the [contribution guidelines](_about/CONTRIBUTING.md). You may also [report an issue](https://github.com/terraform-providers/terraform-provider-kubernetes/issues/new/choose). Once you've filed an issue, it will follow the [issue lifecycle](_about/ISSUES.md).
 
-Enter the provider directory and build the provider
+Also available are some answers to [Frequently Asked Questions](_about/FAQ.md).
 
-```sh
-$ cd $GOPATH/src/github.com/terraform-providers/terraform-provider-kubernetes
-$ make build
-```
-
-Statically linking binaries can be required for testing development builds in containers not providing all dependencies, e.g.:
-
-```
-# CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"'
-```
-
-## Developing the Provider
-
-### Contributing Resources
-
-In order to prevent breaking changes and migration of user-created resources, resources included in this provider will be limited to stable (aka `v1`) and beta APIs (with beta resources, readiness for inclusion will be assessed individually). You can find `v1` resources in the Kubernetes [API documentation](https://kubernetes.io/docs/reference/#api-reference) for the appropriate version of Kubernetes.
-
-### Development Environment
-
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.9+ is *required*). You'll also need to correctly setup a [GOPATH](http://golang.org/doc/code.html#GOPATH), as well as adding `$GOPATH/bin` to your `$PATH`.
-
-To compile the provider, run `make build`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
-
-```sh
-$ make build
-...
-$ $GOPATH/bin/terraform-provider-kubernetes
-...
-```
-
-In order to test the provider, you can simply run `make test`.
-
-```sh
-$ make test
-```
-
-In order to run the full suite of Acceptance tests, run `make testacc`.
-
-*Note:* Acceptance tests create real resources, and often cost money to run.
-
-```sh
-$ make testacc
-```

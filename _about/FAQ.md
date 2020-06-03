@@ -10,6 +10,10 @@ The HashiCorp Terraform Kubernetes provider team is :
 * Stef Forrester, Engineer - [@dak1n1](https://github.com/dak1n1)
 * Aareet Shermon, Engineering Manager - [@aareet](https://github.com/aareet)
 
+Our collaborators are:
+
+* Patrick Decat - [@pdecat](https://github.com/pdecat)
+
 ### Why isn’t my PR merged yet?
 
 Unfortunately, due to the volume of issues and new pull requests we receive, we are unable to give each one the full attention that we would like. We do our best to focus on the contributions that provide the greatest value to the most community members.

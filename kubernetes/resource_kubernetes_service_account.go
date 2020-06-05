@@ -302,15 +302,15 @@ func getServiceAccountDefaultSecret(name string, config api.ServiceAccount, time
 		}
 
 		diff := diffObjectReferences(config.Secrets, resp.Secrets)
-		secretList, err := conn.CoreV1().Secrets(config.Namespace).List(metav1.ListOptions{})
+		secretList, err := conn.CoreV1().Secrets(config.Namespace).List(metav1.ListOptions{
+			FieldSelector: fmt.Sprintf("type=%s", api.SecretTypeServiceAccountToken),
+		})
 		for _, secret := range secretList.Items {
 			for _, svcSecret := range diff {
 				if secret.Name != svcSecret.Name {
 					continue
 				}
-				if secret.Type == api.SecretTypeServiceAccountToken {
-					svcAccTokens = append(svcAccTokens, secret)
-				}
+				svcAccTokens = append(svcAccTokens, secret)
 			}
 		}
 

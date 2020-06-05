@@ -9,6 +9,6 @@ jobs:
     - uses: aareet/move-labeled-or-milestoned-issue@v2.0
       with:
         action-token: "${{ secrets.k8s_github_actions }}"
-        project-url: "https://github.com/orgs/terraform-providers/projects/19"
+        project-url: "https://github.com/terraform-providers/terraform-provider-kubernetes/projects/3"
         column-name: "Blocked"
         label-name: "waiting-response"

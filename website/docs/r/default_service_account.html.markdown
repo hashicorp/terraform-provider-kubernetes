@@ -1,7 +1,7 @@
 ---
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_default_service_account"
-sidebar_current: "docs-kubernetes-resource-service-account"
+sidebar_current: "docs-kubernetes-resource-default-service-account"
 description: |-
   The default service account resource configures the default service account created by Kubernetes in each namespace.
 ---
@@ -89,5 +89,5 @@ If you remove a `kubernetes_default_service_account` resource from your configur
 The default service account can be imported using the namespace and name, e.g.
 
 ```
-$ terraform import kubernetes_service_account.example terraform-example/default
+$ terraform import kubernetes_default_service_account.example terraform-example/default
 ```

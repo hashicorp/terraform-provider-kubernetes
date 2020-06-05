@@ -154,6 +154,7 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_config_map":                       resourceKubernetesConfigMap(),
 			"kubernetes_cron_job":                         resourceKubernetesCronJob(),
 			"kubernetes_daemonset":                        resourceKubernetesDaemonSet(),
+			"kubernetes_default_service_account":          resourceKubernetesDefaultServiceAccount(),
 			"kubernetes_deployment":                       resourceKubernetesDeployment(),
 			"kubernetes_endpoints":                        resourceKubernetesEndpoints(),
 			"kubernetes_horizontal_pod_autoscaler":        resourceKubernetesHorizontalPodAutoscaler(),

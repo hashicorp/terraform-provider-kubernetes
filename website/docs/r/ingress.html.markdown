@@ -21,7 +21,7 @@ resource "kubernetes_ingress" "example_ingress" {
 
   spec {
     backend {
-      service_name = "MyApp1"
+      service_name = "myapp1"
       service_port = 8080
     }
 
@@ -29,7 +29,7 @@ resource "kubernetes_ingress" "example_ingress" {
       http {
         path {
           backend {
-            service_name = "MyApp1"
+            service_name = "myapp1"
             service_port = 8080
           }
 
@@ -38,7 +38,7 @@ resource "kubernetes_ingress" "example_ingress" {
 
         path {
           backend {
-            service_name = "MyApp2"
+            service_name = "myapp2"
             service_port = 8080
           }
 
@@ -57,7 +57,7 @@ resource "kubernetes_pod" "example" {
   metadata {
     name = "terraform-example"
     labels = {
-      app = "MyApp1"
+      app = "myapp1"
     }
   }
 

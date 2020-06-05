@@ -94,47 +94,11 @@ func resourceKubernetesServiceAccountCreate(d *schema.ResourceData, meta interfa
 	log.Printf("[INFO] Submitted new service account: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	// Here we get the only chance to identify and store default secret name
-	// so we can avoid showing it in diff as it's not managed by Terraform
-	var svcAccTokens []api.Secret
-	err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
-		resp, err := conn.CoreV1().ServiceAccounts(out.Namespace).Get(out.Name, metav1.GetOptions{})
-		if err != nil {
-			return resource.NonRetryableError(err)
-		}
-
-		if len(resp.Secrets) == len(svcAcc.Secrets) {
-			return resource.RetryableError(fmt.Errorf("Waiting for default secret of %q to appear", d.Id()))
-		}
-
-		diff := diffObjectReferences(svcAcc.Secrets, resp.Secrets)
-		secretList, err := conn.CoreV1().Secrets(out.Namespace).List(metav1.ListOptions{})
-		for _, secret := range secretList.Items {
-			for _, svcSecret := range diff {
-				if secret.Name != svcSecret.Name {
-					continue
-				}
-				if secret.Type == api.SecretTypeServiceAccountToken {
-					svcAccTokens = append(svcAccTokens, secret)
-				}
-			}
-		}
-
-		if len(svcAccTokens) == 0 {
-			return resource.RetryableError(fmt.Errorf("Expected 1 generated service account token, %d found", len(svcAccTokens)))
-		}
-
-		if len(svcAccTokens) > 1 {
-			return resource.NonRetryableError(fmt.Errorf("Expected 1 generated service account token, %d found: %s", len(svcAccTokens), err))
-		}
-
-		return nil
-	})
+	secret, err := getServiceAccountDefaultSecret(out.Name, svcAcc, d.Timeout(schema.TimeoutCreate), conn)
 	if err != nil {
 		return err
 	}
-
-	d.Set("default_secret_name", svcAccTokens[0].Name)
+	d.Set("default_secret_name", secret.Name)
 
 	return resourceKubernetesServiceAccountRead(d, meta)
 }
@@ -323,6 +287,48 @@ func resourceKubernetesServiceAccountImportState(d *schema.ResourceData, meta in
 	d.SetId(buildId(sa.ObjectMeta))
 
 	return []*schema.ResourceData{d}, nil
+}
+
+func getServiceAccountDefaultSecret(name string, config api.ServiceAccount, timeout time.Duration, conn *kubernetes.Clientset) (*api.Secret, error) {
+	var svcAccTokens []api.Secret
+	err := resource.Retry(timeout, func() *resource.RetryError {
+		resp, err := conn.CoreV1().ServiceAccounts(config.Namespace).Get(name, metav1.GetOptions{})
+		if err != nil {
+			return resource.NonRetryableError(err)
+		}
+
+		if len(resp.Secrets) == len(config.Secrets) {
+			return resource.RetryableError(fmt.Errorf("Waiting for default secret of %q to appear", buildId(resp.ObjectMeta)))
+		}
+
+		diff := diffObjectReferences(config.Secrets, resp.Secrets)
+		secretList, err := conn.CoreV1().Secrets(config.Namespace).List(metav1.ListOptions{})
+		for _, secret := range secretList.Items {
+			for _, svcSecret := range diff {
+				if secret.Name != svcSecret.Name {
+					continue
+				}
+				if secret.Type == api.SecretTypeServiceAccountToken {
+					svcAccTokens = append(svcAccTokens, secret)
+				}
+			}
+		}
+
+		if len(svcAccTokens) == 0 {
+			return resource.RetryableError(fmt.Errorf("Expected 1 generated service account token, %d found", len(svcAccTokens)))
+		}
+
+		if len(svcAccTokens) > 1 {
+			return resource.NonRetryableError(fmt.Errorf("Expected 1 generated service account token, %d found: %s", len(svcAccTokens), err))
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &svcAccTokens[0], nil
 }
 
 func findDefaultServiceAccount(sa *api.ServiceAccount, conn *kubernetes.Clientset) (string, error) {

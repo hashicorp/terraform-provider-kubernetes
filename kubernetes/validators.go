@@ -189,6 +189,16 @@ func validateTerminationGracePeriodSeconds(value interface{}, key string) (ws []
 	return
 }
 
+func validateServiceAccountTokenExpirationSeconds(minValue int) func(value interface{}, key string) (ws []string, es []error) {
+	return func(value interface{}, key string) (ws []string, es []error) {
+		v := value.(int)
+		if v < minValue {
+			es = append(es, fmt.Errorf("%s must be greater than or equal to %d", key, minValue))
+		}
+		return
+	}
+}
+
 // validateTypeStringNullableInt provides custom error messaging for TypeString ints
 // Some arguments require an int value or unspecified, empty field.
 func validateTypeStringNullableInt(v interface{}, k string) (ws []string, es []error) {

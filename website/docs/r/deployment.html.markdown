@@ -475,7 +475,7 @@ The `option` block supports the following:
 
 #### Arguments
 
-* `hostnames` - (Required) Hostnames for the IP address.
+* `hostnames` - (Required) Array of hostnames for the IP address.
 * `ip` - (Required) IP address of the host file entry.
 
 ### `host_path`

@@ -1,4 +1,4 @@
-module github.com/terraform-providers/terraform-provider-kubernetes
+module github.com/hashicorp/terraform-provider-kubernetes
 
 require (
 	github.com/Azure/go-autorest/autorest v0.9.2 // indirect

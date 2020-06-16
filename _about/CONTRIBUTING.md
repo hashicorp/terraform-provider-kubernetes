@@ -13,17 +13,17 @@ To learn more about how to create issues and pull requests in this repository, a
 
 ## Building the provider
 
-Clone repository to: `$GOPATH/src/github.com/terraform-providers/terraform-provider-kubernetes`
+Clone repository to: `$GOPATH/src/github.com/hashicorp/terraform-provider-kubernetes`
 
 ```sh
 $ mkdir -p $GOPATH/src/github.com/terraform-providers; cd $GOPATH/src/github.com/terraform-providers
-$ git clone git@github.com:terraform-providers/terraform-provider-kubernetes
+$ git clone git@github.com:hashicorp/terraform-provider-kubernetes
 ```
 
 Enter the provider directory and build the provider
 
 ```sh
-$ cd $GOPATH/src/github.com/terraform-providers/terraform-provider-kubernetes
+$ cd $GOPATH/src/github.com/hashicorp/terraform-provider-kubernetes
 $ make build
 ```
 

@@ -85,7 +85,7 @@ func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error
 	}
 	if d.Get("wait_for_completion").(bool) {
 		return resource.Retry(d.Timeout(schema.TimeoutCreate),
-			retryUntilJobCondition(conn, namespace, name, batchv1.JobComplete))
+			retryUntilJobIsFinished(conn, namespace, name))
 	}
 
 	return resourceKubernetesJobRead(d, meta)
@@ -121,7 +121,7 @@ func resourceKubernetesJobUpdate(d *schema.ResourceData, meta interface{}) error
 
 	if d.Get("wait_for_completion").(bool) {
 		return resource.Retry(d.Timeout(schema.TimeoutUpdate),
-			retryUntilJobCondition(conn, namespace, name, batchv1.JobComplete))
+			retryUntilJobIsFinished(conn, namespace, name))
 	}
 	return resourceKubernetesJobRead(d, meta)
 }
@@ -238,7 +238,8 @@ func resourceKubernetesJobExists(d *schema.ResourceData, meta interface{}) (bool
 	return true, err
 }
 
-func retryUntilJobCondition(conn *kubernetes.Clientset, ns, name string, condition batchv1.JobConditionType) resource.RetryFunc {
+// retryUntilJobIsFinished checks if a give job finished its execution and either in Complete or Failed state
+func retryUntilJobIsFinished(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
 	return func() *resource.RetryError {
 		job, err := conn.BatchV1().Jobs(ns).Get(name, metav1.GetOptions{})
 		if err != nil {
@@ -246,12 +247,17 @@ func retryUntilJobCondition(conn *kubernetes.Clientset, ns, name string, conditi
 		}
 
 		for _, c := range job.Status.Conditions {
-			if c.Type == condition && c.Status == corev1.ConditionTrue {
-				return nil
+			if c.Status == corev1.ConditionTrue {
+				log.Printf("[DEBUG] Current condition of job: %s/%s: %s\n", ns, name, c.Type)
+				switch c.Type {
+				case batchv1.JobComplete:
+					return nil
+				case batchv1.JobFailed:
+					return resource.NonRetryableError(fmt.Errorf("job: %s/%s is in failed sate", ns, name))
+				}
 			}
-			log.Printf("[DEBUG] Current condition of job: %s/%s: %s\n", ns, name, c.Type)
 		}
 
-		return resource.RetryableError(fmt.Errorf("job: %s/%s is not in: %s condition", ns, name, condition))
+		return resource.RetryableError(fmt.Errorf("job: %s/%s is not in complete state", ns, name))
 	}
 }

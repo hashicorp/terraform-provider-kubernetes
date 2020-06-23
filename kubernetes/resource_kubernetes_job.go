@@ -85,7 +85,7 @@ func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error
 	}
 	if d.Get("wait_for_completion").(bool) {
 		return resource.Retry(d.Timeout(schema.TimeoutCreate),
-			waitForJobCondition(conn, namespace, name, batchv1.JobComplete))
+			retryUntilJobCondition(conn, namespace, name, batchv1.JobComplete))
 	}
 
 	return resourceKubernetesJobRead(d, meta)
@@ -121,7 +121,7 @@ func resourceKubernetesJobUpdate(d *schema.ResourceData, meta interface{}) error
 
 	if d.Get("wait_for_completion").(bool) {
 		return resource.Retry(d.Timeout(schema.TimeoutUpdate),
-			waitForJobCondition(conn, namespace, name, batchv1.JobComplete))
+			retryUntilJobCondition(conn, namespace, name, batchv1.JobComplete))
 	}
 	return resourceKubernetesJobRead(d, meta)
 }
@@ -238,7 +238,7 @@ func resourceKubernetesJobExists(d *schema.ResourceData, meta interface{}) (bool
 	return true, err
 }
 
-func waitForJobCondition(conn *kubernetes.Clientset, ns, name string, condition batchv1.JobConditionType) resource.RetryFunc {
+func retryUntilJobCondition(conn *kubernetes.Clientset, ns, name string, condition batchv1.JobConditionType) resource.RetryFunc {
 	return func() *resource.RetryError {
 		job, err := conn.BatchV1().Jobs(ns).Get(name, metav1.GetOptions{})
 		if err != nil {
@@ -246,13 +246,10 @@ func waitForJobCondition(conn *kubernetes.Clientset, ns, name string, condition 
 		}
 
 		for _, c := range job.Status.Conditions {
-			if c.Status != corev1.ConditionTrue {
-				continue
-			}
-			log.Printf("[DEBUG] Current condition of job: %s/%s: %s\n", ns, name, c.Type)
-			if c.Type == condition {
+			if c.Type == condition && c.Status == corev1.ConditionTrue {
 				return nil
 			}
+			log.Printf("[DEBUG] Current condition of job: %s/%s: %s\n", ns, name, c.Type)
 		}
 
 		return resource.RetryableError(fmt.Errorf("job: %s/%s is not in: %s condition", ns, name, condition))

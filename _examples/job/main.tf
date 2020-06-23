@@ -1,7 +1,7 @@
-provider kubernetes {
+provider "kubernetes" {
 }
 
-resource kubernetes_job test-pr {
+resource "kubernetes_job" "test-pr" {
   metadata {
     name = "job-with-wait"
     namespace = "default"

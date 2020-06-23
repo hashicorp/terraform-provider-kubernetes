@@ -362,7 +362,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 	cfg, err := cc.ClientConfig()
 	if err != nil {
-		log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail.")
+		log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail: %v", err)
 		return nil, nil
 	}
 

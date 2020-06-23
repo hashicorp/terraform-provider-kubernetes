@@ -260,9 +260,9 @@ resource "kubernetes_job" "test" {
 		}
 	}
 	wait_for_completion = true
-    timeouts {
+	timeouts {
 		create = "1m"
-    }
+	}
 }`, name)
 }
 

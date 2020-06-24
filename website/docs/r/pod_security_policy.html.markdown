@@ -148,7 +148,7 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 #### Arguments
 
 * `rule` - (Required) the strategy that will dictate the allowable RunAsGroup values that may be set.
-* [`ranges`](#ranges) - (Optional) the allowed ranges of gids that may be used. If you would like to force a single gid then supply a single range with the same start and end. Required for MustRunAs.
+* [`range`](#ranges) - (Optional) the allowed ranges of gids that may be used. If you would like to force a single gid then supply a single range with the same start and end. Required for MustRunAs.
 
 ### `se_linux`
 
@@ -161,10 +161,10 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 #### Arguments
 
 * `rule` - (Required) the strategy that will dictate what supplemental groups is used in the SecurityContext.
-* [`ranges`](#ranges) - (Optional) the allowed ranges of supplemental groups.  If you would like to force a single supplemental group then supply a single range with the same start and end. Required for MustRunAs.
+* [`range`](#ranges) - (Optional) the allowed ranges of supplemental groups.  If you would like to force a single supplemental group then supply a single range with the same start and end. Required for MustRunAs.
 
 
-### `ranges`
+### `range`
 
 #### Arguments
 * `min` - (Required) the start of the range, inclusive.

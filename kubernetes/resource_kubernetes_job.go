@@ -8,13 +8,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesJob() *schema.Resource {
-	s := &schema.Resource{
+	return &schema.Resource{
 		Create: resourceKubernetesJobCreate,
 		Read:   resourceKubernetesJobRead,
 		Update: resourceKubernetesJobUpdate,
@@ -25,6 +27,8 @@ func resourceKubernetesJob() *schema.Resource {
 		},
 
 		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(1 * time.Minute),
+			Update: schema.DefaultTimeout(1 * time.Minute),
 			Delete: schema.DefaultTimeout(1 * time.Minute),
 		},
 
@@ -40,10 +44,12 @@ func resourceKubernetesJob() *schema.Resource {
 					Schema: jobSpecFields(),
 				},
 			},
+			"wait_for_completion": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
 		},
 	}
-
-	return s
 }
 
 func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error {
@@ -72,6 +78,15 @@ func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error
 	log.Printf("[INFO] Submitted new job: %#v", out)
 
 	d.SetId(buildId(out.ObjectMeta))
+
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
+	if d.Get("wait_for_completion").(bool) {
+		return resource.Retry(d.Timeout(schema.TimeoutCreate),
+			retryUntilJobIsFinished(conn, namespace, name))
+	}
 
 	return resourceKubernetesJobRead(d, meta)
 }
@@ -103,6 +118,11 @@ func resourceKubernetesJobUpdate(d *schema.ResourceData, meta interface{}) error
 	log.Printf("[INFO] Submitted updated job: %#v", out)
 
 	d.SetId(buildId(out.ObjectMeta))
+
+	if d.Get("wait_for_completion").(bool) {
+		return resource.Retry(d.Timeout(schema.TimeoutUpdate),
+			retryUntilJobIsFinished(conn, namespace, name))
+	}
 	return resourceKubernetesJobRead(d, meta)
 }
 
@@ -154,12 +174,7 @@ func resourceKubernetesJobRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	err = d.Set("spec", jobSpec)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return d.Set("spec", jobSpec)
 }
 
 func resourceKubernetesJobDelete(d *schema.ResourceData, meta interface{}) error {
@@ -221,4 +236,28 @@ func resourceKubernetesJobExists(d *schema.ResourceData, meta interface{}) (bool
 		log.Printf("[DEBUG] Received error: %#v", err)
 	}
 	return true, err
+}
+
+// retryUntilJobIsFinished checks if a give job finished its execution and either in Complete or Failed state
+func retryUntilJobIsFinished(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
+	return func() *resource.RetryError {
+		job, err := conn.BatchV1().Jobs(ns).Get(name, metav1.GetOptions{})
+		if err != nil {
+			return resource.NonRetryableError(err)
+		}
+
+		for _, c := range job.Status.Conditions {
+			if c.Status == corev1.ConditionTrue {
+				log.Printf("[DEBUG] Current condition of job: %s/%s: %s\n", ns, name, c.Type)
+				switch c.Type {
+				case batchv1.JobComplete:
+					return nil
+				case batchv1.JobFailed:
+					return resource.NonRetryableError(fmt.Errorf("job: %s/%s is in failed sate", ns, name))
+				}
+			}
+		}
+
+		return resource.RetryableError(fmt.Errorf("job: %s/%s is not in complete state", ns, name))
+	}
 }

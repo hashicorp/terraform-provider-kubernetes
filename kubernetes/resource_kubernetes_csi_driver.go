@@ -3,13 +3,12 @@ package kubernetes
 import (
 	"fmt"
 	"log"
-	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
-	api "k8s.io/api/storage/v1beta1"
+	storage "k8s.io/api/storage/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
@@ -70,7 +69,7 @@ func resourceKubernetesCSIDriverCreate(d *schema.ResourceData, meta interface{})
 		return err
 	}
 
-	CSIDriver := api.CSIDriver{
+	CSIDriver := storage.CSIDriver{
 		ObjectMeta: expandMetadata(d.Get("metadata").([]interface{})),
 		Spec:       expandCSIDriverSpec(d.Get("spec").([]interface{})),
 	}
@@ -154,39 +153,32 @@ func resourceKubernetesCSIDriverDelete(d *schema.ResourceData, meta interface{})
 		return err
 	}
 
-	name := d.Id()
-	log.Printf("[INFO] Deleting CSIDriver: %#v", name)
-	err = conn.StorageV1beta1().CSIDrivers().Delete(name, &deleteOptions)
+	log.Printf("[INFO] Deleting CSIDriver: %s", d.Id())
+	err = conn.StorageV1beta1().CSIDrivers().Delete(d.Id(), &deleteOptions)
 	if err != nil {
 		return err
 	}
 
-	timeout := 5 * time.Second
-	poll := 1 * time.Second
+	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+		_, err := conn.StorageV1beta1().CSIDrivers().Get(d.Id(), metav1.GetOptions{})
+		if err != nil {
+			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+				return nil
+			}
+			return resource.NonRetryableError(err)
+		}
 
-	if err := waitForCSIDriverDeleted(meta, d.Id(), poll, timeout); err != nil {
+		e := fmt.Errorf("CSIDriver (%s) still exists", d.Id())
+		return resource.RetryableError(e)
+	})
+	if err != nil {
 		return err
 	}
 
-	log.Printf("[INFO] CSIDriver %s deleted", name)
+	log.Printf("[INFO] CSIDriver %s deleted", d.Id())
 
 	d.SetId("")
 	return nil
-}
-
-func waitForCSIDriverDeleted(meta interface{}, csiDriverName string, poll, timeout time.Duration) error {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return err
-	}
-
-	for start := time.Now(); time.Since(start) < timeout; time.Sleep(poll) {
-		_, err := conn.StorageV1beta1().CSIDrivers().Get(csiDriverName, metav1.GetOptions{})
-		if err != nil && apierrs.IsNotFound(err) {
-			return nil
-		}
-	}
-	return fmt.Errorf("CSIDriver still exists: %s", csiDriverName)
 }
 
 func resourceKubernetesCSIDriverExists(d *schema.ResourceData, meta interface{}) (bool, error) {
@@ -205,76 +197,4 @@ func resourceKubernetesCSIDriverExists(d *schema.ResourceData, meta interface{})
 		log.Printf("[DEBUG] Received error: %#v", err)
 	}
 	return true, err
-}
-
-func expandCSIDriverSpec(l []interface{}) api.CSIDriverSpec {
-	if len(l) == 0 || l[0] == nil {
-		return api.CSIDriverSpec{}
-	}
-	in := l[0].(map[string]interface{})
-	obj := api.CSIDriverSpec{}
-
-	if v, ok := in["attach_required"].(bool); ok {
-		obj.AttachRequired = ptrToBool(v)
-	}
-
-	if v, ok := in["pod_info_on_mount"].(bool); ok {
-		obj.PodInfoOnMount = ptrToBool(v)
-	}
-
-	if v, ok := in["volume_lifecycle_modes"].([]interface{}); ok && len(v) > 0 {
-		obj.VolumeLifecycleModes = expandCSIDriverVolumeLifecycleModes(v)
-	}
-
-	return obj
-}
-
-func expandCSIDriverVolumeLifecycleModes(l []interface{}) []api.VolumeLifecycleMode {
-	lifecycleModes := make([]api.VolumeLifecycleMode, 0, 0)
-	for _, lifecycleMode := range l {
-		lifecycleModes = append(lifecycleModes, api.VolumeLifecycleMode(lifecycleMode.(string)))
-	}
-	return lifecycleModes
-}
-
-func flattenCSIDriverSpec(in api.CSIDriverSpec) ([]interface{}, error) {
-	att := make(map[string]interface{})
-
-	att["attach_required"] = in.AttachRequired
-
-	if in.PodInfoOnMount != nil {
-		att["pod_info_on_mount"] = in.PodInfoOnMount
-	}
-
-	if len(in.VolumeLifecycleModes) > 0 {
-		att["volume_lifecycle_modes"] = in.VolumeLifecycleModes
-	}
-
-	return []interface{}{att}, nil
-}
-
-func patchCSIDriverSpec(keyPrefix, pathPrefix string, d *schema.ResourceData) (*PatchOperations, error) {
-	ops := make(PatchOperations, 0, 0)
-	if d.HasChange(keyPrefix + "attach_required") {
-		ops = append(ops, &ReplaceOperation{
-			Path:  pathPrefix + "/attachRequired",
-			Value: d.Get(keyPrefix + "attach_required").(bool),
-		})
-	}
-
-	if d.HasChange(keyPrefix + "pod_info_on_mount") {
-		ops = append(ops, &ReplaceOperation{
-			Path:  pathPrefix + "/podInfoOnMount",
-			Value: d.Get(keyPrefix + "pod_info_on_mount").(bool),
-		})
-	}
-
-	if d.HasChange(keyPrefix + "volume_lifecycle_modes") {
-		ops = append(ops, &ReplaceOperation{
-			Path:  pathPrefix + "/volumeLifecycleModes",
-			Value: expandCSIDriverVolumeLifecycleModes(d.Get(keyPrefix + "volume_lifecycle_modes").([]interface{})),
-		})
-	}
-
-	return &ops, nil
 }

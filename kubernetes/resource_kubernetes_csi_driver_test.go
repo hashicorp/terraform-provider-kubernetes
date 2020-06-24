@@ -28,6 +28,8 @@ func TestAccKubernetesCSIDriver_basic(t *testing.T) {
 					testAccCheckKubernetesCSIDriverExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.attach_required", "true"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_info_on_mount", "true"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_lifecycle_modes.0", "Ephemeral"),
 				),
 			},
 			{
@@ -92,7 +94,9 @@ resource "kubernetes_csi_driver" "test" {
   }
 
   spec {
-    attach_required   = %[2]t
+    attach_required        = %[2]t
+    pod_info_on_mount      = %[2]t
+    volume_lifecycle_modes = ["Ephemeral"]
   }
 }
 `, name, attached)

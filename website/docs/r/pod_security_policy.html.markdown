@@ -6,7 +6,7 @@ description: |-
   A Pod Security Policy is a cluster-level resource that controls security sensitive aspects of the pod specification.
 ---
 
-# kubernetes_api_service
+# kubernetes_pod_security_policy
 
 A Pod Security Policy is a cluster-level resource that controls security sensitive aspects of the pod specification. The PodSecurityPolicy objects define a set of conditions that a pod must run with in order to be accepted into the system, as well as defaults for the related fields.
 
@@ -134,7 +134,7 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 #### Arguments
 
 * `rule` - (Required) the strategy that will dictate what FSGroup is used in the SecurityContext.
-* [`ranges`](#ranges) - (Optional) the allowed ranges of fs groups.  If you would like to force a single fs group then supply a single range with the same start and end. Required for MustRunAs.
+* [`range`](#ranges) - (Optional) the allowed ranges of fs groups.  If you would like to force a single fs group then supply a single range with the same start and end. Required for MustRunAs.
 
 ### `run_as_user`
 

@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 
 	v1 "k8s.io/api/core/v1"
-	v1beta1 "k8s.io/api/extensions/v1beta1"
+	v1beta1 "k8s.io/api/policy/v1beta1"
 )
 
 func flattenPodSecurityPolicySpec(in v1beta1.PodSecurityPolicySpec) []interface{} {

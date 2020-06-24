@@ -1,6 +1,6 @@
 ---
 layout: "kubernetes"
-page_title: "Kubernetes: kubernetes_config map"
+page_title: "Kubernetes: kubernetes_config_map"
 sidebar_current: "docs-kubernetes-resource-config map"
 description: |-
   This data source reads configuration data from a config map.
@@ -15,7 +15,7 @@ Config Maps are key-value pairs containing configuration data. The Config Map da
 ## Example Usage
 
 ```hcl
-data "kubernetes_config map" "example" {
+data "kubernetes_config_map" "example" {
   metadata {
     name = "my-config"
   }

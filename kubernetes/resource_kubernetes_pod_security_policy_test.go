@@ -7,12 +7,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	api "k8s.io/api/extensions/v1beta1"
+	policy "k8s.io/api/policy/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesPodSecurityPolicy_basic(t *testing.T) {
-	var conf api.PodSecurityPolicy
+	var conf policy.PodSecurityPolicy
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 
 	resource.Test(t, resource.TestCase{
@@ -193,7 +193,7 @@ func testAccCheckKubernetesPodSecurityPolicyDestroy(s *terraform.State) error {
 
 		name := rs.Primary.ID
 
-		resp, err := conn.ExtensionsV1beta1().PodSecurityPolicies().Get(name, meta_v1.GetOptions{})
+		resp, err := conn.PolicyV1beta1().PodSecurityPolicies().Get(name, meta_v1.GetOptions{})
 		if err == nil {
 			if resp.Name == name {
 				return fmt.Errorf("Pod Security Policy still exists: %s", rs.Primary.ID)
@@ -204,7 +204,7 @@ func testAccCheckKubernetesPodSecurityPolicyDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckKubernetesPodSecurityPolicyExists(n string, obj *api.PodSecurityPolicy) resource.TestCheckFunc {
+func testAccCheckKubernetesPodSecurityPolicyExists(n string, obj *policy.PodSecurityPolicy) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -218,7 +218,7 @@ func testAccCheckKubernetesPodSecurityPolicyExists(n string, obj *api.PodSecurit
 
 		name := rs.Primary.ID
 
-		out, err := conn.ExtensionsV1beta1().PodSecurityPolicies().Get(name, meta_v1.GetOptions{})
+		out, err := conn.PolicyV1beta1().PodSecurityPolicies().Get(name, meta_v1.GetOptions{})
 		if err != nil {
 			return err
 		}

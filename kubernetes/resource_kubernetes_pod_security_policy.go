@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	api "k8s.io/api/extensions/v1beta1"
+	policy "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
@@ -13,50 +13,50 @@ import (
 
 // Use generated swagger docs from kubernetes' client-go to avoid copy/pasting them here
 var (
-	pspSpecDoc                                = api.PodSecurityPolicy{}.SwaggerDoc()["spec"]
-	pspSpecAllowPrivilegeEscalationDoc        = api.PodSecurityPolicySpec{}.SwaggerDoc()["allowPrivilegeEscalation"]
-	pspSpecAllowedCapabilitiesDoc             = api.PodSecurityPolicySpec{}.SwaggerDoc()["allowedCapabilities"]
-	pspSpecAllowedFlexVolumesDoc              = api.PodSecurityPolicySpec{}.SwaggerDoc()["allowedFlexVolumes"]
-	pspAllowedFlexVolumesDriverDoc            = api.AllowedFlexVolume{}.SwaggerDoc()["driver"]
-	pspSpecAllowedHostPathsDoc                = api.PodSecurityPolicySpec{}.SwaggerDoc()["allowedHostPaths"]
-	pspAllowedHostPathsPathPrefixDoc          = api.AllowedHostPath{}.SwaggerDoc()["pathPrefix"]
-	pspAllowedHostPathsReadOnlyDoc            = api.AllowedHostPath{}.SwaggerDoc()["readOnly"]
-	pspSpecAllowedProcMountTypesDoc           = api.PodSecurityPolicySpec{}.SwaggerDoc()["allowedProcMountTypes"]
-	pspSpecAllowedUnsafeSysctlsDoc            = api.PodSecurityPolicySpec{}.SwaggerDoc()["allowedUnsafeSysctls"]
-	pspSpecDefaultAddCapabilitiesDoc          = api.PodSecurityPolicySpec{}.SwaggerDoc()["defaultAddCapabilities"]
-	pspSpecDefaultAllowPrivilegeEscalationDoc = api.PodSecurityPolicySpec{}.SwaggerDoc()["defaultAllowPrivilegeEscalation"]
-	pspSpecForbiddenSysctlsDoc                = api.PodSecurityPolicySpec{}.SwaggerDoc()["forbiddenSysctls"]
-	pspSpecFSGroupDoc                         = api.PodSecurityPolicySpec{}.SwaggerDoc()["fsGroup"]
-	pspFSGroupIDRangeDoc                      = api.FSGroupStrategyOptions{}.SwaggerDoc()["ranges"]
-	pspIDRangeMinDoc                          = api.IDRange{}.SwaggerDoc()["min"]
-	pspIDRangeMaxDoc                          = api.IDRange{}.SwaggerDoc()["max"]
-	pspFSGroupRuleDoc                         = api.FSGroupStrategyOptions{}.SwaggerDoc()["rule"]
-	pspSpecHostIPCDoc                         = api.PodSecurityPolicySpec{}.SwaggerDoc()["hostIPC"]
-	pspSpecHostNetworkDoc                     = api.PodSecurityPolicySpec{}.SwaggerDoc()["hostNetwork"]
-	pspSpecHostPIDDoc                         = api.PodSecurityPolicySpec{}.SwaggerDoc()["hostPID"]
-	pspSpecHostPortsDoc                       = api.PodSecurityPolicySpec{}.SwaggerDoc()["hostPorts"]
-	pspHostPortRangeMinDoc                    = api.HostPortRange{}.SwaggerDoc()["min"]
-	pspHostPortRangeMaxDoc                    = api.HostPortRange{}.SwaggerDoc()["max"]
-	pspSpecPrivilegedDoc                      = api.PodSecurityPolicySpec{}.SwaggerDoc()["privileged"]
-	pspSpecReadOnlyRootFilesystemDoc          = api.PodSecurityPolicySpec{}.SwaggerDoc()["readOnlyRootFilesystem"]
-	pspSpecRequiredDropCapabilitiesDoc        = api.PodSecurityPolicySpec{}.SwaggerDoc()["requiredDropCapabilities"]
-	pspSpecRunAsUserDoc                       = api.PodSecurityPolicySpec{}.SwaggerDoc()["runAsUser"]
-	pspRunAsUserIDRangeDoc                    = api.RunAsUserStrategyOptions{}.SwaggerDoc()["ranges"]
-	pspRunAsUserRuleDoc                       = api.RunAsUserStrategyOptions{}.SwaggerDoc()["rule"]
-	pspSpecSELinuxDoc                         = api.PodSecurityPolicySpec{}.SwaggerDoc()["seLinux"]
-	pspSELinuxOptionsDoc                      = api.SELinuxStrategyOptions{}.SwaggerDoc()["seLinuxOptions"]
-	pspSELinuxOptionsLevelDoc                 = api.SELinuxStrategyOptions{}.SwaggerDoc()["level"]
-	pspSELinuxOptionsRoleDoc                  = api.SELinuxStrategyOptions{}.SwaggerDoc()["role"]
-	pspSELinuxOptionsTypeDoc                  = api.SELinuxStrategyOptions{}.SwaggerDoc()["type"]
-	pspSELinuxOptionsUserDoc                  = api.SELinuxStrategyOptions{}.SwaggerDoc()["user"]
-	pspSELinuxOptionsRuleDoc                  = api.SELinuxStrategyOptions{}.SwaggerDoc()["rule"]
-	pspSpecSupplementalGroupsDoc              = api.PodSecurityPolicySpec{}.SwaggerDoc()["supplementalGroups"]
-	pspSupplementalGroupsRangesDoc            = api.SupplementalGroupsStrategyOptions{}.SwaggerDoc()["ranges"]
-	pspSupplementalGroupsRuleDoc              = api.SupplementalGroupsStrategyOptions{}.SwaggerDoc()["rule"]
-	pspSpecVolumesDoc                         = api.PodSecurityPolicySpec{}.SwaggerDoc()["volumes"]
-	pspSpecRunAsGroupDoc                      = api.PodSecurityPolicySpec{}.SwaggerDoc()["runAsGroup"]
-	pspRunAsGroupIDRangeDoc                   = api.RunAsGroupStrategyOptions{}.SwaggerDoc()["ranges"]
-	pspRunAsGroupRuleDoc                      = api.RunAsGroupStrategyOptions{}.SwaggerDoc()["rule"]
+	pspSpecDoc                                = policy.PodSecurityPolicy{}.SwaggerDoc()["spec"]
+	pspSpecAllowPrivilegeEscalationDoc        = policy.PodSecurityPolicySpec{}.SwaggerDoc()["allowPrivilegeEscalation"]
+	pspSpecAllowedCapabilitiesDoc             = policy.PodSecurityPolicySpec{}.SwaggerDoc()["allowedCapabilities"]
+	pspSpecAllowedFlexVolumesDoc              = policy.PodSecurityPolicySpec{}.SwaggerDoc()["allowedFlexVolumes"]
+	pspAllowedFlexVolumesDriverDoc            = policy.AllowedFlexVolume{}.SwaggerDoc()["driver"]
+	pspSpecAllowedHostPathsDoc                = policy.PodSecurityPolicySpec{}.SwaggerDoc()["allowedHostPaths"]
+	pspAllowedHostPathsPathPrefixDoc          = policy.AllowedHostPath{}.SwaggerDoc()["pathPrefix"]
+	pspAllowedHostPathsReadOnlyDoc            = policy.AllowedHostPath{}.SwaggerDoc()["readOnly"]
+	pspSpecAllowedProcMountTypesDoc           = policy.PodSecurityPolicySpec{}.SwaggerDoc()["allowedProcMountTypes"]
+	pspSpecAllowedUnsafeSysctlsDoc            = policy.PodSecurityPolicySpec{}.SwaggerDoc()["allowedUnsafeSysctls"]
+	pspSpecDefaultAddCapabilitiesDoc          = policy.PodSecurityPolicySpec{}.SwaggerDoc()["defaultAddCapabilities"]
+	pspSpecDefaultAllowPrivilegeEscalationDoc = policy.PodSecurityPolicySpec{}.SwaggerDoc()["defaultAllowPrivilegeEscalation"]
+	pspSpecForbiddenSysctlsDoc                = policy.PodSecurityPolicySpec{}.SwaggerDoc()["forbiddenSysctls"]
+	pspSpecFSGroupDoc                         = policy.PodSecurityPolicySpec{}.SwaggerDoc()["fsGroup"]
+	pspFSGroupIDRangeDoc                      = policy.FSGroupStrategyOptions{}.SwaggerDoc()["ranges"]
+	pspIDRangeMinDoc                          = policy.IDRange{}.SwaggerDoc()["min"]
+	pspIDRangeMaxDoc                          = policy.IDRange{}.SwaggerDoc()["max"]
+	pspFSGroupRuleDoc                         = policy.FSGroupStrategyOptions{}.SwaggerDoc()["rule"]
+	pspSpecHostIPCDoc                         = policy.PodSecurityPolicySpec{}.SwaggerDoc()["hostIPC"]
+	pspSpecHostNetworkDoc                     = policy.PodSecurityPolicySpec{}.SwaggerDoc()["hostNetwork"]
+	pspSpecHostPIDDoc                         = policy.PodSecurityPolicySpec{}.SwaggerDoc()["hostPID"]
+	pspSpecHostPortsDoc                       = policy.PodSecurityPolicySpec{}.SwaggerDoc()["hostPorts"]
+	pspHostPortRangeMinDoc                    = policy.HostPortRange{}.SwaggerDoc()["min"]
+	pspHostPortRangeMaxDoc                    = policy.HostPortRange{}.SwaggerDoc()["max"]
+	pspSpecPrivilegedDoc                      = policy.PodSecurityPolicySpec{}.SwaggerDoc()["privileged"]
+	pspSpecReadOnlyRootFilesystemDoc          = policy.PodSecurityPolicySpec{}.SwaggerDoc()["readOnlyRootFilesystem"]
+	pspSpecRequiredDropCapabilitiesDoc        = policy.PodSecurityPolicySpec{}.SwaggerDoc()["requiredDropCapabilities"]
+	pspSpecRunAsUserDoc                       = policy.PodSecurityPolicySpec{}.SwaggerDoc()["runAsUser"]
+	pspRunAsUserIDRangeDoc                    = policy.RunAsUserStrategyOptions{}.SwaggerDoc()["ranges"]
+	pspRunAsUserRuleDoc                       = policy.RunAsUserStrategyOptions{}.SwaggerDoc()["rule"]
+	pspSpecSELinuxDoc                         = policy.PodSecurityPolicySpec{}.SwaggerDoc()["seLinux"]
+	pspSELinuxOptionsDoc                      = policy.SELinuxStrategyOptions{}.SwaggerDoc()["seLinuxOptions"]
+	pspSELinuxOptionsLevelDoc                 = policy.SELinuxStrategyOptions{}.SwaggerDoc()["level"]
+	pspSELinuxOptionsRoleDoc                  = policy.SELinuxStrategyOptions{}.SwaggerDoc()["role"]
+	pspSELinuxOptionsTypeDoc                  = policy.SELinuxStrategyOptions{}.SwaggerDoc()["type"]
+	pspSELinuxOptionsUserDoc                  = policy.SELinuxStrategyOptions{}.SwaggerDoc()["user"]
+	pspSELinuxOptionsRuleDoc                  = policy.SELinuxStrategyOptions{}.SwaggerDoc()["rule"]
+	pspSpecSupplementalGroupsDoc              = policy.PodSecurityPolicySpec{}.SwaggerDoc()["supplementalGroups"]
+	pspSupplementalGroupsRangesDoc            = policy.SupplementalGroupsStrategyOptions{}.SwaggerDoc()["ranges"]
+	pspSupplementalGroupsRuleDoc              = policy.SupplementalGroupsStrategyOptions{}.SwaggerDoc()["rule"]
+	pspSpecVolumesDoc                         = policy.PodSecurityPolicySpec{}.SwaggerDoc()["volumes"]
+	pspSpecRunAsGroupDoc                      = policy.PodSecurityPolicySpec{}.SwaggerDoc()["runAsGroup"]
+	pspRunAsGroupIDRangeDoc                   = policy.RunAsGroupStrategyOptions{}.SwaggerDoc()["ranges"]
+	pspRunAsGroupRuleDoc                      = policy.RunAsGroupStrategyOptions{}.SwaggerDoc()["rule"]
 )
 
 func resourceKubernetesPodSecurityPolicy() *schema.Resource {
@@ -376,13 +376,13 @@ func resourceKubernetesPodSecurityPolicyCreate(d *schema.ResourceData, meta inte
 		return err
 	}
 
-	psp := &api.PodSecurityPolicy{
+	psp := &policy.PodSecurityPolicy{
 		ObjectMeta: metadata,
 		Spec:       spec,
 	}
 
 	log.Printf("[INFO] Creating new PodSecurityPolicy: %#v", psp)
-	out, err := conn.ExtensionsV1beta1().PodSecurityPolicies().Create(psp)
+	out, err := conn.PolicyV1beta1().PodSecurityPolicies().Create(psp)
 
 	if err != nil {
 		return err
@@ -402,7 +402,7 @@ func resourceKubernetesPodSecurityPolicyRead(d *schema.ResourceData, meta interf
 	name := d.Id()
 
 	log.Printf("[INFO] Reading PodSecurityPolicy %s", name)
-	psp, err := conn.ExtensionsV1beta1().PodSecurityPolicies().Get(name, meta_v1.GetOptions{})
+	psp, err := conn.PolicyV1beta1().PodSecurityPolicies().Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -446,7 +446,7 @@ func resourceKubernetesPodSecurityPolicyUpdate(d *schema.ResourceData, meta inte
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating PodSecurityPolicy %q: %v", name, string(data))
-	out, err := conn.ExtensionsV1beta1().PodSecurityPolicies().Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.PolicyV1beta1().PodSecurityPolicies().Patch(name, pkgApi.JSONPatchType, data)
 	if err != nil {
 		return fmt.Errorf("Failed to update PodSecurityPolicy: %s", err)
 	}
@@ -465,7 +465,7 @@ func resourceKubernetesPodSecurityPolicyDelete(d *schema.ResourceData, meta inte
 	name := d.Id()
 
 	log.Printf("[INFO] Deleting PodSecurityPolicy: %#v", name)
-	err = conn.ExtensionsV1beta1().PodSecurityPolicies().Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.PolicyV1beta1().PodSecurityPolicies().Delete(name, &meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -483,7 +483,7 @@ func resourceKubernetesPodSecurityPolicyExists(d *schema.ResourceData, meta inte
 	name := d.Id()
 
 	log.Printf("[INFO] Checking PodSecurityPolicy %s", name)
-	_, err = conn.ExtensionsV1beta1().PodSecurityPolicies().Get(name, meta_v1.GetOptions{})
+	_, err = conn.PolicyV1beta1().PodSecurityPolicies().Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

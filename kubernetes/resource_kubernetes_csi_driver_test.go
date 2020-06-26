@@ -32,16 +32,6 @@ func TestAccKubernetesCSIDriver_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_lifecycle_modes.0", "Ephemeral"),
 				),
 			},
-			{
-				Config: testAccKubernetesCSIDriverBasicConfig(name, false),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesCSIDriverExists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.attach_required", "false"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_info_on_mount", "false"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_lifecycle_modes.0", "Ephemeral"),
-				),
-			},
 		},
 	})
 }

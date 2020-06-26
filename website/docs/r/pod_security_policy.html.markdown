@@ -33,13 +33,13 @@ resource "kubernetes_pod_security_policy" "example" {
     run_as_user {
       rule = "MustRunAsNonRoot"
     }
-    
+
     se_linux {
       rule = "RunAsAny"
     }
-    
+
     supplemental_groups {
-      rule   = "MustRunAs"
+      rule = "MustRunAs"
       range {
         min = 1
         max = 65535
@@ -47,13 +47,13 @@ resource "kubernetes_pod_security_policy" "example" {
     }
 
     fs_group {
-      rule   = "MustRunAs"
+      rule = "MustRunAs"
       range {
         min = 1
         max = 65535
       }
     }
-    
+
     read_only_root_filesystem = true
   }
 }

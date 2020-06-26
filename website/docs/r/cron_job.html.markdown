@@ -32,8 +32,8 @@ resource "kubernetes_cron_job" "demo" {
     job_template {
       metadata {}
       spec {
-        backoff_limit = 2
-        ttl_seconds_after_finished    = 10
+        backoff_limit              = 2
+        ttl_seconds_after_finished = 10
         template {
           metadata {}
           spec {

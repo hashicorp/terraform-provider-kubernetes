@@ -26,20 +26,20 @@ resource "kubernetes_mutating_webhook_configuration" "example" {
     client_config {
       service {
         namespace = "example-namespace"
-        name = "example-service"
+        name      = "example-service"
       }
     }
 
     rule {
-      api_groups = ["apps"]
+      api_groups   = ["apps"]
       api_versions = ["v1"]
-      operations = ["CREATE"]
-      resources = ["deployments"]
-      scope = "Namespaced"
+      operations   = ["CREATE"]
+      resources    = ["deployments"]
+      scope        = "Namespaced"
     }
 
     reinvocation_policy = "IfNeeded"
-    side_effects = "None"
+    side_effects        = "None"
   }
 }
 ```

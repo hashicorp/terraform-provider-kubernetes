@@ -24,7 +24,7 @@ resource "kubernetes_api_service" "example" {
     }
     session_affinity = "ClientIP"
     port {
-      port = 8080
+      port        = 8080
       target_port = 80
     }
 

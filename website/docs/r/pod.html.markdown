@@ -29,7 +29,7 @@ resource "kubernetes_pod" "test" {
         name  = "environment"
         value = "test"
       }
-      
+
       port {
         container_port = 8080
       }

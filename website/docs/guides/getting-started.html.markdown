@@ -79,7 +79,7 @@ provider "kubernetes" {
   client_key             = file("~/.kube/client-key.pem")
   cluster_ca_certificate = file("~/.kube/cluster-ca-cert.pem")
 
-  load_config_file = false    # when you wish not to load the local config file
+  load_config_file = false # when you wish not to load the local config file
 }
 ```
 
@@ -92,7 +92,7 @@ provider "kubernetes" {
   username = "ClusterMaster"
   password = "MindTheGap"
 
-  load_config_file = false    # when you wish not to load the local config file
+  load_config_file = false # when you wish not to load the local config file
 }
 ```
 
@@ -697,7 +697,7 @@ accordingly.
 resource "kubernetes_deployment" "example" {
 # ...
 
-  spec {
+  spec = {
     replicas = 5
 
 # ...

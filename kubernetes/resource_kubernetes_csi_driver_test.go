@@ -12,6 +12,8 @@ import (
 )
 
 func TestAccKubernetesCSIDriver_basic(t *testing.T) {
+	skipIfClusterVersionLessThan(t, "1.16.0")
+
 	var conf api.CSIDriver
 	resourceName := "kubernetes_csi_driver.test"
 	name := acctest.RandomWithPrefix("tf-acc-test")
@@ -37,6 +39,8 @@ func TestAccKubernetesCSIDriver_basic(t *testing.T) {
 }
 
 func TestAccKubernetesCSIDriver_importBasic(t *testing.T) {
+	skipIfClusterVersionLessThan(t, "1.16.0")
+
 	resourceName := "kubernetes_csi_driver.test"
 	name := acctest.RandomWithPrefix("tf-acc-test")
 

@@ -33,6 +33,33 @@ func TestAccKubernetesCSIDriver_basic(t *testing.T) {
 				),
 			},
 			{
+				Config: testAccKubernetesCSIDriverBasicConfig(name, false),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesCSIDriverExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.attach_required", "false"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_info_on_mount", "false"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_lifecycle_modes.0", "Ephemeral"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesCSIDriver_importBasic(t *testing.T) {
+	resourceName := "kubernetes_csi_driver.test"
+	name := acctest.RandomWithPrefix("tf-acc-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: resourceName,
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesCSIDriverDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesCSIDriverBasicConfig(name, true),
+			},
+			{
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,

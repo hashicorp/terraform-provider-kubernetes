@@ -697,7 +697,7 @@ accordingly.
 resource "kubernetes_deployment" "example" {
 # ...
 
-  spec = {
+  spec {
     replicas = 5
 
 # ...

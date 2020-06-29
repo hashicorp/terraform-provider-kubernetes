@@ -787,7 +787,7 @@ func TestAccKubernetesPod_termination_message_policy_override_as_fallback_to_log
 				Config: testAccKubernetesTerminationMessagePolicyWithFallBackToLogsOnErr(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodExists("kubernetes_pod.test", &confPod),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.termination_message_policy", "FallBackToLogsOnErr"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.termination_message_policy", "FallBackToLogsOnError"),
 				),
 			},
 		},

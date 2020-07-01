@@ -1,4 +1,10 @@
 ## 1.11.4 (Unreleased)
+
+IMPROVEMENTS:
+
+* Add data source for Pod and PVC (#786)
+
+
 ## 1.11.3 (May 20, 2020)
 
 IMPROVEMENTS:

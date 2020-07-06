@@ -119,10 +119,11 @@ The following arguments are supported:
 #### Arguments
 
 * `caching_mode` - (Required) Host Caching mode: None, Read Only, Read Write.
-* `data_disk_uri` - (Required) The URI the data disk in the blob storage
-* `disk_name` - (Required) The Name of the data disk in the blob storage
+* `data_disk_uri` - (Required) The URI the data disk in the blob storage OR the resourceID of an Azure managed data disk if Kind is Managed
+* `disk_name` - (Required) The Name of the data disk in the blob storage OR the name of an Azure managed data disk if Kind is Managed.
 * `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
 * `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to false (read/write).
+* `kind` - (Optional) The type for the data disk. Expected values: Shared, Dedicated, Managed. Defaults to Shared
 
 ### `azure_file`
 

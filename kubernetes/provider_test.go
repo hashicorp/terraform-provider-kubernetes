@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
+	"github.com/terraform-providers/terraform-provider-azurerm/azurerm"
 	"github.com/terraform-providers/terraform-provider-google/google"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +27,7 @@ func init() {
 		"kubernetes": testAccProvider,
 		"google":     google.Provider(),
 		"aws":        aws.Provider(),
+		"azurerm":    azurerm.Provider(),
 	}
 }
 
@@ -188,6 +190,13 @@ func skipIfNoGoogleCloudSettingsFound(t *testing.T) {
 	if os.Getenv("GOOGLE_PROJECT") == "" || os.Getenv("GOOGLE_REGION") == "" || os.Getenv("GOOGLE_ZONE") == "" {
 		t.Skip("The environment variables GOOGLE_PROJECT, GOOGLE_REGION and GOOGLE_ZONE" +
 			" must be set to run Google Cloud tests - skipping")
+	}
+}
+
+func skipIfNoAzureCloudSettingsFound(t *testing.T) {
+	if os.Getenv("TF_VAR_aks_client_id") == "" || os.Getenv("TF_VAR_aks_client_secret") == "" || os.Getenv("TF_VAR_location") == "" {
+		t.Skip("The environment variables TF_VAR_aks_client_id, TF_VAR_aks_client_secret and TF_VAR_location" +
+			" must be set to run Azure Cloud tests - skipping")
 	}
 }
 

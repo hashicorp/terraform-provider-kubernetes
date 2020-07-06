@@ -187,6 +187,31 @@ func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPersistentVolume_azure_basic(t *testing.T) {
+	var conf api.PersistentVolume
+	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	name := fmt.Sprintf("tf-acc-test-%s", randString)
+	diskName := fmt.Sprintf("tf-acc-test-disk-%s", randString)
+
+	region := os.Getenv("TF_VAR_location")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t); skipIfNoAzureCloudSettingsFound(t) },
+		IDRefreshName: "kubernetes_persistent_volume.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPersistentVolumeConfig_azure_basic(name, diskName, region),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "kind", "Managed"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesPersistentVolume_googleCloud_importBasic(t *testing.T) {
 	resourceName := "kubernetes_persistent_volume.test"
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
@@ -878,6 +903,53 @@ resource "aws_ebs_volume" "test" {
   }
 }
 `, name, zone, diskName)
+}
+
+func testAccKubernetesPersistentVolumeConfig_azure_basic(name, diskName, region string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_persistent_volume" "test" {
+	metadata {
+		annotations {
+			TestAnnotationOne = "one"
+			TestAnnotationTwo = "two"
+		}
+
+		labels {
+			TestLabelOne   = "one"
+			TestLabelTwo   = "two"
+			TestLabelThree = "three"
+		}
+
+		name = "%s"
+	}
+	spec {
+		capacity {
+			storage = "2Gi"
+		}
+		access_modes = ["ReadWriteOnce"]
+		persistent_volume_source {
+			azure_disk {
+				caching_mode = "None"
+				data_disk_uri = "${azurerm_managed_disk.dbstorage.id}"
+				disk_name = "%s"
+				kind = "Managed"
+			}
+		}
+	}
+}
+resource "azurerm_managed_disk" "dbstorage" {
+	name                 = "%s"
+	location             = "West US 2"
+	resource_group_name  = "${azurerm_resource_group.tf-k8s-acc.name}"
+	storage_account_type = "Standard_LRS"
+	create_option        = "Empty"
+	disk_size_gb         = "10"
+
+	tags {
+		environment = "Production"
+	}
+}
+`, name, region, diskName)
 }
 
 func testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, path, typ string) string {

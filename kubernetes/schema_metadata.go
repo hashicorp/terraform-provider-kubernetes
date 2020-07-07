@@ -79,6 +79,11 @@ func metadataSchema(objectName string, generatableName bool) *schema.Schema {
 	}
 }
 
+func metadataSchemaForceNew(s *schema.Schema) *schema.Schema {
+	s.ForceNew = true
+	return s
+}
+
 func namespacedMetadataSchema(objectName string, generatableName bool) *schema.Schema {
 	return namespacedMetadataSchemaIsTemplate(objectName, generatableName, false)
 }

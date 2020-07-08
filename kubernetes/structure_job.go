@@ -94,7 +94,7 @@ func expandJobSpec(j []interface{}) (batchv1.JobSpec, error) {
 	}
 	obj.Template = *template
 
-	if v, ok := in["ttl_seconds_after_finished"].(int); ok && v > 0 {
+	if v, ok := in["ttl_seconds_after_finished"].(int); ok && v >= 0 {
 		obj.TTLSecondsAfterFinished = ptrToInt32(int32(v))
 	}
 

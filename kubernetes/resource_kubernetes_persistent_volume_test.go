@@ -656,6 +656,28 @@ func TestAccKubernetesPersistentVolume_csi_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPersistentVolume_csi_importBasic(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_persistent_volume.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_persistent_volume.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPersistentVolumeConfig_csi_basic(name),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func waitForPersistenceVolumeDeleted(pvName string, poll, timeout time.Duration) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {

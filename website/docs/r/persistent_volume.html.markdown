@@ -140,7 +140,7 @@ The following arguments are supported:
 * `path` - (Optional) Used as the mounted root, rather than the full Ceph tree, default is /
 * `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to `false` (read/write). For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
 * `secret_file` - (Optional) The path to key ring for User, default is /etc/ceph/user.secret For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
-* `secret_ref` - (Optional) Reference to the authentication secret for User, default is empty. For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
+* `secret_ref` - (Optional) Reference to the authentication secret for User, default is empty. For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it. see [secret_ref](#secret_ref) for more details.
 * `user` - (Optional) User is the rados user name, default is admin. For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
 
 ### `cinder`
@@ -182,7 +182,7 @@ The following arguments are supported:
 * `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". The default filesystem depends on FlexVolume script.
 * `options` - (Optional) Extra command options if any.
 * `read_only` - (Optional) Whether to force the ReadOnly setting in VolumeMounts. Defaults to false (read/write).
-* `secret_ref` - (Optional) Reference to the secret object containing sensitive information to pass to the plugin scripts. This may be empty if no secret object is specified. If the secret object contains more than one secret, all secrets are passed to the plugin scripts.
+* `secret_ref` - (Optional) Reference to the secret object containing sensitive information to pass to the plugin scripts. This may be empty if no secret object is specified. If the secret object contains more than one secret, all secrets are passed to the plugin scripts. see [secret_ref](#secret_ref) for more details.
 
 ### `flocker`
 
@@ -287,7 +287,7 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 * `rbd_image` - (Required) The rados image name. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
 * `rbd_pool` - (Optional) The rados pool name. Default is rbd. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it.
 * `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to false. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
-* `secret_ref` - (Optional) Name of the authentication secret for RBDUser. If provided overrides keyring. Default is nil. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+* `secret_ref` - (Optional) Name of the authentication secret for RBDUser. If provided overrides keyring. Default is nil. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it. see [secret_ref](#secret_ref) for more details.
 
 ### `secret_ref`
 

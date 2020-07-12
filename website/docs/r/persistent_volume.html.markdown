@@ -160,7 +160,10 @@ The following arguments are supported:
 * `volume_attributes` - (Optional) Attributes of the volume to publish.
 * `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. `ext4`, `xfs`, `ntfs`.
 * `read_only` - (Optional) Whether to set the read-only property in VolumeMounts to `true`. If omitted, the default is `false`.
-
+* `controller_publish_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI ControllerPublishVolume and ControllerUnpublishVolume calls.
+* `node_stage_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodeStageVolume and NodeStageVolume and NodeUnstageVolume calls.
+* `node_publish_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodePublishVolume and NodeUnpublishVolume calls.
+* `controller_expand_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI ControllerExpandVolume call.
 
 ### `fc`
 

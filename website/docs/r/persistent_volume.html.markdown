@@ -160,10 +160,10 @@ The following arguments are supported:
 * `volume_attributes` - (Optional) Attributes of the volume to publish.
 * `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. `ext4`, `xfs`, `ntfs`.
 * `read_only` - (Optional) Whether to set the read-only property in VolumeMounts to `true`. If omitted, the default is `false`.
-* `controller_publish_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI ControllerPublishVolume and ControllerUnpublishVolume calls.
-* `node_stage_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodeStageVolume and NodeStageVolume and NodeUnstageVolume calls.
-* `node_publish_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodePublishVolume and NodeUnpublishVolume calls.
-* `controller_expand_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI ControllerExpandVolume call.
+* `controller_publish_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI ControllerPublishVolume and ControllerUnpublishVolume calls. see [secret_ref](#secret_ref) for more details.
+* `node_stage_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodeStageVolume and NodeStageVolume and NodeUnstageVolume calls. see [secret_ref](#secret_ref) for more details.
+* `node_publish_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodePublishVolume and NodeUnpublishVolume calls. see [secret_ref](#secret_ref) for more details.
+* `controller_expand_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI ControllerExpandVolume call. see [secret_ref](#secret_ref) for more details.
 
 ### `fc`
 
@@ -294,6 +294,7 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 #### Arguments
 
 * `name` - (Optional) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+* `namespace` - (Optional) The Namespace of the referent secret.
 
 ### `vsphere_volume`
 

@@ -590,6 +590,12 @@ func commonVolumeSourcesSecretRef(description string) *schema.Schema {
 					Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
 					Optional:    true,
 				},
+				"namespace": {
+					Type:        schema.TypeString,
+					Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+					Optional:    true,
+					Computed:    true,
+				},
 			},
 		},
 	}

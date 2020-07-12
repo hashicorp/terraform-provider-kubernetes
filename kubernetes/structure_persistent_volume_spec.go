@@ -288,6 +288,9 @@ func flattenSecretReference(in *v1.SecretReference) []interface{} {
 	if in.Name != "" {
 		att["name"] = in.Name
 	}
+	if in.Namespace != "" {
+		att["namespace"] = in.Namespace
+	}
 	return []interface{}{att}
 }
 
@@ -874,6 +877,9 @@ func expandSecretReference(l []interface{}) *v1.SecretReference {
 	obj := &v1.SecretReference{}
 	if v, ok := in["name"].(string); ok {
 		obj.Name = v
+	}
+	if v, ok := in["namespace"].(string); ok {
+		obj.Namespace = v
 	}
 	return obj
 }

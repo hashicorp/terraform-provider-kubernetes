@@ -1584,24 +1584,26 @@ func patchPersistentVolumeSource(pathPrefix, prefix string, d *schema.ResourceDa
 	}
 
 	if d.HasChange(prefix + "csi") {
-		oldIn, newIn := d.GetChange(prefix + "csi")
+		path := pathPrefix + "/csi"
+		oldIn, newIn := d.GetChange(path)
 		oldV, oldOk := oldIn.([]interface{})
 		newV, newOk := newIn.([]interface{})
+		value := expandCSIPersistentDiskVolumeSource(newV)
 
 		if newOk && len(newV) > 0 {
 			if oldOk && len(oldV) > 0 {
 				ops = append(ops, &ReplaceOperation{
-					Path:  pathPrefix + "/csi",
-					Value: expandCSIPersistentDiskVolumeSource(newV),
+					Path:  path,
+					Value: value,
 				})
 			} else {
 				ops = append(ops, &AddOperation{
-					Path:  pathPrefix + "/csi",
-					Value: expandCSIPersistentDiskVolumeSource(newV),
+					Path:  path,
+					Value: value,
 				})
 			}
 		} else if oldOk && len(oldV) > 0 {
-			ops = append(ops, &RemoveOperation{Path: pathPrefix + "/csi"})
+			ops = append(ops, &RemoveOperation{Path: path})
 		}
 	}
 

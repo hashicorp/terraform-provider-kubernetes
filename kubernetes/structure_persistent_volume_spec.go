@@ -408,6 +408,18 @@ func flattenCSIVolumeSource(in *v1.CSIPersistentVolumeSource) []interface{} {
 	if len(in.VolumeAttributes) > 0 {
 		att["volume_attributes"] = in.VolumeAttributes
 	}
+	if in.ControllerExpandSecretRef != nil {
+		att["controller_expand_secret_ref"] = flattenSecretReference(in.ControllerExpandSecretRef)
+	}
+	if in.ControllerPublishSecretRef != nil {
+		att["controller_publish_secret_ref"] = flattenSecretReference(in.ControllerPublishSecretRef)
+	}
+	if in.NodePublishSecretRef != nil {
+		att["node_publish_secret_ref"] = flattenSecretReference(in.NodePublishSecretRef)
+	}
+	if in.NodeStageSecretRef != nil {
+		att["node_stage_secret_ref"] = flattenSecretReference(in.NodeStageSecretRef)
+	}
 	return []interface{}{att}
 }
 
@@ -1012,6 +1024,18 @@ func expandCSIPersistentDiskVolumeSource(l []interface{}) *v1.CSIPersistentVolum
 	}
 	if v, ok := in["volume_attributes"].(map[string]interface{}); ok && len(v) > 0 {
 		obj.VolumeAttributes = expandStringMap(v)
+	}
+	if v, ok := in["controller_publish_secret_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.ControllerPublishSecretRef = expandSecretReference(v)
+	}
+	if v, ok := in["node_stage_secret_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.NodeStageSecretRef = expandSecretReference(v)
+	}
+	if v, ok := in["node_publish_secret_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.NodePublishSecretRef = expandSecretReference(v)
+	}
+	if v, ok := in["controller_expand_secret_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.ControllerExpandSecretRef = expandSecretReference(v)
 	}
 	return obj
 }

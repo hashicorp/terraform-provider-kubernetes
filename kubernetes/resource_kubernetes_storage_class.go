@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	v1 "k8s.io/api/core/v1"
 	api "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -43,6 +45,11 @@ func resourceKubernetesStorageClass() *schema.Resource {
 				Description: "Indicates the type of the reclaim policy",
 				Optional:    true,
 				Default:     "Delete",
+				ValidateFunc: validation.StringInSlice([]string{
+					"Recycle",
+					"Delete",
+					"Retain",
+				}, false),
 			},
 			"volume_binding_mode": {
 				Type:        schema.TypeString,
@@ -50,6 +57,10 @@ func resourceKubernetesStorageClass() *schema.Resource {
 				Optional:    true,
 				ForceNew:    true,
 				Default:     "Immediate",
+				ValidateFunc: validation.StringInSlice([]string{
+					"Immediate",
+					"WaitForFirstConsumer",
+				}, false),
 			},
 			"allow_volume_expansion": {
 				Type:        schema.TypeBool,
@@ -64,6 +75,36 @@ func resourceKubernetesStorageClass() *schema.Resource {
 				ForceNew:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Set:         schema.HashString,
+			},
+			"allowed_topologies": {
+				Type:        schema.TypeList,
+				Description: "Restrict the node topologies where volumes can be dynamically provisioned.",
+				Optional:    true,
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"match_label_expressions": {
+							Type:        schema.TypeList,
+							Description: "A list of topology selector requirements by labels.",
+							Optional:    true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key": {
+										Type:        schema.TypeString,
+										Description: "The label key that the selector applies to.",
+										Optional:    true,
+									},
+									"values": {
+										Type:        schema.TypeSet,
+										Description: "An array of string values. One value must match the label to be selected.",
+										Optional:    true,
+										Elem:        &schema.Schema{Type: schema.TypeString},
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -94,6 +135,10 @@ func resourceKubernetesStorageClassCreate(d *schema.ResourceData, meta interface
 
 	if v, ok := d.GetOk("mount_options"); ok {
 		storageClass.MountOptions = schemaSetToStringArray(v.(*schema.Set))
+	}
+
+	if v, ok := d.GetOk("allowed_topologies"); ok && len(v.([]interface{})) > 0 {
+		storageClass.AllowedTopologies = expandStorageClassAllowedTopologies(v.([]interface{}))
 	}
 
 	log.Printf("[INFO] Creating new storage class: %#v", storageClass)
@@ -133,6 +178,10 @@ func resourceKubernetesStorageClassRead(d *schema.ResourceData, meta interface{}
 	d.Set("mount_options", newStringSet(schema.HashString, storageClass.MountOptions))
 	if storageClass.AllowVolumeExpansion != nil {
 		d.Set("allow_volume_expansion", *storageClass.AllowVolumeExpansion)
+	}
+
+	if storageClass.AllowedTopologies != nil {
+		d.Set("allowed_topologies", flattenStorageClassAllowedTopologies(storageClass.AllowedTopologies))
 	}
 
 	return nil
@@ -176,6 +225,22 @@ func resourceKubernetesStorageClassDelete(d *schema.ResourceData, meta interface
 		return err
 	}
 
+	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+		_, err := conn.StorageV1().StorageClasses().Get(d.Id(), metav1.GetOptions{})
+		if err != nil {
+			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+				return nil
+			}
+			return resource.NonRetryableError(err)
+		}
+
+		e := fmt.Errorf("storage class (%s) still exists", d.Id())
+		return resource.RetryableError(e)
+	})
+	if err != nil {
+		return err
+	}
+
 	log.Printf("[INFO] Storage class %s deleted", name)
 
 	d.SetId("")
@@ -199,4 +264,58 @@ func resourceKubernetesStorageClassExists(d *schema.ResourceData, meta interface
 		log.Printf("[DEBUG] Received error: %#v", err)
 	}
 	return true, err
+}
+
+func expandStorageClassAllowedTopologies(l []interface{}) []v1.TopologySelectorTerm {
+	if len(l) == 0 || l[0] == nil {
+		return []v1.TopologySelectorTerm{}
+	}
+
+	in := l[0].(map[string]interface{})
+	topologies := make([]v1.TopologySelectorTerm, 0)
+	obj := v1.TopologySelectorTerm{}
+
+	if v, ok := in["match_label_expressions"].([]interface{}); ok && len(v) > 0 {
+		obj.MatchLabelExpressions = expandStorageClassMatchLabelExpressions(v)
+	}
+
+	topologies = append(topologies, obj)
+
+	return topologies
+}
+
+func expandStorageClassMatchLabelExpressions(l []interface{}) []v1.TopologySelectorLabelRequirement {
+	if len(l) == 0 || l[0] == nil {
+		return []v1.TopologySelectorLabelRequirement{}
+	}
+	obj := make([]v1.TopologySelectorLabelRequirement, len(l), len(l))
+	for i, n := range l {
+		in := n.(map[string]interface{})
+		obj[i] = v1.TopologySelectorLabelRequirement{
+			Key:    in["key"].(string),
+			Values: sliceOfString(in["values"].(*schema.Set).List()),
+		}
+	}
+	return obj
+}
+
+func flattenStorageClassAllowedTopologies(in []v1.TopologySelectorTerm) []interface{} {
+	att := make(map[string]interface{})
+	for _, n := range in {
+		if len(n.MatchLabelExpressions) > 0 {
+			att["match_label_expressions"] = flattenStorageClassMatchLabelExpressions(n.MatchLabelExpressions)
+		}
+	}
+	return []interface{}{att}
+}
+
+func flattenStorageClassMatchLabelExpressions(in []v1.TopologySelectorLabelRequirement) []interface{} {
+	att := make([]interface{}, len(in), len(in))
+	for i, n := range in {
+		m := make(map[string]interface{})
+		m["key"] = n.Key
+		m["values"] = newStringSet(schema.HashString, n.Values)
+		att[i] = m
+	}
+	return att
 }

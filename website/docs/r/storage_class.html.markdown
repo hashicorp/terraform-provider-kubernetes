@@ -39,6 +39,8 @@ The following arguments are supported:
 * `volume_binding_mode` - (Optional) Indicates when volume binding and dynamic provisioning should occur.
 * `allow_volume_expansion` - (Optional) Indicates whether the storage class allow volume expand, default true.
 * `mount_options` - (Optional) Persistent Volumes that are dynamically created by a storage class will have the mount options specified.
+* `allowed_topologies` - (Optional) Restrict the node topologies where volumes can be dynamically provisioned. see [allowed_topologies](#allowed_topologies)
+
 
 ## Nested Blocks
 
@@ -56,6 +58,19 @@ The following arguments are supported:
 ~> By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
 
 * `name` - (Optional) Name of the storage class, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+
+### `allowed_topologies`
+
+#### Arguments
+
+* `match_label_expressions` - (Optional) A list of topology selector requirements by labels. see [match_label_expressions](#match_label_expressions)
+
+### `match_label_expressions`
+
+#### Arguments
+
+* `key` - (Optional) The label key that the selector applies to.
+* `values` - (Optional) An array of string values. One value must match the label to be selected.
 
 #### Attributes
 

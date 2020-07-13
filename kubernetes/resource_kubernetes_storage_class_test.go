@@ -16,7 +16,8 @@ import (
 
 func TestAccKubernetesStorageClass_basic(t *testing.T) {
 	var conf api.StorageClass
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_storage_class.test"
+	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_storage_class.test"
 
 	resource.Test(t, resource.TestCase{
@@ -52,6 +53,7 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "mount_options.1996459178", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "parameters.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "parameters.type", "pd-ssd"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.%", "0"),
 					testAccCheckStorageClassParameters(&conf, map[string]string{"type": "pd-ssd"}),
 				),
 			},
@@ -118,6 +120,7 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 
 func TestAccKubernetesStorageClass_generatedName(t *testing.T) {
 	var conf api.StorageClass
+	resourceName := "kubernetes_storage_class.test"
 	prefix := "tf-acc-test-gen-"
 	resourceName := "kubernetes_storage_class.test"
 
@@ -148,6 +151,31 @@ func TestAccKubernetesStorageClass_generatedName(t *testing.T) {
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesStorageClass_allowedTopologies(t *testing.T) {
+	var conf api.StorageClass
+	resourceName := "kubernetes_storage_class.test"
+	name := acctest.RandomWithPrefix("tf-acc-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: resourceName,
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesStorageClassDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStorageClassConfig_allowedToplogies(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStorageClassExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.key", "failure-domain.beta.kubernetes.io/zone"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.values.#", "2"),
+				),
 			},
 		},
 	})
@@ -295,4 +323,46 @@ func testAccKubernetesStorageClassConfig_generatedName(prefix string) string {
   storage_provisioner = "kubernetes.io/gce-pd"
 }
 `, prefix)
+}
+
+func testAccKubernetesStorageClassConfig_allowedToplogies(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_storage_class" "test" {
+  metadata {
+    annotations = {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels = {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  storage_provisioner    = "kubernetes.io/gce-pd"
+  reclaim_policy         = "Delete"
+  volume_binding_mode    = "Immediate"
+  allow_volume_expansion = true
+
+  mount_options			 = ["foo", "bar"]
+
+  parameters = {
+    type = "pd-ssd"
+  }
+
+  allowed_topologies {
+    match_label_expressions {
+      key = "failure-domain.beta.kubernetes.io/zone"
+      values = [
+        "us-east-1a",
+        "us-east-1b"
+      ]
+    }
+  }
+}
+`, name)
 }

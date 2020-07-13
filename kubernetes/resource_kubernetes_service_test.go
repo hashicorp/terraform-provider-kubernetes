@@ -195,6 +195,54 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesService_loadBalancer_healthcheck(t *testing.T) {
+	var conf api.Service
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
+		IDRefreshName: "kubernetes_service.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesServiceDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesServiceConfig_loadBalancer_healthcheck(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceExists("kubernetes_service.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.#", "1"),
+					resource.TestCheckResourceAttrSet("kubernetes_service.test", "spec.0.port.0.node_port"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.port", "8888"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.protocol", "TCP"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.target_port", "80"),
+					resource.TestCheckResourceAttrSet("kubernetes_service.test", "spec.0.cluster_ip"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_ips.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_ips.1452553500", "10.0.0.4"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_ips.3371212991", "10.0.0.3"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_name", "ext-name-"+name),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.external_traffic_policy", "Local"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_source_ranges.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_source_ranges.138364083", "10.0.0.5/32"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.load_balancer_source_ranges.445311837", "10.0.0.6/32"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.App", "MyApp"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.type", "LoadBalancer"),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.health_check_node_port", "31111"),
+					testAccCheckServicePorts(&conf, []api.ServicePort{
+						{
+							Port:       int32(8888),
+							Protocol:   api.ProtocolTCP,
+							TargetPort: intstr.FromInt(80),
+						},
+					}),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 	var conf api.Service
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -768,6 +816,35 @@ resource "kubernetes_service" "test" {
     port {
       port        = 9999
       target_port = 81
+    }
+
+    type = "LoadBalancer"
+  }
+}
+`, name, name)
+}
+
+func testAccKubernetesServiceConfig_loadBalancer_healthcheck(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    external_name               = "ext-name-%s"
+    external_ips                = ["10.0.0.3", "10.0.0.4"]
+    load_balancer_source_ranges = ["10.0.0.5/32", "10.0.0.6/32"]
+    external_traffic_policy     = "Local"
+    health_check_node_port      = 31111
+
+    selector = {
+      App = "MyApp"
+    }
+
+    port {
+      port        = 8888
+      target_port = 80
     }
 
     type = "LoadBalancer"

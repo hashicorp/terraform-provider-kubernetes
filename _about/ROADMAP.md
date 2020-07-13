@@ -19,7 +19,7 @@ Major version releases include code removals, deprecations, and breaking changes
 In the 2.0.0 release we'll focus on three areas:
  - Upgrading to [Terraform Plugin SDK v2](https://www.terraform.io/docs/extend/guides/v2-upgrade-guide.html)
  - [Removing support for Terraform 0.11](https://github.com/hashicorp/terraform-provider-kubernetes/issues/905)
- - [Changing provider credentialling]
+ - [Changing provider credentialling](https://github.com/hashicorp/terraform-provider-kubernetes/issues/909)
 
 ### Themes
 
@@ -61,7 +61,15 @@ We’ve been evaluating the best way to support custom resources in the Kubernet
 
 Now that the features we need are planned for a near-term SDK release, we're evaluating the feasibility of merging the Kubernetes-alpha manifest resource into the existing Kubernetes provider.
 
-We are interested in your thoughts and feedback about this proposal and encourage you to comment on the issue linked above or schedule time with @redeux [here](https://calendly.com/philsautter/30min) to discuss. 
+### Terraform-k8s Kubernetes Operator
+
+Repo: [terraform-k8s](https://github.com/hashicorp/terraform-k8s)
+
+In March 2020, we released an alpha version of the terraform-k8s [Kubernetes operator for Terraform Cloud](https://www.hashicorp.com/blog/creating-workspaces-with-the-hashicorp-terraform-operator-for-kubernetes/). Since then we've continued to [maintain and enhance](https://github.com/hashicorp/terraform-k8s/blob/master/CHANGELOG.md) the project, including adding basic support for Terraform Enterprise. We're currently evaluating where to take the operator next and we're actively seeking user feedback.
+
+## Feedback
+
+We are interested in your thoughts and feedback about these proposals and encourage you to comment on the issue linked above or [schedule time with @redeux](https://calendly.com/philsautter/30min) to discuss.
 
 ## Disclosures
 

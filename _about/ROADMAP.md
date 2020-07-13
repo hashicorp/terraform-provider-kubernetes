@@ -61,7 +61,7 @@ We’ve been evaluating the best way to support custom resources in the Kubernet
 
 Now that the features we need are planned for a near-term SDK release, we're evaluating the feasibility of merging the Kubernetes-alpha manifest resource into the existing Kubernetes provider.
 
-We are interested in your thoughts and feedback about this proposal and encourage you to comment on the issue linked above or schedule time with @redeux via the link on his [GitHub profile](https://github.com/redeux) to discuss. 
+We are interested in your thoughts and feedback about this proposal and encourage you to comment on the issue linked above or schedule time with @redeux [here](https://calendly.com/philsautter/30min) to discuss. 
 
 ## Disclosures
 

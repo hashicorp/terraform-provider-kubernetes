@@ -238,7 +238,7 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 	}
 	if d.HasChange(keyPrefix + "health_check_node_port") {
 		ops = append(ops, &ReplaceOperation{
-			Path:  pathPrefix + "health_check_node_port",
+			Path:  pathPrefix + "healthCheckNodePort",
 			Value: int32(d.Get(keyPrefix + "health_check_node_port").(int)),
 		})
 	}

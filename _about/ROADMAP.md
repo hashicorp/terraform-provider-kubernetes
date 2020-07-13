@@ -6,9 +6,9 @@ We select items to include in the roadmap from community issues and internal pri
 
 Each release will include necessary tasks that lead to the completion of the stated goals as well as community pull requests, enhancements, and features that are not highlighted in the roadmap. 
 
-To make contribution easier, we’ll be using the [`Help Wanted`](https://github.com/hashicorp/terraform-provider-kubernetes/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) tag to point to issues we’d like to include in this quarter’s series of releases. 
+To make contribution easier, we’ll be using the [`Help Wanted`](https://github.com/hashicorp/terraform-provider-kubernetes/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) tag to point to issues we’d like to include in this quarter’s series of releases. Please review the [Contributing Guide](_about/CONTRIBUTING.md) for additional information.
 
-This quarter (July-September ‘20) we will prioritze the following areas of work: 
+This quarter (July-September ‘20) we will prioritize the following areas of work: 
 
 ## Currently In Progress
 
@@ -21,7 +21,11 @@ In the 2.0.0 release we'll focus on three areas:
  - [Removing support for Terraform 0.11](https://github.com/hashicorp/terraform-provider-kubernetes/issues/905)
  - [Changing provider credentialling]
 
-### Coverage
+### Themes
+
+To improve the provider, we plan to identify and focus on a set of themes each quarter that will address specific areas of the user experience. Here are the 3 themes we plan to work on this quarter.
+
+#### Coverage
 
 Issues: [theme/coverage](https://github.com/hashicorp/terraform-provider-kubernetes/issues?q=is%3Aopen+is%3Aissue+label%3Atheme%2Fcoverage)
 
@@ -29,7 +33,7 @@ Goal: Improve coverage of the Kubernetes API
 
 While our goal for the Kubernetes provider is complete coverage of the Kubernetes API, this is more work than we can accomplish in one quarter.  Initially, we're prioritizing this work based on user feedback, but we'll also look at ways to address coverage gaps more proactively.
 
-### Lifecycle
+#### Lifecycle
 
 Issues: [theme/lifecycle](https://github.com/hashicorp/terraform-provider-kubernetes/issues?q=is%3Aopen+is%3Aissue+label%3Atheme%2Flifecycle)
 
@@ -37,7 +41,7 @@ Goal: Lifecycle improvements to match user workflows
 
 There are several requests to modify behavior based on Kubernetes lifecycle events, for example, waiting or not waiting for a pod to become ready before a deployment is considered complete. We’ll look at this and other areas where additional lifecycle controls make sense in the provider. 
 
-### Errors
+#### Strech Goal: Errors
 
 Issues: [theme/errors](https://github.com/hashicorp/terraform-provider-kubernetes/issues?q=is%3Aopen+is%3Aissue+label%3Atheme%2Ferrors)
 
@@ -53,9 +57,9 @@ Research topics include features, architectural changes, and ideas that we are p
 
 Issue: [#215](https://github.com/hashicorp/terraform-provider-kubernetes/issues/215)
 
-We’ve been evaluating the best way to support custom resources in the Kubernetes provider. The [initial work](https://github.com/hashicorp/terraform-provider-kubernetes-alpha) led us to create a new provider with a single resource, called `kubernetes_manifest`. We did this because the functionallity needed to accomidate the dynamic schema of custom resources wasn't available in the Terraform SDK.  
+We’ve been evaluating the best way to support custom resources in the Kubernetes provider. The [initial work](https://github.com/hashicorp/terraform-provider-kubernetes-alpha) led us to create a new provider with a single resource, called `kubernetes_manifest`. We did this because the functionality needed to accommodate the dynamic schema of custom resources wasn't available in the Terraform SDK.  
 
-Now that the features we need are planned for a near-term SDK release, we're evaluating the feasability of merging the Kubernetes-alpha manifest resource into the existing Kubernetes provider.
+Now that the features we need are planned for a near-term SDK release, we're evaluating the feasibility of merging the Kubernetes-alpha manifest resource into the existing Kubernetes provider.
 
 We are interested in your thoughts and feedback about this proposal and encourage you to comment on the issue linked above or schedule time with @redeux via the link on his [GitHub profile](https://github.com/redeux) to discuss. 
 

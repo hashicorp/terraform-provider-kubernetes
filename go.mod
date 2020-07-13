@@ -20,7 +20,7 @@ require (
 	github.com/pierrec/lz4 v2.3.0+incompatible // indirect
 	github.com/robfig/cron v1.2.0
 	github.com/terraform-providers/terraform-provider-aws v1.60.1-0.20191010190908-1261a98537f2
-	github.com/terraform-providers/terraform-provider-azurerm v1.44.0 // indirect
+	github.com/terraform-providers/terraform-provider-azurerm v1.44.0
 	github.com/terraform-providers/terraform-provider-google v1.20.1-0.20191008212436-363f2d283518
 	github.com/terraform-providers/terraform-provider-random v1.3.2-0.20190925210718-83518d96ae4f // indirect
 	github.com/ulikunitz/xz v0.5.6 // indirect

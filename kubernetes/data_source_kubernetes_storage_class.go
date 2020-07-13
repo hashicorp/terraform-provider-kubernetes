@@ -36,6 +36,36 @@ func dataSourceKubernetesStorageClass() *schema.Resource {
 				Set:         schema.HashString,
 				Computed:    true,
 			},
+			"allowed_topologies": {
+				Type:        schema.TypeList,
+				Description: "Restrict the node topologies where volumes can be dynamically provisioned.",
+				Optional:    true,
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"match_label_expressions": {
+							Type:        schema.TypeList,
+							Description: "A list of topology selector requirements by labels.",
+							Optional:    true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key": {
+										Type:        schema.TypeString,
+										Description: "The label key that the selector applies to.",
+										Optional:    true,
+									},
+									"values": {
+										Type:        schema.TypeSet,
+										Description: "An array of string values. One value must match the label to be selected.",
+										Optional:    true,
+										Elem:        &schema.Schema{Type: schema.TypeString},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }

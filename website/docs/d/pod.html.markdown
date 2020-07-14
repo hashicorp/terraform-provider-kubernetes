@@ -143,6 +143,7 @@ The `option` block supports the following:
 
 * `name` -  Name of the option.
 * `value` - Value of the option. Optional: Defaults to empty.
+* `value` - Value of the option. Optional: Defaults to empty.
 
 ### `downward_api`
 
@@ -157,7 +158,6 @@ The `option` block supports the following:
 
 * `medium` - What type of storage medium should back this directory. The default is "" which means to use the node's default medium. Must be an empty string (default) or Memory. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#emptydir)
 * `size_limit` - Total amount of local storage required for this EmptyDir volume.
-
 
 ### `env`
 

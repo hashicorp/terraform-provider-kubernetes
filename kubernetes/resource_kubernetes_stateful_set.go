@@ -6,10 +6,14 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	api "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pkgApi "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	kubernetes "k8s.io/client-go/kubernetes"
+	polymorphichelpers "k8s.io/kubectl/pkg/polymorphichelpers"
 )
 
 func resourceKubernetesStatefulSet() *schema.Resource {
@@ -35,6 +39,12 @@ func resourceKubernetesStatefulSet() *schema.Resource {
 					Schema: statefulSetSpecFields(false),
 				},
 			},
+			"wait_for_rollout": {
+				Type:        schema.TypeBool,
+				Description: "Wait for the rollout of the stateful set to complete. Defaults to false.",
+				Default:     false,
+				Optional:    true,
+			},
 		},
 	}
 }
@@ -49,7 +59,7 @@ func resourceKubernetesStatefulSetCreate(d *schema.ResourceData, meta interface{
 	if err != nil {
 		return err
 	}
-	statefulSet := api.StatefulSet{
+	statefulSet := appsv1.StatefulSet{
 		ObjectMeta: metadata,
 		Spec:       *spec,
 	}
@@ -66,6 +76,14 @@ func resourceKubernetesStatefulSetCreate(d *schema.ResourceData, meta interface{
 	d.SetId(id)
 
 	log.Printf("[INFO] StatefulSet %s created", id)
+
+	if d.Get("wait_for_rollout").(bool) {
+		log.Printf("[INFO] Waiting for StatefulSet %s to rollout", id)
+		namespace := out.ObjectMeta.Namespace
+		name := out.ObjectMeta.Name
+		return resource.Retry(d.Timeout(schema.TimeoutCreate),
+			retryUntilStatefulSetRolloutComplete(conn, namespace, name))
+	}
 
 	return resourceKubernetesStatefulSetRead(d, meta)
 }
@@ -156,7 +174,7 @@ func resourceKubernetesStatefulSetUpdate(d *schema.ResourceData, meta interface{
 		return fmt.Errorf("Failed to marshal update operations for StatefulSet: %s", err)
 	}
 	log.Printf("[INFO] Updating StatefulSet %q: %v", name, string(data))
-	out, err := conn.AppsV1().StatefulSets(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.AppsV1().StatefulSets(namespace).Patch(name, types.JSONPatchType, data)
 	if err != nil {
 		return fmt.Errorf("Failed to update StatefulSet: %s", err)
 	}
@@ -202,4 +220,47 @@ func resourceKubernetesStatefulSetDelete(d *schema.ResourceData, meta interface{
 	log.Printf("[INFO] StatefulSet %s deleted", name)
 
 	return nil
+}
+
+// retryUntilStatefulSetRolloutComplete checks if a give job finished its execution and either in Complete or Failed state
+func retryUntilStatefulSetRolloutComplete(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
+	return func() *resource.RetryError {
+		res, err := conn.AppsV1().StatefulSets(ns).Get(name, metav1.GetOptions{})
+		if err != nil {
+			return resource.NonRetryableError(err)
+		}
+
+		// NOTE This is what kubectl uses to determine if a rollout is done
+		// We are using this here because the logic for determining if a StatefulSet
+		// is done is gnarly and we dont want to duplicate it in the provider
+		gvk := appsv1.SchemeGroupVersion.WithKind("StatefulSet")
+		gk := gvk.GroupKind()
+		statusViewer, err := polymorphichelpers.StatusViewerFor(gk)
+		if err != nil {
+			return resource.NonRetryableError(err)
+		}
+
+		obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(res)
+		if err != nil {
+			return resource.NonRetryableError(err)
+		}
+
+		// NOTE For some reason the kind and apiVersion get lost when converting to unstructured
+		obj["apiVersion"] = gvk.GroupVersion().String()
+		obj["kind"] = gvk.Kind
+		u := unstructured.Unstructured{Object: obj}
+
+		// NOTE the revision parameter of the Status function below is not actually used
+		// for StatefulSet so it is set to 0 here
+		_, done, err := statusViewer.Status(&u, 0)
+		if err != nil {
+			return resource.NonRetryableError(err)
+		}
+
+		if done {
+			return nil
+		}
+
+		return resource.RetryableError(fmt.Errorf("StatefulSet %s/%s is not finished rolling out", ns, name))
+	}
 }

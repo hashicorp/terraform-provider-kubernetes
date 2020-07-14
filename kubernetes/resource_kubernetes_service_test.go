@@ -623,6 +623,8 @@ resource "kubernetes_service" "test" {
       target_port = 80
     }
   }
+
+  wait_for_rollout = true
 }
 `, name)
 }
@@ -652,6 +654,8 @@ resource "kubernetes_service" "test" {
 
 		publish_not_ready_addresses = "true"
   }
+
+  wait_for_rollout = true
 }
 `, name)
 }

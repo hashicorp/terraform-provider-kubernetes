@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"log"
 	"strconv"
 	"strings"
@@ -409,6 +410,7 @@ func flattenConfigMapVolumeSource(in *v1.ConfigMapVolumeSource) []interface{} {
 func flattenEmptyDirVolumeSource(in *v1.EmptyDirVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["medium"] = in.Medium
+	att["size_limit"] = in.SizeLimit.String()
 	return []interface{}{att}
 }
 
@@ -835,6 +837,14 @@ func expandEmptyDirVolumeSource(l []interface{}) *v1.EmptyDirVolumeSource {
 	obj := &v1.EmptyDirVolumeSource{
 		Medium: v1.StorageMedium(in["medium"].(string)),
 	}
+
+	if v, ok := in["size_limit"].(int); ok {
+		obj.SizeLimit = resource.NewQuantity(int64(v), resource.DecimalExponent)
+	} else if v, ok := in["size_limit"].(string); ok {
+		s, _ := resource.ParseQuantity(v)
+		obj.SizeLimit = &s
+	}
+
 	return obj
 }
 

@@ -365,7 +365,7 @@ func testAccCheckKubernetesStatefulSetExists(n string, obj *api.StatefulSet) res
 
 func testAccKubernetesStatefulSetChecksBasic(name string) resource.TestCheckFunc {
 	return resource.ComposeAggregateTestCheckFunc(
-		resource.TestCheckResourceAttr(statefulSetTestResourceName, "wait_for_rollout", true),
+		resource.TestCheckResourceAttr(statefulSetTestResourceName, "wait_for_rollout", "true"),
 		resource.TestCheckResourceAttrSet(statefulSetTestResourceName, "metadata.0.generation"),
 		resource.TestCheckResourceAttrSet(statefulSetTestResourceName, "metadata.0.resource_version"),
 		resource.TestCheckResourceAttrSet(statefulSetTestResourceName, "metadata.0.self_link"),

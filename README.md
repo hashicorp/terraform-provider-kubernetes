@@ -11,6 +11,7 @@
   - [Examples](https://github.com/hashicorp/terraform-provider-kubernetes/tree/master/_examples)
 - Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
 - Chat: [#terraform-providers in Kubernetes](https://kubernetes.slack.com/messages/CJY6ATQH4) ([Sign up here](http://slack.k8s.io/))
+- Roadmap: [Q3 2020](_about/ROADMAP.md)
 
 The Kubernetes provider for Terraform is a plugin that enables full lifecycle management of Kubernetes resources. This provider is maintained internally by HashiCorp.
 

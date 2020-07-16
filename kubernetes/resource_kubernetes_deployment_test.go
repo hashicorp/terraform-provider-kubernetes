@@ -116,7 +116,7 @@ func TestAccKubernetesDeployment_importBasic(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_rollout"},
 			},
 		},
 	})
@@ -168,7 +168,7 @@ func TestAccKubernetesDeployment_importGeneratedName(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_rollout"},
 			},
 		},
 	})
@@ -580,7 +580,7 @@ func TestAccKubernetesDeploymentUpdate_basic(t *testing.T) {
 					// To be added
 					resource.TestCheckNoResourceAttr(deploymentTestResourceName, "metadata.0.annotations.Different"),
 					// To be changed
-					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.8"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.image", defaultNginxImage),
 				),
 			},
 			{
@@ -1028,7 +1028,7 @@ resource "kubernetes_deployment" "test" {
         }
       }
     }
-  }
+	}
 }
 `, name, defaultNginxImage)
 }
@@ -1160,7 +1160,7 @@ resource "kubernetes_deployment" "test" {
       TestLabelThree = "three"
     }
 
-    name = "%s"
+    name = %q
   }
 
   spec {
@@ -1183,14 +1183,14 @@ resource "kubernetes_deployment" "test" {
 
       spec {
         container {
-          image = defaultNginxImage
+          image = %q
           name  = "tf-acc-test"
         }
       }
     }
   }
 }
-`, name)
+`, name, defaultNginxImage)
 }
 
 func testAccKubernetesDeploymentConfig_generatedName(prefix string) string {
@@ -1226,14 +1226,14 @@ resource "kubernetes_deployment" "test" {
 
       spec {
         container {
-          image = defaultNginxImage
+          image = %q
           name  = "tf-acc-test"
         }
       }
     }
   }
 }
-`, prefix)
+`, prefix, defaultNginxImage)
 }
 
 func testAccKubernetesDeploymentConfigWithSecurityContext(deploymentName, imageName string) string {

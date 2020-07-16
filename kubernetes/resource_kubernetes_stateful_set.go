@@ -180,6 +180,12 @@ func resourceKubernetesStatefulSetUpdate(d *schema.ResourceData, meta interface{
 	}
 	log.Printf("[INFO] Submitted updated StatefulSet: %#v", out)
 
+	if d.Get("wait_for_rollout").(bool) {
+		log.Printf("[INFO] Waiting for StatefulSet %s to rollout", d.Id())
+		return resource.Retry(d.Timeout(schema.TimeoutCreate),
+			retryUntilStatefulSetRolloutComplete(conn, namespace, name))
+	}
+
 	return resourceKubernetesStatefulSetRead(d, meta)
 }
 

@@ -140,7 +140,7 @@ The following arguments are supported:
 * `path` - (Optional) Used as the mounted root, rather than the full Ceph tree, default is /
 * `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to `false` (read/write). For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
 * `secret_file` - (Optional) The path to key ring for User, default is /etc/ceph/user.secret For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
-* `secret_ref` - (Optional) Reference to the authentication secret for User, default is empty. For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
+* `secret_ref` - (Optional) Reference to the authentication secret for User, default is empty. For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it. see [secret_ref](#secret_ref) for more details.
 * `user` - (Optional) User is the rados user name, default is admin. For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
 
 ### `cinder`
@@ -150,6 +150,20 @@ The following arguments are supported:
 * `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. For more info see http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
 * `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to false (read/write). For more info see http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
 * `volume_id` - (Required) Volume ID used to identify the volume in Cinder. For more info see http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
+
+### `csi`
+
+#### Arguments
+
+* `driver` - (Required) the name of the volume driver to use. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes/#csi).
+* `volume_handle` - (Required) A map that specifies static properties of a volume. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes/#csi).
+* `volume_attributes` - (Optional) Attributes of the volume to publish.
+* `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. `ext4`, `xfs`, `ntfs`.
+* `read_only` - (Optional) Whether to set the read-only property in VolumeMounts to `true`. If omitted, the default is `false`.
+* `controller_publish_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI ControllerPublishVolume and ControllerUnpublishVolume calls. see [secret_ref](#secret_ref) for more details.
+* `node_stage_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodeStageVolume and NodeStageVolume and NodeUnstageVolume calls. see [secret_ref](#secret_ref) for more details.
+* `node_publish_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodePublishVolume and NodeUnpublishVolume calls. see [secret_ref](#secret_ref) for more details.
+* `controller_expand_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI ControllerExpandVolume call. see [secret_ref](#secret_ref) for more details.
 
 ### `fc`
 
@@ -168,7 +182,7 @@ The following arguments are supported:
 * `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". The default filesystem depends on FlexVolume script.
 * `options` - (Optional) Extra command options if any.
 * `read_only` - (Optional) Whether to force the ReadOnly setting in VolumeMounts. Defaults to false (read/write).
-* `secret_ref` - (Optional) Reference to the secret object containing sensitive information to pass to the plugin scripts. This may be empty if no secret object is specified. If the secret object contains more than one secret, all secrets are passed to the plugin scripts.
+* `secret_ref` - (Optional) Reference to the secret object containing sensitive information to pass to the plugin scripts. This may be empty if no secret object is specified. If the secret object contains more than one secret, all secrets are passed to the plugin scripts. see [secret_ref](#secret_ref) for more details.
 
 ### `flocker`
 
@@ -273,13 +287,14 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 * `rbd_image` - (Required) The rados image name. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
 * `rbd_pool` - (Optional) The rados pool name. Default is rbd. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it.
 * `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to false. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
-* `secret_ref` - (Optional) Name of the authentication secret for RBDUser. If provided overrides keyring. Default is nil. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+* `secret_ref` - (Optional) Name of the authentication secret for RBDUser. If provided overrides keyring. Default is nil. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it. see [secret_ref](#secret_ref) for more details.
 
 ### `secret_ref`
 
 #### Arguments
 
 * `name` - (Optional) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+* `namespace` - (Optional) The Namespace of the referent secret.
 
 ### `vsphere_volume`
 

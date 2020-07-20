@@ -228,7 +228,7 @@ func resourceKubernetesStatefulSetDelete(d *schema.ResourceData, meta interface{
 	return nil
 }
 
-// retryUntilStatefulSetRolloutComplete checks if a give job finished its execution and either in Complete or Failed state
+// retryUntilStatefulSetRolloutComplete checks if a given job finished its execution and is either in 'Complete' or 'Failed' state.
 func retryUntilStatefulSetRolloutComplete(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
 	return func() *resource.RetryError {
 		res, err := conn.AppsV1().StatefulSets(ns).Get(name, metav1.GetOptions{})

@@ -256,7 +256,7 @@ func retryUntilStatefulSetRolloutComplete(conn *kubernetes.Clientset, ns, name s
 		obj["kind"] = gvk.Kind
 		u := unstructured.Unstructured{Object: obj}
 
-		// NOTE the revision parameter of the Status function below is not actually used
+		// NOTE: the revision parameter of the Status function below is not actually used.
 		// for StatefulSet so it is set to 0 here
 		_, done, err := statusViewer.Status(&u, 0)
 		if err != nil {

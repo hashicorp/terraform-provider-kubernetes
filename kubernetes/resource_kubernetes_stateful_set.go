@@ -251,7 +251,7 @@ func retryUntilStatefulSetRolloutComplete(conn *kubernetes.Clientset, ns, name s
 			return resource.NonRetryableError(err)
 		}
 
-		// NOTE For some reason the kind and apiVersion get lost when converting to unstructured
+		// NOTE: For some reason, the Kind and apiVersion get lost when converting to unstructured.
 		obj["apiVersion"] = gvk.GroupVersion().String()
 		obj["kind"] = gvk.Kind
 		u := unstructured.Unstructured{Object: obj}

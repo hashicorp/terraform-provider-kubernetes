@@ -27,3 +27,7 @@ output "ns-present" {
 }
 
 ```
+
+## Attribute Reference
+
+* `namespaces` - A set of all namespaces in a cluster.

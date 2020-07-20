@@ -14,8 +14,8 @@ func dataSourceKubernetesAllNamespaces() *schema.Resource {
 		Read: dataSourceKubernetesAllNamespacesRead,
 		Schema: map[string]*schema.Schema{
 			"namespaces": {
-				Type:        schema.TypeList,
-				Description: "List of all namespaces in a cluster.",
+				Type:        schema.TypeSet,
+				Description: "A set of all namespaces in a cluster.",
 				Computed:    true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -39,7 +39,7 @@ func dataSourceKubernetesAllNamespacesRead(d *schema.ResourceData, meta interfac
 	}
 	namespaces := make([]string, len(nsRaw.Items))
 	for i, v := range nsRaw.Items {
-		namespaces[i] = string(v.Name)
+		namespaces[i] = v.Name
 	}
 	log.Printf("[INFO] Received namespaces: %#v", namespaces)
 	err = d.Set("namespaces", namespaces)

@@ -236,7 +236,7 @@ func retryUntilStatefulSetRolloutComplete(conn *kubernetes.Clientset, ns, name s
 			return resource.NonRetryableError(err)
 		}
 
-		// NOTE This is what kubectl uses to determine if a rollout is done
+		// NOTE: This is what kubectl uses to determine if a rollout is done.
 		// We are using this here because the logic for determining if a StatefulSet
 		// is done is gnarly and we dont want to duplicate it in the provider
 		gvk := appsv1.SchemeGroupVersion.WithKind("StatefulSet")

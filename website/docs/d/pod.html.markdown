@@ -416,6 +416,7 @@ The `items` block supports the following:
 * `name` -  This must match the Name of a Volume.
 * `read_only` -  Mounted read-only if true, read-write otherwise (false or unspecified). Defaults to false.
 * `sub_path` -  Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).
+* `sub_path_expr` -  Expanded path within the volume from which the container's volume should be mounted. Behaves similarly to SubPath but environment variable references $(VAR_NAME) are expanded using the container's environment. Defaults to "" (volume's root). SubPathExpr and SubPath are mutually exclusive.
 * `mount_propagation` -  Mount propagation mode. Defaults to "None". For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation)
 
 ## Argument Reference

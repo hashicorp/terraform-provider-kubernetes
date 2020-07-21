@@ -490,6 +490,38 @@ func TestAccKubernetesPod_with_volume_mount(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.name", "db"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.read_only", "false"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.sub_path", ""),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.sub_path_expr", ""),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.mount_propagation", "HostToContainer"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPod_with_volume_mount_sub_path_expr(t *testing.T) {
+	var conf api.Pod
+
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodConfigWithVolumeMountsSubPathExpr(secretName, podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.mount_path", "/tmp/my_path"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.name", "db"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.read_only", "false"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.sub_path", ""),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.sub_path_expr", "$(POD_NAME)"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.mount_propagation", "HostToContainer"),
 				),
 			},
@@ -520,11 +552,13 @@ func TestAccKubernetesPod_with_cfg_map_volume_mount(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.name", "cfg"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.read_only", "false"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.sub_path", ""),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.sub_path_expr", ""),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.mount_propagation", "None"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.1.mount_path", "/tmp/my_raw_path"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.1.name", "cfg-binary"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.1.read_only", "false"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.1.sub_path", ""),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.1.sub_path_expr", ""),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.name", "cfg"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.config_map.0.name", cfgMap),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.config_map.0.default_mode", "0777")),
@@ -1220,6 +1254,62 @@ resource "kubernetes_pod" "test" {
         mount_path        = "/tmp/my_path"
         name              = "db"
         mount_propagation = "HostToContainer"
+      }
+    }
+
+    volume {
+      name = "db"
+
+      secret {
+        secret_name = "${kubernetes_secret.test.metadata.0.name}"
+      }
+    }
+  }
+}
+`, secretName, podName, imageName)
+}
+
+func testAccKubernetesPodConfigWithVolumeMountsSubPathExpr(secretName, podName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_secret" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  data = {
+    one = "first"
+  }
+}
+
+resource "kubernetes_pod" "test" {
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+
+      env {
+        name = "POD_NAME"
+        value_from {
+          field_ref {
+            api_version = "v1"
+            field_path  = "metadata.name"
+          }
+        }
+      }
+
+      volume_mount {
+        mount_path        = "/tmp/my_path"
+        name              = "db"
+        mount_propagation = "HostToContainer"
+        sub_path_expr     = "$(POD_NAME)"
       }
     }
 

@@ -288,10 +288,11 @@ Terraform will perform the following actions:
                 }
 
               + volume_mount {
-                  + mount_path = (known after apply)
-                  + name       = (known after apply)
-                  + read_only  = (known after apply)
-                  + sub_path   = (known after apply)
+                  + mount_path    = (known after apply)
+                  + name          = (known after apply)
+                  + read_only     = (known after apply)
+                  + sub_path      = (known after apply)
+                  + sub_path_expr = (known after apply)
                 }
             }
 

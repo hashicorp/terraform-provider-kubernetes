@@ -1,4 +1,4 @@
-## 1.11.4 (Unreleased)
+## 1.11.4 (July 21, 2020)
 
 IMPROVEMENTS:
 * Add resource for CSIDriver (#825)

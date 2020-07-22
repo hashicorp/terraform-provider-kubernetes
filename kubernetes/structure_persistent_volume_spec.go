@@ -291,6 +291,9 @@ func flattenSecretReference(in *v1.SecretReference) []interface{} {
 	if in.Name != "" {
 		att["name"] = in.Name
 	}
+	if in.Namespace != "" {
+		att["namespace"] = in.Namespace
+	}
 	return []interface{}{att}
 }
 
@@ -360,6 +363,9 @@ func flattenPersistentVolumeSource(in v1.PersistentVolumeSource) []interface{} {
 	if in.PhotonPersistentDisk != nil {
 		att["photon_persistent_disk"] = flattenPhotonPersistentDiskVolumeSource(in.PhotonPersistentDisk)
 	}
+	if in.CSI != nil {
+		att["csi"] = flattenCSIVolumeSource(in.CSI)
+	}
 	return []interface{}{att}
 }
 
@@ -393,6 +399,32 @@ func flattenPhotonPersistentDiskVolumeSource(in *v1.PhotonPersistentDiskVolumeSo
 	att["pd_id"] = in.PdID
 	if in.FSType != "" {
 		att["fs_type"] = in.FSType
+	}
+	return []interface{}{att}
+}
+
+func flattenCSIVolumeSource(in *v1.CSIPersistentVolumeSource) []interface{} {
+	att := make(map[string]interface{})
+	att["driver"] = in.Driver
+	att["volume_handle"] = in.VolumeHandle
+	att["read_only"] = in.ReadOnly
+	if in.FSType != "" {
+		att["fs_type"] = in.FSType
+	}
+	if len(in.VolumeAttributes) > 0 {
+		att["volume_attributes"] = in.VolumeAttributes
+	}
+	if in.ControllerExpandSecretRef != nil {
+		att["controller_expand_secret_ref"] = flattenSecretReference(in.ControllerExpandSecretRef)
+	}
+	if in.ControllerPublishSecretRef != nil {
+		att["controller_publish_secret_ref"] = flattenSecretReference(in.ControllerPublishSecretRef)
+	}
+	if in.NodePublishSecretRef != nil {
+		att["node_publish_secret_ref"] = flattenSecretReference(in.NodePublishSecretRef)
+	}
+	if in.NodeStageSecretRef != nil {
+		att["node_stage_secret_ref"] = flattenSecretReference(in.NodeStageSecretRef)
 	}
 	return []interface{}{att}
 }
@@ -854,6 +886,9 @@ func expandSecretReference(l []interface{}) *v1.SecretReference {
 	if v, ok := in["name"].(string); ok {
 		obj.Name = v
 	}
+	if v, ok := in["namespace"].(string); ok {
+		obj.Namespace = v
+	}
 	return obj
 }
 
@@ -932,6 +967,9 @@ func expandPersistentVolumeSource(l []interface{}) v1.PersistentVolumeSource {
 	if v, ok := in["photon_persistent_disk"].([]interface{}); ok && len(v) > 0 {
 		obj.PhotonPersistentDisk = expandPhotonPersistentDiskVolumeSource(v)
 	}
+	if v, ok := in["csi"].([]interface{}); ok && len(v) > 0 {
+		obj.CSI = expandCSIPersistentDiskVolumeSource(v)
+	}
 	return obj
 }
 
@@ -979,6 +1017,39 @@ func expandPhotonPersistentDiskVolumeSource(l []interface{}) *v1.PhotonPersisten
 	}
 	if v, ok := in["fs_type"].(string); ok {
 		obj.FSType = v
+	}
+	return obj
+}
+
+func expandCSIPersistentDiskVolumeSource(l []interface{}) *v1.CSIPersistentVolumeSource {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.CSIPersistentVolumeSource{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.CSIPersistentVolumeSource{
+		Driver:       in["driver"].(string),
+		VolumeHandle: in["volume_handle"].(string),
+	}
+	if v, ok := in["read_only"].(bool); ok {
+		obj.ReadOnly = v
+	}
+	if v, ok := in["fs_type"].(string); ok {
+		obj.FSType = v
+	}
+	if v, ok := in["volume_attributes"].(map[string]interface{}); ok && len(v) > 0 {
+		obj.VolumeAttributes = expandStringMap(v)
+	}
+	if v, ok := in["controller_publish_secret_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.ControllerPublishSecretRef = expandSecretReference(v)
+	}
+	if v, ok := in["node_stage_secret_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.NodeStageSecretRef = expandSecretReference(v)
+	}
+	if v, ok := in["node_publish_secret_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.NodePublishSecretRef = expandSecretReference(v)
+	}
+	if v, ok := in["controller_expand_secret_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.ControllerExpandSecretRef = expandSecretReference(v)
 	}
 	return obj
 }
@@ -1523,6 +1594,30 @@ func patchPersistentVolumeSource(pathPrefix, prefix string, d *schema.ResourceDa
 			}
 		} else if oldOk && len(oldV) > 0 {
 			ops = append(ops, &RemoveOperation{Path: pathPrefix + "/photonPersistentDisk"})
+		}
+	}
+
+	if d.HasChange(prefix + "csi") {
+		path := pathPrefix + "/csi"
+		oldIn, newIn := d.GetChange(path)
+		oldV, oldOk := oldIn.([]interface{})
+		newV, newOk := newIn.([]interface{})
+		value := expandCSIPersistentDiskVolumeSource(newV)
+
+		if newOk && len(newV) > 0 {
+			if oldOk && len(oldV) > 0 {
+				ops = append(ops, &ReplaceOperation{
+					Path:  path,
+					Value: value,
+				})
+			} else {
+				ops = append(ops, &AddOperation{
+					Path:  path,
+					Value: value,
+				})
+			}
+		} else if oldOk && len(oldV) > 0 {
+			ops = append(ops, &RemoveOperation{Path: path})
 		}
 	}
 

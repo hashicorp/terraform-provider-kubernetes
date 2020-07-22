@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"crypto/sha256"
 	"fmt"
+	"k8s.io/apimachinery/pkg/labels"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -21,6 +22,7 @@ func dataSourceKubernetesAllNamespaces() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"metadata": metadataSchema("namespace", true),
 		},
 	}
 }
@@ -31,8 +33,11 @@ func dataSourceKubernetesAllNamespacesRead(d *schema.ResourceData, meta interfac
 		return err
 	}
 
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	lo := metadata.GetLabels()
+
 	log.Printf("[INFO] Listing namespaces")
-	nsRaw, err := conn.CoreV1().Namespaces().List(metav1.ListOptions{})
+	nsRaw, err := conn.CoreV1().Namespaces().List(metav1.ListOptions{LabelSelector: labels.SelectorFromSet(lo).String()})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err

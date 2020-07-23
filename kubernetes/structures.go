@@ -162,6 +162,14 @@ func isInternalKey(annotationKey string) bool {
 		return true
 	}
 
+        if err == nil && strings.HasSuffix(u.Hostname(), "cloud.google.com") {
+                return true
+        }
+
+        if err == nil && strings.HasSuffix(u.Hostname(), "keel.sh") {
+                return true
+        }
+
 	// Specific to DaemonSet annotations, generated & controlled by the server.
 	if strings.Contains(annotationKey, "deprecated.daemonset.template.generation") {
 		return true

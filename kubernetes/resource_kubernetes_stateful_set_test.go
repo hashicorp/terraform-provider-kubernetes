@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -26,6 +27,7 @@ func TestAccKubernetesStatefulSet_basic(t *testing.T) {
 				Config: testAccKubernetesStatefulSetConfigBasic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetExists(statefulSetTestResourceName, &conf),
+					testAccCheckKubernetesStatefulSetRollingOut(statefulSetTestResourceName),
 					testAccKubernetesStatefulSetChecksBasic(name),
 				),
 			},
@@ -310,6 +312,26 @@ func TestAccKubernetesStatefulSet_update_pod_template(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesStatefulSet_waitForRollout(t *testing.T) {
+	var conf api.StatefulSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: statefulSetTestResourceName,
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesStatefulSetDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStatefulSetConfigWaitForRollout(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetExists(statefulSetTestResourceName, &conf),
+					testAccCheckKubernetesStatefulSetRolledOut(statefulSetTestResourceName),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesStatefulSetDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
@@ -337,34 +359,74 @@ func testAccCheckKubernetesStatefulSetDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckKubernetesStatefulSetExists(n string, obj *api.StatefulSet) resource.TestCheckFunc {
+func getStatefulSetFromResourceName(s *terraform.State, n string) (*appsv1.StatefulSet, error) {
+	rs, ok := s.RootModule().Resources[n]
+	if !ok {
+		return nil, fmt.Errorf("Not found: %s", n)
+	}
+
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return nil, err
+	}
+
+	namespace, name, err := idParts(rs.Primary.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	out, err := conn.AppsV1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
+func testAccCheckKubernetesStatefulSetExists(n string, obj *appsv1.StatefulSet) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[n]
-		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+		d, err := getStatefulSetFromResourceName(s, n)
+		if err != nil {
+			return err
 		}
+		*obj = *d
+		return nil
+	}
+}
 
-		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+func testAccCheckKubernetesStatefulSetRollingOut(n string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		d, err := getStatefulSetFromResourceName(s, n)
 		if err != nil {
 			return err
 		}
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		if d.Status.Replicas == *d.Spec.Replicas {
+			return fmt.Errorf("StatefulSet has already rolled out")
+		}
+
+		return nil
+	}
+}
+
+func testAccCheckKubernetesStatefulSetRolledOut(n string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		d, err := getStatefulSetFromResourceName(s, n)
 		if err != nil {
 			return err
 		}
 
-		out, err := conn.AppsV1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
-		if err != nil {
-			return err
+		if d.Status.Replicas != *d.Spec.Replicas {
+			return fmt.Errorf("StatefulSet is still rolling out")
 		}
-		*obj = *out
+
 		return nil
 	}
 }
 
 func testAccKubernetesStatefulSetChecksBasic(name string) resource.TestCheckFunc {
 	return resource.ComposeAggregateTestCheckFunc(
+		resource.TestCheckResourceAttr(statefulSetTestResourceName, "wait_for_rollout", "false"),
 		resource.TestCheckResourceAttrSet(statefulSetTestResourceName, "metadata.0.generation"),
 		resource.TestCheckResourceAttrSet(statefulSetTestResourceName, "metadata.0.resource_version"),
 		resource.TestCheckResourceAttrSet(statefulSetTestResourceName, "metadata.0.self_link"),
@@ -1006,6 +1068,72 @@ resource "kubernetes_stateful_set" "test" {
       }
     }
   }
+}
+`, name)
+}
+
+func testAccKubernetesStatefulSetConfigWaitForRollout(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service" "test" {
+  metadata {
+    name = "ss-test"
+  }
+  spec {
+    port {
+      port = 80
+    }
+  }
+}
+
+resource "kubernetes_stateful_set" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    replicas = 2
+
+    selector {
+      match_labels = {
+        app = "ss-test"
+      }
+    }
+
+    update_strategy {
+      type = "RollingUpdate"
+    }
+
+    service_name = kubernetes_service.test.metadata.0.name
+
+    template {
+      metadata {
+        labels = {
+          app = "ss-test"
+        }
+      }
+
+      spec {
+        container {
+          name  = "ss-test"
+          image = "nginx:1.19"
+
+          port {
+            container_port = 80
+          }
+
+          readiness_probe {
+            initial_delay_seconds = 5
+            http_get {
+              path = "/"
+              port = 80
+            }
+          }
+        }
+      }
+    }
+  }
+
+  wait_for_rollout = true
 }
 `, name)
 }

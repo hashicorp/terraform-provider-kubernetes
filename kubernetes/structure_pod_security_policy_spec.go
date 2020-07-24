@@ -149,8 +149,8 @@ func flattenHostPortRangeSlice(in []v1beta1.HostPortRange) []interface{} {
 
 	for k, v := range in {
 		result[k] = map[string]interface{}{
-			"min": v.Min,
-			"max": v.Max,
+			"min": int(v.Min),
+			"max": int(v.Max),
 		}
 	}
 
@@ -383,8 +383,8 @@ func expandHostPortRangeSlice(in []interface{}) []v1beta1.HostPortRange {
 	for k, v := range in {
 		if m, ok := v.(map[string]interface{}); ok {
 			result[k] = v1beta1.HostPortRange{
-				Min: m["min"].(int32),
-				Max: m["max"].(int32),
+				Min: int32(m["min"].(int)),
+				Max: int32(m["max"].(int)),
 			}
 		}
 	}

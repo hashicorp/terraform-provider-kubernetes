@@ -81,6 +81,7 @@ The following arguments are supported:
 
 * `metadata` - (Required) Standard deployment's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 * `spec` - (Required) Spec defines the specification of the desired behavior of the deployment. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status)
+* `wait_for_rollout` - (Optional) Wait for the deployment to successfully roll out. Defaults to `true`.
 
 ## Nested Blocks
 

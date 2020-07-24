@@ -25,10 +25,11 @@ require (
 	github.com/terraform-providers/terraform-provider-random v1.3.2-0.20190925210718-83518d96ae4f // indirect
 	github.com/ulikunitz/xz v0.5.6 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	k8s.io/api v0.0.0-20191025225708-5524a3672fbb
-	k8s.io/apimachinery v0.0.0-20191025225532-af6325b3a843
+	k8s.io/api v0.16.12
+	k8s.io/apimachinery v0.16.12
 	k8s.io/client-go v10.0.0+incompatible
 	k8s.io/kube-aggregator v0.0.0-20191025230902-aa872b06629d
+	k8s.io/kubectl v0.16.12
 )
 
 // Override invalid go-autorest pseudo-version. This can be removed once

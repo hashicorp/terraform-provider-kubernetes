@@ -19,7 +19,7 @@ Major version releases include code removals, deprecations, and breaking changes
 In the 2.0.0 release we'll focus on three areas:
  - Upgrading to [Terraform Plugin SDK v2](https://www.terraform.io/docs/extend/guides/v2-upgrade-guide.html)
  - [Removing support for Terraform 0.11](https://github.com/hashicorp/terraform-provider-kubernetes/issues/905)
- - [Changing provider credentialling](https://github.com/hashicorp/terraform-provider-kubernetes/issues/909)
+ - [Changing provider credentialing](https://github.com/hashicorp/terraform-provider-kubernetes/issues/909)
 
 ### Themes
 

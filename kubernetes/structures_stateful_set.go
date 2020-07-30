@@ -60,7 +60,7 @@ func expandStatefulSetSpec(s []interface{}) (*v1.StatefulSetSpec, error) {
 			return obj, nil
 		}
 		for _, pvc := range v {
-			p, err := expandPersistenVolumeClaim(pvc.(map[string]interface{}))
+			p, err := expandPersistentVolumeClaim(pvc.(map[string]interface{}))
 			if err != nil {
 				return obj, err
 			}

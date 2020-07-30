@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	k8sresource "k8s.io/apimachinery/pkg/api/resource"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
@@ -41,6 +42,45 @@ func resourceKubernetesPersistentVolumeClaim() *schema.Resource {
 		},
 
 		Schema: fields,
+
+		// All fields of Spec are immutable after creation, except for resources.requests.storage.
+		// Storage can only be increased in place. A new object will be created when the storage is decreased.
+		CustomizeDiff: func(diff *schema.ResourceDiff, meta interface{}) error {
+			// Skip custom logic for resource creation.
+			if diff.Id() == "" {
+				return nil
+			}
+			key := "spec.0.resources.0.requests"
+			subKeyStorage := "spec.0.resources.0.requests.storage"
+			subKeyLimits := "spec.0.resources.0.limits"
+			if diff.HasChange(subKeyLimits) {
+				err := diff.ForceNew(subKeyLimits)
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+			if diff.HasChange(key) {
+				old, new := diff.GetChange(subKeyStorage)
+				oldStorageQuantity, err := k8sresource.ParseQuantity(old.(string))
+				if err != nil {
+					return err
+				}
+				newStorageQuantity, err := k8sresource.ParseQuantity(new.(string))
+				if err != nil {
+					return err
+				}
+				if newStorageQuantity.Cmp(oldStorageQuantity) == -1 {
+					log.Printf("[DEBUG] CustomizeDiff spec.resources.requests.storage: field can not be less than previous value")
+					log.Printf("[DEBUG] CustomizeDiff creating new PVC with size: %v", new)
+					err := diff.ForceNew(key)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		},
 	}
 }
 
@@ -50,7 +90,7 @@ func resourceKubernetesPersistentVolumeClaimCreate(d *schema.ResourceData, meta 
 		return err
 	}
 
-	claim, err := expandPersistenVolumeClaim(map[string]interface{}{
+	claim, err := expandPersistentVolumeClaim(map[string]interface{}{
 		"metadata": d.Get("metadata"),
 		"spec":     d.Get("spec"),
 	})
@@ -153,7 +193,18 @@ func resourceKubernetesPersistentVolumeClaimUpdate(d *schema.ResourceData, meta 
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
-	// The whole spec is ForceNew = nothing to update there
+	// spec.resources.requests is the only editable field in Spec.
+	if d.HasChange("spec.0.resources.0.requests") {
+		r := d.Get("spec.0.resources.0.requests").(map[string]interface{})
+		requests, err := expandMapToResourceList(r)
+		if err != nil {
+			return err
+		}
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/spec/resources/requests",
+			Value: requests,
+		})
+	}
 	data, err := ops.MarshalJSON()
 	if err != nil {
 		return fmt.Errorf("Failed to marshal update operations: %s", err)

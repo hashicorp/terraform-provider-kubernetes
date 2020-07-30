@@ -39,7 +39,7 @@ func flattenResourceRequirements(in v1.ResourceRequirements) []interface{} {
 
 // Expanders
 
-func expandPersistenVolumeClaim(p map[string]interface{}) (*corev1.PersistentVolumeClaim, error) {
+func expandPersistentVolumeClaim(p map[string]interface{}) (*corev1.PersistentVolumeClaim, error) {
 	pvc := &corev1.PersistentVolumeClaim{}
 	if len(p) == 0 {
 		return pvc, nil

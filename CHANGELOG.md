@@ -1,4 +1,4 @@
-## 1.11.5 (Unreleased)
+## 1.12.0 (Unreleased)
 
 BUG FIXES:
 

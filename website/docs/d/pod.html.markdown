@@ -143,7 +143,6 @@ The `option` block supports the following:
 
 * `name` -  Name of the option.
 * `value` - Value of the option. Optional: Defaults to empty.
-* `value` - Value of the option. Optional: Defaults to empty.
 
 ### `downward_api`
 

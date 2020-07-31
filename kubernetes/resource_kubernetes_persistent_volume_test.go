@@ -729,6 +729,45 @@ func TestAccKubernetesPersistentVolume_csi_secrets(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPersistentVolume_volumeMode(t *testing.T) {
+	var conf api.PersistentVolume
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_persistent_volume.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_persistent_volume.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPersistentVolumeVolumeModeConfig(name, "Block"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
+					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "3"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelTwo", "two"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelThree", "three"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.capacity.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.capacity.storage", "5Gi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.1245328686", "ReadWriteOnce"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_mode", "Block"),
+				),
+			},
+		},
+	})
+}
+
 func waitForPersistenceVolumeDeleted(pvName string, poll, timeout time.Duration) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
@@ -1160,6 +1199,36 @@ resource "kubernetes_persistent_volume" "test" {
   }
 }
 `, name)
+}
+
+func testAccKubernetesPersistentVolumeVolumeModeConfig(name, mode string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_persistent_volume" "test" {
+  metadata {
+    annotations = {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels = {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = %[1]q
+  }
+
+  spec {
+    capacity = {
+      storage = "5Gi"
+    }
+
+    access_modes = ["ReadWriteOnce"]
+    volume_mode  = %[1]q
+  }
+}
+`, name, mode)
 }
 
 func testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, path, typ string) string {

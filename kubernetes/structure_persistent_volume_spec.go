@@ -996,6 +996,9 @@ func expandPersistentVolumeSpec(l []interface{}) (*v1.PersistentVolumeSpec, erro
 	if v, ok := in["mount_options"].(*schema.Set); ok && v.Len() > 0 {
 		obj.MountOptions = schemaSetToStringArray(v)
 	}
+	if v, ok := in["volume_mode"].(string); ok {
+		obj.VolumeMode = &v1.PersistentVolumeMode(v)
+	}
 	return obj, nil
 }
 

@@ -256,6 +256,25 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 							Type: schema.TypeInt,
 						},
 					},
+					"sysctl": {
+						Type:        schema.TypeList,
+						Optional:    true,
+						Description: "holds a list of namespaced sysctls used for the pod.",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"name": {
+									Type:        schema.TypeString,
+									Description: "Name of a property to set.",
+									Required:    true,
+								},
+								"value": {
+									Type:        schema.TypeString,
+									Description: "Value of a property to set.",
+									Required:    true,
+								},
+							},
+						},
+					},
 				},
 			},
 		},

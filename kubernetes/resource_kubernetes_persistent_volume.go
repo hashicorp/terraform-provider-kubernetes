@@ -91,6 +91,7 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 									"ReadWriteMany",
 								}, false),
 							},
+							Set: schema.HashString,
 						},
 						"capacity": {
 							Type:         schema.TypeMap,
@@ -159,6 +160,7 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Type:        schema.TypeString,
 							Description: "Defines if a volume is intended to be used with a formatted filesystem. or to remain in raw block state.",
 							Optional:    true,
+							ForceNew:    true,
 							Default:     "Filesystem",
 							ValidateFunc: validation.StringInSlice([]string{
 								"Block",

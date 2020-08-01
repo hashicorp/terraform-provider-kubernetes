@@ -730,6 +730,12 @@ The `items` block supports the following:
 * `run_as_user` - (Optional) The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.
 * `se_linux_options` - (Optional) The SELinux context to be applied to all containers. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.
 * `supplemental_groups` - (Optional) A list of groups applied to the first process run in each container, in addition to the container's primary GID. If unspecified, no groups will be added to any container.
+* `sysctl` - (Optional) holds a list of namespaced sysctls used for the pod. see [Sysctl](#sysctl) block. See [offical docs](https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/) for more details.
+
+##### Sysctl
+
+* `name` - (Required) Name of a property to set.
+* `value` - (Required) Value of a property to set.
 
 ### `tcp_socket`
 

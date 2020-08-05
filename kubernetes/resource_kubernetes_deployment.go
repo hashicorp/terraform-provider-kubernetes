@@ -9,10 +9,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pkgApi "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -190,6 +191,12 @@ func resourceKubernetesDeployment() *schema.Resource {
 					},
 				},
 			},
+			"wait_for_rollout": {
+				Type:        schema.TypeBool,
+				Description: "Wait for the rollout of the deployment to complete. Defaults to true.",
+				Default:     true,
+				Optional:    true,
+			},
 		},
 	}
 }
@@ -221,11 +228,13 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 
 	log.Printf("[DEBUG] Waiting for deployment %s to schedule %d replicas", d.Id(), *out.Spec.Replicas)
 
-	// 10 mins should be sufficient for scheduling ~10k replicas
-	err = resource.Retry(d.Timeout(schema.TimeoutCreate),
-		waitForDeploymentReplicasFunc(conn, out.GetNamespace(), out.GetName()))
-	if err != nil {
-		return err
+	if d.Get("wait_for_rollout").(bool) {
+		log.Printf("[INFO] Waiting for deployment %s/%s to rollout", out.ObjectMeta.Namespace, out.ObjectMeta.Name)
+		err := resource.Retry(d.Timeout(schema.TimeoutCreate),
+			waitForDeploymentReplicasFunc(conn, out.GetNamespace(), out.GetName()))
+		if err != nil {
+			return err
+		}
 	}
 
 	log.Printf("[INFO] Submitted new deployment: %#v", out)
@@ -262,16 +271,19 @@ func resourceKubernetesDeploymentUpdate(d *schema.ResourceData, meta interface{}
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating deployment %q: %v", name, string(data))
-	out, err := conn.AppsV1().Deployments(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.AppsV1().Deployments(namespace).Patch(name, types.JSONPatchType, data)
 	if err != nil {
 		return fmt.Errorf("Failed to update deployment: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated deployment: %#v", out)
 
-	err = resource.Retry(d.Timeout(schema.TimeoutUpdate),
-		waitForDeploymentReplicasFunc(conn, namespace, name))
-	if err != nil {
-		return err
+	if d.Get("wait_for_rollout").(bool) {
+		log.Printf("[INFO] Waiting for deployment %s/%s to rollout", out.ObjectMeta.Namespace, out.ObjectMeta.Name)
+		err := resource.Retry(d.Timeout(schema.TimeoutCreate),
+			waitForDeploymentReplicasFunc(conn, out.GetNamespace(), out.GetName()))
+		if err != nil {
+			return err
+		}
 	}
 
 	return resourceKubernetesDeploymentRead(d, meta)

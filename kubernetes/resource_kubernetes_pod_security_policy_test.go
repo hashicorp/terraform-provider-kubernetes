@@ -278,6 +278,11 @@ resource "kubernetes_pod_security_policy" "test" {
 		max = 65535
 	  }
     }
+
+    host_ports {
+      min = 0
+      max = 65535
+    }
     
     read_only_root_filesystem = true
   }

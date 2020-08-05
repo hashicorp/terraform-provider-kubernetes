@@ -1,9 +1,30 @@
-## 1.11.4 (Unreleased)
+## 1.12.1 (Unreleased)
+## 1.12.0 (July 30, 2020)
+
+BUG FIXES:
+
+* Fix crash in `resource_kubernetes_pod_security_policy` attribute `host_ports` (#931)
 
 IMPROVEMENTS:
 
-* Add data source for Pod and PVC (#786)
+* Add `wait_for_rollout` to `kubernetes_deployment` resource (#863)
+* Add `wait_for_rollout` to `kubernetes_stateful_set` resource (#605)
 
+## 1.11.4 (July 21, 2020)
+
+IMPROVEMENTS:
+
+* Add resource for CSIDriver (#825)
+* Add resource for Pod Security Policies (#861)
+* Add data source for Pod and PVC (#786)
+* Add support for CSI volume type in persistent_volume resource (#817)
+* Add Kubernetes Job `wait_for_completion` functionality (#625)
+* Support `optional` flag for ConfigMap mounted as volume (#823)
+* Add specific error message when failing to load provider config (#780)
+* Support `optional` on env valueFrom for secret key/configmap key (#824)
+* Skip tests for CSIDriver if cluster version is less than 1.16
+* Allow `ttl_seconds_after_finished = 0` in `kubernetes_job` resource (#849)
+* Set service block to `optional` for webhook configurations (#902)
 
 ## 1.11.3 (May 20, 2020)
 

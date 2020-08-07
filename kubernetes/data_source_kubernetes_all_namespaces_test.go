@@ -28,6 +28,8 @@ func TestAccKubernetesDataSourceAllNamespaces_basic(t *testing.T) {
 
 func testAccKubernetesDataSourceAllNamespacesConfig_basic() string {
 	return `
-data "kubernetes_all_namespaces" "test" {}
-`
+data "kubernetes_all_namespaces" "test" { 
+	metadata {
+  	}
+}`
 }

@@ -43,6 +43,23 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 				Schema: containerFields(isUpdatable, false),
 			},
 		},
+		"readiness_gate": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Computed:    isComputed,
+			ForceNew:    true,
+			Description: "If specified, all readiness gates will be evaluated for pod readiness. A pod is ready when all its containers are ready AND all conditions specified in the readiness gates have status equal to \"True\" More info: https://git.k8s.io/enhancements/keps/sig-network/0007-pod-ready%2B%2B.md",
+			Deprecated:  deprecatedMessage,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"condition_type": {
+						Type:        schema.TypeString,
+						Required:    true,
+						Description: "refers to a condition in the pod's condition list with matching type.",
+					},
+				},
+			},
+		},
 		"init_container": {
 			Type:        schema.TypeList,
 			Optional:    true,

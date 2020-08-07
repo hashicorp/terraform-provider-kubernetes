@@ -33,6 +33,12 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	}
 	att["container"] = containers
 
+	gates, err := flattenReadinessGates(in.ReadinessGates)
+	if err != nil {
+		return nil, err
+	}
+	att["readiness_gate"] = gates
+
 	initContainers, err := flattenContainers(in.InitContainers)
 	if err != nil {
 		return nil, err
@@ -580,6 +586,14 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 			return obj, err
 		}
 		obj.Containers = cs
+	}
+
+	if v, ok := in["readiness_gate"].([]interface{}); ok && len(v) > 0 {
+		cs, err := expandReadinessGates(v)
+		if err != nil {
+			return obj, err
+		}
+		obj.ReadinessGates = cs
 	}
 
 	if v, ok := in["init_container"].([]interface{}); ok && len(v) > 0 {

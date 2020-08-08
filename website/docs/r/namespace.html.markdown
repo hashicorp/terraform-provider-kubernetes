@@ -33,6 +33,7 @@ resource "kubernetes_namespace" "example" {
 The following arguments are supported:
 
 * `metadata` - (Required) Standard namespace's [metadata](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata).
+* `spec` - (Optional) Defines the behavior of the Namespace. [More info](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status)
 
 ### Timeouts
 
@@ -64,6 +65,12 @@ The following arguments are supported:
 * `resource_version` - An opaque value that represents the internal version of this namespace that can be used by clients to determine when namespaces have changed. Read more about [concurrency control and consistency](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency).
 * `self_link` - A URL representing this namespace.
 * `uid` - The unique in time and space value for this namespace. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
+
+### `spec`
+
+#### Arguments
+
+* `finalizers` - (Optional) An opaque list of values that must be empty to permanently remove object from storage. [More info](https://kubernetes.io/docs/tasks/administer-cluster/namespaces/)
 
 ## Import
 

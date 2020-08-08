@@ -36,6 +36,8 @@ func TestAccKubernetesNamespace_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "spec.0.finalizers.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_namespace.test", "spec.0.finalizers.0", "kubernetes"),
 				),
 			},
 			{
@@ -221,6 +223,58 @@ func TestAccKubernetesNamespace_deleteTimeout(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesNamespace_spec(t *testing.T) {
+	var conf api.Namespace
+	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_namespace.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: resourceName,
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesNamespaceDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesNamespaceSpecConfig(nsName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesNamespaceExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", nsName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.finalizers.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.finalizers.0", "kubernetes"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesNamespace_importSpec(t *testing.T) {
+	resourceName := "kubernetes_namespace.test"
+	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesNamespaceDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesNamespaceSpecConfig(nsName),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
 func testAccCheckMetaAnnotations(om *metav1.ObjectMeta, expected map[string]string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(om.Annotations) == 0 {
@@ -317,6 +371,20 @@ func testAccKubernetesNamespaceConfig_basic(nsName string) string {
 	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = "%s"
+  }
+}
+`, nsName)
+}
+
+func testAccKubernetesNamespaceSpecConfig(nsName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_namespace" "test" {
+  metadata {
+    name = %[1]q
+  }
+
+  spec {
+    finalizers = ["kubernetes"]
   }
 }
 `, nsName)

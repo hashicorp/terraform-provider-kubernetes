@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
@@ -27,6 +28,25 @@ func resourceKubernetesNamespace() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("namespace", true),
+			"spec": {
+				Type:        schema.TypeList,
+				Description: "Spec defines the behavior of the Namespace.",
+				Computed:    true,
+				Optional:    true,
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"finalizers": {
+							Type:        schema.TypeList,
+							Description: "Finalizers is an opaque list of values that must be empty to permanently remove object from storage.",
+							Optional:    true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
 		},
 		Timeouts: &schema.ResourceTimeout{
 			Delete: schema.DefaultTimeout(5 * time.Minute),
@@ -44,6 +64,7 @@ func resourceKubernetesNamespaceCreate(d *schema.ResourceData, meta interface{})
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	namespace := api.Namespace{
 		ObjectMeta: metadata,
+		Spec:       expandNamespaceSpec(d.Get("spec").([]interface{})),
 	}
 	log.Printf("[INFO] Creating new namespace: %#v", namespace)
 	out, err := conn.CoreV1().Namespaces().Create(ctx, &namespace, metav1.CreateOptions{})
@@ -76,6 +97,11 @@ func resourceKubernetesNamespaceRead(d *schema.ResourceData, meta interface{}) e
 		return err
 	}
 
+	err = d.Set("spec", flattenNamespaceSpec(&namespace.Spec))
+	if err != nil {
+		return fmt.Errorf("error setting spec: %w", err)
+	}
+
 	return nil
 }
 
@@ -90,6 +116,15 @@ func resourceKubernetesNamespaceUpdate(d *schema.ResourceData, meta interface{})
 	data, err := ops.MarshalJSON()
 	if err != nil {
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
+	}
+
+	if d.HasChange("spec") {
+		spec := expandNamespaceSpec(d.Get("spec").([]interface{}))
+
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/spec",
+			Value: spec,
+		})
 	}
 
 	log.Printf("[INFO] Updating namespace: %s", ops)
@@ -164,4 +199,23 @@ func resourceKubernetesNamespaceExists(d *schema.ResourceData, meta interface{})
 	}
 	log.Printf("[INFO] Namespace %s exists", name)
 	return true, err
+}
+
+func expandNamespaceSpec(in []interface{}) v1.NamespaceSpec {
+	spec := v1.NamespaceSpec{}
+	if len(in) < 1 {
+		return spec
+	}
+	m := in[0].(map[string]interface{})
+
+	if v, ok := m["finalizers"]; ok {
+		finalizers := make([]v1.FinalizerName, 0)
+		for _, f := range v.([]interface{}) {
+			finalizer := v1.FinalizerName(f.(string))
+			finalizers = append(finalizers, finalizer)
+		}
+		spec.Finalizers = finalizers
+	}
+
+	return spec
 }

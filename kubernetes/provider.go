@@ -151,6 +151,7 @@ func Provider() terraform.ResourceProvider {
 
 		ResourcesMap: map[string]*schema.Resource{
 			"kubernetes_api_service":                      resourceKubernetesAPIService(),
+			"kubernetes_certificate_signing_request":      resourceKubernetesCertificateSigningRequest(),
 			"kubernetes_cluster_role":                     resourceKubernetesClusterRole(),
 			"kubernetes_cluster_role_binding":             resourceKubernetesClusterRoleBinding(),
 			"kubernetes_config_map":                       resourceKubernetesConfigMap(),

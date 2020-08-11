@@ -328,8 +328,8 @@ func resourceKubernetesServiceAccountImportState(d *schema.ResourceData, meta in
 func findDefaultServiceAccount(sa *api.ServiceAccount, conn *kubernetes.Clientset) (string, error) {
 	/*
 		The default service account token secret would have:
-		- been created either at the same moment as the service account or _just_ after (Kubernetes controllers appears to work off a queue)
 		- have a name starting with "[service account name]-token-"
+		- annotations linking back to the service account name and uid
 
 		See this for where the default token is created in Kubernetes
 		https://github.com/kubernetes/kubernetes/blob/release-1.13/pkg/controller/serviceaccount/tokens_controller.go#L384
@@ -350,13 +350,8 @@ func findDefaultServiceAccount(sa *api.ServiceAccount, conn *kubernetes.Clientse
 			continue
 		}
 
-		if secret.CreationTimestamp.Before(&sa.CreationTimestamp) {
-			log.Printf("[DEBUG] Skipping %s as it existed before the service account", saSecret.Name)
-			continue
-		}
-
-		if secret.CreationTimestamp.Sub(sa.CreationTimestamp.Time) > (3 * time.Second) {
-			log.Printf("[DEBUG] Skipping %s as it wasn't created at the same time as the service account", saSecret.Name)
+		if secret.Annotations[api.ServiceAccountNameKey] != sa.Name || secret.Annotations[api.ServiceAccountUIDKey] != string(sa.UID) {
+			log.Printf("[DEBUG] Skipping %s as annotations don't match", saSecret.Name)
 			continue
 		}
 

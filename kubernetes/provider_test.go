@@ -54,6 +54,21 @@ func TestProvider_configure(t *testing.T) {
 	}
 }
 
+func TestProvider_configure_multiple_kubeconfig(t *testing.T) {
+	resetEnv := unsetEnv(t)
+	defer resetEnv()
+
+	os.Setenv("KUBECONFIG", "test-fixtures/kube-config.yaml:test-fixtures/kube-config-dummy.yaml")
+	os.Setenv("KUBE_CTX", "dummy")
+
+	rc := terraform.NewResourceConfigRaw(map[string]interface{}{})
+	p := Provider()
+	err := p.Configure(rc)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func unsetEnv(t *testing.T) func() {
 	e := getEnv()
 

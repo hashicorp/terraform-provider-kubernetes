@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -277,12 +279,18 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	if d.Get("load_config_file").(bool) {
 		log.Printf("[DEBUG] Trying to load configuration from file")
 		if configPath, ok := d.GetOk("config_path"); ok && configPath.(string) != "" {
-			path, err := homedir.Expand(configPath.(string))
-			if err != nil {
-				return nil, err
+			configPathSplit := filepath.SplitList(configPath.(string))
+			precedence := make([]string, len(configPathSplit))
+			for i, path := range configPathSplit {
+				expanded, err := homedir.Expand(path)
+				if err != nil {
+					return nil, err
+				}
+				precedence[i] = expanded
 			}
-			log.Printf("[DEBUG] Configuration file is: %s", path)
-			loader.ExplicitPath = path
+
+			log.Printf("[DEBUG] Configuration file(s) are: %s", strings.Join(precedence, ","))
+			loader.Precedence = precedence
 
 			ctxSuffix := "; default context"
 

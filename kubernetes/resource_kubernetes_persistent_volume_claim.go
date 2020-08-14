@@ -237,6 +237,23 @@ func resourceKubernetesPersistentVolumeClaimDelete(d *schema.ResourceData, meta 
 		return err
 	}
 
+	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+		out, err := conn.CoreV1().PersistentVolumeClaims(namespace).Get(name, meta_v1.GetOptions{})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return nil
+			}
+			return resource.NonRetryableError(err)
+		}
+
+		log.Printf("[DEBUG] Current state of persistent volume claim finalizers: %#v", out.Finalizers)
+		e := fmt.Errorf("Persistent volume claim %s still exists with finalizers: %v", name, out.Finalizers)
+		return resource.RetryableError(e)
+	})
+	if err != nil {
+		return err
+	}
+
 	log.Printf("[INFO] Persistent volume claim %s deleted", name)
 
 	d.SetId("")

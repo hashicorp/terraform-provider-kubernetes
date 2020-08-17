@@ -38,6 +38,33 @@ func TestAccKubernetesDefaultServiceAccount_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_default_service_account.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_default_service_account.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_default_service_account.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_default_service_account.test", "secret.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_default_service_account.test", "image_pull_secret.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDefaultServiceAccount_secrets(t *testing.T) {
+	var conf api.ServiceAccount
+	namespace := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_default_service_account.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesServiceAccountDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDefaultServiceAccountConfig_secrets(namespace),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceAccountExists("kubernetes_default_service_account.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_default_service_account.test", "metadata.0.name", "default"),
+					resource.TestCheckResourceAttrSet("kubernetes_default_service_account.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_default_service_account.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_default_service_account.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_default_service_account.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_default_service_account.test", "secret.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_default_service_account.test", "image_pull_secret.#", "2"),
 					testAccCheckServiceAccountImagePullSecrets(&conf, []*regexp.Regexp{
@@ -99,6 +126,22 @@ resource "kubernetes_default_service_account" "test" {
       TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
+	}
+}
+`, namespace)
+}
+
+func testAccKubernetesDefaultServiceAccountConfig_secrets(namespace string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_namespace" "test" {
+	metadata {
+		name = "%s"
+	}
+}
+
+resource "kubernetes_default_service_account" "test" {
+  metadata {
+		namespace = "${kubernetes_namespace.test.id}"
   }
 
   secret {

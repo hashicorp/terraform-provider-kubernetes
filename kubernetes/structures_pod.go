@@ -838,9 +838,7 @@ func expandEmptyDirVolumeSource(l []interface{}) *v1.EmptyDirVolumeSource {
 		Medium: v1.StorageMedium(in["medium"].(string)),
 	}
 
-	if v, ok := in["size_limit"].(int); ok {
-		obj.SizeLimit = resource.NewQuantity(int64(v), resource.DecimalExponent)
-	} else if v, ok := in["size_limit"].(string); ok {
+	if v, ok := in["size_limit"].(string); ok {
 		s, _ := resource.ParseQuantity(v)
 		obj.SizeLimit = &s
 	}

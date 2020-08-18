@@ -65,7 +65,6 @@ resource "kubernetes_ingress" "test" {
 		}
 	}
 }
-
 data "kubernetes_ingress" "test" {
 	metadata {
 		name = "${kubernetes_ingress.test.metadata.0.name}"

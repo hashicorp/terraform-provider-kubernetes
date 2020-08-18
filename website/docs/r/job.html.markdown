@@ -14,7 +14,7 @@ description: |-
 
   You can also use a Job to run multiple Pods in parallel.
 
-## Example Usage
+## Example Usage - No waiting
 
 ```hcl
 resource "kubernetes_job" "demo" {
@@ -38,12 +38,39 @@ resource "kubernetes_job" "demo" {
 }
 ```
 
+## Example Usage - waiting for job successful completion
+
+```hcl
+resource "kubernetes_job" "demo" {
+  metadata {
+    name = "demo"
+  }
+  spec {
+    template {
+      metadata {}
+      spec {
+        container {
+          name    = "pi"
+          image   = "perl"
+          command = ["perl", "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+        }
+        restart_policy = "Never"
+      }
+    }
+    backoff_limit = 4
+  }
+  wait_for_completion = true
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
 
 * `metadata` - (Required) Standard resource's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 * `spec` - (Required) Specification of the desired behavior of a job. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
+* `wait_for_completion` - 
+(Optional) If `true` blocks job `create` or `update` until the status of the job has a `Complete` or `Failed` condition.
 
 ## Nested Blocks
 
@@ -95,3 +122,15 @@ More info: http://kubernetes.io/docs/user-guide/labels
 These arguments are the same as the for the `spec` block of a Pod.
 
 Please see the [Pod resource](pod.html#spec-1) for reference.
+
+## Timeouts
+
+The following [Timeout](/docs/configuration/resources.html#operation-timeouts) configuration options are available for the `kubernetes_job` resource when used with `wait_for_completion = true`:
+
+* `create` - (Default `1 minute`) Used for creating a new job and waiting for a successful job completion.
+* `update - (Default `1 minute`) Used for updating an existing job and waiting for a successful job completion.
+
+Note: 
+- Kubernetes provider will treat update operations that change the Job spec resulting in the job re-run as "# forces replacement". 
+In such cases, the `create` timeout value is used for both Create and Update operations.
+- `wait_for_completion` is not applicable during Delete operations; thus, there is no "delete" timeout value for Delete operation. 

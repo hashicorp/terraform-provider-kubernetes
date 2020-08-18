@@ -42,7 +42,7 @@ on how to do so, specifically look at arguments `credentials` and `project`.
 Below is a graph of the all resources we're creating as part of this example
 which also demonstrates how they depend on each other.
 
-<img src="https://raw.githubusercontent.com/terraform-providers/terraform-provider-kubernetes/master/_examples/wordpress-mysql-gce-pv/graph.png">
+<img src="https://raw.githubusercontent.com/hashicorp/terraform-provider-kubernetes/master/_examples/wordpress-mysql-gce-pv/graph.png">
 
 ## How to
 

@@ -446,6 +446,95 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_storageClass(t *testing.
 	})
 }
 
+func TestAccKubernetesPersistentVolumeClaim_expansion(t *testing.T) {
+	var conf1, conf2 api.PersistentVolumeClaim
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_persistent_volume_claim.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesPersistentVolumeClaimDestroy,
+		Steps: []resource.TestStep{
+			{ // Minikube specific check -- initial create.
+				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageMinikube(name, "1Gi", "5Gi"),
+				SkipFunc: func() (bool, error) {
+					isInMinikube, err := isRunningInMinikube()
+					return !isInMinikube, err
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &conf1),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "1Gi"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.limits.storage", "5Gi"),
+				),
+			},
+			{ // Minikube specific check -- Update -- PVC is updated in-place when `resources.requests` is increased.
+				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageMinikube(name, "2Gi", "5Gi"),
+				SkipFunc: func() (bool, error) {
+					isInMinikube, err := isRunningInMinikube()
+					return !isInMinikube, err
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &conf2),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "2Gi"),
+					testAccCheckKubernetesPersistentVolumeClaimForceNew(&conf1, &conf2, false),
+				),
+			},
+			{ // Minikube specific check -- PVC is recreated when when `resources.limits` is increased.
+				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageMinikube(name, "2Gi", "6Gi"),
+				SkipFunc: func() (bool, error) {
+					isInMinikube, err := isRunningInMinikube()
+					return !isInMinikube, err
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &conf2),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.limits.storage", "6Gi"),
+					testAccCheckKubernetesPersistentVolumeClaimForceNew(&conf1, &conf2, true),
+				),
+			},
+			{ // Minikube specific check -- PVC is recreated when `resources.requests` is decreased.
+				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageMinikube(name, "1Gi", "6Gi"),
+				SkipFunc: func() (bool, error) {
+					isInMinikube, err := isRunningInMinikube()
+					return !isInMinikube, err
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &conf2),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "1Gi"),
+					testAccCheckKubernetesPersistentVolumeClaimForceNew(&conf1, &conf2, true),
+				),
+			},
+			{ // GKE specific check -- initial create.
+				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, "1Gi"),
+				SkipFunc: func() (bool, error) {
+					isInGke, err := isRunningInGke()
+					return !isInGke, err
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &conf1),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "1Gi"),
+				),
+			},
+			{ // GKE specific check -- Update -- storage is increased in place.
+				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, "2Gi"),
+				SkipFunc: func() (bool, error) {
+					isInGke, err := isRunningInGke()
+					return !isInGke, err
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &conf2),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "2Gi"),
+					testAccCheckKubernetesPersistentVolumeClaimForceNew(&conf1, &conf2, false),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesPersistentVolumeClaimDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
@@ -570,6 +659,105 @@ resource "kubernetes_persistent_volume_claim" "test" {
   wait_until_bound = false
 }
 `, name)
+}
+
+func testAccKubernetesPersistentVolumeClaimConfig_updateStorageMinikube(name, requests, limits string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_storage_class" "test" {
+  metadata {
+    name = "allow-expansion"
+  }
+  reclaim_policy = "Delete"
+  storage_provisioner = "k8s.io/minikube-hostpath"
+}
+resource "kubernetes_persistent_volume" "test" {
+  metadata {
+    name = "test"
+  }
+  spec {
+    capacity = {
+      storage = "5Gi"
+    }
+    access_modes = ["ReadWriteOnce"]
+    storage_class_name = kubernetes_storage_class.test.metadata.0.name
+    persistent_volume_reclaim_policy = "Recycle"
+    persistent_volume_source {
+      host_path {
+        path = "/tmp/minikubetest"
+        type = "DirectoryOrCreate"
+      }
+    }
+  }
+}
+resource "kubernetes_persistent_volume_claim" "test" {
+  wait_until_bound = true
+  metadata {
+    name = "%s"
+  }
+  spec {
+    access_modes = ["ReadWriteOnce"]
+    storage_class_name = kubernetes_storage_class.test.metadata.0.name
+    volume_name = kubernetes_persistent_volume.test.metadata.0.name
+    resources {
+      requests = {
+        storage = "%s"
+      }
+      limits = {
+        storage = "%s"
+      }
+    }
+  }
+}
+`, name, requests, limits)
+}
+
+func testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, requests string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_storage_class" "test" {
+  metadata {
+    name = "test"
+  }
+  allow_volume_expansion = true
+  storage_provisioner = "kubernetes.io/gce-pd"
+}
+resource "kubernetes_persistent_volume_claim" "test" {
+  wait_until_bound = true
+  metadata {
+    name = "%s"
+  }
+  spec {
+    access_modes = ["ReadWriteOnce"]
+    storage_class_name = kubernetes_storage_class.test.metadata.0.name
+    resources {
+      requests = {
+        storage = "%s"
+      }
+    }
+  }
+}
+resource "kubernetes_pod" "main" {
+  metadata {
+    name = "test"
+  }
+  spec {
+    container {
+      name = "default"
+      image = "alpine:latest"
+      command = ["sleep", "3600s"]
+      volume_mount {
+        mount_path = "/etc/test"
+        name = "pvc"
+      }
+    }
+    volume {
+      name = "pvc"
+      persistent_volume_claim {
+        claim_name = kubernetes_persistent_volume_claim.test.metadata.0.name
+      }
+    }
+  }
+}
+`, name, requests)
 }
 
 func testAccKubernetesPersistentVolumeClaimConfig_metaModified(name string) string {
@@ -987,4 +1175,19 @@ resource "kubernetes_persistent_volume_claim" "test" {
   }
 }
 `, className, className, claimName)
+}
+
+func testAccCheckKubernetesPersistentVolumeClaimForceNew(old, new *api.PersistentVolumeClaim, wantNew bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if wantNew {
+			if old.ObjectMeta.UID == new.ObjectMeta.UID {
+				return fmt.Errorf("Expecting new resource for persistent volume claim %s", old.ObjectMeta.UID)
+			}
+		} else {
+			if old.ObjectMeta.UID != new.ObjectMeta.UID {
+				return fmt.Errorf("Expecting persistent volume claim UIDs to be the same: expected %s got %s", old.ObjectMeta.UID, new.ObjectMeta.UID)
+			}
+		}
+		return nil
+	}
 }

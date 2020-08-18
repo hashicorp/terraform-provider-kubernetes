@@ -42,7 +42,7 @@ func webhookClientConfigFields() map[string]*schema.Schema {
 		},
 		"service": {
 			Type:        schema.TypeList,
-			Required:    true,
+			Optional:    true,
 			Description: apiDoc["service"],
 			MaxItems:    1,
 			Elem: &schema.Resource{

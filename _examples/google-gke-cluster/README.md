@@ -38,7 +38,7 @@ and name of the cluster.
 
 ```sh
 terraform apply \
-	-var 'kubernetes_version=1.6.7' \
+	-var 'kubernetes_version=1.16.8' \
 	-var 'cluster_name=terraform-example-cluster' \
 	-var 'region=us-west1' \
 	-var 'username=MySecretUsername' \
@@ -57,7 +57,7 @@ additional_zones = [
 ]
 cluster_name = terraform-example-cluster
 endpoint = 102.186.121.2
-node_version = 1.6.7
+node_version = 1.16.8
 primary_zone = us-west1-a
 ```
 

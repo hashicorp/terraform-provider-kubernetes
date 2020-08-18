@@ -190,10 +190,6 @@ func ptrToString(s string) *string {
 	return &s
 }
 
-func ptrToInt(i int) *int {
-	return &i
-}
-
 func ptrToBool(b bool) *bool {
 	return &b
 }
@@ -218,7 +214,7 @@ func base64EncodeStringMap(m map[string]interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
 	for k, v := range m {
 		value := v.(string)
-		result[k] = (base64.StdEncoding.EncodeToString([]byte(value)))
+		result[k] = base64.StdEncoding.EncodeToString([]byte(value))
 	}
 	return result
 }

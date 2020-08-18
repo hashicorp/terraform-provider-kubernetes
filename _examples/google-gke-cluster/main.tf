@@ -14,7 +14,7 @@ variable "cluster_name" {
 }
 
 variable "kubernetes_version" {
-  default = "1.10.11"
+  default = "1.16.8"
 }
 
 variable "username" {
@@ -25,13 +25,13 @@ variable "password" {
 
 resource "google_container_cluster" "primary" {
   name               = var.cluster_name
-  zone               = data.google_compute_zones.available.names[0]
+  location 	     = data.google_compute_zones.available.names[0]
   initial_node_count = 3
 
   min_master_version = var.kubernetes_version
   node_version       = var.kubernetes_version
 
-  additional_zones = [
+  node_locations = [
     data.google_compute_zones.available.names[1],
   ]
 

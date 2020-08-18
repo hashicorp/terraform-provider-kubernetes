@@ -137,22 +137,26 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"kubernetes_all_namespaces":  dataSourceKubernetesAllNamespaces(),
-			"kubernetes_config_map":      dataSourceKubernetesConfigMap(),
-			"kubernetes_ingress":         dataSourceKubernetesIngress(),
-			"kubernetes_namespace":       dataSourceKubernetesNamespace(),
-			"kubernetes_secret":          dataSourceKubernetesSecret(),
-			"kubernetes_service":         dataSourceKubernetesService(),
-			"kubernetes_service_account": dataSourceKubernetesServiceAccount(),
-			"kubernetes_storage_class":   dataSourceKubernetesStorageClass(),
+			"kubernetes_all_namespaces":          dataSourceKubernetesAllNamespaces(),
+			"kubernetes_config_map":              dataSourceKubernetesConfigMap(),
+			"kubernetes_ingress":                 dataSourceKubernetesIngress(),
+			"kubernetes_namespace":               dataSourceKubernetesNamespace(),
+			"kubernetes_secret":                  dataSourceKubernetesSecret(),
+			"kubernetes_service":                 dataSourceKubernetesService(),
+			"kubernetes_service_account":         dataSourceKubernetesServiceAccount(),
+			"kubernetes_storage_class":           dataSourceKubernetesStorageClass(),
+			"kubernetes_pod":                     dataSourceKubernetesPod(),
+			"kubernetes_persistent_volume_claim": dataSourceKubernetesPersistentVolumeClaim(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
 			"kubernetes_api_service":                      resourceKubernetesAPIService(),
+			"kubernetes_certificate_signing_request":      resourceKubernetesCertificateSigningRequest(),
 			"kubernetes_cluster_role":                     resourceKubernetesClusterRole(),
 			"kubernetes_cluster_role_binding":             resourceKubernetesClusterRoleBinding(),
 			"kubernetes_config_map":                       resourceKubernetesConfigMap(),
 			"kubernetes_cron_job":                         resourceKubernetesCronJob(),
+			"kubernetes_csi_driver":                       resourceKubernetesCSIDriver(),
 			"kubernetes_daemonset":                        resourceKubernetesDaemonSet(),
 			"kubernetes_default_service_account":          resourceKubernetesDefaultServiceAccount(),
 			"kubernetes_deployment":                       resourceKubernetesDeployment(),
@@ -167,6 +171,7 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_persistent_volume_claim":          resourceKubernetesPersistentVolumeClaim(),
 			"kubernetes_pod":                              resourceKubernetesPod(),
 			"kubernetes_pod_disruption_budget":            resourceKubernetesPodDisruptionBudget(),
+			"kubernetes_pod_security_policy":              resourceKubernetesPodSecurityPolicy(),
 			"kubernetes_priority_class":                   resourceKubernetesPriorityClass(),
 			"kubernetes_replication_controller":           resourceKubernetesReplicationController(),
 			"kubernetes_role_binding":                     resourceKubernetesRoleBinding(),
@@ -363,7 +368,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 	cfg, err := cc.ClientConfig()
 	if err != nil {
-		log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail.")
+		log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail: %v", err)
 		return nil, nil
 	}
 

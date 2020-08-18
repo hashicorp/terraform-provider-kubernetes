@@ -42,7 +42,11 @@ func TestAccKubernetesPod_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.0.value_from.0.secret_key_ref.0.name", secretName),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.0.value_from.0.secret_key_ref.0.key", "one"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.0.value_from.0.secret_key_ref.0.optional", "true"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.1.value_from.0.config_map_key_ref.0.name", configMapName),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.1.value_from.0.config_map_key_ref.0.key", "one"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.1.value_from.0.config_map_key_ref.0.optional", "true"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env_from.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env_from.0.config_map_ref.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env_from.0.config_map_ref.0.name", fmt.Sprintf("%s-from", configMapName)),
@@ -853,8 +857,9 @@ resource "kubernetes_pod" "test" {
 
         value_from {
           secret_key_ref {
-            name = "${kubernetes_secret.test.metadata.0.name}"
-            key  = "one"
+            name     = "${kubernetes_secret.test.metadata.0.name}"
+            key      = "one"
+            optional = true
           }
         }
       }
@@ -862,8 +867,9 @@ resource "kubernetes_pod" "test" {
         name = "EXPORTED_VARIBALE_FROM_CONFIG_MAP"
 				value_from {
 					config_map_key_ref {
-						name = "${kubernetes_config_map.test.metadata.0.name}"
-						key  = "one"
+						name     = "${kubernetes_config_map.test.metadata.0.name}"
+						key      = "one"
+						optional = true
 					}
 				}
 			}

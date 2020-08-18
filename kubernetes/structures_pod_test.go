@@ -149,3 +149,305 @@ func TestExpandTolerations(t *testing.T) {
 		}
 	}
 }
+
+func TestFlattenSecretVolumeSource(t *testing.T) {
+	cases := []struct {
+		Input          *v1.SecretVolumeSource
+		ExpectedOutput []interface{}
+	}{
+		{
+			&v1.SecretVolumeSource{
+				DefaultMode: ptrToInt32(0644),
+				SecretName:  "secret1",
+				Optional:    ptrToBool(true),
+				Items: []v1.KeyToPath{
+					{
+						Key:  "foo.txt",
+						Mode: ptrToInt32(0600),
+						Path: "etc/foo.txt",
+					},
+				},
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"default_mode": "0644",
+					"secret_name":  "secret1",
+					"optional":     true,
+					"items": []interface{}{
+						map[string]interface{}{
+							"key":  "foo.txt",
+							"mode": "0600",
+							"path": "etc/foo.txt",
+						},
+					},
+				},
+			},
+		},
+		{
+			&v1.SecretVolumeSource{
+				DefaultMode: ptrToInt32(0755),
+				SecretName:  "secret2",
+				Items: []v1.KeyToPath{
+					{
+						Key:  "bar.txt",
+						Path: "etc/bar.txt",
+					},
+				},
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"default_mode": "0755",
+					"secret_name":  "secret2",
+					"items": []interface{}{
+						map[string]interface{}{
+							"key":  "bar.txt",
+							"path": "etc/bar.txt",
+						},
+					},
+				},
+			},
+		},
+		{
+			&v1.SecretVolumeSource{},
+			[]interface{}{map[string]interface{}{}},
+		},
+	}
+
+	for _, tc := range cases {
+		output := flattenSecretVolumeSource(tc.Input)
+		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
+			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
+				tc.ExpectedOutput, output)
+		}
+	}
+}
+
+func TestExpandSecretVolumeSource(t *testing.T) {
+	cases := []struct {
+		Input          []interface{}
+		ExpectedOutput *v1.SecretVolumeSource
+	}{
+		{
+			[]interface{}{
+				map[string]interface{}{
+					"default_mode": "0644",
+					"secret_name":  "secret1",
+					"optional":     true,
+					"items": []interface{}{
+						map[string]interface{}{
+							"key":  "foo.txt",
+							"mode": "0600",
+							"path": "etc/foo.txt",
+						},
+					},
+				},
+			},
+			&v1.SecretVolumeSource{
+				DefaultMode: ptrToInt32(0644),
+				SecretName:  "secret1",
+				Optional:    ptrToBool(true),
+				Items: []v1.KeyToPath{
+					{
+						Key:  "foo.txt",
+						Mode: ptrToInt32(0600),
+						Path: "etc/foo.txt",
+					},
+				},
+			},
+		},
+		{
+			[]interface{}{
+				map[string]interface{}{
+					"default_mode": "0755",
+					"secret_name":  "secret2",
+					"items": []interface{}{
+						map[string]interface{}{
+							"key":  "bar.txt",
+							"path": "etc/bar.txt",
+						},
+					},
+				},
+			},
+			&v1.SecretVolumeSource{
+				DefaultMode: ptrToInt32(0755),
+				SecretName:  "secret2",
+				Items: []v1.KeyToPath{
+					{
+						Key:  "bar.txt",
+						Path: "etc/bar.txt",
+					},
+				},
+			},
+		},
+		{
+			[]interface{}{},
+			&v1.SecretVolumeSource{},
+		},
+	}
+
+	for _, tc := range cases {
+		output, err := expandSecretVolumeSource(tc.Input)
+		if err != nil {
+			t.Fatalf("Unexpected failure in expander.\nInput: %#v, error: %#v", tc.Input, err)
+		}
+		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
+			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
+				tc.ExpectedOutput, output)
+		}
+	}
+}
+
+func TestFlattenConfigMapVolumeSource(t *testing.T) {
+	cases := []struct {
+		Input          *v1.ConfigMapVolumeSource
+		ExpectedOutput []interface{}
+	}{
+		{
+			&v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: "configmap1",
+				},
+				DefaultMode: ptrToInt32(0644),
+				Optional:    ptrToBool(true),
+				Items: []v1.KeyToPath{
+					{
+						Key:  "foo.txt",
+						Mode: ptrToInt32(0600),
+						Path: "etc/foo.txt",
+					},
+				},
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"default_mode": "0644",
+					"name":         "configmap1",
+					"optional":     true,
+					"items": []interface{}{
+						map[string]interface{}{
+							"key":  "foo.txt",
+							"mode": "0600",
+							"path": "etc/foo.txt",
+						},
+					},
+				},
+			},
+		},
+		{
+			&v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: "configmap2",
+				},
+				DefaultMode: ptrToInt32(0755),
+				Items: []v1.KeyToPath{
+					{
+						Key:  "bar.txt",
+						Path: "etc/bar.txt",
+					},
+				},
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"default_mode": "0755",
+					"name":         "configmap2",
+					"items": []interface{}{
+						map[string]interface{}{
+							"key":  "bar.txt",
+							"path": "etc/bar.txt",
+						},
+					},
+				},
+			},
+		},
+		{
+			&v1.ConfigMapVolumeSource{},
+			[]interface{}{map[string]interface{}{"name": ""}},
+		},
+	}
+
+	for _, tc := range cases {
+		output := flattenConfigMapVolumeSource(tc.Input)
+		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
+			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
+				tc.ExpectedOutput, output)
+		}
+	}
+}
+
+func TestExpandConfigMapVolumeSource(t *testing.T) {
+	cases := []struct {
+		Input          []interface{}
+		ExpectedOutput *v1.ConfigMapVolumeSource
+	}{
+		{
+			[]interface{}{
+				map[string]interface{}{
+					"default_mode": "0644",
+					"name":         "configmap1",
+					"optional":     true,
+					"items": []interface{}{
+						map[string]interface{}{
+							"key":  "foo.txt",
+							"mode": "0600",
+							"path": "etc/foo.txt",
+						},
+					},
+				},
+			},
+			&v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: "configmap1",
+				},
+				DefaultMode: ptrToInt32(0644),
+				Optional:    ptrToBool(true),
+				Items: []v1.KeyToPath{
+					{
+						Key:  "foo.txt",
+						Mode: ptrToInt32(0600),
+						Path: "etc/foo.txt",
+					},
+				},
+			},
+		},
+		{
+			[]interface{}{
+				map[string]interface{}{
+					"default_mode": "0755",
+					"name":         "configmap2",
+					"items": []interface{}{
+						map[string]interface{}{
+							"key":  "bar.txt",
+							"path": "etc/bar.txt",
+						},
+					},
+				},
+			},
+			&v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: "configmap2",
+				},
+				DefaultMode: ptrToInt32(0755),
+				Items: []v1.KeyToPath{
+					{
+						Key:  "bar.txt",
+						Path: "etc/bar.txt",
+					},
+				},
+			},
+		},
+		{
+			[]interface{}{},
+			&v1.ConfigMapVolumeSource{},
+		},
+	}
+
+	for _, tc := range cases {
+		output, err := expandConfigMapVolumeSource(tc.Input)
+		if err != nil {
+			t.Fatalf("Unexpected failure in expander.\nInput: %#v, error: %#v", tc.Input, err)
+		}
+		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
+			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
+				tc.ExpectedOutput, output)
+		}
+	}
+}

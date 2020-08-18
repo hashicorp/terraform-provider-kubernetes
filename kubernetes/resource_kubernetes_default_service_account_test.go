@@ -4,10 +4,14 @@ import (
 	"fmt"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesDefaultServiceAccount_basic(t *testing.T) {
@@ -93,6 +97,7 @@ func TestAccKubernetesDefaultServiceAccount_importBasic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDefaultServiceAccountConfig_basic(namespace),
+				Check:  testAccWaitKubernetesServiceAccountExists("kubernetes_default_service_account.test"),
 			},
 			{
 				ResourceName:            resourceName,
@@ -189,4 +194,36 @@ resource "kubernetes_secret" "four" {
   }
 }
 `, namespace)
+}
+
+func testAccWaitKubernetesServiceAccountExists(n string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("Not found: %s", n)
+		}
+
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
+
+		namespace, name, err := idParts(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+
+		return resource.Retry(time.Minute, func() *resource.RetryError {
+			_, err := conn.CoreV1().ServiceAccounts(namespace).Get(name, metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					return resource.RetryableError(err)
+				}
+
+				return resource.NonRetryableError(err)
+			}
+
+			return nil
+		})
+	}
 }

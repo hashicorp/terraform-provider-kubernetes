@@ -1,6 +1,9 @@
 package kubernetes
 
 import (
+	"errors"
+	"net/url"
+
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 )
@@ -53,6 +56,30 @@ func webhookClientConfigFields() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: apiDoc["url"],
 			Optional:    true,
+			ValidateFunc: func(v interface{}, k string) ([]string, []error) {
+				url, err := url.Parse(v.(string))
+				if err != nil {
+					return nil, []error{err}
+				}
+
+				if url.Scheme != "https" {
+					return nil, []error{errors.New("url: scheme must be https")}
+				}
+
+				if url.Host == "" {
+					return nil, []error{errors.New("url: host must be provided")}
+				}
+
+				if url.User != nil {
+					return nil, []error{errors.New("url: user info is not permitted")}
+				}
+
+				if url.Fragment != "" || url.RawQuery != "" {
+					return nil, []error{errors.New("url: fragments and query parameters are not permitted")}
+				}
+
+				return nil, nil
+			},
 		},
 	}
 }

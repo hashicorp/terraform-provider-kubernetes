@@ -62,23 +62,25 @@ func webhookClientConfigFields() map[string]*schema.Schema {
 					return nil, []error{err}
 				}
 
+				errs := []error{}
+
 				if u.Scheme != "https" {
-					return nil, []error{errors.New("url: scheme must be https")}
+					errs = append(errs, errors.New("url: scheme must be https"))
 				}
 
 				if u.Host == "" {
-					return nil, []error{errors.New("url: host must be provided")}
+					errs = append(errs, errors.New("url: host must be provided"))
 				}
 
 				if u.User != nil {
-					return nil, []error{errors.New("url: user info is not permitted")}
+					errs = append(errs, errors.New("url: user info is not permitted"))
 				}
 
 				if u.Fragment != "" || u.RawQuery != "" {
-					return nil, []error{errors.New("url: fragments and query parameters are not permitted")}
+					errs = append(errs, errors.New("url: fragments and query parameters are not permitted"))
 				}
 
-				return nil, nil
+				return nil, errs
 			},
 		},
 	}

@@ -772,6 +772,12 @@ The `items` block supports the following:
 * `run_as_non_root` - (Optional) Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does. If unset or false, no such validation will be performed. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 * `run_as_user` - (Optional) The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 * `se_linux_options` - (Optional) The SELinux context to be applied to the container. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
+* `sysctl` - (Optional) holds a list of namespaced sysctls used for the pod. see [Sysctl](#sysctl) block. See [offical docs](https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/) for more details.
+
+##### Sysctl
+
+* `name` - (Required) Name of a property to set.
+* `value` - (Required) Value of a property to set.
 
 ### `capabilities`
 

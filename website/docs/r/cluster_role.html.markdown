@@ -56,7 +56,7 @@ The following arguments are supported:
 
 * `metadata` - (Required) Standard kubernetes metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 * `rule` - (Optional) The PolicyRoles for this ClusterRole. For more info see [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#role-and-clusterrole)
-* `aggregation_rule` - (Optional) Describes how to build the Rules for this ClusterRole. If AggregationRule is set, then the Rules are controller managed and direct changes to Rules will be stomped by the controller.
+* `aggregation_rule` - (Optional) Describes how to build the Rules for this ClusterRole. If AggregationRule is set, then the Rules are controller managed and direct changes to Rules will be overwritten by the controller.
 . For more info see [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles) 
 
 ## Nested Blocks

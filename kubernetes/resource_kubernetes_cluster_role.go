@@ -27,10 +27,29 @@ func resourceKubernetesClusterRole() *schema.Resource {
 			"rule": {
 				Type:        schema.TypeList,
 				Description: "List of PolicyRules for this ClusterRole",
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
 				MinItems:    1,
 				Elem: &schema.Resource{
 					Schema: policyRuleSchema(),
+				},
+			},
+			"aggregation_rule": {
+				Type:        schema.TypeList,
+				Description: "Describes how to build the Rules for this ClusterRole.",
+				Optional:    true,
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"cluster_role_selectors": {
+							Type:        schema.TypeList,
+							Description: "A list of selectors which will be used to find ClusterRoles and create the rules.",
+							Optional:    true,
+							Elem: &schema.Resource{
+								Schema: labelSelectorFields(true),
+							},
+						},
+					},
 				},
 			},
 		},
@@ -48,6 +67,11 @@ func resourceKubernetesClusterRoleCreate(d *schema.ResourceData, meta interface{
 		ObjectMeta: metadata,
 		Rules:      expandClusterRoleRules(d.Get("rule").([]interface{})),
 	}
+
+	if v, ok := d.GetOk("aggregation_rule"); ok {
+		cRole.AggregationRule = expandClusterRoleAggregationRule(v.([]interface{}))
+	}
+
 	log.Printf("[INFO] Creating new cluster role: %#v", cRole)
 	out, err := conn.RbacV1().ClusterRoles().Create(&cRole)
 	if err != nil {
@@ -69,6 +93,10 @@ func resourceKubernetesClusterRoleUpdate(d *schema.ResourceData, meta interface{
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("rule") {
 		diffOps := patchRbacRule(d)
+		ops = append(ops, diffOps...)
+	}
+	if d.HasChange("aggregation_rule") {
+		diffOps := patchRbacAggregationRule(d)
 		ops = append(ops, diffOps...)
 	}
 	data, err := ops.MarshalJSON()
@@ -108,8 +136,16 @@ func resourceKubernetesClusterRoleRead(d *schema.ResourceData, meta interface{})
 	if err != nil {
 		return err
 	}
-	d.Set("rule", flattenClusterRoleRules(cRole.Rules))
-
+	err = d.Set("rule", flattenClusterRoleRules(cRole.Rules))
+	if err != nil {
+		return err
+	}
+	if cRole.AggregationRule != nil {
+		err = d.Set("aggregation_rule", flattenClusterRoleAggregationRule(cRole.AggregationRule))
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

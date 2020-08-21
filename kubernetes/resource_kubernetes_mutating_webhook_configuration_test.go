@@ -72,10 +72,8 @@ func TestAccKubernetesMutatingWebhookConfiguration_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.admission_review_versions.0", "v1"),
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.admission_review_versions.1", "v1beta1"),
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.service.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.service.0.name", "example-service"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.service.0.namespace", "example-namespace"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.service.0.port", "443"),
+					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.service.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.url", "https://test"),
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.failure_policy", "Ignore"),
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.match_policy", "Exact"),
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.name", name),
@@ -254,12 +252,7 @@ resource "kubernetes_mutating_webhook_configuration" "test" {
 		]
 
 		client_config {
-			service {
-				namespace = "example-namespace"
-				name = "example-service"
-			}
-
-			ca_bundle = "test"
+			url = "https://test"
 		}
 
 		rule {

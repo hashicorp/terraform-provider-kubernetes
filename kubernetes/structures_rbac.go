@@ -81,7 +81,7 @@ func expandClusterRoleRules(in []interface{}) []api.PolicyRule {
 }
 
 func expandClusterRoleAggregationRule(in []interface{}) *api.AggregationRule {
-	if len(in) == 0 || in[0] == nil {
+	if len(in) == 0 || in[0] == "" {
 		return &api.AggregationRule{}
 	}
 	ref := &api.AggregationRule{}

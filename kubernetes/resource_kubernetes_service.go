@@ -107,6 +107,7 @@ func resourceKubernetesService() *schema.Resource {
 										ValidateFunc: validation.StringInSlice([]string{
 											"TCP",
 											"UDP",
+											"SCTP",
 										}, false),
 									},
 									"target_port": {

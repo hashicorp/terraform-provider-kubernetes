@@ -17,6 +17,7 @@ import (
 func TestAccKubernetesNamespace_basic(t *testing.T) {
 	var conf api.Namespace
 	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_namespace.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -27,7 +28,7 @@ func TestAccKubernetesNamespace_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesNamespaceConfig_basic(nsName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesNamespaceExists("kubernetes_namespace.test", &conf),
+					testAccCheckKubernetesNamespaceExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.annotations.%", "0"),
 					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.labels.%", "0"),
 					resource.TestCheckResourceAttr("kubernetes_namespace.test", "metadata.0.name", nsName),
@@ -36,6 +37,12 @@ func TestAccKubernetesNamespace_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.uid"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesNamespaceConfig_addAnnotations(nsName),
@@ -111,32 +118,10 @@ func TestAccKubernetesNamespace_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesNamespace_importBasic(t *testing.T) {
-	resourceName := "kubernetes_namespace.test"
-	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesNamespaceDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesNamespaceConfig_basic(nsName),
-			},
-
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
-			},
-		},
-	})
-}
-
 func TestAccKubernetesNamespace_generatedName(t *testing.T) {
 	var conf api.Namespace
 	prefix := "tf-acc-test-gen-"
+	resourceName := "kubernetes_namespace.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -159,6 +144,12 @@ func TestAccKubernetesNamespace_generatedName(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.uid"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})
@@ -198,29 +189,6 @@ func TestAccKubernetesNamespace_withSpecialCharacters(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_namespace.test", "metadata.0.uid"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesNamespace_importGeneratedName(t *testing.T) {
-	resourceName := "kubernetes_namespace.test"
-	prefix := "tf-acc-test-gen-import-"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesNamespaceDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesNamespaceConfig_generatedName(prefix),
-			},
-
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})

@@ -15,6 +15,7 @@ import (
 
 func TestAccKubernetesMutatingWebhookConfiguration_basic(t *testing.T) {
 	name := fmt.Sprintf("acc-test-%v.terraform.io", acctest.RandString(10))
+	resourceName := "kubernetes_mutating_webhook_configuration.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -25,7 +26,7 @@ func TestAccKubernetesMutatingWebhookConfiguration_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesMutatingWebhookConfigurationConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesMutatingWebhookConfigurationExists("kubernetes_mutating_webhook_configuration.test"),
+					testAccCheckKubernetesMutatingWebhookConfigurationExists(resourceName),
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_mutating_webhook_configuration.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_mutating_webhook_configuration.test", "metadata.0.resource_version"),
@@ -59,6 +60,11 @@ func TestAccKubernetesMutatingWebhookConfiguration_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.side_effects", "None"),
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.timeout_seconds", "10"),
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			{
 				Config: testAccKubernetesMutatingWebhookConfigurationConfig_modified(name),
@@ -103,27 +109,6 @@ func TestAccKubernetesMutatingWebhookConfiguration_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.side_effects", "NoneOnDryRun"),
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.timeout_seconds", "5"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesMutatingWebhookConfiguration_importBasic(t *testing.T) {
-	resourceName := "kubernetes_mutating_webhook_configuration.test"
-	name := fmt.Sprintf("acc-test-%v.terraform.io", acctest.RandString(10))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesMutatingWebhookConfigurationDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesMutatingWebhookConfigurationConfig_basic(name),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
 			},
 		},
 	})

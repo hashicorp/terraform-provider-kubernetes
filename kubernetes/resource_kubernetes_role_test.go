@@ -16,84 +16,68 @@ import (
 func TestAccKubernetesRole_basic(t *testing.T) {
 	var conf api.Role
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_role.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_role.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesRoleConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesRoleExists("kubernetes_role.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_role.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_role.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_role.test", "metadata.0.self_link"),
-					resource.TestCheckResourceAttrSet("kubernetes_role.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.api_groups.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.api_groups.1804436815", "core"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.resources.3245178296", "pods"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.verbs.#", "3"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.verbs.4248514160", "get"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.verbs.1154021400", "list"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.verbs.1342917158", "watch"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.resource_names.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.resource_names.2356372769", "foo"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.1.api_groups.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.1.api_groups.270302810", "apps"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.1.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.1.resources.926696405", "deployments"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.1.verbs.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.1.verbs.4248514160", "get"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.1.verbs.1154021400", "list"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.1.resource_names.#", "0"),
+					testAccCheckKubernetesRoleExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "rule.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.api_groups.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.api_groups.1804436815", "core"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.3245178296", "pods"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.4248514160", "get"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.1154021400", "list"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.1342917158", "watch"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resource_names.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resource_names.2356372769", "foo"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.api_groups.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.api_groups.270302810", "apps"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.resources.926696405", "deployments"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.verbs.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.verbs.4248514160", "get"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.verbs.1154021400", "list"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.resource_names.#", "0"),
 				),
 			},
-			{
-				Config: testAccKubernetesRoleConfig_modified(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesRoleExists("kubernetes_role.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_role.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_role.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_role.test", "metadata.0.self_link"),
-					resource.TestCheckResourceAttrSet("kubernetes_role.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.api_groups.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.api_groups.4161491668", "batch"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.resources.2828234181", "jobs"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.verbs.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.verbs.1342917158", "watch"),
-					resource.TestCheckResourceAttr("kubernetes_role.test", "rule.0.resource_names.#", "0"),
-				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesRole_importBasic(t *testing.T) {
-	resourceName := "kubernetes_role.test"
-	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesRoleDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesRoleConfig_basic(name),
-			},
-
 			{
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
+				Config: testAccKubernetesRoleConfig_modified(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesRoleExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "rule.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.api_groups.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.api_groups.4161491668", "batch"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.2828234181", "jobs"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.1342917158", "watch"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resource_names.#", "0"),
+				),
 			},
 		},
 	})
@@ -129,7 +113,7 @@ func TestAccKubernetesRole_generatedName(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesRoleBug(t *testing.T) {
+func TestAccKubernetesRole_Bug(t *testing.T) {
 	var conf api.Role
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.Test(t, resource.TestCase{

@@ -35,25 +35,6 @@ func TestAccKubernetesCSIDriver_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_lifecycle_modes.0", "Ephemeral"),
 				),
 			},
-		},
-	})
-}
-
-func TestAccKubernetesCSIDriver_importBasic(t *testing.T) {
-	skipIfClusterVersionLessThan(t, "1.16.0")
-
-	resourceName := "kubernetes_csi_driver.test"
-	name := acctest.RandomWithPrefix("tf-acc-test")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: resourceName,
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesCSIDriverDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesCSIDriverBasicConfig(name, true),
-			},
 			{
 				ResourceName:      resourceName,
 				ImportState:       true,

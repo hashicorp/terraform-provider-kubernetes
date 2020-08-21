@@ -17,6 +17,7 @@ import (
 func TestAccKubernetesConfigMap_basic(t *testing.T) {
 	var conf api.ConfigMap
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_config_map.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -44,6 +45,12 @@ func TestAccKubernetesConfigMap_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.%", "0"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesConfigMapConfig_basic(name),
@@ -114,29 +121,6 @@ func TestAccKubernetesConfigMap_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesConfigMap_importBasic(t *testing.T) {
-	resourceName := "kubernetes_config_map.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesConfigMapDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesConfigMapConfig_basic(name),
-			},
-
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
-			},
-		},
-	})
-}
-
 func TestAccKubernetesConfigMap_binaryData(t *testing.T) {
 	var conf api.ConfigMap
 	prefix := "tf-acc-test-gen-"
@@ -173,17 +157,18 @@ func TestAccKubernetesConfigMap_binaryData(t *testing.T) {
 func TestAccKubernetesConfigMap_generatedName(t *testing.T) {
 	var conf api.ConfigMap
 	prefix := "tf-acc-test-gen-"
+	resourceName := "kubernetes_config_map.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_config_map.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesConfigMapDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesConfigMapConfig_generatedName(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists("kubernetes_config_map.test", &conf),
+					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.annotations.%", "0"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.labels.%", "0"),
@@ -196,23 +181,6 @@ func TestAccKubernetesConfigMap_generatedName(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.uid"),
 				),
 			},
-		},
-	})
-}
-
-func TestAccKubernetesConfigMap_importGeneratedName(t *testing.T) {
-	resourceName := "kubernetes_config_map.test"
-	prefix := "tf-acc-test-gen-import-"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesConfigMapDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesConfigMapConfig_generatedName(prefix),
-			},
-
 			{
 				ResourceName:      resourceName,
 				ImportState:       true,

@@ -15,6 +15,7 @@ import (
 func TestAccKubernetesHorizontalPodAutoscaler_basic(t *testing.T) {
 	var conf api.HorizontalPodAutoscaler
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_horizontal_pod_autoscaler.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -25,7 +26,7 @@ func TestAccKubernetesHorizontalPodAutoscaler_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesHorizontalPodAutoscalerConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesHorizontalPodAutoscalerExists("kubernetes_horizontal_pod_autoscaler.test", &conf),
+					testAccCheckKubernetesHorizontalPodAutoscalerExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
@@ -46,6 +47,11 @@ func TestAccKubernetesHorizontalPodAutoscaler_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.scale_target_ref.0.kind", "ReplicationController"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.scale_target_ref.0.name", "TerraformAccTest"),
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			{
 				Config: testAccKubernetesHorizontalPodAutoscalerConfig_metaModified(name),
@@ -128,27 +134,6 @@ func TestAccKubernetesHorizontalPodAutoscaler_generatedName(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.scale_target_ref.0.kind", "ReplicationController"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.scale_target_ref.0.name", "TerraformAccTestGeneratedName"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesHorizontalPodAutoscaler_importBasic(t *testing.T) {
-	resourceName := "kubernetes_horizontal_pod_autoscaler.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesHorizontalPodAutoscalerConfig_basic(name),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
 			},
 		},
 	})

@@ -63,6 +63,7 @@ func TestAccKubernetesDeployment_basic(t *testing.T) {
 func TestAccKubernetesDeployment_initContainer(t *testing.T) {
 	var conf appsv1.Deployment
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := deploymentTestResourceName
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -73,7 +74,7 @@ func TestAccKubernetesDeployment_initContainer(t *testing.T) {
 			{
 				Config: testAccKubernetesDeploymentConfig_initContainer(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
+					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.init_container.0.image", "busybox"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.init_container.0.name", "install"),
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.init_container.0.command.0", "wget"),
@@ -97,22 +98,6 @@ func TestAccKubernetesDeployment_initContainer(t *testing.T) {
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.dns_policy", "Default"),
 				),
 			},
-		},
-	})
-}
-
-func TestAccKubernetesDeployment_importBasic(t *testing.T) {
-	resourceName := deploymentTestResourceName
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesDeploymentConfig_basic(name),
-			},
 			{
 				ResourceName:            resourceName,
 				ImportState:             true,
@@ -126,6 +111,7 @@ func TestAccKubernetesDeployment_importBasic(t *testing.T) {
 func TestAccKubernetesDeployment_generatedName(t *testing.T) {
 	var conf appsv1.Deployment
 	prefix := "tf-acc-test-gen-"
+	resourceName := deploymentTestResourceName
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -148,22 +134,6 @@ func TestAccKubernetesDeployment_generatedName(t *testing.T) {
 					resource.TestCheckResourceAttrSet(deploymentTestResourceName, "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet(deploymentTestResourceName, "metadata.0.uid"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesDeployment_importGeneratedName(t *testing.T) {
-	resourceName := deploymentTestResourceName
-	prefix := "tf-acc-test-gen-import-"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesDeploymentConfig_generatedName(prefix),
 			},
 			{
 				ResourceName:            resourceName,

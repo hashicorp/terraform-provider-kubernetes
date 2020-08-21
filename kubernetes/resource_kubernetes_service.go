@@ -104,6 +104,11 @@ func resourceKubernetesService() *schema.Resource {
 										Description: "The IP protocol for this port. Supports `TCP` and `UDP`. Default is `TCP`.",
 										Optional:    true,
 										Default:     "TCP",
+										ValidateFunc: validation.StringInSlice([]string{
+											"TCP",
+											"UDP",
+											"SCTP",
+										}, false),
 									},
 									"target_port": {
 										Type:        schema.TypeString,
@@ -130,12 +135,28 @@ func resourceKubernetesService() *schema.Resource {
 							Description: "Used to maintain session affinity. Supports `ClientIP` and `None`. Defaults to `None`. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",
 							Optional:    true,
 							Default:     "None",
+							ValidateFunc: validation.StringInSlice([]string{
+								"ClientIP",
+								"None",
+							}, false),
 						},
 						"type": {
 							Type:        schema.TypeString,
 							Description: "Determines how the service is exposed. Defaults to `ClusterIP`. Valid options are `ExternalName`, `ClusterIP`, `NodePort`, and `LoadBalancer`. `ExternalName` maps to the specified `external_name`. More info: http://kubernetes.io/docs/user-guide/services#overview",
 							Optional:    true,
 							Default:     "ClusterIP",
+							ValidateFunc: validation.StringInSlice([]string{
+								"ClusterIP",
+								"ExternalName",
+								"NodePort",
+								"LoadBalancer",
+							}, false),
+						},
+						"health_check_node_port": {
+							Type:        schema.TypeInt,
+							Description: "Specifies the Healthcheck NodePort for the service. Only effects when type is set to `LoadBalancer` and external_traffic_policy is set to `Local`.",
+							Optional:    true,
+							Computed:    true,
 						},
 					},
 				},

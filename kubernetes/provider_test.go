@@ -265,6 +265,16 @@ func skipIfNotRunningInGke(t *testing.T) {
 	}
 }
 
+func skipIfNotRunningInEks(t *testing.T) {
+	isInEks, err := isRunningInEks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !isInEks {
+		t.Skip("The Kubernetes endpoint must come from GKE for this test to run - skipping")
+	}
+}
+
 func skipIfUnsupportedSecurityContextRunAsGroup(t *testing.T) {
 	skipIfClusterVersionLessThan(t, "1.14.0")
 }

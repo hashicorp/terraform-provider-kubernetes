@@ -111,7 +111,7 @@ func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 	zone := os.Getenv("AWS_ZONE")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t); skipIfNoAwsSettingsFound(t) },
+		PreCheck:      func() { testAccPreCheck(t); skipIfNotRunningInEks(t) },
 		IDRefreshName: "kubernetes_persistent_volume.test",
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,

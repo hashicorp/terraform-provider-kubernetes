@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -919,6 +920,7 @@ func testAccCheckKubernetesDeploymentDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_deployment" {
@@ -930,7 +932,7 @@ func testAccCheckKubernetesDeploymentDestroy(s *terraform.State) error {
 			return err
 		}
 
-		resp, err := conn.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+		resp, err := conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("Deployment still exists: %s", rs.Primary.ID)
@@ -951,13 +953,14 @@ func getDeploymentFromResourceName(s *terraform.State, n string) (*appsv1.Deploy
 	if err != nil {
 		return nil, err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(rs.Primary.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	out, err := conn.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+	out, err := conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

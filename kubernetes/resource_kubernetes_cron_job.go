@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -47,6 +48,7 @@ func resourceKubernetesCronJobCreate(d *schema.ResourceData, meta interface{}) e
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandCronJobSpec(d.Get("spec").([]interface{}))
@@ -61,7 +63,7 @@ func resourceKubernetesCronJobCreate(d *schema.ResourceData, meta interface{}) e
 
 	log.Printf("[INFO] Creating new cron job: %#v", job)
 
-	out, err := conn.BatchV1beta1().CronJobs(metadata.Namespace).Create(&job)
+	out, err := conn.BatchV1beta1().CronJobs(metadata.Namespace).Create(ctx, &job, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -77,6 +79,7 @@ func resourceKubernetesCronJobUpdate(d *schema.ResourceData, meta interface{}) e
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, _, err := idParts(d.Id())
 	if err != nil {
@@ -97,7 +100,7 @@ func resourceKubernetesCronJobUpdate(d *schema.ResourceData, meta interface{}) e
 
 	log.Printf("[INFO] Updating cron job %s: %s", d.Id(), cronjob)
 
-	out, err := conn.BatchV1beta1().CronJobs(namespace).Update(cronjob)
+	out, err := conn.BatchV1beta1().CronJobs(namespace).Update(ctx, cronjob, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -112,6 +115,7 @@ func resourceKubernetesCronJobRead(d *schema.ResourceData, meta interface{}) err
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -119,7 +123,7 @@ func resourceKubernetesCronJobRead(d *schema.ResourceData, meta interface{}) err
 	}
 
 	log.Printf("[INFO] Reading cron job %s", name)
-	job, err := conn.BatchV1beta1().CronJobs(namespace).Get(name, metav1.GetOptions{})
+	job, err := conn.BatchV1beta1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -171,6 +175,7 @@ func resourceKubernetesCronJobDelete(d *schema.ResourceData, meta interface{}) e
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -178,13 +183,13 @@ func resourceKubernetesCronJobDelete(d *schema.ResourceData, meta interface{}) e
 	}
 
 	log.Printf("[INFO] Deleting cron job: %#v", name)
-	err = conn.BatchV1beta1().CronJobs(namespace).Delete(name, nil)
+	err = conn.BatchV1beta1().CronJobs(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
 
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
-		_, err := conn.BatchV1beta1().CronJobs(namespace).Get(name, metav1.GetOptions{})
+		_, err := conn.BatchV1beta1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 				return nil
@@ -210,6 +215,7 @@ func resourceKubernetesCronJobExists(d *schema.ResourceData, meta interface{}) (
 	if err != nil {
 		return false, err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -217,7 +223,7 @@ func resourceKubernetesCronJobExists(d *schema.ResourceData, meta interface{}) (
 	}
 
 	log.Printf("[INFO] Checking cron job %s", name)
-	_, err = conn.BatchV1beta1().CronJobs(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.BatchV1beta1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

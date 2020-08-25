@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -777,9 +778,10 @@ func waitForPersistenceVolumeDeleted(pvName string, poll, timeout time.Duration)
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(poll) {
-		_, err := conn.CoreV1().PersistentVolumes().Get(pvName, meta_v1.GetOptions{})
+		_, err := conn.CoreV1().PersistentVolumes().Get(ctx, pvName, meta_v1.GetOptions{})
 		if err != nil && apierrs.IsNotFound(err) {
 			return nil
 		}
@@ -792,6 +794,7 @@ func testAccCheckKubernetesPersistentVolumeDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	timeout := 5 * time.Second
 	poll := 1 * time.Second
@@ -801,7 +804,7 @@ func testAccCheckKubernetesPersistentVolumeDestroy(s *terraform.State) error {
 			continue
 		}
 		name := rs.Primary.ID
-		resp, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
+		resp, err := conn.CoreV1().PersistentVolumes().Get(ctx, name, meta_v1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return waitForPersistenceVolumeDeleted(name, poll, timeout)
@@ -823,9 +826,9 @@ func testAccCheckKubernetesPersistentVolumeExists(n string, obj *api.PersistentV
 		if err != nil {
 			return err
 		}
-
+		ctx := context.TODO()
 		name := rs.Primary.ID
-		out, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
+		out, err := conn.CoreV1().PersistentVolumes().Get(ctx, name, meta_v1.GetOptions{})
 		if err != nil {
 			return err
 		}

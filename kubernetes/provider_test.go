@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -8,11 +9,11 @@ import (
 	"testing"
 
 	gversion "github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-provider-google/google"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
-	"github.com/terraform-providers/terraform-provider-google/google"
+	"github.com/terraform-providers/terraform-provider-azurerm/azurerm"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -26,6 +27,7 @@ func init() {
 		"kubernetes": testAccProvider,
 		"google":     google.Provider(),
 		"aws":        aws.Provider(),
+		"azure":      azurerm.Provider(),
 	}
 }
 
@@ -317,8 +319,9 @@ func getFirstNode() (api.Node, error) {
 	if err != nil {
 		return api.Node{}, err
 	}
+	ctx := context.TODO()
 
-	resp, err := conn.CoreV1().Nodes().List(metav1.ListOptions{})
+	resp, err := conn.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return api.Node{}, err
 	}
@@ -344,16 +347,6 @@ func clusterVersionLessThan(vs string) bool {
 	}
 
 	return cv.LessThan(v)
-}
-
-func skipCheckIf(skip func() (bool, string), check resource.TestCheckFunc) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if s, reason := skip(); s {
-			fmt.Println("Skipping check:", reason)
-			return nil
-		}
-		return check(s)
-	}
 }
 
 type currentEnv struct {

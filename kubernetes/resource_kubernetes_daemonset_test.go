@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/apps/v1"
 	appsv1 "k8s.io/api/apps/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesDaemonSet_minimal(t *testing.T) {
@@ -270,6 +271,7 @@ func testAccCheckKubernetesDaemonSetDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_daemonset" {
@@ -281,7 +283,7 @@ func testAccCheckKubernetesDaemonSetDestroy(s *terraform.State) error {
 			return err
 		}
 
-		resp, err := conn.AppsV1().DaemonSets(namespace).Get(name, meta_v1.GetOptions{})
+		resp, err := conn.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("DaemonSet still exists: %s", rs.Primary.ID)
@@ -303,12 +305,13 @@ func testAccCheckKubernetesDaemonSetExists(n string, obj *appsv1.DaemonSet) reso
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
-		out, err := conn.AppsV1().DaemonSets(namespace).Get(name, meta_v1.GetOptions{})
+		out, err := conn.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

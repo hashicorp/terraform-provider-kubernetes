@@ -39,7 +39,9 @@ To start working with this package, create a client:
         // TODO: Handle error.
     }
 
-The client will use your default application credentials.
+The client will use your default application credentials. Clients should be
+reused instead of created as needed. The methods of Client are safe for
+concurrent use by multiple goroutines.
 
 If you only wish to access public data, you can create
 an unauthenticated client with
@@ -117,6 +119,33 @@ Objects also have attributes, which you can fetch with Attrs:
     fmt.Printf("object %s has size %d and can be read using %s\n",
         objAttrs.Name, objAttrs.Size, objAttrs.MediaLink)
 
+Listing objects
+
+Listing objects in a bucket is done with the Bucket.Objects method:
+
+    query := &storage.Query{Prefix: ""}
+
+    var names []string
+    it := bkt.Objects(ctx, query)
+    for {
+        attrs, err := it.Next()
+        if err == iterator.Done {
+            break
+        }
+        if err != nil {
+            log.Fatal(err)
+        }
+        names = append(names, attrs.Name)
+    }
+
+If only a subset of object attributes is needed when listing, specifying this
+subset using Query.SetAttrSelection may speed up the listing process:
+
+    query := &storage.Query{Prefix: ""}
+    query.SetAttrSelection([]string{"Name"})
+
+    // ... as before
+
 ACLs
 
 Both objects and buckets have ACLs (Access Control Lists). An ACL is a list of
@@ -163,6 +192,21 @@ SignedURL for details.
         // TODO: Handle error.
     }
     fmt.Println(url)
+
+Post Policy V4 Signed Request
+
+A type of signed request that allows uploads through HTML forms directly to Cloud Storage with
+temporary permission. Conditions can be applied to restrict how the HTML form is used and exercised
+by a user.
+
+For more information, please see https://cloud.google.com/storage/docs/xml-api/post-object as well
+as the documentation of GenerateSignedPostPolicyV4.
+
+    pv4, err := storage.GenerateSignedPostPolicyV4(bucketName, objectName, opts)
+    if err != nil {
+        // TODO: Handle error.
+    }
+    fmt.Printf("URL: %s\nFields; %v\n", pv4.URL, pv4.Fields)
 
 Errors
 

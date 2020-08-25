@@ -21,17 +21,17 @@ func camelCase(s string, upper bool) string {
 	s = strings.TrimSpace(s)
 	buffer := make([]rune, 0, len(s))
 
-	var prev rune
-	for _, curr := range s {
+	stringIter(s, func(prev, curr, next rune) {
 		if !isDelimiter(curr) {
 			if isDelimiter(prev) || (upper && prev == 0) {
 				buffer = append(buffer, toUpper(curr))
+			} else if isLower(prev) {
+				buffer = append(buffer, curr)
 			} else {
 				buffer = append(buffer, toLower(curr))
 			}
 		}
-		prev = curr
-	}
+	})
 
 	return string(buffer)
 }

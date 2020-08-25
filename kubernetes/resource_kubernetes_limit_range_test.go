@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -8,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesLimitRange_basic(t *testing.T) {
@@ -291,6 +292,7 @@ func testAccCheckKubernetesLimitRangeDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_limit_range" {
@@ -302,7 +304,7 @@ func testAccCheckKubernetesLimitRangeDestroy(s *terraform.State) error {
 			return err
 		}
 
-		resp, err := conn.CoreV1().LimitRanges(namespace).Get(name, meta_v1.GetOptions{})
+		resp, err := conn.CoreV1().LimitRanges(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Namespace == namespace && resp.Name == name {
 				return fmt.Errorf("Limit Range still exists: %s", rs.Primary.ID)
@@ -324,13 +326,14 @@ func testAccCheckKubernetesLimitRangeExists(n string, obj *api.LimitRange) resou
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		out, err := conn.CoreV1().LimitRanges(namespace).Get(name, meta_v1.GetOptions{})
+		out, err := conn.CoreV1().LimitRanges(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -10,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesNamespace_basic(t *testing.T) {
@@ -252,7 +253,7 @@ func TestAccKubernetesNamespace_deleteTimeout(t *testing.T) {
 	})
 }
 
-func testAccCheckMetaAnnotations(om *meta_v1.ObjectMeta, expected map[string]string) resource.TestCheckFunc {
+func testAccCheckMetaAnnotations(om *metav1.ObjectMeta, expected map[string]string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(om.Annotations) == 0 {
 			return nil
@@ -275,7 +276,7 @@ func testAccCheckMetaAnnotations(om *meta_v1.ObjectMeta, expected map[string]str
 	}
 }
 
-func testAccCheckMetaLabels(om *meta_v1.ObjectMeta, expected map[string]string) resource.TestCheckFunc {
+func testAccCheckMetaLabels(om *metav1.ObjectMeta, expected map[string]string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(om.Labels) == 0 {
 			return nil
@@ -303,13 +304,14 @@ func testAccCheckKubernetesNamespaceDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_namespace" {
 			continue
 		}
 
-		resp, err := conn.CoreV1().Namespaces().Get(rs.Primary.ID, meta_v1.GetOptions{})
+		resp, err := conn.CoreV1().Namespaces().Get(ctx, rs.Primary.ID, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("Namespace still exists: %s", rs.Primary.ID)
@@ -331,8 +333,9 @@ func testAccCheckKubernetesNamespaceExists(n string, obj *api.Namespace) resourc
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
-		out, err := conn.CoreV1().Namespaces().Get(rs.Primary.ID, meta_v1.GetOptions{})
+		out, err := conn.CoreV1().Namespaces().Get(ctx, rs.Primary.ID, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -8,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/networking/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
@@ -368,6 +369,7 @@ func testAccCheckKubernetesNetworkPolicyDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_network_policy" {
@@ -379,7 +381,7 @@ func testAccCheckKubernetesNetworkPolicyDestroy(s *terraform.State) error {
 			return err
 		}
 
-		resp, err := conn.NetworkingV1().NetworkPolicies(namespace).Get(name, meta_v1.GetOptions{})
+		resp, err := conn.NetworkingV1().NetworkPolicies(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Namespace == namespace && resp.Name == name {
 				return fmt.Errorf("Network Policy still exists: %s", rs.Primary.ID)
@@ -401,13 +403,14 @@ func testAccCheckKubernetesNetworkPolicyExists(n string, obj *api.NetworkPolicy)
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		out, err := conn.NetworkingV1().NetworkPolicies(namespace).Get(name, meta_v1.GetOptions{})
+		out, err := conn.NetworkingV1().NetworkPolicies(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

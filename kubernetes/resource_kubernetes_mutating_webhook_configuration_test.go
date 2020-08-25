@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -133,6 +134,7 @@ func testAccCheckKubernetesMutatingWebhookConfigurationDestroy(s *terraform.Stat
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_mutating_webhook_configuration" {
@@ -146,9 +148,9 @@ func testAccCheckKubernetesMutatingWebhookConfigurationDestroy(s *terraform.Stat
 			return err
 		}
 		if useadmissionregistrationv1beta1 {
-			_, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+			_, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 		} else {
-			_, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+			_, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 		}
 
 		if err != nil {
@@ -175,6 +177,7 @@ func testAccCheckKubernetesMutatingWebhookConfigurationExists(n string) resource
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		name := rs.Primary.ID
 
@@ -183,9 +186,9 @@ func testAccCheckKubernetesMutatingWebhookConfigurationExists(n string) resource
 			return err
 		}
 		if useadmissionregistrationv1beta1 {
-			_, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+			_, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 		} else {
-			_, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+			_, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 		}
 		if err != nil {
 			return err

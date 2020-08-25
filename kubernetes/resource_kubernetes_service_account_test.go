@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -9,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesServiceAccount_basic(t *testing.T) {
@@ -316,6 +317,7 @@ func testAccCheckKubernetesServiceAccountDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_service_account" {
@@ -327,7 +329,7 @@ func testAccCheckKubernetesServiceAccountDestroy(s *terraform.State) error {
 			return err
 		}
 
-		resp, err := conn.CoreV1().ServiceAccounts(namespace).Get(name, meta_v1.GetOptions{})
+		resp, err := conn.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("Service Account still exists: %s", rs.Primary.ID)
@@ -349,13 +351,14 @@ func testAccCheckKubernetesServiceAccountExists(n string, obj *api.ServiceAccoun
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		out, err := conn.CoreV1().ServiceAccounts(namespace).Get(name, meta_v1.GetOptions{})
+		out, err := conn.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -899,6 +900,7 @@ func testAccCheckKubernetesPodDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_pod" {
@@ -910,7 +912,7 @@ func testAccCheckKubernetesPodDestroy(s *terraform.State) error {
 			return err
 		}
 
-		resp, err := conn.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
+		resp, err := conn.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Namespace == namespace && resp.Name == name {
 				return fmt.Errorf("Pod still exists: %s: %#v", rs.Primary.ID, resp.Status.Phase)
@@ -932,13 +934,14 @@ func testAccCheckKubernetesPodExists(n string, obj *api.Pod) resource.TestCheckF
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		out, err := conn.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
+		out, err := conn.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

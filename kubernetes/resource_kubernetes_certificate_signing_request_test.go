@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -65,12 +66,14 @@ func testAccCheckKubernetesCertificateSigningRequestRemoteResourceDeleted(s *ter
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
+
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_certificate_signing_request" {
 			continue
 		}
 
-		out, err := conn.CertificatesV1beta1().CertificateSigningRequests().Get(rs.Primary.ID, metav1.GetOptions{})
+		out, err := conn.CertificatesV1beta1().CertificateSigningRequests().Get(ctx, rs.Primary.ID, metav1.GetOptions{})
 		if err == nil {
 			if out.Name == rs.Primary.ID {
 				return fmt.Errorf("CertificateSigningRequest still exists in Kubernetes: %s", rs.Primary.ID)

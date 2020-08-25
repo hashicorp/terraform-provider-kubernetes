@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -10,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesEndpoints_basic(t *testing.T) {
@@ -279,6 +280,7 @@ func testAccCheckKubernetesEndpointDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_endpoints" {
@@ -290,7 +292,7 @@ func testAccCheckKubernetesEndpointDestroy(s *terraform.State) error {
 			return err
 		}
 
-		resp, err := conn.CoreV1().Endpoints(namespace).Get(name, meta_v1.GetOptions{})
+		resp, err := conn.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("Endpoint still exists: %s", rs.Primary.ID)
@@ -312,13 +314,14 @@ func testAccCheckKubernetesEndpointExists(n string, obj *api.Endpoints) resource
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		out, err := conn.CoreV1().Endpoints(namespace).Get(name, meta_v1.GetOptions{})
+		out, err := conn.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

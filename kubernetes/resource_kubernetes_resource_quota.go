@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -9,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
@@ -65,6 +66,7 @@ func resourceKubernetesResourceQuotaCreate(d *schema.ResourceData, meta interfac
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandResourceQuotaSpec(d.Get("spec").([]interface{}))
@@ -76,7 +78,7 @@ func resourceKubernetesResourceQuotaCreate(d *schema.ResourceData, meta interfac
 		Spec:       *spec,
 	}
 	log.Printf("[INFO] Creating new resource quota: %#v", resQuota)
-	out, err := conn.CoreV1().ResourceQuotas(metadata.Namespace).Create(&resQuota)
+	out, err := conn.CoreV1().ResourceQuotas(metadata.Namespace).Create(ctx, &resQuota, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to create resource quota: %s", err)
 	}
@@ -84,7 +86,7 @@ func resourceKubernetesResourceQuotaCreate(d *schema.ResourceData, meta interfac
 	d.SetId(buildId(out.ObjectMeta))
 
 	err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
-		quota, err := conn.CoreV1().ResourceQuotas(out.Namespace).Get(out.Name, meta_v1.GetOptions{})
+		quota, err := conn.CoreV1().ResourceQuotas(out.Namespace).Get(ctx, out.Name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
 		}
@@ -107,6 +109,7 @@ func resourceKubernetesResourceQuotaRead(d *schema.ResourceData, meta interface{
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -114,7 +117,7 @@ func resourceKubernetesResourceQuotaRead(d *schema.ResourceData, meta interface{
 	}
 
 	log.Printf("[INFO] Reading resource quota %s", name)
-	resQuota, err := conn.CoreV1().ResourceQuotas(namespace).Get(name, meta_v1.GetOptions{})
+	resQuota, err := conn.CoreV1().ResourceQuotas(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -146,6 +149,7 @@ func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interfac
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -171,7 +175,7 @@ func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interfac
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating resource quota %q: %v", name, string(data))
-	out, err := conn.CoreV1().ResourceQuotas(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().ResourceQuotas(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update resource quota: %s", err)
 	}
@@ -180,7 +184,7 @@ func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interfac
 
 	if waitForChangedSpec {
 		err = resource.Retry(d.Timeout(schema.TimeoutUpdate), func() *resource.RetryError {
-			quota, err := conn.CoreV1().ResourceQuotas(namespace).Get(name, meta_v1.GetOptions{})
+			quota, err := conn.CoreV1().ResourceQuotas(namespace).Get(ctx, name, metav1.GetOptions{})
 			if err != nil {
 				return resource.NonRetryableError(err)
 			}
@@ -204,6 +208,7 @@ func resourceKubernetesResourceQuotaDelete(d *schema.ResourceData, meta interfac
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -211,7 +216,7 @@ func resourceKubernetesResourceQuotaDelete(d *schema.ResourceData, meta interfac
 	}
 
 	log.Printf("[INFO] Deleting resource quota: %#v", name)
-	err = conn.CoreV1().ResourceQuotas(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().ResourceQuotas(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -227,6 +232,7 @@ func resourceKubernetesResourceQuotaExists(d *schema.ResourceData, meta interfac
 	if err != nil {
 		return false, err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -234,7 +240,7 @@ func resourceKubernetesResourceQuotaExists(d *schema.ResourceData, meta interfac
 	}
 
 	log.Printf("[INFO] Checking resource quota %s", name)
-	_, err = conn.CoreV1().ResourceQuotas(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().ResourceQuotas(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

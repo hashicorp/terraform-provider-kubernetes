@@ -16,7 +16,7 @@ To learn more about how to create issues and pull requests in this repository, a
 Clone repository to: `$GOPATH/src/github.com/hashicorp/terraform-provider-kubernetes`
 
 ```sh
-$ mkdir -p $GOPATH/src/github.com/terraform-providers; cd $GOPATH/src/github.com/terraform-providers
+$ mkdir -p $GOPATH/src/github.com/hashicorp; cd $GOPATH/src/github.com/hashicorp
 $ git clone git@github.com:hashicorp/terraform-provider-kubernetes
 ```
 

@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	networking "k8s.io/api/networking/v1beta1"
 	"log"
@@ -134,6 +135,7 @@ func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) e
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	ing := &v1beta1.Ingress{
@@ -141,7 +143,7 @@ func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) e
 	}
 	ing.ObjectMeta = metadata
 	log.Printf("[INFO] Creating new ingress: %#v", ing)
-	out, err := conn.ExtensionsV1beta1().Ingresses(metadata.Namespace).Create(ing)
+	out, err := conn.ExtensionsV1beta1().Ingresses(metadata.Namespace).Create(ctx, ing, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to create Ingress '%s' because: %s", buildId(ing.ObjectMeta), err)
 	}
@@ -154,7 +156,7 @@ func resourceKubernetesIngressCreate(d *schema.ResourceData, meta interface{}) e
 
 	log.Printf("[INFO] Waiting for load balancer to become ready: %#v", out)
 	return resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
-		res, err := conn.ExtensionsV1beta1().Ingresses(metadata.Namespace).Get(metadata.Name, metav1.GetOptions{})
+		res, err := conn.ExtensionsV1beta1().Ingresses(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 		if err != nil {
 			// NOTE it is possible in some HA apiserver setups that are eventually consistent
 			// that we could get a 404 when doing a Get immediately after a Create
@@ -178,6 +180,7 @@ func resourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) err
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -185,7 +188,7 @@ func resourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) err
 	}
 
 	log.Printf("[INFO] Reading ingress %s", name)
-	ing, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(name, metav1.GetOptions{})
+	ing, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return fmt.Errorf("Failed to read Ingress '%s' because: %s", buildId(ing.ObjectMeta), err)
@@ -216,6 +219,7 @@ func resourceKubernetesIngressUpdate(d *schema.ResourceData, meta interface{}) e
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, _, err := idParts(d.Id())
 	if err != nil {
@@ -234,7 +238,7 @@ func resourceKubernetesIngressUpdate(d *schema.ResourceData, meta interface{}) e
 		Spec:       spec,
 	}
 
-	out, err := conn.ExtensionsV1beta1().Ingresses(namespace).Update(ingress)
+	out, err := conn.ExtensionsV1beta1().Ingresses(namespace).Update(ctx, ingress, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update Ingress %s because: %s", buildId(ingress.ObjectMeta), err)
 	}
@@ -248,6 +252,7 @@ func resourceKubernetesIngressDelete(d *schema.ResourceData, meta interface{}) e
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -255,7 +260,7 @@ func resourceKubernetesIngressDelete(d *schema.ResourceData, meta interface{}) e
 	}
 
 	log.Printf("[INFO] Deleting ingress: %#v", name)
-	err = conn.ExtensionsV1beta1().Ingresses(namespace).Delete(name, &metav1.DeleteOptions{})
+	err = conn.ExtensionsV1beta1().Ingresses(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to delete Ingress %s because: %s", d.Id(), err)
 	}
@@ -271,6 +276,7 @@ func resourceKubernetesIngressExists(d *schema.ResourceData, meta interface{}) (
 	if err != nil {
 		return false, err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -278,7 +284,7 @@ func resourceKubernetesIngressExists(d *schema.ResourceData, meta interface{}) (
 	}
 
 	log.Printf("[INFO] Checking ingress %s", name)
-	_, err = conn.ExtensionsV1beta1().Ingresses(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.ExtensionsV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

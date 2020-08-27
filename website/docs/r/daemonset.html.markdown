@@ -388,7 +388,7 @@ The `option` block supports the following:
 #### Arguments
 
 * `medium` - (Optional) What type of storage medium should back this directory. The default is "" which means to use the node's default medium. Must be an empty string (default) or Memory. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#emptydir)
-* `size_limit` - (Optional) Total amount of local storage required for this EmptyDir volume. [More details here.](https://pkg.go.dev/k8s.io/apimachinery/pkg/api/resource?tab=doc#Quantity)
+* `size_limit` - (Optional) Total amount of local storage required for this EmptyDir volume. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes) and [Kubernetes Quantity type](https://pkg.go.dev/k8s.io/apimachinery/pkg/api/resource?tab=doc#Quantity).
 
 ### `env`
 

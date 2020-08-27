@@ -35,12 +35,7 @@ func resourceKubernetesDefaultServiceAccountCreate(d *schema.ResourceData, meta 
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	svcAcc := api.ServiceAccount{
-		AutomountServiceAccountToken: ptrToBool(d.Get("automount_service_account_token").(bool)),
-		ObjectMeta:                   metadata,
-		ImagePullSecrets:             expandLocalObjectReferenceArray(d.Get("image_pull_secret").(*schema.Set).List()),
-		Secrets:                      expandServiceAccountSecrets(d.Get("secret").(*schema.Set).List(), ""),
-	}
+	svcAcc := api.ServiceAccount{ObjectMeta: metadata}
 
 	log.Printf("[INFO] Checking for default service account existence: %s", metadata.Namespace)
 	err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {

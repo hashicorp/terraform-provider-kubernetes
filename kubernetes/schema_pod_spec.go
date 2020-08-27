@@ -557,6 +557,7 @@ func volumeSchema() *schema.Resource {
 					Type:        schema.TypeString,
 					Description: `Total amount of local storage required for this EmptyDir volume.`,
 					Optional:    true,
+					ForceNew:    true,
 					Default:     "0",
 				},
 			},

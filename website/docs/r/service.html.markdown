@@ -95,6 +95,7 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 * `selector` - (Optional) Route service traffic to pods with label keys and values matching this selector. Only applies to types `ClusterIP`, `NodePort`, and `LoadBalancer`. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/services#overview)
 * `session_affinity` - (Optional) Used to maintain session affinity. Supports `ClientIP` and `None`. Defaults to `None`. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies)
 * `type` - (Optional) Determines how the service is exposed. Defaults to `ClusterIP`. Valid options are `ExternalName`, `ClusterIP`, `NodePort`, and `LoadBalancer`. `ExternalName` maps to the specified `external_name`. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/services#overview)
+* `health_check_node_port` - (Optional) Specifies the Healthcheck NodePort for the service. Only effects when type is set to `LoadBalancer` and external_traffic_policy is set to `Local`.
 
 ### `port`
 

@@ -165,6 +165,9 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	if in.SELinuxOptions != nil {
 		att["se_linux_options"] = flattenSeLinuxOptions(in.SELinuxOptions)
 	}
+	if in.Sysctls != nil {
+		att["sysctl"] = flattenSysctls(in.Sysctls)
+	}
 
 	if len(att) > 0 {
 		return []interface{}{att}
@@ -187,6 +190,22 @@ func flattenSeLinuxOptions(in *v1.SELinuxOptions) []interface{} {
 		att["level"] = in.Level
 	}
 	return []interface{}{att}
+}
+
+func flattenSysctls(sysctls []v1.Sysctl) []interface{} {
+	att := []interface{}{}
+	for _, v := range sysctls {
+		obj := map[string]interface{}{}
+
+		if v.Name != "" {
+			obj["name"] = v.Name
+		}
+		if v.Value != "" {
+			obj["value"] = v.Value
+		}
+		att = append(att, obj)
+	}
+	return att
 }
 
 func flattenTolerations(tolerations []v1.Toleration) []interface{} {
@@ -630,8 +649,29 @@ func expandPodSecurityContext(l []interface{}) *v1.PodSecurityContext {
 	if v, ok := in["supplemental_groups"].(*schema.Set); ok {
 		obj.SupplementalGroups = schemaSetToInt64Array(v)
 	}
+	if v, ok := in["sysctl"].([]interface{}); ok && len(v) > 0 {
+		obj.Sysctls = expandSysctls(v)
+	}
 
 	return obj
+}
+
+func expandSysctls(l []interface{}) []v1.Sysctl {
+	if len(l) == 0 {
+		return []v1.Sysctl{}
+	}
+	sysctls := make([]v1.Sysctl, len(l))
+	for i, c := range l {
+		p := c.(map[string]interface{})
+		if v, ok := p["name"].(string); ok {
+			sysctls[i].Name = v
+		}
+		if v, ok := p["value"].(string); ok {
+			sysctls[i].Value = v
+		}
+
+	}
+	return sysctls
 }
 
 func expandSeLinuxOptions(l []interface{}) *v1.SELinuxOptions {

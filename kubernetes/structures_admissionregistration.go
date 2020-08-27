@@ -80,7 +80,7 @@ func expandWebhookClientConfig(l []interface{}) admissionregistrationv1.WebhookC
 		obj.CABundle = []byte(v)
 	}
 
-	if v, ok := in["service"].([]interface{}); ok {
+	if v, ok := in["service"].([]interface{}); ok && len(v) > 0 {
 		obj.Service = expandServiceReference(v)
 	}
 

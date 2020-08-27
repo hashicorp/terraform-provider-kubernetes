@@ -13,43 +13,44 @@ import (
 
 func TestAccKubernetesClusterRole_basic(t *testing.T) {
 	var conf api.ClusterRole
-	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_cluster_role.test"
+	name := acctest.RandomWithPrefix("tf-acc-test")
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_cluster_role.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesClusterRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesClusterRoleConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists("kubernetes_cluster_role.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.resources.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.resources.0", "pods"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.resources.1", "pods/log"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.verbs.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.verbs.0", "get"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.verbs.1", "list"),
+					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "rule.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.0", "pods"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.1", "pods/log"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.0", "get"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.1", "list"),
 				),
 			},
 			{
 				Config: testAccKubernetesClusterRoleConfig_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists("kubernetes_cluster_role.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.#", "3"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.verbs.#", "3"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.verbs.2", "watch"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.api_groups.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.resources.0", "deployments"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.verbs.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.verbs.0", "get"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.verbs.1", "list"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.non_resource_urls.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.non_resource_urls.0", "/metrics"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.verbs.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.verbs.0", "get"),
+					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "rule.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.2", "watch"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.api_groups.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.resources.0", "deployments"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.verbs.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.verbs.0", "get"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.verbs.1", "list"),
+					resource.TestCheckResourceAttr(resourceName, "rule.2.non_resource_urls.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.2.non_resource_urls.0", "/metrics"),
+					resource.TestCheckResourceAttr(resourceName, "rule.2.verbs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.2.verbs.0", "get"),
 				),
 			},
 		},
@@ -58,7 +59,7 @@ func TestAccKubernetesClusterRole_basic(t *testing.T) {
 
 func TestAccKubernetesClusterRole_importBasic(t *testing.T) {
 	resourceName := "kubernetes_cluster_role.test"
-	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := acctest.RandomWithPrefix("tf-acc-test")
 	resource.Test(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		Providers:    testAccProviders,
@@ -77,74 +78,168 @@ func TestAccKubernetesClusterRole_importBasic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRoleUpdatePatchOperationsOrderWithRemovals(t *testing.T) {
+func TestAccKubernetesClusterRole_updatePatchOperationsOrderWithRemovals(t *testing.T) {
 	var conf api.ClusterRole
-	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_cluster_role.test"
+	name := acctest.RandomWithPrefix("tf-acc-test")
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_cluster_role.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesClusterRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesClusterRoleConfigBug_step_0(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists("kubernetes_cluster_role.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.#", "3"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.resources.0", "pods"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.verbs.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.verbs.0", "get"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.resources.0", "deployments"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.verbs.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.verbs.0", "list"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.non_resource_urls.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.non_resource_urls.0", "/metrics"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.verbs.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.verbs.0", "get"),
+					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "rule.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.0", "pods"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.0", "get"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.resources.0", "deployments"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.verbs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.verbs.0", "list"),
+					resource.TestCheckResourceAttr(resourceName, "rule.2.non_resource_urls.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.2.non_resource_urls.0", "/metrics"),
+					resource.TestCheckResourceAttr(resourceName, "rule.2.verbs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.2.verbs.0", "get"),
 				),
 			},
 			{
 				Config: testAccKubernetesClusterRoleConfigBug_step_1(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists("kubernetes_cluster_role.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.resources.0", "deployments"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.verbs.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.verbs.0", "get"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.verbs.1", "list"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.api_groups.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.resources.0", "jobs"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.verbs.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.verbs.0", "get"),
+					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "rule.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.0", "deployments"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.0", "get"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.1", "list"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.api_groups.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.resources.0", "jobs"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.verbs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.verbs.0", "get"),
 				),
 			},
 			{
 				Config: testAccKubernetesClusterRoleConfigBug_step_2(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists("kubernetes_cluster_role.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.#", "4"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.resources.0", "pods"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.verbs.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.0.verbs.0", "list"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.resources.0", "deployments"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.verbs.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.1.verbs.0", "list"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.non_resource_urls.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.non_resource_urls.0", "/metrics"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.verbs.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.2.verbs.0", "get"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.3.api_groups.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.3.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.3.resources.0", "jobs"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.3.verbs.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cluster_role.test", "rule.3.verbs.0", "get"),
+					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "rule.#", "4"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.0", "pods"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.0", "list"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.resources.0", "deployments"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.verbs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.1.verbs.0", "list"),
+					resource.TestCheckResourceAttr(resourceName, "rule.2.non_resource_urls.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.2.non_resource_urls.0", "/metrics"),
+					resource.TestCheckResourceAttr(resourceName, "rule.2.verbs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.2.verbs.0", "get"),
+					resource.TestCheckResourceAttr(resourceName, "rule.3.api_groups.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.3.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.3.resources.0", "jobs"),
+					resource.TestCheckResourceAttr(resourceName, "rule.3.verbs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.3.verbs.0", "get"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesClusterRole_aggregationRuleBasic(t *testing.T) {
+	var conf api.ClusterRole
+	resourceName := "kubernetes_cluster_role.test"
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: resourceName,
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesClusterRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesClusterRoleConfig_aggRule(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.0.match_expressions.0.key", "environment"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.0.match_expressions.0.operator", "In"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.0.match_expressions.0.values.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.0.match_labels.foo", "bar"),
+				),
+			},
+			{
+				Config: testAccKubernetesClusterRoleConfig_aggRuleModified(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.0.match_expressions.0.key", "env"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.0.match_expressions.0.operator", "NotIn"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.0.match_expressions.0.values.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.0.match_labels.bar", "foo"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesClusterRole_aggregationRuleRuleAggregation(t *testing.T) {
+	var conf api.ClusterRole
+	resourceName := "kubernetes_cluster_role.test"
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: resourceName,
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesClusterRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesClusterRoleConfig_aggRule2(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+				),
+			},
+			{
+				Config: testAccKubernetesClusterRoleConfig_aggRule2(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "rule.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.0", "pods"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.1", "pods/log"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.0", "get"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.1", "list"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesClusterRole_importAggregationRule(t *testing.T) {
+	resourceName := "kubernetes_cluster_role.test"
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: resourceName,
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesClusterRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesClusterRoleConfig_aggRule(name),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})
@@ -321,6 +416,99 @@ resource "kubernetes_cluster_role" "test" {
     api_groups = [""]
     resources  = ["jobs"]
     verbs      = ["get"]
+  }
+}
+`, name)
+}
+
+func testAccKubernetesClusterRoleConfig_aggRule(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_cluster_role" "test" {
+  metadata {
+    labels = {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  aggregation_rule {
+    cluster_role_selectors {
+      match_labels = {
+        foo = "bar"
+      }
+
+      match_expressions {
+        key      = "environment"
+        operator = "In"
+        values   = ["non-exists-12345"]
+      }
+    }
+  }
+}
+`, name)
+}
+
+func testAccKubernetesClusterRoleConfig_aggRuleModified(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_cluster_role" "test" {
+  metadata {
+    labels = {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  aggregation_rule {
+    cluster_role_selectors {
+      match_labels = {
+        bar = "foo"
+      }
+
+      match_expressions {
+        key      = "env"
+        operator = "NotIn"
+        values   = ["non"]
+      }
+    }
+  }
+}
+`, name)
+}
+
+func testAccKubernetesClusterRoleConfig_aggRule2(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_cluster_role" "test" {
+  metadata {
+    name = "%[1]s"
+  }
+
+  aggregation_rule {
+    cluster_role_selectors {
+      match_labels = {
+        "rbac.example.com/aggregate-to-monitoring" = "true"
+      }
+    }
+  }
+}
+
+resource "kubernetes_cluster_role" "test2" {
+  metadata {
+    labels = {
+      "rbac.example.com/aggregate-to-monitoring" = "true"
+    }
+    name = "%[1]s-2"
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["pods", "pods/log"]
+    verbs      = ["get", "list"]
   }
 }
 `, name)

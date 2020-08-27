@@ -298,6 +298,7 @@ func getServiceAccountDefaultSecret(name string, config api.ServiceAccount, time
 		}
 
 		if len(resp.Secrets) == len(config.Secrets) {
+			log.Printf("[DEBUG] Configuration contains %d secrets, saw %d, expected %d", len(config.Secrets), len(resp.Secrets), len(config.Secrets)+1)
 			return resource.RetryableError(fmt.Errorf("Waiting for default secret of %q to appear", buildId(resp.ObjectMeta)))
 		}
 

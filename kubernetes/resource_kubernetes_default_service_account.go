@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	"log"
+
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
@@ -40,17 +42,19 @@ func resourceKubernetesDefaultServiceAccountCreate(d *schema.ResourceData, meta 
 		Secrets:                      expandServiceAccountSecrets(d.Get("secret").(*schema.Set).List(), ""),
 	}
 
-	// wait for ServiceAccountsController to create default ServiceAccount in namespace
+	log.Printf("[INFO] Checking for default service account existence: %s", metadata.Namespace)
 	err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
 		_, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(metadata.Name, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
+				log.Printf("[INFO] Default service account does not exist, will retry: %s", metadata.Namespace)
 				return resource.RetryableError(err)
 			}
 
 			return resource.NonRetryableError(err)
 		}
 
+		log.Printf("[INFO] Default service account exists: %s", metadata.Namespace)
 		return nil
 	})
 

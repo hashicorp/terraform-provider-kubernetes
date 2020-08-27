@@ -69,15 +69,13 @@ func TestAccKubernetesDefaultServiceAccount_secrets(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_default_service_account.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_default_service_account.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_default_service_account.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_default_service_account.test", "secret.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_default_service_account.test", "image_pull_secret.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_default_service_account.test", "secret.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_default_service_account.test", "image_pull_secret.#", "1"),
 					testAccCheckServiceAccountImagePullSecrets(&conf, []*regexp.Regexp{
-						regexp.MustCompile("^three$"),
-						regexp.MustCompile("^four$"),
+						regexp.MustCompile("^two$"),
 					}),
 					testAccCheckServiceAccountSecrets(&conf, []*regexp.Regexp{
 						regexp.MustCompile("^one$"),
-						regexp.MustCompile("^two$"),
 						regexp.MustCompile("^default-token-[a-z0-9]+$"),
 					}),
 				),
@@ -153,16 +151,8 @@ resource "kubernetes_default_service_account" "test" {
     name = kubernetes_secret.one.metadata[0].name
   }
 
-  secret {
+  image_pull_secret {
     name = kubernetes_secret.two.metadata[0].name
-  }
-
-  image_pull_secret {
-    name = kubernetes_secret.three.metadata[0].name
-  }
-
-  image_pull_secret {
-    name = kubernetes_secret.four.metadata[0].name
   }
 }
 
@@ -176,20 +166,6 @@ resource "kubernetes_secret" "one" {
 resource "kubernetes_secret" "two" {
   metadata {
     name      = "two"
-    namespace = kubernetes_namespace.test.metadata.0.name
-  }
-}
-
-resource "kubernetes_secret" "three" {
-  metadata {
-    name      = "three"
-    namespace = kubernetes_namespace.test.metadata.0.name
-  }
-}
-
-resource "kubernetes_secret" "four" {
-  metadata {
-    name      = "four"
     namespace = kubernetes_namespace.test.metadata.0.name
   }
 }

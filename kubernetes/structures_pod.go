@@ -829,9 +829,9 @@ func expandGitRepoVolumeSource(l []interface{}) *v1.GitRepoVolumeSource {
 	return obj
 }
 
-func expandEmptyDirVolumeSource(l []interface{}) *v1.EmptyDirVolumeSource {
+func expandEmptyDirVolumeSource(l []interface{}) (*v1.EmptyDirVolumeSource, error) {
 	if len(l) == 0 || l[0] == nil {
-		return &v1.EmptyDirVolumeSource{}
+		return &v1.EmptyDirVolumeSource{}, nil
 	}
 	in := l[0].(map[string]interface{})
 	obj := &v1.EmptyDirVolumeSource{
@@ -839,11 +839,14 @@ func expandEmptyDirVolumeSource(l []interface{}) *v1.EmptyDirVolumeSource {
 	}
 
 	if v, ok := in["size_limit"].(string); ok {
-		s, _ := resource.ParseQuantity(v)
+		s, err := resource.ParseQuantity(v)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse size_limit: %w", err)
+		}
 		obj.SizeLimit = &s
 	}
 
-	return obj
+	return obj, nil
 }
 
 func expandPersistentVolumeClaimVolumeSource(l []interface{}) *v1.PersistentVolumeClaimVolumeSource {
@@ -943,7 +946,11 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 		}
 
 		if value, ok := m["empty_dir"].([]interface{}); ok && len(value) > 0 {
-			vl[i].EmptyDir = expandEmptyDirVolumeSource(value)
+			var err error
+			vl[i].EmptyDir, err = expandEmptyDirVolumeSource(value)
+			if err != nil {
+				return vl, err
+			}
 		}
 		if value, ok := m["downward_api"].([]interface{}); ok && len(value) > 0 {
 			var err error

@@ -119,7 +119,7 @@ resource "kubernetes_namespace" "test" {
 
 resource "kubernetes_default_service_account" "test" {
   metadata {
-    namespace = kubernetes_namespace.test.id
+    namespace = kubernetes_namespace.test.metadata.0.name
 
     annotations = {
       TestAnnotationOne = "one"
@@ -146,7 +146,7 @@ resource "kubernetes_namespace" "test" {
 
 resource "kubernetes_default_service_account" "test" {
   metadata {
-    namespace = kubernetes_namespace.test.id
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 
   secret {
@@ -169,28 +169,28 @@ resource "kubernetes_default_service_account" "test" {
 resource "kubernetes_secret" "one" {
   metadata {
     name      = "one"
-    namespace = kubernetes_namespace.test.id
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 }
 
 resource "kubernetes_secret" "two" {
   metadata {
     name      = "two"
-    namespace = kubernetes_namespace.test.id
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 }
 
 resource "kubernetes_secret" "three" {
   metadata {
     name      = "three"
-    namespace = kubernetes_namespace.test.id
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 }
 
 resource "kubernetes_secret" "four" {
   metadata {
     name      = "four"
-    namespace = kubernetes_namespace.test.id
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 }
 `, namespace)

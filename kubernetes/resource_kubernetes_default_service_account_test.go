@@ -112,14 +112,14 @@ func TestAccKubernetesDefaultServiceAccount_importBasic(t *testing.T) {
 func testAccKubernetesDefaultServiceAccountConfig_basic(namespace string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
-	metadata {
-		name = "%s"
-	}
+  metadata {
+    name = "%s"
+  }
 }
 
 resource "kubernetes_default_service_account" "test" {
   metadata {
-		namespace = "${kubernetes_namespace.test.id}"
+    namespace = kubernetes_namespace.test.id
 
     annotations = {
       TestAnnotationOne = "one"
@@ -131,7 +131,7 @@ resource "kubernetes_default_service_account" "test" {
       TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
-	}
+  }
 }
 `, namespace)
 }
@@ -139,58 +139,58 @@ resource "kubernetes_default_service_account" "test" {
 func testAccKubernetesDefaultServiceAccountConfig_secrets(namespace string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
-	metadata {
-		name = "%s"
-	}
+  metadata {
+    name = "%s"
+  }
 }
 
 resource "kubernetes_default_service_account" "test" {
   metadata {
-		namespace = "${kubernetes_namespace.test.id}"
+    namespace = kubernetes_namespace.test.id
   }
 
   secret {
-    name = "${kubernetes_secret.one.metadata.0.name}"
+    name = kubernetes_secret.one.metadata[0].name
   }
 
   secret {
-    name = "${kubernetes_secret.two.metadata.0.name}"
+    name = kubernetes_secret.two.metadata[0].name
   }
 
   image_pull_secret {
-    name = "${kubernetes_secret.three.metadata.0.name}"
+    name = kubernetes_secret.three.metadata[0].name
   }
 
   image_pull_secret {
-    name = "${kubernetes_secret.four.metadata.0.name}"
+    name = kubernetes_secret.four.metadata[0].name
   }
 }
 
 resource "kubernetes_secret" "one" {
   metadata {
-		name      = "one"
-		namespace = "${kubernetes_namespace.test.id}"
+    name      = "one"
+    namespace = kubernetes_namespace.test.id
   }
 }
 
 resource "kubernetes_secret" "two" {
   metadata {
-		name      = "two"
-		namespace = "${kubernetes_namespace.test.id}"
+    name      = "two"
+    namespace = kubernetes_namespace.test.id
   }
 }
 
 resource "kubernetes_secret" "three" {
   metadata {
-		name      = "three"
-		namespace = "${kubernetes_namespace.test.id}"
+    name      = "three"
+    namespace = kubernetes_namespace.test.id
   }
 }
 
 resource "kubernetes_secret" "four" {
   metadata {
-		name      = "four"
-		namespace = "${kubernetes_namespace.test.id}"
+    name      = "four"
+    namespace = kubernetes_namespace.test.id
   }
 }
 `, namespace)

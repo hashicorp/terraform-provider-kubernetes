@@ -388,6 +388,9 @@ func flattenPersistentVolumeSpec(in v1.PersistentVolumeSpec) []interface{} {
 	if in.MountOptions != nil {
 		att["mount_options"] = flattenPersistentVolumeMountOptions(in.MountOptions)
 	}
+	if in.VolumeMode != nil {
+		att["volume_mode"] = in.VolumeMode
+	}
 	return []interface{}{att}
 }
 
@@ -995,6 +998,10 @@ func expandPersistentVolumeSpec(l []interface{}) (*v1.PersistentVolumeSpec, erro
 	}
 	if v, ok := in["mount_options"].(*schema.Set); ok && v.Len() > 0 {
 		obj.MountOptions = schemaSetToStringArray(v)
+	}
+	if v, ok := in["volume_mode"].(string); ok {
+		volumeMode := v1.PersistentVolumeMode(v)
+		obj.VolumeMode = &volumeMode
 	}
 	return obj, nil
 }

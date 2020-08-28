@@ -8,6 +8,7 @@ import (
 	gversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,8 +83,15 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Type:        schema.TypeSet,
 							Description: "Contains all ways the volume can be mounted. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes",
 							Required:    true,
-							Elem:        &schema.Schema{Type: schema.TypeString},
-							Set:         schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+								ValidateFunc: validation.StringInSlice([]string{
+									"ReadWriteOnce",
+									"ReadOnlyMany",
+									"ReadWriteMany",
+								}, false),
+							},
+							Set: schema.HashString,
 						},
 						"capacity": {
 							Type:         schema.TypeMap,
@@ -97,6 +105,11 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Description: "What happens to a persistent volume when released from its claim. Valid options are Retain (default) and Recycle. Recycling must be supported by the volume plugin underlying this persistent volume. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#recycling-policy",
 							Optional:    true,
 							Default:     "Retain",
+							ValidateFunc: validation.StringInSlice([]string{
+								"Recycle",
+								"Delete",
+								"Retain",
+							}, false),
 						},
 						"persistent_volume_source": {
 							Type:        schema.TypeList,
@@ -143,6 +156,17 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Optional:    true,
 							Elem:        &schema.Schema{Type: schema.TypeString},
 							Set:         schema.HashString,
+						},
+						"volume_mode": {
+							Type:        schema.TypeString,
+							Description: "Defines if a volume is intended to be used with a formatted filesystem. or to remain in raw block state.",
+							Optional:    true,
+							ForceNew:    true,
+							Default:     "Filesystem",
+							ValidateFunc: validation.StringInSlice([]string{
+								"Block",
+								"Filesystem",
+							}, false),
 						},
 					},
 				},

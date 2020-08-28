@@ -46,13 +46,14 @@ The following arguments are supported:
 
 #### Arguments
 
-* `access_modes` - (Required) Contains all ways the volume can be mounted. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes)
+* `access_modes` - (Required) Contains all ways the volume can be mounted. Valid values are `ReadWriteOnce`, `ReadOnlyMany`, `ReadWriteMany`. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes)
 * `capacity` - (Required) A description of the persistent volume's resources and capacity. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/persistent-volumes#capacity)
 * `node_affinity` - (Optional) NodeAffinity defines constraints that limit what nodes this volume can be accessed from. This field influences the scheduling of pods that use this volume.
 * `persistent_volume_reclaim_policy` - (Optional) What happens to a persistent volume when released from its claim. Valid options are Retain (default), Delete and Recycle. Recycling must be supported by the volume plugin underlying this persistent volume. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/persistent-volumes#recycling-policy)
 * `persistent_volume_source` - (Required) The specification of a persistent volume.
 * `storage_class_name` - (Optional) The name of the persistent volume's storage class. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class)
-* `mount_options` - (Options) A Kubernetes administrator can specify additional mount options for when a Persistent Volume is mounted on a node. *Note: Not all Persistent Volume types support mount options.* For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#mount-options)
+* `mount_options` - (Optional) A Kubernetes administrator can specify additional mount options for when a Persistent Volume is mounted on a node. *Note: Not all Persistent Volume types support mount options.* For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#mount-options)
+* `volume_mode` - (Optional) Defines if a volume is used with a formatted filesystem or to remain in raw block state. Possible values are `Block` and `Filesystem`. Default value is `Filesystem`. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#volume-mode)
 
 ### `node_affinity`
 

@@ -1220,7 +1220,7 @@ resource "kubernetes_persistent_volume" "test" {
       TestLabelThree = "three"
     }
 
-    name = %[1]q
+    name = "%s"
   }
 
   spec {
@@ -1229,7 +1229,7 @@ resource "kubernetes_persistent_volume" "test" {
     }
 
     access_modes = ["ReadWriteOnce"]
-    volume_mode  = %[2]q
+    volume_mode  = "%s"
 
     persistent_volume_source {
       host_path {

@@ -553,6 +553,13 @@ func volumeSchema() *schema.Resource {
 					Default:      "",
 					ValidateFunc: validateAttributeValueIsIn([]string{"", "Memory"}),
 				},
+				"size_limit": {
+					Type:        schema.TypeString,
+					Description: `Total amount of local storage required for this EmptyDir volume.`,
+					Optional:    true,
+					ForceNew:    true,
+					Default:     "0",
+				},
 			},
 		},
 	}

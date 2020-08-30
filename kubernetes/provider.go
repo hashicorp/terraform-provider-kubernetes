@@ -146,6 +146,7 @@ func Provider() terraform.ResourceProvider {
 			"kubernetes_service_account":         dataSourceKubernetesServiceAccount(),
 			"kubernetes_storage_class":           dataSourceKubernetesStorageClass(),
 			"kubernetes_pod":                     dataSourceKubernetesPod(),
+			"kubernetes_persistent_volume":       dataSourceKubernetesPersistentVolume(),
 			"kubernetes_persistent_volume_claim": dataSourceKubernetesPersistentVolumeClaim(),
 		},
 

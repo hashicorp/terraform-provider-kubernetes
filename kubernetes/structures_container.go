@@ -362,6 +362,7 @@ func flattenContainers(in []v1.Container) ([]interface{}, error) {
 
 		c["image_pull_policy"] = v.ImagePullPolicy
 		c["termination_message_path"] = v.TerminationMessagePath
+		c["termination_message_policy"] = v.TerminationMessagePolicy
 		c["stdin"] = v.Stdin
 		c["stdin_once"] = v.StdinOnce
 		c["tty"] = v.TTY
@@ -491,6 +492,9 @@ func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 		}
 		if v, ok := ctr["termination_message_path"]; ok {
 			cs[i].TerminationMessagePath = v.(string)
+		}
+		if v, ok := ctr["termination_message_policy"]; ok {
+			cs[i].TerminationMessagePolicy = v1.TerminationMessagePolicy(v.(string))
 		}
 		if v, ok := ctr["tty"]; ok {
 			cs[i].TTY = v.(bool)

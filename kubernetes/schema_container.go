@@ -521,7 +521,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 			Type:         schema.TypeString,
 			Optional:     true,
 			ValidateFunc: validation.StringInSlice([]string{"File", "FallbackToLogsOnError"}, false),
-			Default:      "File",
+			Computed:     true,
 			Description:  "Optional: Indicate how the termination message should be populated. File will use the contents of terminationMessagePath to populate the container status message on both success and failure. FallbackToLogsOnError will use the last chunk of container log output if the termination message file is empty and the container exited with an error. The log output is limited to 2048 bytes or 80 lines, whichever is smaller. Defaults to File. Cannot be updated.",
 		},
 		"tty": {

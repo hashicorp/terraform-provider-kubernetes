@@ -111,6 +111,11 @@ func dataSourceKubernetesService() *schema.Resource {
 							Description: "Determines how the service is exposed. Defaults to `ClusterIP`. Valid options are `ExternalName`, `ClusterIP`, `NodePort`, and `LoadBalancer`. `ExternalName` maps to the specified `external_name`. More info: http://kubernetes.io/docs/user-guide/services#overview",
 							Computed:    true,
 						},
+						"health_check_node_port": {
+							Type:        schema.TypeInt,
+							Description: "Specifies the Healthcheck NodePort for the service. Only effects when type is set to `LoadBalancer` and external_traffic_policy is set to `Local`.",
+							Computed:    true,
+						},
 					},
 				},
 			},

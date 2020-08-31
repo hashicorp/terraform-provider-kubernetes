@@ -190,8 +190,7 @@ func testAccCheckKubernetesJobExists(n string, obj *api.Job) resource.TestCheckF
 }
 
 func testAccKubernetesJobConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_job" "test" {
+	return fmt.Sprintf(`resource "kubernetes_job" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -215,8 +214,7 @@ resource "kubernetes_job" "test" {
 }
 
 func testAccKubernetesJobConfig_ttl_seconds_after_finished(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_job" "test" {
+	return fmt.Sprintf(`resource "kubernetes_job" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -240,8 +238,7 @@ resource "kubernetes_job" "test" {
 }
 
 func testAccKubernetesJobConfig_wait_for_completion(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_job" "test" {
+	return fmt.Sprintf(`resource "kubernetes_job" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -267,8 +264,7 @@ resource "kubernetes_job" "test" {
 }
 
 func testAccKubernetesJobConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_job" "test" {
+	return fmt.Sprintf(`resource "kubernetes_job" "test" {
 	metadata {
 		name = "%s"
 		labels = {

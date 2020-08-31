@@ -185,8 +185,7 @@ func testAccCheckKubernetesPriorityClassExists(n string, obj *api.PriorityClass)
 }
 
 func testAccKubernetesPriorityClassConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_priority_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_priority_class" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -207,8 +206,7 @@ resource "kubernetes_priority_class" "test" {
 }
 
 func testAccKubernetesPriorityClassConfig_metaModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_priority_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_priority_class" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -230,22 +228,20 @@ resource "kubernetes_priority_class" "test" {
 }
 
 func testAccKubernetesPriorityClassConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_priority_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_priority_class" "test" {
   metadata {
     name = "%s"
   }
 
-  value = 100
-  description = "Foobar"
+  value          = 100
+  description    = "Foobar"
   global_default = true
 }
 `, name)
 }
 
 func testAccKubernetesPriorityClassConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_priority_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_priority_class" "test" {
   metadata {
     generate_name = "%s"
   }

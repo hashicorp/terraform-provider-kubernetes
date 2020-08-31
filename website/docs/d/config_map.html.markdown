@@ -1,7 +1,6 @@
 ---
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_config_map"
-sidebar_current: "docs-kubernetes-resource-config map"
 description: |-
   This data source reads configuration data from a config map.
 ---

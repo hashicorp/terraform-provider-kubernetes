@@ -418,8 +418,7 @@ func testAccCheckKubernetesNetworkPolicyExists(n string, obj *api.NetworkPolicy)
 }
 
 func testAccKubernetesNetworkPolicyConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_network_policy" "test" {
+	return fmt.Sprintf(`resource "kubernetes_network_policy" "test" {
   metadata {
     name      = "%s"
     namespace = "default"
@@ -438,15 +437,14 @@ resource "kubernetes_network_policy" "test" {
   spec {
     pod_selector {}
 
-		policy_types = ["Ingress"]
-	}
+    policy_types = ["Ingress"]
+  }
 }
 `, name)
 }
 
 func testAccKubernetesNetworkPolicyConfig_metaModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_network_policy" "test" {
+	return fmt.Sprintf(`resource "kubernetes_network_policy" "test" {
   metadata {
     name      = "%s"
     namespace = "default"
@@ -465,16 +463,15 @@ resource "kubernetes_network_policy" "test" {
 
   spec {
     pod_selector {}
-    ingress      {}
-	  policy_types = [ "Ingress" ]
+    ingress {}
+    policy_types = ["Ingress"]
   }
 }
 `, name)
 }
 
 func testAccKubernetesNetworkPolicyConfig_specModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_network_policy" "test" {
+	return fmt.Sprintf(`resource "kubernetes_network_policy" "test" {
   metadata {
     name      = "%s"
     namespace = "default"
@@ -515,8 +512,7 @@ resource "kubernetes_network_policy" "test" {
 }
 
 func testAccKubernetesNetworkPolicyConfig_specModified_allow_all_namespaces(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_network_policy" "test" {
+	return fmt.Sprintf(`resource "kubernetes_network_policy" "test" {
   metadata {
     name      = "%s"
     namespace = "default"
@@ -533,7 +529,7 @@ resource "kubernetes_network_policy" "test" {
 
     ingress {
       ports {
-        port     = "http"
+        port = "http"
       }
 
       ports {
@@ -545,15 +541,14 @@ resource "kubernetes_network_policy" "test" {
         namespace_selector {}
       }
     }
-    policy_types = [ "Ingress" ]
+    policy_types = ["Ingress"]
   }
 }
 	`, name)
 }
 
 func testAccKubernetesNetworkPolicyConfig_specModified_deny_other_namespaces(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_network_policy" "test" {
+	return fmt.Sprintf(`resource "kubernetes_network_policy" "test" {
   metadata {
     name      = "%s"
     namespace = "default"
@@ -564,7 +559,7 @@ resource "kubernetes_network_policy" "test" {
 
     ingress {
       ports {
-        port     = "http"
+        port = "http"
       }
 
       ports {
@@ -573,18 +568,17 @@ resource "kubernetes_network_policy" "test" {
       }
 
       from {
-          pod_selector {}
+        pod_selector {}
       }
     }
 
-    policy_types = [ "Ingress" ]
+    policy_types = ["Ingress"]
   }
 }
 	`, name)
 }
 func testAccKubernetesNetworkPolicyConfig_specModified_pod_selector(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_network_policy" "test" {
+	return fmt.Sprintf(`resource "kubernetes_network_policy" "test" {
   metadata {
     name      = "%s"
     namespace = "default"
@@ -633,8 +627,7 @@ resource "kubernetes_network_policy" "test" {
 }
 
 func testAccKubernetesNetworkPolicyConfig_withEgress(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_network_policy" "test" {
+	return fmt.Sprintf(`resource "kubernetes_network_policy" "test" {
   metadata {
     name      = "%s"
     namespace = "default"

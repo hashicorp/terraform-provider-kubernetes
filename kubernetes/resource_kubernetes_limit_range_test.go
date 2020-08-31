@@ -341,8 +341,7 @@ func testAccCheckKubernetesLimitRangeExists(n string, obj *api.LimitRange) resou
 }
 
 func testAccKubernetesLimitRangeConfig_empty(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_limit_range" "test" {
+	return fmt.Sprintf(`resource "kubernetes_limit_range" "test" {
   metadata {
     name = "%s"
   }
@@ -351,8 +350,7 @@ resource "kubernetes_limit_range" "test" {
 }
 
 func testAccKubernetesLimitRangeConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_limit_range" "test" {
+	return fmt.Sprintf(`resource "kubernetes_limit_range" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -387,8 +385,7 @@ resource "kubernetes_limit_range" "test" {
 }
 
 func testAccKubernetesLimitRangeConfig_metaModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_limit_range" "test" {
+	return fmt.Sprintf(`resource "kubernetes_limit_range" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -424,8 +421,7 @@ resource "kubernetes_limit_range" "test" {
 }
 
 func testAccKubernetesLimitRangeConfig_specModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_limit_range" "test" {
+	return fmt.Sprintf(`resource "kubernetes_limit_range" "test" {
   metadata {
     name = "%s"
   }
@@ -454,8 +450,7 @@ resource "kubernetes_limit_range" "test" {
 }
 
 func testAccKubernetesLimitRangeConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_limit_range" "test" {
+	return fmt.Sprintf(`resource "kubernetes_limit_range" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -470,8 +465,7 @@ resource "kubernetes_limit_range" "test" {
 }
 
 func testAccKubernetesLimitRangeConfig_typeChange(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_limit_range" "test" {
+	return fmt.Sprintf(`resource "kubernetes_limit_range" "test" {
   metadata {
     name = "%s"
   }
@@ -491,8 +485,7 @@ resource "kubernetes_limit_range" "test" {
 }
 
 func testAccKubernetesLimitRangeConfig_typeChangeModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_limit_range" "test" {
+	return fmt.Sprintf(`resource "kubernetes_limit_range" "test" {
   metadata {
     name = "%s"
   }
@@ -512,8 +505,7 @@ resource "kubernetes_limit_range" "test" {
 }
 
 func testAccKubernetesLimitRangeConfig_multipleLimits(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_limit_range" "test" {
+	return fmt.Sprintf(`resource "kubernetes_limit_range" "test" {
   metadata {
     name = "%s"
   }

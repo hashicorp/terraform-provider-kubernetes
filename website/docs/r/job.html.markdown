@@ -1,7 +1,6 @@
 ---
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_job"
-sidebar_current: "docs-kubernetes-resource-job"
 description: |-
     A Job creates one or more Pods and ensures that a specified number of them successfully terminate. You can also use a Job to run multiple Pods in parallel.
 ---
@@ -81,10 +80,12 @@ The following arguments are supported:
 * `annotations` - (Optional) An unstructured key value map stored with the resource that may be used to store arbitrary metadata.
 
 ~> By default, the provider ignores any annotations whose key names end with *kubernetes.io*. This is necessary because such annotations can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such annotations in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info: http://kubernetes.io/docs/user-guide/annotations
+
 * `generate_name` - (Optional) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency
 * `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the service. May match selectors of replication controllers and services. 
 
 ~> By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info: http://kubernetes.io/docs/user-guide/labels
+
 * `name` - (Optional) Name of the service, must be unique. Cannot be updated. For more info: http://kubernetes.io/docs/user-guide/identifiers#names
 * `namespace` - (Optional) Namespace defines the space within which name of the service must be unique.
 
@@ -131,6 +132,7 @@ The following [Timeout](/docs/configuration/resources.html#operation-timeouts) c
 * `update - (Default `1 minute`) Used for updating an existing job and waiting for a successful job completion.
 
 Note: 
+
 - Kubernetes provider will treat update operations that change the Job spec resulting in the job re-run as "# forces replacement". 
 In such cases, the `create` timeout value is used for both Create and Update operations.
 - `wait_for_completion` is not applicable during Delete operations; thus, there is no "delete" timeout value for Delete operation. 

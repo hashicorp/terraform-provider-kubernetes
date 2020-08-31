@@ -354,8 +354,7 @@ func testAccCheckKubernetesRoleBindingExists(n string, obj *api.RoleBinding) res
 }
 
 func testAccKubernetesRoleBindingConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role_binding" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -376,8 +375,7 @@ resource "kubernetes_role_binding" "test" {
 }
 
 func testAccKubernetesRoleBindingConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role_binding" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -411,8 +409,7 @@ resource "kubernetes_role_binding" "test" {
 }
 
 func testAccKubernetesRoleBindingConfig_modified_role_ref(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role_binding" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -446,8 +443,7 @@ resource "kubernetes_role_binding" "test" {
 }
 
 func testAccKubernetesRoleBindingConfig_sa_subject(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role_binding" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -468,8 +464,7 @@ resource "kubernetes_role_binding" "test" {
 }
 
 func testAccKubernetesRoleBindingConfig_group_subject(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role_binding" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -490,100 +485,97 @@ resource "kubernetes_role_binding" "test" {
 }
 
 func testAccKubernetesRoleBindingConfigBug_step_0(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role_binding" "test" {
-    metadata {
-		name      = "%s"
-		namespace = "default"
-    }
+	return fmt.Sprintf(`resource "kubernetes_role_binding" "test" {
+  metadata {
+    name      = "%s"
+    namespace = "default"
+  }
 
-    role_ref {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "Role"
-        name      = "admin"
-    }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
 
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser1"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser2"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser3"
-    }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser1"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser2"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser3"
+  }
 }
 `, name)
 }
 
 func testAccKubernetesRoleBindingConfigBug_step_1(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role_binding" "test" {
-    metadata {
-		name      = "%s"
-		namespace = "default"
-    }
+	return fmt.Sprintf(`resource "kubernetes_role_binding" "test" {
+  metadata {
+    name      = "%s"
+    namespace = "default"
+  }
 
-    role_ref {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "Role"
-        name      = "admin"
-    }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
 
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser2"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser4"
-    }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser2"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser4"
+  }
 }
 `, name)
 }
 
 func testAccKubernetesRoleBindingConfigBug_step_2(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role_binding" "test" {
-    metadata {
-		name      = "%s"
-		namespace = "default"
-    }
+	return fmt.Sprintf(`resource "kubernetes_role_binding" "test" {
+  metadata {
+    name      = "%s"
+    namespace = "default"
+  }
 
-    role_ref {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "Role"
-        name      = "admin"
-    }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
 
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser0"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser1"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser2"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser3"
-    }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser0"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser1"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser2"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser3"
+  }
 }
 `, name)
 }

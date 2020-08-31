@@ -1,7 +1,6 @@
 ---
 layout: "kubernetes"
 page_title: "Provider: Kubernetes"
-sidebar_current: "docs-kubernetes-index"
 description: |-
   The Kubernetes (K8s) provider is used to interact with the resources supported by Kubernetes. The provider needs to be configured with the proper credentials before it can be used.
 ---
@@ -139,7 +138,7 @@ The following arguments are supported:
 * `token` - (Optional) Token of your service account.  Can be sourced from `KUBE_TOKEN`.
 * `load_config_file` - (Optional) By default the local config (~/.kube/config) is loaded when you use this provider. This option at false disables this behaviour which is desired when statically specifying the configuration or relying on in-cluster config. Can be sourced from `KUBE_LOAD_CONFIG_FILE`.
 * `exec` - (Optional) Configuration block to use an [exec-based credential plugin] (https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins), e.g. call an external command to receive user credentials.
-  * `api_version` - (Required) API version to use when decoding the ExecCredentials resource, e.g. `client.authentication.k8s.io/v1beta1`.
-  * `command` - (Required) Command to execute.
-  * `args` - (Optional) List of arguments to pass when executing the plugin.
-  * `env` - (Optional) Map of environment variables to set when executing the plugin.
+    * `api_version` - (Required) API version to use when decoding the ExecCredentials resource, e.g. `client.authentication.k8s.io/v1beta1`.
+    * `command` - (Required) Command to execute.
+    * `args` - (Optional) List of arguments to pass when executing the plugin.
+    * `env` - (Optional) Map of environment variables to set when executing the plugin.

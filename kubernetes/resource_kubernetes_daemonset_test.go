@@ -319,8 +319,7 @@ func testAccCheckKubernetesDaemonSetExists(n string, obj *appsv1.DaemonSet) reso
 }
 
 func testAccKubernetesDaemonSetConfig_minimal(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
   }
@@ -352,8 +351,7 @@ resource "kubernetes_daemonset" "test" {
 }
 
 func testAccKubernetesDaemonSetConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -400,8 +398,7 @@ resource "kubernetes_daemonset" "test" {
 }
 
 func testAccKubernetesDaemonSetConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -463,8 +460,7 @@ resource "kubernetes_daemonset" "test" {
 }
 
 func testAccKubernetesDaemonSetConfigWithTemplateMetadata(depName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
 
@@ -507,8 +503,7 @@ resource "kubernetes_daemonset" "test" {
 }
 
 func testAccKubernetesDaemonSetConfigWithTemplateMetadataModified(depName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
 
@@ -526,7 +521,7 @@ resource "kubernetes_daemonset" "test" {
 
     template {
       metadata {
-        labels ={
+        labels = {
           foo  = "bar"
           Test = "TfAcceptanceTest"
         }
@@ -551,8 +546,7 @@ resource "kubernetes_daemonset" "test" {
 }
 
 func testAccKubernetesDaemonSetWithInitContainer(depName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
 
@@ -594,8 +588,7 @@ resource "kubernetes_daemonset" "test" {
 }
 
 func testAccKubernetesDaemonSetWithNoTopLevelLabels(depName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
   }
@@ -636,8 +629,7 @@ func testAccKubernetesDaemonSetConfigWithTolerations(rcName, imageName string, t
 		valueString = fmt.Sprintf("value = \"%s\"", *value)
 	}
 
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
 
@@ -662,9 +654,9 @@ resource "kubernetes_daemonset" "test" {
 
       spec {
         toleration {
-          effect             = "NoExecute"
-          key                = "myKey"
-          operator           = "%s"
+          effect   = "NoExecute"
+          key      = "myKey"
+          operator = "%s"
           %s
           %s
         }

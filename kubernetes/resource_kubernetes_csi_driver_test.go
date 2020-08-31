@@ -108,8 +108,7 @@ func testAccCheckKubernetesCSIDriverExists(n string, obj *api.CSIDriver) resourc
 }
 
 func testAccKubernetesCSIDriverBasicConfig(name string, attached bool) string {
-	return fmt.Sprintf(`
-resource "kubernetes_csi_driver" "test" {
+	return fmt.Sprintf(`resource "kubernetes_csi_driver" "test" {
   metadata {
     name = %[1]q
   }

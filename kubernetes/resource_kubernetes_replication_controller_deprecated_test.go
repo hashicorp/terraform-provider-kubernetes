@@ -413,8 +413,7 @@ func TestAccKubernetesReplicationController_deprecated_with_empty_dir_volume(t *
 }
 
 func testAccKubernetesReplicationControllerConfig_deprecated_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -451,8 +450,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfig_deprecated_initContainer(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
 	metadata {
 		annotations = {
 			TestAnnotationOne = "one"
@@ -504,8 +502,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfig_deprecated_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -534,8 +531,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfig_deprecated_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     labels = {
       TestLabelOne = "one"
@@ -561,8 +557,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfig_deprecated_WithSecurityContext(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
     labels = {
@@ -591,8 +586,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfig_deprecated_WithLivenessProbeUsingExec(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
     labels = {
@@ -625,8 +619,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfig_deprecated_WithLivenessProbeUsingHTTPGet(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
     labels = {
@@ -664,8 +657,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfig_deprecated_WithLivenessProbeUsingTCP(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
     labels = {
@@ -698,8 +690,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfig_deprecated_WithLifeCycle(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
     labels = {
@@ -737,8 +728,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfig_deprecated_WithContainerSecurityContext(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
     labels = {
@@ -753,7 +743,7 @@ resource "kubernetes_replication_controller" "test" {
       container {
         image = "%s"
         name  = "containername"
-  
+
         security_context {
           privileged  = true
           run_as_user = 1
@@ -771,8 +761,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfig_deprecated_WithVolumeMounts(secretName, rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
   }
@@ -794,13 +783,13 @@ resource "kubernetes_replication_controller" "test" {
     selector = {
       Test = "TfAcceptanceTest"
     }
-  	template {
+    template {
       container {
         image = "%s"
         name  = "containername"
         volume_mount {
           mount_path = "/tmp/my_path"
-          name  = "db"
+          name       = "db"
         }
       }
       volume {
@@ -816,8 +805,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfig_deprecated_WithResourceRequirements(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
     labels = {
@@ -829,18 +817,18 @@ resource "kubernetes_replication_controller" "test" {
     selector = {
       Test = "TfAcceptanceTest"
     }
-  	template {
+    template {
       container {
         image = "%s"
         name  = "containername"
 
-        resources{
-          limits{
-            cpu = "0.5"
+        resources {
+          limits {
+            cpu    = "0.5"
             memory = "512Mi"
           }
-          requests{
-            cpu = "250m"
+          requests {
+            cpu    = "250m"
             memory = "50Mi"
           }
         }
@@ -852,8 +840,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfig_deprecated_WithEmptyDirVolumes(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
     labels = {
@@ -870,8 +857,8 @@ resource "kubernetes_replication_controller" "test" {
         image = "%s"
         name  = "containername"
         volume_mount {
-          mount_path =  "/cache"
-          name = "cache-volume"
+          mount_path = "/cache"
+          name       = "cache-volume"
         }
       }
       volume {

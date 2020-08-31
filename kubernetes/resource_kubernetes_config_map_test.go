@@ -286,8 +286,7 @@ func testAccCheckKubernetesConfigMapExists(n string, obj *api.ConfigMap) resourc
 }
 
 func testAccKubernetesConfigMapConfig_nodata(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_config_map" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -309,8 +308,7 @@ resource "kubernetes_config_map" "test" {
 }
 
 func testAccKubernetesConfigMapConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_config_map" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -335,8 +333,7 @@ resource "kubernetes_config_map" "test" {
 }
 
 func testAccKubernetesConfigMapConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_config_map" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -361,8 +358,7 @@ resource "kubernetes_config_map" "test" {
 }
 
 func testAccKubernetesConfigMapConfig_noData(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_config_map" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     name = "%s"
   }
@@ -371,8 +367,7 @@ resource "kubernetes_config_map" "test" {
 }
 
 func testAccKubernetesConfigMapConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_config_map" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -386,8 +381,7 @@ resource "kubernetes_config_map" "test" {
 }
 
 func testAccKubernetesConfigMapConfig_binaryData(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_config_map" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -404,8 +398,7 @@ resource "kubernetes_config_map" "test" {
 }
 
 func testAccKubernetesConfigMapConfig_binaryData2(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_config_map" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     generate_name = "%s"
   }

@@ -166,8 +166,7 @@ func testAccCheckKubernetesCronJobExists(n string, obj *v1beta1.CronJob) resourc
 }
 
 func testAccKubernetesCronJobConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cron_job" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -199,8 +198,7 @@ resource "kubernetes_cron_job" "test" {
 }
 
 func testAccKubernetesCronJobConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cron_job" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -231,8 +229,7 @@ resource "kubernetes_cron_job" "test" {
 }
 
 func testAccKubernetesCronJobConfig_extra(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cron_job" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -263,8 +260,7 @@ resource "kubernetes_cron_job" "test" {
 }
 
 func testAccKubernetesCronJobConfig_extraModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cron_job" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
 	metadata {
 		name = "%s"
 	}

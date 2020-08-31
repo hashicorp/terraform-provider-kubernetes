@@ -196,91 +196,89 @@ func testAccCheckKubernetesMutatingWebhookConfigurationExists(n string) resource
 }
 
 func testAccKubernetesMutatingWebhookConfigurationConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_mutating_webhook_configuration" "test" {
-	metadata {
-		name = %q
-	}
+	return fmt.Sprintf(`resource "kubernetes_mutating_webhook_configuration" "test" {
+  metadata {
+    name = %q
+  }
 
-	webhook {
-		name = %q
+  webhook {
+    name = %q
 
-		admission_review_versions = [
-			"v1",
-			"v1beta1"
-		]
+    admission_review_versions = [
+      "v1",
+      "v1beta1"
+    ]
 
-		client_config {
-			service {
-				namespace = "example-namespace"
-				name = "example-service"
-			}
-		}
+    client_config {
+      service {
+        namespace = "example-namespace"
+        name      = "example-service"
+      }
+    }
 
-		rule {
-			api_groups = ["apps"]
-			api_versions = ["v1"]
-			operations = ["CREATE"]
-			resources = ["pods"]
-			scope = "Namespaced"
-		}
+    rule {
+      api_groups   = ["apps"]
+      api_versions = ["v1"]
+      operations   = ["CREATE"]
+      resources    = ["pods"]
+      scope        = "Namespaced"
+    }
 
-		reinvocation_policy = "IfNeeded"
-		side_effects = "None"
-		timeout_seconds = 10
-	}
+    reinvocation_policy = "IfNeeded"
+    side_effects        = "None"
+    timeout_seconds     = 10
+  }
 }
 `, name, name)
 }
 
 func testAccKubernetesMutatingWebhookConfigurationConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_mutating_webhook_configuration" "test" {
-	metadata {
-		name = %q
-	}
+	return fmt.Sprintf(`resource "kubernetes_mutating_webhook_configuration" "test" {
+  metadata {
+    name = %q
+  }
 
-	webhook {
-		name = %q
+  webhook {
+    name = %q
 
-		failure_policy = "Ignore"
-		match_policy = "Exact"
+    failure_policy = "Ignore"
+    match_policy   = "Exact"
 
-		admission_review_versions = [
-			"v1",
-			"v1beta1"
-		]
+    admission_review_versions = [
+      "v1",
+      "v1beta1"
+    ]
 
-		client_config {
-			url = "https://test"
-		}
+    client_config {
+      url = "https://test"
+    }
 
-		rule {
-			api_groups = ["apps"]
-			api_versions = ["v1"]
-			operations = ["CREATE"]
-			resources = ["pods"]
-			scope = "Namespaced"
-		}
+    rule {
+      api_groups   = ["apps"]
+      api_versions = ["v1"]
+      operations   = ["CREATE"]
+      resources    = ["pods"]
+      scope        = "Namespaced"
+    }
 
-		rule {
-			api_groups = ["batch"]
-			api_versions = ["v1beta1"]
-			operations = ["CREATE"]
-			resources = ["cronjobs"]
-			scope = "Namespaced"
-		}
+    rule {
+      api_groups   = ["batch"]
+      api_versions = ["v1beta1"]
+      operations   = ["CREATE"]
+      resources    = ["cronjobs"]
+      scope        = "Namespaced"
+    }
 
-		object_selector {
-			match_labels = {
-				app = "test"
-			}
-		}
+    object_selector {
+      match_labels = {
+        app = "test"
+      }
+    }
 
-		reinvocation_policy = "Never"
-		side_effects = "NoneOnDryRun"
-		timeout_seconds = 5
-	}
+    reinvocation_policy = "Never"
+    side_effects        = "NoneOnDryRun"
+    timeout_seconds     = 5
+  }
 }
 `, name, name)
 }

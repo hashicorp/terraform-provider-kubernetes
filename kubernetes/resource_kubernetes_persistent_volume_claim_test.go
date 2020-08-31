@@ -622,8 +622,7 @@ type ObjectRefStatic struct {
 }
 
 func testAccKubernetesPersistentVolumeClaimConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume_claim" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume_claim" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -662,12 +661,11 @@ resource "kubernetes_persistent_volume_claim" "test" {
 }
 
 func testAccKubernetesPersistentVolumeClaimConfig_updateStorageMinikube(name, requests, limits string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_storage_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
   metadata {
     name = "allow-expansion"
   }
-  reclaim_policy = "Delete"
+  reclaim_policy      = "Delete"
   storage_provisioner = "k8s.io/minikube-hostpath"
 }
 resource "kubernetes_persistent_volume" "test" {
@@ -678,8 +676,8 @@ resource "kubernetes_persistent_volume" "test" {
     capacity = {
       storage = "5Gi"
     }
-    access_modes = ["ReadWriteOnce"]
-    storage_class_name = kubernetes_storage_class.test.metadata.0.name
+    access_modes                     = ["ReadWriteOnce"]
+    storage_class_name               = kubernetes_storage_class.test.metadata.0.name
     persistent_volume_reclaim_policy = "Recycle"
     persistent_volume_source {
       host_path {
@@ -695,9 +693,9 @@ resource "kubernetes_persistent_volume_claim" "test" {
     name = "%s"
   }
   spec {
-    access_modes = ["ReadWriteOnce"]
+    access_modes       = ["ReadWriteOnce"]
     storage_class_name = kubernetes_storage_class.test.metadata.0.name
-    volume_name = kubernetes_persistent_volume.test.metadata.0.name
+    volume_name        = kubernetes_persistent_volume.test.metadata.0.name
     resources {
       requests = {
         storage = "%s"
@@ -712,13 +710,12 @@ resource "kubernetes_persistent_volume_claim" "test" {
 }
 
 func testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, requests string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_storage_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
   metadata {
     name = "test"
   }
   allow_volume_expansion = true
-  storage_provisioner = "kubernetes.io/gce-pd"
+  storage_provisioner    = "kubernetes.io/gce-pd"
 }
 resource "kubernetes_persistent_volume_claim" "test" {
   wait_until_bound = true
@@ -726,7 +723,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
     name = "%s"
   }
   spec {
-    access_modes = ["ReadWriteOnce"]
+    access_modes       = ["ReadWriteOnce"]
     storage_class_name = kubernetes_storage_class.test.metadata.0.name
     resources {
       requests = {
@@ -741,12 +738,12 @@ resource "kubernetes_pod" "main" {
   }
   spec {
     container {
-      name = "default"
-      image = "alpine:latest"
+      name    = "default"
+      image   = "alpine:latest"
       command = ["sleep", "3600s"]
       volume_mount {
         mount_path = "/etc/test"
-        name = "pvc"
+        name       = "pvc"
       }
     }
     volume {
@@ -761,8 +758,7 @@ resource "kubernetes_pod" "main" {
 }
 
 func testAccKubernetesPersistentVolumeClaimConfig_metaModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume_claim" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume_claim" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -802,8 +798,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 }
 
 func testAccKubernetesPersistentVolumeClaimConfig_import(volumeName, claimName, diskName, zone string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     name = "%s"
   }
@@ -854,8 +849,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 }
 
 func testAccKubernetesPersistentVolumeClaimConfig_volumeMatch(volumeName, claimName, diskName, zone string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     name = "%s"
   }
@@ -906,8 +900,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 }
 
 func testAccKubernetesPersistentVolumeClaimConfig_volumeMatch_modified(volumeName, claimName, diskName, zone string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test2" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test2" {
   metadata {
     name = "%s"
   }
@@ -958,8 +951,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 }
 
 // func testAccKubernetesPersistentVolumeClaimConfig_labelsMatch(volumeName, claimName string) string {
-// 	return fmt.Sprintf(`
-// resource "kubernetes_persistent_volume" "test" {
+// 	return fmt.Sprintf(`// resource "kubernetes_persistent_volume" "test" {
 // 	metadata {
 // 		labels {
 // 			TfAccTestEnvironment = "blablah"
@@ -1001,8 +993,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 // }
 
 // func testAccKubernetesPersistentVolumeClaimConfig_labelsMatchExpression(volumeName, claimName string) string {
-// 	return fmt.Sprintf(`
-// resource "kubernetes_persistent_volume" "test" {
+// 	return fmt.Sprintf(`// resource "kubernetes_persistent_volume" "test" {
 // 	metadata {
 // 		labels {
 // 			TfAccTestEnvironment = "two"
@@ -1046,8 +1037,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 // }
 
 func testAccKubernetesPersistentVolumeClaimConfig_volumeUpdate(volumeName, claimName, storage, diskName, zone string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     name = "%s"
   }
@@ -1098,8 +1088,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 }
 
 func testAccKubernetesPersistentVolumeClaimConfig_storageClass(className, claimName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_storage_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
   metadata {
     name = "%s"
   }
@@ -1132,8 +1121,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 }
 
 func testAccKubernetesPersistentVolumeClaimConfig_storageClassUpdated(className, claimName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_storage_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
   metadata {
     name = "%s"
   }

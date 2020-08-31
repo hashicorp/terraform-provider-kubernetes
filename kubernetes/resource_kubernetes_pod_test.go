@@ -963,8 +963,7 @@ func testAccCheckKubernetesPodForceNew(old, new *api.Pod, wantNew bool) resource
 }
 
 func testAccKubernetesPodConfigBasic(secretName, configMapName, podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
   }
@@ -1033,14 +1032,14 @@ resource "kubernetes_pod" "test" {
       }
       env {
         name = "EXPORTED_VARIBALE_FROM_CONFIG_MAP"
-				value_from {
-					config_map_key_ref {
-						name     = "${kubernetes_config_map.test.metadata.0.name}"
-						key      = "one"
-						optional = true
-					}
-				}
-			}
+        value_from {
+          config_map_key_ref {
+            name     = "${kubernetes_config_map.test.metadata.0.name}"
+            key      = "one"
+            optional = true
+          }
+        }
+      }
 
       env_from {
         config_map_ref {
@@ -1048,14 +1047,14 @@ resource "kubernetes_pod" "test" {
           optional = true
         }
         prefix = "FROM_CM_"
-			}
+      }
       env_from {
-				secret_ref {
-					name     = "${kubernetes_secret.test_from.metadata.0.name}"
-					optional = false
-				}
-				prefix = "FROM_S_"
-			}
+        secret_ref {
+          name     = "${kubernetes_secret.test_from.metadata.0.name}"
+          optional = false
+        }
+        prefix = "FROM_S_"
+      }
     }
 
     volume {
@@ -1071,8 +1070,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWithInitContainer(podName string, image string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1124,7 +1122,7 @@ resource "kubernetes_pod" "test" {
     dns_policy = "Default"
 
     volume {
-      name      = "workdir"
+      name = "workdir"
       empty_dir {}
     }
   }
@@ -1133,8 +1131,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWithSecurityContext(podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1161,8 +1158,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWithSecurityContextRunAsGroup(podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1190,8 +1186,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWithLivenessProbeUsingExec(podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1221,8 +1216,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWithLivenessProbeUsingHTTPGet(podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1258,8 +1252,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWithLivenessProbeUsingTCP(podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1289,8 +1282,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWithLifeCycle(podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1325,8 +1317,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWithContainerSecurityContext(podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1359,8 +1350,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWithVolumeMounts(secretName, podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
   }
@@ -1404,8 +1394,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWithSecretItemsVolume(secretName, podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
   }
@@ -1453,8 +1442,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWithConfigMapVolume(secretName, podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_config_map" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     name = "%s"
   }
@@ -1559,8 +1547,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodProjectedVolume(cfgMapName, cfgMap2Name, secretName, podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_config_map" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
     metadata {
       name = "%s"
     }
@@ -1686,8 +1673,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWithResourceRequirements(podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1719,8 +1705,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWithEmptyDirVolumes(podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1753,8 +1738,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWithEmptyDirVolumesSizeLimit(podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1788,8 +1772,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigNodeSelector(podName, imageName, region string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     name = "%s"
   }
@@ -1809,8 +1792,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigArgsUpdate(podName, imageName, args string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     name = "%s"
   }
@@ -1827,8 +1809,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigEnvUpdate(podName, imageName, val string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     name = "%s"
   }
@@ -1849,8 +1830,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWithAutomountServiceAccountToken(saName string, podName string, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_account" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     name = "%s"
   }
@@ -1887,16 +1867,15 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigWorkingDir(podName, imageName, val string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     name = "%s"
   }
 
   spec {
     container {
-      image = "%s"
-      name  = "containername"
+      image       = "%s"
+      name        = "containername"
       working_dir = "%s"
     }
   }
@@ -1905,8 +1884,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodContainerStartupProbe(podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     name = "%s"
   }
@@ -1932,8 +1910,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesTerminationMessagePolicyDefault(podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     name = "%s"
   }
@@ -1949,8 +1926,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesTerminationMessagePolicyWithOverride(podName, imageName, terminationMessagePolicy string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     name = "%s"
   }

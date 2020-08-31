@@ -34,8 +34,7 @@ func TestAccKubernetesDataSourceConfigMap_basic(t *testing.T) {
 // testAccKubernetesDataSourceConfigMapConfig_basic provides the terraform config
 // used to test basic functionality of the config_map data source.
 func testAccKubernetesDataSourceConfigMapConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_config_map" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -58,8 +57,8 @@ resource "kubernetes_config_map" "test" {
 }
 
 data "kubernetes_config_map" "test" {
-	metadata {
-		name = "${kubernetes_config_map.test.metadata.0.name}"
-	}
-  }`, name)
+  metadata {
+    name = "${kubernetes_config_map.test.metadata.0.name}"
+  }
+}`, name)
 }

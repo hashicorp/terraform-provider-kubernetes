@@ -85,14 +85,13 @@ func testAccCheckKubernetesCertificateSigningRequestDestroy(s *terraform.State) 
 }
 
 func testAccKubernetesCertificateSigningRequestConfig_basic(name, signerName string, usages []string, autoApprove bool) string {
-	return fmt.Sprintf(`
-	resource "kubernetes_certificate_signing_request" "test" {
+	return fmt.Sprintf(`resource "kubernetes_certificate_signing_request" "test" {
   metadata {
     name = "%s"
   }
   auto_approve = %t
   spec {
-    request = <<EOT
+    request     = <<EOT
 -----BEGIN CERTIFICATE REQUEST-----
 MIHSMIGBAgEAMCoxGDAWBgNVBAoTD2V4YW1wbGUgY2x1c3RlcjEOMAwGA1UEAxMF
 YWRtaW4wTjAQBgcqhkjOPQIBBgUrgQQAIQM6AASSG8S2+hQvfMq5ucngPCzK0m0C
@@ -102,21 +101,20 @@ DpNPvh30e0Js8/DYn2YUfu/pQU19
 -----END CERTIFICATE REQUEST-----
 EOT
     signer_name = "%s"
-    usages = %q
+    usages      = %q
   }
 }
 `, name, autoApprove, signerName, usages)
 }
 
 func testAccKubernetesCertificateSigningRequestConfig_generateName(generateName string) string {
-	return fmt.Sprintf(`
-	resource "kubernetes_certificate_signing_request" "test" {
+	return fmt.Sprintf(`resource "kubernetes_certificate_signing_request" "test" {
   metadata {
     generate_name = "%s"
   }
   auto_approve = true
   spec {
-    request = <<EOT
+    request     = <<EOT
 -----BEGIN CERTIFICATE REQUEST-----
 MIHSMIGBAgEAMCoxGDAWBgNVBAoTD2V4YW1wbGUgY2x1c3RlcjEOMAwGA1UEAxMF
 YWRtaW4wTjAQBgcqhkjOPQIBBgUrgQQAIQM6AASSG8S2+hQvfMq5ucngPCzK0m0C
@@ -126,7 +124,7 @@ DpNPvh30e0Js8/DYn2YUfu/pQU19
 -----END CERTIFICATE REQUEST-----
 EOT
     signer_name = "kubernetes.io/legacy-unknown"
-    usages = ["client auth"]
+    usages      = ["client auth"]
   }
 }
 `, generateName)

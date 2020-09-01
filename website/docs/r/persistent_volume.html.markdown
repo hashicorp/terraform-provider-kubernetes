@@ -53,7 +53,8 @@ The following arguments are supported:
 * `persistent_volume_source` - (Required) The specification of a persistent volume.
 * `storage_class_name` - (Optional) The name of the persistent volume's storage class. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class)
 * `mount_options` - (Optional) A Kubernetes administrator can specify additional mount options for when a Persistent Volume is mounted on a node.
-~> NOTE:  Not all Persistent Volume types support mount options. 
+
+~> NOTE  Not all Persistent Volume types support mount options. 
 For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#mount-options)
 * `volume_mode` - (Optional) Defines if a volume is used with a formatted filesystem or to remain in raw block state. Possible values are `Block` and `Filesystem`. Default value is `Filesystem`. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#volume-mode)
 
@@ -240,10 +241,12 @@ For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/sto
 #### Arguments
 
 * `annotations` - (Optional) An unstructured key value map stored with the persistent volume that may be used to store arbitrary metadata. 
-~> NOTE: By default, the provider ignores any annotations whose key names end with *kubernetes.io*. This is necessary because such annotations can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such annotations in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem).
+
+~> NOTE By default, the provider ignores any annotations whose key names end with *kubernetes.io*. This is necessary because such annotations can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such annotations in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem).
 For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/annotations)
 * `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the persistent volume. May match selectors of replication controllers and services. 
-~> NOTE: By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem).
+
+~> NOTE By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem).
 For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
 * `name` - (Optional) Name of the persistent volume, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 

@@ -411,16 +411,6 @@ func flattenContainers(in []v1.Container) ([]interface{}, error) {
 	return att, nil
 }
 
-func flattenReadinessGates(in []v1.PodReadinessGate) ([]interface{}, error) {
-	att := make([]interface{}, len(in))
-	for i, v := range in {
-		c := make(map[string]interface{})
-		c["condition_type"] = v.ConditionType
-		att[i] = c
-	}
-	return att, nil
-}
-
 func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 	if len(ctrs) == 0 {
 		return []v1.Container{}, nil
@@ -523,22 +513,6 @@ func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 
 		if v, ok := ctr["working_dir"].(string); ok && v != "" {
 			cs[i].WorkingDir = v
-		}
-	}
-	return cs, nil
-}
-
-func expandReadinessGates(gates []interface{}) ([]v1.PodReadinessGate, error) {
-	if len(gates) == 0 {
-		return []v1.PodReadinessGate{}, nil
-	}
-	cs := make([]v1.PodReadinessGate, len(gates))
-	for i, c := range gates {
-		gate := c.(map[string]interface{})
-
-		if v, ok := gate["condition_type"]; ok {
-			conType := v1.PodConditionType(v.(string))
-			cs[i].ConditionType = conType
 		}
 	}
 	return cs, nil

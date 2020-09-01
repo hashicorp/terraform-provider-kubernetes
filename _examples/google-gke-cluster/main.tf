@@ -6,24 +6,9 @@ data "google_container_engine_versions" "supported" {
   version_prefix = "${var.kubernetes_version}"
 }
 
-variable "cluster_name" {
-  default = "terraform-example-cluster"
-}
-
-variable "kubernetes_version" {
-  default = "1.16.8"
-}
-
-variable "username" {
-}
-
-variable "password" {
-}
-
-
 resource "google_container_cluster" "primary" {
   name               = var.cluster_name
-  location 	     = data.google_compute_zones.available.names[0]
+  location           = data.google_compute_zones.available.names[0]
   initial_node_count = 3
 
   node_version       = data.google_container_engine_versions.supported.latest_node_version

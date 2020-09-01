@@ -35,6 +35,7 @@ resource "kubernetes_secret" "example" {
 
 ## Example Usage (Docker config)
 
+### Docker config file
 ```hcl
 resource "kubernetes_secret" "example" {
   metadata {
@@ -47,6 +48,36 @@ resource "kubernetes_secret" "example" {
 
   type = "kubernetes.io/dockerconfigjson"
 }
+```
+
+### Username and password
+
+```hcl
+resource "kubernetes_secret" "example" {
+  metadata {
+    name = "docker-cfg"
+  }
+
+  data = {
+    ".dockerconfigjson" = <<DOCKER
+{
+  "auths": {
+    "${var.registry_server}": {
+      "auth": "${base64encode("${var.registry_username}:${var.registry_password}")}"
+    }
+  }
+}
+DOCKER
+  }
+
+  type = "kubernetes.io/dockerconfigjson"
+}
+```
+
+This is equivalent to the following kubectl command:
+
+```sh
+$ kubectl create secret docker-registry docker-cfg --docker-server=${registry_server} --docker-username=${registry_username} --docker-password=${registry_password}
 ```
 
 ## Example Usage (Service account token)

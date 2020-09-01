@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/mitchellh/go-homedir"
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
+	discovery "k8s.io/client-go/discovery"
 	kubernetes "k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	restclient "k8s.io/client-go/rest"
@@ -136,42 +137,53 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"kubernetes_config_map":      dataSourceKubernetesConfigMap(),
-			"kubernetes_secret":          dataSourceKubernetesSecret(),
-			"kubernetes_service":         dataSourceKubernetesService(),
-			"kubernetes_service_account": dataSourceKubernetesServiceAccount(),
-			"kubernetes_storage_class":   dataSourceKubernetesStorageClass(),
+			"kubernetes_all_namespaces":          dataSourceKubernetesAllNamespaces(),
+			"kubernetes_config_map":              dataSourceKubernetesConfigMap(),
+			"kubernetes_ingress":                 dataSourceKubernetesIngress(),
+			"kubernetes_namespace":               dataSourceKubernetesNamespace(),
+			"kubernetes_secret":                  dataSourceKubernetesSecret(),
+			"kubernetes_service":                 dataSourceKubernetesService(),
+			"kubernetes_service_account":         dataSourceKubernetesServiceAccount(),
+			"kubernetes_storage_class":           dataSourceKubernetesStorageClass(),
+			"kubernetes_pod":                     dataSourceKubernetesPod(),
+			"kubernetes_persistent_volume_claim": dataSourceKubernetesPersistentVolumeClaim(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"kubernetes_api_service":               resourceKubernetesAPIService(),
-			"kubernetes_cluster_role":              resourceKubernetesClusterRole(),
-			"kubernetes_cluster_role_binding":      resourceKubernetesClusterRoleBinding(),
-			"kubernetes_config_map":                resourceKubernetesConfigMap(),
-			"kubernetes_cron_job":                  resourceKubernetesCronJob(),
-			"kubernetes_daemonset":                 resourceKubernetesDaemonSet(),
-			"kubernetes_deployment":                resourceKubernetesDeployment(),
-			"kubernetes_endpoints":                 resourceKubernetesEndpoints(),
-			"kubernetes_horizontal_pod_autoscaler": resourceKubernetesHorizontalPodAutoscaler(),
-			"kubernetes_ingress":                   resourceKubernetesIngress(),
-			"kubernetes_job":                       resourceKubernetesJob(),
-			"kubernetes_limit_range":               resourceKubernetesLimitRange(),
-			"kubernetes_namespace":                 resourceKubernetesNamespace(),
-			"kubernetes_network_policy":            resourceKubernetesNetworkPolicy(),
-			"kubernetes_persistent_volume":         resourceKubernetesPersistentVolume(),
-			"kubernetes_persistent_volume_claim":   resourceKubernetesPersistentVolumeClaim(),
-			"kubernetes_pod":                       resourceKubernetesPod(),
-			"kubernetes_pod_disruption_budget":     resourceKubernetesPodDisruptionBudget(),
-			"kubernetes_priority_class":            resourceKubernetesPriorityClass(),
-			"kubernetes_replication_controller":    resourceKubernetesReplicationController(),
-			"kubernetes_role_binding":              resourceKubernetesRoleBinding(),
-			"kubernetes_resource_quota":            resourceKubernetesResourceQuota(),
-			"kubernetes_role":                      resourceKubernetesRole(),
-			"kubernetes_secret":                    resourceKubernetesSecret(),
-			"kubernetes_service":                   resourceKubernetesService(),
-			"kubernetes_service_account":           resourceKubernetesServiceAccount(),
-			"kubernetes_stateful_set":              resourceKubernetesStatefulSet(),
-			"kubernetes_storage_class":             resourceKubernetesStorageClass(),
+			"kubernetes_api_service":                      resourceKubernetesAPIService(),
+			"kubernetes_certificate_signing_request":      resourceKubernetesCertificateSigningRequest(),
+			"kubernetes_cluster_role":                     resourceKubernetesClusterRole(),
+			"kubernetes_cluster_role_binding":             resourceKubernetesClusterRoleBinding(),
+			"kubernetes_config_map":                       resourceKubernetesConfigMap(),
+			"kubernetes_cron_job":                         resourceKubernetesCronJob(),
+			"kubernetes_csi_driver":                       resourceKubernetesCSIDriver(),
+			"kubernetes_daemonset":                        resourceKubernetesDaemonSet(),
+			"kubernetes_default_service_account":          resourceKubernetesDefaultServiceAccount(),
+			"kubernetes_deployment":                       resourceKubernetesDeployment(),
+			"kubernetes_endpoints":                        resourceKubernetesEndpoints(),
+			"kubernetes_horizontal_pod_autoscaler":        resourceKubernetesHorizontalPodAutoscaler(),
+			"kubernetes_ingress":                          resourceKubernetesIngress(),
+			"kubernetes_job":                              resourceKubernetesJob(),
+			"kubernetes_limit_range":                      resourceKubernetesLimitRange(),
+			"kubernetes_namespace":                        resourceKubernetesNamespace(),
+			"kubernetes_network_policy":                   resourceKubernetesNetworkPolicy(),
+			"kubernetes_persistent_volume":                resourceKubernetesPersistentVolume(),
+			"kubernetes_persistent_volume_claim":          resourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_pod":                              resourceKubernetesPod(),
+			"kubernetes_pod_disruption_budget":            resourceKubernetesPodDisruptionBudget(),
+			"kubernetes_pod_security_policy":              resourceKubernetesPodSecurityPolicy(),
+			"kubernetes_priority_class":                   resourceKubernetesPriorityClass(),
+			"kubernetes_replication_controller":           resourceKubernetesReplicationController(),
+			"kubernetes_role_binding":                     resourceKubernetesRoleBinding(),
+			"kubernetes_resource_quota":                   resourceKubernetesResourceQuota(),
+			"kubernetes_role":                             resourceKubernetesRole(),
+			"kubernetes_secret":                           resourceKubernetesSecret(),
+			"kubernetes_service":                          resourceKubernetesService(),
+			"kubernetes_service_account":                  resourceKubernetesServiceAccount(),
+			"kubernetes_stateful_set":                     resourceKubernetesStatefulSet(),
+			"kubernetes_storage_class":                    resourceKubernetesStorageClass(),
+			"kubernetes_validating_webhook_configuration": resourceKubernetesValidatingWebhookConfiguration(),
+			"kubernetes_mutating_webhook_configuration":   resourceKubernetesMutatingWebhookConfiguration(),
 		},
 	}
 
@@ -356,10 +368,48 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 	cfg, err := cc.ClientConfig()
 	if err != nil {
-		log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail.")
+		log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail: %v", err)
 		return nil, nil
 	}
 
 	log.Printf("[INFO] Successfully initialized config")
 	return cfg, nil
+}
+
+var useadmissionregistrationv1beta1 *bool
+
+func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
+	if useadmissionregistrationv1beta1 != nil {
+		return *useadmissionregistrationv1beta1, nil
+	}
+
+	d := conn.Discovery()
+
+	group := "admissionregistration.k8s.io"
+
+	v1, err := apimachineryschema.ParseGroupVersion(fmt.Sprintf("%s/v1", group))
+	if err != nil {
+		return false, err
+	}
+
+	err = discovery.ServerSupportsVersion(d, v1)
+	if err == nil {
+		log.Printf("[INFO] Using %s/v1", group)
+		useadmissionregistrationv1beta1 = ptrToBool(false)
+		return false, nil
+	}
+
+	v1beta1, err := apimachineryschema.ParseGroupVersion(fmt.Sprintf("%s/v1beta1", group))
+	if err != nil {
+		return false, err
+	}
+
+	err = discovery.ServerSupportsVersion(d, v1beta1)
+	if err != nil {
+		return false, err
+	}
+
+	log.Printf("[INFO] Using %s/v1beta1", group)
+	useadmissionregistrationv1beta1 = ptrToBool(true)
+	return true, nil
 }

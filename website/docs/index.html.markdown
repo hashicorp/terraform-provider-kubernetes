@@ -16,8 +16,7 @@ Use the navigation to the left to read about the available resources.
 
 ```hcl
 provider "kubernetes" {
-  config_context_auth_info = "ops"
-  config_context_cluster   = "mycluster"
+  config_context = "my-context"
 }
 
 resource "kubernetes_namespace" "example" {
@@ -87,7 +86,7 @@ provider "kubernetes" {
 }
 ```
 
-If you have any other static configuration setting specifiedin a config file or static configuration, in-cluster service account token will not be tried.
+If you have any other static configuration setting specified in a config file or static configuration, in-cluster service account token will not be tried.
 
 ### Statically defined credentials
 

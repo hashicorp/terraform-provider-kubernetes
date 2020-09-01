@@ -12,7 +12,6 @@ func persistentVolumeClaimFields() map[string]*schema.Schema {
 			Type:        schema.TypeList,
 			Description: "Spec defines the desired characteristics of a volume requested by a pod author. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#persistentvolumeclaims",
 			Required:    true,
-			ForceNew:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: persistentVolumeClaimSpecFields(),
@@ -42,7 +41,6 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 			Type:        schema.TypeList,
 			Description: "A list of the minimum resources the volume should have. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#resources",
 			Required:    true,
-			ForceNew:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
@@ -52,11 +50,11 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 						Optional:    true,
 						ForceNew:    true,
 					},
+					// This is the only field the API will allow modifying in-place, so ForceNew is not used.
 					"requests": {
 						Type:        schema.TypeMap,
 						Description: "Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
 						Optional:    true,
-						ForceNew:    true,
 					},
 				},
 			},

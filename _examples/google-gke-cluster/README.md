@@ -1,4 +1,4 @@
-# Google GKE (Google Container Enginer) cluster
+# Google GKE (Google Container Engine) cluster
 
 In case you don't have a K8S cluster yet the easiest way
 to create one from scratch is to use GKE (Google Container Service).
@@ -39,7 +39,7 @@ and name of the cluster.
 
 ```sh
 terraform apply \
-	-var 'kubernetes_version=1.14' \
+	-var 'kubernetes_version=1.16.8' \
 	-var 'cluster_name=terraform-example-cluster' \
 	-var 'gcp_project=my-project' \
 	-var 'gcp_region=us-west1' \
@@ -56,10 +56,7 @@ Outputs:
 
 cluster_name = terraform-example-cluster
 endpoint = 102.186.121.2
-node_locations = [
-  "us-west1-b",
-]
-node_version = 1.14.8-gke.2
+node_version = 1.16.8
 primary_zone = us-west1-a
 ```
 

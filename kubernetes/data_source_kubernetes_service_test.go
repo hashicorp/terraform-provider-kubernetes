@@ -33,6 +33,7 @@ func TestAccKubernetesDataSourceService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("data.kubernetes_service.test", "spec.0.port.0.target_port", "80"),
 					resource.TestCheckResourceAttr("data.kubernetes_service.test", "spec.0.session_affinity", "None"),
 					resource.TestCheckResourceAttr("data.kubernetes_service.test", "spec.0.type", "ClusterIP"),
+					resource.TestCheckResourceAttr("data.kubernetes_service.test", "spec.0.health_check_node_port", "0"),
 				),
 			},
 		},

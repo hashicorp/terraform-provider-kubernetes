@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // Flatteners
@@ -165,6 +166,9 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	if in.SELinuxOptions != nil {
 		att["se_linux_options"] = flattenSeLinuxOptions(in.SELinuxOptions)
 	}
+	if in.Sysctls != nil {
+		att["sysctl"] = flattenSysctls(in.Sysctls)
+	}
 
 	if len(att) > 0 {
 		return []interface{}{att}
@@ -187,6 +191,22 @@ func flattenSeLinuxOptions(in *v1.SELinuxOptions) []interface{} {
 		att["level"] = in.Level
 	}
 	return []interface{}{att}
+}
+
+func flattenSysctls(sysctls []v1.Sysctl) []interface{} {
+	att := []interface{}{}
+	for _, v := range sysctls {
+		obj := map[string]interface{}{}
+
+		if v.Name != "" {
+			obj["name"] = v.Name
+		}
+		if v.Value != "" {
+			obj["value"] = v.Value
+		}
+		att = append(att, obj)
+	}
+	return att
 }
 
 func flattenTolerations(tolerations []v1.Toleration) []interface{} {
@@ -381,13 +401,16 @@ func flattenConfigMapVolumeSource(in *v1.ConfigMapVolumeSource) []interface{} {
 		}
 		att["items"] = items
 	}
-
+	if in.Optional != nil {
+		att["optional"] = *in.Optional
+	}
 	return []interface{}{att}
 }
 
 func flattenEmptyDirVolumeSource(in *v1.EmptyDirVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["medium"] = in.Medium
+	att["size_limit"] = in.SizeLimit.String()
 	return []interface{}{att}
 }
 
@@ -628,8 +651,29 @@ func expandPodSecurityContext(l []interface{}) *v1.PodSecurityContext {
 	if v, ok := in["supplemental_groups"].(*schema.Set); ok {
 		obj.SupplementalGroups = schemaSetToInt64Array(v)
 	}
+	if v, ok := in["sysctl"].([]interface{}); ok && len(v) > 0 {
+		obj.Sysctls = expandSysctls(v)
+	}
 
 	return obj
+}
+
+func expandSysctls(l []interface{}) []v1.Sysctl {
+	if len(l) == 0 {
+		return []v1.Sysctl{}
+	}
+	sysctls := make([]v1.Sysctl, len(l))
+	for i, c := range l {
+		p := c.(map[string]interface{})
+		if v, ok := p["name"].(string); ok {
+			sysctls[i].Name = v
+		}
+		if v, ok := p["value"].(string); ok {
+			sysctls[i].Value = v
+		}
+
+	}
+	return sysctls
 }
 
 func expandSeLinuxOptions(l []interface{}) *v1.SELinuxOptions {
@@ -730,6 +774,9 @@ func expandConfigMapVolumeSource(l []interface{}) (*v1.ConfigMapVolumeSource, er
 		obj.Name = v
 	}
 
+	if opt, ok := in["optional"].(bool); ok {
+		obj.Optional = ptrToBool(opt)
+	}
 	if v, ok := in["items"].([]interface{}); ok && len(v) > 0 {
 		obj.Items = expandKeyPath(v)
 	}
@@ -782,15 +829,24 @@ func expandGitRepoVolumeSource(l []interface{}) *v1.GitRepoVolumeSource {
 	return obj
 }
 
-func expandEmptyDirVolumeSource(l []interface{}) *v1.EmptyDirVolumeSource {
+func expandEmptyDirVolumeSource(l []interface{}) (*v1.EmptyDirVolumeSource, error) {
 	if len(l) == 0 || l[0] == nil {
-		return &v1.EmptyDirVolumeSource{}
+		return &v1.EmptyDirVolumeSource{}, nil
 	}
 	in := l[0].(map[string]interface{})
 	obj := &v1.EmptyDirVolumeSource{
 		Medium: v1.StorageMedium(in["medium"].(string)),
 	}
-	return obj
+
+	if v, ok := in["size_limit"].(string); ok {
+		s, err := resource.ParseQuantity(v)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse size_limit: %w", err)
+		}
+		obj.SizeLimit = &s
+	}
+
+	return obj, nil
 }
 
 func expandPersistentVolumeClaimVolumeSource(l []interface{}) *v1.PersistentVolumeClaimVolumeSource {
@@ -890,7 +946,11 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 		}
 
 		if value, ok := m["empty_dir"].([]interface{}); ok && len(value) > 0 {
-			vl[i].EmptyDir = expandEmptyDirVolumeSource(value)
+			var err error
+			vl[i].EmptyDir, err = expandEmptyDirVolumeSource(value)
+			if err != nil {
+				return vl, err
+			}
 		}
 		if value, ok := m["downward_api"].([]interface{}); ok && len(value) > 0 {
 			var err error

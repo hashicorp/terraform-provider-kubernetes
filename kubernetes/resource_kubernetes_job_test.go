@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
@@ -14,6 +15,44 @@ import (
 
 func ttlAfterDisabled() (bool, string) {
 	return os.Getenv("FEATURE_GATE_TTL_AFTER_FINISHED") != "enabled", "TTLAfterFinished is not enabled"
+}
+
+func TestAccKubernetesJob_wait_for_completion(t *testing.T) {
+	var conf api.Job
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_job.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesJobDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesJobConfig_wait_for_completion(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// NOTE this is to check that Terraform actually waited for the Job to complete
+					// before considering the Job resource as created
+					testAccCheckJobWaited(time.Duration(10)*time.Second),
+					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "wait_for_completion", "true"),
+				),
+			},
+		},
+	})
+}
+
+func testAccCheckJobWaited(minDuration time.Duration) func(*terraform.State) error {
+	// NOTE this works because this function is called when setting up the test
+	// and the function it returns is called after the resource has been created
+	startTime := time.Now()
+
+	return func(_ *terraform.State) error {
+		testDuration := time.Since(startTime)
+		if testDuration < minDuration {
+			return fmt.Errorf("the job should have waited at least %s before being created", minDuration)
+		}
+		return nil
+	}
 }
 
 func TestAccKubernetesJob_basic(t *testing.T) {
@@ -42,6 +81,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.parallelism", "2"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", "alpine"),
+					resource.TestCheckNoResourceAttr("kubernetes_job.test", "wait_for_completion"),
 				),
 			},
 			{
@@ -63,6 +103,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.manual_selector", "true"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", "alpine"),
+					resource.TestCheckNoResourceAttr("kubernetes_job.test", "wait_for_completion"),
 				),
 			},
 		},
@@ -194,6 +235,33 @@ resource "kubernetes_job" "test" {
 				}
 			}
 		}
+	}
+}`, name)
+}
+
+func testAccKubernetesJobConfig_wait_for_completion(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_job" "test" {
+	metadata {
+		name = "%s"
+	}
+	spec {
+		template {
+			metadata {
+				name = "wait-test"
+			}
+			spec {
+				container {
+					name = "wait-test"
+					image = "busybox"
+					command = ["sleep", "10"]
+				}
+			}
+		}
+	}
+	wait_for_completion = true
+	timeouts {
+		create = "1m"
 	}
 }`, name)
 }

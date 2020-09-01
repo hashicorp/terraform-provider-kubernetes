@@ -256,6 +256,25 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 							Type: schema.TypeInt,
 						},
 					},
+					"sysctl": {
+						Type:        schema.TypeList,
+						Optional:    true,
+						Description: "holds a list of namespaced sysctls used for the pod.",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"name": {
+									Type:        schema.TypeString,
+									Description: "Name of a property to set.",
+									Required:    true,
+								},
+								"value": {
+									Type:        schema.TypeString,
+									Description: "Value of a property to set.",
+									Required:    true,
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -366,7 +385,7 @@ func volumeSchema() *schema.Resource {
 			Schema: map[string]*schema.Schema{
 				"items": {
 					Type:        schema.TypeList,
-					Description: `If unspecified, each key-value pair in the Data field of the referenced ConfigMap will be projected into the volume as a file whose name is the key and content is the value. If specified, the listed keys will be projected into the specified paths, and unlisted keys will not be present. If a key is specified which is not present in the ConfigMap, the volume setup will error. Paths must be relative and may not contain the '..' path or start with '..'.`,
+					Description: `If unspecified, each key-value pair in the Data field of the referenced ConfigMap will be projected into the volume as a file whose name is the key and content is the value. If specified, the listed keys will be projected into the specified paths, and unlisted keys will not be present. If a key is specified which is not present in the ConfigMap, the volume setup will error unless it is marked optional. Paths must be relative and may not contain the '..' path or start with '..'.`,
 					Optional:    true,
 					Elem: &schema.Resource{
 						Schema: map[string]*schema.Schema{
@@ -396,6 +415,11 @@ func volumeSchema() *schema.Resource {
 					Optional:     true,
 					Default:      "0644",
 					ValidateFunc: validateModeBits,
+				},
+				"optional": {
+					Type:        schema.TypeBool,
+					Description: "Optional: Specify whether the ConfigMap or its keys must be defined.",
+					Optional:    true,
 				},
 				"name": {
 					Type:        schema.TypeString,
@@ -529,6 +553,13 @@ func volumeSchema() *schema.Resource {
 					Default:      "",
 					ValidateFunc: validateAttributeValueIsIn([]string{"", "Memory"}),
 				},
+				"size_limit": {
+					Type:        schema.TypeString,
+					Description: `Total amount of local storage required for this EmptyDir volume.`,
+					Optional:    true,
+					ForceNew:    true,
+					Default:     "0",
+				},
 			},
 		},
 	}
@@ -597,7 +628,7 @@ func volumeSchema() *schema.Resource {
 				},
 				"optional": {
 					Type:        schema.TypeBool,
-					Description: "Optional: Specify whether the Secret or it's keys must be defined.",
+					Description: "Optional: Specify whether the Secret or its keys must be defined.",
 					Optional:    true,
 				},
 				"secret_name": {

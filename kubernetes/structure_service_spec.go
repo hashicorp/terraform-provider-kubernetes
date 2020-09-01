@@ -59,6 +59,9 @@ func flattenServiceSpec(in v1.ServiceSpec) []interface{} {
 	if in.ExternalTrafficPolicy != "" {
 		att["external_traffic_policy"] = string(in.ExternalTrafficPolicy)
 	}
+
+	att["health_check_node_port"] = int(in.HealthCheckNodePort)
+
 	return []interface{}{att}
 }
 
@@ -141,6 +144,10 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 	if v, ok := in["external_traffic_policy"].(string); ok {
 		obj.ExternalTrafficPolicy = v1.ServiceExternalTrafficPolicyType(v)
 	}
+	if v, ok := in["health_check_node_port"].(int); ok {
+		obj.HealthCheckNodePort = int32(v)
+	}
+
 	return obj
 }
 
@@ -228,6 +235,12 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 				Path: p,
 			})
 		}
+	}
+	if d.HasChange(keyPrefix + "health_check_node_port") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "healthCheckNodePort",
+			Value: int32(d.Get(keyPrefix + "health_check_node_port").(int)),
+		})
 	}
 	return ops, nil
 }

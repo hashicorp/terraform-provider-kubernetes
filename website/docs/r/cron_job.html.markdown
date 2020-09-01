@@ -28,12 +28,11 @@ resource "kubernetes_cron_job" "demo" {
     schedule                      = "1 0 * * *"
     starting_deadline_seconds     = 10
     successful_jobs_history_limit = 10
-    suspend                       = true
-    ttl_seconds_after_finished    = 10
     job_template {
       metadata {}
       spec {
         backoff_limit = 2
+        ttl_seconds_after_finished    = 10
         template {
           metadata {}
           spec {
@@ -42,7 +41,6 @@ resource "kubernetes_cron_job" "demo" {
               image   = "busybox"
               command = ["/bin/sh", "-c", "date; echo Hello from the Kubernetes cluster"]
             }
-            restart_policy = "OnFailure"
           }
         }
       }
@@ -97,8 +95,8 @@ More info: http://kubernetes.io/docs/user-guide/labels
 
 #### Arguments
 
-* `metadata` - (Required) Standard object's metadata of the jobs created from this template. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-* `spec` - (Required) Specification of the desired behavior of the job. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
+* `metadata` - (Required) Standard object's metadata of the jobs created from this template. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata
+* `spec` - (Required) Specification of the desired behavior of the job. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 
 ### `spec`
 

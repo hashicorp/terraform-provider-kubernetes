@@ -412,8 +412,10 @@ func flattenConfigMapVolumeSource(in *v1.ConfigMapVolumeSource) []interface{} {
 
 func flattenEmptyDirVolumeSource(in *v1.EmptyDirVolumeSource) []interface{} {
 	att := make(map[string]interface{})
-	att["medium"] = in.Medium
-	att["size_limit"] = in.SizeLimit.String()
+	att["medium"] = string(in.Medium)
+	if in.SizeLimit != nil {
+		att["size_limit"] = in.SizeLimit.String()
+	}
 	return []interface{}{att}
 }
 

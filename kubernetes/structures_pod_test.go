@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func TestFlattenTolerations(t *testing.T) {
@@ -293,6 +294,54 @@ func TestExpandSecretVolumeSource(t *testing.T) {
 		}
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
+				tc.ExpectedOutput, output)
+		}
+	}
+}
+
+func TestFlattenEmptyDirVolumeSource(t *testing.T) {
+	size, _ := resource.ParseQuantity("64Mi")
+
+	cases := []struct {
+		Input          *v1.EmptyDirVolumeSource
+		ExpectedOutput []interface{}
+	}{
+		{
+			&v1.EmptyDirVolumeSource{
+				Medium: v1.StorageMediumMemory,
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"medium": "Memory",
+				},
+			},
+		},
+		{
+			&v1.EmptyDirVolumeSource{
+				Medium:    v1.StorageMediumMemory,
+				SizeLimit: &size,
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"medium":     "Memory",
+					"size_limit": "64Mi",
+				},
+			},
+		},
+		{
+			&v1.EmptyDirVolumeSource{},
+			[]interface{}{
+				map[string]interface{}{
+					"medium": "",
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		output := flattenEmptyDirVolumeSource(tc.Input)
+		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
+			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)
 		}
 	}

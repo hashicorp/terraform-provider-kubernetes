@@ -22,6 +22,7 @@ BUG FIXES:
 
 * Recreate Storage Class on VolumeBindingMode update (#757)
 * Fix url attribute in admissionregistration client_config.service block (#959)
+* Fix crash when deferencing nil pointer in v1beta1.IngressRule (#967)
 
 ## 1.12.0 (July 30, 2020)
 

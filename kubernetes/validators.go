@@ -189,7 +189,7 @@ func validateTerminationGracePeriodSeconds(value interface{}, key string) (ws []
 	return
 }
 
-func validateServiceAccountTokenExpirationSeconds(minValue int) func(value interface{}, key string) (ws []string, es []error) {
+func validateIntGreaterThan(minValue int) func(value interface{}, key string) (ws []string, es []error) {
 	return func(value interface{}, key string) (ws []string, es []error) {
 		v := value.(int)
 		if v < minValue {

@@ -460,23 +460,33 @@ func TestExpandThenFlatten_projected_volume(t *testing.T) {
 		{
 			Input: &v1.ProjectedVolumeSource{
 				Sources: []v1.VolumeProjection{
-					{Secret: &v1.SecretProjection{
-						LocalObjectReference: v1.LocalObjectReference{Name: "secret-1"},
-					}},
-					{ConfigMap: &v1.ConfigMapProjection{
-						LocalObjectReference: v1.LocalObjectReference{Name: "config-1"},
-					}},
-					{ConfigMap: &v1.ConfigMapProjection{
-						LocalObjectReference: v1.LocalObjectReference{Name: "config-2"},
-					}},
-					{DownwardAPI: &v1.DownwardAPIProjection{
-						Items: []v1.DownwardAPIVolumeFile{
-							{Path: "path-1"},
+					{
+						Secret: &v1.SecretProjection{
+							LocalObjectReference: v1.LocalObjectReference{Name: "secret-1"},
 						},
-					}},
-					{ServiceAccountToken: &v1.ServiceAccountTokenProjection{
-						Audience: "audience-1",
-					}},
+					},
+					{
+						ConfigMap: &v1.ConfigMapProjection{
+							LocalObjectReference: v1.LocalObjectReference{Name: "config-1"},
+						},
+					},
+					{
+						ConfigMap: &v1.ConfigMapProjection{
+							LocalObjectReference: v1.LocalObjectReference{Name: "config-2"},
+						},
+					},
+					{
+						DownwardAPI: &v1.DownwardAPIProjection{
+							Items: []v1.DownwardAPIVolumeFile{
+								{Path: "path-1"},
+							},
+						},
+					},
+					{
+						ServiceAccountToken: &v1.ServiceAccountTokenProjection{
+							Audience: "audience-1",
+						},
+					},
 				},
 			},
 		},

@@ -1000,20 +1000,21 @@ func expandProjectedVolumeSource(l []interface{}) (*v1.ProjectedVolumeSource, er
 		}
 
 		obj.Sources = srcs
-	} else if v, ok := in["sources"]; ok {
-		return obj, fmt.Errorf("projected sources of unexpected type: %T, %#v", v, v)
 	}
 
 	return obj, nil
 }
 
 func expandProjectedSources(sources []interface{}) ([]v1.VolumeProjection, error) {
-	if len(sources) == 0 {
+	if len(sources) == 0 || sources[0] == nil {
 		return []v1.VolumeProjection{}, nil
 	}
 	srcs := make([]v1.VolumeProjection, 0, len(sources))
 	for _, src := range sources {
-		in := src.(map[string]interface{})
+		in, ok := src.(map[string]interface{})
+		if !ok {
+			continue
+		}
 		if v, ok := in["secret"].([]interface{}); ok {
 			srcs = append(srcs, expandProjectedSecrets(v)...)
 		}

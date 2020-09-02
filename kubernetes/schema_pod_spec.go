@@ -718,7 +718,7 @@ func volumeSchema() *schema.Resource {
 										},
 										"items": {
 											Type:        schema.TypeList,
-											Description: `If unspecified, each key-value pair in the Data field of the referenced ConfigMap will be projected into the volume as a file whose name is the key and content is the value. If specified, the listed keys will be projected into the specified paths, and unlisted keys will not be present. If a key is specified which is not present in the ConfigMap, the volume setup will error. Paths must be relative and may not contain the '..' path or start with '..'.`,
+											Description: "If unspecified, each key-value pair in the Data field of the referenced ConfigMap will be projected into the volume as a file whose name is the key and content is the value. If specified, the listed keys will be projected into the specified paths, and unlisted keys will not be present. If a key is specified which is not present in the ConfigMap, the volume setup will error. Paths must be relative and may not contain the '..' path or start with '..'.",
 											Optional:    true,
 											Elem: &schema.Resource{
 												Schema: map[string]*schema.Schema{
@@ -730,14 +730,14 @@ func volumeSchema() *schema.Resource {
 													"mode": {
 														Type:         schema.TypeString,
 														Optional:     true,
-														Description:  `Optional: mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.`,
+														Description:  "Optional: mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.",
 														ValidateFunc: validateModeBits,
 													},
 													"path": {
 														Type:         schema.TypeString,
 														Optional:     true,
 														ValidateFunc: validateAttributeValueDoesNotContain(".."),
-														Description:  `The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.`,
+														Description:  "The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.",
 													},
 												},
 											},
@@ -755,11 +755,12 @@ func volumeSchema() *schema.Resource {
 								Type:        schema.TypeList,
 								Description: "DownwardAPI represents downward API about the pod that should populate this volume",
 								Optional:    true,
+								MaxItems:    1,
 								Elem: &schema.Resource{
 									Schema: map[string]*schema.Schema{
 										"items": {
 											Type:        schema.TypeList,
-											Description: `If unspecified, each key-value pair in the Data field of the referenced ConfigMap will be projected into the volume as a file whose name is the key and content is the value. If specified, the listed keys will be projected into the specified paths, and unlisted keys will not be present. If a key is specified which is not present in the ConfigMap, the volume setup will error. Paths must be relative and may not contain the '..' path or start with '..'.`,
+											Description: "Represents a volume containing downward API info. Downward API volumes support ownership management and SELinux relabeling.",
 											Optional:    true,
 											Elem: &schema.Resource{
 												Schema: map[string]*schema.Schema{
@@ -767,14 +768,14 @@ func volumeSchema() *schema.Resource {
 														Type:        schema.TypeList,
 														Optional:    true,
 														MaxItems:    1,
-														Description: "Required: Selects a field of the pod: only annotations, labels, name and namespace are supported.",
+														Description: "Selects a field of the pod: only annotations, labels, name and namespace are supported.",
 														Elem: &schema.Resource{
 															Schema: map[string]*schema.Schema{
 																"api_version": {
 																	Type:        schema.TypeString,
 																	Optional:    true,
 																	Default:     "v1",
-																	Description: `Version of the schema the FieldPath is written in terms of, defaults to "v1".`,
+																	Description: "Version of the schema the FieldPath is written in terms of, defaults to 'v1'.",
 																},
 																"field_path": {
 																	Type:        schema.TypeString,
@@ -787,14 +788,14 @@ func volumeSchema() *schema.Resource {
 													"mode": {
 														Type:         schema.TypeString,
 														Optional:     true,
-														Description:  `Optional: mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.`,
+														Description:  "Mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.",
 														ValidateFunc: validateModeBits,
 													},
 													"path": {
 														Type:         schema.TypeString,
 														Required:     true,
 														ValidateFunc: validateAttributeValueDoesNotContain(".."),
-														Description:  `Path is the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'`,
+														Description:  "Path is the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'",
 													},
 													"resource_field_ref": {
 														Type:        schema.TypeList,
@@ -827,8 +828,9 @@ func volumeSchema() *schema.Resource {
 							},
 							"service_account_token": &schema.Schema{
 								Type:        schema.TypeList,
-								Description: "Volume's name. Must be a DNS_LABEL and unique within the pod. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+								Description: "A projected service account token volume",
 								Optional:    true,
+								MaxItems:    1,
 								Elem: &schema.Resource{
 									Schema: map[string]*schema.Schema{
 										"audience": {
@@ -841,7 +843,7 @@ func volumeSchema() *schema.Resource {
 											Optional:     true,
 											Default:      3600,
 											Description:  "ExpirationSeconds is the expected duration of validity of the service account token. It defaults to 1 hour and must be at least 10 minutes (600 seconds).",
-											ValidateFunc: validateServiceAccountTokenExpirationSeconds(600),
+											ValidateFunc: validateIntGreaterThan(600),
 										},
 										"path": {
 											Type:        schema.TypeString,

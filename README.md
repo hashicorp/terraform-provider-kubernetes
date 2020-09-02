@@ -24,6 +24,12 @@ Please note: We take Terraform's security and our users' trust very seriously. I
     - Note that version 0.11.x currently works, but is [deprecated](https://www.hashicorp.com/blog/deprecating-terraform-0-11-support-in-terraform-providers/)
 -	[Go](https://golang.org/doc/install) 1.14.x (to build the provider plugin)
 
+
+## Kubernetes Alpha Provider
+
+A new [experimental provider](https://registry.terraform.io/providers/hashicorp/kubernetes-alpha/latest) is now available that enables management of all Kubernetes resources, including CustomResourceDefinitions (CRDs). Our intent is to eventually merge these two providers.
+
+
 ## Contributing to the provider
 
 The Kubernetes Provider for Terraform is the work of many contributors. We appreciate your help!

@@ -1,4 +1,28 @@
-## 1.12.1 (Unreleased)
+## 1.13.0 (Unreleased)
+
+FEATURES:
+
+* Add resource `CertificateSigningRequest` (#922)
+* Add resource `default_service_account` (#876)
+
+
+IMPROVEMENTS:
+
+* Allow in-place update of PVC's storage request (#957)
+* Add sysctl support to pod spec (#938)
+* Add ability to wait for deployment to delete (#937)
+* Add support for `aggregation_rule` to `cluster_role` resource (#911)
+* Add `health_check_node_port` to Service resource (#908)
+* Add support for `size_limit` for `empty_dir` block (#912)
+* Add support for volume mode (#939)
+* Add projected volumes in pod_spec (#907)
+* Add termination_message_policy to container schema (#847)
+
+BUG FIXES:
+
+* Recreate Storage Class on VolumeBindingMode update (#757)
+* Fix url attribute in admissionregistration client_config.service block (#959)
+
 ## 1.12.0 (July 30, 2020)
 
 BUG FIXES:

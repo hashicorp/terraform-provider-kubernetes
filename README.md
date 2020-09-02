@@ -27,7 +27,7 @@ Please note: We take Terraform's security and our users' trust very seriously. I
 
 ## Kubernetes Alpha Provider
 
-A new [experimental provider](https://github.com/hashicorp/terraform-provider-kubernetes-alpha) is now available that enables management of all Kubernetes resources, including CustomResourceDefinitions (CRDs). Our intent is to eventually merge these two providers.
+A new [experimental provider](https://registry.terraform.io/providers/hashicorp/kubernetes-alpha/latest) is now available that enables management of all Kubernetes resources, including CustomResourceDefinitions (CRDs). Our intent is to eventually merge these two providers.
 
 
 ## Contributing to the provider

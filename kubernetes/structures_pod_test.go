@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -450,4 +451,61 @@ func TestExpandConfigMapVolumeSource(t *testing.T) {
 				tc.ExpectedOutput, output)
 		}
 	}
+}
+
+func TestExpandThenFlatten_projected_volume(t *testing.T) {
+	cases := []struct {
+		Input *v1.ProjectedVolumeSource
+	}{
+		{
+			Input: &v1.ProjectedVolumeSource{
+				Sources: []v1.VolumeProjection{
+					{
+						Secret: &v1.SecretProjection{
+							LocalObjectReference: v1.LocalObjectReference{Name: "secret-1"},
+						},
+					},
+					{
+						ConfigMap: &v1.ConfigMapProjection{
+							LocalObjectReference: v1.LocalObjectReference{Name: "config-1"},
+						},
+					},
+					{
+						ConfigMap: &v1.ConfigMapProjection{
+							LocalObjectReference: v1.LocalObjectReference{Name: "config-2"},
+						},
+					},
+					{
+						DownwardAPI: &v1.DownwardAPIProjection{
+							Items: []v1.DownwardAPIVolumeFile{
+								{Path: "path-1"},
+							},
+						},
+					},
+					{
+						ServiceAccountToken: &v1.ServiceAccountTokenProjection{
+							Audience: "audience-1",
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tc := range cases {
+		in := tc.Input
+		flattenedFirst := flattenProjectedVolumeSource(in)
+		out, err := expandProjectedVolumeSource(flattenedFirst)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !cmp.Equal(in, out) {
+			t.Fatal(cmp.Diff(in, out))
+		}
+
+		flattenedAgain := flattenProjectedVolumeSource(out)
+		if !cmp.Equal(flattenedFirst, flattenedAgain) {
+			t.Fatal(cmp.Diff(flattenedFirst, flattenedAgain))
+		}
+	}
+
 }

@@ -824,6 +824,30 @@ The `items` block supports the following:
 * `resource_field_ref` - (Optional) Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported.
 * `secret_key_ref` - (Optional) Selects a key of a secret in the pod's namespace.
 
+### `projected`
+
+#### Arguments
+
+* `default_mode` - (Optional) Mode bits used to set permissions on created files by default. Must be an octal value between 0000 and 0777 or a decimal value between 0 and 511. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.
+* `sources` - (Required) List of volume projection sources
+
+### `sources`
+
+#### Arguments
+
+* `config_map` - (Optional) Adapts a ConfigMap into a projected volume. The contents of the target ConfigMap's Data field will be presented in a projected volume as files using the keys in the Data field as the file names, unless the items element is populated with specific mappings of keys to paths. Note that this is identical to a configmap volume source without the default mode.
+* `downward_api` - (Optional) Represents downward API info for projecting into a projected volume. Note that this is identical to a downward_api volume source without the default mode.
+* `secret` - (Optional) Adapts a secret into a projected volume. The contents of the target Secret's Data field will be presented in a projected volume as files using the keys in the Data field as the file names. Note that this is identical to a secret volume source without the default mode.
+* `service_account_token` - (Optional) Represents a projected service account token volume. This projection can be used to insert a service account token into the pods runtime filesystem for use against APIs (Kubernetes API Server or otherwise).
+
+### `service_account_token`
+
+#### Arguments
+
+* `audience` - (Optional) Audience is the intended audience of the token. A recipient of a token must identify itself with an identifier specified in the audience of the token, and otherwise should reject the token. The audience defaults to the identifier of the apiserver.
+* `expiration_seconds` - (Optional) The requested duration of validity of the service account token. As the token approaches expiration, the kubelet volume plugin will proactively rotate the service account token. The kubelet will start trying to rotate the token if the token is older than 80 percent of its time to live or if the token is older than 24 hours.Defaults to 1 hour and must be at least 10 minutes.
+* `path` - (Required) Path is the path relative to the mount point of the file to project the token into.
+
 ### `volume`
 
 #### Arguments
@@ -848,6 +872,7 @@ The `items` block supports the following:
 * `nfs` - (Optional) Represents an NFS mount on the host. Provisioned by an admin. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#nfs)
 * `persistent_volume_claim` - (Optional) The specification of a persistent volume.
 * `photon_persistent_disk` - (Optional) Represents a PhotonController persistent disk attached and mounted on kubelets host machine
+* `projected` (Optional) Items for all in one resources secrets, configmaps, and downward API.
 * `quobyte` - (Optional) Quobyte represents a Quobyte mount on the host that shares a pod's lifetime
 * `rbd` - (Optional) Represents a Rados Block Device mount on the host that shares a pod's lifetime. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md
 * `secret` - (Optional) Secret represents a secret that should populate this volume. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#secrets)

@@ -547,6 +547,53 @@ func TestAccKubernetesPod_with_cfg_map_volume_mount(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPod_with_projected_volume(t *testing.T) {
+	var conf api.Pod
+
+	cfgMapName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	cfgMap2Name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := "busybox:1.32"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				ExpectNonEmptyPlan: true,
+				Config:             testAccKubernetesPodProjectedVolume(cfgMapName, cfgMap2Name, secretName, podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.image", imageName),
+
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.name", "projected-vol"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.default_mode", "0777"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.#", "4"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.0.config_map.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.0.config_map.0.name", cfgMapName),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.1.config_map.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.1.config_map.0.name", cfgMap2Name),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.2.secret.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.2.secret.0.name", secretName),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.0.path", "labels"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.0.field_ref.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.0.field_ref.0.field_path", "metadata.labels"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.1.path", "cpu_limit"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.1.resource_field_ref.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.1.resource_field_ref.0.container_name", "containername"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.1.resource_field_ref.0.resource", "limits.cpu"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesPod_with_resource_requirements(t *testing.T) {
 	var conf api.Pod
 
@@ -1509,6 +1556,133 @@ resource "kubernetes_pod" "test" {
   }
 }
 `, secretName, podName, imageName)
+}
+
+func testAccKubernetesPodProjectedVolume(cfgMapName, cfgMap2Name, secretName, podName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_config_map" "test" {
+    metadata {
+      name = "%s"
+    }
+
+    binary_data = {
+      raw = "${base64encode("Raw data should come back as is in the pod")}"
+    }
+
+    data = {
+      one = "first"
+    }
+}
+
+resource "kubernetes_config_map" "test2" {
+    metadata {
+      name = "%s"
+    }
+
+    binary_data = {
+      raw = "${base64encode("Raw data should come back as is in the pod")}"
+    }
+
+    data = {
+      one = "first"
+    }
+}
+
+resource "kubernetes_secret" "test" {
+    metadata {
+      name = "%s"
+    }
+
+    data = {
+      one = "first"
+    }
+}
+
+resource "kubernetes_pod" "test" {
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    restart_policy = "Never"
+
+    container {
+      image = "%s"
+      name  = "containername"
+
+	  command = ["sleep", "3600"]
+
+      lifecycle {
+        post_start {
+          exec {
+            command = ["/bin/sh", "-xc", "grep 'Raw data should come back as is in the pod' /tmp/my-projected-volume/raw.txt"]
+          }
+        }
+      }
+
+      volume_mount {
+        mount_path = "/tmp/my-projected-volume"
+        name       = "projected-vol"
+      }
+    }
+
+    volume {
+      name = "projected-vol"
+      projected {
+        default_mode = "0777"
+        sources {
+          config_map {
+            name = "${kubernetes_config_map.test.metadata.0.name}"
+            items {
+              key  = "raw"
+              path = "raw.txt"
+            }
+		  }
+		}
+		sources {
+		  config_map {
+            name = "${kubernetes_config_map.test2.metadata.0.name}"
+            items {
+              key  = "raw"
+              path = "raw-again.txt"
+            }
+		  }
+		}
+		sources {
+          secret {
+            name = "${kubernetes_secret.test.metadata.0.name}"
+            items {
+              key  = "one"
+              path = "secret.txt"
+            }
+		  }
+		}
+		sources {
+          downward_api {
+            items {
+              path = "labels"
+              field_ref {
+                field_path = "metadata.labels"
+              }
+            }
+            items {
+              path = "cpu_limit"
+              resource_field_ref {
+                container_name = "containername"
+                resource = "limits.cpu"
+              }
+            }
+		  }
+        }
+      }
+    }
+  }
+}
+`, cfgMapName, cfgMap2Name, secretName, podName, imageName)
 }
 
 func testAccKubernetesPodConfigWithResourceRequirements(podName, imageName string) string {

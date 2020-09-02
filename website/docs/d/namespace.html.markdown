@@ -52,4 +52,4 @@ The following arguments are supported:
 
 #### Attributes
 
-* `finalizers` - An opaque list of values that must be empty to permanently remove object from storage. More info: https://kubernetes.io/docs/tasks/administer-cluster/namespaces/
+* `finalizers` - An opaque list of values that must be empty to permanently remove object from storage. For more info: https://kubernetes.io/docs/tasks/administer-cluster/namespaces/

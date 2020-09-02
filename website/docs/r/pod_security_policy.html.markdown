@@ -156,7 +156,7 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 
 #### Arguments
 * `rule` - (Required) the strategy that will dictate the allowable labels that may be set.
-* `se_linux_options` - (Optional) required to run as; required for MustRunAs. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+* `se_linux_options` - (Optional) required to run as; required for MustRunAs. For more info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
 
 ### `supplemental_groups`
 

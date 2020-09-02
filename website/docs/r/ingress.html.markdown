@@ -98,7 +98,7 @@ resource "kubernetes_pod" "example2" {
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard ingress's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata
+* `metadata` - (Required) Standard ingress's metadata. For more info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata
 * `spec` - (Required) Spec defines the behavior of a ingress. https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 * `wait_for_load_balancer` - (Optional) Terraform will wait for the load balancer to have at least 1 endpoint before considering the resource created.
 
@@ -117,7 +117,7 @@ More info: http://kubernetes.io/docs/user-guide/annotations
 
 ~> By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem).
 More info: http://kubernetes.io/docs/user-guide/labels
-* `name` - (Optional) Name of the service, must be unique. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names
+* `name` - (Optional) Name of the service, must be unique. Cannot be updated. For more info: http://kubernetes.io/docs/user-guide/identifiers#names
 * `namespace` - (Optional) Namespace defines the space within which name of the service must be unique.
 
 #### Attributes
@@ -126,7 +126,7 @@ More info: http://kubernetes.io/docs/user-guide/labels
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this service that can be used by clients to determine when service has changed. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
 * `self_link` - A URL representing this service.
-* `uid` - The unique in time and space value for this service. More info: http://kubernetes.io/docs/user-guide/identifiers#uids
+* `uid` - The unique in time and space value for this service. For more info: http://kubernetes.io/docs/user-guide/identifiers#uids
 
 ### `spec`
 

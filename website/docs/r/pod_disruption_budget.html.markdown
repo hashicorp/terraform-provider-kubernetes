@@ -34,7 +34,7 @@ resource "kubernetes_pod_disruption_budget" "demo" {
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard resource's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+* `metadata` - (Required) Standard resource's metadata. For more info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 * `spec` - (Required) Spec defines the behavior of a Pod Disruption Budget. https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 
 ## Nested Blocks
@@ -52,7 +52,7 @@ More info: http://kubernetes.io/docs/user-guide/annotations
 
 ~> By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem).
 More info: http://kubernetes.io/docs/user-guide/labels
-* `name` - (Optional) Name of the service, must be unique. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names
+* `name` - (Optional) Name of the service, must be unique. Cannot be updated. For more info: http://kubernetes.io/docs/user-guide/identifiers#names
 * `namespace` - (Optional) Namespace defines the space within which name of the service must be unique.
 
 #### Attributes
@@ -60,7 +60,7 @@ More info: http://kubernetes.io/docs/user-guide/labels
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this service that can be used by clients to determine when service has changed. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#concurrency-control-and-consistency
 * `self_link` - A URL representing this service.
-* `uid` - The unique in time and space value for this service. More info: http://kubernetes.io/docs/user-guide/identifiers#uids
+* `uid` - The unique in time and space value for this service. For more info: http://kubernetes.io/docs/user-guide/identifiers#uids
 
 ### `spec`
 
@@ -68,4 +68,4 @@ More info: http://kubernetes.io/docs/user-guide/labels
 
 * `max_unavailable` - (Optional) Specifies the number of pods from the selected set that can be unavailable after the eviction. It can be either an absolute number or a percentage. You can specify only one of max_unavailable and min_available in a single Pod Disruption Budget. max_unavailable can only be used to control the eviction of pods that have an associated controller managing them.
 * `min_available` - (Optional) Specifies the number of pods from the selected set that must still be available after the eviction, even in the absence of the evicted pod. min_available can be either an absolute number or a percentage. You can specify only one of min_available and max_unavailable in a single Pod Disruption Budget. min_available can only be used to control the eviction of pods that have an associated controller managing them.
-* `selector` - (Optional) A label query over controllers (Deployment, ReplicationController, ReplicaSet, or StatefulSet) that the Pod Disruption Budget should be applied to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
+* `selector` - (Optional) A label query over controllers (Deployment, ReplicationController, ReplicaSet, or StatefulSet) that the Pod Disruption Budget should be applied to. For more info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors

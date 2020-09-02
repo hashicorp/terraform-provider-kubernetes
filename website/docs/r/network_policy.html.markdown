@@ -88,14 +88,14 @@ More info: http://kubernetes.io/docs/user-guide/annotations
 
 ~> By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem).
 More info: http://kubernetes.io/docs/user-guide/labels
-* `name` - (Optional) Name of the network policy, must be unique. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names
+* `name` - (Optional) Name of the network policy, must be unique. Cannot be updated. For more info: http://kubernetes.io/docs/user-guide/identifiers#names
 
 #### Attributes
 
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this network policy that can be used by clients to determine when network policies have changed. Read more about [concurrency control and consistency](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency).
 * `self_link` - A URL representing this network policy.
-* `uid` - The unique in time and space value for this network policy. More info: http://kubernetes.io/docs/user-guide/identifiers#uids
+* `uid` - The unique in time and space value for this network policy. For more info: http://kubernetes.io/docs/user-guide/identifiers#uids
 
 
 ### `spec`

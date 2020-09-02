@@ -267,9 +267,9 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 
 #### Arguments
 
-* `metadata` - (Required) Standard object's metadata. More info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata)
+* `metadata` - (Required) Standard object's metadata. For more info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata)
 
-* `spec` - (Optional) Specification of the desired behavior of the pod. More info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status)
+* `spec` - (Optional) Specification of the desired behavior of the pod. For more info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status)
 
 ## Nested Blocks
 

@@ -157,6 +157,7 @@ func resourceKubernetesService() *schema.Resource {
 							Description: "Specifies the Healthcheck NodePort for the service. Only effects when type is set to `LoadBalancer` and external_traffic_policy is set to `Local`.",
 							Optional:    true,
 							Computed:    true,
+							ForceNew:    true,
 						},
 					},
 				},

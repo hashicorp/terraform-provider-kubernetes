@@ -585,6 +585,18 @@ func TestAccKubernetesDeployment_with_empty_dir_volume(t *testing.T) {
 					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.volume.0.empty_dir.0.medium", "Memory"),
 				),
 			},
+			{
+				Config: testAccKubernetesDeploymentConfigWithEmptyDirVolumesModified(deploymentName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists(deploymentTestResourceName, &conf),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.volume_mount.#", "1"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.mount_path", "/cache"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.name", "cache-volume"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.volume.0.empty_dir.0.medium", "Memory"),
+					resource.TestCheckResourceAttr(deploymentTestResourceName, "spec.0.template.0.spec.0.volume.0.empty_dir.0.size_limit", "128Mi"),
+				),
+			},
 		},
 	})
 }
@@ -1948,6 +1960,57 @@ resource "kubernetes_deployment" "test" {
 
           empty_dir {
             medium = "Memory"
+          }
+        }
+      }
+    }
+  }
+}
+`, deploymentName, imageName)
+}
+
+func testAccKubernetesDeploymentConfigWithEmptyDirVolumesModified(deploymentName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_deployment" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+
+          volume_mount {
+            mount_path = "/cache"
+            name       = "cache-volume"
+          }
+        }
+
+        volume {
+          name = "cache-volume"
+
+          empty_dir {
+            medium = "Memory"
+            size_limit = "128Mi"
           }
         }
       }

@@ -1,4 +1,4 @@
-## 1.13.1 (Unreleased)
+## 1.13.1 (September 03, 2020)
 
 BUG FIXES:
 * Fix crash when size_limit is not present on empty_dir volume (#983)

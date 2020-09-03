@@ -352,7 +352,7 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Computed:    true,
 			Description: "List of volumes that can be mounted by containers belonging to the pod. More info: http://kubernetes.io/docs/user-guide/volumes",
 			Deprecated:  deprecatedMessage,
-			Elem:        volumeSchema(),
+			Elem:        volumeSchema(isUpdatable),
 		},
 	}
 
@@ -373,7 +373,7 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 	return s
 }
 
-func volumeSchema() *schema.Resource {
+func volumeSchema(isUpdatable bool) *schema.Resource {
 	v := commonVolumeSources()
 
 	v["config_map"] = &schema.Schema{
@@ -551,14 +551,16 @@ func volumeSchema() *schema.Resource {
 					Description:  `What type of storage medium should back this directory. The default is "" which means to use the node's default medium. Must be an empty string (default) or Memory. More info: http://kubernetes.io/docs/user-guide/volumes#emptydir`,
 					Optional:     true,
 					Default:      "",
+					ForceNew:     !isUpdatable,
 					ValidateFunc: validateAttributeValueIsIn([]string{"", "Memory"}),
 				},
 				"size_limit": {
-					Type:        schema.TypeString,
-					Description: `Total amount of local storage required for this EmptyDir volume.`,
-					Optional:    true,
-					ForceNew:    true,
-					Default:     "0",
+					Type:             schema.TypeString,
+					Description:      `Total amount of local storage required for this EmptyDir volume.`,
+					Optional:         true,
+					ForceNew:         !isUpdatable,
+					ValidateFunc:     validateResourceQuantity,
+					DiffSuppressFunc: suppressEquivalentResourceQuantity,
 				},
 			},
 		},

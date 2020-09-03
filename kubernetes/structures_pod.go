@@ -940,7 +940,7 @@ func expandEmptyDirVolumeSource(l []interface{}) (*v1.EmptyDirVolumeSource, erro
 		Medium: v1.StorageMedium(in["medium"].(string)),
 	}
 
-	if v, ok := in["size_limit"].(string); ok {
+	if v, ok := in["size_limit"].(string); ok && v != "" {
 		s, err := resource.ParseQuantity(v)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse size_limit: %w", err)

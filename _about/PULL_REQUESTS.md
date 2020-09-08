@@ -22,7 +22,7 @@ expect:
 
 1. Once you believe your pull request is ready to be reviewed, ensure the
    pull request is not a draft pull request by [marking it ready for review](https://help.github.com/en/articles/changing-the-stage-of-a-pull-request) and a
-   maintainer will review it.
+   maintainer will review it. Adding [tests](https://github.com/hashicorp/terraform-provider-kubernetes/blob/master/_about/CONTRIBUTING.md#tests) will help speed up our acceptance of your PR.
 
 1. One of Terraform's provider team members will look over your contribution and
    either approve it or provide comments letting you know if there is anything

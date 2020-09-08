@@ -65,3 +65,7 @@ In order to run the full suite of Acceptance tests, run `make testacc`.
 ```sh
 $ make testacc
 ```
+
+### Tests
+
+In general, adding test coverage (unit tests and acceptance tests) to new features or bug fixes in your PRs, and sharing the logs of a successful test run on your branch will greatly speed up the acceptance of your PR. Most of our tests can be run against a `kind` cluster, so no additional infrastructure is required.

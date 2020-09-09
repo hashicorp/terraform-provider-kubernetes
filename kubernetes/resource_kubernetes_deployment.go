@@ -416,7 +416,7 @@ func waitForDeploymentReplicasFunc(conn *kubernetes.Clientset, ns, name string) 
 			}
 
 			if dply.Status.UpdatedReplicas < *dply.Spec.Replicas {
-				return resource.RetryableError(fmt.Errorf("Waiting for rollout to finish: %d out of %d new replicas have been updated...", dply.Status.UpdatedReplicas, dply.Spec.Replicas))
+				return resource.RetryableError(fmt.Errorf("Waiting for rollout to finish: %d out of %d new replicas have been updated...", dply.Status.UpdatedReplicas, *dply.Spec.Replicas))
 			}
 
 			if dply.Status.Replicas > dply.Status.UpdatedReplicas {

@@ -408,6 +408,11 @@ func waitForDeploymentReplicasFunc(conn *kubernetes.Clientset, ns, name string) 
 			return resource.NonRetryableError(err)
 		}
 
+		var specReplicas int32 = 1 // default, acording to API docs
+		if dply.Spec.Replicas != nil {
+			specReplicas = *dply.Spec.Replicas
+		}
+
 		if dply.Generation <= dply.Status.ObservedGeneration {
 			cond := GetDeploymentCondition(dply.Status, appsv1.DeploymentProgressing)
 			if cond != nil && cond.Reason == TimedOutReason {
@@ -415,8 +420,8 @@ func waitForDeploymentReplicasFunc(conn *kubernetes.Clientset, ns, name string) 
 				return resource.NonRetryableError(err)
 			}
 
-			if dply.Status.UpdatedReplicas < *dply.Spec.Replicas {
-				return resource.RetryableError(fmt.Errorf("Waiting for rollout to finish: %d out of %d new replicas have been updated...", dply.Status.UpdatedReplicas, dply.Spec.Replicas))
+			if dply.Status.UpdatedReplicas < specReplicas {
+				return resource.RetryableError(fmt.Errorf("Waiting for rollout to finish: %d out of %d new replicas have been updated...", dply.Status.UpdatedReplicas, specReplicas))
 			}
 
 			if dply.Status.Replicas > dply.Status.UpdatedReplicas {

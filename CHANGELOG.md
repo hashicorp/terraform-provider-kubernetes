@@ -1,3 +1,17 @@
+## 1.13.2 (Unreleased)
+
+BUG FIXES:
+
+* Fix spurious forced replacement in empty_dir volume (#985)
+* Fix reported replica count when waiting for Deployment rollout (#998)
+* health_check_port_node should force replacement (#986)
+* Don't force replacement StatefulSet / Deployment when affinity rule selectors change (#755)
+
+IMPROVEMENTS:
+
+* Wait for `kubernetes_service` to be deleted
+* Updates to CONTRIBUTING.md and PULL_REQUESTS.md
+
 ## 1.13.1 (September 03, 2020)
 
 BUG FIXES:

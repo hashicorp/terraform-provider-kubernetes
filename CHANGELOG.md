@@ -1,4 +1,4 @@
-## 1.13.2 (Unreleased)
+## 1.13.2 (September 10, 2020)
 
 BUG FIXES:
 

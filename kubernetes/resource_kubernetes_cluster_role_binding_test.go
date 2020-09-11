@@ -344,8 +344,7 @@ func testAccCheckKubernetesClusterRoleBindingExists(n string, obj *api.ClusterRo
 }
 
 func testAccKubernetesClusterRoleBindingConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -366,8 +365,7 @@ resource "kubernetes_cluster_role_binding" "test" {
 }
 
 func testAccKubernetesClusterRoleBindingConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -401,18 +399,17 @@ resource "kubernetes_cluster_role_binding" "test" {
 }
 
 func testAccKubernetesClusterRoleBindingConfig_modified_role_ref(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
 
   role_ref {
     api_group = "rbac.authorization.k8s.io"
-	# The kind field only accepts this value, anything else returns an error:
-	# roleRef.kind: Unsupported value: "Role": supported values: "ClusterRole"
-	kind      = "ClusterRole"
-    name      = "admin"
+    # The kind field only accepts this value, anything else returns an error:
+    # roleRef.kind: Unsupported value: "Role": supported values: "ClusterRole"
+    kind = "ClusterRole"
+    name = "admin"
   }
 
   subject {
@@ -438,8 +435,7 @@ resource "kubernetes_cluster_role_binding" "test" {
 }
 
 func testAccKubernetesClusterRoleBindingConfig_serviceaccount_subject(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -451,16 +447,15 @@ resource "kubernetes_cluster_role_binding" "test" {
   }
 
   subject {
-    kind      = "ServiceAccount"
-    name      = "someservice"
+    kind = "ServiceAccount"
+    name = "someservice"
   }
 }
 `, name)
 }
 
 func testAccKubernetesClusterRoleBindingConfig_group_subject(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -472,7 +467,7 @@ resource "kubernetes_cluster_role_binding" "test" {
   }
 
   subject {
-		api_group = "rbac.authorization.k8s.io"
+    api_group = "rbac.authorization.k8s.io"
     kind      = "Group"
     name      = "somegroup"
   }
@@ -481,97 +476,94 @@ resource "kubernetes_cluster_role_binding" "test" {
 }
 
 func testAccKubernetesClusterRoleBindingConfigBug_step_0(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
-    metadata {
-        name = "%s"
-    }
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
+  metadata {
+    name = "%s"
+  }
 
-    role_ref {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "ClusterRole"
-        name      = "cluster-admin"
-    }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
 
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser1"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser2"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser3"
-    }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser1"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser2"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser3"
+  }
 }
 `, name)
 }
 
 func testAccKubernetesClusterRoleBindingConfigBug_step_1(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
-    metadata {
-        name = "%s"
-    }
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
+  metadata {
+    name = "%s"
+  }
 
-    role_ref {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "ClusterRole"
-        name      = "cluster-admin"
-    }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
 
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser2"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser4"
-    }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser2"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser4"
+  }
 }
 `, name)
 }
 
 func testAccKubernetesClusterRoleBindingConfigBug_step_2(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
-    metadata {
-        name = "%s"
-    }
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
+  metadata {
+    name = "%s"
+  }
 
-    role_ref {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "ClusterRole"
-        name      = "cluster-admin"
-    }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
 
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser0"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser1"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser2"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser3"
-    }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser0"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser1"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser2"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser3"
+  }
 }
 `, name)
 }

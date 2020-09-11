@@ -647,13 +647,16 @@ func (tml *Tokenmandatorylabel) Size() uint32 {
 // system-related operations on the local computer.
 type Token Handle
 
-// OpenCurrentProcessToken opens the access token
-// associated with current process. It is a real
-// token that needs to be closed, unlike
-// GetCurrentProcessToken.
-func OpenCurrentProcessToken() (token Token, err error) {
-	err = OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY|TOKEN_DUPLICATE, &token)
-	return
+// OpenCurrentProcessToken opens an access token associated with current
+// process with TOKEN_QUERY access. It is a real token that needs to be closed.
+//
+// Deprecated: Explicitly call OpenProcessToken(CurrentProcess(), ...)
+// with the desired access instead, or use GetCurrentProcessToken for a
+// TOKEN_QUERY token.
+func OpenCurrentProcessToken() (Token, error) {
+	var token Token
+	err := OpenProcessToken(CurrentProcess(), TOKEN_QUERY, &token)
+	return token, err
 }
 
 // GetCurrentProcessToken returns the access token associated with

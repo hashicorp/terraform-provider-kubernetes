@@ -3,19 +3,23 @@ module github.com/hashicorp/terraform-provider-kubernetes
 require (
 	github.com/Azure/go-autorest/autorest v0.9.2 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.8.1-0.20191028180845-3492b2aff503 // indirect
+	github.com/bflad/tfproviderdocs v0.7.0
+	github.com/bflad/tfproviderlint v0.5.0
+	github.com/client9/misspell v0.3.4
 	github.com/frankban/quicktest v1.4.2 // indirect
 	github.com/gogo/protobuf v1.3.0 // indirect
+	github.com/golangci/golangci-lint v1.20.0
 	github.com/google/go-cmp v0.3.1
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/gophercloud/gophercloud v0.3.1-0.20190807175045-25a84d593c97 // indirect
 	github.com/hashicorp/go-getter v1.4.2-0.20200106182914-9813cbd4eb02 // indirect
 	github.com/hashicorp/go-version v1.2.0
-	github.com/hashicorp/hcl/v2 v2.3.0 // indirect
 	github.com/hashicorp/terraform-config-inspect v0.0.0-20191212124732-c6ae6269b9d7 // indirect
 	github.com/hashicorp/terraform-plugin-sdk v1.7.0
 	github.com/hashicorp/vault v1.1.2 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
+	github.com/katbyte/terrafmt v0.2.0
 	github.com/keybase/go-crypto v0.0.0-20190416182011-b785b22cc757 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pierrec/lz4 v2.3.0+incompatible // indirect

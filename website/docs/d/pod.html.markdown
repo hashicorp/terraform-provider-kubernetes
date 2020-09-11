@@ -1,7 +1,6 @@
 ---
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_pod"
-sidebar_current: "docs-kubernetes-data-source-pod"
 description: |-
    A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context.
 ---

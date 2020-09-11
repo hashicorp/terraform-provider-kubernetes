@@ -157,8 +157,7 @@ func testAccCheckKubernetesPodDisruptionBudgetExists(n string, obj *api.PodDisru
 }
 
 func testAccKubernetesPodDisruptionBudgetConfig_maxUnavailable(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod_disruption_budget" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_disruption_budget" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -187,8 +186,7 @@ resource "kubernetes_pod_disruption_budget" "test" {
 
 func testAccKubernetesPodDisruptionBudgetConfig_minAvailable(name string) string {
 	// Note the percent sign in min_available is golang-escaped to be double percent signs
-	return fmt.Sprintf(`
-resource "kubernetes_pod_disruption_budget" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_disruption_budget" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -207,9 +205,9 @@ resource "kubernetes_pod_disruption_budget" "test" {
     min_available = "75%%"
     selector {
       match_expressions {
-        key = "name"
+        key      = "name"
         operator = "In"
-        values = ["foo", "apps"]
+        values   = ["foo", "apps"]
       }
     }
   }

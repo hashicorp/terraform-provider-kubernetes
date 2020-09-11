@@ -641,8 +641,7 @@ func testAccCheckKubernetesServiceExists(n string, obj *api.Service) resource.Te
 }
 
 func testAccKubernetesServiceConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -669,8 +668,7 @@ resource "kubernetes_service" "test" {
 }
 
 func testAccKubernetesServiceConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -689,17 +687,16 @@ resource "kubernetes_service" "test" {
     port {
       port        = 8081
       target_port = 80
-		}
+    }
 
-		publish_not_ready_addresses = "true"
+    publish_not_ready_addresses = "true"
   }
 }
 `, name)
 }
 
 func testAccKubernetesServiceConfig_loadBalancer(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     name = "%[1]s"
   }
@@ -725,8 +722,7 @@ resource "kubernetes_service" "test" {
 }
 
 func testAccKubernetesServiceConfig_loadBalancer_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     name = "%[1]s"
   }
@@ -754,8 +750,7 @@ resource "kubernetes_service" "test" {
 }
 
 func testAccKubernetesServiceConfig_loadBalancer_annotations_aws(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     name = "%[1]s"
     annotations = {
@@ -786,8 +781,7 @@ resource "kubernetes_service" "test" {
 }
 
 func testAccKubernetesServiceConfig_loadBalancer_annotations_aws_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     name = "%[1]s"
     annotations = {
@@ -818,8 +812,7 @@ resource "kubernetes_service" "test" {
 }
 
 func testAccKubernetesServiceConfig_loadBalancer_healthcheck(name string, nodePort int) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     name = "%[1]s"
   }
@@ -847,8 +840,7 @@ resource "kubernetes_service" "test" {
 }
 
 func testAccKubernetesServiceConfig_nodePort(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     name = "%[1]s"
   }
@@ -883,8 +875,7 @@ resource "kubernetes_service" "test" {
 }
 
 func testAccKubernetesServiceConfig_stringTargetPort(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     name = "%s"
 
@@ -912,8 +903,7 @@ resource "kubernetes_service" "test" {
 }
 
 func testAccKubernetesServiceConfig_noTargetPort(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     name = "%s"
   }
@@ -940,8 +930,7 @@ resource "kubernetes_service" "test" {
 }
 
 func testAccKubernetesServiceConfig_externalName(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     name = "%s"
   }
@@ -955,8 +944,7 @@ resource "kubernetes_service" "test" {
 }
 
 func testAccKubernetesServiceConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     generate_name = "%s"
   }

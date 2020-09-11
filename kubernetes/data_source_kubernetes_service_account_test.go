@@ -33,15 +33,14 @@ func TestAccKubernetesDataSourceServiceAccount_basic(t *testing.T) {
 }
 
 func testAccKubernetesDataSourceServiceAccountConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_account" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     annotations = {
       TestAnnotation = "annotation"
     }
 
     labels = {
-      TestLabel   = "label"
+      TestLabel = "label"
     }
     name = "%s"
   }
@@ -68,9 +67,9 @@ resource "kubernetes_secret" "image_pull_secret" {
 }
 
 data "kubernetes_service_account" "test" {
-	metadata {
-		name = "${kubernetes_service_account.test.metadata.0.name}"
-	}
+  metadata {
+    name = "${kubernetes_service_account.test.metadata.0.name}"
+  }
 }
 `, name, name, name)
 }

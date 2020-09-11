@@ -366,8 +366,7 @@ func testAccCheckKubernetesServiceAccountExists(n string, obj *api.ServiceAccoun
 }
 
 func testAccKubernetesServiceAccountConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_account" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -427,8 +426,7 @@ resource "kubernetes_secret" "four" {
 }
 
 func testAccKubernetesServiceAccountConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_account" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -489,8 +487,7 @@ resource "kubernetes_secret" "four" {
 }
 
 func testAccKubernetesServiceAccountConfig_noAttributes(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_account" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     name = "%s"
   }
@@ -499,8 +496,7 @@ resource "kubernetes_service_account" "test" {
 }
 
 func testAccKubernetesServiceAccountConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_account" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -509,8 +505,7 @@ resource "kubernetes_service_account" "test" {
 }
 
 func testAccKubernetesServiceAccountConfig_automount(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_account" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"

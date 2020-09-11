@@ -202,8 +202,7 @@ func TestAccKubernetesRoleBug(t *testing.T) {
 }
 
 func testAccKubernetesRoleConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -224,7 +223,7 @@ resource "kubernetes_role" "test" {
     resources      = ["pods"]
     verbs          = ["get", "list", "watch"]
     resource_names = ["foo"]
-	}
+  }
 
   rule {
     api_groups = ["apps"]
@@ -236,8 +235,7 @@ resource "kubernetes_role" "test" {
 }
 
 func testAccKubernetesRoleConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -261,8 +259,7 @@ resource "kubernetes_role" "test" {
 `, name)
 }
 func testAccKubernetesRoleConfig_generatedName(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -331,11 +328,10 @@ func testAccCheckKubernetesRoleDestroy(s *terraform.State) error {
 }
 
 func testAccKubernetesRoleConfigBug_step_0(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role" "test" {
   metadata {
-	name      = "%s"
-	namespace = "default"
+    name      = "%s"
+    namespace = "default"
   }
 
   rule {
@@ -360,11 +356,10 @@ resource "kubernetes_role" "test" {
 }
 
 func testAccKubernetesRoleConfigBug_step_1(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role" "test" {
   metadata {
-	name      = "%s"
-	namespace = "default"
+    name      = "%s"
+    namespace = "default"
   }
 
   rule {
@@ -383,11 +378,10 @@ resource "kubernetes_role" "test" {
 }
 
 func testAccKubernetesRoleConfigBug_step_2(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role" "test" {
   metadata {
-	name      = "%s"
-	namespace = "default"
+    name      = "%s"
+    namespace = "default"
   }
 
   rule {

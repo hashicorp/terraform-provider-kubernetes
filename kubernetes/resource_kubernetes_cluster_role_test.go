@@ -286,8 +286,7 @@ func testAccCheckKubernetesClusterRoleExists(n string, obj *api.ClusterRole) res
 }
 
 func testAccKubernetesClusterRoleConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     labels = {
       TestLabelOne   = "one"
@@ -308,8 +307,7 @@ resource "kubernetes_cluster_role" "test" {
 }
 
 func testAccKubernetesClusterRoleConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     labels = {
       TestLabelOne   = "one"
@@ -333,15 +331,14 @@ resource "kubernetes_cluster_role" "test" {
 
   rule {
     non_resource_urls = ["/metrics"]
-    verbs = ["get"]
+    verbs             = ["get"]
   }
 }
 `, name)
 }
 
 func testAccKubernetesClusterRoleConfigBug_step_0(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     name = "%s"
   }
@@ -367,8 +364,7 @@ resource "kubernetes_cluster_role" "test" {
 }
 
 func testAccKubernetesClusterRoleConfigBug_step_1(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     name = "%s"
   }
@@ -389,8 +385,7 @@ resource "kubernetes_cluster_role" "test" {
 }
 
 func testAccKubernetesClusterRoleConfigBug_step_2(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     name = "%s"
   }
@@ -422,8 +417,7 @@ resource "kubernetes_cluster_role" "test" {
 }
 
 func testAccKubernetesClusterRoleConfig_aggRule(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     labels = {
       TestLabelOne   = "one"
@@ -452,8 +446,7 @@ resource "kubernetes_cluster_role" "test" {
 }
 
 func testAccKubernetesClusterRoleConfig_aggRuleModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     labels = {
       TestLabelOne   = "one"
@@ -482,8 +475,7 @@ resource "kubernetes_cluster_role" "test" {
 }
 
 func testAccKubernetesClusterRoleConfig_aggRule2(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     name = "%[1]s"
   }

@@ -1,7 +1,6 @@
 ---
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_all_namespaces"
-sidebar_current: "docs-kubernetes-data-source-all-namespaces"
 description: |-
   Lists all namespaces within a cluster.
 ---

@@ -224,8 +224,7 @@ func testAccCheckKubernetesIngressExists(n string, obj *api.Ingress) resource.Te
 }
 
 func testAccKubernetesIngressConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -251,8 +250,7 @@ resource "kubernetes_ingress" "test" {
 }
 
 func testAccKubernetesIngressConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -266,8 +264,7 @@ resource "kubernetes_ingress" "test" {
 }
 
 func testAccKubernetesIngressConfig_TLS(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -285,8 +282,7 @@ resource "kubernetes_ingress" "test" {
 }
 
 func testAccKubernetesIngressConfig_TLS_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -304,8 +300,7 @@ resource "kubernetes_ingress" "test" {
 }
 
 func testAccKubernetesIngressConfig_internalKey(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
 		annotations = {
@@ -332,8 +327,7 @@ resource "kubernetes_ingress" "test" {
 }
 
 func testAccKubernetesIngressConfig_internalKey_removed(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
 		annotations = {
@@ -358,8 +352,7 @@ resource "kubernetes_ingress" "test" {
 }
 
 func testAccKubernetesIngressConfig_waitForLoadBalancer(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
 	metadata {
 		name = %q
 	}

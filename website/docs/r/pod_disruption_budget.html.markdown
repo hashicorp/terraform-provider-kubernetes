@@ -1,7 +1,6 @@
 ---
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_pod_disruption_budget"
-sidebar_current: "docs-kubernetes-resource-pod-disruption-budget"
 description: |-
     A Pod Disruption Budget limits the number of pods of a replicated application that are down simultaneously from voluntary disruptions. For example, a quorum-based application would like to ensure that the number of replicas running is never brought below the number needed for a quorum. A web front end might want to ensure that the number of replicas serving load never falls below a certain percentage of the total.
 ---
@@ -20,7 +19,7 @@ resource "kubernetes_pod_disruption_budget" "demo" {
     name = "demo"
   }
   spec {
-    max_unavailable            = "20%"
+    max_unavailable = "20%"
     selector {
       match_labels = {
         test = "MyExampleApp"
@@ -46,10 +45,12 @@ The following arguments are supported:
 * `annotations` - (Optional) An unstructured key value map stored with the resource that may be used to store arbitrary metadata.
 
 ~> By default, the provider ignores any annotations whose key names end with *kubernetes.io*. This is necessary because such annotations can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such annotations in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info: http://kubernetes.io/docs/user-guide/annotations
+
 * `generate_name` - (Optional) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md#idempotency
 * `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the service. May match selectors of replication controllers and services. 
 
 ~> By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info: http://kubernetes.io/docs/user-guide/labels
+
 * `name` - (Optional) Name of the service, must be unique. Cannot be updated. For more info: http://kubernetes.io/docs/user-guide/identifiers#names
 * `namespace` - (Optional) Namespace defines the space within which name of the service must be unique.
 

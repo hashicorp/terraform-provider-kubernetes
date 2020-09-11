@@ -329,8 +329,7 @@ func testAccCheckKubernetesEndpointExists(n string, obj *api.Endpoints) resource
 }
 
 func testAccKubernetesEndpointsConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_endpoints" "test" {
+	return fmt.Sprintf(`resource "kubernetes_endpoints" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -362,8 +361,7 @@ resource "kubernetes_endpoints" "test" {
 }
 
 func testAccKubernetesEndpointsConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_endpoints" "test" {
+	return fmt.Sprintf(`resource "kubernetes_endpoints" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -401,11 +399,11 @@ resource "kubernetes_endpoints" "test" {
       ip = "10.0.0.7"
     }
 
-		not_ready_address {
+    not_ready_address {
       ip = "10.0.0.10"
     }
 
-		not_ready_address {
+    not_ready_address {
       ip = "10.0.0.11"
     }
 
@@ -426,14 +424,13 @@ resource "kubernetes_endpoints" "test" {
       port     = 442
       protocol = "TCP"
     }
-	}
+  }
 }
 `, name)
 }
 
 func testAccKubernetesEndpointsConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_endpoints" "test" {
+	return fmt.Sprintf(`resource "kubernetes_endpoints" "test" {
   metadata {
     generate_name = "%s"
   }

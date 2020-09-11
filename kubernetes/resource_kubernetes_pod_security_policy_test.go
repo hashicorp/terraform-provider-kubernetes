@@ -229,8 +229,7 @@ func testAccCheckKubernetesPodSecurityPolicyExists(n string, obj *policy.PodSecu
 }
 
 func testAccKubernetesPodSecurityPolicyConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod_security_policy" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_security_policy" "test" {
   metadata {
     name = "%s"
 
@@ -246,102 +245,101 @@ resource "kubernetes_pod_security_policy" "test" {
   }
 
   spec {
-	volumes = [
-	  "configMap",
+    volumes = [
+      "configMap",
       "emptyDir",
       "projected",
       "secret",
       "downwardAPI",
       "persistentVolumeClaim",
-	]
+    ]
 
-	run_as_user {
-	  rule = "MustRunAsNonRoot"
-	}
-    
-    se_linux {
-	  rule = "RunAsAny"
+    run_as_user {
+      rule = "MustRunAsNonRoot"
     }
-    
+
+    se_linux {
+      rule = "RunAsAny"
+    }
+
     supplemental_groups {
-	  rule   = "MustRunAs"
-	  range {
-		min = 1
-		max = 65535
-	  }
-	}
+      rule = "MustRunAs"
+      range {
+        min = 1
+        max = 65535
+      }
+    }
 
     fs_group {
-      rule   = "MustRunAs"
-	  range {
-		min = 1
-		max = 65535
-	  }
+      rule = "MustRunAs"
+      range {
+        min = 1
+        max = 65535
+      }
     }
 
     host_ports {
       min = 0
       max = 65535
     }
-    
+
     read_only_root_filesystem = true
   }
-}  
+}
 `, name)
 }
 
 func testAccKubernetesPodSecurityPolicyConfig_metaModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod_security_policy" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_security_policy" "test" {
   metadata {
     name = "%s"
 
     annotations = {
-	  TestAnnotationOne = "one"
-	  TestAnnotationTwo = "two"
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
     }
 
     labels = {
-	  TestLabelOne   = "one"
-	  TestLabelTwo   = "two"
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
   }
 
   spec {
-	volumes = [
-	  "configMap",
+    volumes = [
+      "configMap",
       "emptyDir",
       "projected",
       "secret",
       "downwardAPI",
       "persistentVolumeClaim",
-	]
+    ]
 
-	run_as_user {
-	  rule = "MustRunAsNonRoot"
-	}
-    
+    run_as_user {
+      rule = "MustRunAsNonRoot"
+    }
+
     se_linux {
-	  rule = "RunAsAny"
+      rule = "RunAsAny"
     }
-    
-    supplemental_groups {
-	  rule   = "MustRunAs"
-	  range {
-		min = 1
-		max = 65535
-	  }
-	}
 
-	fs_group {
-      rule   = "MustRunAs"
-	  range {
-		min = 1
-		max = 65535
-	  }
+    supplemental_groups {
+      rule = "MustRunAs"
+      range {
+        min = 1
+        max = 65535
+      }
     }
-    
+
+    fs_group {
+      rule = "MustRunAs"
+      range {
+        min = 1
+        max = 65535
+      }
+    }
+
     read_only_root_filesystem = true
   }
 }
@@ -349,53 +347,52 @@ resource "kubernetes_pod_security_policy" "test" {
 }
 
 func testAccKubernetesPodSecurityPolicyConfig_specModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod_security_policy" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_security_policy" "test" {
   metadata {
     name = "%s"
   }
 
   spec {
-	privileged                         = true
-	allow_privilege_escalation         = true
-	default_allow_privilege_escalation = true
-	host_ipc                           = true
-	host_network                       = true
-	host_pid                           = true
+    privileged                         = true
+    allow_privilege_escalation         = true
+    default_allow_privilege_escalation = true
+    host_ipc                           = true
+    host_network                       = true
+    host_pid                           = true
 
-	volumes = [
-	  "configMap",
+    volumes = [
+      "configMap",
       "emptyDir",
       "projected",
       "secret",
       "downwardAPI",
       "persistentVolumeClaim",
-	]
+    ]
 
-	allowed_unsafe_sysctls = [
-	  "kernel.msg*"
-	]
+    allowed_unsafe_sysctls = [
+      "kernel.msg*"
+    ]
 
-	forbidden_sysctls = [
-	  "kernel.shm_rmid_forced"
-	]
+    forbidden_sysctls = [
+      "kernel.shm_rmid_forced"
+    ]
 
-	run_as_user {
-	  rule = "MustRunAsNonRoot"
-	}
-    
+    run_as_user {
+      rule = "MustRunAsNonRoot"
+    }
+
     se_linux {
-	  rule = "RunAsAny"
+      rule = "RunAsAny"
     }
-    
-    supplemental_groups {
-	  rule   = "RunAsAny"
-	}
 
-	fs_group {
-      rule   = "RunAsAny"
+    supplemental_groups {
+      rule = "RunAsAny"
     }
-    
+
+    fs_group {
+      rule = "RunAsAny"
+    }
+
     read_only_root_filesystem = true
   }
 }

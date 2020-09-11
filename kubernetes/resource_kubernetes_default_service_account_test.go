@@ -108,8 +108,7 @@ func TestAccKubernetesDefaultServiceAccount_importBasic(t *testing.T) {
 }
 
 func testAccKubernetesDefaultServiceAccountConfig_basic(namespace string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = "%s"
   }
@@ -135,8 +134,7 @@ resource "kubernetes_default_service_account" "test" {
 }
 
 func testAccKubernetesDefaultServiceAccountConfig_secrets(namespace string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = "%s"
   }

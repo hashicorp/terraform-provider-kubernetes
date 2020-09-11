@@ -515,8 +515,7 @@ func testAccCheckKubernetesReplicationControllerExists(n string, obj *api.Replic
 }
 
 func testAccKubernetesReplicationControllerConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -567,8 +566,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfig_initContainer(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -645,7 +643,7 @@ resource "kubernetes_replication_controller" "test" {
         dns_policy = "Default"
 
         volume {
-          name      = "workdir"
+          name = "workdir"
           empty_dir {}
         }
       }
@@ -656,8 +654,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -705,8 +702,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     labels = {
       TestLabelOne   = "one"
@@ -746,8 +742,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfigWithSecurityContext(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
@@ -788,8 +783,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfigWithSecurityContextRunAsGroup(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
@@ -831,8 +825,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfigWithLivenessProbeUsingExec(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
@@ -876,8 +869,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfigWithLivenessProbeUsingHTTPGet(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
@@ -927,8 +919,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfigWithLivenessProbeUsingTCP(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
@@ -972,8 +963,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfigWithLifeCycle(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
@@ -1022,8 +1012,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfigWithContainerSecurityContext(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
@@ -1066,8 +1055,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfigWithVolumeMounts(secretName, rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
   }
@@ -1124,8 +1112,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfigWithResourceRequirements(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 
@@ -1171,8 +1158,7 @@ resource "kubernetes_replication_controller" "test" {
 }
 
 func testAccKubernetesReplicationControllerConfigWithEmptyDirVolumes(rcName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_replication_controller" "test" {
+	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
   metadata {
     name = "%s"
 

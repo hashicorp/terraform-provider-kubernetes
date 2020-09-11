@@ -45,54 +45,52 @@ func TestAccKubernetesDataSourcePVC_basic(t *testing.T) {
 }
 
 func testAccKubernetesDataSourcePVCConfig_basic(name string) string {
-	return fmt.Sprintf(`
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume_claim" "test" {
+  metadata {
+    annotations = {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
 
-	resource "kubernetes_persistent_volume_claim" "test" {
-		metadata {
-		  annotations = {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		  }
-	  
-		  labels = {
-			TestLabelOne   = "one"
-			TestLabelTwo   = "two"
-			TestLabelThree = "three"
-		  }
-	  
-		  name = "%s"
-		}
-	  
-		spec {
-		  access_modes = ["ReadWriteOnce"]
-	  
-		  resources {
-			requests = {
-			  storage = "5Gi"
-			}
-		  }
-	  
-		  selector {
-			match_expressions {
-			  key      = "environment"
-			  operator = "In"
-			  values   = ["non-exists-12345"]
-			}
-		  }
-		}
-	  
-		wait_until_bound = false
-		lifecycle {
-			ignore_changes = [metadata]
-		}
-	  }
-	  
-	  
-	  
-	  data "kubernetes_persistent_volume_claim" "test" {
-		  metadata {
-			  name = "${kubernetes_persistent_volume_claim.test.metadata.0.name}"
-		  }
-	  }
+    labels = {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    access_modes = ["ReadWriteOnce"]
+
+    resources {
+      requests = {
+        storage = "5Gi"
+      }
+    }
+
+    selector {
+      match_expressions {
+        key      = "environment"
+        operator = "In"
+        values   = ["non-exists-12345"]
+      }
+    }
+  }
+
+  wait_until_bound = false
+  lifecycle {
+    ignore_changes = [metadata]
+  }
+}
+
+
+
+data "kubernetes_persistent_volume_claim" "test" {
+  metadata {
+    name = "${kubernetes_persistent_volume_claim.test.metadata.0.name}"
+  }
+}
 `, name)
 }

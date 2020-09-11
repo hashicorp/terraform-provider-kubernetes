@@ -1,5 +1,5 @@
 ---
-dist: trusty
+dist: focal
 services:
   - docker
 language: go
@@ -17,9 +17,13 @@ install:
   - bash scripts/gogetcookie.sh
 
 script:
+  - make website-lint
+  - make depscheck
+  - make fmtcheck
   - make test
+  - make test-compile
+  - make tests-lint
   - make vet
-  - make website-test
 
 branches:
   only:

@@ -1,7 +1,6 @@
 ---
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_pod_security_policy"
-sidebar_current: "docs-kubernetes-resource-pod-security-policy"
 description: |-
   A Pod Security Policy is a cluster-level resource that controls security sensitive aspects of the pod specification.
 ---
@@ -33,13 +32,13 @@ resource "kubernetes_pod_security_policy" "example" {
     run_as_user {
       rule = "MustRunAsNonRoot"
     }
-    
+
     se_linux {
       rule = "RunAsAny"
     }
-    
+
     supplemental_groups {
-      rule   = "MustRunAs"
+      rule = "MustRunAs"
       range {
         min = 1
         max = 65535
@@ -47,13 +46,13 @@ resource "kubernetes_pod_security_policy" "example" {
     }
 
     fs_group {
-      rule   = "MustRunAs"
+      rule = "MustRunAs"
       range {
         min = 1
         max = 65535
       }
     }
-    
+
     read_only_root_filesystem = true
   }
 }
@@ -75,10 +74,12 @@ The following arguments are supported:
 * `annotations` - (Optional) An unstructured key value map stored with the Pod Security Policy that may be used to store arbitrary metadata.
 
 ~> By default, the provider ignores any annotations whose key names end with *kubernetes.io*. This is necessary because such annotations can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such annotations in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/annotations)
+
 * `generate_name` - (Optional) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#idempotency)
 * `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the Pod Security Policy. 
 
 ~> By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
+
 * `name` - (Optional) Name of the Pod Security Policy, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 
 #### Attributes
@@ -98,10 +99,10 @@ The following arguments are supported:
 * [`allowed_flex_volumes`](#allowed_flex_volumes) - (Optional) a whitelist of allowed Flexvolumes.  Empty or nil indicates that all Flexvolumes may be used.  This parameter is effective only when the usage of the Flexvolumes is allowed in the "volumes" field.
 * [`allowed_host_paths`](#allowed_host_paths) - (Optional) a white list of allowed host paths. Empty indicates that all host paths may be used.
 * `allowed_proc_mount_types` - (Optional) a whitelist of allowed ProcMountTypes. Empty or nil indicates that only the DefaultProcMountType may be used. This requires the ProcMountType feature flag to be enabled. Possible values are `"Default"` or `"Unmasked"`
-* `allowed_unsafe_sysctls` - (Optional) a list of explicitly allowed unsafe sysctls, defaults to none. Each entry is either a plain sysctl name or ends in "*" in which case it is considered as a prefix of allowed sysctls. Single * means all unsafe sysctls are allowed. Kubelet has to whitelist all allowed unsafe sysctls explicitly to avoid rejection. Examples: "foo/*" allows "foo/bar", "foo/baz", etc. and "foo.*" allows "foo.bar", "foo.baz", etc.
+* `allowed_unsafe_sysctls` - (Optional) a list of explicitly allowed unsafe sysctls, defaults to none. Each entry is either a plain sysctl name or ends in "*" in which case it is considered as a prefix of allowed sysctls. Single* means all unsafe sysctls are allowed. Kubelet has to whitelist all allowed unsafe sysctls explicitly to avoid rejection. Examples: "foo/*" allows "foo/bar", "foo/baz", etc. and "foo.*" allows "foo.bar", "foo.baz", etc.
 * `default_add_capabilities` - (Optional) the default set of capabilities that will be added to the container unless the pod spec specifically drops the capability.  You may not list a capability in both defaultAddCapabilities and requiredDropCapabilities. Capabilities added here are implicitly allowed, and need not be included in the allowedCapabilities list.
 * `default_allow_privilege_escalation` - (Optional) controls the default setting for whether a process can gain more privileges than its parent process.
-* `forbidden_sysctls` - (Optional) forbiddenSysctls is a list of explicitly forbidden sysctls, defaults to none. Each entry is either a plain sysctl name or ends in "*" in which case it is considered as a prefix of forbidden sysctls. Single * means all sysctls are forbidden.
+* `forbidden_sysctls` - (Optional) forbiddenSysctls is a list of explicitly forbidden sysctls, defaults to none. Each entry is either a plain sysctl name or ends in "*" in which case it is considered as a prefix of forbidden sysctls. Single* means all sysctls are forbidden.
 * [`fs_group`](#fs_group) - (Required) the strategy that will dictate what fs group is used by the SecurityContext.
 * `host_ipc` - (Optional) determines if the policy allows the use of HostIPC in the pod spec.
 * `host_network` - (Optional) determines if the policy allows the use of HostNetwork in the pod spec.
@@ -153,6 +154,7 @@ The following arguments are supported:
 ### `se_linux`
 
 #### Arguments
+
 * `rule` - (Required) the strategy that will dictate the allowable labels that may be set.
 * `se_linux_options` - (Optional) required to run as; required for MustRunAs. For more info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
 
@@ -167,6 +169,7 @@ The following arguments are supported:
 ### `range`
 
 #### Arguments
+
 * `min` - (Required) the start of the range, inclusive.
 * `max` - (Required) the end of the range, inclusive.
 

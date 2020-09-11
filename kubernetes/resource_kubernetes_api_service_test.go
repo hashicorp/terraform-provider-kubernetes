@@ -183,8 +183,7 @@ func testAccCheckKubernetesAPIServiceExists(n string) resource.TestCheckFunc {
 }
 
 func testAccKubernetesAPIServiceConfig_basic(name, group, version string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_api_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_api_service" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -202,12 +201,12 @@ resource "kubernetes_api_service" "test" {
 
   spec {
     service {
-      name        = "metrics-server"
-      namespace   = "kube-system"
+      name      = "metrics-server"
+      namespace = "kube-system"
     }
 
     group                  = "%s"
-    group_priority_minimum  = 1
+    group_priority_minimum = 1
 
     version          = "%s"
     version_priority = 1
@@ -219,66 +218,64 @@ resource "kubernetes_api_service" "test" {
 }
 
 func testAccKubernetesAPIServiceConfig_modified(name, group, version string) string {
-	return fmt.Sprintf(`
-  resource "kubernetes_api_service" "test" {
-    metadata {
-      annotations = {
-        TestAnnotationOne = "one"
-      }
-
-      labels = {
-        TestLabelOne = "one"
-        TestLabelTwo = "two"
-      }
-
-      name = "%s"
+	return fmt.Sprintf(`resource "kubernetes_api_service" "test" {
+  metadata {
+    annotations = {
+      TestAnnotationOne = "one"
     }
 
-    spec {
-      service {
-        name        = "metrics-server"
-        namespace   = "kube-system"
-        port        = 8443
-      }
-
-      group                  = "%s"
-      group_priority_minimum = 100
-
-      version          = "%s"
-      version_priority = 100
-
-      ca_bundle = "data"
-      insecure_skip_tls_verify = false
+    labels = {
+      TestLabelOne = "one"
+      TestLabelTwo = "two"
     }
+
+    name = "%s"
   }
+
+  spec {
+    service {
+      name      = "metrics-server"
+      namespace = "kube-system"
+      port      = 8443
+    }
+
+    group                  = "%s"
+    group_priority_minimum = 100
+
+    version          = "%s"
+    version_priority = 100
+
+    ca_bundle                = "data"
+    insecure_skip_tls_verify = false
+  }
+}
 `, name, group, version)
 }
 
 func testAccKubernetesAPIServiceConfig_modified_local_service(name, group, version string) string {
-	return fmt.Sprintf(`
-  resource "kubernetes_api_service" "test" {
-    metadata {
-      annotations = {
-        TestAnnotationOne = "one"
-      }
-
-      labels = {
-        TestLabelOne = "one"
-        TestLabelTwo = "two"
-      }
-
-      name = "%s"
+	return fmt.Sprintf(`resource "kubernetes_api_service" "test" {
+  metadata {
+    annotations = {
+      TestAnnotationOne = "one"
     }
 
-    spec {
-      group                  = "%s"
-      group_priority_minimum = 100
-
-      version          = "%s"
-      version_priority = 100
-
-      insecure_skip_tls_verify = false
+    labels = {
+      TestLabelOne = "one"
+      TestLabelTwo = "two"
     }
+
+    name = "%s"
   }
+
+  spec {
+    group                  = "%s"
+    group_priority_minimum = 100
+
+    version          = "%s"
+    version_priority = 100
+
+    insecure_skip_tls_verify = false
+  }
+}
 `, name, group, version)
 }

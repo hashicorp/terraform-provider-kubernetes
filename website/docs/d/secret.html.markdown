@@ -1,7 +1,6 @@
 ---
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_secret"
-sidebar_current: "docs-kubernetes-resource-secret"
 description: |-
   The resource provides mechanisms to inject containers with sensitive information while keeping containers agnostic of Kubernetes.
 ---

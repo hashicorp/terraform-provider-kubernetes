@@ -343,8 +343,7 @@ func testAccCheckKubernetesNamespaceExists(n string, obj *api.Namespace) resourc
 }
 
 func testAccKubernetesNamespaceConfig_basic(nsName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = "%s"
   }
@@ -353,10 +352,9 @@ resource "kubernetes_namespace" "test" {
 }
 
 func testAccKubernetesNamespaceConfig_addAnnotations(nsName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
-		annotations = {
+    annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
@@ -366,8 +364,7 @@ resource "kubernetes_namespace" "test" {
 `, nsName)
 }
 func testAccKubernetesNamespaceConfig_addLabels(nsName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -387,8 +384,7 @@ resource "kubernetes_namespace" "test" {
 }
 
 func testAccKubernetesNamespaceConfig_smallerLists(nsName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -407,8 +403,7 @@ resource "kubernetes_namespace" "test" {
 }
 
 func testAccKubernetesNamespaceConfig_noLists(nsName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = "%s"
   }
@@ -417,8 +412,7 @@ resource "kubernetes_namespace" "test" {
 }
 
 func testAccKubernetesNamespaceConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -427,8 +421,7 @@ resource "kubernetes_namespace" "test" {
 }
 
 func testAccKubernetesNamespaceConfig_specialCharacters(nsName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     annotations = {
       "myhost.co.uk/any-path" = "one"
@@ -447,12 +440,11 @@ resource "kubernetes_namespace" "test" {
 }
 
 func testAccKubernetesNamespaceConfig_deleteTimeout(nsName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = "%s"
   }
-  timeouts{
+  timeouts {
     delete = "30m"
   }
 }

@@ -340,8 +340,7 @@ resource "kubernetes_secret" "test" {
 `
 
 func testAccKubernetesSecretConfig_emptyData(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -363,8 +362,7 @@ resource "kubernetes_secret" "test" {
 }
 
 func testAccKubernetesSecretConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -389,8 +387,7 @@ resource "kubernetes_secret" "test" {
 }
 
 func testAccKubernetesSecretConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -415,8 +412,7 @@ resource "kubernetes_secret" "test" {
 }
 
 func testAccKubernetesSecretConfig_noData(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
   }
@@ -425,8 +421,7 @@ resource "kubernetes_secret" "test" {
 }
 
 func testAccKubernetesSecretConfig_typeSpecified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
   }
@@ -442,8 +437,7 @@ resource "kubernetes_secret" "test" {
 }
 
 func testAccKubernetesSecretConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -457,14 +451,13 @@ resource "kubernetes_secret" "test" {
 }
 
 func testAccKubernetesSecretConfig_binaryData(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     generate_name = "%s"
   }
 
   data = {
-		one =<<EOF
+    one = <<EOF
 "${filebase64("./test-fixtures/binary.data")}"
 EOF
 
@@ -474,18 +467,17 @@ EOF
 }
 
 func testAccKubernetesSecretConfig_binaryData2(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     generate_name = "%s"
   }
 
   data = {
-		one =<<EOF
+    one = <<EOF
 "${filebase64("./test-fixtures/binary2.data")}"
 EOF
 
-		two =<<EOF
+    two = <<EOF
 "${filebase64("./test-fixtures/binary.data")}"
 EOF
 

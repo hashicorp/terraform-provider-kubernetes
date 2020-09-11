@@ -253,8 +253,7 @@ func testAccCheckKubernetesResourceQuotaExists(n string, obj *api.ResourceQuota)
 }
 
 func testAccKubernetesResourceQuotaConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_resource_quota" "test" {
+	return fmt.Sprintf(`resource "kubernetes_resource_quota" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -281,8 +280,7 @@ resource "kubernetes_resource_quota" "test" {
 }
 
 func testAccKubernetesResourceQuotaConfig_metaModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_resource_quota" "test" {
+	return fmt.Sprintf(`resource "kubernetes_resource_quota" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -310,8 +308,7 @@ resource "kubernetes_resource_quota" "test" {
 }
 
 func testAccKubernetesResourceQuotaConfig_specModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_resource_quota" "test" {
+	return fmt.Sprintf(`resource "kubernetes_resource_quota" "test" {
   metadata {
     name = "%s"
   }
@@ -329,8 +326,7 @@ resource "kubernetes_resource_quota" "test" {
 }
 
 func testAccKubernetesResourceQuotaConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_resource_quota" "test" {
+	return fmt.Sprintf(`resource "kubernetes_resource_quota" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -345,8 +341,7 @@ resource "kubernetes_resource_quota" "test" {
 }
 
 func testAccKubernetesResourceQuotaConfig_withScopes(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_resource_quota" "test" {
+	return fmt.Sprintf(`resource "kubernetes_resource_quota" "test" {
   metadata {
     name = "%s"
   }
@@ -363,8 +358,7 @@ resource "kubernetes_resource_quota" "test" {
 }
 
 func testAccKubernetesResourceQuotaConfig_withScopesModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_resource_quota" "test" {
+	return fmt.Sprintf(`resource "kubernetes_resource_quota" "test" {
   metadata {
     name = "%s"
   }

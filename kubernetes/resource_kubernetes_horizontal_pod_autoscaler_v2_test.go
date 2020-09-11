@@ -162,8 +162,7 @@ func testAccCheckKubernetesHorizontalPodAutoscalerV2Exists(n string) resource.Te
 }
 
 func testAccKubernetesHorizontalPodAutoscalerV2Config_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_horizontal_pod_autoscaler" "test" {
+	return fmt.Sprintf(`resource "kubernetes_horizontal_pod_autoscaler" "test" {
   metadata {
     name = %q
 
@@ -249,8 +248,7 @@ resource "kubernetes_horizontal_pod_autoscaler" "test" {
 }
 
 func testAccKubernetesHorizontalPodAutoscalerV2Config_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_horizontal_pod_autoscaler" "test" {
+	return fmt.Sprintf(`resource "kubernetes_horizontal_pod_autoscaler" "test" {
   metadata {
     name = %q
 

@@ -28,8 +28,7 @@ func TestAccKubernetesDataSourcePod_basic(t *testing.T) {
 }
 
 func testAccKubernetesDataSourcePodConfig_basic(name, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     name = "%s"
   }
@@ -42,9 +41,9 @@ resource "kubernetes_pod" "test" {
   }
 }
 data "kubernetes_pod" "test" {
-	metadata {
-		name = "${kubernetes_pod.test.metadata.0.name}"
-	}
+  metadata {
+    name = "${kubernetes_pod.test.metadata.0.name}"
   }
+}
 `, name, imageName)
 }

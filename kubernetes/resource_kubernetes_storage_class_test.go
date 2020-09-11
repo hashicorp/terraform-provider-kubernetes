@@ -243,8 +243,7 @@ func testAccCheckKubernetesStorageClassExists(n string, obj *api.StorageClass) r
 }
 
 func testAccKubernetesStorageClassConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_storage_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -265,7 +264,7 @@ resource "kubernetes_storage_class" "test" {
   volume_binding_mode    = "Immediate"
   allow_volume_expansion = true
 
-  mount_options			 = ["foo", "bar"]
+  mount_options = ["foo", "bar"]
 
   parameters = {
     type = "pd-ssd"
@@ -275,8 +274,7 @@ resource "kubernetes_storage_class" "test" {
 }
 
 func testAccKubernetesStorageClassConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_storage_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -296,7 +294,7 @@ resource "kubernetes_storage_class" "test" {
   volume_binding_mode    = "WaitForFirstConsumer"
   allow_volume_expansion = false
 
-  mount_options			 = ["foo"]
+  mount_options = ["foo"]
 
   parameters = {
     type  = "pd-standard"
@@ -307,8 +305,7 @@ resource "kubernetes_storage_class" "test" {
 }
 
 func testAccKubernetesStorageClassConfig_noParameters(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_storage_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
   metadata {
     name = "%s"
   }
@@ -319,8 +316,7 @@ resource "kubernetes_storage_class" "test" {
 }
 
 func testAccKubernetesStorageClassConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_storage_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
   metadata {
     generate_name = "%s"
   }

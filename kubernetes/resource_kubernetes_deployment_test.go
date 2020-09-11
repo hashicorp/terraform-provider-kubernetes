@@ -1007,8 +1007,7 @@ func testAccCheckKubernetesDeploymentRolledOut(n string) resource.TestCheckFunc 
 }
 
 func testAccKubernetesDeploymentConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -1070,14 +1069,13 @@ resource "kubernetes_deployment" "test" {
         }
       }
     }
-	}
+  }
 }
 `, name, defaultNginxImage)
 }
 
 func testAccKubernetesDeploymentConfig_initContainer(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -1178,7 +1176,7 @@ resource "kubernetes_deployment" "test" {
         dns_policy = "Default"
 
         volume {
-          name      = "workdir"
+          name = "workdir"
           empty_dir {}
         }
       }
@@ -1189,8 +1187,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -1236,8 +1233,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     labels = {
       TestLabelOne   = "one"
@@ -1279,8 +1275,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithSecurityContext(deploymentName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -1323,8 +1318,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithSecurityContextRunAsGroup(deploymentName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -1368,8 +1362,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithSecurityContextSysctl(deploymentName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -1400,9 +1393,9 @@ resource "kubernetes_deployment" "test" {
           supplemental_groups = [101]
 
           sysctl {
-            name = "kernel.shm_rmid_forced"
+            name  = "kernel.shm_rmid_forced"
             value = "0"
-          }        
+          }
         }
 
         container {
@@ -1426,8 +1419,7 @@ func testAccKubernetesDeploymentConfigWithTolerations(deploymentName, imageName 
 		valueString = fmt.Sprintf("value = \"%s\"", *value)
 	}
 
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -1452,9 +1444,9 @@ resource "kubernetes_deployment" "test" {
 
       spec {
         toleration {
-          effect             = "NoExecute"
-          key                = "myKey"
-          operator           = "%s"
+          effect   = "NoExecute"
+          key      = "myKey"
+          operator = "%s"
           %s
           %s
         }
@@ -1471,8 +1463,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithLivenessProbeUsingExec(deploymentName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -1518,8 +1509,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithLivenessProbeUsingHTTPGet(deploymentName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -1571,8 +1561,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithLivenessProbeUsingTCP(deploymentName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -1618,8 +1607,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithLifeCycle(deploymentName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -1670,8 +1658,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithContainerSecurityContext(deploymentName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -1740,8 +1727,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithContainerSecurityContextRunAsGroup(deploymentName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -1811,8 +1797,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithVolumeMounts(secretName, deploymentName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
   }
@@ -1871,8 +1856,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithResourceRequirements(deploymentName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -1920,8 +1904,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithEmptyDirVolumes(deploymentName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -1970,8 +1953,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithEmptyDirVolumesModified(deploymentName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -2021,8 +2003,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithDeploymentStrategy(deploymentName, strategy, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -2062,8 +2043,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithShareProcessNamespace(deploymentName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -2104,8 +2084,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithDeploymentStrategyRollingUpdate(deploymentName, maxSurge, maxUnavailable, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
 
@@ -2150,8 +2129,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigHostAliases(name string, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -2217,8 +2195,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithAutomountServiceAccountToken(deploymentName string, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = "%s"
   }
@@ -2250,8 +2227,7 @@ resource "kubernetes_deployment" "test" {
 }
 
 func testAccKubernetesDeploymentConfigWithWaitForRolloutFalse(deploymentName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_deployment" "test" {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   metadata {
     name = %q
   }

@@ -13,9 +13,9 @@ func dataSourceKubernetesAllPods() *schema.Resource {
 	return &schema.Resource{
 		Read: dataSourceKubernetesAllPodsRead,
 		Schema: map[string]*schema.Schema{
-			"context": {
+			"namespace": {
 				Type:        schema.TypeString,
-				Description: "Context",
+				Description: "Namespace",
 				Optional:    true,
 				Default:     "default",
 			},
@@ -38,7 +38,7 @@ func dataSourceKubernetesAllPodsRead(d *schema.ResourceData, meta interface{}) e
 	}
 
 	log.Printf("[INFO] Listing pods")
-	nsRaw, err := conn.CoreV1().Pods(d.Get("context").(string)).List(metav1.ListOptions{})
+	nsRaw, err := conn.CoreV1().Pods(d.Get("namespace").(string)).List(metav1.ListOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err

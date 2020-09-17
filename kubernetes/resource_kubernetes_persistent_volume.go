@@ -2,18 +2,24 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
-	gversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	api "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
+)
+
+const (
+	persistentVolumeAzureManagedError = `Unable to apply Azure Disk configuration. Managed disks require configuration: kind = "Managed"`
+	persistentVolumeAzureBlobError    = `Unable to apply Azure Disk configuration. Blob storage disks require configuration: kind = "Shared" or kind = "Dedicated"`
 )
 
 func resourceKubernetesPersistentVolume() *schema.Resource {
@@ -32,43 +38,38 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 		},
 
 		CustomizeDiff: func(diff *schema.ResourceDiff, meta interface{}) error {
-			if diff.Id() == "" {
-				// We only care about updates, not creation
+			// The field `data_disk_uri` expects a different value depending on the value of `kind`.
+			// If `kind` is omitted, "Shared", or "Dedicated", then data_disk_uri expects a blob storage disk.
+			// If `kind` is "Managed", then `data_disk_uri` expects a Managed Disk.
+			kind := "spec.0.persistent_volume_source.0.azure_disk.0.kind"
+			diskURI := "spec.0.persistent_volume_source.0.azure_disk.0.data_disk_uri"
+			kindValue, _ := diff.GetOk(kind)
+			diskURIValue, diskURIExists := diff.GetOk(diskURI)
+			if !diskURIExists {
 				return nil
 			}
-
-			// Mutation of PersistentVolumeSource after creation is no longer allowed in 1.9+
-			// See https://github.com/kubernetes/kubernetes/blob/v1.9.3/CHANGELOG-1.9.md#storage-3
-			conn, err := meta.(KubeClientsets).MainClientset()
-			if err != nil {
-				return err
+			if strings.Contains(diskURIValue.(string), "blob.core.windows.net") && kindValue == "Managed" {
+				log.Printf("Configuration error:")
+				log.Printf("Mismatch between Disk URI: %v = %v and Disk Kind: %v = %v", diskURI, diskURIValue, kind, kindValue)
+				return errors.New(persistentVolumeAzureBlobError)
 			}
-			serverVersion, err := conn.ServerVersion()
-			if err != nil {
-				return err
+			if strings.Contains(diskURIValue.(string), "/providers/Microsoft.Compute/disks/") && kindValue != "Managed" {
+				log.Printf("Configuration error:")
+				log.Printf("Mismatch between Disk URI: %v = %v and disk Kind: %v = %v", diskURI, diskURIValue, kind, kindValue)
+				return errors.New(persistentVolumeAzureManagedError)
 			}
-
-			k8sVersion, err := gversion.NewVersion(serverVersion.String())
-			if err != nil {
-				return err
-			}
-
-			v1_9_0, _ := gversion.NewVersion("1.9.0")
-			if k8sVersion.Equal(v1_9_0) || k8sVersion.GreaterThan(v1_9_0) {
-				if diff.HasChange("spec.0.persistent_volume_source") {
-					keys := diff.GetChangedKeysPrefix("spec.0.persistent_volume_source")
-					for _, key := range keys {
-						if diff.HasChange(key) {
-							err := diff.ForceNew(key)
-							if err != nil {
-								return err
-							}
+			// Any change to Persistent Volume Source requires a new resource.
+			if diff.HasChange("spec.0.persistent_volume_source") {
+				keys := diff.GetChangedKeysPrefix("spec.0.persistent_volume_source")
+				for _, key := range keys {
+					if diff.HasChange(key) {
+						err := diff.ForceNew(key)
+						if err != nil {
+							return err
 						}
 					}
-					return nil
 				}
 			}
-
 			return nil
 		},
 
@@ -118,6 +119,7 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Required:    true,
 							MaxItems:    1,
 							Elem:        persistentVolumeSourceSchema(),
+							ForceNew:    true,
 						},
 						"storage_class_name": {
 							Type:        schema.TypeString,
@@ -302,7 +304,7 @@ func resourceKubernetesPersistentVolumeDelete(d *schema.ResourceData, meta inter
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		out, err := conn.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if k8serrors.IsNotFound(err) {
 				return nil
 			}
 			return resource.NonRetryableError(err)
@@ -333,7 +335,7 @@ func resourceKubernetesPersistentVolumeExists(d *schema.ResourceData, meta inter
 	log.Printf("[INFO] Checking persistent volume %s", name)
 	_, err = conn.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

@@ -27,7 +27,7 @@ func init() {
 		"kubernetes": testAccProvider,
 		"google":     google.Provider(),
 		"aws":        aws.Provider(),
-		"azure":      azurerm.Provider(),
+		"azurerm":    azurerm.Provider(),
 	}
 }
 
@@ -202,20 +202,6 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
-func skipIfNoGoogleCloudSettingsFound(t *testing.T) {
-	if os.Getenv("GOOGLE_PROJECT") == "" || os.Getenv("GOOGLE_REGION") == "" || os.Getenv("GOOGLE_ZONE") == "" {
-		t.Skip("The environment variables GOOGLE_PROJECT, GOOGLE_REGION and GOOGLE_ZONE" +
-			" must be set to run Google Cloud tests - skipping")
-	}
-}
-
-func skipIfNoAwsSettingsFound(t *testing.T) {
-	if os.Getenv("AWS_DEFAULT_REGION") == "" || os.Getenv("AWS_ZONE") == "" || os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-		t.Skip("The environment variables AWS_DEFAULT_REGION, AWS_ZONE, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY" +
-			" must be set to run AWS tests - skipping")
-	}
-}
-
 func getClusterVersion() (*gversion.Version, error) {
 	meta := testAccProvider.Meta()
 
@@ -265,6 +251,47 @@ func skipIfNotRunningInGke(t *testing.T) {
 	if !isInGke {
 		t.Skip("The Kubernetes endpoint must come from GKE for this test to run - skipping")
 	}
+	if os.Getenv("GOOGLE_PROJECT") == "" || os.Getenv("GOOGLE_REGION") == "" || os.Getenv("GOOGLE_ZONE") == "" {
+		t.Fatal("GOOGLE_PROJECT, GOOGLE_REGION, and GOOGLE_ZONE must be set for GoogleCloud tests")
+	}
+}
+
+func skipIfNotRunningInAks(t *testing.T) {
+	isInAks, err := isRunningInAks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !isInAks {
+		t.Skip("The Kubernetes endpoint must come from AKS for this test to run - skipping")
+	}
+	location := os.Getenv("TF_VAR_location")
+	subscription := os.Getenv("ARM_SUBSCRIPTION_ID")
+	if location == "" || subscription == "" {
+		t.Fatal("TF_VAR_location and ARM_SUBSCRIPTION_ID must be set for Azure tests")
+	}
+}
+
+func skipIfNotRunningInEks(t *testing.T) {
+	isInEks, err := isRunningInEks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !isInEks {
+		t.Skip("The Kubernetes endpoint must come from EKS for this test to run - skipping")
+	}
+	if os.Getenv("AWS_DEFAULT_REGION") == "" || os.Getenv("AWS_ZONE") == "" || os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
+		t.Fatal("AWS_DEFAULT_REGION, AWS_ZONE, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set for AWS tests")
+	}
+}
+
+func skipIfNotRunningInMinikube(t *testing.T) {
+	isInMinikube, err := isRunningInMinikube()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !isInMinikube {
+		t.Skip("The Kubernetes endpoint must come from Minikube for this test to run - skipping")
+	}
 }
 
 func skipIfUnsupportedSecurityContextRunAsGroup(t *testing.T) {
@@ -298,13 +325,32 @@ func isRunningInGke() (bool, error) {
 }
 
 func isRunningInEks() (bool, error) {
+	// EKS nodes don't have any unique labels, so check for the AWS
+	// specific config map created by our test-infra.
+	meta := testAccProvider.Meta()
+	if meta == nil {
+		return false, errors.New("Provider not initialized, unable to fetch provider metadata")
+	}
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return false, err
+	}
+	ctx := context.TODO()
+	_, err = conn.CoreV1().ConfigMaps("kube-system").Get(ctx, "aws-auth", metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func isRunningInAks() (bool, error) {
 	node, err := getFirstNode()
 	if err != nil {
 		return false, err
 	}
 
 	labels := node.GetLabels()
-	if _, ok := labels["failure-domain.beta.kubernetes.io/region"]; ok {
+	if _, ok := labels["kubernetes.azure.com/cluster"]; ok {
 		return true, nil
 	}
 	return false, nil

@@ -13,7 +13,7 @@ import (
 
 // Flatteners
 
-func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
+func flattenPodSpec(in v1.PodSpec, isNative bool) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	if in.ActiveDeadlineSeconds != nil {
 		att["active_deadline_seconds"] = *in.ActiveDeadlineSeconds
@@ -91,7 +91,7 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	}
 
 	if len(in.Tolerations) > 0 {
-		att["toleration"] = flattenTolerations(in.Tolerations)
+		att["toleration"] = flattenTolerations(in.Tolerations, isNative)
 	}
 
 	if len(in.Volumes) > 0 {
@@ -209,11 +209,13 @@ func flattenSysctls(sysctls []v1.Sysctl) []interface{} {
 	return att
 }
 
-func flattenTolerations(tolerations []v1.Toleration) []interface{} {
+func flattenTolerations(tolerations []v1.Toleration, isNative bool) []interface{} {
 	att := []interface{}{}
 	for _, v := range tolerations {
-		// The API Server may automatically add several Tolerations to pods, strip these to avoid TF diff.
-		if strings.Contains(v.Key, "node.kubernetes.io/") {
+		// The API Server may automatically add several Tolerations to
+		// pods when it is created natively, not as part of  deployment or daemonset
+		// strip these to avoid TF diff, but keep these for non-native pods to be able to use them explicitly
+		if isNative && strings.Contains(v.Key, "node.kubernetes.io/") {
 			log.Printf("[INFO] ignoring toleration with key: %s", v.Key)
 			continue
 		}

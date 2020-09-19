@@ -9,11 +9,22 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func TestFlattenTolerations(t *testing.T) {
+func TestFlattenTolerationsNative(t *testing.T) {
 	cases := []struct {
 		Input          []v1.Toleration
 		ExpectedOutput []interface{}
 	}{
+		{
+			[]v1.Toleration{
+				v1.Toleration{
+					Key:               "node.kubernetes.io/not-ready",
+					Effect:            "NoExecute",
+					Operator:          "Exists",
+					TolerationSeconds: ptrToInt64(150),
+				},
+			},
+			[]interface{}{},
+		},
 		{
 			[]v1.Toleration{
 				v1.Toleration{
@@ -71,7 +82,95 @@ func TestFlattenTolerations(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output := flattenTolerations(tc.Input)
+		output := flattenTolerations(tc.Input, true)
+		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
+			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
+				tc.ExpectedOutput, output)
+		}
+	}
+}
+
+func TestFlattenTolerationsNonNative(t *testing.T) {
+	cases := []struct {
+		Input          []v1.Toleration
+		ExpectedOutput []interface{}
+	}{
+		{
+			[]v1.Toleration{
+				v1.Toleration{
+					Key:   "node-role.kubernetes.io/spot-worker",
+					Value: "true",
+				},
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"key":   "node-role.kubernetes.io/spot-worker",
+					"value": "true",
+				},
+			},
+		},
+		{
+			[]v1.Toleration{
+				v1.Toleration{
+					Key:               "node.kubernetes.io/not-ready",
+					Effect:            "NoExecute",
+					Operator:          "Exists",
+					TolerationSeconds: ptrToInt64(150),
+				},
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"key":                "node.kubernetes.io/not-ready",
+					"effect":             "NoExecute",
+					"operator":           "Exists",
+					"toleration_seconds": "150",
+				},
+			},
+		},
+		{
+			[]v1.Toleration{
+				v1.Toleration{
+					Key:      "node-role.kubernetes.io/other-worker",
+					Operator: "Exists",
+				},
+				v1.Toleration{
+					Key:   "node-role.kubernetes.io/spot-worker",
+					Value: "true",
+				},
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"key":      "node-role.kubernetes.io/other-worker",
+					"operator": "Exists",
+				},
+				map[string]interface{}{
+					"key":   "node-role.kubernetes.io/spot-worker",
+					"value": "true",
+				},
+			},
+		},
+		{
+			[]v1.Toleration{
+				v1.Toleration{
+					Effect:            "NoExecute",
+					TolerationSeconds: ptrToInt64(120),
+				},
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"effect":             "NoExecute",
+					"toleration_seconds": "120",
+				},
+			},
+		},
+		{
+			[]v1.Toleration{},
+			[]interface{}{},
+		},
+	}
+
+	for _, tc := range cases {
+		output := flattenTolerations(tc.Input, false)
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)

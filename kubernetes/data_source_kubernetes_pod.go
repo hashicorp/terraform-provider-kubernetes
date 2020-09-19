@@ -63,7 +63,7 @@ func dataSourceKubernetesPodRead(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	podSpec, err := flattenPodSpec(pod.Spec)
+	podSpec, err := flattenPodSpec(pod.Spec, true)
 	if err != nil {
 		return err
 	}

@@ -190,7 +190,7 @@ func flattenPodTemplateSpec(t corev1.PodTemplateSpec, d *schema.ResourceData, pr
 		metaPrefix = prefix[0]
 	}
 	template["metadata"] = flattenMetadata(t.ObjectMeta, d, metaPrefix)
-	spec, err := flattenPodSpec(t.Spec)
+	spec, err := flattenPodSpec(t.Spec, false)
 	if err != nil {
 		return []interface{}{template}, err
 	}

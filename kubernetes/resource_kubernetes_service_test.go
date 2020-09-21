@@ -281,9 +281,11 @@ func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.service.beta.kubernetes.io/aws-load-balancer-type", "nlb"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout", "100"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "4"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.service.beta.kubernetes.io/aws-load-balancer-backend-protocol", "http"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout", "60"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.service.beta.kubernetes.io/aws-load-balancer-ssl-ports", "*"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled", "true"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttrSet(resourceName, "spec.0.cluster_ip"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.external_ips.#", "2"),
@@ -785,8 +787,10 @@ func testAccKubernetesServiceConfig_loadBalancer_annotations_aws_modified(name s
   metadata {
     name = "%[1]s"
     annotations = {
-      "service.beta.kubernetes.io/aws-load-balancer-type"                    = "nlb"
-      "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout" = "100"
+      "service.beta.kubernetes.io/aws-load-balancer-backend-protocol"                  = "http"
+      "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"           = "60"
+	  "service.beta.kubernetes.io/aws-load-balancer-ssl-ports"                         = "*"
+	  "service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled" = "true"
     }
   }
 

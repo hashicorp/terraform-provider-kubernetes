@@ -1,13 +1,14 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
@@ -52,6 +53,7 @@ func resourceKubernetesRoleBindingCreate(d *schema.ResourceData, meta interface{
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	binding := &api.RoleBinding{
@@ -60,7 +62,7 @@ func resourceKubernetesRoleBindingCreate(d *schema.ResourceData, meta interface{
 		Subjects:   expandRBACSubjects(d.Get("subject").([]interface{})),
 	}
 	log.Printf("[INFO] Creating new RoleBinding: %#v", binding)
-	out, err := conn.RbacV1().RoleBindings(metadata.Namespace).Create(binding)
+	out, err := conn.RbacV1().RoleBindings(metadata.Namespace).Create(ctx, binding, metav1.CreateOptions{})
 
 	if err != nil {
 		return err
@@ -76,6 +78,7 @@ func resourceKubernetesRoleBindingRead(d *schema.ResourceData, meta interface{})
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -83,7 +86,7 @@ func resourceKubernetesRoleBindingRead(d *schema.ResourceData, meta interface{})
 	}
 
 	log.Printf("[INFO] Reading RoleBinding %s", name)
-	binding, err := conn.RbacV1().RoleBindings(namespace).Get(name, meta_v1.GetOptions{})
+	binding, err := conn.RbacV1().RoleBindings(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -117,6 +120,7 @@ func resourceKubernetesRoleBindingUpdate(d *schema.ResourceData, meta interface{
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -133,7 +137,7 @@ func resourceKubernetesRoleBindingUpdate(d *schema.ResourceData, meta interface{
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating RoleBinding %q: %v", name, string(data))
-	out, err := conn.RbacV1().RoleBindings(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.RbacV1().RoleBindings(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update RoleBinding: %s", err)
 	}
@@ -148,6 +152,7 @@ func resourceKubernetesRoleBindingDelete(d *schema.ResourceData, meta interface{
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -155,7 +160,7 @@ func resourceKubernetesRoleBindingDelete(d *schema.ResourceData, meta interface{
 	}
 
 	log.Printf("[INFO] Deleting RoleBinding: %#v", name)
-	err = conn.RbacV1().RoleBindings(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.RbacV1().RoleBindings(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -169,6 +174,7 @@ func resourceKubernetesRoleBindingExists(d *schema.ResourceData, meta interface{
 	if err != nil {
 		return false, err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -176,7 +182,7 @@ func resourceKubernetesRoleBindingExists(d *schema.ResourceData, meta interface{
 	}
 
 	log.Printf("[INFO] Checking RoleBinding %s", name)
-	_, err = conn.RbacV1().RoleBindings(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.RbacV1().RoleBindings(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

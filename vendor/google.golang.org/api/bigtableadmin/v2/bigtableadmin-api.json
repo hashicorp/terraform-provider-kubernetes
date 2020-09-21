@@ -46,6 +46,7 @@
   },
   "id": "bigtableadmin:v2",
   "kind": "discovery#restDescription",
+  "mtlsRootUrl": "https://bigtableadmin.mtls.googleapis.com/",
   "name": "bigtableadmin",
   "ownerDomain": "google.com",
   "ownerName": "Google",
@@ -142,7 +143,7 @@
             "name": {
               "description": "The name of the operation resource to be cancelled.",
               "location": "path",
-              "pattern": "^operations/.+$",
+              "pattern": "^operations/.*$",
               "required": true,
               "type": "string"
             }
@@ -172,7 +173,7 @@
             "name": {
               "description": "The name of the operation resource to be deleted.",
               "location": "path",
-              "pattern": "^operations/.+$",
+              "pattern": "^operations/.*$",
               "required": true,
               "type": "string"
             }
@@ -202,7 +203,7 @@
             "name": {
               "description": "The name of the operation resource.",
               "location": "path",
-              "pattern": "^operations/.+$",
+              "pattern": "^operations/.*$",
               "required": true,
               "type": "string"
             }
@@ -244,7 +245,7 @@
                     "name": {
                       "description": "The name of the operation's parent resource.",
                       "location": "path",
-                      "pattern": "^operations/projects/.+$",
+                      "pattern": "^operations/projects/.*$",
                       "required": true,
                       "type": "string"
                     },
@@ -294,7 +295,7 @@
               ],
               "parameters": {
                 "parent": {
-                  "description": "The unique name of the project in which to create the new instance.\nValues are of the form `projects/\u003cproject\u003e`.",
+                  "description": "Required. The unique name of the project in which to create the new instance.\nValues are of the form `projects/{project}`.",
                   "location": "path",
                   "pattern": "^projects/[^/]+$",
                   "required": true,
@@ -327,7 +328,7 @@
               ],
               "parameters": {
                 "name": {
-                  "description": "The unique name of the instance to be deleted.\nValues are of the form `projects/\u003cproject\u003e/instances/\u003cinstance\u003e`.",
+                  "description": "Required. The unique name of the instance to be deleted.\nValues are of the form `projects/{project}/instances/{instance}`.",
                   "location": "path",
                   "pattern": "^projects/[^/]+/instances/[^/]+$",
                   "required": true,
@@ -357,7 +358,7 @@
               ],
               "parameters": {
                 "name": {
-                  "description": "The unique name of the requested instance. Values are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e`.",
+                  "description": "Required. The unique name of the requested instance. Values are of the form\n`projects/{project}/instances/{instance}`.",
                   "location": "path",
                   "pattern": "^projects/[^/]+/instances/[^/]+$",
                   "required": true,
@@ -426,7 +427,7 @@
                   "type": "string"
                 },
                 "parent": {
-                  "description": "The unique name of the project for which a list of instances is requested.\nValues are of the form `projects/\u003cproject\u003e`.",
+                  "description": "Required. The unique name of the project for which a list of instances is requested.\nValues are of the form `projects/{project}`.",
                   "location": "path",
                   "pattern": "^projects/[^/]+$",
                   "required": true,
@@ -457,14 +458,14 @@
               ],
               "parameters": {
                 "name": {
-                  "description": "(`OutputOnly`)\nThe unique name of the instance. Values are of the form\n`projects/\u003cproject\u003e/instances/a-z+[a-z0-9]`.",
+                  "description": "The unique name of the instance. Values are of the form\n`projects/{project}/instances/a-z+[a-z0-9]`.",
                   "location": "path",
                   "pattern": "^projects/[^/]+/instances/[^/]+$",
                   "required": true,
                   "type": "string"
                 },
                 "updateMask": {
-                  "description": "The subset of Instance fields which should be replaced.\nMust be explicitly set.",
+                  "description": "Required. The subset of Instance fields which should be replaced.\nMust be explicitly set.",
                   "format": "google-fieldmask",
                   "location": "query",
                   "type": "string"
@@ -562,7 +563,7 @@
               ],
               "parameters": {
                 "name": {
-                  "description": "(`OutputOnly`)\nThe unique name of the instance. Values are of the form\n`projects/\u003cproject\u003e/instances/a-z+[a-z0-9]`.",
+                  "description": "The unique name of the instance. Values are of the form\n`projects/{project}/instances/a-z+[a-z0-9]`.",
                   "location": "path",
                   "pattern": "^projects/[^/]+/instances/[^/]+$",
                   "required": true,
@@ -599,7 +600,7 @@
                   ],
                   "parameters": {
                     "appProfileId": {
-                      "description": "The ID to be used when referring to the new app profile within its\ninstance, e.g., just `myprofile` rather than\n`projects/myproject/instances/myinstance/appProfiles/myprofile`.",
+                      "description": "Required. The ID to be used when referring to the new app profile within its\ninstance, e.g., just `myprofile` rather than\n`projects/myproject/instances/myinstance/appProfiles/myprofile`.",
                       "location": "query",
                       "type": "string"
                     },
@@ -609,7 +610,7 @@
                       "type": "boolean"
                     },
                     "parent": {
-                      "description": "The unique name of the instance in which to create the new app profile.\nValues are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e`.",
+                      "description": "Required. The unique name of the instance in which to create the new app profile.\nValues are of the form\n`projects/{project}/instances/{instance}`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+$",
                       "required": true,
@@ -642,12 +643,12 @@
                   ],
                   "parameters": {
                     "ignoreWarnings": {
-                      "description": "If true, ignore safety checks when deleting the app profile.",
+                      "description": "Required. If true, ignore safety checks when deleting the app profile.",
                       "location": "query",
                       "type": "boolean"
                     },
                     "name": {
-                      "description": "The unique name of the app profile to be deleted. Values are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/appProfiles/\u003capp_profile\u003e`.",
+                      "description": "Required. The unique name of the app profile to be deleted. Values are of the form\n`projects/{project}/instances/{instance}/appProfiles/{app_profile}`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+/appProfiles/[^/]+$",
                       "required": true,
@@ -677,7 +678,7 @@
                   ],
                   "parameters": {
                     "name": {
-                      "description": "The unique name of the requested app profile. Values are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/appProfiles/\u003capp_profile\u003e`.",
+                      "description": "Required. The unique name of the requested app profile. Values are of the form\n`projects/{project}/instances/{instance}/appProfiles/{app_profile}`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+/appProfiles/[^/]+$",
                       "required": true,
@@ -719,7 +720,7 @@
                       "type": "string"
                     },
                     "parent": {
-                      "description": "The unique name of the instance for which a list of app profiles is\nrequested. Values are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e`.\nUse `\u003cinstance\u003e = '-'` to list AppProfiles for all Instances in a project,\ne.g., `projects/myproject/instances/-`.",
+                      "description": "Required. The unique name of the instance for which a list of app profiles is\nrequested. Values are of the form\n`projects/{project}/instances/{instance}`.\nUse `{instance} = '-'` to list AppProfiles for all Instances in a project,\ne.g., `projects/myproject/instances/-`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+$",
                       "required": true,
@@ -754,14 +755,14 @@
                       "type": "boolean"
                     },
                     "name": {
-                      "description": "(`OutputOnly`)\nThe unique name of the app profile. Values are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/appProfiles/_a-zA-Z0-9*`.",
+                      "description": "The unique name of the app profile. Values are of the form\n`projects/{project}/instances/{instance}/appProfiles/_a-zA-Z0-9*`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+/appProfiles/[^/]+$",
                       "required": true,
                       "type": "string"
                     },
                     "updateMask": {
-                      "description": "The subset of app profile fields which should be replaced.\nIf unset, all fields will be replaced.",
+                      "description": "Required. The subset of app profile fields which should be replaced.\nIf unset, all fields will be replaced.",
                       "format": "google-fieldmask",
                       "location": "query",
                       "type": "string"
@@ -797,12 +798,12 @@
                   ],
                   "parameters": {
                     "clusterId": {
-                      "description": "The ID to be used when referring to the new cluster within its instance,\ne.g., just `mycluster` rather than\n`projects/myproject/instances/myinstance/clusters/mycluster`.",
+                      "description": "Required. The ID to be used when referring to the new cluster within its instance,\ne.g., just `mycluster` rather than\n`projects/myproject/instances/myinstance/clusters/mycluster`.",
                       "location": "query",
                       "type": "string"
                     },
                     "parent": {
-                      "description": "The unique name of the instance in which to create the new cluster.\nValues are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e`.",
+                      "description": "Required. The unique name of the instance in which to create the new cluster.\nValues are of the form\n`projects/{project}/instances/{instance}`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+$",
                       "required": true,
@@ -835,7 +836,7 @@
                   ],
                   "parameters": {
                     "name": {
-                      "description": "The unique name of the cluster to be deleted. Values are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/clusters/\u003ccluster\u003e`.",
+                      "description": "Required. The unique name of the cluster to be deleted. Values are of the form\n`projects/{project}/instances/{instance}/clusters/{cluster}`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+/clusters/[^/]+$",
                       "required": true,
@@ -865,7 +866,7 @@
                   ],
                   "parameters": {
                     "name": {
-                      "description": "The unique name of the requested cluster. Values are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/clusters/\u003ccluster\u003e`.",
+                      "description": "Required. The unique name of the requested cluster. Values are of the form\n`projects/{project}/instances/{instance}/clusters/{cluster}`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+/clusters/[^/]+$",
                       "required": true,
@@ -901,7 +902,7 @@
                       "type": "string"
                     },
                     "parent": {
-                      "description": "The unique name of the instance for which a list of clusters is requested.\nValues are of the form `projects/\u003cproject\u003e/instances/\u003cinstance\u003e`.\nUse `\u003cinstance\u003e = '-'` to list Clusters for all Instances in a project,\ne.g., `projects/myproject/instances/-`.",
+                      "description": "Required. The unique name of the instance for which a list of clusters is requested.\nValues are of the form `projects/{project}/instances/{instance}`.\nUse `{instance} = '-'` to list Clusters for all Instances in a project,\ne.g., `projects/myproject/instances/-`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+$",
                       "required": true,
@@ -932,7 +933,7 @@
                   ],
                   "parameters": {
                     "name": {
-                      "description": "(`OutputOnly`)\nThe unique name of the cluster. Values are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/clusters/a-z*`.",
+                      "description": "The unique name of the cluster. Values are of the form\n`projects/{project}/instances/{instance}/clusters/a-z*`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+/clusters/[^/]+$",
                       "required": true,
@@ -955,6 +956,291 @@
                     "https://www.googleapis.com/auth/cloud-platform"
                   ]
                 }
+              },
+              "resources": {
+                "backups": {
+                  "methods": {
+                    "create": {
+                      "description": "Starts creating a new Cloud Bigtable Backup.  The returned backup\nlong-running operation can be used to\ntrack creation of the backup. The\nmetadata field type is\nCreateBackupMetadata. The\nresponse field type is\nBackup, if successful. Cancelling the returned operation will stop the\ncreation and delete the backup.",
+                      "flatPath": "v2/projects/{projectsId}/instances/{instancesId}/clusters/{clustersId}/backups",
+                      "httpMethod": "POST",
+                      "id": "bigtableadmin.projects.instances.clusters.backups.create",
+                      "parameterOrder": [
+                        "parent"
+                      ],
+                      "parameters": {
+                        "backupId": {
+                          "description": "Required. The id of the backup to be created. The `backup_id` along with\nthe parent `parent` are combined as {parent}/backups/{backup_id} to create\nthe full backup name, of the form:\n`projects/{project}/instances/{instance}/clusters/{cluster}/backups/{backup_id}`.\nThis string must be between 1 and 50 characters in length and match the\nregex _a-zA-Z0-9*.",
+                          "location": "query",
+                          "type": "string"
+                        },
+                        "parent": {
+                          "description": "Required. This must be one of the clusters in the instance in which this\ntable is located. The backup will be stored in this cluster. Values are\nof the form `projects/{project}/instances/{instance}/clusters/{cluster}`.",
+                          "location": "path",
+                          "pattern": "^projects/[^/]+/instances/[^/]+/clusters/[^/]+$",
+                          "required": true,
+                          "type": "string"
+                        }
+                      },
+                      "path": "v2/{+parent}/backups",
+                      "request": {
+                        "$ref": "Backup"
+                      },
+                      "response": {
+                        "$ref": "Operation"
+                      },
+                      "scopes": [
+                        "https://www.googleapis.com/auth/bigtable.admin",
+                        "https://www.googleapis.com/auth/bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-platform"
+                      ]
+                    },
+                    "delete": {
+                      "description": "Deletes a pending or completed Cloud Bigtable backup.",
+                      "flatPath": "v2/projects/{projectsId}/instances/{instancesId}/clusters/{clustersId}/backups/{backupsId}",
+                      "httpMethod": "DELETE",
+                      "id": "bigtableadmin.projects.instances.clusters.backups.delete",
+                      "parameterOrder": [
+                        "name"
+                      ],
+                      "parameters": {
+                        "name": {
+                          "description": "Required. Name of the backup to delete.\nValues are of the form\n`projects/{project}/instances/{instance}/clusters/{cluster}/backups/{backup}`.",
+                          "location": "path",
+                          "pattern": "^projects/[^/]+/instances/[^/]+/clusters/[^/]+/backups/[^/]+$",
+                          "required": true,
+                          "type": "string"
+                        }
+                      },
+                      "path": "v2/{+name}",
+                      "response": {
+                        "$ref": "Empty"
+                      },
+                      "scopes": [
+                        "https://www.googleapis.com/auth/bigtable.admin",
+                        "https://www.googleapis.com/auth/bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-platform"
+                      ]
+                    },
+                    "get": {
+                      "description": "Gets metadata on a pending or completed Cloud Bigtable Backup.",
+                      "flatPath": "v2/projects/{projectsId}/instances/{instancesId}/clusters/{clustersId}/backups/{backupsId}",
+                      "httpMethod": "GET",
+                      "id": "bigtableadmin.projects.instances.clusters.backups.get",
+                      "parameterOrder": [
+                        "name"
+                      ],
+                      "parameters": {
+                        "name": {
+                          "description": "Required. Name of the backup.\nValues are of the form\n`projects/{project}/instances/{instance}/clusters/{cluster}/backups/{backup}`.",
+                          "location": "path",
+                          "pattern": "^projects/[^/]+/instances/[^/]+/clusters/[^/]+/backups/[^/]+$",
+                          "required": true,
+                          "type": "string"
+                        }
+                      },
+                      "path": "v2/{+name}",
+                      "response": {
+                        "$ref": "Backup"
+                      },
+                      "scopes": [
+                        "https://www.googleapis.com/auth/bigtable.admin",
+                        "https://www.googleapis.com/auth/bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-platform"
+                      ]
+                    },
+                    "getIamPolicy": {
+                      "description": "Gets the access control policy for a Table resource.\nReturns an empty policy if the resource exists but does not have a policy\nset.",
+                      "flatPath": "v2/projects/{projectsId}/instances/{instancesId}/clusters/{clustersId}/backups/{backupsId}:getIamPolicy",
+                      "httpMethod": "POST",
+                      "id": "bigtableadmin.projects.instances.clusters.backups.getIamPolicy",
+                      "parameterOrder": [
+                        "resource"
+                      ],
+                      "parameters": {
+                        "resource": {
+                          "description": "REQUIRED: The resource for which the policy is being requested.\nSee the operation documentation for the appropriate value for this field.",
+                          "location": "path",
+                          "pattern": "^projects/[^/]+/instances/[^/]+/clusters/[^/]+/backups/[^/]+$",
+                          "required": true,
+                          "type": "string"
+                        }
+                      },
+                      "path": "v2/{+resource}:getIamPolicy",
+                      "request": {
+                        "$ref": "GetIamPolicyRequest"
+                      },
+                      "response": {
+                        "$ref": "Policy"
+                      },
+                      "scopes": [
+                        "https://www.googleapis.com/auth/bigtable.admin",
+                        "https://www.googleapis.com/auth/bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-platform"
+                      ]
+                    },
+                    "list": {
+                      "description": "Lists Cloud Bigtable backups. Returns both completed and pending\nbackups.",
+                      "flatPath": "v2/projects/{projectsId}/instances/{instancesId}/clusters/{clustersId}/backups",
+                      "httpMethod": "GET",
+                      "id": "bigtableadmin.projects.instances.clusters.backups.list",
+                      "parameterOrder": [
+                        "parent"
+                      ],
+                      "parameters": {
+                        "filter": {
+                          "description": "A filter expression that filters backups listed in the response.\nThe expression must specify the field name, a comparison operator,\nand the value that you want to use for filtering. The value must be a\nstring, a number, or a boolean. The comparison operator must be\n\u003c, \u003e, \u003c=, \u003e=, !=, =, or :. Colon ':' represents a HAS operator which is\nroughly synonymous with equality. Filter rules are case insensitive.\n\nThe fields eligible for filtering are:\n  * `name`\n  * `source_table`\n  * `state`\n  * `start_time` (and values are of the format YYYY-MM-DDTHH:MM:SSZ)\n  * `end_time` (and values are of the format YYYY-MM-DDTHH:MM:SSZ)\n  * `expire_time` (and values are of the format YYYY-MM-DDTHH:MM:SSZ)\n  * `size_bytes`\n\nTo filter on multiple expressions, provide each separate expression within\nparentheses. By default, each expression is an AND expression. However,\nyou can include AND, OR, and NOT expressions explicitly.\n\nSome examples of using filters are:\n\n  * `name:\"exact\"` --\u003e The backup's name is the string \"exact\".\n  * `name:howl` --\u003e The backup's name contains the string \"howl\".\n  * `source_table:prod`\n         --\u003e The source_table's name contains the string \"prod\".\n  * `state:CREATING` --\u003e The backup is pending creation.\n  * `state:READY` --\u003e The backup is fully created and ready for use.\n  * `(name:howl) AND (start_time \u003c \\\"2018-03-28T14:50:00Z\\\")`\n         --\u003e The backup name contains the string \"howl\" and start_time\n             of the backup is before 2018-03-28T14:50:00Z.\n  * `size_bytes \u003e 10000000000` --\u003e The backup's size is greater than 10GB",
+                          "location": "query",
+                          "type": "string"
+                        },
+                        "orderBy": {
+                          "description": "An expression for specifying the sort order of the results of the request.\nThe string value should specify one or more fields in Backup. The full\nsyntax is described at https://aip.dev/132#ordering.\n\nFields supported are:\n   * name\n   * source_table\n   * expire_time\n   * start_time\n   * end_time\n   * size_bytes\n   * state\n\nFor example, \"start_time\". The default sorting order is ascending.\nTo specify descending order for the field, a suffix \" desc\" should\nbe appended to the field name. For example, \"start_time desc\".\nRedundant space characters in the syntax are insigificant.\n\nIf order_by is empty, results will be sorted by `start_time` in descending\norder starting from the most recently created backup.",
+                          "location": "query",
+                          "type": "string"
+                        },
+                        "pageSize": {
+                          "description": "Number of backups to be returned in the response. If 0 or\nless, defaults to the server's maximum allowed page size.",
+                          "format": "int32",
+                          "location": "query",
+                          "type": "integer"
+                        },
+                        "pageToken": {
+                          "description": "If non-empty, `page_token` should contain a\nnext_page_token from a\nprevious ListBackupsResponse to the same `parent` and with the same\n`filter`.",
+                          "location": "query",
+                          "type": "string"
+                        },
+                        "parent": {
+                          "description": "Required. The cluster to list backups from.  Values are of the\nform `projects/{project}/instances/{instance}/clusters/{cluster}`.\nUse `{cluster} = '-'` to list backups for all clusters in an instance,\ne.g., `projects/{project}/instances/{instance}/clusters/-`.",
+                          "location": "path",
+                          "pattern": "^projects/[^/]+/instances/[^/]+/clusters/[^/]+$",
+                          "required": true,
+                          "type": "string"
+                        }
+                      },
+                      "path": "v2/{+parent}/backups",
+                      "response": {
+                        "$ref": "ListBackupsResponse"
+                      },
+                      "scopes": [
+                        "https://www.googleapis.com/auth/bigtable.admin",
+                        "https://www.googleapis.com/auth/bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-platform"
+                      ]
+                    },
+                    "patch": {
+                      "description": "Updates a pending or completed Cloud Bigtable Backup.",
+                      "flatPath": "v2/projects/{projectsId}/instances/{instancesId}/clusters/{clustersId}/backups/{backupsId}",
+                      "httpMethod": "PATCH",
+                      "id": "bigtableadmin.projects.instances.clusters.backups.patch",
+                      "parameterOrder": [
+                        "name"
+                      ],
+                      "parameters": {
+                        "name": {
+                          "description": "A globally unique identifier for the backup which cannot be\nchanged. Values are of the form\n`projects/{project}/instances/{instance}/clusters/{cluster}/\n   backups/_a-zA-Z0-9*`\nThe final segment of the name must be between 1 and 50 characters\nin length.\n\nThe backup is stored in the cluster identified by the prefix of the backup\nname of the form\n`projects/{project}/instances/{instance}/clusters/{cluster}`.",
+                          "location": "path",
+                          "pattern": "^projects/[^/]+/instances/[^/]+/clusters/[^/]+/backups/[^/]+$",
+                          "required": true,
+                          "type": "string"
+                        },
+                        "updateMask": {
+                          "description": "Required. A mask specifying which fields (e.g. `expire_time`) in the\nBackup resource should be updated. This mask is relative to the Backup\nresource, not to the request message. The field mask must always be\nspecified; this prevents any future fields from being erased accidentally\nby clients that do not know about them.",
+                          "format": "google-fieldmask",
+                          "location": "query",
+                          "type": "string"
+                        }
+                      },
+                      "path": "v2/{+name}",
+                      "request": {
+                        "$ref": "Backup"
+                      },
+                      "response": {
+                        "$ref": "Backup"
+                      },
+                      "scopes": [
+                        "https://www.googleapis.com/auth/bigtable.admin",
+                        "https://www.googleapis.com/auth/bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-platform"
+                      ]
+                    },
+                    "setIamPolicy": {
+                      "description": "Sets the access control policy on a Table resource.\nReplaces any existing policy.",
+                      "flatPath": "v2/projects/{projectsId}/instances/{instancesId}/clusters/{clustersId}/backups/{backupsId}:setIamPolicy",
+                      "httpMethod": "POST",
+                      "id": "bigtableadmin.projects.instances.clusters.backups.setIamPolicy",
+                      "parameterOrder": [
+                        "resource"
+                      ],
+                      "parameters": {
+                        "resource": {
+                          "description": "REQUIRED: The resource for which the policy is being specified.\nSee the operation documentation for the appropriate value for this field.",
+                          "location": "path",
+                          "pattern": "^projects/[^/]+/instances/[^/]+/clusters/[^/]+/backups/[^/]+$",
+                          "required": true,
+                          "type": "string"
+                        }
+                      },
+                      "path": "v2/{+resource}:setIamPolicy",
+                      "request": {
+                        "$ref": "SetIamPolicyRequest"
+                      },
+                      "response": {
+                        "$ref": "Policy"
+                      },
+                      "scopes": [
+                        "https://www.googleapis.com/auth/bigtable.admin",
+                        "https://www.googleapis.com/auth/bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-platform"
+                      ]
+                    },
+                    "testIamPermissions": {
+                      "description": "Returns permissions that the caller has on the specified table resource.",
+                      "flatPath": "v2/projects/{projectsId}/instances/{instancesId}/clusters/{clustersId}/backups/{backupsId}:testIamPermissions",
+                      "httpMethod": "POST",
+                      "id": "bigtableadmin.projects.instances.clusters.backups.testIamPermissions",
+                      "parameterOrder": [
+                        "resource"
+                      ],
+                      "parameters": {
+                        "resource": {
+                          "description": "REQUIRED: The resource for which the policy detail is being requested.\nSee the operation documentation for the appropriate value for this field.",
+                          "location": "path",
+                          "pattern": "^projects/[^/]+/instances/[^/]+/clusters/[^/]+/backups/[^/]+$",
+                          "required": true,
+                          "type": "string"
+                        }
+                      },
+                      "path": "v2/{+resource}:testIamPermissions",
+                      "request": {
+                        "$ref": "TestIamPermissionsRequest"
+                      },
+                      "response": {
+                        "$ref": "TestIamPermissionsResponse"
+                      },
+                      "scopes": [
+                        "https://www.googleapis.com/auth/bigtable.admin",
+                        "https://www.googleapis.com/auth/bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin",
+                        "https://www.googleapis.com/auth/cloud-bigtable.admin.table",
+                        "https://www.googleapis.com/auth/cloud-platform"
+                      ]
+                    }
+                  }
+                }
               }
             },
             "tables": {
@@ -969,7 +1255,7 @@
                   ],
                   "parameters": {
                     "name": {
-                      "description": "The unique name of the Table for which to check replication consistency.\nValues are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/tables/\u003ctable\u003e`.",
+                      "description": "Required. The unique name of the Table for which to check replication consistency.\nValues are of the form\n`projects/{project}/instances/{instance}/tables/{table}`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+/tables/[^/]+$",
                       "required": true,
@@ -1001,7 +1287,7 @@
                   ],
                   "parameters": {
                     "parent": {
-                      "description": "The unique name of the instance in which to create the table.\nValues are of the form `projects/\u003cproject\u003e/instances/\u003cinstance\u003e`.",
+                      "description": "Required. The unique name of the instance in which to create the table.\nValues are of the form `projects/{project}/instances/{instance}`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+$",
                       "required": true,
@@ -1033,7 +1319,7 @@
                   ],
                   "parameters": {
                     "name": {
-                      "description": "The unique name of the table to be deleted.\nValues are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/tables/\u003ctable\u003e`.",
+                      "description": "Required. The unique name of the table to be deleted.\nValues are of the form\n`projects/{project}/instances/{instance}/tables/{table}`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+/tables/[^/]+$",
                       "required": true,
@@ -1062,7 +1348,7 @@
                   ],
                   "parameters": {
                     "name": {
-                      "description": "The unique name of the table on which to drop a range of rows.\nValues are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/tables/\u003ctable\u003e`.",
+                      "description": "Required. The unique name of the table on which to drop a range of rows.\nValues are of the form\n`projects/{project}/instances/{instance}/tables/{table}`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+/tables/[^/]+$",
                       "required": true,
@@ -1094,7 +1380,7 @@
                   ],
                   "parameters": {
                     "name": {
-                      "description": "The unique name of the Table for which to create a consistency token.\nValues are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/tables/\u003ctable\u003e`.",
+                      "description": "Required. The unique name of the Table for which to create a consistency token.\nValues are of the form\n`projects/{project}/instances/{instance}/tables/{table}`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+/tables/[^/]+$",
                       "required": true,
@@ -1126,7 +1412,7 @@
                   ],
                   "parameters": {
                     "name": {
-                      "description": "The unique name of the requested table.\nValues are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/tables/\u003ctable\u003e`.",
+                      "description": "Required. The unique name of the requested table.\nValues are of the form\n`projects/{project}/instances/{instance}/tables/{table}`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+/tables/[^/]+$",
                       "required": true,
@@ -1158,6 +1444,38 @@
                     "https://www.googleapis.com/auth/cloud-platform.read-only"
                   ]
                 },
+                "getIamPolicy": {
+                  "description": "Gets the access control policy for a Table resource.\nReturns an empty policy if the resource exists but does not have a policy\nset.",
+                  "flatPath": "v2/projects/{projectsId}/instances/{instancesId}/tables/{tablesId}:getIamPolicy",
+                  "httpMethod": "POST",
+                  "id": "bigtableadmin.projects.instances.tables.getIamPolicy",
+                  "parameterOrder": [
+                    "resource"
+                  ],
+                  "parameters": {
+                    "resource": {
+                      "description": "REQUIRED: The resource for which the policy is being requested.\nSee the operation documentation for the appropriate value for this field.",
+                      "location": "path",
+                      "pattern": "^projects/[^/]+/instances/[^/]+/tables/[^/]+$",
+                      "required": true,
+                      "type": "string"
+                    }
+                  },
+                  "path": "v2/{+resource}:getIamPolicy",
+                  "request": {
+                    "$ref": "GetIamPolicyRequest"
+                  },
+                  "response": {
+                    "$ref": "Policy"
+                  },
+                  "scopes": [
+                    "https://www.googleapis.com/auth/bigtable.admin",
+                    "https://www.googleapis.com/auth/bigtable.admin.table",
+                    "https://www.googleapis.com/auth/cloud-bigtable.admin",
+                    "https://www.googleapis.com/auth/cloud-bigtable.admin.table",
+                    "https://www.googleapis.com/auth/cloud-platform"
+                  ]
+                },
                 "list": {
                   "description": "Lists all tables served from a specified instance.",
                   "flatPath": "v2/projects/{projectsId}/instances/{instancesId}/tables",
@@ -1179,14 +1497,14 @@
                       "type": "string"
                     },
                     "parent": {
-                      "description": "The unique name of the instance for which tables should be listed.\nValues are of the form `projects/\u003cproject\u003e/instances/\u003cinstance\u003e`.",
+                      "description": "Required. The unique name of the instance for which tables should be listed.\nValues are of the form `projects/{project}/instances/{instance}`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+$",
                       "required": true,
                       "type": "string"
                     },
                     "view": {
-                      "description": "The view to be applied to the returned tables' fields.\nDefaults to `NAME_ONLY` if unspecified; no others are currently supported.",
+                      "description": "The view to be applied to the returned tables' fields.\nOnly NAME_ONLY view (default) and REPLICATION_VIEW are supported.",
                       "enum": [
                         "VIEW_UNSPECIFIED",
                         "NAME_ONLY",
@@ -1221,7 +1539,7 @@
                   ],
                   "parameters": {
                     "name": {
-                      "description": "The unique name of the table whose families should be modified.\nValues are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/tables/\u003ctable\u003e`.",
+                      "description": "Required. The unique name of the table whose families should be modified.\nValues are of the form\n`projects/{project}/instances/{instance}/tables/{table}`.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/instances/[^/]+/tables/[^/]+$",
                       "required": true,
@@ -1234,6 +1552,102 @@
                   },
                   "response": {
                     "$ref": "Table"
+                  },
+                  "scopes": [
+                    "https://www.googleapis.com/auth/bigtable.admin",
+                    "https://www.googleapis.com/auth/bigtable.admin.table",
+                    "https://www.googleapis.com/auth/cloud-bigtable.admin",
+                    "https://www.googleapis.com/auth/cloud-bigtable.admin.table",
+                    "https://www.googleapis.com/auth/cloud-platform"
+                  ]
+                },
+                "restore": {
+                  "description": "Create a new table by restoring from a completed backup. The new table\nmust be in the same instance as the instance containing the backup.  The\nreturned table long-running operation can\nbe used to track the progress of the operation, and to cancel it.  The\nmetadata field type is\nRestoreTableMetadata.  The\nresponse type is\nTable, if successful.",
+                  "flatPath": "v2/projects/{projectsId}/instances/{instancesId}/tables:restore",
+                  "httpMethod": "POST",
+                  "id": "bigtableadmin.projects.instances.tables.restore",
+                  "parameterOrder": [
+                    "parent"
+                  ],
+                  "parameters": {
+                    "parent": {
+                      "description": "Required. The name of the instance in which to create the restored\ntable. This instance must be the parent of the source backup. Values are\nof the form `projects/\u003cproject\u003e/instances/\u003cinstance\u003e`.",
+                      "location": "path",
+                      "pattern": "^projects/[^/]+/instances/[^/]+$",
+                      "required": true,
+                      "type": "string"
+                    }
+                  },
+                  "path": "v2/{+parent}/tables:restore",
+                  "request": {
+                    "$ref": "RestoreTableRequest"
+                  },
+                  "response": {
+                    "$ref": "Operation"
+                  },
+                  "scopes": [
+                    "https://www.googleapis.com/auth/bigtable.admin",
+                    "https://www.googleapis.com/auth/bigtable.admin.table",
+                    "https://www.googleapis.com/auth/cloud-bigtable.admin",
+                    "https://www.googleapis.com/auth/cloud-bigtable.admin.table",
+                    "https://www.googleapis.com/auth/cloud-platform"
+                  ]
+                },
+                "setIamPolicy": {
+                  "description": "Sets the access control policy on a Table resource.\nReplaces any existing policy.",
+                  "flatPath": "v2/projects/{projectsId}/instances/{instancesId}/tables/{tablesId}:setIamPolicy",
+                  "httpMethod": "POST",
+                  "id": "bigtableadmin.projects.instances.tables.setIamPolicy",
+                  "parameterOrder": [
+                    "resource"
+                  ],
+                  "parameters": {
+                    "resource": {
+                      "description": "REQUIRED: The resource for which the policy is being specified.\nSee the operation documentation for the appropriate value for this field.",
+                      "location": "path",
+                      "pattern": "^projects/[^/]+/instances/[^/]+/tables/[^/]+$",
+                      "required": true,
+                      "type": "string"
+                    }
+                  },
+                  "path": "v2/{+resource}:setIamPolicy",
+                  "request": {
+                    "$ref": "SetIamPolicyRequest"
+                  },
+                  "response": {
+                    "$ref": "Policy"
+                  },
+                  "scopes": [
+                    "https://www.googleapis.com/auth/bigtable.admin",
+                    "https://www.googleapis.com/auth/bigtable.admin.table",
+                    "https://www.googleapis.com/auth/cloud-bigtable.admin",
+                    "https://www.googleapis.com/auth/cloud-bigtable.admin.table",
+                    "https://www.googleapis.com/auth/cloud-platform"
+                  ]
+                },
+                "testIamPermissions": {
+                  "description": "Returns permissions that the caller has on the specified table resource.",
+                  "flatPath": "v2/projects/{projectsId}/instances/{instancesId}/tables/{tablesId}:testIamPermissions",
+                  "httpMethod": "POST",
+                  "id": "bigtableadmin.projects.instances.tables.testIamPermissions",
+                  "parameterOrder": [
+                    "resource"
+                  ],
+                  "parameters": {
+                    "resource": {
+                      "description": "REQUIRED: The resource for which the policy detail is being requested.\nSee the operation documentation for the appropriate value for this field.",
+                      "location": "path",
+                      "pattern": "^projects/[^/]+/instances/[^/]+/tables/[^/]+$",
+                      "required": true,
+                      "type": "string"
+                    }
+                  },
+                  "path": "v2/{+resource}:testIamPermissions",
+                  "request": {
+                    "$ref": "TestIamPermissionsRequest"
+                  },
+                  "response": {
+                    "$ref": "TestIamPermissionsResponse"
                   },
                   "scopes": [
                     "https://www.googleapis.com/auth/bigtable.admin",
@@ -1332,7 +1746,7 @@
       }
     }
   },
-  "revision": "20190628",
+  "revision": "20200817",
   "rootUrl": "https://bigtableadmin.googleapis.com/",
   "schemas": {
     "AppProfile": {
@@ -1340,7 +1754,7 @@
       "id": "AppProfile",
       "properties": {
         "description": {
-          "description": "Optional long form description of the use case for this AppProfile.",
+          "description": "Long form description of the use case for this AppProfile.",
           "type": "string"
         },
         "etag": {
@@ -1352,7 +1766,7 @@
           "description": "Use a multi-cluster routing policy."
         },
         "name": {
-          "description": "(`OutputOnly`)\nThe unique name of the app profile. Values are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/appProfiles/_a-zA-Z0-9*`.",
+          "description": "The unique name of the app profile. Values are of the form\n`projects/{project}/instances/{instance}/appProfiles/_a-zA-Z0-9*`.",
           "type": "string"
         },
         "singleClusterRouting": {
@@ -1363,7 +1777,7 @@
       "type": "object"
     },
     "AuditConfig": {
-      "description": "Specifies the audit configuration for a service.\nThe configuration determines which permission types are logged, and what\nidentities, if any, are exempted from logging.\nAn AuditConfig must have one or more AuditLogConfigs.\n\nIf there are AuditConfigs for both `allServices` and a specific service,\nthe union of the two AuditConfigs is used for that service: the log_types\nspecified in each AuditConfig are enabled, and the exempted_members in each\nAuditLogConfig are exempted.\n\nExample Policy with multiple AuditConfigs:\n\n    {\n      \"audit_configs\": [\n        {\n          \"service\": \"allServices\"\n          \"audit_log_configs\": [\n            {\n              \"log_type\": \"DATA_READ\",\n              \"exempted_members\": [\n                \"user:foo@gmail.com\"\n              ]\n            },\n            {\n              \"log_type\": \"DATA_WRITE\",\n            },\n            {\n              \"log_type\": \"ADMIN_READ\",\n            }\n          ]\n        },\n        {\n          \"service\": \"fooservice.googleapis.com\"\n          \"audit_log_configs\": [\n            {\n              \"log_type\": \"DATA_READ\",\n            },\n            {\n              \"log_type\": \"DATA_WRITE\",\n              \"exempted_members\": [\n                \"user:bar@gmail.com\"\n              ]\n            }\n          ]\n        }\n      ]\n    }\n\nFor fooservice, this policy enables DATA_READ, DATA_WRITE and ADMIN_READ\nlogging. It also exempts foo@gmail.com from DATA_READ logging, and\nbar@gmail.com from DATA_WRITE logging.",
+      "description": "Specifies the audit configuration for a service.\nThe configuration determines which permission types are logged, and what\nidentities, if any, are exempted from logging.\nAn AuditConfig must have one or more AuditLogConfigs.\n\nIf there are AuditConfigs for both `allServices` and a specific service,\nthe union of the two AuditConfigs is used for that service: the log_types\nspecified in each AuditConfig are enabled, and the exempted_members in each\nAuditLogConfig are exempted.\n\nExample Policy with multiple AuditConfigs:\n\n    {\n      \"audit_configs\": [\n        {\n          \"service\": \"allServices\",\n          \"audit_log_configs\": [\n            {\n              \"log_type\": \"DATA_READ\",\n              \"exempted_members\": [\n                \"user:jose@example.com\"\n              ]\n            },\n            {\n              \"log_type\": \"DATA_WRITE\"\n            },\n            {\n              \"log_type\": \"ADMIN_READ\"\n            }\n          ]\n        },\n        {\n          \"service\": \"sampleservice.googleapis.com\",\n          \"audit_log_configs\": [\n            {\n              \"log_type\": \"DATA_READ\"\n            },\n            {\n              \"log_type\": \"DATA_WRITE\",\n              \"exempted_members\": [\n                \"user:aliya@example.com\"\n              ]\n            }\n          ]\n        }\n      ]\n    }\n\nFor sampleservice, this policy enables DATA_READ, DATA_WRITE and ADMIN_READ\nlogging. It also exempts jose@example.com from DATA_READ logging, and\naliya@example.com from DATA_WRITE logging.",
       "id": "AuditConfig",
       "properties": {
         "auditLogConfigs": {
@@ -1381,7 +1795,7 @@
       "type": "object"
     },
     "AuditLogConfig": {
-      "description": "Provides the configuration for logging a type of permissions.\nExample:\n\n    {\n      \"audit_log_configs\": [\n        {\n          \"log_type\": \"DATA_READ\",\n          \"exempted_members\": [\n            \"user:foo@gmail.com\"\n          ]\n        },\n        {\n          \"log_type\": \"DATA_WRITE\",\n        }\n      ]\n    }\n\nThis enables 'DATA_READ' and 'DATA_WRITE' logging, while exempting\nfoo@gmail.com from DATA_READ logging.",
+      "description": "Provides the configuration for logging a type of permissions.\nExample:\n\n    {\n      \"audit_log_configs\": [\n        {\n          \"log_type\": \"DATA_READ\",\n          \"exempted_members\": [\n            \"user:jose@example.com\"\n          ]\n        },\n        {\n          \"log_type\": \"DATA_WRITE\"\n        }\n      ]\n    }\n\nThis enables 'DATA_READ' and 'DATA_WRITE' logging, while exempting\njose@example.com from DATA_READ logging.",
       "id": "AuditLogConfig",
       "properties": {
         "exemptedMembers": {
@@ -1410,16 +1824,90 @@
       },
       "type": "object"
     },
+    "Backup": {
+      "description": "A backup of a Cloud Bigtable table.",
+      "id": "Backup",
+      "properties": {
+        "endTime": {
+          "description": "Output only. `end_time` is the time that the backup was finished. The row\ndata in the backup will be no newer than this timestamp.",
+          "format": "google-datetime",
+          "type": "string"
+        },
+        "expireTime": {
+          "description": "Required. The expiration time of the backup, with microseconds\ngranularity that must be at least 6 hours and at most 30 days\nfrom the time the request is received. Once the `expire_time`\nhas passed, Cloud Bigtable will delete the backup and free the\nresources used by the backup.",
+          "format": "google-datetime",
+          "type": "string"
+        },
+        "name": {
+          "description": "A globally unique identifier for the backup which cannot be\nchanged. Values are of the form\n`projects/{project}/instances/{instance}/clusters/{cluster}/\n   backups/_a-zA-Z0-9*`\nThe final segment of the name must be between 1 and 50 characters\nin length.\n\nThe backup is stored in the cluster identified by the prefix of the backup\nname of the form\n`projects/{project}/instances/{instance}/clusters/{cluster}`.",
+          "type": "string"
+        },
+        "sizeBytes": {
+          "description": "Output only. Size of the backup in bytes.",
+          "format": "int64",
+          "type": "string"
+        },
+        "sourceTable": {
+          "description": "Required. Immutable. Name of the table from which this backup was created. This needs\nto be in the same instance as the backup. Values are of the form\n`projects/{project}/instances/{instance}/tables/{source_table}`.",
+          "type": "string"
+        },
+        "startTime": {
+          "description": "Output only. `start_time` is the time that the backup was started\n(i.e. approximately the time the\nCreateBackup request is received).  The\nrow data in this backup will be no older than this timestamp.",
+          "format": "google-datetime",
+          "type": "string"
+        },
+        "state": {
+          "description": "Output only. The current state of the backup.",
+          "enum": [
+            "STATE_UNSPECIFIED",
+            "CREATING",
+            "READY"
+          ],
+          "enumDescriptions": [
+            "Not specified.",
+            "The pending backup is still being created. Operations on the\nbackup may fail with `FAILED_PRECONDITION` in this state.",
+            "The backup is complete and ready for use."
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "BackupInfo": {
+      "description": "Information about a backup.",
+      "id": "BackupInfo",
+      "properties": {
+        "backup": {
+          "description": "Output only. Name of the backup.",
+          "type": "string"
+        },
+        "endTime": {
+          "description": "Output only. This time that the backup was finished. Row data in the\nbackup will be no newer than this timestamp.",
+          "format": "google-datetime",
+          "type": "string"
+        },
+        "sourceTable": {
+          "description": "Output only. Name of the table the backup was created from.",
+          "type": "string"
+        },
+        "startTime": {
+          "description": "Output only. The time that the backup was started. Row data in the backup\nwill be no older than this timestamp.",
+          "format": "google-datetime",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "Binding": {
       "description": "Associates `members` with a `role`.",
       "id": "Binding",
       "properties": {
         "condition": {
           "$ref": "Expr",
-          "description": "The condition that is associated with this binding.\nNOTE: An unsatisfied condition will not allow user access via current\nbinding. Different bindings, including their conditions, are examined\nindependently."
+          "description": "The condition that is associated with this binding.\n\nIf the condition evaluates to `true`, then this binding applies to the\ncurrent request.\n\nIf the condition evaluates to `false`, then this binding does not apply to\nthe current request. However, a different role binding might grant the same\nrole to one or more of the members in this binding.\n\nTo learn which resources support conditions in their IAM policies, see the\n[IAM\ndocumentation](https://cloud.google.com/iam/help/conditions/resource-policies)."
         },
         "members": {
-          "description": "Specifies the identities requesting access for a Cloud Platform resource.\n`members` can have the following values:\n\n* `allUsers`: A special identifier that represents anyone who is\n   on the internet; with or without a Google account.\n\n* `allAuthenticatedUsers`: A special identifier that represents anyone\n   who is authenticated with a Google account or a service account.\n\n* `user:{emailid}`: An email address that represents a specific Google\n   account. For example, `alice@gmail.com` .\n\n\n* `serviceAccount:{emailid}`: An email address that represents a service\n   account. For example, `my-other-app@appspot.gserviceaccount.com`.\n\n* `group:{emailid}`: An email address that represents a Google group.\n   For example, `admins@example.com`.\n\n\n* `domain:{domain}`: The G Suite domain (primary) that represents all the\n   users of that domain. For example, `google.com` or `example.com`.\n\n",
+          "description": "Specifies the identities requesting access for a Cloud Platform resource.\n`members` can have the following values:\n\n* `allUsers`: A special identifier that represents anyone who is\n   on the internet; with or without a Google account.\n\n* `allAuthenticatedUsers`: A special identifier that represents anyone\n   who is authenticated with a Google account or a service account.\n\n* `user:{emailid}`: An email address that represents a specific Google\n   account. For example, `alice@example.com` .\n\n\n* `serviceAccount:{emailid}`: An email address that represents a service\n   account. For example, `my-other-app@appspot.gserviceaccount.com`.\n\n* `group:{emailid}`: An email address that represents a Google group.\n   For example, `admins@example.com`.\n\n* `deleted:user:{emailid}?uid={uniqueid}`: An email address (plus unique\n   identifier) representing a user that has been recently deleted. For\n   example, `alice@example.com?uid=123456789012345678901`. If the user is\n   recovered, this value reverts to `user:{emailid}` and the recovered user\n   retains the role in the binding.\n\n* `deleted:serviceAccount:{emailid}?uid={uniqueid}`: An email address (plus\n   unique identifier) representing a service account that has been recently\n   deleted. For example,\n   `my-other-app@appspot.gserviceaccount.com?uid=123456789012345678901`.\n   If the service account is undeleted, this value reverts to\n   `serviceAccount:{emailid}` and the undeleted service account retains the\n   role in the binding.\n\n* `deleted:group:{emailid}?uid={uniqueid}`: An email address (plus unique\n   identifier) representing a Google group that has been recently\n   deleted. For example, `admins@example.com?uid=123456789012345678901`. If\n   the group is recovered, this value reverts to `group:{emailid}` and the\n   recovered group retains the role in the binding.\n\n\n* `domain:{domain}`: The G Suite domain (primary) that represents all the\n   users of that domain. For example, `google.com` or `example.com`.\n\n",
           "items": {
             "type": "string"
           },
@@ -1437,7 +1925,7 @@
       "id": "CheckConsistencyRequest",
       "properties": {
         "consistencyToken": {
-          "description": "The token created using GenerateConsistencyToken for the Table.",
+          "description": "Required. The token created using GenerateConsistencyToken for the Table.",
           "type": "string"
         }
       },
@@ -1459,7 +1947,7 @@
       "id": "Cluster",
       "properties": {
         "defaultStorageType": {
-          "description": "(`CreationOnly`)\nThe type of storage used by this cluster to serve its\nparent instance's tables, unless explicitly overridden.",
+          "description": "Immutable. The type of storage used by this cluster to serve its\nparent instance's tables, unless explicitly overridden.",
           "enum": [
             "STORAGE_TYPE_UNSPECIFIED",
             "SSD",
@@ -1473,20 +1961,20 @@
           "type": "string"
         },
         "location": {
-          "description": "(`CreationOnly`)\nThe location where this cluster's nodes and storage reside. For best\nperformance, clients should be located as close as possible to this\ncluster. Currently only zones are supported, so values should be of the\nform `projects/\u003cproject\u003e/locations/\u003czone\u003e`.",
+          "description": "Immutable. The location where this cluster's nodes and storage reside. For best\nperformance, clients should be located as close as possible to this\ncluster. Currently only zones are supported, so values should be of the\nform `projects/{project}/locations/{zone}`.",
           "type": "string"
         },
         "name": {
-          "description": "(`OutputOnly`)\nThe unique name of the cluster. Values are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/clusters/a-z*`.",
+          "description": "The unique name of the cluster. Values are of the form\n`projects/{project}/instances/{instance}/clusters/a-z*`.",
           "type": "string"
         },
         "serveNodes": {
-          "description": "The number of nodes allocated to this cluster. More nodes enable higher\nthroughput and more consistent performance.",
+          "description": "Required. The number of nodes allocated to this cluster. More nodes enable higher\nthroughput and more consistent performance.",
           "format": "int32",
           "type": "integer"
         },
         "state": {
-          "description": "(`OutputOnly`)\nThe current state of the cluster.",
+          "description": "Output only. The current state of the cluster.",
           "enum": [
             "STATE_NOT_KNOWN",
             "READY",
@@ -1511,20 +1999,22 @@
       "id": "ClusterState",
       "properties": {
         "replicationState": {
-          "description": "Output only.\nThe state of replication for the table in this cluster.",
+          "description": "Output only. The state of replication for the table in this cluster.",
           "enum": [
             "STATE_NOT_KNOWN",
             "INITIALIZING",
             "PLANNED_MAINTENANCE",
             "UNPLANNED_MAINTENANCE",
-            "READY"
+            "READY",
+            "READY_OPTIMIZING"
           ],
           "enumDescriptions": [
             "The replication state of the table is unknown in this cluster.",
             "The cluster was recently created, and the table must finish copying\nover pre-existing data from other clusters before it can begin\nreceiving live replication updates and serving Data API requests.",
             "The table is temporarily unable to serve Data API requests from this\ncluster due to planned internal maintenance.",
             "The table is temporarily unable to serve Data API requests from this\ncluster due to unplanned or emergency maintenance.",
-            "The table can serve Data API requests from this cluster. Depending on\nreplication delay, reads may not immediately reflect the state of the\ntable in other clusters."
+            "The table can serve Data API requests from this cluster. Depending on\nreplication delay, reads may not immediately reflect the state of the\ntable in other clusters.",
+            "The table is fully created and ready for use after a restore, and is\nbeing optimized for performance. When optimizations are complete, the\ntable will transition to `READY` state."
           ],
           "type": "string"
         }
@@ -1538,6 +2028,31 @@
         "gcRule": {
           "$ref": "GcRule",
           "description": "Garbage collection rule specified as a protobuf.\nMust serialize to at most 500 bytes.\n\nNOTE: Garbage collection executes opportunistically in the background, and\nso it's possible for reads to return a cell even if it matches the active\nGC expression for its family."
+        }
+      },
+      "type": "object"
+    },
+    "CreateBackupMetadata": {
+      "description": "Metadata type for the operation returned by\nCreateBackup.",
+      "id": "CreateBackupMetadata",
+      "properties": {
+        "endTime": {
+          "description": "If set, the time at which this operation finished or was cancelled.",
+          "format": "google-datetime",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name of the backup being created.",
+          "type": "string"
+        },
+        "sourceTable": {
+          "description": "The name of the table the backup is created from.",
+          "type": "string"
+        },
+        "startTime": {
+          "description": "The time at which this operation started.",
+          "format": "google-datetime",
+          "type": "string"
         }
       },
       "type": "object"
@@ -1576,14 +2091,14 @@
       "properties": {
         "cluster": {
           "$ref": "Cluster",
-          "description": "The cluster to be created.\nFields marked `OutputOnly` must be left blank."
+          "description": "Required. The cluster to be created.\nFields marked `OutputOnly` must be left blank."
         },
         "clusterId": {
-          "description": "The ID to be used when referring to the new cluster within its instance,\ne.g., just `mycluster` rather than\n`projects/myproject/instances/myinstance/clusters/mycluster`.",
+          "description": "Required. The ID to be used when referring to the new cluster within its instance,\ne.g., just `mycluster` rather than\n`projects/myproject/instances/myinstance/clusters/mycluster`.",
           "type": "string"
         },
         "parent": {
-          "description": "The unique name of the instance in which to create the new cluster.\nValues are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e`.",
+          "description": "Required. The unique name of the instance in which to create the new cluster.\nValues are of the form\n`projects/{project}/instances/{instance}`.",
           "type": "string"
         }
       },
@@ -1618,19 +2133,19 @@
           "additionalProperties": {
             "$ref": "Cluster"
           },
-          "description": "The clusters to be created within the instance, mapped by desired\ncluster ID, e.g., just `mycluster` rather than\n`projects/myproject/instances/myinstance/clusters/mycluster`.\nFields marked `OutputOnly` must be left blank.\nCurrently, at most two clusters can be specified.",
+          "description": "Required. The clusters to be created within the instance, mapped by desired\ncluster ID, e.g., just `mycluster` rather than\n`projects/myproject/instances/myinstance/clusters/mycluster`.\nFields marked `OutputOnly` must be left blank.\nCurrently, at most four clusters can be specified.",
           "type": "object"
         },
         "instance": {
           "$ref": "Instance",
-          "description": "The instance to create.\nFields marked `OutputOnly` must be left blank."
+          "description": "Required. The instance to create.\nFields marked `OutputOnly` must be left blank."
         },
         "instanceId": {
-          "description": "The ID to be used when referring to the new instance within its project,\ne.g., just `myinstance` rather than\n`projects/myproject/instances/myinstance`.",
+          "description": "Required. The ID to be used when referring to the new instance within its project,\ne.g., just `myinstance` rather than\n`projects/myproject/instances/myinstance`.",
           "type": "string"
         },
         "parent": {
-          "description": "The unique name of the project in which to create the new instance.\nValues are of the form `projects/\u003cproject\u003e`.",
+          "description": "Required. The unique name of the project in which to create the new instance.\nValues are of the form `projects/{project}`.",
           "type": "string"
         }
       },
@@ -1649,10 +2164,10 @@
         },
         "table": {
           "$ref": "Table",
-          "description": "The Table to create."
+          "description": "Required. The Table to create."
         },
         "tableId": {
-          "description": "The name by which the new table should be referred to within the parent\ninstance, e.g., `foobar` rather than `\u003cparent\u003e/tables/foobar`.\nMaximum 50 characters.",
+          "description": "Required. The name by which the new table should be referred to within the parent\ninstance, e.g., `foobar` rather than `{parent}/tables/foobar`.\nMaximum 50 characters.",
           "type": "string"
         }
       },
@@ -1681,23 +2196,51 @@
       "type": "object"
     },
     "Expr": {
-      "description": "Represents an expression text. Example:\n\n    title: \"User account presence\"\n    description: \"Determines whether the request has a user account\"\n    expression: \"size(request.user) \u003e 0\"",
+      "description": "Represents a textual expression in the Common Expression Language (CEL)\nsyntax. CEL is a C-like expression language. The syntax and semantics of CEL\nare documented at https://github.com/google/cel-spec.\n\nExample (Comparison):\n\n    title: \"Summary size limit\"\n    description: \"Determines if a summary is less than 100 chars\"\n    expression: \"document.summary.size() \u003c 100\"\n\nExample (Equality):\n\n    title: \"Requestor is owner\"\n    description: \"Determines if requestor is the document owner\"\n    expression: \"document.owner == request.auth.claims.email\"\n\nExample (Logic):\n\n    title: \"Public documents\"\n    description: \"Determine whether the document should be publicly visible\"\n    expression: \"document.type != 'private' \u0026\u0026 document.type != 'internal'\"\n\nExample (Data Manipulation):\n\n    title: \"Notification string\"\n    description: \"Create a notification string with a timestamp.\"\n    expression: \"'New message received at ' + string(document.create_time)\"\n\nThe exact variables and functions that may be referenced within an expression\nare determined by the service that evaluates it. See the service\ndocumentation for additional information.",
       "id": "Expr",
       "properties": {
         "description": {
-          "description": "An optional description of the expression. This is a longer text which\ndescribes the expression, e.g. when hovered over it in a UI.",
+          "description": "Optional. Description of the expression. This is a longer text which\ndescribes the expression, e.g. when hovered over it in a UI.",
           "type": "string"
         },
         "expression": {
-          "description": "Textual representation of an expression in\nCommon Expression Language syntax.\n\nThe application context of the containing message determines which\nwell-known feature set of CEL is supported.",
+          "description": "Textual representation of an expression in Common Expression Language\nsyntax.",
           "type": "string"
         },
         "location": {
-          "description": "An optional string indicating the location of the expression for error\nreporting, e.g. a file name and a position in the file.",
+          "description": "Optional. String indicating the location of the expression for error\nreporting, e.g. a file name and a position in the file.",
           "type": "string"
         },
         "title": {
-          "description": "An optional title for the expression, i.e. a short string describing\nits purpose. This can be used e.g. in UIs which allow to enter the\nexpression.",
+          "description": "Optional. Title for the expression, i.e. a short string describing\nits purpose. This can be used e.g. in UIs which allow to enter the\nexpression.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "FailureTrace": {
+      "description": "Added to the error payload.",
+      "id": "FailureTrace",
+      "properties": {
+        "frames": {
+          "items": {
+            "$ref": "Frame"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "Frame": {
+      "id": "Frame",
+      "properties": {
+        "targetName": {
+          "type": "string"
+        },
+        "workflowGuid": {
+          "type": "string"
+        },
+        "zoneId": {
           "type": "string"
         }
       },
@@ -1748,7 +2291,24 @@
     "GetIamPolicyRequest": {
       "description": "Request message for `GetIamPolicy` method.",
       "id": "GetIamPolicyRequest",
-      "properties": {},
+      "properties": {
+        "options": {
+          "$ref": "GetPolicyOptions",
+          "description": "OPTIONAL: A `GetPolicyOptions` object for specifying options to\n`GetIamPolicy`."
+        }
+      },
+      "type": "object"
+    },
+    "GetPolicyOptions": {
+      "description": "Encapsulates settings provided to GetIamPolicy.",
+      "id": "GetPolicyOptions",
+      "properties": {
+        "requestedPolicyVersion": {
+          "description": "Optional. The policy format version to be returned.\n\nValid values are 0, 1, and 3. Requests specifying an invalid value will be\nrejected.\n\nRequests for policies with any conditional bindings must specify version 3.\nPolicies without any conditional bindings may specify any valid value or\nleave the field unset.\n\nTo learn which resources support conditions in their IAM policies, see the\n[IAM\ndocumentation](https://cloud.google.com/iam/help/conditions/resource-policies).",
+          "format": "int32",
+          "type": "integer"
+        }
+      },
       "type": "object"
     },
     "Instance": {
@@ -1756,22 +2316,22 @@
       "id": "Instance",
       "properties": {
         "displayName": {
-          "description": "The descriptive name for this instance as it appears in UIs.\nCan be changed at any time, but should be kept globally unique\nto avoid confusion.",
+          "description": "Required. The descriptive name for this instance as it appears in UIs.\nCan be changed at any time, but should be kept globally unique\nto avoid confusion.",
           "type": "string"
         },
         "labels": {
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Labels are a flexible and lightweight mechanism for organizing cloud\nresources into groups that reflect a customer's organizational needs and\ndeployment strategies. They can be used to filter resources and aggregate\nmetrics.\n\n* Label keys must be between 1 and 63 characters long and must conform to\n  the regular expression: `\\p{Ll}\\p{Lo}{0,62}`.\n* Label values must be between 0 and 63 characters long and must conform to\n  the regular expression: `[\\p{Ll}\\p{Lo}\\p{N}_-]{0,63}`.\n* No more than 64 labels can be associated with a given resource.\n* Keys and values must both be under 128 bytes.",
+          "description": "Required. Labels are a flexible and lightweight mechanism for organizing cloud\nresources into groups that reflect a customer's organizational needs and\ndeployment strategies. They can be used to filter resources and aggregate\nmetrics.\n\n* Label keys must be between 1 and 63 characters long and must conform to\n  the regular expression: `\\p{Ll}\\p{Lo}{0,62}`.\n* Label values must be between 0 and 63 characters long and must conform to\n  the regular expression: `[\\p{Ll}\\p{Lo}\\p{N}_-]{0,63}`.\n* No more than 64 labels can be associated with a given resource.\n* Keys and values must both be under 128 bytes.",
           "type": "object"
         },
         "name": {
-          "description": "(`OutputOnly`)\nThe unique name of the instance. Values are of the form\n`projects/\u003cproject\u003e/instances/a-z+[a-z0-9]`.",
+          "description": "The unique name of the instance. Values are of the form\n`projects/{project}/instances/a-z+[a-z0-9]`.",
           "type": "string"
         },
         "state": {
-          "description": "(`OutputOnly`)\nThe current state of the instance.",
+          "description": "Output only. The current state of the instance.",
           "enum": [
             "STATE_NOT_KNOWN",
             "READY",
@@ -1785,7 +2345,7 @@
           "type": "string"
         },
         "type": {
-          "description": "The type of the instance. Defaults to `PRODUCTION`.",
+          "description": "Required. The type of the instance. Defaults to `PRODUCTION`.",
           "enum": [
             "TYPE_UNSPECIFIED",
             "PRODUCTION",
@@ -1794,7 +2354,7 @@
           "enumDescriptions": [
             "The type of the instance is unspecified. If set when creating an\ninstance, a `PRODUCTION` instance will be created. If set when updating\nan instance, the type will be left unchanged.",
             "An instance meant for production use. `serve_nodes` must be set\non the cluster.",
-            "The instance is meant for development and testing purposes only; it has\nno performance or uptime guarantees and is not covered by SLA.\nAfter a development instance is created, it can be upgraded by\nupdating the instance to type `PRODUCTION`. An instance created\nas a production instance cannot be changed to a development instance.\nWhen creating a development instance, `serve_nodes` on the cluster must\nnot be set."
+            "DEPRECATED: Prefer PRODUCTION for all use cases, as it no longer enforces\na higher minimum node count than DEVELOPMENT."
           ],
           "type": "string"
         }
@@ -1835,6 +2395,24 @@
         },
         "nextPageToken": {
           "description": "Set if not all app profiles could be returned in a single response.\nPass this value to `page_token` in another request to get the next\npage of results.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ListBackupsResponse": {
+      "description": "The response for ListBackups.",
+      "id": "ListBackupsResponse",
+      "properties": {
+        "backups": {
+          "description": "The list of matching backups.",
+          "items": {
+            "$ref": "Backup"
+          },
+          "type": "array"
+        },
+        "nextPageToken": {
+          "description": "`next_page_token` can be sent in a subsequent\nListBackups call to fetch more\nof the matching backups.",
           "type": "string"
         }
       },
@@ -2006,7 +2584,7 @@
       "id": "ModifyColumnFamiliesRequest",
       "properties": {
         "modifications": {
-          "description": "Modifications to be atomically applied to the specified table's families.\nEntries are applied in order, meaning that earlier modifications can be\nmasked by later ones (in the case of repeated updates to the same family,\nfor example).",
+          "description": "Required. Modifications to be atomically applied to the specified table's families.\nEntries are applied in order, meaning that earlier modifications can be\nmasked by later ones (in the case of repeated updates to the same family,\nfor example).",
           "items": {
             "$ref": "Modification"
           },
@@ -2056,16 +2634,53 @@
       },
       "type": "object"
     },
+    "OperationProgress": {
+      "description": "Encapsulates progress related information for a Cloud Bigtable long\nrunning operation.",
+      "id": "OperationProgress",
+      "properties": {
+        "endTime": {
+          "description": "If set, the time at which this operation failed or was completed\nsuccessfully.",
+          "format": "google-datetime",
+          "type": "string"
+        },
+        "progressPercent": {
+          "description": "Percent completion of the operation.\nValues are between 0 and 100 inclusive.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "startTime": {
+          "description": "Time the request was received.",
+          "format": "google-datetime",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "OptimizeRestoredTableMetadata": {
+      "description": "Metadata type for the long-running operation used to track the progress\nof optimizations performed on a newly restored table. This long-running\noperation is automatically created by the system after the successful\ncompletion of a table restore, and cannot be cancelled.",
+      "id": "OptimizeRestoredTableMetadata",
+      "properties": {
+        "name": {
+          "description": "Name of the restored table being optimized.",
+          "type": "string"
+        },
+        "progress": {
+          "$ref": "OperationProgress",
+          "description": "The progress of the post-restore optimizations."
+        }
+      },
+      "type": "object"
+    },
     "PartialUpdateInstanceRequest": {
       "description": "Request message for BigtableInstanceAdmin.PartialUpdateInstance.",
       "id": "PartialUpdateInstanceRequest",
       "properties": {
         "instance": {
           "$ref": "Instance",
-          "description": "The Instance which will (partially) replace the current value."
+          "description": "Required. The Instance which will (partially) replace the current value."
         },
         "updateMask": {
-          "description": "The subset of Instance fields which should be replaced.\nMust be explicitly set.",
+          "description": "Required. The subset of Instance fields which should be replaced.\nMust be explicitly set.",
           "format": "google-fieldmask",
           "type": "string"
         }
@@ -2073,7 +2688,7 @@
       "type": "object"
     },
     "Policy": {
-      "description": "Defines an Identity and Access Management (IAM) policy. It is used to\nspecify access control policies for Cloud Platform resources.\n\n\nA `Policy` consists of a list of `bindings`. A `binding` binds a list of\n`members` to a `role`, where the members can be user accounts, Google groups,\nGoogle domains, and service accounts. A `role` is a named list of permissions\ndefined by IAM.\n\n**JSON Example**\n\n    {\n      \"bindings\": [\n        {\n          \"role\": \"roles/owner\",\n          \"members\": [\n            \"user:mike@example.com\",\n            \"group:admins@example.com\",\n            \"domain:google.com\",\n            \"serviceAccount:my-other-app@appspot.gserviceaccount.com\"\n          ]\n        },\n        {\n          \"role\": \"roles/viewer\",\n          \"members\": [\"user:sean@example.com\"]\n        }\n      ]\n    }\n\n**YAML Example**\n\n    bindings:\n    - members:\n      - user:mike@example.com\n      - group:admins@example.com\n      - domain:google.com\n      - serviceAccount:my-other-app@appspot.gserviceaccount.com\n      role: roles/owner\n    - members:\n      - user:sean@example.com\n      role: roles/viewer\n\n\nFor a description of IAM and its features, see the\n[IAM developer's guide](https://cloud.google.com/iam/docs).",
+      "description": "An Identity and Access Management (IAM) policy, which specifies access\ncontrols for Google Cloud resources.\n\n\nA `Policy` is a collection of `bindings`. A `binding` binds one or more\n`members` to a single `role`. Members can be user accounts, service accounts,\nGoogle groups, and domains (such as G Suite). A `role` is a named list of\npermissions; each `role` can be an IAM predefined role or a user-created\ncustom role.\n\nFor some types of Google Cloud resources, a `binding` can also specify a\n`condition`, which is a logical expression that allows access to a resource\nonly if the expression evaluates to `true`. A condition can add constraints\nbased on attributes of the request, the resource, or both. To learn which\nresources support conditions in their IAM policies, see the\n[IAM documentation](https://cloud.google.com/iam/help/conditions/resource-policies).\n\n**JSON example:**\n\n    {\n      \"bindings\": [\n        {\n          \"role\": \"roles/resourcemanager.organizationAdmin\",\n          \"members\": [\n            \"user:mike@example.com\",\n            \"group:admins@example.com\",\n            \"domain:google.com\",\n            \"serviceAccount:my-project-id@appspot.gserviceaccount.com\"\n          ]\n        },\n        {\n          \"role\": \"roles/resourcemanager.organizationViewer\",\n          \"members\": [\n            \"user:eve@example.com\"\n          ],\n          \"condition\": {\n            \"title\": \"expirable access\",\n            \"description\": \"Does not grant access after Sep 2020\",\n            \"expression\": \"request.time \u003c timestamp('2020-10-01T00:00:00.000Z')\",\n          }\n        }\n      ],\n      \"etag\": \"BwWWja0YfJA=\",\n      \"version\": 3\n    }\n\n**YAML example:**\n\n    bindings:\n    - members:\n      - user:mike@example.com\n      - group:admins@example.com\n      - domain:google.com\n      - serviceAccount:my-project-id@appspot.gserviceaccount.com\n      role: roles/resourcemanager.organizationAdmin\n    - members:\n      - user:eve@example.com\n      role: roles/resourcemanager.organizationViewer\n      condition:\n        title: expirable access\n        description: Does not grant access after Sep 2020\n        expression: request.time \u003c timestamp('2020-10-01T00:00:00.000Z')\n    - etag: BwWWja0YfJA=\n    - version: 3\n\nFor a description of IAM and its features, see the\n[IAM documentation](https://cloud.google.com/iam/docs/).",
       "id": "Policy",
       "properties": {
         "auditConfigs": {
@@ -2084,21 +2699,93 @@
           "type": "array"
         },
         "bindings": {
-          "description": "Associates a list of `members` to a `role`.\n`bindings` with no members will result in an error.",
+          "description": "Associates a list of `members` to a `role`. Optionally, may specify a\n`condition` that determines how and when the `bindings` are applied. Each\nof the `bindings` must contain at least one member.",
           "items": {
             "$ref": "Binding"
           },
           "type": "array"
         },
         "etag": {
-          "description": "`etag` is used for optimistic concurrency control as a way to help\nprevent simultaneous updates of a policy from overwriting each other.\nIt is strongly suggested that systems make use of the `etag` in the\nread-modify-write cycle to perform policy updates in order to avoid race\nconditions: An `etag` is returned in the response to `getIamPolicy`, and\nsystems are expected to put that etag in the request to `setIamPolicy` to\nensure that their change will be applied to the same version of the policy.\n\nIf no `etag` is provided in the call to `setIamPolicy`, then the existing\npolicy is overwritten blindly.",
+          "description": "`etag` is used for optimistic concurrency control as a way to help\nprevent simultaneous updates of a policy from overwriting each other.\nIt is strongly suggested that systems make use of the `etag` in the\nread-modify-write cycle to perform policy updates in order to avoid race\nconditions: An `etag` is returned in the response to `getIamPolicy`, and\nsystems are expected to put that etag in the request to `setIamPolicy` to\nensure that their change will be applied to the same version of the policy.\n\n**Important:** If you use IAM Conditions, you must include the `etag` field\nwhenever you call `setIamPolicy`. If you omit this field, then IAM allows\nyou to overwrite a version `3` policy with a version `1` policy, and all of\nthe conditions in the version `3` policy are lost.",
           "format": "byte",
           "type": "string"
         },
         "version": {
-          "description": "Deprecated.",
+          "description": "Specifies the format of the policy.\n\nValid values are `0`, `1`, and `3`. Requests that specify an invalid value\nare rejected.\n\nAny operation that affects conditional role bindings must specify version\n`3`. This requirement applies to the following operations:\n\n* Getting a policy that includes a conditional role binding\n* Adding a conditional role binding to a policy\n* Changing a conditional role binding in a policy\n* Removing any role binding, with or without a condition, from a policy\n  that includes conditions\n\n**Important:** If you use IAM Conditions, you must include the `etag` field\nwhenever you call `setIamPolicy`. If you omit this field, then IAM allows\nyou to overwrite a version `3` policy with a version `1` policy, and all of\nthe conditions in the version `3` policy are lost.\n\nIf a policy does not include any conditions, operations on that policy may\nspecify any valid version or leave the field unset.\n\nTo learn which resources support conditions in their IAM policies, see the\n[IAM documentation](https://cloud.google.com/iam/help/conditions/resource-policies).",
           "format": "int32",
           "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "RestoreInfo": {
+      "description": "Information about a table restore.",
+      "id": "RestoreInfo",
+      "properties": {
+        "backupInfo": {
+          "$ref": "BackupInfo",
+          "description": "Information about the backup used to restore the table. The backup\nmay no longer exist."
+        },
+        "sourceType": {
+          "description": "The type of the restore source.",
+          "enum": [
+            "RESTORE_SOURCE_TYPE_UNSPECIFIED",
+            "BACKUP"
+          ],
+          "enumDescriptions": [
+            "No restore associated.",
+            "A backup was used as the source of the restore."
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "RestoreTableMetadata": {
+      "description": "Metadata type for the long-running operation returned by\nRestoreTable.",
+      "id": "RestoreTableMetadata",
+      "properties": {
+        "backupInfo": {
+          "$ref": "BackupInfo"
+        },
+        "name": {
+          "description": "Name of the table being created and restored to.",
+          "type": "string"
+        },
+        "optimizeTableOperationName": {
+          "description": "If exists, the name of the long-running operation that will be used to\ntrack the post-restore optimization process to optimize the performance of\nthe restored table. The metadata type of the long-running operation is\nOptimizeRestoreTableMetadata. The response type is\nEmpty. This long-running operation may be\nautomatically created by the system if applicable after the\nRestoreTable long-running operation completes successfully. This operation\nmay not be created if the table is already optimized or the restore was\nnot successful.",
+          "type": "string"
+        },
+        "progress": {
+          "$ref": "OperationProgress",
+          "description": "The progress of the RestoreTable\noperation."
+        },
+        "sourceType": {
+          "description": "The type of the restore source.",
+          "enum": [
+            "RESTORE_SOURCE_TYPE_UNSPECIFIED",
+            "BACKUP"
+          ],
+          "enumDescriptions": [
+            "No restore associated.",
+            "A backup was used as the source of the restore."
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "RestoreTableRequest": {
+      "description": "The request for\nRestoreTable.",
+      "id": "RestoreTableRequest",
+      "properties": {
+        "backup": {
+          "description": "Name of the backup from which to restore.  Values are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/clusters/\u003ccluster\u003e/backups/\u003cbackup\u003e`.",
+          "type": "string"
+        },
+        "tableId": {
+          "description": "Required. The id of the table to create and restore to. This\ntable must not already exist. The `table_id` appended to\n`parent` forms the full table name of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/tables/\u003ctable_id\u003e`.",
+          "type": "string"
         }
       },
       "type": "object"
@@ -2112,7 +2799,7 @@
           "description": "REQUIRED: The complete policy to be applied to the `resource`. The size of\nthe policy is limited to a few 10s of KB. An empty policy is a\nvalid policy but certain Cloud Platform services (such as Projects)\nmight reject them."
         },
         "updateMask": {
-          "description": "OPTIONAL: A FieldMask specifying which fields of the policy to modify. Only\nthe fields in the mask will be modified. If no mask is provided, the\nfollowing default mask is used:\npaths: \"bindings, etag\"\nThis field is only used by Cloud IAM.",
+          "description": "OPTIONAL: A FieldMask specifying which fields of the policy to modify. Only\nthe fields in the mask will be modified. If no mask is provided, the\nfollowing default mask is used:\n\n`paths: \"bindings, etag\"`",
           "format": "google-fieldmask",
           "type": "string"
         }
@@ -2181,18 +2868,18 @@
           "additionalProperties": {
             "$ref": "ClusterState"
           },
-          "description": "Output only.\nMap from cluster ID to per-cluster table state.\nIf it could not be determined whether or not the table has data in a\nparticular cluster (for example, if its zone is unavailable), then\nthere will be an entry for the cluster with UNKNOWN `replication_status`.\nViews: `REPLICATION_VIEW`, `FULL`",
+          "description": "Output only. Map from cluster ID to per-cluster table state.\nIf it could not be determined whether or not the table has data in a\nparticular cluster (for example, if its zone is unavailable), then\nthere will be an entry for the cluster with UNKNOWN `replication_status`.\nViews: `REPLICATION_VIEW`, `FULL`",
           "type": "object"
         },
         "columnFamilies": {
           "additionalProperties": {
             "$ref": "ColumnFamily"
           },
-          "description": "(`CreationOnly`)\nThe column families configured for this table, mapped by column family ID.\nViews: `SCHEMA_VIEW`, `FULL`",
+          "description": "The column families configured for this table, mapped by column family ID.\nViews: `SCHEMA_VIEW`, `FULL`",
           "type": "object"
         },
         "granularity": {
-          "description": "(`CreationOnly`)\nThe granularity (i.e. `MILLIS`) at which timestamps are stored in\nthis table. Timestamps not matching the granularity will be rejected.\nIf unspecified at creation time, the value will be set to `MILLIS`.\nViews: `SCHEMA_VIEW`, `FULL`.",
+          "description": "Immutable. The granularity (i.e. `MILLIS`) at which timestamps are stored in this\ntable. Timestamps not matching the granularity will be rejected.\nIf unspecified at creation time, the value will be set to `MILLIS`.\nViews: `SCHEMA_VIEW`, `FULL`.",
           "enum": [
             "TIMESTAMP_GRANULARITY_UNSPECIFIED",
             "MILLIS"
@@ -2204,8 +2891,12 @@
           "type": "string"
         },
         "name": {
-          "description": "Output only.\nThe unique name of the table. Values are of the form\n`projects/\u003cproject\u003e/instances/\u003cinstance\u003e/tables/_a-zA-Z0-9*`.\nViews: `NAME_ONLY`, `SCHEMA_VIEW`, `REPLICATION_VIEW`, `FULL`",
+          "description": "The unique name of the table. Values are of the form\n`projects/{project}/instances/{instance}/tables/_a-zA-Z0-9*`.\nViews: `NAME_ONLY`, `SCHEMA_VIEW`, `REPLICATION_VIEW`, `FULL`",
           "type": "string"
+        },
+        "restoreInfo": {
+          "$ref": "RestoreInfo",
+          "description": "Output only. If this table was restored from another data source (e.g. a backup), this\nfield will be populated with information about the restore."
         }
       },
       "type": "object"

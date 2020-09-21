@@ -1,13 +1,14 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
@@ -83,6 +84,7 @@ func resourceKubernetesLimitRangeCreate(d *schema.ResourceData, meta interface{}
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandLimitRangeSpec(d.Get("spec").([]interface{}), d.IsNewResource())
@@ -94,7 +96,7 @@ func resourceKubernetesLimitRangeCreate(d *schema.ResourceData, meta interface{}
 		Spec:       *spec,
 	}
 	log.Printf("[INFO] Creating new limit range: %#v", limitRange)
-	out, err := conn.CoreV1().LimitRanges(metadata.Namespace).Create(&limitRange)
+	out, err := conn.CoreV1().LimitRanges(metadata.Namespace).Create(ctx, &limitRange, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to create limit range: %s", err)
 	}
@@ -109,13 +111,14 @@ func resourceKubernetesLimitRangeRead(d *schema.ResourceData, meta interface{}) 
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
 		return err
 	}
 	log.Printf("[INFO] Reading limit range %s", name)
-	limitRange, err := conn.CoreV1().LimitRanges(namespace).Get(name, meta_v1.GetOptions{})
+	limitRange, err := conn.CoreV1().LimitRanges(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -139,6 +142,7 @@ func resourceKubernetesLimitRangeUpdate(d *schema.ResourceData, meta interface{}
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -161,7 +165,7 @@ func resourceKubernetesLimitRangeUpdate(d *schema.ResourceData, meta interface{}
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating limit range %q: %v", name, string(data))
-	out, err := conn.CoreV1().LimitRanges(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().LimitRanges(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update limit range: %s", err)
 	}
@@ -176,6 +180,7 @@ func resourceKubernetesLimitRangeDelete(d *schema.ResourceData, meta interface{}
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -183,7 +188,7 @@ func resourceKubernetesLimitRangeDelete(d *schema.ResourceData, meta interface{}
 	}
 
 	log.Printf("[INFO] Deleting limit range: %#v", name)
-	err = conn.CoreV1().LimitRanges(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().LimitRanges(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -199,6 +204,7 @@ func resourceKubernetesLimitRangeExists(d *schema.ResourceData, meta interface{}
 	if err != nil {
 		return false, err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -206,7 +212,7 @@ func resourceKubernetesLimitRangeExists(d *schema.ResourceData, meta interface{}
 	}
 
 	log.Printf("[INFO] Checking limit range %s", name)
-	_, err = conn.CoreV1().LimitRanges(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().LimitRanges(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

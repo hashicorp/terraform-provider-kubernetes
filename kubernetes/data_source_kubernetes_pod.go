@@ -1,11 +1,11 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
-	"log"
-
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"log"
 )
 
 func dataSourceKubernetesPod() *schema.Resource {
@@ -36,6 +36,11 @@ func dataSourceKubernetesPod() *schema.Resource {
 }
 
 func dataSourceKubernetesPodRead(d *schema.ResourceData, meta interface{}) error {
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
@@ -45,13 +50,8 @@ func dataSourceKubernetesPodRead(d *schema.ResourceData, meta interface{}) error
 	}
 	d.SetId(buildId(om))
 
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return err
-	}
-
 	log.Printf("[INFO] Reading pod %s", metadata.Name)
-	pod, err := conn.CoreV1().Pods(metadata.Namespace).Get(metadata.Name, meta_v1.GetOptions{})
+	pod, err := conn.CoreV1().Pods(metadata.Namespace).Get(ctx, metadata.Name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err

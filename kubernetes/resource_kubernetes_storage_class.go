@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -73,6 +74,7 @@ func resourceKubernetesStorageClassCreate(d *schema.ResourceData, meta interface
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	reclaimPolicy := v1.PersistentVolumeReclaimPolicy(d.Get("reclaim_policy").(string))
@@ -95,7 +97,7 @@ func resourceKubernetesStorageClassCreate(d *schema.ResourceData, meta interface
 	}
 
 	log.Printf("[INFO] Creating new storage class: %#v", storageClass)
-	out, err := conn.StorageV1().StorageClasses().Create(&storageClass)
+	out, err := conn.StorageV1().StorageClasses().Create(ctx, &storageClass, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -110,10 +112,11 @@ func resourceKubernetesStorageClassRead(d *schema.ResourceData, meta interface{}
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	name := d.Id()
 	log.Printf("[INFO] Reading storage class %s", name)
-	storageClass, err := conn.StorageV1().StorageClasses().Get(name, metav1.GetOptions{})
+	storageClass, err := conn.StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -140,6 +143,7 @@ func resourceKubernetesStorageClassUpdate(d *schema.ResourceData, meta interface
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	name := d.Id()
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -148,7 +152,7 @@ func resourceKubernetesStorageClassUpdate(d *schema.ResourceData, meta interface
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating storage class %q: %v", name, string(data))
-	out, err := conn.StorageV1().StorageClasses().Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.StorageV1().StorageClasses().Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update storage class: %s", err)
 	}
@@ -163,10 +167,11 @@ func resourceKubernetesStorageClassDelete(d *schema.ResourceData, meta interface
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting storage class: %#v", name)
-	err = conn.StorageV1().StorageClasses().Delete(name, &deleteOptions)
+	err = conn.StorageV1().StorageClasses().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -182,10 +187,11 @@ func resourceKubernetesStorageClassExists(d *schema.ResourceData, meta interface
 	if err != nil {
 		return false, err
 	}
+	ctx := context.TODO()
 
 	name := d.Id()
 	log.Printf("[INFO] Checking storage class %s", name)
-	_, err = conn.StorageV1().StorageClasses().Get(name, metav1.GetOptions{})
+	_, err = conn.StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

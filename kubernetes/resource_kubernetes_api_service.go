@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -44,7 +45,7 @@ func resourceKubernetesAPIService() *schema.Resource {
 						},
 						"group_priority_minimum": {
 							Type:         schema.TypeInt,
-							Description:  "GroupPriorityMininum is the priority this group should have at least. Higher priority means that the group is preferred by clients over lower priority ones. Note that other versions of this group might specify even higher GroupPriorityMininum values such that the whole group gets a higher priority. The primary sort is based on GroupPriorityMinimum, ordered highest number to lowest (20 before 10). The secondary sort is based on the alphabetical comparison of the name of the object. (v1.bar before v1.foo) We'd recommend something like: *.k8s.io (except extensions) at 18000 and PaaSes (OpenShift, Deis) are recommended to be in the 2000s.",
+							Description:  "GroupPriorityMinimum is the priority this group should have at least. Higher priority means that the group is preferred by clients over lower priority ones. Note that other versions of this group might specify even higher GroupPriorityMininum values such that the whole group gets a higher priority. The primary sort is based on GroupPriorityMinimum, ordered highest number to lowest (20 before 10). The secondary sort is based on the alphabetical comparison of the name of the object. (v1.bar before v1.foo) We'd recommend something like: *.k8s.io (except extensions) at 18000 and PaaSes (OpenShift, Deis) are recommended to be in the 2000s.",
 							Required:     true,
 							ValidateFunc: validation.IntBetween(0, 20000),
 						},
@@ -106,13 +107,16 @@ func resourceKubernetesAPIServiceCreate(d *schema.ResourceData, meta interface{}
 		return err
 	}
 
+	ctx := context.TODO()
+
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svc := v1.APIService{
 		ObjectMeta: metadata,
 		Spec:       expandAPIServiceSpec(d.Get("spec").([]interface{})),
 	}
+
 	log.Printf("[INFO] Creating new API service: %#v", svc)
-	out, err := conn.ApiregistrationV1().APIServices().Create(&svc)
+	out, err := conn.ApiregistrationV1().APIServices().Create(ctx, &svc, meta_v1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -127,11 +131,11 @@ func resourceKubernetesAPIServiceRead(d *schema.ResourceData, meta interface{}) 
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	name := d.Id()
-
 	log.Printf("[INFO] Reading service %s", name)
-	svc, err := conn.ApiregistrationV1().APIServices().Get(name, meta_v1.GetOptions{})
+	svc, err := conn.ApiregistrationV1().APIServices().Get(ctx, name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -157,9 +161,9 @@ func resourceKubernetesAPIServiceUpdate(d *schema.ResourceData, meta interface{}
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	name := d.Id()
-
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("spec") {
 		ops = append(ops, &ReplaceOperation{
@@ -172,7 +176,7 @@ func resourceKubernetesAPIServiceUpdate(d *schema.ResourceData, meta interface{}
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating service %q: %v", name, string(data))
-	out, err := conn.ApiregistrationV1().APIServices().Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.ApiregistrationV1().APIServices().Patch(ctx, name, pkgApi.JSONPatchType, data, meta_v1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update API service: %s", err)
 	}
@@ -187,11 +191,12 @@ func resourceKubernetesAPIServiceDelete(d *schema.ResourceData, meta interface{}
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	name := d.Id()
 
 	log.Printf("[INFO] Deleting API service: %#v", name)
-	err = conn.ApiregistrationV1().APIServices().Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.ApiregistrationV1().APIServices().Delete(ctx, name, meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -207,11 +212,12 @@ func resourceKubernetesAPIServiceExists(d *schema.ResourceData, meta interface{}
 	if err != nil {
 		return false, err
 	}
+	ctx := context.TODO()
 
 	name := d.Id()
 
 	log.Printf("[INFO] Checking API service %s", name)
-	_, err = conn.ApiregistrationV1().APIServices().Get(name, meta_v1.GetOptions{})
+	_, err = conn.ApiregistrationV1().APIServices().Get(ctx, name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

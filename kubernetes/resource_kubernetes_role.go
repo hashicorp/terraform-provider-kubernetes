@@ -1,13 +1,14 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
@@ -70,6 +71,7 @@ func resourceKubernetesRoleCreate(d *schema.ResourceData, meta interface{}) erro
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	rules := expandRules(d.Get("rule").([]interface{}))
@@ -79,7 +81,7 @@ func resourceKubernetesRoleCreate(d *schema.ResourceData, meta interface{}) erro
 		Rules:      *rules,
 	}
 	log.Printf("[INFO] Creating new role: %#v", role)
-	out, err := conn.RbacV1().Roles(metadata.Namespace).Create(&role)
+	out, err := conn.RbacV1().Roles(metadata.Namespace).Create(ctx, &role, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -95,6 +97,7 @@ func resourceKubernetesRoleRead(d *schema.ResourceData, meta interface{}) error 
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -102,7 +105,7 @@ func resourceKubernetesRoleRead(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	log.Printf("[INFO] Reading role %s", name)
-	role, err := conn.RbacV1().Roles(namespace).Get(name, meta_v1.GetOptions{})
+	role, err := conn.RbacV1().Roles(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -127,6 +130,7 @@ func resourceKubernetesRoleUpdate(d *schema.ResourceData, meta interface{}) erro
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -148,7 +152,7 @@ func resourceKubernetesRoleUpdate(d *schema.ResourceData, meta interface{}) erro
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating role %q: %v", name, string(data))
-	out, err := conn.RbacV1().Roles(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.RbacV1().Roles(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update role: %s", err)
 	}
@@ -163,6 +167,7 @@ func resourceKubernetesRoleDelete(d *schema.ResourceData, meta interface{}) erro
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -170,7 +175,7 @@ func resourceKubernetesRoleDelete(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	log.Printf("[INFO] Deleting role: %#v", name)
-	err = conn.RbacV1().Roles(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.RbacV1().Roles(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -185,6 +190,7 @@ func resourceKubernetesRoleExists(d *schema.ResourceData, meta interface{}) (boo
 	if err != nil {
 		return false, err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -192,7 +198,7 @@ func resourceKubernetesRoleExists(d *schema.ResourceData, meta interface{}) (boo
 	}
 
 	log.Printf("[INFO] Checking role %s", name)
-	_, err = conn.RbacV1().Roles(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.RbacV1().Roles(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return false, nil

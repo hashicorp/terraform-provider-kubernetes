@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -8,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	policy "k8s.io/api/policy/v1beta1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesPodSecurityPolicy_basic(t *testing.T) {
@@ -185,6 +186,7 @@ func testAccCheckKubernetesPodSecurityPolicyDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_pod_security_policy" {
@@ -193,7 +195,7 @@ func testAccCheckKubernetesPodSecurityPolicyDestroy(s *terraform.State) error {
 
 		name := rs.Primary.ID
 
-		resp, err := conn.PolicyV1beta1().PodSecurityPolicies().Get(name, meta_v1.GetOptions{})
+		resp, err := conn.PolicyV1beta1().PodSecurityPolicies().Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == name {
 				return fmt.Errorf("Pod Security Policy still exists: %s", rs.Primary.ID)
@@ -215,10 +217,11 @@ func testAccCheckKubernetesPodSecurityPolicyExists(n string, obj *policy.PodSecu
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		name := rs.Primary.ID
 
-		out, err := conn.PolicyV1beta1().PodSecurityPolicies().Get(name, meta_v1.GetOptions{})
+		out, err := conn.PolicyV1beta1().PodSecurityPolicies().Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -9,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesReplicationController_basic(t *testing.T) {
@@ -465,6 +466,7 @@ func testAccCheckKubernetesReplicationControllerDestroy(s *terraform.State) erro
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_replication_controller" {
@@ -476,7 +478,7 @@ func testAccCheckKubernetesReplicationControllerDestroy(s *terraform.State) erro
 			return err
 		}
 
-		resp, err := conn.CoreV1().ReplicationControllers(namespace).Get(name, meta_v1.GetOptions{})
+		resp, err := conn.CoreV1().ReplicationControllers(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("Replication Controller still exists: %s", rs.Primary.ID)
@@ -498,13 +500,14 @@ func testAccCheckKubernetesReplicationControllerExists(n string, obj *api.Replic
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		out, err := conn.CoreV1().ReplicationControllers(namespace).Get(name, meta_v1.GetOptions{})
+		out, err := conn.CoreV1().ReplicationControllers(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

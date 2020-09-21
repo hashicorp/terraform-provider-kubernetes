@@ -1,8 +1,8 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -59,14 +59,15 @@ func dataSourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interfa
 	if err != nil {
 		return err
 	}
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	ctx := context.TODO()
 
-	sa, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(metadata.Name, metav1.GetOptions{})
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	sa, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Unable to fetch service account from Kubernetes: %s", err)
 	}
 
-	defaultSecret, err := findDefaultServiceAccount(sa, conn)
+	defaultSecret, err := findDefaultServiceAccount(ctx, sa, conn)
 	if err != nil {
 		return fmt.Errorf("Failed to discover the default service account token: %s", err)
 	}

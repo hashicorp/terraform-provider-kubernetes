@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -10,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesConfigMap_basic(t *testing.T) {
@@ -239,6 +240,7 @@ func testAccCheckKubernetesConfigMapDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_config_map" {
@@ -248,7 +250,7 @@ func testAccCheckKubernetesConfigMapDestroy(s *terraform.State) error {
 		if err != nil {
 			return err
 		}
-		resp, err := conn.CoreV1().ConfigMaps(namespace).Get(name, meta_v1.GetOptions{})
+		resp, err := conn.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("Config Map still exists: %s", rs.Primary.ID)
@@ -270,12 +272,13 @@ func testAccCheckKubernetesConfigMapExists(n string, obj *api.ConfigMap) resourc
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
-		out, err := conn.CoreV1().ConfigMaps(namespace).Get(name, meta_v1.GetOptions{})
+		out, err := conn.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

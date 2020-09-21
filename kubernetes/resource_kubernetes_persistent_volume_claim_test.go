@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -12,7 +13,7 @@ import (
 	api "k8s.io/api/core/v1"
 	storageapi "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesPersistentVolumeClaim_basic(t *testing.T) {
@@ -540,6 +541,7 @@ func testAccCheckKubernetesPersistentVolumeClaimDestroy(s *terraform.State) erro
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_persistent_volume_claim" {
@@ -553,7 +555,7 @@ func testAccCheckKubernetesPersistentVolumeClaimDestroy(s *terraform.State) erro
 
 		var resp *api.PersistentVolumeClaim
 		err = resource.Retry(3*time.Minute, func() *resource.RetryError {
-			resp, err = conn.CoreV1().PersistentVolumeClaims(namespace).Get(name, meta_v1.GetOptions{})
+			resp, err = conn.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, metav1.GetOptions{})
 			if errors.IsNotFound(err) {
 				return nil
 			}
@@ -584,13 +586,13 @@ func testAccCheckKubernetesPersistentVolumeClaimExists(n string, obj *api.Persis
 		if err != nil {
 			return err
 		}
-
+		ctx := context.TODO()
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		out, err := conn.CoreV1().PersistentVolumeClaims(namespace).Get(name, meta_v1.GetOptions{})
+		out, err := conn.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

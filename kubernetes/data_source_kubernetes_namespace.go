@@ -1,11 +1,11 @@
 package kubernetes
 
 import (
-	"log"
-
+	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"log"
 )
 
 func dataSourceKubernetesNamespace() *schema.Resource {
@@ -41,11 +41,12 @@ func dataSourceKubernetesNamespaceRead(d *schema.ResourceData, meta interface{})
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	d.SetId(metadata.Name)
 
-	namespace, err := conn.CoreV1().Namespaces().Get(metadata.Name, meta_v1.GetOptions{})
+	namespace, err := conn.CoreV1().Namespaces().Get(ctx, metadata.Name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err

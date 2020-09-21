@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -337,6 +338,7 @@ func testAccCheckKubernetesStatefulSetDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_stateful_set" {
@@ -348,7 +350,7 @@ func testAccCheckKubernetesStatefulSetDestroy(s *terraform.State) error {
 			return err
 		}
 
-		resp, err := conn.AppsV1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
+		resp, err := conn.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Namespace == namespace && resp.Name == name {
 				return fmt.Errorf("StatefulSet still exists: %s: (Generation %#v)", rs.Primary.ID, resp.Status.ObservedGeneration)
@@ -369,13 +371,14 @@ func getStatefulSetFromResourceName(s *terraform.State, n string) (*appsv1.State
 	if err != nil {
 		return nil, err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(rs.Primary.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	out, err := conn.AppsV1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
+	out, err := conn.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

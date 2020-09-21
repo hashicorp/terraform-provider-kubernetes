@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"sync"
 )
 
 var (
@@ -53,6 +52,18 @@ func Fmt(str string, args ...interface{}) Format {
 	return append(Format{str}, args...)
 }
 
+// A simple shortcut to format numbers in hex when displayed with the normal
+// text output. For example: L.Info("header value", Hex(17))
+type Hex int
+
+// A simple shortcut to format numbers in octal when displayed with the normal
+// text output. For example: L.Info("perms", Octal(17))
+type Octal int
+
+// A simple shortcut to format numbers in binary when displayed with the normal
+// text output. For example: L.Info("bits", Binary(17))
+type Binary int
+
 // ColorOption expresses how the output should be colored, if at all.
 type ColorOption uint8
 
@@ -90,11 +101,33 @@ func LevelFromString(levelStr string) Level {
 	}
 }
 
+func (l Level) String() string {
+	switch l {
+	case Trace:
+		return "trace"
+	case Debug:
+		return "debug"
+	case Info:
+		return "info"
+	case Warn:
+		return "warn"
+	case Error:
+		return "error"
+	case NoLevel:
+		return "none"
+	default:
+		return "unknown"
+	}
+}
+
 // Logger describes the interface that must be implemeted by all loggers.
 type Logger interface {
 	// Args are alternating key, val pairs
 	// keys must be strings
 	// vals can be any type, but display is implementation specific
+	// Emit a message and key/value pairs at a provided log level
+	Log(level Level, msg string, args ...interface{})
+
 	// Emit a message and key/value pairs at the TRACE level
 	Trace(msg string, args ...interface{})
 
@@ -183,8 +216,10 @@ type LoggerOptions struct {
 	// Where to write the logs to. Defaults to os.Stderr if nil
 	Output io.Writer
 
-	// An optional mutex pointer in case Output is shared
-	Mutex *sync.Mutex
+	// An optional Locker in case Output is shared. This can be a sync.Mutex or
+	// a NoopLocker if the caller wants control over output, e.g. for batching
+	// log lines.
+	Mutex Locker
 
 	// Control if the output should be in JSON.
 	JSONFormat bool
@@ -195,9 +230,19 @@ type LoggerOptions struct {
 	// The time format to use instead of the default
 	TimeFormat string
 
+	// Control whether or not to display the time at all. This is required
+	// because setting TimeFormat to empty assumes the default format.
+	DisableTime bool
+
 	// Color the output. On Windows, colored logs are only avaiable for io.Writers that
 	// are concretely instances of *os.File.
 	Color ColorOption
+
+	// A function which is called with the log information and if it returns true the value
+	// should not be logged.
+	// This is useful when interacting with a system that you wish to suppress the log
+	// message for (because it's too noisy, etc)
+	Exclude func(level Level, msg string, args ...interface{}) bool
 }
 
 // InterceptLogger describes the interface for using a logger
@@ -238,3 +283,45 @@ type InterceptLogger interface {
 type SinkAdapter interface {
 	Accept(name string, level Level, msg string, args ...interface{})
 }
+
+// Flushable represents a method for flushing an output buffer. It can be used
+// if Resetting the log to use a new output, in order to flush the writes to
+// the existing output beforehand.
+type Flushable interface {
+	Flush() error
+}
+
+// OutputResettable provides ways to swap the output in use at runtime
+type OutputResettable interface {
+	// ResetOutput swaps the current output writer with the one given in the
+	// opts. Color options given in opts will be used for the new output.
+	ResetOutput(opts *LoggerOptions) error
+
+	// ResetOutputWithFlush swaps the current output writer with the one given
+	// in the opts, first calling Flush on the given Flushable. Color options
+	// given in opts will be used for the new output.
+	ResetOutputWithFlush(opts *LoggerOptions, flushable Flushable) error
+}
+
+// Locker is used for locking output. If not set when creating a logger, a
+// sync.Mutex will be used internally.
+type Locker interface {
+	// Lock is called when the output is going to be changed or written to
+	Lock()
+
+	// Unlock is called when the operation that called Lock() completes
+	Unlock()
+}
+
+// NoopLocker implements locker but does nothing. This is useful if the client
+// wants tight control over locking, in order to provide grouping of log
+// entries or other functionality.
+type NoopLocker struct{}
+
+// Lock does nothing
+func (n NoopLocker) Lock() {}
+
+// Unlock does nothing
+func (n NoopLocker) Unlock() {}
+
+var _ Locker = (*NoopLocker)(nil)

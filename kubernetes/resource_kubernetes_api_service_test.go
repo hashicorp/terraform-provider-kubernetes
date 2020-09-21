@@ -1,13 +1,14 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesAPIService_basic(t *testing.T) {
@@ -140,6 +141,7 @@ func testAccCheckKubernetesAPIServiceDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_api_service" {
@@ -148,7 +150,7 @@ func testAccCheckKubernetesAPIServiceDestroy(s *terraform.State) error {
 
 		name := rs.Primary.ID
 
-		resp, err := conn.ApiregistrationV1().APIServices().Get(name, meta_v1.GetOptions{})
+		resp, err := conn.ApiregistrationV1().APIServices().Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("Service still exists: %s", rs.Primary.ID)
@@ -170,10 +172,11 @@ func testAccCheckKubernetesAPIServiceExists(n string) resource.TestCheckFunc {
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		name := rs.Primary.ID
 
-		_, err = conn.ApiregistrationV1().APIServices().Get(name, meta_v1.GetOptions{})
+		_, err = conn.ApiregistrationV1().APIServices().Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

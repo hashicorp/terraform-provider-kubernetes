@@ -12,6 +12,9 @@ import (
 // otherwise the argument is assumed to be the desired contents and is simply
 // returned.
 //
+// Deprecated: This will be removed in v2 without replacement. If you need
+// its functionality, you can copy it or reference the v1 package.
+//
 // The boolean second return value can be called `wasPath` - it indicates if a
 // path was detected and a file loaded.
 func Read(poc string) (string, bool, error) {

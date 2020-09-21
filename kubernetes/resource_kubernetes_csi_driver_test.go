@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -8,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/storage/v1beta1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesCSIDriver_basic(t *testing.T) {
@@ -67,13 +68,14 @@ func testAccCheckKubernetesCSIDriverDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_csi_driver" {
 			continue
 		}
 		name := rs.Primary.ID
-		resp, err := conn.StorageV1beta1().CSIDrivers().Get(name, meta_v1.GetOptions{})
+		resp, err := conn.StorageV1beta1().CSIDrivers().Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("CSIDriver still exists: %s", rs.Primary.ID)
@@ -95,9 +97,10 @@ func testAccCheckKubernetesCSIDriverExists(n string, obj *api.CSIDriver) resourc
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		name := rs.Primary.ID
-		out, err := conn.StorageV1beta1().CSIDrivers().Get(name, meta_v1.GetOptions{})
+		out, err := conn.StorageV1beta1().CSIDrivers().Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -108,33 +109,6 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_importBasic(t *testing.T) {
 	})
 }
 
-func testAccCheckKubernetesHorizontalPodAutoscalerV2Destroy(s *terraform.State) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-	if err != nil {
-		return err
-	}
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_horizontal_pod_autoscaler" {
-			continue
-		}
-
-		namespace, name, err := idParts(rs.Primary.ID)
-		if err != nil {
-			return err
-		}
-
-		resp, err := conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Get(name, metav1.GetOptions{})
-		if err == nil {
-			if resp.Namespace == namespace && resp.Name == name {
-				return fmt.Errorf("Horizontal Pod Autoscaler still exists: %s", rs.Primary.ID)
-			}
-		}
-	}
-
-	return nil
-}
-
 func testAccCheckKubernetesHorizontalPodAutoscalerV2Exists(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
@@ -146,13 +120,14 @@ func testAccCheckKubernetesHorizontalPodAutoscalerV2Exists(n string) resource.Te
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		_, err = conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Get(name, metav1.GetOptions{})
+		_, err = conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

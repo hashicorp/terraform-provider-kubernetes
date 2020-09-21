@@ -13,19 +13,29 @@ import (
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
-func loadModule(dir string) (*Module, Diagnostics) {
+func loadModule(fs FS, dir string) (*Module, Diagnostics) {
 	mod := newModule(dir)
-	primaryPaths, diags := dirFiles(dir)
+	primaryPaths, diags := dirFiles(fs, dir)
 
 	parser := hclparse.NewParser()
 
 	for _, filename := range primaryPaths {
 		var file *hcl.File
 		var fileDiags hcl.Diagnostics
+
+		b, err := fs.ReadFile(filename)
+		if err != nil {
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Failed to read file",
+				Detail:   fmt.Sprintf("The configuration file %q could not be read.", filename),
+			})
+			continue
+		}
 		if strings.HasSuffix(filename, ".json") {
-			file, fileDiags = parser.ParseJSONFile(filename)
+			file, fileDiags = parser.ParseJSON(b, filename)
 		} else {
-			file, fileDiags = parser.ParseHCLFile(filename)
+			file, fileDiags = parser.ParseHCL(b, filename)
 		}
 		diags = append(diags, fileDiags...)
 		if file == nil {
@@ -60,6 +70,20 @@ func loadModule(dir string) (*Module, Diagnostics) {
 							if _, exists := mod.RequiredProviders[name]; !exists {
 								mod.RequiredProviders[name] = req
 							} else {
+								if req.Source != "" {
+									source := mod.RequiredProviders[name].Source
+									if source != "" && source != req.Source {
+										diags = append(diags, &hcl.Diagnostic{
+											Severity: hcl.DiagError,
+											Summary:  "Multiple provider source attributes",
+											Detail:   fmt.Sprintf("Found multiple source attributes for provider %s: %q, %q", name, source, req.Source),
+											Subject:  &innerBlock.DefRange,
+										})
+									} else {
+										mod.RequiredProviders[name].Source = req.Source
+									}
+								}
+
 								mod.RequiredProviders[name].VersionConstraints = append(mod.RequiredProviders[name].VersionConstraints, req.VersionConstraints...)
 							}
 						}
@@ -149,6 +173,8 @@ func loadModule(dir string) (*Module, Diagnostics) {
 						}
 						v.Default = def
 					}
+				} else {
+					v.Required = true
 				}
 
 			case "output":

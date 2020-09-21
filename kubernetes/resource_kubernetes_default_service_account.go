@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
@@ -12,7 +13,7 @@ import (
 )
 
 func resourceKubernetesDefaultServiceAccount() *schema.Resource {
-	resource := resourceKubernetesServiceAccount()
+	serviceAccountResource := resourceKubernetesServiceAccount()
 
 	metaSchema := namespacedMetadataSchema("service account", false)
 
@@ -21,11 +22,11 @@ func resourceKubernetesDefaultServiceAccount() *schema.Resource {
 	nameField.Default = "default"
 	nameField.ValidateFunc = validation.StringInSlice([]string{"default"}, false)
 
-	resource.Schema["metadata"] = metaSchema
+	serviceAccountResource.Schema["metadata"] = metaSchema
 
-	resource.Create = resourceKubernetesDefaultServiceAccountCreate
+	serviceAccountResource.Create = resourceKubernetesDefaultServiceAccountCreate
 
-	return resource
+	return serviceAccountResource
 }
 
 func resourceKubernetesDefaultServiceAccountCreate(d *schema.ResourceData, meta interface{}) error {
@@ -33,13 +34,14 @@ func resourceKubernetesDefaultServiceAccountCreate(d *schema.ResourceData, meta 
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svcAcc := api.ServiceAccount{ObjectMeta: metadata}
 
 	log.Printf("[INFO] Checking for default service account existence: %s", metadata.Namespace)
 	err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
-		_, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(metadata.Name, metav1.GetOptions{})
+		_, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				log.Printf("[INFO] Default service account does not exist, will retry: %s", metadata.Namespace)
@@ -59,7 +61,7 @@ func resourceKubernetesDefaultServiceAccountCreate(d *schema.ResourceData, meta 
 
 	d.SetId(buildId(metadata))
 
-	secret, err := getServiceAccountDefaultSecret("default", svcAcc, d.Timeout(schema.TimeoutCreate), conn)
+	secret, err := getServiceAccountDefaultSecret(ctx, "default", svcAcc, d.Timeout(schema.TimeoutCreate), conn)
 	if err != nil {
 		return err
 	}

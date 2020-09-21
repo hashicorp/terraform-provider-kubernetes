@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -181,6 +182,7 @@ func testAccWaitKubernetesServiceAccountExists(n string) resource.TestCheckFunc 
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
@@ -188,7 +190,7 @@ func testAccWaitKubernetesServiceAccountExists(n string) resource.TestCheckFunc 
 		}
 
 		return resource.Retry(time.Minute, func() *resource.RetryError {
-			_, err := conn.CoreV1().ServiceAccounts(namespace).Get(name, metav1.GetOptions{})
+			_, err := conn.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 			if err != nil {
 				if errors.IsNotFound(err) {
 					return resource.RetryableError(err)

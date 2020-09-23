@@ -23,7 +23,6 @@ func resourceKubernetesStatefulSet() *schema.Resource {
 		Read:   resourceKubernetesStatefulSetRead,
 		Update: resourceKubernetesStatefulSetUpdate,
 		Delete: resourceKubernetesStatefulSetDelete,
-		Exists: resourceKubernetesStatefulSetExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -89,29 +88,6 @@ func resourceKubernetesStatefulSetCreate(d *schema.ResourceData, meta interface{
 	}
 
 	return resourceKubernetesStatefulSetRead(d, meta)
-}
-
-func resourceKubernetesStatefulSetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	namespace, name, err := idParts(d.Id())
-	if err != nil {
-		return false, err
-	}
-
-	log.Printf("[INFO] Checking StatefulSet %s", name)
-	_, err = conn.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }
 
 func resourceKubernetesStatefulSetRead(d *schema.ResourceData, meta interface{}) error {

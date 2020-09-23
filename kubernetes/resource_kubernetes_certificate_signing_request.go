@@ -128,7 +128,8 @@ func resourceKubernetesCertificateSigningRequestCreate(d *schema.ResourceData, m
 			return updateErr
 		})
 		if retryErr != nil {
-			panic(fmt.Errorf("CSR auto-approve update failed: %v", retryErr))
+			fmt.Println(fmt.Sprintf("CSR auto-approve update failed: %v", retryErr))
+			return retryErr
 		}
 		fmt.Println("CSR auto-approve update succeeded")
 	}

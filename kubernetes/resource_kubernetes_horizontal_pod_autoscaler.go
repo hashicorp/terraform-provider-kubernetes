@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/autoscaling/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
@@ -16,7 +15,6 @@ func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesHorizontalPodAutoscalerCreate,
 		Read:   resourceKubernetesHorizontalPodAutoscalerRead,
-		Exists: resourceKubernetesHorizontalPodAutoscalerExists,
 		Update: resourceKubernetesHorizontalPodAutoscalerUpdate,
 		Delete: resourceKubernetesHorizontalPodAutoscalerDelete,
 		Importer: &schema.ResourceImporter{
@@ -223,33 +221,6 @@ func resourceKubernetesHorizontalPodAutoscalerDelete(d *schema.ResourceData, met
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesHorizontalPodAutoscalerExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	if useV2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Exists(d, meta)
-	}
-
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	namespace, name, err := idParts(d.Id())
-	if err != nil {
-		return false, err
-	}
-
-	log.Printf("[INFO] Checking horizontal pod autoscaler %s", name)
-	_, err = conn.AutoscalingV1().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }
 
 func useV2(d *schema.ResourceData) bool {

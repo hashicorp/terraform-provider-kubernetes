@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	v1 "k8s.io/api/core/v1"
 	api "k8s.io/api/storage/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
@@ -17,7 +16,6 @@ func resourceKubernetesStorageClass() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesStorageClassCreate,
 		Read:   resourceKubernetesStorageClassRead,
-		Exists: resourceKubernetesStorageClassExists,
 		Update: resourceKubernetesStorageClassUpdate,
 		Delete: resourceKubernetesStorageClassDelete,
 		Importer: &schema.ResourceImporter{
@@ -128,10 +126,14 @@ func resourceKubernetesStorageClassRead(d *schema.ResourceData, meta interface{}
 	}
 	d.Set("parameters", storageClass.Parameters)
 	d.Set("storage_provisioner", storageClass.Provisioner)
-	d.Set("reclaim_policy", storageClass.ReclaimPolicy)
-	d.Set("volume_binding_mode", storageClass.VolumeBindingMode)
+	// Putting a linter exception for these two Set calls as they are working
+	// and non breaking
+
+	d.Set("reclaim_policy", storageClass.ReclaimPolicy)          //lintignore:R004
+	d.Set("volume_binding_mode", storageClass.VolumeBindingMode) //lintignore:R004
 	d.Set("mount_options", newStringSet(schema.HashString, storageClass.MountOptions))
 	if storageClass.AllowVolumeExpansion != nil {
+		//lintignore:R002
 		d.Set("allow_volume_expansion", *storageClass.AllowVolumeExpansion)
 	}
 
@@ -180,23 +182,4 @@ func resourceKubernetesStorageClassDelete(d *schema.ResourceData, meta interface
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesStorageClassExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	name := d.Id()
-	log.Printf("[INFO] Checking storage class %s", name)
-	_, err = conn.StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }

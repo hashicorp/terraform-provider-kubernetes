@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 
@@ -21,7 +20,6 @@ func resourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesMutatingWebhookConfigurationCreate,
 		Read:   resourceKubernetesMutatingWebhookConfigurationRead,
-		Exists: resourceKubernetesMutatingWebhookConfigurationExists,
 		Update: resourceKubernetesMutatingWebhookConfigurationUpdate,
 		Delete: resourceKubernetesMutatingWebhookConfigurationDelete,
 		Importer: &schema.ResourceImporter{
@@ -291,35 +289,4 @@ func resourceKubernetesMutatingWebhookConfigurationDelete(d *schema.ResourceData
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesMutatingWebhookConfigurationExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	name := d.Id()
-
-	log.Printf("[INFO] Checking MutatingWebhookConfiguration %s", name)
-
-	useadmissionregistrationv1beta1, err := useAdmissionregistrationV1beta1(conn)
-	if err != nil {
-		return false, err
-	}
-	if useadmissionregistrationv1beta1 {
-		_, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
-	} else {
-		_, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
-	}
-
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		return false, err
-	}
-
-	return true, nil
 }

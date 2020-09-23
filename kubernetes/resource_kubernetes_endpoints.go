@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
@@ -16,7 +15,6 @@ func resourceKubernetesEndpoints() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesEndpointsCreate,
 		Read:   resourceKubernetesEndpointsRead,
-		Exists: resourceKubernetesEndpointsExists,
 		Update: resourceKubernetesEndpointsUpdate,
 		Delete: resourceKubernetesEndpointsDelete,
 		Importer: &schema.ResourceImporter{
@@ -148,27 +146,4 @@ func resourceKubernetesEndpointsDelete(d *schema.ResourceData, meta interface{})
 	d.SetId("")
 
 	return nil
-}
-
-func resourceKubernetesEndpointsExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	namespace, name, err := idParts(d.Id())
-	if err != nil {
-		return false, err
-	}
-
-	log.Printf("[INFO] Checking endpoints %s", name)
-	_, err = conn.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }

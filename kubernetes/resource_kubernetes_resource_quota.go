@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
@@ -18,7 +17,6 @@ func resourceKubernetesResourceQuota() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesResourceQuotaCreate,
 		Read:   resourceKubernetesResourceQuotaRead,
-		Exists: resourceKubernetesResourceQuotaExists,
 		Update: resourceKubernetesResourceQuotaUpdate,
 		Delete: resourceKubernetesResourceQuotaDelete,
 		Importer: &schema.ResourceImporter{
@@ -225,27 +223,4 @@ func resourceKubernetesResourceQuotaDelete(d *schema.ResourceData, meta interfac
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesResourceQuotaExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	namespace, name, err := idParts(d.Id())
-	if err != nil {
-		return false, err
-	}
-
-	log.Printf("[INFO] Checking resource quota %s", name)
-	_, err = conn.CoreV1().ResourceQuotas(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }

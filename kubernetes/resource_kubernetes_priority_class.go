@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/scheduling/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
@@ -16,7 +15,6 @@ func resourceKubernetesPriorityClass() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesPriorityClassCreate,
 		Read:   resourceKubernetesPriorityClassRead,
-		Exists: resourceKubernetesPriorityClassExists,
 		Update: resourceKubernetesPriorityClassUpdate,
 		Delete: resourceKubernetesPriorityClassDelete,
 		Importer: &schema.ResourceImporter{
@@ -178,24 +176,4 @@ func resourceKubernetesPriorityClassDelete(d *schema.ResourceData, meta interfac
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesPriorityClassExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	name := d.Id()
-
-	log.Printf("[INFO] Checking priority class %s", name)
-	_, err = conn.SchedulingV1().PriorityClasses().Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }

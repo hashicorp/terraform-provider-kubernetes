@@ -22,7 +22,6 @@ func resourceKubernetesJob() *schema.Resource {
 		Read:   resourceKubernetesJobRead,
 		Update: resourceKubernetesJobUpdate,
 		Delete: resourceKubernetesJobDelete,
-		Exists: resourceKubernetesJobExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -219,29 +218,6 @@ func resourceKubernetesJobDelete(d *schema.ResourceData, meta interface{}) error
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesJobExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	namespace, name, err := idParts(d.Id())
-	if err != nil {
-		return false, err
-	}
-
-	log.Printf("[INFO] Checking job %s", name)
-	_, err = conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }
 
 // retryUntilJobIsFinished checks if a give job finished its execution and either in Complete or Failed state

@@ -18,7 +18,6 @@ func resourceKubernetesNamespace() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesNamespaceCreate,
 		Read:   resourceKubernetesNamespaceRead,
-		Exists: resourceKubernetesNamespaceExists,
 		Update: resourceKubernetesNamespaceUpdate,
 		Delete: resourceKubernetesNamespaceDelete,
 		Importer: &schema.ResourceImporter{
@@ -144,24 +143,4 @@ func resourceKubernetesNamespaceDelete(d *schema.ResourceData, meta interface{})
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesNamespaceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	name := d.Id()
-	log.Printf("[INFO] Checking namespace %s", name)
-	_, err = conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	log.Printf("[INFO] Namespace %s exists", name)
-	return true, err
 }

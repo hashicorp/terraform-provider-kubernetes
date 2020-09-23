@@ -16,7 +16,6 @@ func resourceKubernetesClusterRole() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesClusterRoleCreate,
 		Read:   resourceKubernetesClusterRoleRead,
-		Exists: resourceKubernetesClusterRoleExists,
 		Update: resourceKubernetesClusterRoleUpdate,
 		Delete: resourceKubernetesClusterRoleDelete,
 		Importer: &schema.ResourceImporter{
@@ -170,23 +169,4 @@ func resourceKubernetesClusterRoleDelete(d *schema.ResourceData, meta interface{
 	log.Printf("[INFO] cluster role %s deleted", name)
 
 	return nil
-}
-
-func resourceKubernetesClusterRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	name := d.Id()
-	log.Printf("[INFO] Checking cluster role %s", name)
-	_, err = conn.RbacV1().ClusterRoles().Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }

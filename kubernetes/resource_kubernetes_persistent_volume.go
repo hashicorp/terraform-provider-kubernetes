@@ -20,7 +20,6 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesPersistentVolumeCreate,
 		Read:   resourceKubernetesPersistentVolumeRead,
-		Exists: resourceKubernetesPersistentVolumeExists,
 		Update: resourceKubernetesPersistentVolumeUpdate,
 		Delete: resourceKubernetesPersistentVolumeDelete,
 		Importer: &schema.ResourceImporter{
@@ -320,23 +319,4 @@ func resourceKubernetesPersistentVolumeDelete(d *schema.ResourceData, meta inter
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesPersistentVolumeExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	name := d.Id()
-	log.Printf("[INFO] Checking persistent volume %s", name)
-	_, err = conn.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }

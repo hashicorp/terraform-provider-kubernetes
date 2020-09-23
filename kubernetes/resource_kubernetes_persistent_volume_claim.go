@@ -28,7 +28,6 @@ func resourceKubernetesPersistentVolumeClaim() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesPersistentVolumeClaimCreate,
 		Read:   resourceKubernetesPersistentVolumeClaimRead,
-		Exists: resourceKubernetesPersistentVolumeClaimExists,
 		Update: resourceKubernetesPersistentVolumeClaimUpdate,
 		Delete: resourceKubernetesPersistentVolumeClaimDelete,
 		Importer: &schema.ResourceImporter{
@@ -263,27 +262,4 @@ func resourceKubernetesPersistentVolumeClaimDelete(d *schema.ResourceData, meta 
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesPersistentVolumeClaimExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	namespace, name, err := idParts(d.Id())
-	if err != nil {
-		return false, err
-	}
-
-	log.Printf("[INFO] Checking persistent volume claim %s", name)
-	_, err = conn.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }

@@ -18,7 +18,6 @@ func resourceKubernetesCSIDriver() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesCSIDriverCreate,
 		Read:   resourceKubernetesCSIDriverRead,
-		Exists: resourceKubernetesCSIDriverExists,
 		Update: resourceKubernetesCSIDriverUpdate,
 		Delete: resourceKubernetesCSIDriverDelete,
 		Importer: &schema.ResourceImporter{
@@ -184,23 +183,4 @@ func resourceKubernetesCSIDriverDelete(d *schema.ResourceData, meta interface{})
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesCSIDriverExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	name := d.Id()
-	log.Printf("[INFO] Checking CSIDriver %s", name)
-	_, err = conn.StorageV1beta1().CSIDrivers().Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }

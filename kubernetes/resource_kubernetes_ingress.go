@@ -23,7 +23,6 @@ func resourceKubernetesIngress() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesIngressCreate,
 		Read:   resourceKubernetesIngressRead,
-		Exists: resourceKubernetesIngressExists,
 		Update: resourceKubernetesIngressUpdate,
 		Delete: resourceKubernetesIngressDelete,
 		Importer: &schema.ResourceImporter{
@@ -269,27 +268,4 @@ func resourceKubernetesIngressDelete(d *schema.ResourceData, meta interface{}) e
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesIngressExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	namespace, name, err := idParts(d.Id())
-	if err != nil {
-		return false, err
-	}
-
-	log.Printf("[INFO] Checking ingress %s", name)
-	_, err = conn.ExtensionsV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }

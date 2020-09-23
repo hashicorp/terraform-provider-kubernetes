@@ -220,8 +220,7 @@ func patchRbacRule(d *schema.ResourceData) PatchOperations {
 }
 
 func patchRbacAggregationRule(d *schema.ResourceData) PatchOperations {
-	_, n := d.GetChange("aggregation_rule")
-	//oldrules := expandClusterRoleRules(o.([]interface{}))
+	n := d.Get("aggregation_rule")
 	newAggRule := expandClusterRoleAggregationRule(n.([]interface{}))
 	ops := make([]PatchOperation, 0)
 

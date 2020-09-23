@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
@@ -16,7 +15,6 @@ func resourceKubernetesClusterRoleBinding() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesClusterRoleBindingCreate,
 		Read:   resourceKubernetesClusterRoleBindingRead,
-		Exists: resourceKubernetesClusterRoleBindingExists,
 		Update: resourceKubernetesClusterRoleBindingUpdate,
 		Delete: resourceKubernetesClusterRoleBindingDelete,
 		Importer: &schema.ResourceImporter{
@@ -157,23 +155,4 @@ func resourceKubernetesClusterRoleBindingDelete(d *schema.ResourceData, meta int
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesClusterRoleBindingExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	name := d.Id()
-	log.Printf("[INFO] Checking ClusterRoleBinding %s", name)
-	_, err = conn.RbacV1().ClusterRoleBindings().Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }

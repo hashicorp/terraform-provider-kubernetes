@@ -19,7 +19,6 @@ func resourceKubernetesCronJob() *schema.Resource {
 		Read:   resourceKubernetesCronJobRead,
 		Update: resourceKubernetesCronJobUpdate,
 		Delete: resourceKubernetesCronJobDelete,
-		Exists: resourceKubernetesCronJobExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -208,27 +207,4 @@ func resourceKubernetesCronJobDelete(d *schema.ResourceData, meta interface{}) e
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesCronJobExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	namespace, name, err := idParts(d.Id())
-	if err != nil {
-		return false, err
-	}
-
-	log.Printf("[INFO] Checking cron job %s", name)
-	_, err = conn.BatchV1beta1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }

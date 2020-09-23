@@ -27,7 +27,6 @@ func resourceKubernetesDeployment() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesDeploymentCreate,
 		Read:   resourceKubernetesDeploymentRead,
-		Exists: resourceKubernetesDeploymentExists,
 		Update: resourceKubernetesDeploymentUpdate,
 		Delete: resourceKubernetesDeploymentDelete,
 		Importer: &schema.ResourceImporter{
@@ -369,29 +368,6 @@ func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesDeploymentExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	namespace, name, err := idParts(d.Id())
-	if err != nil {
-		return false, err
-	}
-
-	log.Printf("[INFO] Checking deployment %s", name)
-	_, err = conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }
 
 // GetDeploymentConditionInternal returns the condition with the provided type.

@@ -21,7 +21,6 @@ func resourceKubernetesDaemonSet() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesDaemonSetCreate,
 		Read:   resourceKubernetesDaemonSetRead,
-		Exists: resourceKubernetesDaemonSetExists,
 		Update: resourceKubernetesDaemonSetUpdate,
 		Delete: resourceKubernetesDaemonSetDelete,
 		Importer: &schema.ResourceImporter{
@@ -259,29 +258,6 @@ func resourceKubernetesDaemonSetDelete(d *schema.ResourceData, meta interface{})
 	log.Printf("[INFO] DaemonSet %s deleted", name)
 
 	return nil
-}
-
-func resourceKubernetesDaemonSetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	namespace, name, err := idParts(d.Id())
-	if err != nil {
-		return false, err
-	}
-
-	log.Printf("[INFO] Checking daemonset %s", name)
-	_, err = conn.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }
 
 func waitForDaemonSetReplicasFunc(ctx context.Context, conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {

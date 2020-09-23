@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/policy/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
@@ -26,7 +25,6 @@ func resourceKubernetesPodDisruptionBudget() *schema.Resource {
 		Read:   resourceKubernetesPodDisruptionBudgetRead,
 		Update: resourceKubernetesPodDisruptionBudgetUpdate,
 		Delete: resourceKubernetesPodDisruptionBudgetDelete,
-		Exists: resourceKubernetesPodDisruptionBudgetExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -190,27 +188,4 @@ func resourceKubernetesPodDisruptionBudgetDelete(d *schema.ResourceData, meta in
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesPodDisruptionBudgetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	namespace, name, err := idParts(d.Id())
-	if err != nil {
-		return false, err
-	}
-
-	log.Printf("[INFO] Checking pod disruption budget %s", name)
-	_, err = conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }

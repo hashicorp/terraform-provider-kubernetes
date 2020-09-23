@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
-	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	v1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
@@ -17,7 +16,6 @@ func resourceKubernetesAPIService() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceKubernetesAPIServiceCreate,
 		Read:   resourceKubernetesAPIServiceRead,
-		Exists: resourceKubernetesAPIServiceExists,
 		Update: resourceKubernetesAPIServiceUpdate,
 		Delete: resourceKubernetesAPIServiceDelete,
 		Importer: &schema.ResourceImporter{
@@ -127,6 +125,7 @@ func resourceKubernetesAPIServiceCreate(d *schema.ResourceData, meta interface{}
 }
 
 func resourceKubernetesAPIServiceRead(d *schema.ResourceData, meta interface{}) error {
+
 	conn, err := meta.(KubeClientsets).AggregatorClientset()
 	if err != nil {
 		return err
@@ -205,24 +204,4 @@ func resourceKubernetesAPIServiceDelete(d *schema.ResourceData, meta interface{}
 
 	d.SetId("")
 	return nil
-}
-
-func resourceKubernetesAPIServiceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).AggregatorClientset()
-	if err != nil {
-		return false, err
-	}
-	ctx := context.TODO()
-
-	name := d.Id()
-
-	log.Printf("[INFO] Checking API service %s", name)
-	_, err = conn.ApiregistrationV1().APIServices().Get(ctx, name, meta_v1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	return true, err
 }

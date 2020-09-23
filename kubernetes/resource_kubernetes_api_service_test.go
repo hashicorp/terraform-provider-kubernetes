@@ -13,6 +13,7 @@ import (
 
 func TestAccKubernetesAPIService_basic(t *testing.T) {
 	group := fmt.Sprintf("tf-acc-test-%s.k8s.io", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_api_service.test"
 	version := "v1beta1"
 	name := fmt.Sprintf("%s.%s", version, group)
 
@@ -43,6 +44,12 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.ca_bundle", ""),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.insecure_skip_tls_verify", "true"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesAPIServiceConfig_modified(name, group, version),
@@ -106,31 +113,6 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.ca_bundle", ""),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.insecure_skip_tls_verify", "true"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesAPIService_importBasic(t *testing.T) {
-	resourceName := "kubernetes_api_service.test"
-	group := fmt.Sprintf("tf-acc-test-%s.k8s.io", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	version := "v1beta1"
-	name := fmt.Sprintf("%s.%s", version, group)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesAPIServiceDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesAPIServiceConfig_basic(name, group, version),
-			},
-
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})

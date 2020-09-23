@@ -15,17 +15,18 @@ import (
 func TestAccKubernetesPodDisruptionBudget_basic(t *testing.T) {
 	var conf api.PodDisruptionBudget
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_pod_disruption_budget.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_pod_disruption_budget.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPodDisruptionBudgetDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodDisruptionBudgetConfig_maxUnavailable(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodDisruptionBudgetExists("kubernetes_pod_disruption_budget.test", &conf),
+					testAccCheckKubernetesPodDisruptionBudgetExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
@@ -49,9 +50,14 @@ func TestAccKubernetesPodDisruptionBudget_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testAccKubernetesPodDisruptionBudgetConfig_minAvailable(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodDisruptionBudgetExists("kubernetes_pod_disruption_budget.test", &conf),
+					testAccCheckKubernetesPodDisruptionBudgetExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
@@ -77,27 +83,6 @@ func TestAccKubernetesPodDisruptionBudget_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "spec.0.selector.0.match_expressions.0.values.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "spec.0.selector.0.match_expressions.0.values.2356372769", "foo"),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "spec.0.selector.0.match_expressions.0.values.270302810", "apps")),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesPodDisruptionBudget_importBasic(t *testing.T) {
-	resourceName := "kubernetes_pod_disruption_budget.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesPodDisruptionBudgetDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesPodDisruptionBudgetConfig_minAvailable(name),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
 			},
 		},
 	})

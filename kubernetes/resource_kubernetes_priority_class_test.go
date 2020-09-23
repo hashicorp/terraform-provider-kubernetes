@@ -15,17 +15,18 @@ import (
 func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 	var conf api.PriorityClass
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_priority_class.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_priority_class.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPriorityClassDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPriorityClassConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPriorityClassExists("kubernetes_priority_class.test", &conf),
+					testAccCheckKubernetesPriorityClassExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
@@ -43,9 +44,15 @@ func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
 				Config: testAccKubernetesPriorityClassConfig_metaModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPriorityClassExists("kubernetes_priority_class.test", &conf),
+					testAccCheckKubernetesPriorityClassExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -66,7 +73,7 @@ func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesPriorityClassConfig_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPriorityClassExists("kubernetes_priority_class.test", &conf),
+					testAccCheckKubernetesPriorityClassExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.%", "0"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.labels.%", "0"),
@@ -110,28 +117,6 @@ func TestAccKubernetesPriorityClass_generatedName(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_priority_class.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "value", "999"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesPriorityClass_importBasic(t *testing.T) {
-	resourceName := "kubernetes_priority_class.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesPriorityClassDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesPriorityClassConfig_basic(name),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})

@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesClusterRoleBinding(t *testing.T) {
+func TestAccKubernetesClusterRoleBinding_basic(t *testing.T) {
 	var conf api.ClusterRoleBinding
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
@@ -159,7 +159,7 @@ func TestAccKubernetesClusterRoleBinding_serviceaccount_subject(t *testing.T) {
 func TestAccKubernetesClusterRoleBinding_group_subject(t *testing.T) {
 	var conf api.ClusterRoleBinding
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
+	resourceName := "kubernetes_cluster_role_binding.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
 		IDRefreshName: "kubernetes_cluster_role_binding.test",
@@ -185,22 +185,6 @@ func TestAccKubernetesClusterRoleBinding_group_subject(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "subject.0.kind", "Group"),
 				),
 			},
-		},
-	})
-}
-
-func TestAccKubernetesClusterRoleBinding_importBasic(t *testing.T) {
-	resourceName := "kubernetes_cluster_role_binding.test"
-	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesClusterRoleBindingDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesClusterRoleBindingConfig_basic(name),
-			},
 			{
 				ResourceName:      resourceName,
 				ImportState:       true,
@@ -210,7 +194,7 @@ func TestAccKubernetesClusterRoleBinding_importBasic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRoleBindingUpdatePatchOperationsOrderWithRemovals(t *testing.T) {
+func TestAccKubernetesClusterRoleBinding_UpdatePatchOperationsOrderWithRemovals(t *testing.T) {
 	var conf api.ClusterRoleBinding
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 

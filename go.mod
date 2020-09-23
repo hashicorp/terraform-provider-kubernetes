@@ -54,7 +54,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.3.3 // indirect
-	github.com/moby/term v0.0.0-20200611042045-63b9a826fb74 // indirect
+	github.com/moby/term v0.0.0-20200915141129-7f0af18e79f2 // indirect
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/pelletier/go-toml v1.8.0 // indirect
 	github.com/posener/complete v1.2.3 // indirect

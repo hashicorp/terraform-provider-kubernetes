@@ -188,50 +188,25 @@ func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPersistentVolume_googleCloud_importBasic(t *testing.T) {
-	resourceName := "kubernetes_persistent_volume.test"
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-	name := fmt.Sprintf("tf-acc-test-import-%s", randString)
-	diskName := fmt.Sprintf("tf-acc-test-disk-%s", randString)
-
-	zone := os.Getenv("GOOGLE_ZONE")
-	region := os.Getenv("GOOGLE_REGION")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesPersistentVolumeDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone, region),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
-
 func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
 	var conf api.PersistentVolume
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 	diskName := fmt.Sprintf("tf-acc-test-disk-%s", randString)
+	resourceName := "kubernetes_persistent_volume.test"
 
 	zone := os.Getenv("GOOGLE_ZONE")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
-		IDRefreshName: "kubernetes_persistent_volume.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_volumeSource(name, diskName, zone),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
+					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.labels.%", "0"),
@@ -248,6 +223,11 @@ func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.gce_persistent_disk.#", "1"),
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.gce_persistent_disk.0.pd_name"),
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			{
 				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/custom/testing/path", ""),
@@ -630,6 +610,11 @@ func TestAccKubernetesPersistentVolume_csi_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testAccKubernetesPersistentVolumeConfig_csi_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf),
@@ -656,28 +641,6 @@ func TestAccKubernetesPersistentVolume_csi_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_source.0.csi.0.read_only", "true"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_source.0.csi.0.fs_type", "ext4"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesPersistentVolume_csi_importBasic(t *testing.T) {
-	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_persistent_volume.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_persistent_volume.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesPersistentVolumeConfig_csi_basic(name),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
 			},
 		},
 	})

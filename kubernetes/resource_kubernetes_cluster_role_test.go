@@ -36,6 +36,12 @@ func TestAccKubernetesClusterRole_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
 				Config: testAccKubernetesClusterRoleConfig_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
@@ -58,28 +64,7 @@ func TestAccKubernetesClusterRole_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRole_importBasic(t *testing.T) {
-	resourceName := "kubernetes_cluster_role.test"
-	name := acctest.RandomWithPrefix("tf-acc-test")
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesClusterRoleDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesClusterRoleConfig_basic(name),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
-			},
-		},
-	})
-}
-
-func TestAccKubernetesClusterRole_updatePatchOperationsOrderWithRemovals(t *testing.T) {
+func TestAccKubernetesClusterRole_UpdatePatchOperationsOrderWithRemovals(t *testing.T) {
 	var conf api.ClusterRole
 	resourceName := "kubernetes_cluster_role.test"
 	name := acctest.RandomWithPrefix("tf-acc-test")
@@ -176,6 +161,12 @@ func TestAccKubernetesClusterRole_aggregationRuleBasic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
 				Config: testAccKubernetesClusterRoleConfig_aggRuleModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
@@ -219,28 +210,6 @@ func TestAccKubernetesClusterRole_aggregationRuleRuleAggregation(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.0", "get"),
 					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.1", "list"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesClusterRole_importAggregationRule(t *testing.T) {
-	resourceName := "kubernetes_cluster_role.test"
-	name := acctest.RandomWithPrefix("tf-acc-test")
-	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: resourceName,
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesClusterRoleDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesClusterRoleConfig_aggRule(name),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})

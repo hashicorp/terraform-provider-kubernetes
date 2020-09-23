@@ -15,17 +15,18 @@ import (
 func TestAccKubernetesPodSecurityPolicy_basic(t *testing.T) {
 	var conf policy.PodSecurityPolicy
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_pod_security_policy.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_pod_security_policy.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPodSecurityPolicyDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodSecurityPolicyConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodSecurityPolicyExists("kubernetes_pod_security_policy.test", &conf),
+					testAccCheckKubernetesPodSecurityPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
@@ -69,9 +70,14 @@ func TestAccKubernetesPodSecurityPolicy_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testAccKubernetesPodSecurityPolicyConfig_metaModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodSecurityPolicyExists("kubernetes_pod_security_policy.test", &conf),
+					testAccCheckKubernetesPodSecurityPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -118,7 +124,7 @@ func TestAccKubernetesPodSecurityPolicy_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesPodSecurityPolicyConfig_specModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodSecurityPolicyExists("kubernetes_pod_security_policy.test", &conf),
+					testAccCheckKubernetesPodSecurityPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.annotations.%", "0"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.labels.%", "0"),
@@ -155,27 +161,6 @@ func TestAccKubernetesPodSecurityPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.fs_group.0.rule", "RunAsAny"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.read_only_root_filesystem", "true"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesPodSecurityPolicy_importBasic(t *testing.T) {
-	resourceName := "kubernetes_pod_security_policy.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesPodSecurityPolicyDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesPodSecurityPolicyConfig_basic(name),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
 			},
 		},
 	})

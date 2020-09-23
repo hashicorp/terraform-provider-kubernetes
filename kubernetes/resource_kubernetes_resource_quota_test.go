@@ -15,6 +15,7 @@ import (
 func TestAccKubernetesResourceQuota_basic(t *testing.T) {
 	var conf api.ResourceQuota
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_resource_quota.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -44,6 +45,12 @@ func TestAccKubernetesResourceQuota_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_resource_quota.test", "spec.0.hard.limits.memory", "2Gi"),
 					resource.TestCheckResourceAttr("kubernetes_resource_quota.test", "spec.0.hard.pods", "4"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesResourceQuotaConfig_metaModified(name),
@@ -172,28 +179,6 @@ func TestAccKubernetesResourceQuota_withScopes(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_resource_quota.test", "spec.0.scopes.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_resource_quota.test", "spec.0.scopes.3022121741", "NotBestEffort"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesResourceQuota_importBasic(t *testing.T) {
-	resourceName := "kubernetes_resource_quota.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesResourceQuotaDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesResourceQuotaConfig_basic(name),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})

@@ -15,6 +15,7 @@ import (
 func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 	var conf api.NetworkPolicy
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_network_policy.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -25,7 +26,7 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesNetworkPolicyConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesNetworkPolicyExists("kubernetes_network_policy.test", &conf),
+					testAccCheckKubernetesNetworkPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
@@ -47,9 +48,14 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testAccKubernetesNetworkPolicyConfig_metaModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesNetworkPolicyExists("kubernetes_network_policy.test", &conf),
+					testAccCheckKubernetesNetworkPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -74,7 +80,7 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesNetworkPolicyConfig_specModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesNetworkPolicyExists("kubernetes_network_policy.test", &conf),
+					testAccCheckKubernetesNetworkPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "0"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.%", "0"),
@@ -109,7 +115,7 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesNetworkPolicyConfig_specModified_allow_all_namespaces(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesNetworkPolicyExists("kubernetes_network_policy.test", &conf),
+					testAccCheckKubernetesNetworkPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "0"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.%", "0"),
@@ -146,7 +152,7 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesNetworkPolicyConfig_specModified_deny_other_namespaces(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesNetworkPolicyExists("kubernetes_network_policy.test", &conf),
+					testAccCheckKubernetesNetworkPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "0"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.%", "0"),
@@ -178,7 +184,7 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesNetworkPolicyConfig_specModified_pod_selector(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesNetworkPolicyExists("kubernetes_network_policy.test", &conf),
+					testAccCheckKubernetesNetworkPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "0"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.%", "0"),
@@ -220,7 +226,7 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesNetworkPolicyConfig_withEgress(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesNetworkPolicyExists("kubernetes_network_policy.test", &conf),
+					testAccCheckKubernetesNetworkPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "0"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.%", "0"),
@@ -338,27 +344,6 @@ func TestAccKubernetesNetworkPolicy_withEgressAtCreation(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.0", "Ingress"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.1", "Egress"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesNetworkPolicy_importBasic(t *testing.T) {
-	resourceName := "kubernetes_network_policy.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesNetworkPolicyDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesNetworkPolicyConfig_basic(name),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
 			},
 		},
 	})

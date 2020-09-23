@@ -17,8 +17,8 @@ import (
 
 func TestAccKubernetesService_basic(t *testing.T) {
 	var conf api.Service
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_service.test"
-	name := acctest.RandomWithPrefix("tf-acc-test")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -54,6 +54,12 @@ func TestAccKubernetesService_basic(t *testing.T) {
 						},
 					}),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesServiceConfig_modified(name),
@@ -490,33 +496,10 @@ func TestAccKubernetesService_externalName(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesService_importBasic(t *testing.T) {
-	resourceName := "kubernetes_service.test"
-	name := acctest.RandomWithPrefix("tf-acc-test")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesServiceDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesServiceConfig_basic(name),
-			},
-
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
-			},
-		},
-	})
-}
-
 func TestAccKubernetesService_generatedName(t *testing.T) {
 	var conf api.Service
-	resourceName := "kubernetes_service.test"
 	prefix := "tf-acc-test-gen-"
+	resourceName := "kubernetes_service.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -540,23 +523,6 @@ func TestAccKubernetesService_generatedName(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 				),
 			},
-		},
-	})
-}
-
-func TestAccKubernetesService_importGeneratedName(t *testing.T) {
-	resourceName := "kubernetes_service.test"
-	prefix := "tf-acc-test-gen-import-"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesServiceDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesServiceConfig_generatedName(prefix),
-			},
-
 			{
 				ResourceName:            resourceName,
 				ImportState:             true,

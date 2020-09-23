@@ -17,121 +17,105 @@ import (
 func TestAccKubernetesConfigMap_basic(t *testing.T) {
 	var conf api.ConfigMap
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_config_map.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_config_map.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesConfigMapDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesConfigMapConfig_nodata(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists("kubernetes_config_map.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.annotations.%", "2"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
+					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.labels.%", "3"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.labels.TestLabelOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.labels.TestLabelTwo", "two"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.labels.TestLabelThree", "three"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "3"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelTwo", "two"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelThree", "three"),
 					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelTwo": "two", "TestLabelThree": "three"}),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.self_link"),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "0"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesConfigMapConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists("kubernetes_config_map.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.annotations.%", "2"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
+					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.labels.%", "3"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.labels.TestLabelOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.labels.TestLabelTwo", "two"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.labels.TestLabelThree", "three"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "3"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelTwo", "two"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelThree", "three"),
 					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelTwo": "two", "TestLabelThree": "three"}),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.self_link"),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.%", "2"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.one", "first"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.two", "second"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "data.one", "first"),
+					resource.TestCheckResourceAttr(resourceName, "data.two", "second"),
 					testAccCheckConfigMapData(&conf, map[string]string{"one": "first", "two": "second"}),
 				),
 			},
 			{
 				Config: testAccKubernetesConfigMapConfig_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists("kubernetes_config_map.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.annotations.%", "2"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.annotations.Different", "1234"),
+					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.Different", "1234"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "Different": "1234"}),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.labels.%", "2"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.labels.TestLabelOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.labels.TestLabelThree", "three"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelThree", "three"),
 					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelThree": "three"}),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.self_link"),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.%", "3"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.one", "first"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.two", "second"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.nine", "ninth"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "3"),
+					resource.TestCheckResourceAttr(resourceName, "data.one", "first"),
+					resource.TestCheckResourceAttr(resourceName, "data.two", "second"),
+					resource.TestCheckResourceAttr(resourceName, "data.nine", "ninth"),
 					testAccCheckConfigMapData(&conf, map[string]string{"one": "first", "two": "second", "nine": "ninth"}),
 				),
 			},
 			{
 				Config: testAccKubernetesConfigMapConfig_noData(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists("kubernetes_config_map.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.annotations.%", "0"),
+					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
 					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.self_link"),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "0"),
 					testAccCheckConfigMapData(&conf, map[string]string{}),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesConfigMap_importBasic(t *testing.T) {
-	resourceName := "kubernetes_config_map.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesConfigMapDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesConfigMapConfig_basic(name),
-			},
-
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})
@@ -140,30 +124,31 @@ func TestAccKubernetesConfigMap_importBasic(t *testing.T) {
 func TestAccKubernetesConfigMap_binaryData(t *testing.T) {
 	var conf api.ConfigMap
 	prefix := "tf-acc-test-gen-"
+	resourceName := "kubernetes_config_map.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_config_map.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesConfigMapDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesConfigMapConfig_binaryData(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists("kubernetes_config_map.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "binary_data.%", "1"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.%", "1"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.two", "second"),
+					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "binary_data.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "data.two", "second"),
 				),
 			},
 			{
 				Config: testAccKubernetesConfigMapConfig_binaryData2(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists("kubernetes_config_map.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "binary_data.%", "3"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "binary_data.raw", "UmF3IGRhdGEgc2hvdWxkIGNvbWUgYmFjayBhcyBpcyBpbiB0aGUgcG9k"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.%", "1"),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "data.three", "third"),
+					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "binary_data.%", "3"),
+					resource.TestCheckResourceAttr(resourceName, "binary_data.raw", "UmF3IGRhdGEgc2hvdWxkIGNvbWUgYmFjayBhcyBpcyBpbiB0aGUgcG9k"),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "data.three", "third"),
 				),
 			},
 		},
@@ -173,46 +158,30 @@ func TestAccKubernetesConfigMap_binaryData(t *testing.T) {
 func TestAccKubernetesConfigMap_generatedName(t *testing.T) {
 	var conf api.ConfigMap
 	prefix := "tf-acc-test-gen-"
+	resourceName := "kubernetes_config_map.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_config_map.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesConfigMapDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesConfigMapConfig_generatedName(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists("kubernetes_config_map.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.annotations.%", "0"),
+					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
 					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
-					resource.TestCheckResourceAttr("kubernetes_config_map.test", "metadata.0.generate_name", prefix),
-					resource.TestMatchResourceAttr("kubernetes_config_map.test", "metadata.0.name", regexp.MustCompile("^"+prefix)),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.self_link"),
-					resource.TestCheckResourceAttrSet("kubernetes_config_map.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", prefix),
+					resource.TestMatchResourceAttr(resourceName, "metadata.0.name", regexp.MustCompile("^"+prefix)),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 				),
 			},
-		},
-	})
-}
-
-func TestAccKubernetesConfigMap_importGeneratedName(t *testing.T) {
-	resourceName := "kubernetes_config_map.test"
-	prefix := "tf-acc-test-gen-import-"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesConfigMapDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesConfigMapConfig_generatedName(prefix),
-			},
-
 			{
 				ResourceName:      resourceName,
 				ImportState:       true,

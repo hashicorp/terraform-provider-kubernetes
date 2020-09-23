@@ -63,6 +63,12 @@ func TestAccKubernetesPod_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
 				Config: testAccKubernetesPodConfigBasic(secretName, configMapName, podName, imageName2),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodExists(resourceName, &conf2),
@@ -247,29 +253,6 @@ func TestAccKubernetesPod_updateEnvForceNew(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.name", "containername"),
 					testAccCheckKubernetesPodForceNew(&conf1, &conf2, true),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesPod_importBasic(t *testing.T) {
-	resourceName := "kubernetes_pod.test"
-	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := "nginx:1.7.9"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesPodDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesPodConfigWithSecurityContext(podName, imageName),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})

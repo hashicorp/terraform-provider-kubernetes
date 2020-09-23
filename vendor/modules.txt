@@ -938,7 +938,7 @@ github.com/mitchellh/hashstructure
 github.com/mitchellh/mapstructure
 # github.com/mitchellh/reflectwalk v1.0.1
 github.com/mitchellh/reflectwalk
-# github.com/moby/term v0.0.0-20200611042045-63b9a826fb74
+# github.com/moby/term v0.0.0-20200915141129-7f0af18e79f2
 ## explicit
 github.com/moby/term
 github.com/moby/term/windows

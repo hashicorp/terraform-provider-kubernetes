@@ -15,6 +15,7 @@ import (
 func TestAccKubernetesLimitRange_basic(t *testing.T) {
 	var conf api.LimitRange
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_limit_range.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -25,7 +26,7 @@ func TestAccKubernetesLimitRange_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesLimitRangeConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesLimitRangeExists("kubernetes_limit_range.test", &conf),
+					testAccCheckKubernetesLimitRangeExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_limit_range.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_limit_range.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
@@ -48,6 +49,12 @@ func TestAccKubernetesLimitRange_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_limit_range.test", "spec.0.limit.0.default_request.memory", "256M"),
 					resource.TestCheckResourceAttr("kubernetes_limit_range.test", "spec.0.limit.0.type", "Container"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesLimitRangeConfig_metaModified(name),
@@ -260,28 +267,6 @@ func TestAccKubernetesLimitRange_multipleLimits(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_limit_range.test", "spec.0.limit.2.default.memory", "24M"),
 					resource.TestCheckResourceAttr("kubernetes_limit_range.test", "spec.0.limit.2.type", "Container"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesLimitRange_importBasic(t *testing.T) {
-	resourceName := "kubernetes_limit_range.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesLimitRangeDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesLimitRangeConfig_basic(name),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})

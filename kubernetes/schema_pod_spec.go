@@ -75,7 +75,7 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 						Optional:    true,
 						Elem: &schema.Schema{
 							Type:         schema.TypeString,
-							ValidateFunc: validation.SingleIP(),
+							ValidateFunc: validation.IsIPAddress,
 						},
 					},
 					"option": {

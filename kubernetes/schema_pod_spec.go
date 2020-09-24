@@ -47,7 +47,6 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Type:        schema.TypeList,
 			Optional:    true,
 			Computed:    isComputed,
-			ForceNew:    !isUpdatable,
 			Description: "List of init containers belonging to the pod. Init containers always run to completion and each must complete successfully before the next is started. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/",
 			Deprecated:  deprecatedMessage,
 			Elem: &schema.Resource{
@@ -363,6 +362,10 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 				continue
 			}
 			if k == "container" {
+				// Some fields are always updatable
+				continue
+			}
+			if k == "init_container" {
 				// Some fields are always updatable
 				continue
 			}

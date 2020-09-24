@@ -60,6 +60,7 @@ func TestAccKubernetesPod_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.env_from.1.secret_ref.0.optional", "false"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.env_from.1.prefix", "FROM_S_"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName1),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.enable_service_links", "true"),
 				),
 			},
 			{
@@ -872,6 +873,37 @@ func TestAccKubernetesPod_termination_message_policy_override_as_fallback_to_log
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodExists("kubernetes_pod.test", &confPod),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.termination_message_policy", "FallbackToLogsOnError"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPod_enableServiceLinks(t *testing.T) {
+	var conf1 api.Pod
+
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	imageName := "nginx:1.7.9"
+	resourceName := "kubernetes_pod.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodConfigEnableServiceLinks(rName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists(resourceName, &conf1),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.app", "pod_label"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.enable_service_links", "false"),
 				),
 			},
 		},
@@ -1934,4 +1966,26 @@ func testAccKubernetesTerminationMessagePolicyWithFile(podName, imageName string
 
 func testAccKubernetesTerminationMessagePolicyWithFallBackToLogsOnErr(podName, imageName string) string {
 	return testAccKubernetesTerminationMessagePolicyWithOverride(podName, imageName, "FallbackToLogsOnError")
+}
+
+func testAccKubernetesPodConfigEnableServiceLinks(podName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_pod" "test" {
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+    enable_service_links = false
+  }
+}
+`, podName, imageName)
 }

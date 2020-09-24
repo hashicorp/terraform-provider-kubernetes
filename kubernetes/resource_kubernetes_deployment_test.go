@@ -135,28 +135,6 @@ func TestAccKubernetesDeployment_initContainer(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesDeployment_importBasic(t *testing.T) {
-	resourceName := deploymentTestResourceName
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesDeploymentDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesDeploymentConfig_basic(name),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_rollout"},
-			},
-		},
-	})
-}
-
 func TestAccKubernetesDeployment_generatedName(t *testing.T) {
 	var conf appsv1.Deployment
 	prefix := "tf-acc-test-gen-"

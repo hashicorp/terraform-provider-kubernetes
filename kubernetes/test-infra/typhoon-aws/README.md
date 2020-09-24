@@ -18,15 +18,15 @@ Example:
 ```export TF_VAR_base_domain=k8s.myself.com```
 ## Versions
 
-You can set the desired version of Kubernetes by editing the `main.tf` configuration file and replacing the version in the source URL of the `typhoon-acc` module.
-
+You can set the desired version of Kubernetes via the `kubernetes_version` Terraform variable. If unset it defaults to 
+version 1.18.
 Example:
 ```
-
-module "typhoon-acc" {
-  source = "git::https://github.com/poseidon/typhoon//aws/fedora-coreos/kubernetes?ref=v1.18.0" # set the desired Kubernetes version here
-...
+export TF_VAR_kubernetes_version=1.18
 ```
+
+This configuration is only compatible with Terraform 0.13 and up due to the use of the count-on-module feature which is not available in earlier versions.
+
 ## Worker node count and instance type
 
 You can control the amount of worker nodes in the cluster as well as their machine type, using the following variables:

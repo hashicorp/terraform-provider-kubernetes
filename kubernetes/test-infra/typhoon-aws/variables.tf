@@ -6,6 +6,11 @@ variable "cluster_name" {
   type = string
 }
 
+variable "kubernetes_version" {
+    type = string
+    default = "1.18.8"
+}
+
 variable "controller_count" {
   default = 1
 }

@@ -168,10 +168,6 @@ func TestAccKubernetesStorageClass_allowedTopologies(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStorageClassConfig_allowedToplogies(name),
-				SkipFunc: func() (bool, error) {
-					isInGke, err := isRunningInGke()
-					return !isInGke, err
-				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStorageClassExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.#", "1"),
@@ -181,10 +177,6 @@ func TestAccKubernetesStorageClass_allowedTopologies(t *testing.T) {
 				),
 			},
 			{
-				SkipFunc: func() (bool, error) {
-					isInGke, err := isRunningInGke()
-					return !isInGke, err
-				},
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,

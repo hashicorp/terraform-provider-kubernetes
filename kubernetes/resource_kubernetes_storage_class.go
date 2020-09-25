@@ -79,6 +79,7 @@ func resourceKubernetesStorageClass() *schema.Resource {
 				Type:        schema.TypeList,
 				Description: "Restrict the node topologies where volumes can be dynamically provisioned.",
 				Optional:    true,
+				ForceNew:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{

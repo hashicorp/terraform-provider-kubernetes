@@ -939,6 +939,8 @@ func TestAccKubernetesPod_readinessGate(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
+					ctx := context.TODO()
+
 					conditions := conf1.Status.Conditions
 					testCondition := api.PodCondition{
 						Type:   api.PodConditionType("haha"),
@@ -946,7 +948,7 @@ func TestAccKubernetesPod_readinessGate(t *testing.T) {
 					}
 					updatedConditions := append(conditions, testCondition)
 					conf1.Status.Conditions = updatedConditions
-					_, err = conn.CoreV1().Pods("default").UpdateStatus(&conf1)
+					_, err = conn.CoreV1().Pods("default").UpdateStatus(ctx, &conf1, metav1.UpdateOptions{})
 					if err != nil {
 						t.Fatal(err)
 					}

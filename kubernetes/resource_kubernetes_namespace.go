@@ -37,7 +37,7 @@ func resourceKubernetesNamespace() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"finalizers": {
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Description: "Finalizers is an opaque list of values that must be empty to permanently remove object from storage.",
 							Optional:    true,
 							Elem: &schema.Schema{

@@ -41,7 +41,6 @@ The following arguments are supported:
 * `mount_options` - (Optional) Persistent Volumes that are dynamically created by a storage class will have the mount options specified.
 * `allowed_topologies` - (Optional) Restrict the node topologies where volumes can be dynamically provisioned. see [allowed_topologies](#allowed_topologies)
 
-
 ## Nested Blocks
 
 ### `metadata`

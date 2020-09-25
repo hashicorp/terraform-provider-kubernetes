@@ -1338,7 +1338,7 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 }
 
 func expandReadinessGates(gates []interface{}) ([]v1.PodReadinessGate, error) {
-	if len(gates) == 0 {
+	if len(gates) == 0 || gates[0] == nil {
 		return []v1.PodReadinessGate{}, nil
 	}
 	cs := make([]v1.PodReadinessGate, len(gates))

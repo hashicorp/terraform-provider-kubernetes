@@ -16,7 +16,6 @@ import (
 
 func TestAccKubernetesStorageClass_basic(t *testing.T) {
 	var conf api.StorageClass
-	resourceName := "kubernetes_storage_class.test"
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_storage_class.test"
 
@@ -165,10 +164,15 @@ func TestAccKubernetesStorageClass_allowedTopologies(t *testing.T) {
 		PreCheck:      func() { testAccPreCheck(t) },
 		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesStorageClassDestroy,
+
+		CheckDestroy: testAccCheckKubernetesStorageClassDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStorageClassConfig_allowedToplogies(name),
+				SkipFunc: func() (bool, error) {
+					isInGke, err := isRunningInGke()
+					return !isInGke, err
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStorageClassExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.#", "1"),
@@ -176,6 +180,16 @@ func TestAccKubernetesStorageClass_allowedTopologies(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.key", "failure-domain.beta.kubernetes.io/zone"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.values.#", "2"),
 				),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					isInGke, err := isRunningInGke()
+					return !isInGke, err
+				},
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})

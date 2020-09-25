@@ -46,7 +46,6 @@ func resourceKubernetesStorageClass() *schema.Resource {
 				Optional:    true,
 				Default:     "Delete",
 				ValidateFunc: validation.StringInSlice([]string{
-					"Recycle",
 					"Delete",
 					"Retain",
 				}, false),
@@ -226,7 +225,7 @@ func resourceKubernetesStorageClassDelete(d *schema.ResourceData, meta interface
 	}
 
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
-		_, err := conn.StorageV1().StorageClasses().Get(d.Id(), metav1.GetOptions{})
+		_, err := conn.StorageV1().StorageClasses().Get(ctx, d.Id(), metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 				return nil

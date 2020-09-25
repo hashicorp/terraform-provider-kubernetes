@@ -1,3 +1,17 @@
+## 1.13.3 (Unreleased)
+FEATURES:
+
+BUG FIXES:
+* Fix annotation diffs on affinity tests (#993)
+
+IMPROVEMENTS:
+
+* Add support for enable_service_links to the pod specification (#975)
+* Update Go dependencies (#968)
+* Update acceptance tests for tfproviderlint (#962)
+* Refactor Typhoon test configuration to allow selection of Kubernetes version (#992)
+
+
 ## 1.13.2 (September 10, 2020)
 
 BUG FIXES:

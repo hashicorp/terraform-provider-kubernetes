@@ -2116,14 +2116,14 @@ resource "kubernetes_pod" "test" {
       }
       env {
         name = "EXPORTED_VARIBALE_FROM_CONFIG_MAP"
-				value_from {
-					config_map_key_ref {
-						name     = "${kubernetes_config_map.test.metadata.0.name}"
-						key      = "one"
-						optional = true
-					}
-				}
-			}
+        value_from {
+          config_map_key_ref {
+            name     = "${kubernetes_config_map.test.metadata.0.name}"
+            key      = "one"
+            optional = true
+          }
+        }
+      }
 
       env_from {
         config_map_ref {
@@ -2131,14 +2131,14 @@ resource "kubernetes_pod" "test" {
           optional = true
         }
         prefix = "FROM_CM_"
-			}
+      }
       env_from {
-				secret_ref {
-					name     = "${kubernetes_secret.test_from.metadata.0.name}"
-					optional = false
-				}
-				prefix = "FROM_S_"
-			}
+        secret_ref {
+          name     = "${kubernetes_secret.test_from.metadata.0.name}"
+          optional = false
+        }
+        prefix = "FROM_S_"
+      }
     }
 
     volume {

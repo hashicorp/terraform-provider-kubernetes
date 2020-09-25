@@ -223,7 +223,7 @@ func TestAccKubernetesNamespace_deleteTimeout(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesNamespace_spec(t *testing.T) {
+func TestAccKubernetesNamespace_finalizers(t *testing.T) {
 	var conf api.Namespace
 	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_namespace.test"
@@ -235,7 +235,7 @@ func TestAccKubernetesNamespace_spec(t *testing.T) {
 		CheckDestroy:  testAccCheckKubernetesNamespaceDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesNamespaceSpecConfig(nsName),
+				Config: testAccKubernetesNamespaceFinalizersConfig1(nsName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesNamespaceExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
@@ -246,30 +246,41 @@ func TestAccKubernetesNamespace_spec(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.finalizers.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.finalizers.0", "kubernetes"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesNamespace_importSpec(t *testing.T) {
-	resourceName := "kubernetes_namespace.test"
-	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesNamespaceDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesNamespaceSpecConfig(nsName),
 			},
 			{
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
+				Config: testAccKubernetesNamespaceFinalizersConfig2(nsName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesNamespaceExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", nsName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.finalizers.#", "2"),
+				),
+			},
+			{
+				Config: testAccKubernetesNamespaceFinalizersConfig1(nsName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesNamespaceExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", nsName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.finalizers.#", "1"),
+				),
 			},
 		},
 	})
@@ -376,7 +387,7 @@ func testAccKubernetesNamespaceConfig_basic(nsName string) string {
 `, nsName)
 }
 
-func testAccKubernetesNamespaceSpecConfig(nsName string) string {
+func testAccKubernetesNamespaceFinalizersConfig1(nsName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_namespace" "test" {
   metadata {
@@ -385,6 +396,20 @@ resource "kubernetes_namespace" "test" {
 
   spec {
     finalizers = ["kubernetes"]
+  }
+}
+`, nsName)
+}
+
+func testAccKubernetesNamespaceFinalizersConfig2(nsName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_namespace" "test" {
+  metadata {
+    name = %[1]q
+  }
+
+  spec {
+    finalizers = ["kubernetes", "foregroundDeletion"]
   }
 }
 `, nsName)

@@ -37,7 +37,7 @@ func resourceKubernetesNamespace() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"finalizers": {
-							Type:        schema.TypeSet,
+							Type:        schema.TypeList,
 							Description: "Finalizers is an opaque list of values that must be empty to permanently remove object from storage.",
 							Optional:    true,
 							Elem: &schema.Schema{
@@ -113,18 +113,26 @@ func resourceKubernetesNamespaceUpdate(d *schema.ResourceData, meta interface{})
 	ctx := context.TODO()
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
+
+	if d.HasChange("spec.0.finalizers") {
+		r := d.Get("spec.0.finalizers")
+
+		finalizers := make([]v1.FinalizerName, 0)
+		for _, f := range r.([]interface{}) {
+			finalizer := v1.FinalizerName(f.(string))
+			finalizers = append(finalizers, finalizer)
+		}
+
+		log.Printf("haha %#v", r)
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/spec/finalizers",
+			Value: finalizers,
+		})
+	}
+
 	data, err := ops.MarshalJSON()
 	if err != nil {
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
-	}
-
-	if d.HasChange("spec") {
-		spec := expandNamespaceSpec(d.Get("spec").([]interface{}))
-
-		ops = append(ops, &ReplaceOperation{
-			Path:  "/spec",
-			Value: spec,
-		})
 	}
 
 	log.Printf("[INFO] Updating namespace: %s", ops)

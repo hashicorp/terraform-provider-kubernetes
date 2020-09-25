@@ -113,7 +113,9 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["toleration"] = flattenTolerations(in.Tolerations)
 	}
 
+	log.Printf("haha3")
 	if len(in.TopologySpreadConstraints) > 0 {
+		log.Printf("haha4")
 		att["topology_spread_constraint"] = flattenTopologySpreadConstraints(in.TopologySpreadConstraints)
 	}
 
@@ -279,9 +281,9 @@ func flattenTolerations(tolerations []v1.Toleration) []interface{} {
 	return att
 }
 
-func flattenTopologySpreadConstraints(tolerations []v1.TopologySpreadConstraint) []interface{} {
+func flattenTopologySpreadConstraints(tsc []v1.TopologySpreadConstraint) []interface{} {
 	att := []interface{}{}
-	for _, v := range tolerations {
+	for _, v := range tsc {
 		obj := map[string]interface{}{}
 
 		if v.TopologyKey != "" {
@@ -773,7 +775,9 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.Volumes = cs
 	}
 
+	log.Printf("haha1")
 	if v, ok := in["topology_spread_constraint"].([]interface{}); ok && len(v) > 0 {
+		log.Printf("haha2")
 		ts, err := expandTopologySpreadConstraints(v)
 		if err != nil {
 			return obj, err

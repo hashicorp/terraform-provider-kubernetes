@@ -964,6 +964,38 @@ func TestAccKubernetesPod_readinessGate(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPod_topologySpreadConstraint(t *testing.T) {
+	var conf1 api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod.test"
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodTopologySpreadConstraintConfig(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists(resourceName, &conf1),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.max_skew", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.topology_key", "failure-domain.beta.kubernetes.io/zone"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.when_unsatisfiable", "DoNotSchedule"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesPodDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
@@ -2370,4 +2402,33 @@ func testAccKubernetesPodConfig_afterUpdate(name, imageName string) string {
   }
 }
 `, name, imageName)
+}
+
+func testAccKubernetesPodTopologySpreadConstraintConfig(podName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_pod" "test" {
+  metadata {
+    labels = {
+      "app.kubernetes.io/instance" = "terraform-example"
+    }
+    name = "%s"
+  }
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+    topology_spread_constraint {
+      max_skew           = 1
+      topology_key       = "kubernetes.io/hostname"
+      when_unsatisfiable = "DoNotSchedule"
+      label_selector {
+        match_labels = {
+          "app.kubernetes.io/instance" = "terraform-example"
+        }
+      }
+    }
+  }
+}
+`, podName, imageName)
 }

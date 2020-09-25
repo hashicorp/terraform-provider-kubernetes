@@ -119,7 +119,6 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 
 func TestAccKubernetesStorageClass_generatedName(t *testing.T) {
 	var conf api.StorageClass
-	resourceName := "kubernetes_storage_class.test"
 	prefix := "tf-acc-test-gen-"
 	resourceName := "kubernetes_storage_class.test"
 

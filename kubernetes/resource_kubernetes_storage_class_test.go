@@ -352,7 +352,6 @@ resource "kubernetes_storage_class" "test" {
   reclaim_policy         = "Delete"
   volume_binding_mode    = "Immediate"
   allow_volume_expansion = true
-
   mount_options			 = ["foo", "bar"]
 
   parameters = {

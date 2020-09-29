@@ -11,8 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/mitchellh/go-homedir"
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
-	discovery "k8s.io/client-go/discovery"
-	kubernetes "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	restclient "k8s.io/client-go/rest"
 
@@ -151,12 +151,14 @@ func Provider() terraform.ResourceProvider {
 
 		ResourcesMap: map[string]*schema.Resource{
 			"kubernetes_api_service":                      resourceKubernetesAPIService(),
+			"kubernetes_certificate_signing_request":      resourceKubernetesCertificateSigningRequest(),
 			"kubernetes_cluster_role":                     resourceKubernetesClusterRole(),
 			"kubernetes_cluster_role_binding":             resourceKubernetesClusterRoleBinding(),
 			"kubernetes_config_map":                       resourceKubernetesConfigMap(),
 			"kubernetes_cron_job":                         resourceKubernetesCronJob(),
 			"kubernetes_csi_driver":                       resourceKubernetesCSIDriver(),
 			"kubernetes_daemonset":                        resourceKubernetesDaemonSet(),
+			"kubernetes_default_service_account":          resourceKubernetesDefaultServiceAccount(),
 			"kubernetes_deployment":                       resourceKubernetesDeployment(),
 			"kubernetes_endpoints":                        resourceKubernetesEndpoints(),
 			"kubernetes_horizontal_pod_autoscaler":        resourceKubernetesHorizontalPodAutoscaler(),

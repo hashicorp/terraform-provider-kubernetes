@@ -1,9 +1,88 @@
-## 1.11.4 (Unreleased)
+## 1.13.3 (Unreleased)
+FEATURES:
+
+BUG FIXES:
+* Fix annotation diffs on affinity tests (#993)
 
 IMPROVEMENTS:
 
-* Add data source for Pod and PVC (#786)
+* Add support for enable_service_links to the pod specification (#975)
+* Update Go dependencies (#968)
+* Update acceptance tests for tfproviderlint (#962)
+* Refactor Typhoon test configuration to allow selection of Kubernetes version (#992)
 
+
+## 1.13.2 (September 10, 2020)
+
+BUG FIXES:
+
+* Fix spurious forced replacement in empty_dir volume (#985)
+* Fix reported replica count when waiting for Deployment rollout (#998)
+* health_check_port_node should force replacement (#986)
+* Don't force replacement StatefulSet / Deployment when affinity rule selectors change (#755)
+
+IMPROVEMENTS:
+
+* Wait for `kubernetes_service` to be deleted
+* Updates to CONTRIBUTING.md and PULL_REQUESTS.md
+
+## 1.13.1 (September 03, 2020)
+
+BUG FIXES:
+* Fix crash when size_limit is not present on empty_dir volume (#983)
+
+## 1.13.0 (September 02, 2020)
+
+FEATURES:
+
+* Add resource `CertificateSigningRequest` (#922)
+* Add resource `default_service_account` (#876)
+
+
+IMPROVEMENTS:
+
+* Allow in-place update of PVC's storage request (#957)
+* Add sysctl support to pod spec (#938)
+* Add ability to wait for deployment to delete (#937)
+* Add support for `aggregation_rule` to `cluster_role` resource (#911)
+* Add `health_check_node_port` to Service resource (#908)
+* Add support for `size_limit` for `empty_dir` block (#912)
+* Add support for volume mode (#939)
+* Add projected volumes in pod_spec (#907)
+* Add termination_message_policy to container schema (#847)
+
+BUG FIXES:
+
+* Recreate Storage Class on VolumeBindingMode update (#757)
+* Fix url attribute in admissionregistration client_config.service block (#959)
+* Fix crash when deferencing nil pointer in v1beta1.IngressRule (#967)
+
+## 1.12.0 (July 30, 2020)
+
+BUG FIXES:
+
+* Fix crash in `resource_kubernetes_pod_security_policy` attribute `host_ports` (#931)
+
+IMPROVEMENTS:
+
+* Add `wait_for_rollout` to `kubernetes_deployment` resource (#863)
+* Add `wait_for_rollout` to `kubernetes_stateful_set` resource (#605)
+
+## 1.11.4 (July 21, 2020)
+
+IMPROVEMENTS:
+
+* Add resource for CSIDriver (#825)
+* Add resource for Pod Security Policies (#861)
+* Add data source for Pod and PVC (#786)
+* Add support for CSI volume type in persistent_volume resource (#817)
+* Add Kubernetes Job `wait_for_completion` functionality (#625)
+* Support `optional` flag for ConfigMap mounted as volume (#823)
+* Add specific error message when failing to load provider config (#780)
+* Support `optional` on env valueFrom for secret key/configmap key (#824)
+* Skip tests for CSIDriver if cluster version is less than 1.16
+* Allow `ttl_seconds_after_finished = 0` in `kubernetes_job` resource (#849)
+* Set service block to `optional` for webhook configurations (#902)
 
 ## 1.11.3 (May 20, 2020)
 

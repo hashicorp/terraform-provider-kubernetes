@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -8,12 +9,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/autoscaling/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesHorizontalPodAutoscaler_basic(t *testing.T) {
 	var conf api.HorizontalPodAutoscaler
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_horizontal_pod_autoscaler.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -24,7 +26,7 @@ func TestAccKubernetesHorizontalPodAutoscaler_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesHorizontalPodAutoscalerConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesHorizontalPodAutoscalerExists("kubernetes_horizontal_pod_autoscaler.test", &conf),
+					testAccCheckKubernetesHorizontalPodAutoscalerExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
@@ -45,6 +47,11 @@ func TestAccKubernetesHorizontalPodAutoscaler_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.scale_target_ref.0.kind", "ReplicationController"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.scale_target_ref.0.name", "TerraformAccTest"),
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			{
 				Config: testAccKubernetesHorizontalPodAutoscalerConfig_metaModified(name),
@@ -132,32 +139,12 @@ func TestAccKubernetesHorizontalPodAutoscaler_generatedName(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesHorizontalPodAutoscaler_importBasic(t *testing.T) {
-	resourceName := "kubernetes_horizontal_pod_autoscaler.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesHorizontalPodAutoscalerConfig_basic(name),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
-
 func testAccCheckKubernetesHorizontalPodAutoscalerDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_horizontal_pod_autoscaler" {
@@ -169,7 +156,7 @@ func testAccCheckKubernetesHorizontalPodAutoscalerDestroy(s *terraform.State) er
 			return err
 		}
 
-		resp, err := conn.AutoscalingV1().HorizontalPodAutoscalers(namespace).Get(name, meta_v1.GetOptions{})
+		resp, err := conn.AutoscalingV1().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Namespace == namespace && resp.Name == name {
 				return fmt.Errorf("Horizontal Pod Autoscaler still exists: %s", rs.Primary.ID)
@@ -191,13 +178,14 @@ func testAccCheckKubernetesHorizontalPodAutoscalerExists(n string, obj *api.Hori
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		out, err := conn.AutoscalingV1().HorizontalPodAutoscalers(namespace).Get(name, meta_v1.GetOptions{})
+		out, err := conn.AutoscalingV1().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -208,8 +196,7 @@ func testAccCheckKubernetesHorizontalPodAutoscalerExists(n string, obj *api.Hori
 }
 
 func testAccKubernetesHorizontalPodAutoscalerConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_horizontal_pod_autoscaler" "test" {
+	return fmt.Sprintf(`resource "kubernetes_horizontal_pod_autoscaler" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -237,8 +224,7 @@ resource "kubernetes_horizontal_pod_autoscaler" "test" {
 }
 
 func testAccKubernetesHorizontalPodAutoscalerConfig_metaModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_horizontal_pod_autoscaler" "test" {
+	return fmt.Sprintf(`resource "kubernetes_horizontal_pod_autoscaler" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -267,8 +253,7 @@ resource "kubernetes_horizontal_pod_autoscaler" "test" {
 }
 
 func testAccKubernetesHorizontalPodAutoscalerConfig_specModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_horizontal_pod_autoscaler" "test" {
+	return fmt.Sprintf(`resource "kubernetes_horizontal_pod_autoscaler" "test" {
   metadata {
     name = "%s"
   }
@@ -286,8 +271,7 @@ resource "kubernetes_horizontal_pod_autoscaler" "test" {
 }
 
 func testAccKubernetesHorizontalPodAutoscalerConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_horizontal_pod_autoscaler" "test" {
+	return fmt.Sprintf(`resource "kubernetes_horizontal_pod_autoscaler" "test" {
   metadata {
     generate_name = "%s"
   }

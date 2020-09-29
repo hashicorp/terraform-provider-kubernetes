@@ -1,7 +1,6 @@
 ---
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_service_account"
-sidebar_current: "docs-kubernetes-data-source-service-account"
 description: |-
   A service account provides an identity for processes that run in a Pod.
 ---

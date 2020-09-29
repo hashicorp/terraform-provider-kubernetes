@@ -85,8 +85,8 @@ func ReadPassword(fd int) ([]byte, error) {
 	}
 	old := st
 
-	st &^= (windows.ENABLE_ECHO_INPUT)
-	st |= (windows.ENABLE_PROCESSED_INPUT | windows.ENABLE_LINE_INPUT | windows.ENABLE_PROCESSED_OUTPUT)
+	st &^= (windows.ENABLE_ECHO_INPUT | windows.ENABLE_LINE_INPUT)
+	st |= (windows.ENABLE_PROCESSED_OUTPUT | windows.ENABLE_PROCESSED_INPUT)
 	if err := windows.SetConsoleMode(windows.Handle(fd), st); err != nil {
 		return nil, err
 	}
@@ -94,7 +94,8 @@ func ReadPassword(fd int) ([]byte, error) {
 	defer windows.SetConsoleMode(windows.Handle(fd), old)
 
 	var h windows.Handle
-	if err := windows.DuplicateHandle(windows.GetCurrentProcess(), windows.Handle(fd), windows.GetCurrentProcess(), &h, 0, false, windows.DUPLICATE_SAME_ACCESS); err != nil {
+	p, _ := windows.GetCurrentProcess()
+	if err := windows.DuplicateHandle(p, windows.Handle(fd), p, &h, 0, false, windows.DUPLICATE_SAME_ACCESS); err != nil {
 		return nil, err
 	}
 

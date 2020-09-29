@@ -1,17 +1,18 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sort"
 
 	api "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	kubernetes "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes"
 )
 
-func getLastWarningsForObject(conn *kubernetes.Clientset, metadata meta_v1.ObjectMeta, kind string, limit int) ([]api.Event, error) {
+func getLastWarningsForObject(ctx context.Context, conn *kubernetes.Clientset, metadata metav1.ObjectMeta, kind string, limit int) ([]api.Event, error) {
 	m := map[string]string{
 		"involvedObject.name": metadata.Name,
 		"involvedObject.kind": kind,
@@ -22,7 +23,7 @@ func getLastWarningsForObject(conn *kubernetes.Clientset, metadata meta_v1.Objec
 
 	fs := fields.Set(m).String()
 	log.Printf("[DEBUG] Looking up events via this selector: %q", fs)
-	out, err := conn.CoreV1().Events(metadata.Namespace).List(meta_v1.ListOptions{
+	out, err := conn.CoreV1().Events(metadata.Namespace).List(ctx, metav1.ListOptions{
 		FieldSelector: fs,
 	})
 	if err != nil {

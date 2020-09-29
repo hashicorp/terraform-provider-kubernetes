@@ -10,29 +10,34 @@ import (
 
 func flattenIngressRule(in []v1beta1.IngressRule) []interface{} {
 	att := make([]interface{}, len(in), len(in))
-	for i, n := range in {
-		// rulePrefix := fmt.Sprintf("rule.%d.")
+	for i, r := range in {
 		m := make(map[string]interface{})
 
-		m["host"] = n.Host
-
-		httpAtt := make(map[string]interface{})
-		pathAtts := make([]interface{}, len(n.HTTP.Paths), len(n.HTTP.Paths))
-		for i, p := range n.HTTP.Paths {
-			path := map[string]interface{}{
-				"path":    p.Path,
-				"backend": flattenIngressBackend(&p.Backend),
-			}
-			pathAtts[i] = path
-		}
-		httpAtt["path"] = pathAtts
-		m["http"] = []interface{}{
-			httpAtt,
-		}
-
+		m["host"] = r.Host
+		m["http"] = flattenIngressRuleHttp(r.HTTP)
 		att[i] = m
 	}
 	return att
+}
+
+func flattenIngressRuleHttp(in *v1beta1.HTTPIngressRuleValue) []interface{} {
+	if in == nil {
+		return []interface{}{}
+	}
+	pathAtts := make([]interface{}, len(in.Paths), len(in.Paths))
+	for i, p := range in.Paths {
+		path := map[string]interface{}{
+			"path":    p.Path,
+			"backend": flattenIngressBackend(&p.Backend),
+		}
+		pathAtts[i] = path
+	}
+
+	httpAtt := map[string]interface{}{
+		"path": pathAtts,
+	}
+
+	return []interface{}{httpAtt}
 }
 
 func flattenIngressBackend(in *v1beta1.IngressBackend) []interface{} {

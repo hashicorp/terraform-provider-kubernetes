@@ -1,7 +1,6 @@
 ---
 layout: "kubernetes"
 page_title: "Provider: Kubernetes"
-sidebar_current: "docs-kubernetes-index"
 description: |-
   The Kubernetes (K8s) provider is used to interact with the resources supported by Kubernetes. The provider needs to be configured with the proper credentials before it can be used.
 ---
@@ -43,8 +42,7 @@ Terraform providers for various cloud providers feature resources to spin up man
 
 To use these credentials with the Kubernetes provider, they can be interpolated into the respective attributes of the Kubernetes provider configuration block.
 
-**IMPORTANT WARNING**
-*When using interpolation to pass credentials to the Kubernetes provider from other resources, these resources SHOULD NOT be created in the same `apply` operation where Kubernetes provider resources are also used. This will lead to intermittent and unpredictable errors which are hard to debug and diagnose. The root issue lies with the order in which Terraform itself evaluates the provider blocks vs. actual resources. Please refer to [this section of Terraform docs](https://www.terraform.io/docs/configuration/providers.html#provider-configuration) for further explanation.*
+~> **WARNING** When using interpolation to pass credentials to the Kubernetes provider from other resources, these resources SHOULD NOT be created in the same `apply` operation where Kubernetes provider resources are also used. This will lead to intermittent and unpredictable errors which are hard to debug and diagnose. The root issue lies with the order in which Terraform itself evaluates the provider blocks vs. actual resources. Please refer to [this section of Terraform docs](https://www.terraform.io/docs/configuration/providers.html#provider-configuration) for further explanation.
 
 The best-practice in this case is to ensure that the cluster itself and the Kubernetes provider resources are managed with separate `apply` operations. Data-sources can be used to convey values between the two stages as needed.
 
@@ -90,7 +88,7 @@ If you have any other static configuration setting specified in a config file or
 
 ### Statically defined credentials
 
-An other way is **statically** define TLS certificate credentials:
+Another way is **statically** define TLS certificate credentials:
 
 ```hcl
 provider "kubernetes" {
@@ -118,7 +116,8 @@ provider "kubernetes" {
 ```
 
 
-If you have **both** valid configuration in a config file and static configuration, the static one is used as override.
+
+~> If you have **both** valid configuration in a config file and static configuration, the static one is used as override.
 i.e. any static field will override its counterpart loaded from the config.
 
 ## Argument Reference
@@ -139,7 +138,7 @@ The following arguments are supported:
 * `token` - (Optional) Token of your service account.  Can be sourced from `KUBE_TOKEN`.
 * `load_config_file` - (Optional) By default the local config (~/.kube/config) is loaded when you use this provider. This option at false disables this behaviour which is desired when statically specifying the configuration or relying on in-cluster config. Can be sourced from `KUBE_LOAD_CONFIG_FILE`.
 * `exec` - (Optional) Configuration block to use an [exec-based credential plugin] (https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins), e.g. call an external command to receive user credentials.
-  * `api_version` - (Required) API version to use when decoding the ExecCredentials resource, e.g. `client.authentication.k8s.io/v1beta1`.
-  * `command` - (Required) Command to execute.
-  * `args` - (Optional) List of arguments to pass when executing the plugin.
-  * `env` - (Optional) Map of environment variables to set when executing the plugin.
+    * `api_version` - (Required) API version to use when decoding the ExecCredentials resource, e.g. `client.authentication.k8s.io/v1beta1`.
+    * `command` - (Required) Command to execute.
+    * `args` - (Optional) List of arguments to pass when executing the plugin.
+    * `env` - (Optional) Map of environment variables to set when executing the plugin.

@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -10,12 +11,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesEndpoints_basic(t *testing.T) {
 	var conf api.Endpoints
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_endpoints.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -56,6 +58,12 @@ func TestAccKubernetesEndpoints_basic(t *testing.T) {
 						},
 					}),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesEndpointsConfig_modified(name),
@@ -183,32 +191,10 @@ func TestAccKubernetesEndpoints_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesEndpoints_importBasic(t *testing.T) {
-	resourceName := "kubernetes_endpoints.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesEndpointDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesEndpointsConfig_basic(name),
-			},
-
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
-			},
-		},
-	})
-}
-
 func TestAccKubernetesEndpoints_generatedName(t *testing.T) {
 	var conf api.Endpoints
 	prefix := "tf-acc-test-gen-"
+	resourceName := "kubernetes_endpoints.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -232,23 +218,6 @@ func TestAccKubernetesEndpoints_generatedName(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.uid"),
 				),
 			},
-		},
-	})
-}
-
-func TestAccKubernetesEndpoints_importGeneratedName(t *testing.T) {
-	resourceName := "kubernetes_endpoints.test"
-	prefix := "tf-acc-test-gen-import-"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesEndpointDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesEndpointsConfig_generatedName(prefix),
-			},
-
 			{
 				ResourceName:            resourceName,
 				ImportState:             true,
@@ -279,6 +248,7 @@ func testAccCheckKubernetesEndpointDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_endpoints" {
@@ -290,7 +260,7 @@ func testAccCheckKubernetesEndpointDestroy(s *terraform.State) error {
 			return err
 		}
 
-		resp, err := conn.CoreV1().Endpoints(namespace).Get(name, meta_v1.GetOptions{})
+		resp, err := conn.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("Endpoint still exists: %s", rs.Primary.ID)
@@ -312,13 +282,14 @@ func testAccCheckKubernetesEndpointExists(n string, obj *api.Endpoints) resource
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		out, err := conn.CoreV1().Endpoints(namespace).Get(name, meta_v1.GetOptions{})
+		out, err := conn.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -329,8 +300,7 @@ func testAccCheckKubernetesEndpointExists(n string, obj *api.Endpoints) resource
 }
 
 func testAccKubernetesEndpointsConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_endpoints" "test" {
+	return fmt.Sprintf(`resource "kubernetes_endpoints" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -362,8 +332,7 @@ resource "kubernetes_endpoints" "test" {
 }
 
 func testAccKubernetesEndpointsConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_endpoints" "test" {
+	return fmt.Sprintf(`resource "kubernetes_endpoints" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -401,11 +370,11 @@ resource "kubernetes_endpoints" "test" {
       ip = "10.0.0.7"
     }
 
-		not_ready_address {
+    not_ready_address {
       ip = "10.0.0.10"
     }
 
-		not_ready_address {
+    not_ready_address {
       ip = "10.0.0.11"
     }
 
@@ -426,14 +395,13 @@ resource "kubernetes_endpoints" "test" {
       port     = 442
       protocol = "TCP"
     }
-	}
+  }
 }
 `, name)
 }
 
 func testAccKubernetesEndpointsConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_endpoints" "test" {
+	return fmt.Sprintf(`resource "kubernetes_endpoints" "test" {
   metadata {
     generate_name = "%s"
   }

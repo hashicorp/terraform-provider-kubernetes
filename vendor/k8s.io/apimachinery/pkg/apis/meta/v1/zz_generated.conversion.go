@@ -45,6 +45,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*url.Values)(nil), (*DeleteOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_url_Values_To_v1_DeleteOptions(a.(*url.Values), b.(*DeleteOptions), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*url.Values)(nil), (*ExportOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_url_Values_To_v1_ExportOptions(a.(*url.Values), b.(*ExportOptions), scope)
 	}); err != nil {
@@ -120,18 +125,28 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*[]string)(nil), (**DeletionPropagation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_Slice_string_To_Pointer_v1_DeletionPropagation(a.(*[]string), b.(**DeletionPropagation), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*[]string)(nil), (**Time)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_Slice_string_To_Pointer_v1_Time(a.(*[]string), b.(**Time), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*[]string)(nil), (*[]int32)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_Slice_string_To_Slice_int32(a.(*[]string), b.(*[]int32), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*[]string)(nil), (*DeletionPropagation)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_Slice_string_To_v1_DeletionPropagation(a.(*[]string), b.(*DeletionPropagation), scope)
+	if err := s.AddConversionFunc((*[]string)(nil), (*IncludeObjectPolicy)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_Slice_string_To_v1_IncludeObjectPolicy(a.(*[]string), b.(*IncludeObjectPolicy), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*[]string)(nil), (*IncludeObjectPolicy)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_Slice_string_To_v1_IncludeObjectPolicy(a.(*[]string), b.(*IncludeObjectPolicy), scope)
+	if err := s.AddConversionFunc((*[]string)(nil), (*ResourceVersionMatch)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_Slice_string_To_v1_ResourceVersionMatch(a.(*[]string), b.(*ResourceVersionMatch), scope)
 	}); err != nil {
 		return err
 	}
@@ -202,6 +217,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddConversionFunc((*string)(nil), (*labels.Selector)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_string_To_labels_Selector(a.(*string), b.(*labels.Selector), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*url.Values)(nil), (*DeleteOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_url_Values_To_v1_DeleteOptions(a.(*url.Values), b.(*DeleteOptions), scope)
 	}); err != nil {
 		return err
 	}
@@ -286,6 +306,39 @@ func Convert_url_Values_To_v1_CreateOptions(in *url.Values, out *CreateOptions, 
 	return autoConvert_url_Values_To_v1_CreateOptions(in, out, s)
 }
 
+func autoConvert_url_Values_To_v1_DeleteOptions(in *url.Values, out *DeleteOptions, s conversion.Scope) error {
+	// WARNING: Field TypeMeta does not have json tag, skipping.
+
+	if values, ok := map[string][]string(*in)["gracePeriodSeconds"]; ok && len(values) > 0 {
+		if err := runtime.Convert_Slice_string_To_Pointer_int64(&values, &out.GracePeriodSeconds, s); err != nil {
+			return err
+		}
+	} else {
+		out.GracePeriodSeconds = nil
+	}
+	// INFO: in.Preconditions opted out of conversion generation
+	if values, ok := map[string][]string(*in)["orphanDependents"]; ok && len(values) > 0 {
+		if err := runtime.Convert_Slice_string_To_Pointer_bool(&values, &out.OrphanDependents, s); err != nil {
+			return err
+		}
+	} else {
+		out.OrphanDependents = nil
+	}
+	if values, ok := map[string][]string(*in)["propagationPolicy"]; ok && len(values) > 0 {
+		if err := Convert_Slice_string_To_Pointer_v1_DeletionPropagation(&values, &out.PropagationPolicy, s); err != nil {
+			return err
+		}
+	} else {
+		out.PropagationPolicy = nil
+	}
+	if values, ok := map[string][]string(*in)["dryRun"]; ok && len(values) > 0 {
+		out.DryRun = *(*[]string)(unsafe.Pointer(&values))
+	} else {
+		out.DryRun = nil
+	}
+	return nil
+}
+
 func autoConvert_url_Values_To_v1_ExportOptions(in *url.Values, out *ExportOptions, s conversion.Scope) error {
 	// WARNING: Field TypeMeta does not have json tag, skipping.
 
@@ -366,6 +419,13 @@ func autoConvert_url_Values_To_v1_ListOptions(in *url.Values, out *ListOptions, 
 		}
 	} else {
 		out.ResourceVersion = ""
+	}
+	if values, ok := map[string][]string(*in)["resourceVersionMatch"]; ok && len(values) > 0 {
+		if err := Convert_Slice_string_To_v1_ResourceVersionMatch(&values, &out.ResourceVersionMatch, s); err != nil {
+			return err
+		}
+	} else {
+		out.ResourceVersionMatch = ""
 	}
 	if values, ok := map[string][]string(*in)["timeoutSeconds"]; ok && len(values) > 0 {
 		if err := runtime.Convert_Slice_string_To_Pointer_int64(&values, &out.TimeoutSeconds, s); err != nil {

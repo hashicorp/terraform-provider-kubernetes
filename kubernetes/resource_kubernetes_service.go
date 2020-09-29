@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -10,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
@@ -104,6 +105,11 @@ func resourceKubernetesService() *schema.Resource {
 										Description: "The IP protocol for this port. Supports `TCP` and `UDP`. Default is `TCP`.",
 										Optional:    true,
 										Default:     "TCP",
+										ValidateFunc: validation.StringInSlice([]string{
+											"TCP",
+											"UDP",
+											"SCTP",
+										}, false),
 									},
 									"target_port": {
 										Type:        schema.TypeString,
@@ -130,12 +136,29 @@ func resourceKubernetesService() *schema.Resource {
 							Description: "Used to maintain session affinity. Supports `ClientIP` and `None`. Defaults to `None`. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",
 							Optional:    true,
 							Default:     "None",
+							ValidateFunc: validation.StringInSlice([]string{
+								"ClientIP",
+								"None",
+							}, false),
 						},
 						"type": {
 							Type:        schema.TypeString,
 							Description: "Determines how the service is exposed. Defaults to `ClusterIP`. Valid options are `ExternalName`, `ClusterIP`, `NodePort`, and `LoadBalancer`. `ExternalName` maps to the specified `external_name`. More info: http://kubernetes.io/docs/user-guide/services#overview",
 							Optional:    true,
 							Default:     "ClusterIP",
+							ValidateFunc: validation.StringInSlice([]string{
+								"ClusterIP",
+								"ExternalName",
+								"NodePort",
+								"LoadBalancer",
+							}, false),
+						},
+						"health_check_node_port": {
+							Type:        schema.TypeInt,
+							Description: "Specifies the Healthcheck NodePort for the service. Only effects when type is set to `LoadBalancer` and external_traffic_policy is set to `Local`.",
+							Optional:    true,
+							Computed:    true,
+							ForceNew:    true,
 						},
 					},
 				},
@@ -165,6 +188,7 @@ func resourceKubernetesServiceCreate(d *schema.ResourceData, meta interface{}) e
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svc := api.Service{
@@ -172,7 +196,7 @@ func resourceKubernetesServiceCreate(d *schema.ResourceData, meta interface{}) e
 		Spec:       expandServiceSpec(d.Get("spec").([]interface{})),
 	}
 	log.Printf("[INFO] Creating new service: %#v", svc)
-	out, err := conn.CoreV1().Services(metadata.Namespace).Create(&svc)
+	out, err := conn.CoreV1().Services(metadata.Namespace).Create(ctx, &svc, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -183,7 +207,7 @@ func resourceKubernetesServiceCreate(d *schema.ResourceData, meta interface{}) e
 		log.Printf("[DEBUG] Waiting for load balancer to assign IP/hostname")
 
 		err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
-			svc, err := conn.CoreV1().Services(out.Namespace).Get(out.Name, meta_v1.GetOptions{})
+			svc, err := conn.CoreV1().Services(out.Namespace).Get(ctx, out.Name, metav1.GetOptions{})
 			if err != nil {
 				log.Printf("[DEBUG] Received error: %#v", err)
 				return resource.NonRetryableError(err)
@@ -200,7 +224,7 @@ func resourceKubernetesServiceCreate(d *schema.ResourceData, meta interface{}) e
 				"Waiting for service %q to assign IP/hostname for a load balancer", d.Id()))
 		})
 		if err != nil {
-			lastWarnings, wErr := getLastWarningsForObject(conn, out.ObjectMeta, "Service", 3)
+			lastWarnings, wErr := getLastWarningsForObject(ctx, conn, out.ObjectMeta, "Service", 3)
 			if wErr != nil {
 				return wErr
 			}
@@ -216,6 +240,7 @@ func resourceKubernetesServiceRead(d *schema.ResourceData, meta interface{}) err
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -223,7 +248,7 @@ func resourceKubernetesServiceRead(d *schema.ResourceData, meta interface{}) err
 	}
 
 	log.Printf("[INFO] Reading service %s", name)
-	svc, err := conn.CoreV1().Services(namespace).Get(name, meta_v1.GetOptions{})
+	svc, err := conn.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -254,6 +279,7 @@ func resourceKubernetesServiceUpdate(d *schema.ResourceData, meta interface{}) e
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -277,7 +303,7 @@ func resourceKubernetesServiceUpdate(d *schema.ResourceData, meta interface{}) e
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating service %q: %v", name, string(data))
-	out, err := conn.CoreV1().Services(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().Services(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update service: %s", err)
 	}
@@ -292,6 +318,7 @@ func resourceKubernetesServiceDelete(d *schema.ResourceData, meta interface{}) e
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -299,7 +326,23 @@ func resourceKubernetesServiceDelete(d *schema.ResourceData, meta interface{}) e
 	}
 
 	log.Printf("[INFO] Deleting service: %#v", name)
-	err = conn.CoreV1().Services(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+
+	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+		_, err := conn.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+				return nil
+			}
+			return resource.NonRetryableError(err)
+		}
+
+		e := fmt.Errorf("Service (%s) still exists", d.Id())
+		return resource.RetryableError(e)
+	})
 	if err != nil {
 		return err
 	}
@@ -315,6 +358,7 @@ func resourceKubernetesServiceExists(d *schema.ResourceData, meta interface{}) (
 	if err != nil {
 		return false, err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -322,7 +366,7 @@ func resourceKubernetesServiceExists(d *schema.ResourceData, meta interface{}) (
 	}
 
 	log.Printf("[INFO] Checking service %s", name)
-	_, err = conn.CoreV1().Services(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

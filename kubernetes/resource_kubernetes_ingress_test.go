@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -8,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/extensions/v1beta1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesIngress_basic(t *testing.T) {
@@ -174,6 +175,7 @@ func testAccCheckKubernetesIngressDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_ingress" {
@@ -185,7 +187,7 @@ func testAccCheckKubernetesIngressDestroy(s *terraform.State) error {
 			return err
 		}
 
-		resp, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(name, meta_v1.GetOptions{})
+		resp, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("Ingress still exists: %s", rs.Primary.ID)
@@ -207,13 +209,14 @@ func testAccCheckKubernetesIngressExists(n string, obj *api.Ingress) resource.Te
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		out, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(name, meta_v1.GetOptions{})
+		out, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -224,8 +227,7 @@ func testAccCheckKubernetesIngressExists(n string, obj *api.Ingress) resource.Te
 }
 
 func testAccKubernetesIngressConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -251,8 +253,7 @@ resource "kubernetes_ingress" "test" {
 }
 
 func testAccKubernetesIngressConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -266,8 +267,7 @@ resource "kubernetes_ingress" "test" {
 }
 
 func testAccKubernetesIngressConfig_TLS(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -285,8 +285,7 @@ resource "kubernetes_ingress" "test" {
 }
 
 func testAccKubernetesIngressConfig_TLS_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -304,8 +303,7 @@ resource "kubernetes_ingress" "test" {
 }
 
 func testAccKubernetesIngressConfig_internalKey(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
 		annotations = {
@@ -332,8 +330,7 @@ resource "kubernetes_ingress" "test" {
 }
 
 func testAccKubernetesIngressConfig_internalKey_removed(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
 		annotations = {
@@ -358,8 +355,7 @@ resource "kubernetes_ingress" "test" {
 }
 
 func testAccKubernetesIngressConfig_waitForLoadBalancer(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
 	metadata {
 		name = %q
 	}

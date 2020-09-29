@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -14,6 +15,7 @@ import (
 
 func TestAccKubernetesMutatingWebhookConfiguration_basic(t *testing.T) {
 	name := fmt.Sprintf("acc-test-%v.terraform.io", acctest.RandString(10))
+	resourceName := "kubernetes_mutating_webhook_configuration.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -24,7 +26,7 @@ func TestAccKubernetesMutatingWebhookConfiguration_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesMutatingWebhookConfigurationConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesMutatingWebhookConfigurationExists("kubernetes_mutating_webhook_configuration.test"),
+					testAccCheckKubernetesMutatingWebhookConfigurationExists(resourceName),
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_mutating_webhook_configuration.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_mutating_webhook_configuration.test", "metadata.0.resource_version"),
@@ -60,6 +62,11 @@ func TestAccKubernetesMutatingWebhookConfiguration_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testAccKubernetesMutatingWebhookConfigurationConfig_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "metadata.0.name", name),
@@ -72,10 +79,8 @@ func TestAccKubernetesMutatingWebhookConfiguration_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.admission_review_versions.0", "v1"),
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.admission_review_versions.1", "v1beta1"),
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.service.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.service.0.name", "example-service"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.service.0.namespace", "example-namespace"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.service.0.port", "443"),
+					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.service.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.url", "https://test"),
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.failure_policy", "Ignore"),
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.match_policy", "Exact"),
 					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.name", name),
@@ -109,32 +114,12 @@ func TestAccKubernetesMutatingWebhookConfiguration_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesMutatingWebhookConfiguration_importBasic(t *testing.T) {
-	resourceName := "kubernetes_mutating_webhook_configuration.test"
-	name := fmt.Sprintf("acc-test-%v.terraform.io", acctest.RandString(10))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesMutatingWebhookConfigurationDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesMutatingWebhookConfigurationConfig_basic(name),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
-
 func testAccCheckKubernetesMutatingWebhookConfigurationDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_mutating_webhook_configuration" {
@@ -148,9 +133,9 @@ func testAccCheckKubernetesMutatingWebhookConfigurationDestroy(s *terraform.Stat
 			return err
 		}
 		if useadmissionregistrationv1beta1 {
-			_, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+			_, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 		} else {
-			_, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+			_, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 		}
 
 		if err != nil {
@@ -177,6 +162,7 @@ func testAccCheckKubernetesMutatingWebhookConfigurationExists(n string) resource
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		name := rs.Primary.ID
 
@@ -185,9 +171,9 @@ func testAccCheckKubernetesMutatingWebhookConfigurationExists(n string) resource
 			return err
 		}
 		if useadmissionregistrationv1beta1 {
-			_, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+			_, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 		} else {
-			_, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+			_, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 		}
 		if err != nil {
 			return err
@@ -198,96 +184,89 @@ func testAccCheckKubernetesMutatingWebhookConfigurationExists(n string) resource
 }
 
 func testAccKubernetesMutatingWebhookConfigurationConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_mutating_webhook_configuration" "test" {
-	metadata {
-		name = %q
-	}
+	return fmt.Sprintf(`resource "kubernetes_mutating_webhook_configuration" "test" {
+  metadata {
+    name = %q
+  }
 
-	webhook {
-		name = %q
+  webhook {
+    name = %q
 
-		admission_review_versions = [
-			"v1",
-			"v1beta1"
-		]
+    admission_review_versions = [
+      "v1",
+      "v1beta1"
+    ]
 
-		client_config {
-			service {
-				namespace = "example-namespace"
-				name = "example-service"
-			}
-		}
+    client_config {
+      service {
+        namespace = "example-namespace"
+        name      = "example-service"
+      }
+    }
 
-		rule {
-			api_groups = ["apps"]
-			api_versions = ["v1"]
-			operations = ["CREATE"]
-			resources = ["pods"]
-			scope = "Namespaced"
-		}
+    rule {
+      api_groups   = ["apps"]
+      api_versions = ["v1"]
+      operations   = ["CREATE"]
+      resources    = ["pods"]
+      scope        = "Namespaced"
+    }
 
-		reinvocation_policy = "IfNeeded"
-		side_effects = "None"
-		timeout_seconds = 10
-	}
+    reinvocation_policy = "IfNeeded"
+    side_effects        = "None"
+    timeout_seconds     = 10
+  }
 }
 `, name, name)
 }
 
 func testAccKubernetesMutatingWebhookConfigurationConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_mutating_webhook_configuration" "test" {
-	metadata {
-		name = %q
-	}
+	return fmt.Sprintf(`resource "kubernetes_mutating_webhook_configuration" "test" {
+  metadata {
+    name = %q
+  }
 
-	webhook {
-		name = %q
+  webhook {
+    name = %q
 
-		failure_policy = "Ignore"
-		match_policy = "Exact"
+    failure_policy = "Ignore"
+    match_policy   = "Exact"
 
-		admission_review_versions = [
-			"v1",
-			"v1beta1"
-		]
+    admission_review_versions = [
+      "v1",
+      "v1beta1"
+    ]
 
-		client_config {
-			service {
-				namespace = "example-namespace"
-				name = "example-service"
-			}
+    client_config {
+      url = "https://test"
+    }
 
-			ca_bundle = "test"
-		}
+    rule {
+      api_groups   = ["apps"]
+      api_versions = ["v1"]
+      operations   = ["CREATE"]
+      resources    = ["pods"]
+      scope        = "Namespaced"
+    }
 
-		rule {
-			api_groups = ["apps"]
-			api_versions = ["v1"]
-			operations = ["CREATE"]
-			resources = ["pods"]
-			scope = "Namespaced"
-		}
+    rule {
+      api_groups   = ["batch"]
+      api_versions = ["v1beta1"]
+      operations   = ["CREATE"]
+      resources    = ["cronjobs"]
+      scope        = "Namespaced"
+    }
 
-		rule {
-			api_groups = ["batch"]
-			api_versions = ["v1beta1"]
-			operations = ["CREATE"]
-			resources = ["cronjobs"]
-			scope = "Namespaced"
-		}
+    object_selector {
+      match_labels = {
+        app = "test"
+      }
+    }
 
-		object_selector {
-			match_labels = {
-				app = "test"
-			}
-		}
-
-		reinvocation_policy = "Never"
-		side_effects = "NoneOnDryRun"
-		timeout_seconds = 5
-	}
+    reinvocation_policy = "Never"
+    side_effects        = "NoneOnDryRun"
+    timeout_seconds     = 5
+  }
 }
 `, name, name)
 }

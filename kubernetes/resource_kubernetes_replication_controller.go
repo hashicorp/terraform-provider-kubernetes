@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -11,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	kubernetes "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes"
 )
 
 func resourceKubernetesReplicationController() *schema.Resource {
@@ -114,6 +115,7 @@ func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta 
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
@@ -128,7 +130,7 @@ func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta 
 	}
 
 	log.Printf("[INFO] Creating new replication controller: %#v", rc)
-	out, err := conn.CoreV1().ReplicationControllers(metadata.Namespace).Create(&rc)
+	out, err := conn.CoreV1().ReplicationControllers(metadata.Namespace).Create(ctx, &rc, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to create replication controller: %s", err)
 	}
@@ -139,7 +141,7 @@ func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta 
 		d.Id(), *out.Spec.Replicas)
 	// 10 mins should be sufficient for scheduling ~10k replicas
 	err = resource.Retry(d.Timeout(schema.TimeoutCreate),
-		waitForDesiredReplicasFunc(conn, out.GetNamespace(), out.GetName()))
+		waitForDesiredReplicasFunc(ctx, conn, out.GetNamespace(), out.GetName()))
 	if err != nil {
 		return err
 	}
@@ -157,6 +159,7 @@ func resourceKubernetesReplicationControllerRead(d *schema.ResourceData, meta in
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -164,7 +167,7 @@ func resourceKubernetesReplicationControllerRead(d *schema.ResourceData, meta in
 	}
 
 	log.Printf("[INFO] Reading replication controller %s", name)
-	rc, err := conn.CoreV1().ReplicationControllers(namespace).Get(name, metav1.GetOptions{})
+	rc, err := conn.CoreV1().ReplicationControllers(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -194,6 +197,7 @@ func resourceKubernetesReplicationControllerUpdate(d *schema.ResourceData, meta 
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -218,14 +222,14 @@ func resourceKubernetesReplicationControllerUpdate(d *schema.ResourceData, meta 
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating replication controller %q: %v", name, string(data))
-	out, err := conn.CoreV1().ReplicationControllers(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().ReplicationControllers(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update replication controller: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated replication controller: %#v", out)
 
 	err = resource.Retry(d.Timeout(schema.TimeoutUpdate),
-		waitForDesiredReplicasFunc(conn, namespace, name))
+		waitForDesiredReplicasFunc(ctx, conn, namespace, name))
 	if err != nil {
 		return err
 	}
@@ -238,6 +242,7 @@ func resourceKubernetesReplicationControllerDelete(d *schema.ResourceData, meta 
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -256,19 +261,19 @@ func resourceKubernetesReplicationControllerDelete(d *schema.ResourceData, meta 
 	if err != nil {
 		return err
 	}
-	_, err = conn.CoreV1().ReplicationControllers(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	_, err = conn.CoreV1().ReplicationControllers(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return err
 	}
 
 	// Wait until all replicas are gone
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete),
-		waitForDesiredReplicasFunc(conn, namespace, name))
+		waitForDesiredReplicasFunc(ctx, conn, namespace, name))
 	if err != nil {
 		return err
 	}
 
-	err = conn.CoreV1().ReplicationControllers(namespace).Delete(name, &deleteOptions)
+	err = conn.CoreV1().ReplicationControllers(namespace).Delete(ctx, name, deleteOptions)
 	if err != nil {
 		return err
 	}
@@ -284,6 +289,7 @@ func resourceKubernetesReplicationControllerExists(d *schema.ResourceData, meta 
 	if err != nil {
 		return false, err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -291,7 +297,7 @@ func resourceKubernetesReplicationControllerExists(d *schema.ResourceData, meta 
 	}
 
 	log.Printf("[INFO] Checking replication controller %s", name)
-	_, err = conn.CoreV1().ReplicationControllers(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.CoreV1().ReplicationControllers(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil
@@ -301,9 +307,9 @@ func resourceKubernetesReplicationControllerExists(d *schema.ResourceData, meta 
 	return true, err
 }
 
-func waitForDesiredReplicasFunc(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
+func waitForDesiredReplicasFunc(ctx context.Context, conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
 	return func() *resource.RetryError {
-		rc, err := conn.CoreV1().ReplicationControllers(ns).Get(name, metav1.GetOptions{})
+		rc, err := conn.CoreV1().ReplicationControllers(ns).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
 		}

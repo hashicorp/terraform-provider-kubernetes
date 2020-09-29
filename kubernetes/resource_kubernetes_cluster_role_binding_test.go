@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -8,10 +9,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/rbac/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesClusterRoleBinding(t *testing.T) {
+func TestAccKubernetesClusterRoleBinding_basic(t *testing.T) {
 	var conf api.ClusterRoleBinding
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
@@ -158,7 +159,7 @@ func TestAccKubernetesClusterRoleBinding_serviceaccount_subject(t *testing.T) {
 func TestAccKubernetesClusterRoleBinding_group_subject(t *testing.T) {
 	var conf api.ClusterRoleBinding
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
+	resourceName := "kubernetes_cluster_role_binding.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
 		IDRefreshName: "kubernetes_cluster_role_binding.test",
@@ -184,22 +185,6 @@ func TestAccKubernetesClusterRoleBinding_group_subject(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "subject.0.kind", "Group"),
 				),
 			},
-		},
-	})
-}
-
-func TestAccKubernetesClusterRoleBinding_importBasic(t *testing.T) {
-	resourceName := "kubernetes_cluster_role_binding.test"
-	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesClusterRoleBindingDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesClusterRoleBindingConfig_basic(name),
-			},
 			{
 				ResourceName:      resourceName,
 				ImportState:       true,
@@ -209,7 +194,7 @@ func TestAccKubernetesClusterRoleBinding_importBasic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRoleBindingUpdatePatchOperationsOrderWithRemovals(t *testing.T) {
+func TestAccKubernetesClusterRoleBinding_UpdatePatchOperationsOrderWithRemovals(t *testing.T) {
 	var conf api.ClusterRoleBinding
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
@@ -303,13 +288,14 @@ func testAccCheckKubernetesClusterRoleBindingDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_cluster_role_binding" {
 			continue
 		}
 		name := rs.Primary.ID
-		resp, err := conn.RbacV1().ClusterRoleBindings().Get(name, meta_v1.GetOptions{})
+		resp, err := conn.RbacV1().ClusterRoleBindings().Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("ClusterRoleBinding still exists: %s", rs.Primary.ID)
@@ -331,9 +317,10 @@ func testAccCheckKubernetesClusterRoleBindingExists(n string, obj *api.ClusterRo
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		name := rs.Primary.ID
-		resp, err := conn.RbacV1().ClusterRoleBindings().Get(name, meta_v1.GetOptions{})
+		resp, err := conn.RbacV1().ClusterRoleBindings().Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -344,8 +331,7 @@ func testAccCheckKubernetesClusterRoleBindingExists(n string, obj *api.ClusterRo
 }
 
 func testAccKubernetesClusterRoleBindingConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -366,8 +352,7 @@ resource "kubernetes_cluster_role_binding" "test" {
 }
 
 func testAccKubernetesClusterRoleBindingConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -401,18 +386,17 @@ resource "kubernetes_cluster_role_binding" "test" {
 }
 
 func testAccKubernetesClusterRoleBindingConfig_modified_role_ref(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
 
   role_ref {
     api_group = "rbac.authorization.k8s.io"
-	# The kind field only accepts this value, anything else returns an error:
-	# roleRef.kind: Unsupported value: "Role": supported values: "ClusterRole"
-	kind      = "ClusterRole"
-    name      = "admin"
+    # The kind field only accepts this value, anything else returns an error:
+    # roleRef.kind: Unsupported value: "Role": supported values: "ClusterRole"
+    kind = "ClusterRole"
+    name = "admin"
   }
 
   subject {
@@ -438,8 +422,7 @@ resource "kubernetes_cluster_role_binding" "test" {
 }
 
 func testAccKubernetesClusterRoleBindingConfig_serviceaccount_subject(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -451,16 +434,15 @@ resource "kubernetes_cluster_role_binding" "test" {
   }
 
   subject {
-    kind      = "ServiceAccount"
-    name      = "someservice"
+    kind = "ServiceAccount"
+    name = "someservice"
   }
 }
 `, name)
 }
 
 func testAccKubernetesClusterRoleBindingConfig_group_subject(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -472,7 +454,7 @@ resource "kubernetes_cluster_role_binding" "test" {
   }
 
   subject {
-		api_group = "rbac.authorization.k8s.io"
+    api_group = "rbac.authorization.k8s.io"
     kind      = "Group"
     name      = "somegroup"
   }
@@ -481,97 +463,94 @@ resource "kubernetes_cluster_role_binding" "test" {
 }
 
 func testAccKubernetesClusterRoleBindingConfigBug_step_0(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
-    metadata {
-        name = "%s"
-    }
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
+  metadata {
+    name = "%s"
+  }
 
-    role_ref {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "ClusterRole"
-        name      = "cluster-admin"
-    }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
 
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser1"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser2"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser3"
-    }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser1"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser2"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser3"
+  }
 }
 `, name)
 }
 
 func testAccKubernetesClusterRoleBindingConfigBug_step_1(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
-    metadata {
-        name = "%s"
-    }
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
+  metadata {
+    name = "%s"
+  }
 
-    role_ref {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "ClusterRole"
-        name      = "cluster-admin"
-    }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
 
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser2"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser4"
-    }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser2"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser4"
+  }
 }
 `, name)
 }
 
 func testAccKubernetesClusterRoleBindingConfigBug_step_2(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
-    metadata {
-        name = "%s"
-    }
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
+  metadata {
+    name = "%s"
+  }
 
-    role_ref {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "ClusterRole"
-        name      = "cluster-admin"
-    }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
 
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser0"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser1"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser2"
-    }
-    subject {
-        api_group = "rbac.authorization.k8s.io"
-        kind      = "User"
-        name      = "notauser3"
-    }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser0"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser1"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser2"
+  }
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "notauser3"
+  }
 }
 `, name)
 }

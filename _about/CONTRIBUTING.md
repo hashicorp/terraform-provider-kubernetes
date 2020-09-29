@@ -16,7 +16,7 @@ To learn more about how to create issues and pull requests in this repository, a
 Clone repository to: `$GOPATH/src/github.com/hashicorp/terraform-provider-kubernetes`
 
 ```sh
-$ mkdir -p $GOPATH/src/github.com/terraform-providers; cd $GOPATH/src/github.com/terraform-providers
+$ mkdir -p $GOPATH/src/github.com/hashicorp; cd $GOPATH/src/github.com/hashicorp
 $ git clone git@github.com:hashicorp/terraform-provider-kubernetes
 ```
 
@@ -65,3 +65,7 @@ In order to run the full suite of Acceptance tests, run `make testacc`.
 ```sh
 $ make testacc
 ```
+
+### Tests
+
+In general, adding test coverage (unit tests and acceptance tests) to new features or bug fixes in your PRs, and sharing the logs of a successful test run on your branch will greatly speed up the acceptance of your PR. Most of our tests can be run against a `kind` cluster, so no additional infrastructure is required.

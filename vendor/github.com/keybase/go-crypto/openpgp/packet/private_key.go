@@ -426,8 +426,11 @@ func (pk *PrivateKey) parsePrivateKey(data []byte) (err error) {
 		return pk.parseECDHPrivateKey(data)
 	case PubKeyAlgoEdDSA:
 		return pk.parseEdDSAPrivateKey(data)
+	case PubKeyAlgoBadElGamal:
+		return errors.UnsupportedError("parsing el-gamal sign-or-encrypt privatekeys is unsupported")
+	default:
+		return errors.UnsupportedError("cannot parse this private key type")
 	}
-	panic("impossible")
 }
 
 func (pk *PrivateKey) parseRSAPrivateKey(data []byte) (err error) {

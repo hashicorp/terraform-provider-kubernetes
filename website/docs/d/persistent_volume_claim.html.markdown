@@ -1,9 +1,8 @@
 ---
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_persistent_volume_claim"
-sidebar_current: "docs-kubernetes-data-source-persistent-volume-claim"
 description: |-
-A PersistentVolumeClaim (PVC) is a request for storage by a user. This data source retrieves information about the specified PVC.
+  A PersistentVolumeClaim (PVC) is a request for storage by a user. This data source retrieves information about the specified PVC.
 ---
 
 # kubernetes_persistent_volume_claim

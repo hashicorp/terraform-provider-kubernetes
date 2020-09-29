@@ -3,7 +3,7 @@ locals {
 }
 
 provider "azurerm" {
-  version = ">= 1.28.0, <2.0.0"
+  features {}
 }
 
 data "azurerm_kubernetes_service_versions" "current" {
@@ -43,11 +43,8 @@ resource "azurerm_virtual_network" "tf-k8s-acc" {
 resource "azurerm_subnet" "tf-k8s-acc" {
   name                 = "${local.random_prefix}-internal"
   resource_group_name  = azurerm_resource_group.tf-k8s-acc.name
-  address_prefix       = "10.1.0.0/24"
+  address_prefixes     = ["10.1.0.0/24"]
   virtual_network_name = azurerm_virtual_network.tf-k8s-acc.name
-
-  # this field is deprecated and will be removed in 2.0 - but is required until then
-  route_table_id = azurerm_route_table.tf-k8s-acc.id
 }
 
 resource "azurerm_subnet_route_table_association" "tf-k8s-acc" {
@@ -71,11 +68,10 @@ resource "azurerm_kubernetes_cluster" "tf-k8s-acc" {
   #   }
   # }
 
-  agent_pool_profile {
+  default_node_pool {
     name            = "agentpool"
-    count           = var.workers_count
+    node_count      = var.workers_count
     vm_size         = var.workers_type
-    os_type         = "Linux"
     os_disk_size_gb = 30
 
     # Required for advanced networking

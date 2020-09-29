@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/terraform-providers/terraform-provider-aws/aws/internal/keyvaluetags"
 )
 
 func resourceAwsSsmParameter() *schema.Resource {
@@ -19,7 +20,6 @@ func resourceAwsSsmParameter() *schema.Resource {
 		Read:   resourceAwsSsmParameterRead,
 		Update: resourceAwsSsmParameterPut,
 		Delete: resourceAwsSsmParameterDelete,
-		Exists: resourceAwsSmmParameterExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -67,6 +67,15 @@ func resourceAwsSsmParameter() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"data_type": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+				ValidateFunc: validation.StringInSlice([]string{
+					"aws:ec2:image",
+					"text",
+				}, false),
+			},
 			"overwrite": {
 				Type:     schema.TypeBool,
 				Optional: true,
@@ -92,24 +101,9 @@ func resourceAwsSsmParameter() *schema.Resource {
 	}
 }
 
-func resourceAwsSmmParameterExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	ssmconn := meta.(*AWSClient).ssmconn
-	_, err := ssmconn.GetParameter(&ssm.GetParameterInput{
-		Name:           aws.String(d.Id()),
-		WithDecryption: aws.Bool(false),
-	})
-	if err != nil {
-		if isAWSErr(err, ssm.ErrCodeParameterNotFound, "") {
-			return false, nil
-		}
-		return false, err
-	}
-
-	return true, nil
-}
-
 func resourceAwsSsmParameterRead(d *schema.ResourceData, meta interface{}) error {
 	ssmconn := meta.(*AWSClient).ssmconn
+	ignoreTagsConfig := meta.(*AWSClient).IgnoreTagsConfig
 
 	log.Printf("[DEBUG] Reading SSM Parameter: %s", d.Id())
 
@@ -117,12 +111,24 @@ func resourceAwsSsmParameterRead(d *schema.ResourceData, meta interface{}) error
 		Name:           aws.String(d.Id()),
 		WithDecryption: aws.Bool(true),
 	})
+
+	if isAWSErr(err, ssm.ErrCodeParameterNotFound, "") && d.IsNewResource() && d.Get("data_type").(string) == "aws:ec2:image" {
+		return fmt.Errorf("error reading SSM Parameter (%s) after creation: this can indicate that the provided parameter value could not be validated by SSM", d.Id())
+	}
+
+	if isAWSErr(err, ssm.ErrCodeParameterNotFound, "") && !d.IsNewResource() {
+		log.Printf("[WARN] SSM Parameter (%s) not found, removing from state", d.Id())
+		d.SetId("")
+		return nil
+	}
+
 	if err != nil {
-		return fmt.Errorf("error getting SSM parameter: %s", err)
+		return fmt.Errorf("error reading SSM Parameter (%s): %w", d.Id(), err)
 	}
 
 	param := resp.Parameter
-	d.Set("name", param.Name)
+	name := *param.Name
+	d.Set("name", name)
 	d.Set("type", param.Type)
 	d.Set("value", param.Value)
 	d.Set("version", param.Version)
@@ -132,7 +138,7 @@ func resourceAwsSsmParameterRead(d *schema.ResourceData, meta interface{}) error
 			{
 				Key:    aws.String("Name"),
 				Option: aws.String("Equals"),
-				Values: []*string{aws.String(d.Get("name").(string))},
+				Values: []*string{aws.String(name)},
 			},
 		},
 	}
@@ -155,14 +161,16 @@ func resourceAwsSsmParameterRead(d *schema.ResourceData, meta interface{}) error
 		d.Set("tier", detail.Tier)
 	}
 	d.Set("allowed_pattern", detail.AllowedPattern)
+	d.Set("data_type", detail.DataType)
 
-	if tagList, err := ssmconn.ListTagsForResource(&ssm.ListTagsForResourceInput{
-		ResourceId:   aws.String(d.Get("name").(string)),
-		ResourceType: aws.String("Parameter"),
-	}); err != nil {
-		return fmt.Errorf("Failed to get SSM parameter tags for %s: %s", d.Get("name"), err)
-	} else {
-		d.Set("tags", tagsToMapSSM(tagList.TagList))
+	tags, err := keyvaluetags.SsmListTags(ssmconn, name, ssm.ResourceTypeForTaggingParameter)
+
+	if err != nil {
+		return fmt.Errorf("error listing tags for SSM Parameter (%s): %s", name, err)
+	}
+
+	if err := d.Set("tags", tags.IgnoreAws().IgnoreConfig(ignoreTagsConfig).Map()); err != nil {
+		return fmt.Errorf("error setting tags: %s", err)
 	}
 
 	arn := arn.ARN{
@@ -206,13 +214,16 @@ func resourceAwsSsmParameterPut(d *schema.ResourceData, meta interface{}) error 
 		AllowedPattern: aws.String(d.Get("allowed_pattern").(string)),
 	}
 
+	if v, ok := d.GetOk("data_type"); ok {
+		paramInput.DataType = aws.String(v.(string))
+	}
+
 	if d.HasChange("description") {
 		_, n := d.GetChange("description")
 		paramInput.Description = aws.String(n.(string))
 	}
 
-	if keyID, ok := d.GetOk("key_id"); ok {
-		log.Printf("[DEBUG] Setting key_id for SSM Parameter %v: %s", d.Get("name"), keyID)
+	if keyID, ok := d.GetOk("key_id"); ok && d.Get("type").(string) == ssm.ParameterTypeSecureString {
 		paramInput.SetKeyId(keyID.(string))
 	}
 
@@ -228,8 +239,13 @@ func resourceAwsSsmParameterPut(d *schema.ResourceData, meta interface{}) error 
 		return fmt.Errorf("error creating SSM parameter: %s", err)
 	}
 
-	if err := setTagsSSM(ssmconn, d, d.Get("name").(string), "Parameter"); err != nil {
-		return fmt.Errorf("error creating SSM parameter tags: %s", err)
+	name := d.Get("name").(string)
+	if d.HasChange("tags") {
+		o, n := d.GetChange("tags")
+
+		if err := keyvaluetags.SsmUpdateTags(ssmconn, name, ssm.ResourceTypeForTaggingParameter, o, n); err != nil {
+			return fmt.Errorf("error updating SSM Parameter (%s) tags: %s", name, err)
+		}
 	}
 
 	d.SetId(d.Get("name").(string))

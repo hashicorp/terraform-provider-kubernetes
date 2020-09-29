@@ -42,3 +42,30 @@ func isSpace(ch rune) bool {
 func isDelimiter(ch rune) bool {
 	return ch == '-' || ch == '_' || isSpace(ch)
 }
+
+// iterFunc is a callback that is called fro a specific position in a string. Its arguments are the
+// rune at the respective string position as well as the previous and the next rune. If curr is at the
+// first position of the string prev is zero. If curr is at the end of the string next is zero.
+type iterFunc func(prev, curr, next rune)
+
+// stringIter iterates over a string, invoking the callback for every single rune in the string.
+func stringIter(s string, callback iterFunc) {
+	var prev rune
+	var curr rune
+	for _, next := range s {
+		if curr == 0 {
+			prev = curr
+			curr = next
+			continue
+		}
+
+		callback(prev, curr, next)
+
+		prev = curr
+		curr = next
+	}
+
+	if len(s) > 0 {
+		callback(prev, curr, 0)
+	}
+}

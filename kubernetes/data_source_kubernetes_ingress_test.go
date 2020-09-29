@@ -41,8 +41,7 @@ func TestAccKubernetesDataSourceIngress_basic(t *testing.T) {
 }
 
 func testAccKubernetesDataSourceIngressConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
 	metadata {
 		name = "%s"
 	}

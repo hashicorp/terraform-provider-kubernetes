@@ -31,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/recognizer"
 	"k8s.io/apimachinery/pkg/util/framer"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // NewSerializer creates a JSON serializer that handles encoding versioned objects into the proper JSON form. If typer
@@ -140,27 +140,7 @@ func (customNumberDecoder) Decode(ptr unsafe.Pointer, iter *jsoniter.Iterator) {
 		}
 		iter.ReportError("DecodeNumber", err.Error())
 	default:
-		// init depth, if needed
-		if iter.Attachment == nil {
-			iter.Attachment = int(1)
-		}
-
-		// remember current depth
-		originalAttachment := iter.Attachment
-
-		// increment depth before descending
-		if i, ok := iter.Attachment.(int); ok {
-			iter.Attachment = i + 1
-			if i > 10000 {
-				iter.ReportError("parse", "exceeded max depth")
-				return
-			}
-		}
-
 		*(*interface{})(ptr) = iter.Read()
-
-		// restore current depth
-		iter.Attachment = originalAttachment
 	}
 }
 

@@ -215,215 +215,227 @@ func TestAccKubernetesPod_with_pod_anti_affinity_with_preferred_during_schedulin
 }
 
 func testAccKubernetesPodConfigWithNodeAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`
-	resource "kubernetes_pod" "test" {
-		metadata {
-			labels = {
-				app = "pod_label"
-			}
-			name = "%s"
-		}
-		spec {
-			affinity {
-				node_affinity {
-					required_during_scheduling_ignored_during_execution {
-						node_selector_term {
-							match_expressions {
-								key = "kubernetes.io/hostname"
-								operator = "NotIn"
-								values = ["foo", "bar"]
-							}
-							match_expressions {
-								key = "beta.kubernetes.io/os"
-								operator = "In"
-								values = ["linux"]
-							}
-						}
-					}
-				}
-			}
-			container {
-				image = "%s"
-				name  = "containername"
-			}
-		}
-	}
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+  lifecycle {
+    ignore_changes = [ metadata[0].annotations ]
+  }
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+    name = "%s"
+  }
+  spec {
+    affinity {
+      node_affinity {
+        required_during_scheduling_ignored_during_execution {
+          node_selector_term {
+            match_expressions {
+              key      = "kubernetes.io/hostname"
+              operator = "NotIn"
+              values   = ["foo", "bar"]
+            }
+            match_expressions {
+              key      = "beta.kubernetes.io/os"
+              operator = "In"
+              values   = ["linux"]
+            }
+          }
+        }
+      }
+    }
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+}
 		`, podName, imageName)
 }
 
 func testAccKubernetesPodConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`
-	resource "kubernetes_pod" "test" {
-		metadata {
-			labels = {
-				app = "pod_label"
-			}
-			name = "%s"
-		}
-		spec {
-			affinity {
-				node_affinity {
-					preferred_during_scheduling_ignored_during_execution {
-						weight = 1
-						preference {
-							match_expressions {
-								key = "kubernetes.io/hostname"
-								operator = "NotIn"
-								values = ["foo", "bar"]
-							}
-							match_expressions {
-								key = "beta.kubernetes.io/os"
-								operator = "In"
-								values = ["linux"]
-							}
-						}
-					}
-				}
-			}
-			container {
-				image = "%s"
-				name  = "containername"
-			}
-		}
-	}
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+  lifecycle {
+    ignore_changes = [ metadata[0].annotations ]
+  }
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+    name = "%s"
+  }
+  spec {
+    affinity {
+      node_affinity {
+        preferred_during_scheduling_ignored_during_execution {
+          weight = 1
+          preference {
+            match_expressions {
+              key      = "kubernetes.io/hostname"
+              operator = "NotIn"
+              values   = ["foo", "bar"]
+            }
+            match_expressions {
+              key      = "beta.kubernetes.io/os"
+              operator = "In"
+              values   = ["linux"]
+            }
+          }
+        }
+      }
+    }
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+}
 		`, podName, imageName)
 }
 
 func testAccKubernetesPodConfigWithPodAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`
-	resource "kubernetes_pod" "test" {
-		metadata {
-			labels = {
-				app = "pod_label"
-			}
-			name = "%s"
-		}
-		spec {
-			affinity {
-				pod_affinity {
-					required_during_scheduling_ignored_during_execution {
-						label_selector {
-							match_expressions {
-								key = "security"
-								operator = "NotIn"
-								values = ["foo", "bar"]
-							}
-						}
-						topology_key = "kubernetes.io/hostname"
-					}
-				}
-			}
-			container {
-				image = "%s"
-				name  = "containername"
-			}
-		}
-	}
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+  lifecycle {
+    ignore_changes = [ metadata[0].annotations ]
+  }
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+    name = "%s"
+  }
+  spec {
+    affinity {
+      pod_affinity {
+        required_during_scheduling_ignored_during_execution {
+          label_selector {
+            match_expressions {
+              key      = "security"
+              operator = "NotIn"
+              values   = ["foo", "bar"]
+            }
+          }
+          topology_key = "kubernetes.io/hostname"
+        }
+      }
+    }
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+}
 		`, podName, imageName)
 }
 
 func testAccKubernetesPodConfigWithPodAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`
-	resource "kubernetes_pod" "test" {
-		metadata {
-			labels = {
-				app = "pod_label"
-			}
-			name = "%s"
-		}
-		spec {
-			affinity {
-				pod_affinity {
-					preferred_during_scheduling_ignored_during_execution {
-						weight = 100
-						pod_affinity_term {
-							label_selector {
-								match_expressions {
-									key = "security"
-									operator = "NotIn"
-									values = ["foo", "bar"]
-								}
-							}
-              namespaces = ["default"]
-							topology_key = "kubernetes.io/hostname"
-						}
-					}
-				}
-			}
-			container {
-				image = "%s"
-				name  = "containername"
-			}
-		}
-	}
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+  lifecycle {
+    ignore_changes = [ metadata[0].annotations ]
+  }
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+    name = "%s"
+  }
+  spec {
+    affinity {
+      pod_affinity {
+        preferred_during_scheduling_ignored_during_execution {
+          weight = 100
+          pod_affinity_term {
+            label_selector {
+              match_expressions {
+                key      = "security"
+                operator = "NotIn"
+                values   = ["foo", "bar"]
+              }
+            }
+            namespaces   = ["default"]
+            topology_key = "kubernetes.io/hostname"
+          }
+        }
+      }
+    }
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+}
 		`, podName, imageName)
 }
 
 func testAccKubernetesPodConfigWithPodAntiAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`
-	resource "kubernetes_pod" "test" {
-		metadata {
-			labels = {
-				app = "pod_label"
-			}
-			name = "%s"
-		}
-		spec {
-			affinity {
-				pod_anti_affinity {
-					required_during_scheduling_ignored_during_execution {
-						label_selector {
-							match_expressions {
-								key = "security"
-								operator = "NotIn"
-								values = ["foo", "bar"]
-							}
-						}
-						topology_key = "kubernetes.io/hostname"
-					}
-				}
-			}
-			container {
-				image = "%s"
-				name  = "containername"
-			}
-		}
-	}
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+  lifecycle {
+    ignore_changes = [ metadata[0].annotations ]
+  }
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+    name = "%s"
+  }
+  spec {
+    affinity {
+      pod_anti_affinity {
+        required_during_scheduling_ignored_during_execution {
+          label_selector {
+            match_expressions {
+              key      = "security"
+              operator = "NotIn"
+              values   = ["foo", "bar"]
+            }
+          }
+          topology_key = "kubernetes.io/hostname"
+        }
+      }
+    }
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+}
 		`, podName, imageName)
 }
 
 func testAccKubernetesPodConfigWithPodAntiAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`
-	resource "kubernetes_pod" "test" {
-		metadata {
-			labels = {
-				app = "pod_label"
-			}
-			name = "%s"
-		}
-		spec {
-			affinity {
-				pod_anti_affinity {
-					preferred_during_scheduling_ignored_during_execution {
-						weight = 100
-						pod_affinity_term {
-							label_selector {
-								match_expressions {
-									key = "security"
-									operator = "NotIn"
-									values = ["foo", "bar"]
-								}
-							}
-							topology_key = "kubernetes.io/hostname"
-						}
-					}
-				}
-			}
-			container {
-				image = "%s"
-				name  = "containername"
-			}
-		}
-	}
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+  lifecycle {
+    ignore_changes = [ metadata[0].annotations ]
+  }
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+    name = "%s"
+  }
+  spec {
+    affinity {
+      pod_anti_affinity {
+        preferred_during_scheduling_ignored_during_execution {
+          weight = 100
+          pod_affinity_term {
+            label_selector {
+              match_expressions {
+                key      = "security"
+                operator = "NotIn"
+                values   = ["foo", "bar"]
+              }
+            }
+            topology_key = "kubernetes.io/hostname"
+          }
+        }
+      }
+    }
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+}
 		`, podName, imageName)
 }

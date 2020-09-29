@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -187,50 +188,25 @@ func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPersistentVolume_googleCloud_importBasic(t *testing.T) {
-	resourceName := "kubernetes_persistent_volume.test"
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-	name := fmt.Sprintf("tf-acc-test-import-%s", randString)
-	diskName := fmt.Sprintf("tf-acc-test-disk-%s", randString)
-
-	zone := os.Getenv("GOOGLE_ZONE")
-	region := os.Getenv("GOOGLE_REGION")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesPersistentVolumeDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone, region),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
-
 func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
 	var conf api.PersistentVolume
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 	diskName := fmt.Sprintf("tf-acc-test-disk-%s", randString)
+	resourceName := "kubernetes_persistent_volume.test"
 
 	zone := os.Getenv("GOOGLE_ZONE")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
-		IDRefreshName: "kubernetes_persistent_volume.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_volumeSource(name, diskName, zone),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
+					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.labels.%", "0"),
@@ -247,6 +223,11 @@ func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.gce_persistent_disk.#", "1"),
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.gce_persistent_disk.0.pd_name"),
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			{
 				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/custom/testing/path", ""),
@@ -327,6 +308,10 @@ func TestAccKubernetesPersistentVolume_hostPath_volumeSource(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.host_path.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.host_path.0.path", "/second/path"),
 				),
+			},
+			{
+				Config:   testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource_volumeMode(name, "/second/path", ""),
+				PlanOnly: true,
 			},
 		},
 	})
@@ -625,6 +610,11 @@ func TestAccKubernetesPersistentVolume_csi_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testAccKubernetesPersistentVolumeConfig_csi_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf),
@@ -651,28 +641,6 @@ func TestAccKubernetesPersistentVolume_csi_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_source.0.csi.0.read_only", "true"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_source.0.csi.0.fs_type", "ext4"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesPersistentVolume_csi_importBasic(t *testing.T) {
-	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_persistent_volume.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_persistent_volume.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesPersistentVolumeConfig_csi_basic(name),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
 			},
 		},
 	})
@@ -729,14 +697,54 @@ func TestAccKubernetesPersistentVolume_csi_secrets(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPersistentVolume_volumeMode(t *testing.T) {
+	var conf api.PersistentVolume
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_persistent_volume.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_persistent_volume.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPersistentVolumeVolumeModeConfig(name, "Block"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
+					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "3"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelTwo", "two"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelThree", "three"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.capacity.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.capacity.storage", "5Gi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_mode", "Block"),
+				),
+			},
+		},
+	})
+}
+
 func waitForPersistenceVolumeDeleted(pvName string, poll, timeout time.Duration) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(poll) {
-		_, err := conn.CoreV1().PersistentVolumes().Get(pvName, meta_v1.GetOptions{})
+		_, err := conn.CoreV1().PersistentVolumes().Get(ctx, pvName, meta_v1.GetOptions{})
 		if err != nil && apierrs.IsNotFound(err) {
 			return nil
 		}
@@ -749,6 +757,7 @@ func testAccCheckKubernetesPersistentVolumeDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	timeout := 5 * time.Second
 	poll := 1 * time.Second
@@ -758,7 +767,7 @@ func testAccCheckKubernetesPersistentVolumeDestroy(s *terraform.State) error {
 			continue
 		}
 		name := rs.Primary.ID
-		resp, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
+		resp, err := conn.CoreV1().PersistentVolumes().Get(ctx, name, meta_v1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return waitForPersistenceVolumeDeleted(name, poll, timeout)
@@ -780,9 +789,9 @@ func testAccCheckKubernetesPersistentVolumeExists(n string, obj *api.PersistentV
 		if err != nil {
 			return err
 		}
-
+		ctx := context.TODO()
 		name := rs.Primary.ID
-		out, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
+		out, err := conn.CoreV1().PersistentVolumes().Get(ctx, name, meta_v1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -793,8 +802,7 @@ func testAccCheckKubernetesPersistentVolumeExists(n string, obj *api.PersistentV
 }
 
 func testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone string, region string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -829,17 +837,17 @@ resource "kubernetes_persistent_volume" "test" {
           match_expressions {
             key      = "test"
             operator = "Exists"
-		  }
-		  match_expressions {
-			  key = "failure-domain.beta.kubernetes.io/zone"
-			  operator = "In"
-			  values = ["%s"]
-		  }
-		  match_expressions {
-				key = "failure-domain.beta.kubernetes.io/region"
-				operator = "In"
-				values = ["%s"]
-		  }
+          }
+          match_expressions {
+            key      = "failure-domain.beta.kubernetes.io/zone"
+            operator = "In"
+            values   = ["%s"]
+          }
+          match_expressions {
+            key      = "failure-domain.beta.kubernetes.io/region"
+            operator = "In"
+            values   = ["%s"]
+          }
         }
       }
     }
@@ -857,8 +865,7 @@ resource "google_compute_disk" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_googleCloud_modified(name, diskName, zone string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -902,8 +909,7 @@ resource "google_compute_disk" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_googleCloud_volumeSource(name, diskName, zone string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     name = "%s"
   }
@@ -934,8 +940,7 @@ resource "google_compute_disk" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_aws_basic(name, diskName, zone string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -978,8 +983,7 @@ resource "aws_ebs_volume" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_aws_modified(name, diskName, zone string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -1025,8 +1029,7 @@ resource "aws_ebs_volume" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_csi_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -1065,8 +1068,7 @@ resource "kubernetes_persistent_volume" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_csi_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -1093,8 +1095,8 @@ resource "kubernetes_persistent_volume" "test" {
       csi {
         driver        = %[1]q
         volume_handle = %[1]q
-        read_only     =  true
-        fs_type       =  "ext4"
+        read_only     = true
+        fs_type       = "ext4"
 
         volume_attributes = {
           "bar" = "foo"
@@ -1107,8 +1109,7 @@ resource "kubernetes_persistent_volume" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_csi_secrets(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -1162,9 +1163,44 @@ resource "kubernetes_persistent_volume" "test" {
 `, name)
 }
 
+func testAccKubernetesPersistentVolumeVolumeModeConfig(name, mode string) string {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
+  metadata {
+    annotations = {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels = {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    capacity = {
+      storage = "5Gi"
+    }
+
+    access_modes = ["ReadWriteOnce"]
+    volume_mode  = "%s"
+
+    persistent_volume_source {
+      host_path {
+        path = "/first/path"
+        type = "DirectoryOrCreate"
+      }
+    }
+  }
+}
+`, name, mode)
+}
+
 func testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, path, typ string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     name = "%s"
   }
@@ -1187,9 +1223,33 @@ resource "kubernetes_persistent_volume" "test" {
 `, name, path, typ)
 }
 
+func testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource_volumeMode(name, path, typ string) string {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    capacity = {
+      storage = "123Gi"
+    }
+
+    access_modes = ["ReadWriteOnce"]
+    volume_mode  = "Filesystem"
+
+    persistent_volume_source {
+      host_path {
+        path = "%s"
+        type = "%s"
+      }
+    }
+  }
+}
+`, name, path, typ)
+}
+
 func testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, path, hostname string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     name = "%s"
   }
@@ -1223,8 +1283,7 @@ resource "kubernetes_persistent_volume" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_cephFsSecretRef(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     name = "%s"
   }
@@ -1251,8 +1310,7 @@ resource "kubernetes_persistent_volume" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_storageClass(name, diskName, storageClassName, storageClassName2, zone, refName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     name = "%s"
   }
@@ -1309,8 +1367,7 @@ resource "kubernetes_storage_class" "test2" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity(name, nodeAffinity string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     name = "%s"
   }
@@ -1330,8 +1387,7 @@ resource "kubernetes_persistent_volume" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity_match(name, selectorLabel, selectorValue string) string {
-	nodeAffinity := fmt.Sprintf(`
-    node_affinity {
+	nodeAffinity := fmt.Sprintf(`    node_affinity {
       required {
         node_selector_term {
           match_expressions {
@@ -1351,8 +1407,7 @@ func testAccKubernetesPersistentVolumeConfig_hostPath_withoutNodeAffinity(name s
 }
 
 func testAccKubernetesPersistentVolumeConfig_hostPath_mountOptions(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     name = "%s"
   }

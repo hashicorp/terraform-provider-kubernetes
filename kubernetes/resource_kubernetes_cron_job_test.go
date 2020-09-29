@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -8,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"k8s.io/api/batch/v1beta1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesCronJob_basic(t *testing.T) {
@@ -116,6 +117,7 @@ func testAccCheckKubernetesCronJobDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_cron_job" {
@@ -127,7 +129,7 @@ func testAccCheckKubernetesCronJobDestroy(s *terraform.State) error {
 			return err
 		}
 
-		resp, err := conn.BatchV1beta1().CronJobs(namespace).Get(name, meta_v1.GetOptions{})
+		resp, err := conn.BatchV1beta1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("CronJob still exists: %s", rs.Primary.ID)
@@ -149,13 +151,14 @@ func testAccCheckKubernetesCronJobExists(n string, obj *v1beta1.CronJob) resourc
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		out, err := conn.BatchV1beta1().CronJobs(namespace).Get(name, meta_v1.GetOptions{})
+		out, err := conn.BatchV1beta1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -166,8 +169,7 @@ func testAccCheckKubernetesCronJobExists(n string, obj *v1beta1.CronJob) resourc
 }
 
 func testAccKubernetesCronJobConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cron_job" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -199,8 +201,7 @@ resource "kubernetes_cron_job" "test" {
 }
 
 func testAccKubernetesCronJobConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cron_job" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -231,8 +232,7 @@ resource "kubernetes_cron_job" "test" {
 }
 
 func testAccKubernetesCronJobConfig_extra(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cron_job" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
 	metadata {
 		name = "%s"
 	}
@@ -263,8 +263,7 @@ resource "kubernetes_cron_job" "test" {
 }
 
 func testAccKubernetesCronJobConfig_extraModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cron_job" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
 	metadata {
 		name = "%s"
 	}

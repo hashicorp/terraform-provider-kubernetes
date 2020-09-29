@@ -1,7 +1,6 @@
 ---
 layout: "kubernetes"
 page_title: "Kubernetes: Getting Started with Kubernetes provider"
-sidebar_current: "docs-kubernetes-guide-getting-started"
 description: |-
   This guide focuses on scheduling Kubernetes resources like Pods,
   Replication Controllers, Services etc. on top of a properly configured
@@ -11,6 +10,9 @@ description: |-
 # Getting Started with Kubernetes provider
 
 ## Kubernetes
+
+-> Visit the [Manage Kubernetes Resources via Terraform](https://learn.hashicorp.com/tutorials/terraform/kubernetes-provider?in=terraform/kubernetes&utm_source=WEBSITE&utm_medium=WEB_IO&utm_offer=ARTICLE_PAGE&utm_content=DOCS) Learn tutorial for an interactive getting
+started experience.
 
 [Kubernetes](https://kubernetes.io/) (K8S) is an open-source workload scheduler 
 with focus on containerized applications.
@@ -26,25 +28,25 @@ a properly configured & running Kubernetes cluster.
 The guide also expects you to run the cluster on a cloud provider
 where Kubernetes can automatically provision a load balancer.
 
-## Why Terraform?
+## Why Terraform
 
 While you could use `kubectl` or similar CLI-based tools mapped to API calls
 to manage all Kubernetes resources described in YAML files,
 orchestration with Terraform presents a few benefits.
 
- - Use the same [configuration language](/docs/configuration/syntax.html)
+- Use the same [configuration language](/docs/configuration/syntax.html)
     to provision the Kubernetes infrastructure and to deploy applications into it.
- - drift detection - `terraform plan` will always present you the difference
+- drift detection - `terraform plan` will always present you the difference
     between reality at a given time and config you intend to apply.
- - full lifecycle management - Terraform doesn't just initially create resources,
+- full lifecycle management - Terraform doesn't just initially create resources,
     but offers a single command for creation, update, and deletion of tracked
     resources without needing to inspect the API to identify those resources.
- - synchronous feedback - While asynchronous behaviour is often useful,
+- synchronous feedback - While asynchronous behaviour is often useful,
     sometimes it's counter-productive as the job of identifying operation result
     (failures or details of created resource) is left to the user. e.g. you don't
     have IP/hostname of load balancer until it has finished provisioning,
     hence you can't create any DNS record pointing to it.
- - [graph of relationships](https://www.terraform.io/docs/internals/graph.html) -
+- [graph of relationships](https://www.terraform.io/docs/internals/graph.html) -
     Terraform understands relationships between resources which may help
     in scheduling - e.g. if a Persistent Volume Claim claims space from
     a particular Persistent Volume Terraform won't even attempt to create
@@ -79,7 +81,7 @@ provider "kubernetes" {
   client_key             = file("~/.kube/client-key.pem")
   cluster_ca_certificate = file("~/.kube/cluster-ca-cert.pem")
 
-  load_config_file = false    # when you wish not to load the local config file
+  load_config_file = false # when you wish not to load the local config file
 }
 ```
 
@@ -92,7 +94,7 @@ provider "kubernetes" {
   username = "ClusterMaster"
   password = "MindTheGap"
 
-  load_config_file = false    # when you wish not to load the local config file
+  load_config_file = false # when you wish not to load the local config file
 }
 ```
 
@@ -106,7 +108,7 @@ Initializing the backend...
 
 Initializing provider plugins...
 - Checking for available provider plugins...
-- Downloading plugin for provider "kubernetes" (terraform-providers/kubernetes) 1.10.1...
+- Downloading plugin for provider "kubernetes" (hashicorp/kubernetes) 1.10.1...
 
 The following providers do not have any version constraints in configuration,
 so the latest version was installed.
@@ -251,6 +253,7 @@ Terraform will perform the following actions:
       + spec {
           + automount_service_account_token  = false
           + dns_policy                       = "ClusterFirst"
+          + enable_service_links             = false
           + host_ipc                         = false
           + host_network                     = false
           + host_pid                         = false
@@ -696,13 +699,15 @@ accordingly.
 
 ```hcl
 resource "kubernetes_deployment" "example" {
-# ...
-
+  metadata {
+    #...
+  }
   spec {
-    replicas = 5
-
-# ...
-
+    replicas = 2
+  }
+  template {
+    #...
+  }
 }
 ```
 

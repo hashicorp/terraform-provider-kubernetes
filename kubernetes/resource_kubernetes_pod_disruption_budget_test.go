@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -8,23 +9,24 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/policy/v1beta1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesPodDisruptionBudget_basic(t *testing.T) {
 	var conf api.PodDisruptionBudget
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_pod_disruption_budget.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_pod_disruption_budget.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPodDisruptionBudgetDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodDisruptionBudgetConfig_maxUnavailable(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodDisruptionBudgetExists("kubernetes_pod_disruption_budget.test", &conf),
+					testAccCheckKubernetesPodDisruptionBudgetExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
@@ -48,9 +50,14 @@ func TestAccKubernetesPodDisruptionBudget_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testAccKubernetesPodDisruptionBudgetConfig_minAvailable(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodDisruptionBudgetExists("kubernetes_pod_disruption_budget.test", &conf),
+					testAccCheckKubernetesPodDisruptionBudgetExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
@@ -81,32 +88,12 @@ func TestAccKubernetesPodDisruptionBudget_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPodDisruptionBudget_importBasic(t *testing.T) {
-	resourceName := "kubernetes_pod_disruption_budget.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesPodDisruptionBudgetDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesPodDisruptionBudgetConfig_minAvailable(name),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-		},
-	})
-}
-
 func testAccCheckKubernetesPodDisruptionBudgetDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_pod_disruption_budget" {
@@ -118,7 +105,7 @@ func testAccCheckKubernetesPodDisruptionBudgetDestroy(s *terraform.State) error 
 			return err
 		}
 
-		resp, err := conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Get(name, meta_v1.GetOptions{})
+		resp, err := conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Namespace == namespace && resp.Name == name {
 				return fmt.Errorf("Pod Disruption Budget still exists: %s", rs.Primary.ID)
@@ -140,13 +127,14 @@ func testAccCheckKubernetesPodDisruptionBudgetExists(n string, obj *api.PodDisru
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		out, err := conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Get(name, meta_v1.GetOptions{})
+		out, err := conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -157,8 +145,7 @@ func testAccCheckKubernetesPodDisruptionBudgetExists(n string, obj *api.PodDisru
 }
 
 func testAccKubernetesPodDisruptionBudgetConfig_maxUnavailable(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod_disruption_budget" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_disruption_budget" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -187,8 +174,7 @@ resource "kubernetes_pod_disruption_budget" "test" {
 
 func testAccKubernetesPodDisruptionBudgetConfig_minAvailable(name string) string {
 	// Note the percent sign in min_available is golang-escaped to be double percent signs
-	return fmt.Sprintf(`
-resource "kubernetes_pod_disruption_budget" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_disruption_budget" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -207,9 +193,9 @@ resource "kubernetes_pod_disruption_budget" "test" {
     min_available = "75%%"
     selector {
       match_expressions {
-        key = "name"
+        key      = "name"
         operator = "In"
-        values = ["foo", "apps"]
+        values   = ["foo", "apps"]
       }
     }
   }

@@ -1,13 +1,14 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
@@ -46,6 +47,7 @@ func resourceKubernetesSecretCreate(d *schema.ResourceData, meta interface{}) er
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	secret := api.Secret{
@@ -58,7 +60,7 @@ func resourceKubernetesSecretCreate(d *schema.ResourceData, meta interface{}) er
 	}
 
 	log.Printf("[INFO] Creating new secret: %#v", secret)
-	out, err := conn.CoreV1().Secrets(metadata.Namespace).Create(&secret)
+	out, err := conn.CoreV1().Secrets(metadata.Namespace).Create(ctx, &secret, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -74,6 +76,7 @@ func resourceKubernetesSecretRead(d *schema.ResourceData, meta interface{}) erro
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -81,7 +84,7 @@ func resourceKubernetesSecretRead(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	log.Printf("[INFO] Reading secret %s", name)
-	secret, err := conn.CoreV1().Secrets(namespace).Get(name, meta_v1.GetOptions{})
+	secret, err := conn.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -103,6 +106,7 @@ func resourceKubernetesSecretUpdate(d *schema.ResourceData, meta interface{}) er
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -127,7 +131,7 @@ func resourceKubernetesSecretUpdate(d *schema.ResourceData, meta interface{}) er
 	}
 
 	log.Printf("[INFO] Updating secret %q: %v", name, data)
-	out, err := conn.CoreV1().Secrets(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().Secrets(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update secret: %s", err)
 	}
@@ -143,6 +147,7 @@ func resourceKubernetesSecretDelete(d *schema.ResourceData, meta interface{}) er
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -150,7 +155,7 @@ func resourceKubernetesSecretDelete(d *schema.ResourceData, meta interface{}) er
 	}
 
 	log.Printf("[INFO] Deleting secret: %q", name)
-	err = conn.CoreV1().Secrets(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().Secrets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -167,6 +172,7 @@ func resourceKubernetesSecretExists(d *schema.ResourceData, meta interface{}) (b
 	if err != nil {
 		return false, err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -174,7 +180,7 @@ func resourceKubernetesSecretExists(d *schema.ResourceData, meta interface{}) (b
 	}
 
 	log.Printf("[INFO] Checking secret %s", name)
-	_, err = conn.CoreV1().Secrets(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

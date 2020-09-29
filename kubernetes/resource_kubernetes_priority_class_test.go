@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -8,23 +9,24 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/scheduling/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 	var conf api.PriorityClass
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_priority_class.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_priority_class.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPriorityClassDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPriorityClassConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPriorityClassExists("kubernetes_priority_class.test", &conf),
+					testAccCheckKubernetesPriorityClassExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
@@ -42,9 +44,15 @@ func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
 				Config: testAccKubernetesPriorityClassConfig_metaModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPriorityClassExists("kubernetes_priority_class.test", &conf),
+					testAccCheckKubernetesPriorityClassExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -65,7 +73,7 @@ func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesPriorityClassConfig_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPriorityClassExists("kubernetes_priority_class.test", &conf),
+					testAccCheckKubernetesPriorityClassExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.%", "0"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.labels.%", "0"),
@@ -114,33 +122,12 @@ func TestAccKubernetesPriorityClass_generatedName(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPriorityClass_importBasic(t *testing.T) {
-	resourceName := "kubernetes_priority_class.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesPriorityClassDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesPriorityClassConfig_basic(name),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
-			},
-		},
-	})
-}
-
 func testAccCheckKubernetesPriorityClassDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_priority_class" {
@@ -149,7 +136,7 @@ func testAccCheckKubernetesPriorityClassDestroy(s *terraform.State) error {
 
 		name := rs.Primary.ID
 
-		resp, err := conn.SchedulingV1().PriorityClasses().Get(name, meta_v1.GetOptions{})
+		resp, err := conn.SchedulingV1().PriorityClasses().Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == name {
 				return fmt.Errorf("Resource Quota still exists: %s", rs.Primary.ID)
@@ -171,10 +158,11 @@ func testAccCheckKubernetesPriorityClassExists(n string, obj *api.PriorityClass)
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		name := rs.Primary.ID
 
-		out, err := conn.SchedulingV1().PriorityClasses().Get(name, meta_v1.GetOptions{})
+		out, err := conn.SchedulingV1().PriorityClasses().Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -185,8 +173,7 @@ func testAccCheckKubernetesPriorityClassExists(n string, obj *api.PriorityClass)
 }
 
 func testAccKubernetesPriorityClassConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_priority_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_priority_class" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -207,8 +194,7 @@ resource "kubernetes_priority_class" "test" {
 }
 
 func testAccKubernetesPriorityClassConfig_metaModified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_priority_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_priority_class" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -230,22 +216,20 @@ resource "kubernetes_priority_class" "test" {
 }
 
 func testAccKubernetesPriorityClassConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_priority_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_priority_class" "test" {
   metadata {
     name = "%s"
   }
 
-  value = 100
-  description = "Foobar"
+  value          = 100
+  description    = "Foobar"
   global_default = true
 }
 `, name)
 }
 
 func testAccKubernetesPriorityClassConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_priority_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_priority_class" "test" {
   metadata {
     generate_name = "%s"
   }

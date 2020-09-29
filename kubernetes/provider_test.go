@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -8,11 +9,11 @@ import (
 	"testing"
 
 	gversion "github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-provider-google/google"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
-	"github.com/terraform-providers/terraform-provider-google/google"
+	"github.com/terraform-providers/terraform-provider-azurerm/azurerm"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -26,6 +27,7 @@ func init() {
 		"kubernetes": testAccProvider,
 		"google":     google.Provider(),
 		"aws":        aws.Provider(),
+		"azure":      azurerm.Provider(),
 	}
 }
 
@@ -40,11 +42,6 @@ func TestProvider_impl(t *testing.T) {
 }
 
 func TestProvider_configure(t *testing.T) {
-	if os.Getenv("TF_ACC") != "" {
-		t.Skip("The environment variable TF_ACC is set, and this test prevents acceptance tests" +
-			" from running as it alters environment variables - skipping")
-	}
-
 	resetEnv := unsetEnv(t)
 	defer resetEnv()
 
@@ -95,6 +92,15 @@ func unsetEnv(t *testing.T) func() {
 	if err := os.Unsetenv("KUBE_CLUSTER_CA_CERT_DATA"); err != nil {
 		t.Fatalf("Error unsetting env var KUBE_CLUSTER_CA_CERT_DATA: %s", err)
 	}
+	if err := os.Unsetenv("KUBE_INSECURE"); err != nil {
+		t.Fatalf("Error unsetting env var KUBE_INSECURE: %s", err)
+	}
+	if err := os.Unsetenv("KUBE_LOAD_CONFIG_FILE"); err != nil {
+		t.Fatalf("Error unsetting env var KUBE_LOAD_CONFIG_FILE: %s", err)
+	}
+	if err := os.Unsetenv("KUBE_TOKEN"); err != nil {
+		t.Fatalf("Error unsetting env var KUBE_TOKEN: %s", err)
+	}
 
 	return func() {
 		if err := os.Setenv("KUBE_CONFIG", e.Config); err != nil {
@@ -103,7 +109,7 @@ func unsetEnv(t *testing.T) func() {
 		if err := os.Setenv("KUBECONFIG", e.Config); err != nil {
 			t.Fatalf("Error resetting env var KUBECONFIG: %s", err)
 		}
-		if err := os.Setenv("KUBE_CTX", e.Config); err != nil {
+		if err := os.Setenv("KUBE_CTX", e.Ctx); err != nil {
 			t.Fatalf("Error resetting env var KUBE_CTX: %s", err)
 		}
 		if err := os.Setenv("KUBE_CTX_AUTH_INFO", e.CtxAuthInfo); err != nil {
@@ -130,6 +136,15 @@ func unsetEnv(t *testing.T) func() {
 		if err := os.Setenv("KUBE_CLUSTER_CA_CERT_DATA", e.ClusterCACertData); err != nil {
 			t.Fatalf("Error resetting env var KUBE_CLUSTER_CA_CERT_DATA: %s", err)
 		}
+		if err := os.Setenv("KUBE_INSECURE", e.Insecure); err != nil {
+			t.Fatalf("Error resetting env var KUBE_INSECURE: %s", err)
+		}
+		if err := os.Setenv("KUBE_LOAD_CONFIG_FILE", e.LoadConfigFile); err != nil {
+			t.Fatalf("Error resetting env var KUBE_LOAD_CONFIG_FILE: %s", err)
+		}
+		if err := os.Setenv("KUBE_TOKEN", e.Token); err != nil {
+			t.Fatalf("Error resetting env var KUBE_TOKEN: %s", err)
+		}
 	}
 }
 
@@ -144,6 +159,9 @@ func getEnv() *currentEnv {
 		ClientCertData:    os.Getenv("KUBE_CLIENT_CERT_DATA"),
 		ClientKeyData:     os.Getenv("KUBE_CLIENT_KEY_DATA"),
 		ClusterCACertData: os.Getenv("KUBE_CLUSTER_CA_CERT_DATA"),
+		Insecure:          os.Getenv("KUBE_INSECURE"),
+		LoadConfigFile:    os.Getenv("KUBE_LOAD_CONFIG_FILE"),
+		Token:             os.Getenv("KUBE_TOKEN"),
 	}
 	if cfg := os.Getenv("KUBE_CONFIG"); cfg != "" {
 		e.Config = cfg
@@ -301,8 +319,9 @@ func getFirstNode() (api.Node, error) {
 	if err != nil {
 		return api.Node{}, err
 	}
+	ctx := context.TODO()
 
-	resp, err := conn.CoreV1().Nodes().List(metav1.ListOptions{})
+	resp, err := conn.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return api.Node{}, err
 	}
@@ -330,16 +349,6 @@ func clusterVersionLessThan(vs string) bool {
 	return cv.LessThan(v)
 }
 
-func skipCheckIf(skip func() (bool, string), check resource.TestCheckFunc) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if s, reason := skip(); s {
-			fmt.Println("Skipping check:", reason)
-			return nil
-		}
-		return check(s)
-	}
-}
-
 type currentEnv struct {
 	Config            string
 	Ctx               string
@@ -351,4 +360,7 @@ type currentEnv struct {
 	ClientCertData    string
 	ClientKeyData     string
 	ClusterCACertData string
+	Insecure          string
+	LoadConfigFile    string
+	Token             string
 }

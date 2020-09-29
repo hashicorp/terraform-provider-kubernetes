@@ -1,6 +1,6 @@
-[![Build Status](https://travis-ci.org/stoewer/go-strcase.svg?branch=master)](https://travis-ci.org/stoewer/go-strcase)
-[![Coverage Status](https://coveralls.io/repos/github/stoewer/go-strcase/badge.svg?branch=master)](https://coveralls.io/github/stoewer/go-strcase?branch=master)
-[![GoDoc](https://godoc.org/github.com/stoewer/go-strcase?status.svg)](https://godoc.org/github.com/stoewer/go-strcase)
+[![CircleCI](https://circleci.com/gh/stoewer/go-strcase/tree/master.svg?style=svg)](https://circleci.com/gh/stoewer/go-strcase/tree/master)
+[![codecov](https://codecov.io/gh/stoewer/go-strcase/branch/master/graph/badge.svg)](https://codecov.io/gh/stoewer/go-strcase)
+[![GoDoc](https://godoc.org/github.com/stoewer/go-strcase?status.svg)](https://pkg.go.dev/github.com/stoewer/go-strcase)
 ---
 
 Go strcase
@@ -42,16 +42,9 @@ Dependencies
 Run linters and unit tests
 -------------------------- 
 
-Since some of the linters ran by gometalinter don't support go modules yet, test dependencies have to be
-loaded to the vendor directory first and gometalinter itself must run with disabled module support:
+To run the static code analysis, linters and tests use the following commands:
 
 ```
-go mod vendor
-GO111MODULE=off gometalinter --config=.gometalinter.json --deadline=10m .
-```
-
-To run the test use the following commands:
-
-```
-go test .
+golangci-lint run --config .golangci.yml ./...
+go test ./...
 ```

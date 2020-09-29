@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -118,6 +119,7 @@ func resourceKubernetesValidatingWebhookConfigurationCreate(d *schema.ResourceDa
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	cfg := admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: expandMetadata(d.Get("metadata").([]interface{})),
@@ -136,10 +138,10 @@ func resourceKubernetesValidatingWebhookConfigurationCreate(d *schema.ResourceDa
 		requestv1beta1 := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
 		responsev1beta1 := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
 		copier.Copy(requestv1beta1, cfg)
-		responsev1beta1, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Create(requestv1beta1)
+		responsev1beta1, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Create(ctx, requestv1beta1, metav1.CreateOptions{})
 		copier.Copy(res, responsev1beta1)
 	} else {
-		res, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(&cfg)
+		res, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(ctx, &cfg, metav1.CreateOptions{})
 	}
 
 	if err != nil {
@@ -158,6 +160,7 @@ func resourceKubernetesValidatingWebhookConfigurationRead(d *schema.ResourceData
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	name := d.Id()
 
@@ -170,10 +173,10 @@ func resourceKubernetesValidatingWebhookConfigurationRead(d *schema.ResourceData
 	}
 	if useadmissionregistrationv1beta1 {
 		cfgv1beta1 := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
-		cfgv1beta1, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		cfgv1beta1, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 		copier.Copy(cfg, cfgv1beta1)
 	} else {
-		cfg, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		cfg, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 	}
 	if err != nil {
 		return err
@@ -199,6 +202,7 @@ func resourceKubernetesValidatingWebhookConfigurationUpdate(d *schema.ResourceDa
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
@@ -240,10 +244,10 @@ func resourceKubernetesValidatingWebhookConfigurationUpdate(d *schema.ResourceDa
 	}
 	if useadmissionregistrationv1beta1 {
 		responsev1beta1 := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
-		responsev1beta1, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Patch(name, types.JSONPatchType, data)
+		responsev1beta1, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Patch(ctx, name, types.JSONPatchType, data, metav1.PatchOptions{})
 		copier.Copy(res, responsev1beta1)
 	} else {
-		res, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Patch(name, types.JSONPatchType, data)
+		res, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Patch(ctx, name, types.JSONPatchType, data, metav1.PatchOptions{})
 	}
 	if err != nil {
 		return fmt.Errorf("Failed to update ValidatingWebhookConfiguration: %s", err)
@@ -259,6 +263,7 @@ func resourceKubernetesValidatingWebhookConfigurationDelete(d *schema.ResourceDa
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	name := d.Id()
 
@@ -268,9 +273,9 @@ func resourceKubernetesValidatingWebhookConfigurationDelete(d *schema.ResourceDa
 		return err
 	}
 	if useadmissionregistrationv1beta1 {
-		err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Delete(name, &metav1.DeleteOptions{})
+		err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Delete(ctx, name, metav1.DeleteOptions{})
 	} else {
-		err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(name, &metav1.DeleteOptions{})
+		err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(ctx, name, metav1.DeleteOptions{})
 	}
 	if err != nil {
 		return err
@@ -287,6 +292,7 @@ func resourceKubernetesValidatingWebhookConfigurationExists(d *schema.ResourceDa
 	if err != nil {
 		return false, err
 	}
+	ctx := context.TODO()
 
 	name := d.Id()
 
@@ -297,9 +303,9 @@ func resourceKubernetesValidatingWebhookConfigurationExists(d *schema.ResourceDa
 		return false, err
 	}
 	if useadmissionregistrationv1beta1 {
-		_, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		_, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 	} else {
-		_, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		_, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 	}
 
 	if err != nil {

@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/apps/v1"
 	appsv1 "k8s.io/api/apps/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesDaemonSet_minimal(t *testing.T) {
@@ -38,17 +39,18 @@ func TestAccKubernetesDaemonSet_minimal(t *testing.T) {
 func TestAccKubernetesDaemonSet_basic(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_daemonset.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_daemonset.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf),
+					testAccCheckKubernetesDaemonSetExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -70,9 +72,15 @@ func TestAccKubernetesDaemonSet_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
 				Config: testAccKubernetesDaemonSetConfig_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf),
+					testAccCheckKubernetesDaemonSetExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.Different", "1234"),
@@ -102,28 +110,6 @@ func TestAccKubernetesDaemonSet_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.dns_config.0.option.1.value", ""),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.dns_policy", "Default"),
 				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesDaemonSet_importBasic(t *testing.T) {
-	resourceName := "kubernetes_daemonset.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesDaemonSetDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesDaemonSetConfig_basic(name),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})
@@ -270,6 +256,7 @@ func testAccCheckKubernetesDaemonSetDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_daemonset" {
@@ -281,7 +268,7 @@ func testAccCheckKubernetesDaemonSetDestroy(s *terraform.State) error {
 			return err
 		}
 
-		resp, err := conn.AppsV1().DaemonSets(namespace).Get(name, meta_v1.GetOptions{})
+		resp, err := conn.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("DaemonSet still exists: %s", rs.Primary.ID)
@@ -303,12 +290,13 @@ func testAccCheckKubernetesDaemonSetExists(n string, obj *appsv1.DaemonSet) reso
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
-		out, err := conn.AppsV1().DaemonSets(namespace).Get(name, meta_v1.GetOptions{})
+		out, err := conn.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -319,8 +307,7 @@ func testAccCheckKubernetesDaemonSetExists(n string, obj *appsv1.DaemonSet) reso
 }
 
 func testAccKubernetesDaemonSetConfig_minimal(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
   }
@@ -352,8 +339,7 @@ resource "kubernetes_daemonset" "test" {
 }
 
 func testAccKubernetesDaemonSetConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -400,8 +386,7 @@ resource "kubernetes_daemonset" "test" {
 }
 
 func testAccKubernetesDaemonSetConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -463,8 +448,7 @@ resource "kubernetes_daemonset" "test" {
 }
 
 func testAccKubernetesDaemonSetConfigWithTemplateMetadata(depName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
 
@@ -507,8 +491,7 @@ resource "kubernetes_daemonset" "test" {
 }
 
 func testAccKubernetesDaemonSetConfigWithTemplateMetadataModified(depName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
 
@@ -526,7 +509,7 @@ resource "kubernetes_daemonset" "test" {
 
     template {
       metadata {
-        labels ={
+        labels = {
           foo  = "bar"
           Test = "TfAcceptanceTest"
         }
@@ -551,8 +534,7 @@ resource "kubernetes_daemonset" "test" {
 }
 
 func testAccKubernetesDaemonSetWithInitContainer(depName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
 
@@ -594,8 +576,7 @@ resource "kubernetes_daemonset" "test" {
 }
 
 func testAccKubernetesDaemonSetWithNoTopLevelLabels(depName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
   }
@@ -636,8 +617,7 @@ func testAccKubernetesDaemonSetConfigWithTolerations(rcName, imageName string, t
 		valueString = fmt.Sprintf("value = \"%s\"", *value)
 	}
 
-	return fmt.Sprintf(`
-resource "kubernetes_daemonset" "test" {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
 
@@ -662,9 +642,9 @@ resource "kubernetes_daemonset" "test" {
 
       spec {
         toleration {
-          effect             = "NoExecute"
-          key                = "myKey"
-          operator           = "%s"
+          effect   = "NoExecute"
+          key      = "myKey"
+          operator = "%s"
           %s
           %s
         }

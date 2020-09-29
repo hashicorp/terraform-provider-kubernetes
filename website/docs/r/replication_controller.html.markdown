@@ -1,7 +1,6 @@
 ---
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_replication_controller"
-sidebar_current: "docs-kubernetes-resource-replication-controller"
 description: |-
   A Replication Controller ensures that a specified number of pod “replicas” are running at any one time. In other words, a Replication Controller makes sure that a pod or homogeneous set of pods are always up and available. If there are too many pods, it will kill some. If there are too few, the Replication Controller will start more.
 ---
@@ -88,12 +87,14 @@ The following arguments are supported:
 #### Arguments
 
 * `annotations` - (Optional) An unstructured key value map stored with the replication controller that may be used to store arbitrary metadata.
-**By default, the provider ignores any annotations whose key names end with *kubernetes.io*. This is necessary because such annotations can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such annotations in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem).**
-For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/annotations)
+
+~> By default, the provider ignores any annotations whose key names end with *kubernetes.io*. This is necessary because such annotations can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such annotations in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/annotations)
+
 * `generate_name` - (Optional) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency)
 * `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the replication controller.
-**By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem).**
-For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
+
+~> By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
+
 * `name` - (Optional) Name of the replication controller, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 * `namespace` - (Optional) Namespace defines the space within which name of the replication controller must be unique.
 
@@ -119,9 +120,9 @@ For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/la
 
 #### Arguments
 
-* `metadata` - (Optional) Standard object's metadata. More info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata).  While required by the kubernetes API, this field is marked as optional to allow the usage of the deprecated pod spec fields that were mistakenly placed directly under the `template` block.
+* `metadata` - (Optional) Standard object's metadata. For more info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata).  While required by the kubernetes API, this field is marked as optional to allow the usage of the deprecated pod spec fields that were mistakenly placed directly under the `template` block.
 
-* `spec` - (Optional) Specification of the desired behavior of the pod. More info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status)
+* `spec` - (Optional) Specification of the desired behavior of the pod. For more info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status)
 
 ~> **NOTE:** all the fields from the `spec.template.spec` block are also accepted at the `spec.template` level but that usage is deprecated. All existing configurations should be updated to only use the new fields under `spec.template.spec`. Mixing the usage of deprecated fields with new fields is not supported.
 

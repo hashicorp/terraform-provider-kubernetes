@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"log"
@@ -30,16 +31,17 @@ func dataSourceKubernetesAllNamespacesRead(d *schema.ResourceData, meta interfac
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	log.Printf("[INFO] Listing namespaces")
-	nsRaw, err := conn.CoreV1().Namespaces().List(metav1.ListOptions{})
+	nsRaw, err := conn.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
 	}
 	namespaces := make([]string, len(nsRaw.Items))
 	for i, v := range nsRaw.Items {
-		namespaces[i] = string(v.Name)
+		namespaces[i] = v.Name
 	}
 	log.Printf("[INFO] Received namespaces: %#v", namespaces)
 	err = d.Set("namespaces", namespaces)

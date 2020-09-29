@@ -181,31 +181,22 @@ func validatePositiveInteger(value interface{}, key string) (ws []string, es []e
 	return
 }
 
-func validateDNSPolicy(value interface{}, key string) (ws []string, es []error) {
-	v := value.(string)
-	if v != "ClusterFirst" && v != "Default" {
-		es = append(es, fmt.Errorf("%s must be either ClusterFirst or Default", key))
-	}
-	return
-}
-
-func validateRestartPolicy(value interface{}, key string) (ws []string, es []error) {
-	v := value.(string)
-	switch v {
-	case "Always", "OnFailure", "Never":
-		return
-	default:
-		es = append(es, fmt.Errorf("%s must be one of Always, OnFailure or Never ", key))
-	}
-	return
-}
-
 func validateTerminationGracePeriodSeconds(value interface{}, key string) (ws []string, es []error) {
 	v := value.(int)
 	if v < 0 {
 		es = append(es, fmt.Errorf("%s must be greater than or equal to 0", key))
 	}
 	return
+}
+
+func validateIntGreaterThan(minValue int) func(value interface{}, key string) (ws []string, es []error) {
+	return func(value interface{}, key string) (ws []string, es []error) {
+		v := value.(int)
+		if v < minValue {
+			es = append(es, fmt.Errorf("%s must be greater than or equal to %d", key, minValue))
+		}
+		return
+	}
 }
 
 // validateTypeStringNullableInt provides custom error messaging for TypeString ints

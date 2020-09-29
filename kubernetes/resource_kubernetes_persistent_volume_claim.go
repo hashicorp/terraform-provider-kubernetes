@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -9,7 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sresource "k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
@@ -41,6 +43,45 @@ func resourceKubernetesPersistentVolumeClaim() *schema.Resource {
 		},
 
 		Schema: fields,
+
+		// All fields of Spec are immutable after creation, except for resources.requests.storage.
+		// Storage can only be increased in place. A new object will be created when the storage is decreased.
+		CustomizeDiff: func(diff *schema.ResourceDiff, meta interface{}) error {
+			// Skip custom logic for resource creation.
+			if diff.Id() == "" {
+				return nil
+			}
+			key := "spec.0.resources.0.requests"
+			subKeyStorage := "spec.0.resources.0.requests.storage"
+			subKeyLimits := "spec.0.resources.0.limits"
+			if diff.HasChange(subKeyLimits) {
+				err := diff.ForceNew(subKeyLimits)
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+			if diff.HasChange(key) {
+				old, new := diff.GetChange(subKeyStorage)
+				oldStorageQuantity, err := k8sresource.ParseQuantity(old.(string))
+				if err != nil {
+					return err
+				}
+				newStorageQuantity, err := k8sresource.ParseQuantity(new.(string))
+				if err != nil {
+					return err
+				}
+				if newStorageQuantity.Cmp(oldStorageQuantity) == -1 {
+					log.Printf("[DEBUG] CustomizeDiff spec.resources.requests.storage: field can not be less than previous value")
+					log.Printf("[DEBUG] CustomizeDiff creating new PVC with size: %v", new)
+					err := diff.ForceNew(key)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		},
 	}
 }
 
@@ -49,8 +90,9 @@ func resourceKubernetesPersistentVolumeClaimCreate(d *schema.ResourceData, meta 
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
-	claim, err := expandPersistenVolumeClaim(map[string]interface{}{
+	claim, err := expandPersistentVolumeClaim(map[string]interface{}{
 		"metadata": d.Get("metadata"),
 		"spec":     d.Get("spec"),
 	})
@@ -58,7 +100,7 @@ func resourceKubernetesPersistentVolumeClaimCreate(d *schema.ResourceData, meta 
 		return err
 	}
 	log.Printf("[INFO] Creating new persistent volume claim: %#v", claim)
-	out, err := conn.CoreV1().PersistentVolumeClaims(claim.Namespace).Create(claim)
+	out, err := conn.CoreV1().PersistentVolumeClaims(claim.Namespace).Create(ctx, claim, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -73,7 +115,7 @@ func resourceKubernetesPersistentVolumeClaimCreate(d *schema.ResourceData, meta 
 			Pending: []string{"Pending"},
 			Timeout: d.Timeout(schema.TimeoutCreate),
 			Refresh: func() (interface{}, string, error) {
-				out, err := conn.CoreV1().PersistentVolumeClaims(claim.Namespace).Get(name, meta_v1.GetOptions{})
+				out, err := conn.CoreV1().PersistentVolumeClaims(claim.Namespace).Get(ctx, name, metav1.GetOptions{})
 				if err != nil {
 					log.Printf("[ERROR] Received error: %#v", err)
 					return out, "", err
@@ -89,13 +131,13 @@ func resourceKubernetesPersistentVolumeClaimCreate(d *schema.ResourceData, meta 
 			var lastWarnings []api.Event
 			var wErr error
 
-			lastWarnings, wErr = getLastWarningsForObject(conn, out.ObjectMeta, "PersistentVolumeClaim", 3)
+			lastWarnings, wErr = getLastWarningsForObject(ctx, conn, out.ObjectMeta, "PersistentVolumeClaim", 3)
 			if wErr != nil {
 				return wErr
 			}
 
 			if len(lastWarnings) == 0 {
-				lastWarnings, wErr = getLastWarningsForObject(conn, meta_v1.ObjectMeta{
+				lastWarnings, wErr = getLastWarningsForObject(ctx, conn, metav1.ObjectMeta{
 					Name: out.Spec.VolumeName,
 				}, "PersistentVolume", 3)
 				if wErr != nil {
@@ -116,6 +158,7 @@ func resourceKubernetesPersistentVolumeClaimRead(d *schema.ResourceData, meta in
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -123,7 +166,7 @@ func resourceKubernetesPersistentVolumeClaimRead(d *schema.ResourceData, meta in
 	}
 
 	log.Printf("[INFO] Reading persistent volume claim %s", name)
-	claim, err := conn.CoreV1().PersistentVolumeClaims(namespace).Get(name, meta_v1.GetOptions{})
+	claim, err := conn.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -146,6 +189,7 @@ func resourceKubernetesPersistentVolumeClaimUpdate(d *schema.ResourceData, meta 
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -153,14 +197,25 @@ func resourceKubernetesPersistentVolumeClaimUpdate(d *schema.ResourceData, meta 
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
-	// The whole spec is ForceNew = nothing to update there
+	// spec.resources.requests is the only editable field in Spec.
+	if d.HasChange("spec.0.resources.0.requests") {
+		r := d.Get("spec.0.resources.0.requests").(map[string]interface{})
+		requests, err := expandMapToResourceList(r)
+		if err != nil {
+			return err
+		}
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/spec/resources/requests",
+			Value: requests,
+		})
+	}
 	data, err := ops.MarshalJSON()
 	if err != nil {
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 
 	log.Printf("[INFO] Updating persistent volume claim: %s", ops)
-	out, err := conn.CoreV1().PersistentVolumeClaims(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().PersistentVolumeClaims(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return err
 	}
@@ -174,6 +229,7 @@ func resourceKubernetesPersistentVolumeClaimDelete(d *schema.ResourceData, meta 
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -181,7 +237,24 @@ func resourceKubernetesPersistentVolumeClaimDelete(d *schema.ResourceData, meta 
 	}
 
 	log.Printf("[INFO] Deleting persistent volume claim: %#v", name)
-	err = conn.CoreV1().PersistentVolumeClaims(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().PersistentVolumeClaims(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+
+	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+		out, err := conn.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return nil
+			}
+			return resource.NonRetryableError(err)
+		}
+
+		log.Printf("[DEBUG] Current state of persistent volume claim finalizers: %#v", out.Finalizers)
+		e := fmt.Errorf("Persistent volume claim %s still exists with finalizers: %v", name, out.Finalizers)
+		return resource.RetryableError(e)
+	})
 	if err != nil {
 		return err
 	}
@@ -197,6 +270,7 @@ func resourceKubernetesPersistentVolumeClaimExists(d *schema.ResourceData, meta 
 	if err != nil {
 		return false, err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -204,7 +278,7 @@ func resourceKubernetesPersistentVolumeClaimExists(d *schema.ResourceData, meta 
 	}
 
 	log.Printf("[INFO] Checking persistent volume claim %s", name)
-	_, err = conn.CoreV1().PersistentVolumeClaims(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

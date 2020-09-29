@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -8,9 +9,10 @@ import (
 	gversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
@@ -82,8 +84,15 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Type:        schema.TypeSet,
 							Description: "Contains all ways the volume can be mounted. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes",
 							Required:    true,
-							Elem:        &schema.Schema{Type: schema.TypeString},
-							Set:         schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+								ValidateFunc: validation.StringInSlice([]string{
+									"ReadWriteOnce",
+									"ReadOnlyMany",
+									"ReadWriteMany",
+								}, false),
+							},
+							Set: schema.HashString,
 						},
 						"capacity": {
 							Type:         schema.TypeMap,
@@ -97,6 +106,11 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Description: "What happens to a persistent volume when released from its claim. Valid options are Retain (default) and Recycle. Recycling must be supported by the volume plugin underlying this persistent volume. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#recycling-policy",
 							Optional:    true,
 							Default:     "Retain",
+							ValidateFunc: validation.StringInSlice([]string{
+								"Recycle",
+								"Delete",
+								"Retain",
+							}, false),
 						},
 						"persistent_volume_source": {
 							Type:        schema.TypeList,
@@ -144,6 +158,17 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Elem:        &schema.Schema{Type: schema.TypeString},
 							Set:         schema.HashString,
 						},
+						"volume_mode": {
+							Type:        schema.TypeString,
+							Description: "Defines if a volume is intended to be used with a formatted filesystem. or to remain in raw block state.",
+							Optional:    true,
+							ForceNew:    true,
+							Default:     "Filesystem",
+							ValidateFunc: validation.StringInSlice([]string{
+								"Block",
+								"Filesystem",
+							}, false),
+						},
 					},
 				},
 			},
@@ -156,6 +181,7 @@ func resourceKubernetesPersistentVolumeCreate(d *schema.ResourceData, meta inter
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandPersistentVolumeSpec(d.Get("spec").([]interface{}))
@@ -168,7 +194,7 @@ func resourceKubernetesPersistentVolumeCreate(d *schema.ResourceData, meta inter
 	}
 
 	log.Printf("[INFO] Creating new persistent volume: %#v", volume)
-	out, err := conn.CoreV1().PersistentVolumes().Create(&volume)
+	out, err := conn.CoreV1().PersistentVolumes().Create(ctx, &volume, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -179,7 +205,7 @@ func resourceKubernetesPersistentVolumeCreate(d *schema.ResourceData, meta inter
 		Pending: []string{"Pending"},
 		Timeout: d.Timeout(schema.TimeoutCreate),
 		Refresh: func() (interface{}, string, error) {
-			out, err := conn.CoreV1().PersistentVolumes().Get(metadata.Name, meta_v1.GetOptions{})
+			out, err := conn.CoreV1().PersistentVolumes().Get(ctx, metadata.Name, metav1.GetOptions{})
 			if err != nil {
 				log.Printf("[ERROR] Received error: %#v", err)
 				return out, "Error", err
@@ -206,10 +232,11 @@ func resourceKubernetesPersistentVolumeRead(d *schema.ResourceData, meta interfa
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	name := d.Id()
 	log.Printf("[INFO] Reading persistent volume %s", name)
-	volume, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
+	volume, err := conn.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -232,6 +259,7 @@ func resourceKubernetesPersistentVolumeUpdate(d *schema.ResourceData, meta inter
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("spec") {
@@ -247,7 +275,7 @@ func resourceKubernetesPersistentVolumeUpdate(d *schema.ResourceData, meta inter
 	}
 
 	log.Printf("[INFO] Updating persistent volume %s: %s", d.Id(), ops)
-	out, err := conn.CoreV1().PersistentVolumes().Patch(d.Id(), pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().PersistentVolumes().Patch(ctx, d.Id(), pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return err
 	}
@@ -262,16 +290,17 @@ func resourceKubernetesPersistentVolumeDelete(d *schema.ResourceData, meta inter
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting persistent volume: %#v", name)
-	err = conn.CoreV1().PersistentVolumes().Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().PersistentVolumes().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
 
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
-		out, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
+		out, err := conn.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return nil
@@ -298,10 +327,11 @@ func resourceKubernetesPersistentVolumeExists(d *schema.ResourceData, meta inter
 	if err != nil {
 		return false, err
 	}
+	ctx := context.TODO()
 
 	name := d.Id()
 	log.Printf("[INFO] Checking persistent volume %s", name)
-	_, err = conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return false, nil

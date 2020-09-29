@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -44,6 +45,7 @@ func resourceKubernetesConfigMapCreate(d *schema.ResourceData, meta interface{})
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	cfgMap := api.ConfigMap{
@@ -52,7 +54,7 @@ func resourceKubernetesConfigMapCreate(d *schema.ResourceData, meta interface{})
 		Data:       expandStringMap(d.Get("data").(map[string]interface{})),
 	}
 	log.Printf("[INFO] Creating new config map: %#v", cfgMap)
-	out, err := conn.CoreV1().ConfigMaps(metadata.Namespace).Create(&cfgMap)
+	out, err := conn.CoreV1().ConfigMaps(metadata.Namespace).Create(ctx, &cfgMap, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -67,13 +69,14 @@ func resourceKubernetesConfigMapRead(d *schema.ResourceData, meta interface{}) e
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
 		return err
 	}
 	log.Printf("[INFO] Reading config map %s", name)
-	cfgMap, err := conn.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+	cfgMap, err := conn.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -95,6 +98,7 @@ func resourceKubernetesConfigMapUpdate(d *schema.ResourceData, meta interface{})
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -120,7 +124,7 @@ func resourceKubernetesConfigMapUpdate(d *schema.ResourceData, meta interface{})
 	}
 
 	log.Printf("[INFO] Updating config map %q: %v", name, string(data))
-	out, err := conn.CoreV1().ConfigMaps(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().ConfigMaps(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update Config Map: %s", err)
 	}
@@ -135,13 +139,14 @@ func resourceKubernetesConfigMapDelete(d *schema.ResourceData, meta interface{})
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
 		return err
 	}
 	log.Printf("[INFO] Deleting config map: %#v", name)
-	err = conn.CoreV1().ConfigMaps(namespace).Delete(name, &metav1.DeleteOptions{})
+	err = conn.CoreV1().ConfigMaps(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -157,6 +162,7 @@ func resourceKubernetesConfigMapExists(d *schema.ResourceData, meta interface{})
 	if err != nil {
 		return false, err
 	}
+	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -164,7 +170,7 @@ func resourceKubernetesConfigMapExists(d *schema.ResourceData, meta interface{})
 	}
 
 	log.Printf("[INFO] Checking config map %s", name)
-	_, err = conn.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

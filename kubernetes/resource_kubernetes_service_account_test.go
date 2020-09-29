@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
@@ -9,40 +10,41 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	api "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesServiceAccount_basic(t *testing.T) {
 	var conf api.ServiceAccount
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_service_account.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_service_account.test",
+		IDRefreshName: resourceName,
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesServiceAccountDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesServiceAccountConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceAccountExists("kubernetes_service_account.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "metadata.0.annotations.%", "2"),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
+					testAccCheckKubernetesServiceAccountExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
 					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "metadata.0.labels.%", "3"),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "metadata.0.labels.TestLabelOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "metadata.0.labels.TestLabelTwo", "two"),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "metadata.0.labels.TestLabelThree", "three"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "3"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelTwo", "two"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelThree", "three"),
 					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelTwo": "two", "TestLabelThree": "three"}),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_service_account.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_service_account.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_service_account.test", "metadata.0.self_link"),
-					resource.TestCheckResourceAttrSet("kubernetes_service_account.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "secret.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "image_pull_secret.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", "false"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "secret.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "image_pull_secret.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "automount_service_account_token", "false"),
 					testAccCheckServiceAccountImagePullSecrets(&conf, []*regexp.Regexp{
 						regexp.MustCompile("^" + name + "-three$"),
 						regexp.MustCompile("^" + name + "-four$"),
@@ -53,6 +55,12 @@ func TestAccKubernetesServiceAccount_basic(t *testing.T) {
 						regexp.MustCompile("^" + name + "-token-[a-z0-9]+$"),
 					}),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "automount_service_account_token"},
 			},
 		},
 	})
@@ -237,28 +245,6 @@ func TestAccKubernetesServiceAccount_generatedName(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesServiceAccount_importBasic(t *testing.T) {
-	resourceName := "kubernetes_service_account.test"
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesServiceAccountDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesServiceAccountConfig_basic(name),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "automount_service_account_token"},
-			},
-		},
-	})
-}
-
 func testAccCheckServiceAccountImagePullSecrets(m *api.ServiceAccount, expected []*regexp.Regexp) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(m.ImagePullSecrets) == 0 {
@@ -316,6 +302,7 @@ func testAccCheckKubernetesServiceAccountDestroy(s *terraform.State) error {
 	if err != nil {
 		return err
 	}
+	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_service_account" {
@@ -327,7 +314,7 @@ func testAccCheckKubernetesServiceAccountDestroy(s *terraform.State) error {
 			return err
 		}
 
-		resp, err := conn.CoreV1().ServiceAccounts(namespace).Get(name, meta_v1.GetOptions{})
+		resp, err := conn.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("Service Account still exists: %s", rs.Primary.ID)
@@ -349,13 +336,14 @@ func testAccCheckKubernetesServiceAccountExists(n string, obj *api.ServiceAccoun
 		if err != nil {
 			return err
 		}
+		ctx := context.TODO()
 
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		out, err := conn.CoreV1().ServiceAccounts(namespace).Get(name, meta_v1.GetOptions{})
+		out, err := conn.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -366,8 +354,7 @@ func testAccCheckKubernetesServiceAccountExists(n string, obj *api.ServiceAccoun
 }
 
 func testAccKubernetesServiceAccountConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_account" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -427,8 +414,7 @@ resource "kubernetes_secret" "four" {
 }
 
 func testAccKubernetesServiceAccountConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_account" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -489,8 +475,7 @@ resource "kubernetes_secret" "four" {
 }
 
 func testAccKubernetesServiceAccountConfig_noAttributes(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_account" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     name = "%s"
   }
@@ -499,8 +484,7 @@ resource "kubernetes_service_account" "test" {
 }
 
 func testAccKubernetesServiceAccountConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_account" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -509,8 +493,7 @@ resource "kubernetes_service_account" "test" {
 }
 
 func testAccKubernetesServiceAccountConfig_automount(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_account" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"

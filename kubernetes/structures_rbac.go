@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func expandRBACRoleRef(in []interface{}) api.RoleRef {
@@ -79,6 +80,22 @@ func expandClusterRoleRules(in []interface{}) []api.PolicyRule {
 	return rules
 }
 
+func expandClusterRoleAggregationRule(in []interface{}) *api.AggregationRule {
+	if len(in) == 0 || in[0] == nil {
+		return &api.AggregationRule{}
+	}
+	ref := &api.AggregationRule{}
+	m := in[0].(map[string]interface{})
+
+	if v, ok := m["cluster_role_selectors"].([]interface{}); ok && len(v) > 0 {
+		crs := make([]metav1.LabelSelector, 0)
+		crs = append(crs, *expandLabelSelector(v))
+		ref.ClusterRoleSelectors = crs
+	}
+
+	return ref
+}
+
 func flattenRBACRoleRef(in api.RoleRef) []interface{} {
 	att := make(map[string]interface{})
 
@@ -119,6 +136,18 @@ func flattenClusterRoleRules(in []api.PolicyRule) []interface{} {
 		att[i] = m
 	}
 	return att
+}
+
+func flattenClusterRoleAggregationRule(in *api.AggregationRule) []interface{} {
+	att := make(map[string]interface{})
+
+	if len(in.ClusterRoleSelectors) > 0 {
+		for _, crs := range in.ClusterRoleSelectors {
+			att["cluster_role_selectors"] = flattenLabelSelector(&crs)
+		}
+	}
+
+	return []interface{}{att}
 }
 
 // Patch Ops
@@ -187,5 +216,19 @@ func patchRbacRule(d *schema.ResourceData) PatchOperations {
 			})
 		}
 	}
+	return ops
+}
+
+func patchRbacAggregationRule(d *schema.ResourceData) PatchOperations {
+	_, n := d.GetChange("aggregation_rule")
+	//oldrules := expandClusterRoleRules(o.([]interface{}))
+	newAggRule := expandClusterRoleAggregationRule(n.([]interface{}))
+	ops := make([]PatchOperation, 0)
+
+	ops = append(ops, &ReplaceOperation{
+		Path:  "/aggregationRule",
+		Value: newAggRule,
+	})
+
 	return ops
 }

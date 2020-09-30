@@ -227,7 +227,6 @@ func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 	diskName := fmt.Sprintf("tf-acc-test-disk-%s", randString)
 
-	region := os.Getenv("AWS_DEFAULT_REGION")
 	zone := os.Getenv("AWS_ZONE")
 
 	resource.Test(t, resource.TestCase{
@@ -252,8 +251,6 @@ func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 						"TestLabelOne":   "one",
 						"TestLabelTwo":   "two",
 						"TestLabelThree": "three",
-						"failure-domain.beta.kubernetes.io/region": region,
-						"failure-domain.beta.kubernetes.io/zone":   zone,
 					}),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume.test", "metadata.0.generation"),
@@ -284,8 +281,6 @@ func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 						"TestLabelOne":   "one",
 						"TestLabelTwo":   "two",
 						"TestLabelThree": "three",
-						"failure-domain.beta.kubernetes.io/region": region,
-						"failure-domain.beta.kubernetes.io/zone":   zone,
 					}),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume.test", "metadata.0.generation"),

@@ -338,7 +338,7 @@ func isRunningInEks() (bool, error) {
 	ctx := context.TODO()
 	_, err = conn.CoreV1().ConfigMaps("kube-system").Get(ctx, "aws-auth", metav1.GetOptions{})
 	if err != nil {
-		return false, err
+		return false, nil
 	}
 	return true, nil
 }

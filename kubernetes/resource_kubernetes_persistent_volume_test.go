@@ -266,7 +266,7 @@ func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_aws_modified(name, diskName, zone),
+				Config: testAccKubernetesPersistentVolumeConfig_aws_modified(name, region, zone),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "2"),
@@ -430,7 +430,7 @@ func TestAccKubernetesPersistentVolume_hostPath_volumeSource(t *testing.T) {
 }
 
 func TestAccKubernetesPersistentVolume_local_volumeSource(t *testing.T) {
-	var conf api.PersistentVolume
+	var conf1, conf2 api.PersistentVolume
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 
@@ -441,13 +441,13 @@ func TestAccKubernetesPersistentVolume_local_volumeSource(t *testing.T) {
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, "/first/path", "test-node"),
+				Config: testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, "1Gi", "/first/path", "test-node"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
+					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf1),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
-					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
+					testAccCheckMetaAnnotations(&conf1.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.labels.%", "0"),
-					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
+					testAccCheckMetaLabels(&conf1.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume.test", "metadata.0.resource_version"),
@@ -461,25 +461,20 @@ func TestAccKubernetesPersistentVolume_local_volumeSource(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.local.0.path", "/first/path"),
 				),
 			},
-			{
-				Config: testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, "/second/path", "test-node"),
+			{ // Test updating storage capacity in-place.
+				Config: testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, "2Gi", "/first/path", "test-node"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
-					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.labels.%", "0"),
-					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume.test", "metadata.0.self_link"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.capacity.%", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.capacity.storage", "1Gi"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.local.#", "1"),
+					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf2),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.capacity.storage", "2Gi"),
+					testAccCheckKubernetesPersistentVolumeForceNew(&conf1, &conf2, false),
+				),
+			},
+			{ // Test updating persistentVolumeSource. This should create a new resource.
+				Config: testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, "2Gi", "/second/path", "test-node"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf2),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.local.0.path", "/second/path"),
+					testAccCheckKubernetesPersistentVolumeForceNew(&conf1, &conf2, true),
 				),
 			},
 		},
@@ -1101,13 +1096,13 @@ resource "aws_ebs_volume" "test" {
   size              = 1
 
   tags = {
-    Name = %q[1]
+    Name = %[1]q
   }
 }
 `, name, region, zone)
 }
 
-func testAccKubernetesPersistentVolumeConfig_aws_modified(name, diskName, zone string) string {
+func testAccKubernetesPersistentVolumeConfig_aws_modified(name, region, zone string) string {
 	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     annotations = {
@@ -1142,15 +1137,19 @@ func testAccKubernetesPersistentVolumeConfig_aws_modified(name, diskName, zone s
   }
 }
 
+provider "aws" {
+  region = "%s"
+}
+
 resource "aws_ebs_volume" "test" {
   availability_zone = "%s"
   size              = 10
 
   tags = {
-    Name = "%s"
+    Name = %[1]q
   }
 }
-`, name, zone, diskName)
+`, name, region, zone)
 }
 
 func testAccKubernetesPersistentVolumeConfig_azure_managedDisk(name, location string) string {
@@ -1468,7 +1467,7 @@ func testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource_volumeMode(na
 `, name, path, typ)
 }
 
-func testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, path, hostname string) string {
+func testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, storage, path, hostname string) string {
 	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     name = "%s"
@@ -1476,7 +1475,7 @@ func testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, path, host
 
   spec {
     capacity = {
-      storage = "1Gi"
+      storage = "%s"
     }
 
     access_modes = ["ReadWriteOnce"]
@@ -1499,7 +1498,7 @@ func testAccKubernetesPersistentVolumeConfig_local_volumeSource(name, path, host
     }
   }
 }
-`, name, path, hostname)
+`, name, storage, path, hostname)
 }
 
 func testAccKubernetesPersistentVolumeConfig_cephFsSecretRef(name string) string {

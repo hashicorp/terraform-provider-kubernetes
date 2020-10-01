@@ -63,12 +63,12 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 			keys := diff.GetChangedKeysPrefix("spec.0.persistent_volume_source")
 			for _, key := range keys {
 				log.Printf("[DEBUG] CustomizeDiff GetChangedKeysPrefix key: %v", key)
-					log.Printf("[DEBUG] CustomizeDiff key: %v", key)
-					err := diff.ForceNew(key)
-					if err != nil {
-						return err
-					}
+				log.Printf("[DEBUG] CustomizeDiff key: %v", key)
+				err := diff.ForceNew(key)
+				if err != nil {
+					return err
 				}
+			}
 			return nil
 		},
 

@@ -1060,7 +1060,7 @@ resource "google_compute_disk" "test" {
 `, name, diskName, zone)
 }
 
-func testAccKubernetesPersistentVolumeConfig_aws_basic(name, diskName, zone string) string {
+func testAccKubernetesPersistentVolumeConfig_aws_basic(name, region, zone string) string {
 	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     annotations = {
@@ -1092,15 +1092,19 @@ func testAccKubernetesPersistentVolumeConfig_aws_basic(name, diskName, zone stri
   }
 }
 
+provider "aws" {
+  region = "%s"
+}
+
 resource "aws_ebs_volume" "test" {
   availability_zone = "%s"
   size              = 10
 
   tags = {
-    Name = "%s"
+    Name = %q[1]
   }
 }
-`, name, zone, diskName)
+`, name, region, zone)
 }
 
 func testAccKubernetesPersistentVolumeConfig_aws_modified(name, diskName, zone string) string {

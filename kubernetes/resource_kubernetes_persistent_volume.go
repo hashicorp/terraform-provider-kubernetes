@@ -45,31 +45,30 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 			diskURI := "spec.0.persistent_volume_source.0.azure_disk.0.data_disk_uri"
 			kindValue, _ := diff.GetOk(kind)
 			diskURIValue, diskURIExists := diff.GetOk(diskURI)
-			if !diskURIExists {
-				return nil
-			}
-			if strings.Contains(diskURIValue.(string), "blob.core.windows.net") && kindValue == "Managed" {
+			if diskURIExists && strings.Contains(diskURIValue.(string), "blob.core.windows.net") && kindValue == "Managed" {
 				log.Printf("Configuration error:")
 				log.Printf("Mismatch between Disk URI: %v = %v and Disk Kind: %v = %v", diskURI, diskURIValue, kind, kindValue)
 				return errors.New(persistentVolumeAzureBlobError)
 			}
-			if strings.Contains(diskURIValue.(string), "/providers/Microsoft.Compute/disks/") && kindValue != "Managed" {
+			if diskURIExists && strings.Contains(diskURIValue.(string), "/providers/Microsoft.Compute/disks/") && kindValue != "Managed" {
 				log.Printf("Configuration error:")
 				log.Printf("Mismatch between Disk URI: %v = %v and disk Kind: %v = %v", diskURI, diskURIValue, kind, kindValue)
 				return errors.New(persistentVolumeAzureManagedError)
 			}
+			// The following applies to Updates only.
+			if diff.Id() == "" {
+				return nil
+			}
 			// Any change to Persistent Volume Source requires a new resource.
-			if diff.HasChange("spec.0.persistent_volume_source") {
-				keys := diff.GetChangedKeysPrefix("spec.0.persistent_volume_source")
-				for _, key := range keys {
-					if diff.HasChange(key) {
-						err := diff.ForceNew(key)
-						if err != nil {
-							return err
-						}
+			keys := diff.GetChangedKeysPrefix("spec.0.persistent_volume_source")
+			for _, key := range keys {
+				log.Printf("[DEBUG] CustomizeDiff GetChangedKeysPrefix key: %v", key)
+					log.Printf("[DEBUG] CustomizeDiff key: %v", key)
+					err := diff.ForceNew(key)
+					if err != nil {
+						return err
 					}
 				}
-			}
 			return nil
 		},
 
@@ -119,7 +118,6 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Required:    true,
 							MaxItems:    1,
 							Elem:        persistentVolumeSourceSchema(),
-							ForceNew:    true,
 						},
 						"storage_class_name": {
 							Type:        schema.TypeString,

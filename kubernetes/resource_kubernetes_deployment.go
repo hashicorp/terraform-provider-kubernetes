@@ -3,13 +3,14 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"regexp"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -25,13 +26,12 @@ const (
 
 func resourceKubernetesDeployment() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesDeploymentCreate,
-		Read:   resourceKubernetesDeploymentRead,
-		Exists: resourceKubernetesDeploymentExists,
-		Update: resourceKubernetesDeploymentUpdate,
-		Delete: resourceKubernetesDeploymentDelete,
+		CreateContext: resourceKubernetesDeploymentCreate,
+		ReadContext:   resourceKubernetesDeploymentRead,
+		UpdateContext: resourceKubernetesDeploymentUpdate,
+		DeleteContext: resourceKubernetesDeploymentDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Timeouts: &schema.ResourceTimeout{
@@ -202,17 +202,16 @@ func resourceKubernetesDeployment() *schema.Resource {
 	}
 }
 
-func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesDeploymentCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandDeploymentSpec(d.Get("spec").([]interface{}))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	deployment := appsv1.Deployment{
@@ -223,7 +222,7 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 	log.Printf("[INFO] Creating new deployment: %#v", deployment)
 	out, err := conn.AppsV1().Deployments(metadata.Namespace).Create(ctx, &deployment, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to create deployment: %s", err)
+		return diag.Errorf("Failed to create deployment: %s", err)
 	}
 
 	d.SetId(buildId(out.ObjectMeta))
@@ -232,28 +231,27 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 
 	if d.Get("wait_for_rollout").(bool) {
 		log.Printf("[INFO] Waiting for deployment %s/%s to rollout", out.ObjectMeta.Namespace, out.ObjectMeta.Name)
-		err := resource.Retry(d.Timeout(schema.TimeoutCreate),
+		err := resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
 			waitForDeploymentReplicasFunc(ctx, conn, out.GetNamespace(), out.GetName()))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
 	log.Printf("[INFO] Submitted new deployment: %#v", out)
 
-	return resourceKubernetesDeploymentRead(d, meta)
+	return resourceKubernetesDeploymentRead(ctx, d, meta)
 }
 
-func resourceKubernetesDeploymentUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesDeploymentUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -261,7 +259,7 @@ func resourceKubernetesDeploymentUpdate(d *schema.ResourceData, meta interface{}
 	if d.HasChange("spec") {
 		spec, err := expandDeploymentSpec(d.Get("spec").([]interface{}))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		ops = append(ops, &ReplaceOperation{
@@ -271,85 +269,90 @@ func resourceKubernetesDeploymentUpdate(d *schema.ResourceData, meta interface{}
 	}
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating deployment %q: %v", name, string(data))
 	out, err := conn.AppsV1().Deployments(namespace).Patch(ctx, name, types.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to update deployment: %s", err)
+		return diag.Errorf("Failed to update deployment: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated deployment: %#v", out)
 
 	if d.Get("wait_for_rollout").(bool) {
 		log.Printf("[INFO] Waiting for deployment %s/%s to rollout", out.ObjectMeta.Namespace, out.ObjectMeta.Name)
-		err := resource.Retry(d.Timeout(schema.TimeoutCreate),
+		err := resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
 			waitForDeploymentReplicasFunc(ctx, conn, out.GetNamespace(), out.GetName()))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
-	return resourceKubernetesDeploymentRead(d, meta)
+	return resourceKubernetesDeploymentRead(ctx, d, meta)
 }
 
-func resourceKubernetesDeploymentRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesDeploymentRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesDeploymentExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		return diag.Diagnostics{}
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Reading deployment %s", name)
 	deployment, err := conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received deployment: %#v", deployment)
 
 	err = d.Set("metadata", flattenMetadata(deployment.ObjectMeta, d))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	spec, err := flattenDeploymentSpec(deployment.Spec, d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = d.Set("spec", spec)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesDeploymentDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Deleting deployment: %#v", name)
 
 	err = conn.AppsV1().Deployments(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		_, err := conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
@@ -362,7 +365,7 @@ func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}
 		return resource.RetryableError(e)
 	})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Deployment %s deleted", name)
@@ -371,12 +374,11 @@ func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}
 	return nil
 }
 
-func resourceKubernetesDeploymentExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesDeploymentExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

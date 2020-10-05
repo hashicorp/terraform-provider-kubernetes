@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -18,10 +18,10 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 	name := fmt.Sprintf("%s.%s", version, group)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_api_service.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesAPIServiceDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_api_service.test",
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesAPIServiceDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAPIServiceConfig_basic(name, group, version),
@@ -47,7 +47,6 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 			},
 			{
 				ResourceName:            resourceName,
-				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},

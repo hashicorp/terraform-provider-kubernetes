@@ -3,13 +3,14 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"regexp"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,13 +20,12 @@ import (
 
 func resourceKubernetesDaemonSet() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesDaemonSetCreate,
-		Read:   resourceKubernetesDaemonSetRead,
-		Exists: resourceKubernetesDaemonSetExists,
-		Update: resourceKubernetesDaemonSetUpdate,
-		Delete: resourceKubernetesDaemonSetDelete,
+		CreateContext: resourceKubernetesDaemonSetCreate,
+		ReadContext:   resourceKubernetesDaemonSetRead,
+		UpdateContext: resourceKubernetesDaemonSetUpdate,
+		DeleteContext: resourceKubernetesDaemonSetDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Timeouts: &schema.ResourceTimeout{
@@ -117,17 +117,16 @@ func resourceKubernetesDaemonSet() *schema.Resource {
 	}
 }
 
-func resourceKubernetesDaemonSetCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesDaemonSetCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandDaemonSetSpec(d.Get("spec").([]interface{}))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	daemonset := appsv1.DaemonSet{
@@ -139,26 +138,25 @@ func resourceKubernetesDaemonSetCreate(d *schema.ResourceData, meta interface{})
 
 	out, err := conn.AppsV1().DaemonSets(metadata.Namespace).Create(ctx, &daemonset, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to create daemonset: %s", err)
+		return diag.Errorf("Failed to create daemonset: %s", err)
 	}
 
 	d.SetId(buildId(out.ObjectMeta))
 
 	log.Printf("[INFO] Submitted new daemonset: %#v", out)
 
-	return resourceKubernetesDaemonSetRead(d, meta)
+	return resourceKubernetesDaemonSetRead(ctx, d, meta)
 }
 
-func resourceKubernetesDaemonSetUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesDaemonSetUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -166,7 +164,7 @@ func resourceKubernetesDaemonSetUpdate(d *schema.ResourceData, meta interface{})
 	if d.HasChange("spec") {
 		spec, err := expandDaemonSetSpec(d.Get("spec").([]interface{}))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 
 		ops = append(ops, &ReplaceOperation{
@@ -176,35 +174,41 @@ func resourceKubernetesDaemonSetUpdate(d *schema.ResourceData, meta interface{})
 	}
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating daemonset: %q", name)
 
 	out, err := conn.AppsV1().DaemonSets(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to update daemonset: %s", err)
+		return diag.Errorf("Failed to update daemonset: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated daemonset: %#v", out)
 
-	err = resource.Retry(d.Timeout(schema.TimeoutUpdate),
+	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
 		waitForDaemonSetReplicasFunc(ctx, conn, namespace, name))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourceKubernetesDaemonSetRead(d, meta)
+	return resourceKubernetesDaemonSetRead(ctx, d, meta)
 }
 
-func resourceKubernetesDaemonSetRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesDaemonSetRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesDaemonSetExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		return diag.Diagnostics{}
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Reading daemonset %s", name)
@@ -215,45 +219,44 @@ func resourceKubernetesDaemonSetRead(d *schema.ResourceData, meta interface{}) e
 			return nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received daemonset: %#v", daemonset)
 
 	err = d.Set("metadata", flattenMetadata(daemonset.ObjectMeta, d))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	spec, err := flattenDaemonSetSpec(daemonset.Spec, d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = d.Set("spec", spec)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceKubernetesDaemonSetDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesDaemonSetDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Deleting daemonset: %#v", name)
 
 	err = conn.AppsV1().DaemonSets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] DaemonSet %s deleted", name)
@@ -261,12 +264,11 @@ func resourceKubernetesDaemonSetDelete(d *schema.ResourceData, meta interface{})
 	return nil
 }
 
-func resourceKubernetesDaemonSetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesDaemonSetExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

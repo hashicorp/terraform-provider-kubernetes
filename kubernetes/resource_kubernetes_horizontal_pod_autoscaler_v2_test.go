@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -16,10 +16,10 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_basic(t *testing.T) {
 	resourceName := "kubernetes_horizontal_pod_autoscaler.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_horizontal_pod_autoscaler.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_horizontal_pod_autoscaler.test",
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesHorizontalPodAutoscalerV2Config_basic(name),

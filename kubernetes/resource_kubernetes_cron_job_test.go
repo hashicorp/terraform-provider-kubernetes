@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"k8s.io/api/batch/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -17,10 +17,10 @@ func TestAccKubernetesCronJob_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_cron_job.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesCronJobDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_cron_job.test",
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesCronJobDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCronJobConfig_basic(name),
@@ -77,10 +77,10 @@ func TestAccKubernetesCronJob_extra(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_cron_job.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesCronJobDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_cron_job.test",
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesCronJobDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCronJobConfig_extra(name),
@@ -114,6 +114,7 @@ func TestAccKubernetesCronJob_extra(t *testing.T) {
 
 func testAccCheckKubernetesCronJobDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+
 	if err != nil {
 		return err
 	}
@@ -170,125 +171,125 @@ func testAccCheckKubernetesCronJobExists(n string, obj *v1beta1.CronJob) resourc
 
 func testAccKubernetesCronJobConfig_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		concurrency_policy = "Replace"
-		failed_jobs_history_limit = 5
-		schedule = "1 0 * * *"
-		starting_deadline_seconds = 10
-		successful_jobs_history_limit = 10
-		suspend = true
-		job_template {
-			metadata {}
-			spec {
-				backoff_limit = 2
-				template {
-					metadata {}
-					spec {
-						container {
-							name = "hello"
-							image = "alpine"
-							command = ["echo", "'hello'"]
-						}
-					}
-				}
-			}
-		}
-	}
+  metadata {
+    name = "%s"
+  }
+  spec {
+    concurrency_policy = "Replace"
+    failed_jobs_history_limit = 5
+    schedule = "1 0 * * *"
+    starting_deadline_seconds = 10
+    successful_jobs_history_limit = 10
+    suspend = true
+    job_template {
+      metadata {}
+      spec {
+        backoff_limit = 2
+        template {
+          metadata {}
+          spec {
+            container {
+              name = "hello"
+              image = "alpine"
+              command = ["echo", "'hello'"]
+            }
+          }
+        }
+      }
+    }
+  }
 }`, name)
 }
 
 func testAccKubernetesCronJobConfig_modified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		schedule = "1 0 * * *"
-		job_template {
-			metadata {}
-			spec {
-				parallelism = 2
-				template {
-					metadata {
-						labels = {
-							foo = "bar"
-						}
-					}
-					spec {
-						container {
-							name = "hello"
-							image = "alpine"
-							command = ["echo", "'hello'"]
-						}
-					}
-				}
-			}
-		}
-	}
+  metadata {
+    name = "%s"
+  }
+  spec {
+    schedule = "1 0 * * *"
+    job_template {
+      metadata {}
+      spec {
+        parallelism = 2
+        template {
+          metadata {
+            labels = {
+              foo = "bar"
+            }
+          }
+          spec {
+            container {
+              name = "hello"
+              image = "alpine"
+              command = ["echo", "'hello'"]
+            }
+          }
+        }
+      }
+    }
+  }
 }`, name)
 }
 
 func testAccKubernetesCronJobConfig_extra(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		schedule = "1 0 * * *"
-		concurrency_policy            = "Forbid"
-		successful_jobs_history_limit = 10
-		failed_jobs_history_limit     = 10
-		starting_deadline_seconds     = 60
-		job_template {
-			metadata {}
-			spec {
-				backoff_limit = 2
-				template {
-					metadata {}
-					spec {
-						container {
-							name = "hello"
-							image = "alpine"
-							command = ["echo", "'hello'"]
-						}
-					}
-				}
-			}
-		}
-	}
+  metadata {
+    name = "%s"
+  }
+  spec {
+    schedule = "1 0 * * *"
+    concurrency_policy            = "Forbid"
+    successful_jobs_history_limit = 10
+    failed_jobs_history_limit     = 10
+    starting_deadline_seconds     = 60
+    job_template {
+      metadata {}
+      spec {
+        backoff_limit = 2
+        template {
+          metadata {}
+          spec {
+            container {
+              name = "hello"
+              image = "alpine"
+              command = ["echo", "'hello'"]
+            }
+          }
+        }
+      }
+    }
+  }
 }`, name)
 }
 
 func testAccKubernetesCronJobConfig_extraModified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		schedule = "1 0 * * *"
-		concurrency_policy            = "Forbid"
-		successful_jobs_history_limit = 2
-		failed_jobs_history_limit     = 2
-		starting_deadline_seconds     = 120
-		job_template {
-			metadata {}
-			spec {
-				backoff_limit = 3
-				template {
-					metadata {}
-					spec {
-						container {
-							name = "hello"
-							image = "alpine"
-							command = ["echo", "'hello'"]
-						}
-					}
-				}
-			}
-		}
-	}
+  metadata {
+    name = "%s"
+  }
+  spec {
+    schedule = "1 0 * * *"
+    concurrency_policy            = "Forbid"
+    successful_jobs_history_limit = 2
+    failed_jobs_history_limit     = 2
+    starting_deadline_seconds     = 120
+    job_template {
+      metadata {}
+      spec {
+        backoff_limit = 3
+        template {
+          metadata {}
+          spec {
+            container {
+              name = "hello"
+              image = "alpine"
+              command = ["echo", "'hello'"]
+            }
+          }
+        }
+      }
+    }
+  }
 }`, name)
 }

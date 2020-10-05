@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"errors"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"k8s.io/api/core/v1"
 )
 

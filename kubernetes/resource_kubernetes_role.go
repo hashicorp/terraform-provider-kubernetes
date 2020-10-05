@@ -2,10 +2,10 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,13 +14,12 @@ import (
 
 func resourceKubernetesRole() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesRoleCreate,
-		Read:   resourceKubernetesRoleRead,
-		Exists: resourceKubernetesRoleExists,
-		Update: resourceKubernetesRoleUpdate,
-		Delete: resourceKubernetesRoleDelete,
+		CreateContext: resourceKubernetesRoleCreate,
+		ReadContext:   resourceKubernetesRoleRead,
+		UpdateContext: resourceKubernetesRoleUpdate,
+		DeleteContext: resourceKubernetesRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -66,12 +65,11 @@ func resourceKubernetesRole() *schema.Resource {
 	}
 }
 
-func resourceKubernetesRoleCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	rules := expandRules(d.Get("rule").([]interface{}))
@@ -83,58 +81,63 @@ func resourceKubernetesRoleCreate(d *schema.ResourceData, meta interface{}) erro
 	log.Printf("[INFO] Creating new role: %#v", role)
 	out, err := conn.RbacV1().Roles(metadata.Namespace).Create(ctx, &role, metav1.CreateOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Submitted new role: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesRoleRead(d, meta)
+	return resourceKubernetesRoleRead(ctx, d, meta)
 }
 
-func resourceKubernetesRoleRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesRoleExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		return diag.Diagnostics{}
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Reading role %s", name)
 	role, err := conn.RbacV1().Roles(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Received role: %#v", role)
 	err = d.Set("metadata", flattenMetadata(role.ObjectMeta, d))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = d.Set("rule", flattenRules(&role.Rules))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceKubernetesRoleUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -149,35 +152,34 @@ func resourceKubernetesRoleUpdate(d *schema.ResourceData, meta interface{}) erro
 
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating role %q: %v", name, string(data))
 	out, err := conn.RbacV1().Roles(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to update role: %s", err)
+		return diag.Errorf("Failed to update role: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated role: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesRoleRead(d, meta)
+	return resourceKubernetesRoleRead(ctx, d, meta)
 }
 
-func resourceKubernetesRoleDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesRoleDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Deleting role: %#v", name)
 	err = conn.RbacV1().Roles(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Role %s deleted", name)
@@ -185,12 +187,11 @@ func resourceKubernetesRoleDelete(d *schema.ResourceData, meta interface{}) erro
 	return nil
 }
 
-func resourceKubernetesRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesRoleExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

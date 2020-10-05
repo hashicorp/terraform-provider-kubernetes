@@ -1,7 +1,9 @@
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	networking "k8s.io/api/networking/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -15,7 +17,7 @@ func dataSourceKubernetesIngress() *schema.Resource {
 	docIngressSpec := networking.IngressSpec{}.SwaggerDoc()
 
 	return &schema.Resource{
-		Read: dataSourceKubernetesIngressRead,
+		ReadContext: dataSourceKubernetesIngressRead,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("ingress", false),
@@ -23,7 +25,6 @@ func dataSourceKubernetesIngress() *schema.Resource {
 				Type:        schema.TypeList,
 				Description: docIngress["spec"],
 				Computed:    true,
-				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"backend": backendSpecFields(defaultBackendDescription),
@@ -42,7 +43,6 @@ func dataSourceKubernetesIngress() *schema.Resource {
 									"http": {
 										Type:        schema.TypeList,
 										Computed:    true,
-										MaxItems:    1,
 										Description: docIngressRule[""],
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
@@ -111,7 +111,7 @@ func dataSourceKubernetesIngress() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceKubernetesIngressRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
 	om := meta_v1.ObjectMeta{
@@ -120,5 +120,5 @@ func dataSourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) e
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesIngressRead(d, meta)
+	return resourceKubernetesIngressRead(ctx, d, meta)
 }

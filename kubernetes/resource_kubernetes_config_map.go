@@ -2,10 +2,10 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,13 +14,12 @@ import (
 
 func resourceKubernetesConfigMap() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesConfigMapCreate,
-		Read:   resourceKubernetesConfigMapRead,
-		Exists: resourceKubernetesConfigMapExists,
-		Update: resourceKubernetesConfigMapUpdate,
-		Delete: resourceKubernetesConfigMapDelete,
+		CreateContext: resourceKubernetesConfigMapCreate,
+		ReadContext:   resourceKubernetesConfigMapRead,
+		UpdateContext: resourceKubernetesConfigMapUpdate,
+		DeleteContext: resourceKubernetesConfigMapDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -40,12 +39,11 @@ func resourceKubernetesConfigMap() *schema.Resource {
 	}
 }
 
-func resourceKubernetesConfigMapCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesConfigMapCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	cfgMap := api.ConfigMap{
@@ -56,35 +54,41 @@ func resourceKubernetesConfigMapCreate(d *schema.ResourceData, meta interface{})
 	log.Printf("[INFO] Creating new config map: %#v", cfgMap)
 	out, err := conn.CoreV1().ConfigMaps(metadata.Namespace).Create(ctx, &cfgMap, metav1.CreateOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted new config map: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesConfigMapRead(d, meta)
+	return resourceKubernetesConfigMapRead(ctx, d, meta)
 }
 
-func resourceKubernetesConfigMapRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesConfigMapRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesConfigMapExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		return diag.Diagnostics{}
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Reading config map %s", name)
 	cfgMap, err := conn.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received config map: %#v", cfgMap)
 	err = d.Set("metadata", flattenMetadata(cfgMap.ObjectMeta, d))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("binary_data", flattenByteMapToBase64Map(cfgMap.BinaryData))
@@ -93,16 +97,15 @@ func resourceKubernetesConfigMapRead(d *schema.ResourceData, meta interface{}) e
 	return nil
 }
 
-func resourceKubernetesConfigMapUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesConfigMapUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -120,35 +123,34 @@ func resourceKubernetesConfigMapUpdate(d *schema.ResourceData, meta interface{})
 
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 
 	log.Printf("[INFO] Updating config map %q: %v", name, string(data))
 	out, err := conn.CoreV1().ConfigMaps(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to update Config Map: %s", err)
+		return diag.Errorf("Failed to update Config Map: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated config map: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesConfigMapRead(d, meta)
+	return resourceKubernetesConfigMapRead(ctx, d, meta)
 }
 
-func resourceKubernetesConfigMapDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesConfigMapDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Deleting config map: %#v", name)
 	err = conn.CoreV1().ConfigMaps(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Config map %s deleted", name)
@@ -157,12 +159,11 @@ func resourceKubernetesConfigMapDelete(d *schema.ResourceData, meta interface{})
 	return nil
 }
 
-func resourceKubernetesConfigMapExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesConfigMapExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

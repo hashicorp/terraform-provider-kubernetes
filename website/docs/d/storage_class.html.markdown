@@ -36,6 +36,20 @@ The following arguments are supported:
 
 * `name` - (Required) Name of the storage class, must be unique. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 
+### `allowed_topologies`
+￼
+#### Arguments
+￼
+
+* `match_label_expressions` - (Optional) A list of topology selector requirements by labels. See [match_label_expressions](#match_label_expressions)
+
+### `match_label_expressions`
+
+#### Arguments
+
+* `key` - (Optional) The label key that the selector applies to.
+* `values` - (Optional) An array of string values. One value must match the label to be selected.
+
 #### Attributes
 
 
@@ -56,3 +70,4 @@ The following attributes are exported:
 * `volume_binding_mode` - Indicates when volume binding and dynamic provisioning should occur.
 * `allow_volume_expansion` - Indicates whether the storage class allow volume expand.
 * `mount_options` - Persistent Volumes that are dynamically created by a storage class will have the mount options specified.
+* `allowed_topologies` - (Optional) Restrict the node topologies where volumes can be dynamically provisioned. See [allowed_topologies](#allowed_topologies)

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	api "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -17,10 +17,10 @@ func TestAccKubernetesClusterRole_basic(t *testing.T) {
 	resourceName := "kubernetes_cluster_role.test"
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: resourceName,
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesClusterRoleDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesClusterRoleConfig_basic(name),
@@ -69,10 +69,10 @@ func TestAccKubernetesClusterRole_UpdatePatchOperationsOrderWithRemovals(t *test
 	resourceName := "kubernetes_cluster_role.test"
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: resourceName,
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesClusterRoleDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesClusterRoleConfigBug_step_0(name),
@@ -143,10 +143,10 @@ func TestAccKubernetesClusterRole_aggregationRuleBasic(t *testing.T) {
 	resourceName := "kubernetes_cluster_role.test"
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: resourceName,
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesClusterRoleDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesClusterRoleConfig_aggRule(name),
@@ -187,10 +187,10 @@ func TestAccKubernetesClusterRole_aggregationRuleRuleAggregation(t *testing.T) {
 	resourceName := "kubernetes_cluster_role.test"
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: resourceName,
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesClusterRoleDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesClusterRoleConfig_aggRule2(name),
@@ -217,6 +217,7 @@ func TestAccKubernetesClusterRole_aggregationRuleRuleAggregation(t *testing.T) {
 
 func testAccCheckKubernetesClusterRoleDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+
 	if err != nil {
 		return err
 	}

@@ -3,13 +3,13 @@ package kubernetes
 import (
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestAccKubernetesDataSourceNamespace_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDataSourceNamespaceConfig_basic(),
@@ -31,9 +31,9 @@ func TestAccKubernetesDataSourceNamespace_basic(t *testing.T) {
 func testAccKubernetesDataSourceNamespaceConfig_basic() string {
 	return `
 data "kubernetes_namespace" "test" {
-	metadata {
-		name = "kube-system"
-	}
+  metadata {
+    name = "kube-system"
+  }
 }
 `
 }

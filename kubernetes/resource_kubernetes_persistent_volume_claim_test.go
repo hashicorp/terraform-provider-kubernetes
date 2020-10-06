@@ -134,8 +134,6 @@ func TestAccKubernetesPersistentVolumeClaim_basic(t *testing.T) {
 func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T) {
 	var pvcConf api.PersistentVolumeClaim
 	var pvConf api.PersistentVolume
-
-	resourceName := "kubernetes_persistent_volume_claim.test"
 	claimName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	volumeName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	volumeNameModified := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
@@ -143,15 +141,15 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T
 	zone := os.Getenv("GOOGLE_ZONE")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
-		IDRefreshName: resourceName,
+		PreCheck:      func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
+		IDRefreshName: "kubernetes_persistent_volume_claim.test",
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeClaimDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPersistentVolumeClaimConfig_volumeMatch(volumeName, claimName, diskName, zone),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeClaimExists(resourceName, &pvcConf),
+					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim", &pvcConf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.annotations.%", "0"),
 					testAccCheckMetaAnnotations(&pvcConf.ObjectMeta, map[string]string{"pv.kubernetes.io/bind-completed": "yes"}),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.labels.%", "0"),
@@ -172,7 +170,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T
 				),
 			},
 			{
-				ResourceName:            resourceName,
+				ResourceName:            "kubernetes_persistent_volume_claim",
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
@@ -298,7 +296,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeUpdate(t *testing.
 	zone := os.Getenv("GOOGLE_ZONE")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
+		PreCheck:      func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
 		IDRefreshName: "kubernetes_persistent_volume_claim.test",
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeClaimDestroy,
@@ -364,7 +362,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_storageClass(t *testing.
 	claimName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t); skipIfNoGoogleCloudSettingsFound(t) },
+		PreCheck:      func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
 		IDRefreshName: "kubernetes_persistent_volume_claim.test",
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeClaimDestroy,
@@ -429,12 +427,51 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_storageClass(t *testing.
 	})
 }
 
-func TestAccKubernetesPersistentVolumeClaim_expansion(t *testing.T) {
+func TestAccKubernetesPersistentVolumeClaim_expansionGoogleCloud(t *testing.T) {
 	var conf1, conf2 api.PersistentVolumeClaim
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
+		PreCheck:      func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
+		IDRefreshName: "kubernetes_persistent_volume_claim.test",
+		Providers:     testAccProviders,
+		CheckDestroy:  testAccCheckKubernetesPersistentVolumeClaimDestroy,
+		Steps: []resource.TestStep{
+			{ // GKE specific check -- initial create.
+				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, "1Gi"),
+				SkipFunc: func() (bool, error) {
+					isInGke, err := isRunningInGke()
+					return !isInGke, err
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &conf1),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "1Gi"),
+				),
+			},
+			{ // GKE specific check -- Update -- storage is increased in place.
+				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, "2Gi"),
+				SkipFunc: func() (bool, error) {
+					isInGke, err := isRunningInGke()
+					return !isInGke, err
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &conf2),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "2Gi"),
+					testAccCheckKubernetesPersistentVolumeClaimForceNew(&conf1, &conf2, false),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPersistentVolumeClaim_expansionMinikube(t *testing.T) {
+	var conf1, conf2 api.PersistentVolumeClaim
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
 		IDRefreshName: "kubernetes_persistent_volume_claim.test",
 		Providers:     testAccProviders,
 		CheckDestroy:  testAccCheckKubernetesPersistentVolumeClaimDestroy,
@@ -487,31 +524,6 @@ func TestAccKubernetesPersistentVolumeClaim_expansion(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "1Gi"),
 					testAccCheckKubernetesPersistentVolumeClaimForceNew(&conf1, &conf2, true),
-				),
-			},
-			{ // GKE specific check -- initial create.
-				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, "1Gi"),
-				SkipFunc: func() (bool, error) {
-					isInGke, err := isRunningInGke()
-					return !isInGke, err
-				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &conf1),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "1Gi"),
-				),
-			},
-			{ // GKE specific check -- Update -- storage is increased in place.
-				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, "2Gi"),
-				SkipFunc: func() (bool, error) {
-					isInGke, err := isRunningInGke()
-					return !isInGke, err
-				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &conf2),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "2Gi"),
-					testAccCheckKubernetesPersistentVolumeClaimForceNew(&conf1, &conf2, false),
 				),
 			},
 		},
@@ -779,57 +791,6 @@ func testAccKubernetesPersistentVolumeClaimConfig_metaModified(name string) stri
   wait_until_bound = false
 }
 `, name)
-}
-
-func testAccKubernetesPersistentVolumeClaimConfig_import(volumeName, claimName, diskName, zone string) string {
-	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
-  metadata {
-    name = "%s"
-  }
-
-  spec {
-    capacity = {
-      storage = "10Gi"
-    }
-
-    access_modes       = ["ReadWriteOnce"]
-    storage_class_name = "standard"
-
-    persistent_volume_source {
-      gce_persistent_disk {
-        pd_name = "${google_compute_disk.test.name}"
-      }
-    }
-  }
-}
-
-resource "google_compute_disk" "test" {
-  name  = "%s"
-  type  = "pd-ssd"
-  zone  = "%s"
-  image = "debian-8-jessie-v20170523"
-  size  = 10
-}
-
-resource "kubernetes_persistent_volume_claim" "test" {
-  metadata {
-    name = "%s"
-  }
-
-  spec {
-    access_modes       = ["ReadWriteOnce"]
-    storage_class_name = "standard"
-
-    resources {
-      requests = {
-        storage = "5Gi"
-      }
-    }
-
-    volume_name = "${kubernetes_persistent_volume.test.metadata.0.name}"
-  }
-}
-`, volumeName, diskName, zone, claimName)
 }
 
 func testAccKubernetesPersistentVolumeClaimConfig_volumeMatch(volumeName, claimName, diskName, zone string) string {

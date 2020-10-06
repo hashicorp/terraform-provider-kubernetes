@@ -31,6 +31,53 @@ resource "kubernetes_persistent_volume" "example" {
 }
 ```
 
+## Example: Persistent Volume using Azure Managed Disk
+
+```hcl
+resource "kubernetes_persistent_volume" "example" {
+  metadata {
+    name = "example"
+  }
+  spec {
+    capacity = {
+      storage = "1Gi"
+    }
+    access_modes = ["ReadWriteOnce"]
+    persistent_volume_source {
+      azure_disk {
+        caching_mode  = "None"
+        data_disk_uri = azurerm_managed_disk.example.id
+        disk_name     = "example"
+        kind          = "Managed"
+      }
+    }
+  }
+}
+
+provider "azurerm" {
+  version = ">=2.20.0"
+  features {}
+}
+
+resource "azurerm_resource_group" "example" {
+  name     = "example"
+  location = "westus2"
+}
+
+
+resource "azurerm_managed_disk" "example" {
+  name                 = "example"
+  location             = azurerm_resource_group.example.location
+  resource_group_name  = azurerm_resource_group.example.name
+  storage_account_type = "Standard_LRS"
+  create_option        = "Empty"
+  disk_size_gb         = "1"
+  tags = {
+    environment = azurerm_resource_group.example.name
+  }
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -121,10 +168,11 @@ The following arguments are supported:
 #### Arguments
 
 * `caching_mode` - (Required) Host Caching mode: None, Read Only, Read Write.
-* `data_disk_uri` - (Required) The URI the data disk in the blob storage
-* `disk_name` - (Required) The Name of the data disk in the blob storage
+* `data_disk_uri` - (Required) The URI the data disk in the blob storage OR the resource ID of an Azure managed data disk if `kind` is `Managed`.
+* `disk_name` - (Required) The Name of the data disk in the blob storage OR the name of an Azure managed data disk if `kind` is `Managed`.
 * `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
 * `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to false (read/write).
+* `kind` - (Optional) The type for the data disk. Expected values: `Shared`, `Dedicated`, `Managed`. Defaults to `Shared`.
 
 ### `azure_file`
 

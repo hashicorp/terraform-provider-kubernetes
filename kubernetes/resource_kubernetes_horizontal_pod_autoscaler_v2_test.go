@@ -34,6 +34,27 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.0.policy.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.0.policy.0.period_seconds", "120"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.0.policy.0.type", "Pods"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.0.policy.0.value", "1"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.0.policy.1.period_seconds", "310"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.0.policy.1.type", "Percent"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.0.policy.1.value", "100"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.0.select_policy", "Min"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.0.stabilization_window_seconds", "300"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.0.policy.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.0.policy.0.period_seconds", "180"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.0.policy.0.type", "Percent"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.0.policy.0.value", "100"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.0.policy.1.period_seconds", "600"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.0.policy.1.type", "Pods"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.0.policy.1.value", "5"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.0.select_policy", "Max"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.0.stabilization_window_seconds", "600"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.max_replicas", "10"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.min_replicas", "1"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.scale_target_ref.#", "1"),
@@ -76,6 +97,20 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.labels.test", "test"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.0.policy.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.0.policy.0.period_seconds", "120"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.0.policy.0.type", "Pods"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.0.policy.0.value", "10"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.0.select_policy", "Max"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_down.0.stabilization_window_seconds", "100"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.0.select_policy", "Disabled"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.0.policy.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.0.policy.0.period_seconds", "60"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.0.policy.0.type", "Pods"),
+					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.behavior.0.scale_up.0.policy.0.value", "1"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.max_replicas", "100"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.min_replicas", "50"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.scale_target_ref.#", "1"),
@@ -140,6 +175,42 @@ func testAccKubernetesHorizontalPodAutoscalerV2Config_basic(name string) string 
     scale_target_ref {
       kind = "Deployment"
       name = "TerraformAccTest"
+    }
+
+    behavior {
+      scale_down {
+        stabilization_window_seconds = 300
+        select_policy                = "Min"
+
+        policy {
+          period_seconds = 120
+          type           = "Pods"
+          value          = 1
+        }
+        
+        policy {
+          period_seconds = 310
+          type           = "Percent"
+          value          = 100
+        } 
+      }
+
+      scale_up {
+        stabilization_window_seconds = 600
+        select_policy                = "Max"
+
+        policy {
+          period_seconds = 180
+          type           = "Percent"
+          value          = 100
+        }
+
+        policy {
+          period_seconds = 600
+          type           = "Pods"
+          value          = 5
+        }
+      }
     }
 
     metric {
@@ -227,6 +298,29 @@ func testAccKubernetesHorizontalPodAutoscalerV2Config_modified(name string) stri
     scale_target_ref {
       kind = "Deployment"
       name = "TerraformAccTest"
+    }
+
+    behavior {
+      scale_down {
+        stabilization_window_seconds = 100
+        select_policy                = "Max"
+
+        policy {
+          period_seconds = 120
+          type           = "Pods"
+          value          = 10
+        }
+      }
+
+      scale_up {
+        select_policy = "Disabled"
+
+        policy {
+          period_seconds = 60
+          type           = "Pods"
+          value          = 1
+        }
+      }
     }
 
     metric {

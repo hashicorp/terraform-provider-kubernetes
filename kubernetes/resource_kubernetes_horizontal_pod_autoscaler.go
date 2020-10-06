@@ -48,6 +48,28 @@ func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
 							Optional:    true,
 							Default:     1,
 						},
+						"behavior": {
+							Type:        schema.TypeList,
+							Description: "Behavior configures the scaling behavior of the target in both Up and Down directions (scale_up and scale_down fields respectively).",
+							Optional:    true,
+							MaxItems:    1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"scale_up": {
+										Type:        schema.TypeList,
+										Description: "Scaling policy for scaling Up",
+										Optional:    true,
+										Elem:        scalingRulesSpecFields(),
+									},
+									"scale_down": {
+										Type:        schema.TypeList,
+										Description: "Scaling policy for scaling Down",
+										Optional:    true,
+										Elem:        scalingRulesSpecFields(),
+									},
+								},
+							},
+						},
 						"scale_target_ref": {
 							Type:        schema.TypeList,
 							Description: "Reference to scaled resource. e.g. Replication Controller",
@@ -260,5 +282,11 @@ func useV2(d *schema.ResourceData) bool {
 		log.Printf("[INFO] Using autoscaling/v2beta2 because this resource has a metric field")
 		return true
 	}
+
+	if len(d.Get("spec.0.behavior").([]interface{})) > 0 {
+		log.Printf("[INFO] Using autoscaling/v2beta2 because this resource has a behavior field")
+		return true
+	}
+
 	return false
 }

@@ -2,10 +2,12 @@
 FEATURES:
 
 BUG FIXES:
+
 * Fix annotation diffs on affinity tests (#993)
 
 IMPROVEMENTS:
 
+* Add Azure Managed disk to PV resource (#202)
 * Add support for enable_service_links to the pod specification (#975)
 * Update Go dependencies (#968)
 * Update acceptance tests for tfproviderlint (#962)

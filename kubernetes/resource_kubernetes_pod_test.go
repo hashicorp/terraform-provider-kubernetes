@@ -86,8 +86,8 @@ func TestAccKubernetesPod_initContainer_updateForcesNew(t *testing.T) {
 	var conf2 api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	image1 := "busybox:1.27"
-	image2 := "busybox:1.28"
+	image1 := "alpine:3.11"
+	image2 := "alpine:3.12"
 	resourceName := "kubernetes_pod.test"
 
 	resource.Test(t, resource.TestCase{

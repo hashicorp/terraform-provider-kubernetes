@@ -78,7 +78,7 @@ func resourceKubernetesPodCreate(d *schema.ResourceData, meta interface{}) error
 	d.SetId(buildId(out.ObjectMeta))
 
 	stateConf := &resource.StateChangeConf{
-		Target:  []string{"Running"},
+		Target:  []string{"Running", "Succeeded"},
 		Pending: []string{"Pending"},
 		Timeout: d.Timeout(schema.TimeoutCreate),
 		Refresh: func() (interface{}, string, error) {

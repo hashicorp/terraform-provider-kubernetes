@@ -223,6 +223,7 @@ The following arguments are supported:
 * `termination_grace_period_seconds` - (Optional) Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request. Value must be non-negative integer. The value zero indicates delete immediately. If this value is nil, the default grace period will be used instead. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Set this value longer than the expected cleanup time for your process.
 * `toleration` - (Optional) Optional pod node tolerations. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/)
 * `volume` - (Optional) List of volumes that can be mounted by containers belonging to the pod. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes)
+* `readiness_gate` - (Optional) If specified, all readiness gates will be evaluated for pod readiness. A pod is ready when all its containers are ready AND all conditions specified in the readiness gates have status equal to "True". [More info](https://git.k8s.io/enhancements/keps/sig-network/0007-pod-ready++.md)
 
 ### `affinity`
 
@@ -896,6 +897,12 @@ The `items` block supports the following:
 
 * `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
 * `volume_path` - (Required) Path that identifies vSphere volume vmdk
+
+### `readiness_gate`
+
+#### Arguments
+
+* `condition_type` - (Required) refers to a condition in the pod's condition list with matching type.
 
 ## Timeouts
 

@@ -33,6 +33,12 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	}
 	att["container"] = containers
 
+	gates, err := flattenReadinessGates(in.ReadinessGates)
+	if err != nil {
+		return nil, err
+	}
+	att["readiness_gate"] = gates
+
 	initContainers, err := flattenContainers(in.InitContainers)
 	if err != nil {
 		return nil, err
@@ -549,6 +555,16 @@ func flattenServiceAccountTokenProjection(in *v1.ServiceAccountTokenProjection) 
 	return []interface{}{att}
 }
 
+func flattenReadinessGates(in []v1.PodReadinessGate) ([]interface{}, error) {
+	att := make([]interface{}, len(in))
+	for i, v := range in {
+		c := make(map[string]interface{})
+		c["condition_type"] = v.ConditionType
+		att[i] = c
+	}
+	return att, nil
+}
+
 // Expanders
 
 func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
@@ -580,6 +596,14 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 			return obj, err
 		}
 		obj.Containers = cs
+	}
+
+	if v, ok := in["readiness_gate"].([]interface{}); ok && len(v) > 0 {
+		cs, err := expandReadinessGates(v)
+		if err != nil {
+			return obj, err
+		}
+		obj.ReadinessGates = cs
 	}
 
 	if v, ok := in["init_container"].([]interface{}); ok && len(v) > 0 {
@@ -1311,6 +1335,22 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 		}
 	}
 	return vl, nil
+}
+
+func expandReadinessGates(gates []interface{}) ([]v1.PodReadinessGate, error) {
+	if len(gates) == 0 || gates[0] == nil {
+		return []v1.PodReadinessGate{}, nil
+	}
+	cs := make([]v1.PodReadinessGate, len(gates))
+	for i, c := range gates {
+		gate := c.(map[string]interface{})
+
+		if v, ok := gate["condition_type"]; ok {
+			conType := v1.PodConditionType(v.(string))
+			cs[i].ConditionType = conType
+		}
+	}
+	return cs, nil
 }
 
 func patchPodSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOperations, error) {

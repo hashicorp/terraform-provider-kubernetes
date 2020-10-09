@@ -910,6 +910,58 @@ func TestAccKubernetesPod_enableServiceLinks(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPod_readinessGate(t *testing.T) {
+	var conf1 api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	secretName := acctest.RandomWithPrefix("tf-acc-test")
+	configMapName := acctest.RandomWithPrefix("tf-acc-test")
+
+	resourceName := "kubernetes_pod.test"
+
+	imageName1 := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodConfigBasic(secretName, configMapName, podName, imageName1),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists(resourceName, &conf1),
+				),
+			},
+			{
+				Config: testAccKubernetesPodConfigReadinessGate(secretName, configMapName, podName, imageName1),
+				PreConfig: func() {
+					conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+					if err != nil {
+						t.Fatal(err)
+					}
+					ctx := context.TODO()
+
+					conditions := conf1.Status.Conditions
+					testCondition := api.PodCondition{
+						Type:   api.PodConditionType("haha"),
+						Status: api.ConditionTrue,
+					}
+					updatedConditions := append(conditions, testCondition)
+					conf1.Status.Conditions = updatedConditions
+					_, err = conn.CoreV1().Pods("default").UpdateStatus(ctx, &conf1, metav1.UpdateOptions{})
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists(resourceName, &conf1),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.readiness_gate.0.condition_type", "haha"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesPodDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
@@ -1988,4 +2040,115 @@ resource "kubernetes_pod" "test" {
   }
 }
 `, podName, imageName)
+}
+
+func testAccKubernetesPodConfigReadinessGate(secretName, configMapName, podName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_secret" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  data = {
+    one = "first"
+  }
+}
+
+resource "kubernetes_secret" "test_from" {
+  metadata {
+    name = "%s-from"
+  }
+
+  data = {
+    one    = "first_from"
+    second = "second_from"
+  }
+}
+
+resource "kubernetes_config_map" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  data = {
+    one = "ONE"
+  }
+}
+
+resource "kubernetes_config_map" "test_from" {
+  metadata {
+    name = "%s-from"
+  }
+
+  data = {
+    one = "ONE_FROM"
+    two = "TWO_FROM"
+  }
+}
+
+resource "kubernetes_pod" "test" {
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    readiness_gate {
+      condition_type = "haha"
+    }
+    container {
+      image = "%s"
+      name  = "containername"
+
+      env {
+        name = "EXPORTED_VARIBALE_FROM_SECRET"
+
+        value_from {
+          secret_key_ref {
+            name     = "${kubernetes_secret.test.metadata.0.name}"
+            key      = "one"
+            optional = true
+          }
+        }
+      }
+      env {
+        name = "EXPORTED_VARIBALE_FROM_CONFIG_MAP"
+        value_from {
+          config_map_key_ref {
+            name     = "${kubernetes_config_map.test.metadata.0.name}"
+            key      = "one"
+            optional = true
+          }
+        }
+      }
+
+      env_from {
+        config_map_ref {
+          name     = "${kubernetes_config_map.test_from.metadata.0.name}"
+          optional = true
+        }
+        prefix = "FROM_CM_"
+      }
+      env_from {
+        secret_ref {
+          name     = "${kubernetes_secret.test_from.metadata.0.name}"
+          optional = false
+        }
+        prefix = "FROM_S_"
+      }
+    }
+
+    volume {
+      name = "db"
+
+      secret {
+        secret_name = "${kubernetes_secret.test.metadata.0.name}"
+      }
+    }
+  }
+}
+`, secretName, secretName, configMapName, configMapName, podName, imageName)
 }

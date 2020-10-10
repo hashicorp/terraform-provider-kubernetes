@@ -394,6 +394,9 @@ func flattenPersistentVolumeSpec(in v1.PersistentVolumeSpec) []interface{} {
 	if in.VolumeMode != nil {
 		att["volume_mode"] = in.VolumeMode
 	}
+	if in.ClaimRef != nil {
+		att["claim_ref"] = flattenObjectRef(in.ClaimRef)
+	}
 	return []interface{}{att}
 }
 
@@ -1010,7 +1013,21 @@ func expandPersistentVolumeSpec(l []interface{}) (*v1.PersistentVolumeSpec, erro
 		volumeMode := v1.PersistentVolumeMode(v)
 		obj.VolumeMode = &volumeMode
 	}
+	if v, ok := in["claim_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.ClaimRef = expandClaimRef(v)
+	}
 	return obj, nil
+}
+
+func expandClaimRef(v []interface{}) *v1.ObjectReference {
+	if len(v) == 0 || v[0] == nil {
+		return nil
+	}
+	o := v[0].(map[string]interface{})
+	return &v1.ObjectReference{
+		Name:      o["name"].(string),
+		Namespace: o["namespace"].(string),
+	}
 }
 
 func expandPhotonPersistentDiskVolumeSource(l []interface{}) *v1.PhotonPersistentDiskVolumeSource {
@@ -1222,7 +1239,13 @@ func patchPersistentVolumeSpec(pathPrefix, prefix string, d *schema.ResourceData
 			Value: expandPersistentVolumeAccessModes(v.List()),
 		})
 	}
-
+	if d.HasChange(prefix + "claim_ref") {
+		v := d.Get(prefix + "claim_ref").([]interface{})
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "/claimRef",
+			Value: expandClaimRef(v),
+		})
+	}
 	return ops, nil
 }
 

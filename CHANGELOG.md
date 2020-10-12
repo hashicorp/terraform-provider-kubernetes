@@ -1,8 +1,13 @@
 ## 1.13.3 (Unreleased)
 FEATURES:
+* Add support for readiness_gate on Pod spec (#949)
+* Add Azure Managed disk to PV resource (#1011)
 
 BUG FIXES:
 
+* Fix annotation diffs on affinity tests (#993)
+* Fix api_group requirement in cluster_role_binding and role_binding (#1024)
+* Fix service test leaking ELBs (#1013)
 * Fix annotation diffs on affinity tests (#993)
 
 IMPROVEMENTS:
@@ -12,7 +17,8 @@ IMPROVEMENTS:
 * Update Go dependencies (#968)
 * Update acceptance tests for tfproviderlint (#962)
 * Refactor Typhoon test configuration to allow selection of Kubernetes version (#992)
-
+* Update Pull Request Lifecycle docs (#1032)
+* CI checks for docs website (registry migration) (#989)
 
 ## 1.13.2 (September 10, 2020)
 

@@ -938,7 +938,7 @@ github.com/mitchellh/hashstructure
 github.com/mitchellh/mapstructure
 # github.com/mitchellh/reflectwalk v1.0.1
 github.com/mitchellh/reflectwalk
-# github.com/moby/term v0.0.0-20200915141129-7f0af18e79f2
+# github.com/moby/term v0.0.0-20200915141129-7f0af18e79f2 => github.com/moby/term v0.0.0-20200507123241-dbdd9cc6608d
 ## explicit
 github.com/moby/term
 github.com/moby/term/windows
@@ -2094,3 +2094,4 @@ sigs.k8s.io/yaml
 # sigs.k8s.io/kustomize/pkg/transformers => ./vendor/k8s.io/cli-runtime/pkg/kustomize/k8sdeps/transformer
 # sigs.k8s.io/kustomize/pkg/transformers/config => ./vendor/k8s.io/cli-runtime/pkg/kustomize/k8sdeps/transformer/config
 # github.com/Azure/go-autorest/autorest => github.com/tombuildsstuff/go-autorest/autorest v0.10.1-0.20200416184303-d4e299a3c04a
+# github.com/moby/term => github.com/moby/term v0.0.0-20200507123241-dbdd9cc6608d

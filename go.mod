@@ -104,7 +104,12 @@ replace (
 	sigs.k8s.io/kustomize/pkg/transformers/config => ./vendor/k8s.io/cli-runtime/pkg/kustomize/k8sdeps/transformer/config
 )
 
-// for azurerm provider
-replace github.com/Azure/go-autorest/autorest => github.com/tombuildsstuff/go-autorest/autorest v0.10.1-0.20200416184303-d4e299a3c04a
+replace (
+	// for azurerm provider
+	github.com/Azure/go-autorest/autorest => github.com/tombuildsstuff/go-autorest/autorest v0.10.1-0.20200416184303-d4e299a3c04a
+
+	// pin version until https://github.com/moby/term/pull/14 is merged - newer commits break the windows/386 builds
+	github.com/moby/term => github.com/moby/term v0.0.0-20200507123241-dbdd9cc6608d
+)
 
 go 1.15

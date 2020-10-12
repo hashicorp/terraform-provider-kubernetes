@@ -28,5 +28,5 @@ module "typhoon-acc-1_19" {
 resource "local_file" "typhoon-acc-1_19" {
   count = local.enabled_1_19
   content  = module.typhoon-acc-1_19[0].kubeconfig-admin
-  filename = "kubeconfig"
+  filename = local.kubeconfig_path
 }

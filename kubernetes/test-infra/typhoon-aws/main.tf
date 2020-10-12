@@ -1,3 +1,7 @@
+locals {
+  kubeconfig_path = "${path.root}/kubeconfig"
+}
+
 resource "tls_private_key" "typhoon-acc" {
   algorithm = "RSA"
 }
@@ -25,4 +29,8 @@ resource "null_resource" "ssh-key" {
 
 data "aws_route53_zone" "typhoon-acc" {
   name = var.base_domain
+}
+
+output "kubeconfig_path" {
+  value = local.kubeconfig_path
 }

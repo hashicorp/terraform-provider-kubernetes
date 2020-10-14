@@ -67,8 +67,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 		CheckDestroy:  testAccCheckKubernetesJobDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config:              testAccKubernetesJobConfig_basic(name),
-				ExpectedDiffChanges: map[string]terraform.DiffChangeType{"kubernetes_job.test": terraform.DiffCreate},
+				Config: testAccKubernetesJobConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.name", name),
@@ -87,8 +86,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 				),
 			},
 			{
-				Config:              testAccKubernetesJobConfig_modified(name),
-				ExpectedDiffChanges: map[string]terraform.DiffChangeType{"kubernetes_job.test": terraform.DiffUpdate},
+				Config: testAccKubernetesJobConfig_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.name", name),
@@ -108,8 +106,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 				),
 			},
 			{
-				Config:              testAccKubernetesJobConfig_recreated_selector(name),
-				ExpectedDiffChanges: map[string]terraform.DiffChangeType{"kubernetes_job.test": terraform.DiffDestroyCreate},
+				Config: testAccKubernetesJobConfig_recreated_selector(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.name", name),
@@ -132,8 +129,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 				),
 			},
 			{
-				Config:              testAccKubernetesJobConfig_recreated_image(name),
-				ExpectedDiffChanges: map[string]terraform.DiffChangeType{"kubernetes_job.test": terraform.DiffDestroyCreate},
+				Config: testAccKubernetesJobConfig_recreated_image(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.name", name),

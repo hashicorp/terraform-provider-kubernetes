@@ -129,7 +129,7 @@ Please see the [Pod resource](pod.html#spec-1) for reference.
 The following [Timeout](/docs/configuration/resources.html#operation-timeouts) configuration options are available for the `kubernetes_job` resource when used with `wait_for_completion = true`:
 
 * `create` - (Default `1 minute`) Used for creating a new job and waiting for a successful job completion.
-* `update - (Default `1 minute`) Used for updating an existing job and waiting for a successful job completion.
+* `update` - (Default `1 minute`) Used for updating an existing job and waiting for a successful job completion.
 
 Note: 
 

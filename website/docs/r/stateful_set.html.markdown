@@ -308,3 +308,12 @@ One or more `volume_claim_template` blocks can be specified.
 Each takes the same attibutes as a `kubernetes_persistent_volume_claim` resource.
 
 Please see its [documentation](persistent_volume_claim.html#argument-reference) for reference.
+
+## Timeouts
+
+The following [Timeout](/docs/configuration/resources.html#operation-timeouts) configuration options are available for the `kubernetes_stateful_set` resource:
+
+* `create` - (Default `10 minutes`) Used for creating new StatefulSet
+* `read`   - (Default `10 minutes`) Used for reading a StatefulSet
+* `update` - (Default `10 minutes`) Used for updating a StatefulSet
+* `delete` - (Default `10 minutes`) Used for destroying a StatefulSet

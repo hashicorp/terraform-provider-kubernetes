@@ -1085,6 +1085,13 @@ resource "kubernetes_stateful_set" "test" {
     name = "%s"
   }
 
+  timeouts {
+    create = "10m"
+    read   = "10m"
+    update = "10m"
+    delete = "10m"
+  }
+
   spec {
     replicas = 2
 

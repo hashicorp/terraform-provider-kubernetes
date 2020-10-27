@@ -1,6 +1,7 @@
 ## 1.13.3 (Unreleased)
 
 FEATURES:
+
 * Add support for readiness_gate on Pod spec (#811)
 * Add Azure Managed disk to PV resource (#202)
 * Add support for enable_service_links to the pod specification (#975)

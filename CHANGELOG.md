@@ -11,6 +11,8 @@ BUG FIXES:
 * Fix api_group requirement in cluster_role_binding and role_binding (#1024)
 * Fix service test leaking ELBs (#947)
 * Fix annotation diffs on affinity tests (#993)
+* Fix job documentation
+* Fix build on macOS (#1045) and windows/386
 
 IMPROVEMENTS:
 

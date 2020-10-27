@@ -1,4 +1,4 @@
-## 1.13.3 (Unreleased)
+## 1.13.3 (October 27, 2020)
 
 FEATURES:
 

@@ -110,6 +110,8 @@ replace (
 
 	// pin version until https://github.com/moby/term/pull/14 is merged - newer commits break the windows/386 builds
 	github.com/moby/term => github.com/moby/term v0.0.0-20200507123241-dbdd9cc6608d
+
+	golang.org/x/sys => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 )
 
 go 1.15

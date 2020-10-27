@@ -1491,7 +1491,7 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.0.0-20200909081042-eff7692f9009
+# golang.org/x/sys v0.0.0-20200909081042-eff7692f9009 => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 ## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
@@ -2095,3 +2095,4 @@ sigs.k8s.io/yaml
 # sigs.k8s.io/kustomize/pkg/transformers/config => ./vendor/k8s.io/cli-runtime/pkg/kustomize/k8sdeps/transformer/config
 # github.com/Azure/go-autorest/autorest => github.com/tombuildsstuff/go-autorest/autorest v0.10.1-0.20200416184303-d4e299a3c04a
 # github.com/moby/term => github.com/moby/term v0.0.0-20200507123241-dbdd9cc6608d
+# golang.org/x/sys => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6

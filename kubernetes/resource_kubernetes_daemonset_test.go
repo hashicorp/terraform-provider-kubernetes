@@ -20,6 +20,7 @@ func TestAccKubernetesDaemonSet_minimal(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_daemonset.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{

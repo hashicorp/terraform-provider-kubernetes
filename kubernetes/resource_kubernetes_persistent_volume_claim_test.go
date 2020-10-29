@@ -56,7 +56,8 @@ func TestAccKubernetesPersistentVolumeClaim_basic(t *testing.T) {
 			//          return !isInGke, err
 			//        },
 			//        Check: resource.ComposeAggregateTestCheckFunc(
-			//          //testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{
+			//          //
+			//         (&conf.ObjectMeta, map[string]string{
 			//          //  "TestAnnotationOne":                             "one",
 			//          //  "volume.beta.kubernetes.io/storage-provisioner": "kubernetes.io/gce-pd",
 			//          //}),

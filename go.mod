@@ -2,8 +2,6 @@ module github.com/hashicorp/terraform-provider-kubernetes
 
 require (
 	cloud.google.com/go/storage v1.11.0 // indirect
-	github.com/Azure/go-autorest/autorest v0.11.6 // indirect
-	github.com/Azure/go-autorest/autorest/adal v0.9.4 // indirect
 	github.com/Djarvur/go-err113 v0.1.0 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
@@ -94,13 +92,9 @@ replace (
 	sigs.k8s.io/kustomize/pkg/transformers/config => ./vendor/k8s.io/cli-runtime/pkg/kustomize/k8sdeps/transformer/config
 )
 
+// pin version until https://github.com/moby/term/pull/14 is merged - newer commits break the windows/386 builds
 replace (
-	// for azurerm provider
-	github.com/Azure/go-autorest/autorest => github.com/tombuildsstuff/go-autorest/autorest v0.10.1-0.20200416184303-d4e299a3c04a
-
-	// pin version until https://github.com/moby/term/pull/14 is merged - newer commits break the windows/386 builds
 	github.com/moby/term => github.com/moby/term v0.0.0-20200507123241-dbdd9cc6608d
-
 	golang.org/x/sys => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 )
 

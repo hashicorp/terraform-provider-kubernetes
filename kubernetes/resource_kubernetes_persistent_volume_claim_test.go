@@ -149,7 +149,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeClaimConfig_volumeMatch(volumeName, claimName, diskName, zone),
+				Config: testAccKubernetesPersistentVolumeClaimConfig_volumeMatch(volumeName, claimName, diskName, zone),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &pvcConf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.annotations.%", "0"),
@@ -178,7 +178,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeClaimConfig_volumeMatch_modified(volumeNameModified, claimName, diskName, zone),
+				Config: testAccKubernetesPersistentVolumeClaimConfig_volumeMatch_modified(volumeNameModified, claimName, diskName, zone),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &pvcConf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.annotations.%", "0"),
@@ -305,7 +305,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeUpdate(t *testing.
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeClaimConfig_volumeUpdate(volumeName, claimName, "5Gi", diskName, zone),
+				Config: testAccKubernetesPersistentVolumeClaimConfig_volumeUpdate(volumeName, claimName, "5Gi", diskName, zone),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &pvcConf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.annotations.%", "0"),
@@ -329,7 +329,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeUpdate(t *testing.
 				),
 			},
 			{
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeClaimConfig_volumeUpdate(volumeName, claimName, "10Gi", diskName, zone),
+				Config: testAccKubernetesPersistentVolumeClaimConfig_volumeUpdate(volumeName, claimName, "10Gi", diskName, zone),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &pvcConf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.annotations.%", "0"),
@@ -442,7 +442,7 @@ func TestAccKubernetesPersistentVolumeClaim_expansionGoogleCloud(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimDestroy,
 		Steps: []resource.TestStep{
 			{ // GKE specific check -- initial create.
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, "1Gi"),
+				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, "1Gi"),
 				SkipFunc: func() (bool, error) {
 					isInGke, err := isRunningInGke()
 					return !isInGke, err
@@ -454,7 +454,7 @@ func TestAccKubernetesPersistentVolumeClaim_expansionGoogleCloud(t *testing.T) {
 				),
 			},
 			{ // GKE specific check -- Update -- storage is increased in place.
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, "2Gi"),
+				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, "2Gi"),
 				SkipFunc: func() (bool, error) {
 					isInGke, err := isRunningInGke()
 					return !isInGke, err

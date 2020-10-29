@@ -32,7 +32,7 @@ func TestAccKubernetesPersistentVolume_azure_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_azure_managedDisk(name, location) +
+				Config: testAccKubernetesPersistentVolumeConfig_azure_managedDisk(name, location) +
 					testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeKind(name, diskURI, "Managed"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("azurerm_resource_group.test", "name", name),
@@ -62,17 +62,17 @@ func TestAccKubernetesPersistentVolume_azure_ManagedDiskExpectErrors(t *testing.
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{ // Expect an error when using a Managed Disk with `kind` omitted.
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_azure_managedDisk(name, location) +
+				Config: testAccKubernetesPersistentVolumeConfig_azure_managedDisk(name, location) +
 					testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeKindOmitted(name, diskURI),
 				ExpectError: regexp.MustCompile(wantError),
 			},
 			{ // Expect an error when using `kind = "Shared"` with a Managed Disk.
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_azure_managedDisk(name, location) +
+				Config: testAccKubernetesPersistentVolumeConfig_azure_managedDisk(name, location) +
 					testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeKind(name, diskURI, "Shared"),
 				ExpectError: regexp.MustCompile(wantError),
 			},
 			{ // Expect an error when using `kind = "Dedicated"` with a Managed Disk.
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_azure_managedDisk(name, location) +
+				Config: testAccKubernetesPersistentVolumeConfig_azure_managedDisk(name, location) +
 					testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeKind(name, diskURI, "Dedicated"),
 				ExpectError: regexp.MustCompile(wantError),
 			},
@@ -97,7 +97,7 @@ func TestAccKubernetesPersistentVolume_azure_blobStorageDisk(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{ // Create a PV using the existing blob storage disk. Kind is omitted to test backwards compatibility.
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_azure_blobStorage(name, location) +
+				Config: testAccKubernetesPersistentVolumeConfig_azure_blobStorage(name, location) +
 					testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeKindOmitted(name, diskURI),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf1),
@@ -107,7 +107,7 @@ func TestAccKubernetesPersistentVolume_azure_blobStorageDisk(t *testing.T) {
 				),
 			},
 			{ // Test that the resource has not been re-created. The object should have the same UID as the initial create.
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_azure_blobStorage(name, location) +
+				Config: testAccKubernetesPersistentVolumeConfig_azure_blobStorage(name, location) +
 					testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeKind(name, diskURI, "Shared"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf2),
@@ -118,7 +118,7 @@ func TestAccKubernetesPersistentVolume_azure_blobStorageDisk(t *testing.T) {
 				),
 			},
 			{ // Create a new Persistent Volume, using the same Azure storage blob, but using "Dedicated" mode in PV.
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_azure_blobStorage(name, location) +
+				Config: testAccKubernetesPersistentVolumeConfig_azure_blobStorage(name, location) +
 					testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeKind(name, diskURI, "Dedicated"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf2),
@@ -129,7 +129,7 @@ func TestAccKubernetesPersistentVolume_azure_blobStorageDisk(t *testing.T) {
 				),
 			},
 			{ // Expect an error when attempting to use 'kind = Managed' with blob storage.
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_azure_blobStorage(name, location) +
+				Config: testAccKubernetesPersistentVolumeConfig_azure_blobStorage(name, location) +
 					testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeKind(name, diskURI, "Managed"),
 				ExpectError: regexp.MustCompile(wantError),
 			},
@@ -154,7 +154,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone, region),
+				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, zone, region),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "2"),
@@ -186,7 +186,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_googleCloud_modified(name, diskName, zone),
+				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_modified(name, diskName, zone),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "2"),
@@ -240,7 +240,7 @@ func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_aws_basic(name, region, zone),
+				Config:  testAccKubernetesPersistentVolumeConfig_aws_basic(name, region, zone),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "2"),
@@ -270,7 +270,7 @@ func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_aws_modified(name, region, zone),
+				Config: testAccKubernetesPersistentVolumeConfig_aws_modified(name, region, zone),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "2"),
@@ -321,7 +321,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_googleCloud_volumeSource(name, diskName, zone),
+				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_volumeSource(name, diskName, zone),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
@@ -347,7 +347,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/custom/testing/path", ""),
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/custom/testing/path", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
@@ -385,7 +385,7 @@ func TestAccKubernetesPersistentVolume_hostPath_volumeSource(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/first/path", "DirectoryOrCreate"),
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/first/path", "DirectoryOrCreate"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
@@ -407,7 +407,7 @@ func TestAccKubernetesPersistentVolume_hostPath_volumeSource(t *testing.T) {
 				),
 			},
 			{
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/second/path", ""),
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource(name, "/second/path", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
@@ -428,7 +428,7 @@ func TestAccKubernetesPersistentVolume_hostPath_volumeSource(t *testing.T) {
 				),
 			},
 			{
-				Config:   requiredProviders() + testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource_volumeMode(name, "/second/path", ""),
+				Config:   testAccKubernetesPersistentVolumeConfig_hostPath_volumeSource_volumeMode(name, "/second/path", ""),
 				PlanOnly: true,
 			},
 		},
@@ -545,7 +545,7 @@ func TestAccKubernetesPersistentVolume_storageClass(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_storageClass(name, diskName, storageClassName, secondStorageClassName, zone, "test"),
+				Config: testAccKubernetesPersistentVolumeConfig_storageClass(name, diskName, storageClassName, secondStorageClassName, zone, "test"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),
@@ -565,7 +565,7 @@ func TestAccKubernetesPersistentVolume_storageClass(t *testing.T) {
 				),
 			},
 			{
-				Config: requiredProviders() + testAccKubernetesPersistentVolumeConfig_storageClass(name, diskName, storageClassName, secondStorageClassName, zone, "test2"),
+				Config: testAccKubernetesPersistentVolumeConfig_storageClass(name, diskName, storageClassName, secondStorageClassName, zone, "test2"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.annotations.%", "0"),

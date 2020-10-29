@@ -259,7 +259,7 @@ func retryUntilJobIsFinished(ctx context.Context, conn *kubernetes.Clientset, ns
 				case batchv1.JobComplete:
 					return nil
 				case batchv1.JobFailed:
-					return resource.NonRetryableError(fmt.Errorf("job: %s/%s is in failed sate", ns, name))
+					return resource.NonRetryableError(fmt.Errorf("job: %s/%s is in failed state", ns, name))
 				}
 			}
 		}

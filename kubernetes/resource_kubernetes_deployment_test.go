@@ -478,6 +478,7 @@ func TestAccKubernetesDeployment_with_container_security_context_run_as_group(t 
 		},
 	})
 }
+
 func TestAccKubernetesDeployment_with_volume_mount(t *testing.T) {
 	var conf appsv1.Deployment
 
@@ -501,6 +502,67 @@ func TestAccKubernetesDeployment_with_volume_mount(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.name", "db"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.read_only", "false"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.sub_path", ""),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDeployment_ForceNew(t *testing.T) {
+	var conf1, conf2 appsv1.Deployment
+
+	imageName := defaultNginxImage
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentConfig_ForceNew("secret1", "label1", "deployment1", imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf1),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.app", "label1"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.selector.0.match_labels.app", "label1"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.metadata.0.labels.app", "label1"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.volume.0.secret.0.secret_name", "secret1"),
+				),
+			},
+			{
+				Config: testAccKubernetesDeploymentConfig_ForceNew("secret2", "label1", "deployment1", imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf2),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.app", "label1"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.selector.0.match_labels.app", "label1"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.metadata.0.labels.app", "label1"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.volume.0.secret.0.secret_name", "secret2"),
+					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, false),
+				),
+			},
+			{ // BUG: labels cannot be updated on a deployment without triggering a ForceNew.
+				Config: testAccKubernetesDeploymentConfig_ForceNew("secret2", "label2", "deployment1", imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf2),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.app", "label2"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.selector.0.match_labels.app", "label2"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.metadata.0.labels.app", "label2"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.volume.0.secret.0.secret_name", "secret2"),
+//					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, false),
+				),
+			},
+			{
+				Config: testAccKubernetesDeploymentConfig_ForceNew("secret2", "label2", "deployment1", "nginx:1.18"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf2),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.app", "label2"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.selector.0.match_labels.app", "label2"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.metadata.0.labels.app", "label2"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.18"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.volume.0.secret.0.secret_name", "secret2"),
+					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, true),
 				),
 			},
 		},
@@ -2394,4 +2456,63 @@ func testAccKubernetesDeploymentConfig_regression(provider, name string) string 
   }
 }
 `, provider, name, defaultNginxImage)
+}
+
+func testAccKubernetesDeploymentConfig_ForceNew(secretName, label, deploymentName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+  metadata {
+    name = %[1]q
+  }
+
+  data = {
+    one = "first"
+  }
+}
+
+resource "kubernetes_deployment" "test" {
+  metadata {
+    name = %[3]q
+
+    labels = {
+      app = %[2]q
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        app = %[2]q
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = %[2]q
+        }
+      }
+
+      spec {
+        container {
+          image = %[4]q
+          name  = "containername"
+
+          volume_mount {
+            mount_path = "/tmp/my_path"
+            name       = "db"
+          }
+        }
+
+        volume {
+          name = "db"
+
+          secret {
+            secret_name = "${kubernetes_secret.test.metadata.0.name}"
+          }
+        }
+      }
+    }
+  }
+}
+`, secretName, label, deploymentName, imageName)
 }

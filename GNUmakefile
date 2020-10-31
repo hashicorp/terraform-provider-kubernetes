@@ -7,6 +7,7 @@ WEBSITE_REPO := github.com/hashicorp/terraform-website
 PKG_NAME     := kubernetes
 OS_ARCH      := $(shell go env GOOS)_$(shell go env GOARCH)
 TF_PROV_DOCS := $(PWD)/kubernetes/test-infra/tfproviderdocs
+EXT_PROV_DIR := $(PWD)/kubernetes/test-infra/external-providers
 
 ifneq ($(PWD),$(PROVIDER_DIR))
 $(error "Makefile must be run from the provider directory")
@@ -43,13 +44,13 @@ test: fmtcheck
 		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
 testacc: fmtcheck
-	rm -rf $(PWD)/.terraform || true
-	mkdir $(PWD)/.terraform
+	rm -rf $(EXT_PROV_DIR)/.terraform || true
+	mkdir $(EXT_PROV_DIR)/.terraform
 	mkdir -p /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH) || true
 	go clean -cache
 	go build -o /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH)/terraform-provider-kubernetes_9.9.9_$(OS_ARCH)
-	cd $(PWD)/kubernetes/test-infra/external-providers && TF_CLI_CONFIG_FILE=$(PWD)/.terraformrc TF_PLUGIN_CACHE_DIR=$(PWD)/.terraform terraform init
-	TF_CLI_CONFIG_FILE=$(PWD)/.terraformrc TF_PLUGIN_CACHE_DIR=$(PWD)/.terraform TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
+	cd $(EXT_PROV_DIR) && TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform terraform init
+	TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
 
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \

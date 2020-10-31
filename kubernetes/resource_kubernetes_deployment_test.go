@@ -550,7 +550,7 @@ func TestAccKubernetesDeployment_ForceNew(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.metadata.0.labels.app", "label2"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.volume.0.secret.0.secret_name", "secret2"),
-//					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, false),
+					//					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, false),
 				),
 			},
 			{

@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"net/http"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -68,15 +69,10 @@ func Provider() *schema.Provider {
 				Description: "PEM-encoded root certificates bundle for TLS authentication.",
 			},
 			"config_path": {
-				Type:     schema.TypeString,
-				Optional: true,
-				DefaultFunc: schema.MultiEnvDefaultFunc(
-					[]string{
-						"KUBE_CONFIG",
-						"KUBECONFIG",
-					},
-					"~/.kube/config"),
-				Description: "Path to the kube config file, defaults to ~/.kube/config",
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("KUBE_CONFIG_PATH", ""),
+				Description: "Path to the kube config file. Can be set with KUBE_CONFIG_PATH environment variable.",
 			},
 			"config_context": {
 				Type:        schema.TypeString,
@@ -100,12 +96,6 @@ func Provider() *schema.Provider {
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_TOKEN", ""),
 				Description: "Token to authenticate an service account",
-			},
-			"load_config_file": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_LOAD_CONFIG_FILE", true),
-				Description: "Load local kubeconfig.",
 			},
 			"exec": {
 				Type:     schema.TypeList,
@@ -270,40 +260,37 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	overrides := &clientcmd.ConfigOverrides{}
 	loader := &clientcmd.ClientConfigLoadingRules{}
 
-	if d.Get("load_config_file").(bool) {
-		log.Printf("[DEBUG] Trying to load configuration from file")
-		if configPath, ok := d.GetOk("config_path"); ok && configPath.(string) != "" {
-			path, err := homedir.Expand(configPath.(string))
-			if err != nil {
-				return nil, err
+	if configPath, ok := d.GetOk("config_path"); ok && configPath.(string) != "" {
+		path, err := homedir.Expand(configPath.(string))
+		if err != nil {
+			return nil, err
+		}
+		log.Printf("[DEBUG] Configuration file is: %s", path)
+		loader.ExplicitPath = path
+
+		ctxSuffix := "; default context"
+
+		kubectx, ctxOk := d.GetOk("config_context")
+		authInfo, authInfoOk := d.GetOk("config_context_auth_info")
+		cluster, clusterOk := d.GetOk("config_context_cluster")
+		if ctxOk || authInfoOk || clusterOk {
+			ctxSuffix = "; overriden context"
+			if ctxOk {
+				overrides.CurrentContext = kubectx.(string)
+				ctxSuffix += fmt.Sprintf("; config ctx: %s", overrides.CurrentContext)
+				log.Printf("[DEBUG] Using custom current context: %q", overrides.CurrentContext)
 			}
-			log.Printf("[DEBUG] Configuration file is: %s", path)
-			loader.ExplicitPath = path
 
-			ctxSuffix := "; default context"
-
-			kubectx, ctxOk := d.GetOk("config_context")
-			authInfo, authInfoOk := d.GetOk("config_context_auth_info")
-			cluster, clusterOk := d.GetOk("config_context_cluster")
-			if ctxOk || authInfoOk || clusterOk {
-				ctxSuffix = "; overriden context"
-				if ctxOk {
-					overrides.CurrentContext = kubectx.(string)
-					ctxSuffix += fmt.Sprintf("; config ctx: %s", overrides.CurrentContext)
-					log.Printf("[DEBUG] Using custom current context: %q", overrides.CurrentContext)
-				}
-
-				overrides.Context = clientcmdapi.Context{}
-				if authInfoOk {
-					overrides.Context.AuthInfo = authInfo.(string)
-					ctxSuffix += fmt.Sprintf("; auth_info: %s", overrides.Context.AuthInfo)
-				}
-				if clusterOk {
-					overrides.Context.Cluster = cluster.(string)
-					ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
-				}
-				log.Printf("[DEBUG] Using overidden context: %#v", overrides.Context)
+			overrides.Context = clientcmdapi.Context{}
+			if authInfoOk {
+				overrides.Context.AuthInfo = authInfo.(string)
+				ctxSuffix += fmt.Sprintf("; auth_info: %s", overrides.Context.AuthInfo)
 			}
+			if clusterOk {
+				overrides.Context.Cluster = cluster.(string)
+				ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
+			}
+			log.Printf("[DEBUG] Using overidden context: %#v", overrides.Context)
 		}
 	}
 

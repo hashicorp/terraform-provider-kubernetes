@@ -84,9 +84,7 @@ func TestAccKubernetesDeployment_initContainer(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.init_container.0.volume_mount.0.mount_path", "/work-dir"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.nameservers.#", "3"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.nameservers.0", "1.1.1.1"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.nameservers.1", "8.8.8.8"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.nameservers.2", "9.9.9.9"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.nameservers.0", "8.8.8.8"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.searches.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.searches.0", "kubernetes.io"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.option.#", "2"),
@@ -1281,7 +1279,7 @@ func testAccKubernetesDeploymentConfig_initContainer(name string) string {
         }
 
         dns_config {
-          nameservers = ["1.1.1.1", "8.8.8.8", "9.9.9.9"]
+          nameservers = ["8.8.8.8"]
           searches    = ["kubernetes.io"]
 
           option {

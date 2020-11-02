@@ -115,6 +115,7 @@ func TestAccKubernetesIngress_InternalKey(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_ingress.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{

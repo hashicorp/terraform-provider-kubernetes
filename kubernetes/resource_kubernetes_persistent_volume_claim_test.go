@@ -170,9 +170,10 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &pvConf),
 					//testAccCheckMetaAnnotations(&pvConf.ObjectMeta, map[string]string{"pv.kubernetes.io/bound-by-controller": "yes"}),
 				),
+				ExpectNonEmptyPlan: true, // GCP adds label "goog-gke-volume" to the disk.
 			},
 			{
-				ResourceName:            "kubernetes_persistent_volume_claim",
+				ResourceName:            "kubernetes_persistent_volume_claim.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
@@ -199,6 +200,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeMatch(t *testing.T
 					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test2", &pvConf),
 					//testAccCheckMetaAnnotations(&pvConf.ObjectMeta, map[string]string{"pv.kubernetes.io/bound-by-controller": "yes"}),
 				),
+				ExpectNonEmptyPlan: true, // GCP adds label "goog-gke-volume" to the disk.
 			},
 		},
 	})
@@ -327,6 +329,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeUpdate(t *testing.
 					//testAccCheckMetaAnnotations(&pvConf.ObjectMeta, map[string]string{"pv.kubernetes.io/bound-by-controller": "yes"}),
 					testAccCheckClaimRef(&pvConf, &ObjectRefStatic{Namespace: "default", Name: claimName}),
 				),
+				ExpectNonEmptyPlan: true, // GCP adds label "goog-gke-volume" to the disk.
 			},
 			{
 				Config: testAccKubernetesPersistentVolumeClaimConfig_volumeUpdate(volumeName, claimName, "10Gi", diskName, zone),
@@ -452,6 +455,7 @@ func TestAccKubernetesPersistentVolumeClaim_expansionGoogleCloud(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "1Gi"),
 				),
+				ExpectNonEmptyPlan: true, // GCP adds label "goog-gke-volume" to the disk.
 			},
 			{ // GKE specific check -- Update -- storage is increased in place.
 				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, "2Gi"),
@@ -581,7 +585,7 @@ func testAccCheckKubernetesPersistentVolumeClaimDestroy(s *terraform.State) erro
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_persistent_volume_claim" {
+		if rs.Type != "kubernetes_persistent_volume_claim.test" {
 			continue
 		}
 

@@ -75,24 +75,7 @@ func TestAccKubernetesDeployment_initContainer(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.init_container.0.image", "busybox"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.init_container.0.name", "install"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.init_container.0.command.0", "wget"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.init_container.0.command.1", "-O"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.init_container.0.command.2", "/work-dir/index.html"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.init_container.0.command.3", "http://kubernetes.io"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.init_container.0.volume_mount.0.name", "workdir"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.init_container.0.volume_mount.0.mount_path", "/work-dir"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.nameservers.#", "3"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.nameservers.0", "8.8.8.8"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.searches.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.searches.0", "kubernetes.io"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.option.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.option.0.name", "ndots"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.option.0.value", "1"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.option.1.name", "use-vc"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_config.0.option.1.value", ""),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.dns_policy", "Default"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.init_container.0.name", "init-service"),
 				),
 			},
 			{
@@ -1232,38 +1215,22 @@ func testAccKubernetesDeploymentConfig_initContainer(name string) string {
 
       spec {
         container {
-          name  = "nginx"
-          image = "nginx"
-
-          port {
-            container_port = 80
-          }
-
-          readiness_probe {
-            initial_delay_seconds = 10
-            http_get {
-              path = "/"
-              port = 80
-            }
-          }
+          name  = "busybox"
+          image = "busybox"
+          command = ["sh", "-c", "echo The app is running! && sleep 3600"]
 
           resources {
             requests {
               memory = "64Mi"
               cpu    = "50m"
             }
-          }
-
-          volume_mount {
-            name       = "workdir"
-            mount_path = "/usr/share/nginx/html"
           }
         }
 
         init_container {
-          name    = "install"
+          name    = "init-service"
           image   = "busybox"
-          command = ["wget", "-O", "/work-dir/index.html", "http://kubernetes.io"]
+          command = ["sh", "-c", "until nslookup init-service.default.svc.cluster.local; do echo waiting for init-service; sleep 2; done"]
 
           resources {
             requests {
@@ -1271,34 +1238,21 @@ func testAccKubernetesDeploymentConfig_initContainer(name string) string {
               cpu    = "50m"
             }
           }
-
-          volume_mount {
-            name       = "workdir"
-            mount_path = "/work-dir"
-          }
-        }
-
-        dns_config {
-          nameservers = ["8.8.8.8"]
-          searches    = ["kubernetes.io"]
-
-          option {
-            name  = "ndots"
-            value = 1
-          }
-
-          option {
-            name = "use-vc"
-          }
-        }
-
-        dns_policy = "Default"
-
-        volume {
-          name = "workdir"
-          empty_dir {}
         }
       }
+    }
+  }
+}
+
+resource "kubernetes_service" "test" {
+  metadata {
+    name = "init-service"
+  }
+
+  spec {
+    port {
+      port        = 8080
+      target_port = 80
     }
   }
 }

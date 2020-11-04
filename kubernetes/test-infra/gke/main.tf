@@ -89,3 +89,11 @@ output "kubeconfig_path" {
   value = local_file.kubeconfig.filename
 }
 
+output "kube_ctx_auth_info" {
+  value = google_container_cluster.primary.master_auth[0].username
+}
+
+output "kube_ctx_cluster" {
+  value = google_container_cluster.primary.name
+}
+

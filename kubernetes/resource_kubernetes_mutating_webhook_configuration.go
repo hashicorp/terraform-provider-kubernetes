@@ -2,10 +2,10 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -19,13 +19,12 @@ func resourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 	apiDoc := admissionregistrationv1.MutatingWebhookConfiguration{}.SwaggerDoc()
 	webhookDoc := admissionregistrationv1.MutatingWebhook{}.SwaggerDoc()
 	return &schema.Resource{
-		Create: resourceKubernetesMutatingWebhookConfigurationCreate,
-		Read:   resourceKubernetesMutatingWebhookConfigurationRead,
-		Exists: resourceKubernetesMutatingWebhookConfigurationExists,
-		Update: resourceKubernetesMutatingWebhookConfigurationUpdate,
-		Delete: resourceKubernetesMutatingWebhookConfigurationDelete,
+		CreateContext: resourceKubernetesMutatingWebhookConfigurationCreate,
+		ReadContext:   resourceKubernetesMutatingWebhookConfigurationRead,
+		UpdateContext: resourceKubernetesMutatingWebhookConfigurationUpdate,
+		DeleteContext: resourceKubernetesMutatingWebhookConfigurationDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -120,12 +119,11 @@ func resourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 	}
 }
 
-func resourceKubernetesMutatingWebhookConfigurationCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesMutatingWebhookConfigurationCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	cfg := admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: expandMetadata(d.Get("metadata").([]interface{})),
@@ -138,7 +136,7 @@ func resourceKubernetesMutatingWebhookConfigurationCreate(d *schema.ResourceData
 
 	useadmissionregistrationv1beta1, err := useAdmissionregistrationV1beta1(conn)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if useadmissionregistrationv1beta1 {
 		requestv1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
@@ -151,22 +149,28 @@ func resourceKubernetesMutatingWebhookConfigurationCreate(d *schema.ResourceData
 	}
 
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Submitted new MutatingWebhookConfiguration: %#v", res)
 
 	d.SetId(res.Name)
 
-	return resourceKubernetesMutatingWebhookConfigurationRead(d, meta)
+	return resourceKubernetesMutatingWebhookConfigurationRead(ctx, d, meta)
 }
 
-func resourceKubernetesMutatingWebhookConfigurationRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesMutatingWebhookConfigurationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesMutatingWebhookConfigurationExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		return diag.Diagnostics{}
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 
@@ -175,7 +179,7 @@ func resourceKubernetesMutatingWebhookConfigurationRead(d *schema.ResourceData, 
 	log.Printf("[INFO] Reading MutatingWebhookConfiguration %s", name)
 	useadmissionregistrationv1beta1, err := useAdmissionregistrationV1beta1(conn)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if useadmissionregistrationv1beta1 {
 		cfgv1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
@@ -185,7 +189,7 @@ func resourceKubernetesMutatingWebhookConfigurationRead(d *schema.ResourceData, 
 		cfg, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 	}
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = d.Set("metadata", flattenMetadata(cfg.ObjectMeta, d))
@@ -197,18 +201,17 @@ func resourceKubernetesMutatingWebhookConfigurationRead(d *schema.ResourceData, 
 
 	err = d.Set("webhook", flattenMutatingWebhooks(cfg.Webhooks))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceKubernetesMutatingWebhookConfigurationUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesMutatingWebhookConfigurationUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
@@ -221,7 +224,7 @@ func resourceKubernetesMutatingWebhookConfigurationUpdate(d *schema.ResourceData
 
 		useadmissionregistrationv1beta1, err := useAdmissionregistrationV1beta1(conn)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		if useadmissionregistrationv1beta1 {
 			patchv1beta1 := []admissionregistrationv1beta1.MutatingWebhook{}
@@ -236,7 +239,7 @@ func resourceKubernetesMutatingWebhookConfigurationUpdate(d *schema.ResourceData
 
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 
 	name := d.Id()
@@ -246,7 +249,7 @@ func resourceKubernetesMutatingWebhookConfigurationUpdate(d *schema.ResourceData
 
 	useadmissionregistrationv1beta1, err := useAdmissionregistrationV1beta1(conn)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if useadmissionregistrationv1beta1 {
 		responsev1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
@@ -256,27 +259,26 @@ func resourceKubernetesMutatingWebhookConfigurationUpdate(d *schema.ResourceData
 		res, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Patch(ctx, name, types.JSONPatchType, data, metav1.PatchOptions{})
 	}
 	if err != nil {
-		return fmt.Errorf("Failed to update MutatingWebhookConfiguration: %s", err)
+		return diag.Errorf("Failed to update MutatingWebhookConfiguration: %s", err)
 	}
 
 	log.Printf("[INFO] Submitted updated MutatingWebhookConfiguration: %#v", res)
 
-	return resourceKubernetesMutatingWebhookConfigurationRead(d, meta)
+	return resourceKubernetesMutatingWebhookConfigurationRead(ctx, d, meta)
 }
 
-func resourceKubernetesMutatingWebhookConfigurationDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesMutatingWebhookConfigurationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 
 	log.Printf("[INFO] Deleting MutatingWebhookConfiguration: %#v", name)
 	useadmissionregistrationv1beta1, err := useAdmissionregistrationV1beta1(conn)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if useadmissionregistrationv1beta1 {
 		err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Delete(ctx, name, metav1.DeleteOptions{})
@@ -284,7 +286,7 @@ func resourceKubernetesMutatingWebhookConfigurationDelete(d *schema.ResourceData
 		err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(ctx, name, metav1.DeleteOptions{})
 	}
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] MutatingWebhookConfiguration %#v is deleted", name)
@@ -293,12 +295,11 @@ func resourceKubernetesMutatingWebhookConfigurationDelete(d *schema.ResourceData
 	return nil
 }
 
-func resourceKubernetesMutatingWebhookConfigurationExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesMutatingWebhookConfigurationExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 

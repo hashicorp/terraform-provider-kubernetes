@@ -1,8 +1,8 @@
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func handlerFields() map[string]*schema.Schema {
@@ -207,14 +207,18 @@ func volumeMountFields() map[string]*schema.Schema {
 func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
 		"args": {
-			Type:        schema.TypeList,
-			Optional:    true,
+			Type:     schema.TypeList,
+			Optional: true,
+			// The API will default this to [], so prevent non-empty plans by setting this to Computed.
+			Computed:    true,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Description: "Arguments to the entrypoint. The docker image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/containers#containers-and-commands",
 		},
 		"command": {
-			Type:        schema.TypeList,
-			Optional:    true,
+			Type:     schema.TypeList,
+			Optional: true,
+			// The API will default this to [], so prevent non-empty plans by setting this to Computed.
+			Computed:    true,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Description: "Entrypoint array. Not executed within a shell. The docker image's ENTRYPOINT is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/containers#containers-and-commands",
 		},

@@ -4,19 +4,36 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestAccKubernetesDataSourcePVC_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			{
+			{ // The first apply creates the resource. The second apply reads the resource using the data source.
 				Config: testAccKubernetesDataSourcePVCConfig_basic(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.0", "ReadWriteOnce"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
+				),
+			},
+			{
+				Config: testAccKubernetesDataSourcePVCConfig_basic(name) +
+					testAccKubernetesDataSourcePVCConfig_read(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("data.kubernetes_persistent_volume_claim.test", "metadata.0.generation"),
@@ -24,20 +41,10 @@ func TestAccKubernetesDataSourcePVC_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.kubernetes_persistent_volume_claim.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("data.kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
+					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume_claim.test", "spec.0.access_modes.0", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
 					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.self_link"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.1245328686", "ReadWriteOnce"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
 				),
 			},
 		},
@@ -80,17 +87,15 @@ func testAccKubernetesDataSourcePVCConfig_basic(name string) string {
   }
 
   wait_until_bound = false
-  lifecycle {
-    ignore_changes = [metadata]
-  }
+}
+`, name)
 }
 
-
-
-data "kubernetes_persistent_volume_claim" "test" {
+func testAccKubernetesDataSourcePVCConfig_read() string {
+	return fmt.Sprintf(`data "kubernetes_persistent_volume_claim" "test" {
   metadata {
     name = "${kubernetes_persistent_volume_claim.test.metadata.0.name}"
   }
 }
-`, name)
+`)
 }

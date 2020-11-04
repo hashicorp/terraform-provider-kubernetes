@@ -2,10 +2,10 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/autoscaling/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,13 +14,12 @@ import (
 
 func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesHorizontalPodAutoscalerCreate,
-		Read:   resourceKubernetesHorizontalPodAutoscalerRead,
-		Exists: resourceKubernetesHorizontalPodAutoscalerExists,
-		Update: resourceKubernetesHorizontalPodAutoscalerUpdate,
-		Delete: resourceKubernetesHorizontalPodAutoscalerDelete,
+		CreateContext: resourceKubernetesHorizontalPodAutoscalerCreate,
+		ReadContext:   resourceKubernetesHorizontalPodAutoscalerRead,
+		UpdateContext: resourceKubernetesHorizontalPodAutoscalerUpdate,
+		DeleteContext: resourceKubernetesHorizontalPodAutoscalerDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("horizontal pod autoscaler", true),
@@ -86,21 +85,20 @@ func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
 	}
 }
 
-func resourceKubernetesHorizontalPodAutoscalerCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesHorizontalPodAutoscalerCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	if useV2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Create(d, meta)
+		return resourceKubernetesHorizontalPodAutoscalerV2Create(ctx, d, meta)
 	}
 
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandHorizontalPodAutoscalerSpec(d.Get("spec").([]interface{}))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	svc := api.HorizontalPodAutoscaler{
@@ -110,72 +108,77 @@ func resourceKubernetesHorizontalPodAutoscalerCreate(d *schema.ResourceData, met
 	log.Printf("[INFO] Creating new horizontal pod autoscaler: %#v", svc)
 	out, err := conn.AutoscalingV1().HorizontalPodAutoscalers(metadata.Namespace).Create(ctx, &svc, metav1.CreateOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Submitted new horizontal pod autoscaler: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesHorizontalPodAutoscalerRead(d, meta)
+	return resourceKubernetesHorizontalPodAutoscalerRead(ctx, d, meta)
 }
 
-func resourceKubernetesHorizontalPodAutoscalerRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesHorizontalPodAutoscalerRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesHorizontalPodAutoscalerExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		return diag.Diagnostics{}
+	}
 	if useV2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Read(d, meta)
+		return resourceKubernetesHorizontalPodAutoscalerV2Read(ctx, d, meta)
 	}
 
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Reading horizontal pod autoscaler %s", name)
 	hpa, err := conn.AutoscalingV1().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
 
 	// NOTE: this is needed for import
 	if _, exists := hpa.ObjectMeta.GetAnnotations()["autoscaling.alpha.kubernetes.io/metrics"]; exists {
-		return resourceKubernetesHorizontalPodAutoscalerV2Read(d, meta)
+		return resourceKubernetesHorizontalPodAutoscalerV2Read(ctx, d, meta)
 	}
 
 	log.Printf("[INFO] Received horizontal pod autoscaler: %#v", hpa)
 	err = d.Set("metadata", flattenMetadata(hpa.ObjectMeta, d))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	flattened := flattenHorizontalPodAutoscalerSpec(hpa.Spec)
 	log.Printf("[DEBUG] Flattened horizontal pod autoscaler spec: %#v", flattened)
 	err = d.Set("spec", flattened)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceKubernetesHorizontalPodAutoscalerUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesHorizontalPodAutoscalerUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	if useV2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Update(d, meta)
+		return resourceKubernetesHorizontalPodAutoscalerV2Update(ctx, d, meta)
 	}
 
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -185,38 +188,37 @@ func resourceKubernetesHorizontalPodAutoscalerUpdate(d *schema.ResourceData, met
 	}
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating horizontal pod autoscaler %q: %v", name, string(data))
 	out, err := conn.AutoscalingV1().HorizontalPodAutoscalers(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to update horizontal pod autoscaler: %s", err)
+		return diag.Errorf("Failed to update horizontal pod autoscaler: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated horizontal pod autoscaler: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesHorizontalPodAutoscalerRead(d, meta)
+	return resourceKubernetesHorizontalPodAutoscalerRead(ctx, d, meta)
 }
 
-func resourceKubernetesHorizontalPodAutoscalerDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesHorizontalPodAutoscalerDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	if useV2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Delete(d, meta)
+		return resourceKubernetesHorizontalPodAutoscalerV2Delete(ctx, d, meta)
 	}
 
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Deleting horizontal pod autoscaler: %#v", name)
 	err = conn.AutoscalingV1().HorizontalPodAutoscalers(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Horizontal Pod Autoscaler %s deleted", name)
@@ -225,16 +227,15 @@ func resourceKubernetesHorizontalPodAutoscalerDelete(d *schema.ResourceData, met
 	return nil
 }
 
-func resourceKubernetesHorizontalPodAutoscalerExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesHorizontalPodAutoscalerExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	if useV2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Exists(d, meta)
+		return resourceKubernetesHorizontalPodAutoscalerV2Exists(ctx, d, meta)
 	}
 
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

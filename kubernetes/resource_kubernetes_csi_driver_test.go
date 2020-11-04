@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	api "k8s.io/api/storage/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -20,10 +20,10 @@ func TestAccKubernetesCSIDriver_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: resourceName,
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesCSIDriverDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesCSIDriverDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCSIDriverBasicConfig(name, true),
@@ -46,6 +46,7 @@ func TestAccKubernetesCSIDriver_basic(t *testing.T) {
 
 func testAccCheckKubernetesCSIDriverDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+
 	if err != nil {
 		return err
 	}

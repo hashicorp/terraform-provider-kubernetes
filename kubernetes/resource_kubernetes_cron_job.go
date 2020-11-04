@@ -3,11 +3,12 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"k8s.io/api/batch/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,13 +16,12 @@ import (
 
 func resourceKubernetesCronJob() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesCronJobCreate,
-		Read:   resourceKubernetesCronJobRead,
-		Update: resourceKubernetesCronJobUpdate,
-		Delete: resourceKubernetesCronJobDelete,
-		Exists: resourceKubernetesCronJobExists,
+		CreateContext: resourceKubernetesCronJobCreate,
+		ReadContext:   resourceKubernetesCronJobRead,
+		UpdateContext: resourceKubernetesCronJobUpdate,
+		DeleteContext: resourceKubernetesCronJobDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Timeouts: &schema.ResourceTimeout{
@@ -43,17 +43,16 @@ func resourceKubernetesCronJob() *schema.Resource {
 	}
 }
 
-func resourceKubernetesCronJobCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesCronJobCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandCronJobSpec(d.Get("spec").([]interface{}))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	job := v1beta1.CronJob{
@@ -65,31 +64,30 @@ func resourceKubernetesCronJobCreate(d *schema.ResourceData, meta interface{}) e
 
 	out, err := conn.BatchV1beta1().CronJobs(metadata.Namespace).Create(ctx, &job, metav1.CreateOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted new cron job: %#v", out)
 
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesCronJobRead(d, meta)
+	return resourceKubernetesCronJobRead(ctx, d, meta)
 }
 
-func resourceKubernetesCronJobUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesCronJobUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, _, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandCronJobSpec(d.Get("spec").([]interface{}))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	spec.JobTemplate.ObjectMeta.Annotations = metadata.Annotations
 
@@ -102,31 +100,37 @@ func resourceKubernetesCronJobUpdate(d *schema.ResourceData, meta interface{}) e
 
 	out, err := conn.BatchV1beta1().CronJobs(namespace).Update(ctx, cronjob, metav1.UpdateOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted updated cron job: %#v", out)
 
 	d.SetId(buildId(out.ObjectMeta))
-	return resourceKubernetesCronJobRead(d, meta)
+	return resourceKubernetesCronJobRead(ctx, d, meta)
 }
 
-func resourceKubernetesCronJobRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesCronJobRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesCronJobExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		return diag.Diagnostics{}
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Reading cron job %s", name)
 	job, err := conn.BatchV1beta1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received cron job: %#v", job)
 
@@ -154,41 +158,40 @@ func resourceKubernetesCronJobRead(d *schema.ResourceData, meta interface{}) err
 
 	err = d.Set("metadata", flattenMetadata(job.ObjectMeta, d))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	jobSpec, err := flattenCronJobSpec(job.Spec, d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = d.Set("spec", jobSpec)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceKubernetesCronJobDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesCronJobDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Deleting cron job: %#v", name)
 	err = conn.BatchV1beta1().CronJobs(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		_, err := conn.BatchV1beta1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
@@ -201,7 +204,7 @@ func resourceKubernetesCronJobDelete(d *schema.ResourceData, meta interface{}) e
 		return resource.RetryableError(e)
 	})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Cron Job %s deleted", name)
@@ -210,12 +213,11 @@ func resourceKubernetesCronJobDelete(d *schema.ResourceData, meta interface{}) e
 	return nil
 }
 
-func resourceKubernetesCronJobExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesCronJobExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

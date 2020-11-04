@@ -4,15 +4,15 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
 func TestAccKubernetesDataSourceAllNamespaces_basic(t *testing.T) {
 	rxPosNum := regexp.MustCompile("^[1-9][0-9]*$")
 	nsName := regexp.MustCompile("^[a-zA-Z][-\\w]*$")
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDataSourceAllNamespacesConfig_basic(),

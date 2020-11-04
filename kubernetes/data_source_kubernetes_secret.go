@@ -1,13 +1,15 @@
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesSecret() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceKubernetesSecretRead,
+		ReadContext: dataSourceKubernetesSecretRead,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("secret", false),
@@ -26,12 +28,12 @@ func dataSourceKubernetesSecret() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesSecretRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceKubernetesSecretRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	om := meta_v1.ObjectMeta{
 		Namespace: d.Get("metadata.0.namespace").(string),
 		Name:      d.Get("metadata.0.name").(string),
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesSecretRead(d, meta)
+	return resourceKubernetesSecretRead(ctx, d, meta)
 }

@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

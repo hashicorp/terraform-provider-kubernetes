@@ -62,9 +62,6 @@ const (
 	// msiEndpoint is the well known endpoint for getting MSI authentications tokens
 	msiEndpoint = "http://169.254.169.254/metadata/identity/oauth2/token"
 
-	// the API version to use for the MSI endpoint
-	msiAPIVersion = "2018-02-01"
-
 	// the default number of attempts to refresh an MSI authentication token
 	defaultMaxMSIRefreshAttempts = 5
 
@@ -73,9 +70,6 @@ const (
 
 	// asMSISecretEnv is the environment variable used to store the request secret on App Service and Functions
 	asMSISecretEnv = "MSI_SECRET"
-
-	// the API version to use for the App Service MSI endpoint
-	appServiceAPIVersion = "2017-09-01"
 )
 
 // OAuthTokenProvider is an interface which should be implemented by an access token retriever
@@ -360,7 +354,6 @@ type ServicePrincipalToken struct {
 	customRefreshFunc TokenRefresh
 	refreshCallbacks  []TokenRefreshCallback
 	// MaxMSIRefreshAttempts is the maximum number of attempts to refresh an MSI token.
-	// Settings this to a value less than 1 will use the default value.
 	MaxMSIRefreshAttempts int
 }
 
@@ -657,8 +650,6 @@ func GetMSIVMEndpoint() (string, error) {
 	return msiEndpoint, nil
 }
 
-// NOTE: this only indicates if the ASE environment credentials have been set
-// which does not necessarily mean that the caller is authenticating via ASE!
 func isAppService() bool {
 	_, asMSIEndpointEnvExists := os.LookupEnv(asMSIEndpointEnv)
 	_, asMSISecretEnvExists := os.LookupEnv(asMSISecretEnv)
@@ -687,22 +678,16 @@ func GetMSIEndpoint() (string, error) {
 // NewServicePrincipalTokenFromMSI creates a ServicePrincipalToken via the MSI VM Extension.
 // It will use the system assigned identity when creating the token.
 func NewServicePrincipalTokenFromMSI(msiEndpoint, resource string, callbacks ...TokenRefreshCallback) (*ServicePrincipalToken, error) {
-	return newServicePrincipalTokenFromMSI(msiEndpoint, resource, nil, nil, callbacks...)
+	return newServicePrincipalTokenFromMSI(msiEndpoint, resource, nil, callbacks...)
 }
 
 // NewServicePrincipalTokenFromMSIWithUserAssignedID creates a ServicePrincipalToken via the MSI VM Extension.
-// It will use the clientID of specified user assigned identity when creating the token.
+// It will use the specified user assigned identity when creating the token.
 func NewServicePrincipalTokenFromMSIWithUserAssignedID(msiEndpoint, resource string, userAssignedID string, callbacks ...TokenRefreshCallback) (*ServicePrincipalToken, error) {
-	return newServicePrincipalTokenFromMSI(msiEndpoint, resource, &userAssignedID, nil, callbacks...)
+	return newServicePrincipalTokenFromMSI(msiEndpoint, resource, &userAssignedID, callbacks...)
 }
 
-// NewServicePrincipalTokenFromMSIWithIdentityResourceID creates a ServicePrincipalToken via the MSI VM Extension.
-// It will use the azure resource id of user assigned identity when creating the token.
-func NewServicePrincipalTokenFromMSIWithIdentityResourceID(msiEndpoint, resource string, identityResourceID string, callbacks ...TokenRefreshCallback) (*ServicePrincipalToken, error) {
-	return newServicePrincipalTokenFromMSI(msiEndpoint, resource, nil, &identityResourceID, callbacks...)
-}
-
-func newServicePrincipalTokenFromMSI(msiEndpoint, resource string, userAssignedID *string, identityResourceID *string, callbacks ...TokenRefreshCallback) (*ServicePrincipalToken, error) {
+func newServicePrincipalTokenFromMSI(msiEndpoint, resource string, userAssignedID *string, callbacks ...TokenRefreshCallback) (*ServicePrincipalToken, error) {
 	if err := validateStringParam(msiEndpoint, "msiEndpoint"); err != nil {
 		return nil, err
 	}
@@ -711,11 +696,6 @@ func newServicePrincipalTokenFromMSI(msiEndpoint, resource string, userAssignedI
 	}
 	if userAssignedID != nil {
 		if err := validateStringParam(*userAssignedID, "userAssignedID"); err != nil {
-			return nil, err
-		}
-	}
-	if identityResourceID != nil {
-		if err := validateStringParam(*identityResourceID, "identityResourceID"); err != nil {
 			return nil, err
 		}
 	}
@@ -729,15 +709,12 @@ func newServicePrincipalTokenFromMSI(msiEndpoint, resource string, userAssignedI
 	v.Set("resource", resource)
 	// App Service MSI currently only supports token API version 2017-09-01
 	if isAppService() {
-		v.Set("api-version", appServiceAPIVersion)
+		v.Set("api-version", "2017-09-01")
 	} else {
-		v.Set("api-version", msiAPIVersion)
+		v.Set("api-version", "2018-02-01")
 	}
 	if userAssignedID != nil {
 		v.Set("client_id", *userAssignedID)
-	}
-	if identityResourceID != nil {
-		v.Set("mi_res_id", *identityResourceID)
 	}
 	msiEndpointURL.RawQuery = v.Encode()
 
@@ -794,9 +771,8 @@ func (spt *ServicePrincipalToken) EnsureFresh() error {
 // EnsureFreshWithContext will refresh the token if it will expire within the refresh window (as set by
 // RefreshWithin) and autoRefresh flag is on.  This method is safe for concurrent use.
 func (spt *ServicePrincipalToken) EnsureFreshWithContext(ctx context.Context) error {
-	// must take the read lock when initially checking the token's expiration
-	if spt.inner.AutoRefresh && spt.Token().WillExpireIn(spt.inner.RefreshWithin) {
-		// take the write lock then check again to see if the token was already refreshed
+	if spt.inner.AutoRefresh && spt.inner.Token.WillExpireIn(spt.inner.RefreshWithin) {
+		// take the write lock then check to see if the token was already refreshed
 		spt.refreshLock.Lock()
 		defer spt.refreshLock.Unlock()
 		if spt.inner.Token.WillExpireIn(spt.inner.RefreshWithin) {
@@ -859,28 +835,11 @@ func (spt *ServicePrincipalToken) getGrantType() string {
 }
 
 func isIMDS(u url.URL) bool {
-	return isMSIEndpoint(u) == true || isASEEndpoint(u) == true
-}
-
-func isMSIEndpoint(endpoint url.URL) bool {
-	msi, err := url.Parse(msiEndpoint)
+	imds, err := url.Parse(msiEndpoint)
 	if err != nil {
 		return false
 	}
-	return endpoint.Host == msi.Host && endpoint.Path == msi.Path
-}
-
-func isASEEndpoint(endpoint url.URL) bool {
-	aseEndpoint, err := GetMSIAppServiceEndpoint()
-	if err != nil {
-		// app service environment isn't enabled
-		return false
-	}
-	ase, err := url.Parse(aseEndpoint)
-	if err != nil {
-		return false
-	}
-	return endpoint.Host == ase.Host && endpoint.Path == ase.Path
+	return (u.Host == imds.Host && u.Path == imds.Path) || isAppService()
 }
 
 func (spt *ServicePrincipalToken) refreshInternal(ctx context.Context, resource string) error {
@@ -899,7 +858,7 @@ func (spt *ServicePrincipalToken) refreshInternal(ctx context.Context, resource 
 	}
 	req.Header.Add("User-Agent", UserAgent())
 	// Add header when runtime is on App Service or Functions
-	if isASEEndpoint(spt.inner.OauthConfig.TokenEndpoint) {
+	if isAppService() {
 		asMSISecret, _ := os.LookupEnv(asMSISecretEnv)
 		req.Header.Add("Secret", asMSISecret)
 	}
@@ -941,14 +900,6 @@ func (spt *ServicePrincipalToken) refreshInternal(ctx context.Context, resource 
 	}
 
 	var resp *http.Response
-	if isMSIEndpoint(spt.inner.OauthConfig.TokenEndpoint) {
-		resp, err = getMSIEndpoint(ctx, spt.sender)
-		if err != nil {
-			// return a TokenRefreshError here so that we don't keep retrying
-			return newTokenRefreshError(fmt.Sprintf("the MSI endpoint is not available. Failed HTTP request to MSI endpoint: %v", err), nil)
-		}
-		resp.Body.Close()
-	}
 	if isIMDS(spt.inner.OauthConfig.TokenEndpoint) {
 		resp, err = retryForIMDS(spt.sender, req, spt.MaxMSIRefreshAttempts)
 	} else {
@@ -1020,11 +971,6 @@ func retryForIMDS(sender Sender, req *http.Request, maxAttempts int) (resp *http
 
 	attempt := 0
 	delay := time.Duration(0)
-
-	// maxAttempts is user-specified, ensure that its value is greater than zero else no request will be made
-	if maxAttempts < 1 {
-		maxAttempts = defaultMaxMSIRefreshAttempts
-	}
 
 	for attempt < maxAttempts {
 		if resp != nil && resp.Body != nil {
@@ -1186,13 +1132,4 @@ func NewMultiTenantServicePrincipalToken(multiTenantCfg MultiTenantOAuthConfig, 
 		m.AuxiliaryTokens[i] = aux
 	}
 	return &m, nil
-}
-
-// MSIAvailable returns true if the MSI endpoint is available for authentication.
-func MSIAvailable(ctx context.Context, sender Sender) bool {
-	resp, err := getMSIEndpoint(ctx, sender)
-	if err == nil {
-		resp.Body.Close()
-	}
-	return err == nil
 }

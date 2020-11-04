@@ -1,8 +1,8 @@
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schema.Schema {
@@ -46,8 +46,7 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 		"readiness_gate": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			Computed:    isComputed,
-			ForceNew:    true,
+			Computed:    true,
 			Description: "If specified, all readiness gates will be evaluated for pod readiness. A pod is ready when all its containers are ready AND all conditions specified in the readiness gates have status equal to \"True\" More info: https://git.k8s.io/enhancements/keps/sig-network/0007-pod-ready%2B%2B.md",
 			Deprecated:  deprecatedMessage,
 			Elem: &schema.Resource{
@@ -55,6 +54,7 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 					"condition_type": {
 						Type:        schema.TypeString,
 						Required:    true,
+						ForceNew:    !isUpdatable,
 						Description: "refers to a condition in the pod's condition list with matching type.",
 					},
 				},
@@ -127,15 +127,18 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			},
 		},
 		"enable_service_links": {
-			Type:        schema.TypeBool,
-			Optional:    true,
-			Default:     true,
-			Description: "Enables generating environment variables for service discovery. Optional: Defaults to true.",
+			Type:     schema.TypeBool,
+			Optional: true,
+			// Kubernetes API defaults this to `true`. A non-empty plan is returned when we also set this default.
+			Computed:    true,
+			ForceNew:    !isUpdatable,
+			Default:     nil,
+			Description: "Enables generating environment variables for service discovery. Optional: service links are enabled by default.",
 		},
 		"host_aliases": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			ForceNew:    true,
+			ForceNew:    !isUpdatable,
 			Computed:    isComputed,
 			Description: "List of hosts and IPs that will be injected into the pod's hosts file if specified. Optional: Defaults to empty.",
 			Deprecated:  deprecatedMessage,

@@ -1,13 +1,15 @@
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesConfigMap() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceKubernetesConfigMapRead,
+		ReadContext: dataSourceKubernetesConfigMapRead,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("config_map", false),
@@ -25,12 +27,12 @@ func dataSourceKubernetesConfigMap() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesConfigMapRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceKubernetesConfigMapRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	om := meta_v1.ObjectMeta{
 		Namespace: d.Get("metadata.0.namespace").(string),
 		Name:      d.Get("metadata.0.name").(string),
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesConfigMapRead(d, meta)
+	return resourceKubernetesConfigMapRead(ctx, d, meta)
 }

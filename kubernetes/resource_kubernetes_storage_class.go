@@ -3,9 +3,12 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	v1 "k8s.io/api/core/v1"
 	api "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -15,13 +18,12 @@ import (
 
 func resourceKubernetesStorageClass() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesStorageClassCreate,
-		Read:   resourceKubernetesStorageClassRead,
-		Exists: resourceKubernetesStorageClassExists,
-		Update: resourceKubernetesStorageClassUpdate,
-		Delete: resourceKubernetesStorageClassDelete,
+		CreateContext: resourceKubernetesStorageClassCreate,
+		ReadContext:   resourceKubernetesStorageClassRead,
+		UpdateContext: resourceKubernetesStorageClassUpdate,
+		DeleteContext: resourceKubernetesStorageClassDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -45,11 +47,12 @@ func resourceKubernetesStorageClass() *schema.Resource {
 				Default:     "Delete",
 			},
 			"volume_binding_mode": {
-				Type:        schema.TypeString,
-				Description: "Indicates when volume binding and dynamic provisioning should occur",
-				Optional:    true,
-				ForceNew:    true,
-				Default:     "Immediate",
+				Type:         schema.TypeString,
+				Description:  "Indicates when volume binding and dynamic provisioning should occur",
+				Optional:     true,
+				ForceNew:     true,
+				Default:      "Immediate",
+				ValidateFunc: validation.StringInSlice([]string{"Immediate", "WaitForFirstConsumer"}, false),
 			},
 			"allow_volume_expansion": {
 				Type:        schema.TypeBool,
@@ -65,16 +68,46 @@ func resourceKubernetesStorageClass() *schema.Resource {
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Set:         schema.HashString,
 			},
+			"allowed_topologies": {
+				Type:        schema.TypeList,
+				Description: "Restrict the node topologies where volumes can be dynamically provisioned.",
+				Optional:    true,
+				ForceNew:    true,
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"match_label_expressions": {
+							Type:        schema.TypeList,
+							Description: "A list of topology selector requirements by labels.",
+							Optional:    true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key": {
+										Type:        schema.TypeString,
+										Description: "The label key that the selector applies to.",
+										Optional:    true,
+									},
+									"values": {
+										Type:        schema.TypeSet,
+										Description: "An array of string values. One value must match the label to be selected.",
+										Optional:    true,
+										Elem:        &schema.Schema{Type: schema.TypeString},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
 
-func resourceKubernetesStorageClassCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesStorageClassCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	reclaimPolicy := v1.PersistentVolumeReclaimPolicy(d.Get("reclaim_policy").(string))
@@ -95,99 +128,123 @@ func resourceKubernetesStorageClassCreate(d *schema.ResourceData, meta interface
 	if v, ok := d.GetOk("mount_options"); ok {
 		storageClass.MountOptions = schemaSetToStringArray(v.(*schema.Set))
 	}
+	if v, ok := d.GetOk("allowed_topologies"); ok && len(v.([]interface{})) > 0 {
+		storageClass.AllowedTopologies = expandStorageClassAllowedTopologies(v.([]interface{}))
+	}
 
 	log.Printf("[INFO] Creating new storage class: %#v", storageClass)
 	out, err := conn.StorageV1().StorageClasses().Create(ctx, &storageClass, metav1.CreateOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted new storage class: %#v", out)
 	d.SetId(out.Name)
 
-	return resourceKubernetesStorageClassRead(d, meta)
+	return resourceKubernetesStorageClassRead(ctx, d, meta)
 }
 
-func resourceKubernetesStorageClassRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesStorageClassRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	diags := diag.Diagnostics{}
+
+	exists, err := resourceKubernetesStorageClassExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		return diags
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 	log.Printf("[INFO] Reading storage class %s", name)
 	storageClass, err := conn.StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
+
 	log.Printf("[INFO] Received storage class: %#v", storageClass)
+
 	err = d.Set("metadata", flattenMetadata(storageClass.ObjectMeta, d))
 	if err != nil {
-		return err
-	}
-	d.Set("parameters", storageClass.Parameters)
-	d.Set("storage_provisioner", storageClass.Provisioner)
-	d.Set("reclaim_policy", storageClass.ReclaimPolicy)
-	d.Set("volume_binding_mode", storageClass.VolumeBindingMode)
-	d.Set("mount_options", newStringSet(schema.HashString, storageClass.MountOptions))
-	if storageClass.AllowVolumeExpansion != nil {
-		d.Set("allow_volume_expansion", *storageClass.AllowVolumeExpansion)
+		diags = append(diags, diag.FromErr(err)[0])
 	}
 
-	return nil
+	sc := flattenStorageClass(*storageClass)
+	for k, v := range sc {
+		err = d.Set(k, v)
+		if err != nil {
+			diags = append(diags, diag.FromErr(err)[0])
+		}
+	}
+	return diags
 }
 
-func resourceKubernetesStorageClassUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesStorageClassUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating storage class %q: %v", name, string(data))
 	out, err := conn.StorageV1().StorageClasses().Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to update storage class: %s", err)
+		return diag.Errorf("Failed to update storage class: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated storage class: %#v", out)
 	d.SetId(out.ObjectMeta.Name)
 
-	return resourceKubernetesStorageClassRead(d, meta)
+	return resourceKubernetesStorageClassRead(ctx, d, meta)
 }
 
-func resourceKubernetesStorageClassDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesStorageClassDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting storage class: %#v", name)
 	err = conn.StorageV1().StorageClasses().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
+	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+		_, err := conn.StorageV1().StorageClasses().Get(ctx, d.Id(), metav1.GetOptions{})
+		if err != nil {
+			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+				return nil
+			}
+			return resource.NonRetryableError(err)
+		}
+
+		e := fmt.Errorf("storage class (%s) still exists", d.Id())
+		return resource.RetryableError(e)
+	})
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	log.Printf("[INFO] Storage class %s deleted", name)
 
 	d.SetId("")
 	return nil
 }
 
-func resourceKubernetesStorageClassExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesStorageClassExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 	log.Printf("[INFO] Checking storage class %s", name)

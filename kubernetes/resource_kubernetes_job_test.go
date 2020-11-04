@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	api "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -25,8 +25,11 @@ func TestAccKubernetesJob_wait_for_completion(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
 		IDRefreshName: "kubernetes_job.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesJobDestroy,
+		IDRefreshIgnore: []string{"spec.0.selector.0.match_expressions.#",
+			"spec.0.template.0.spec.0.container.0.resources.0.limits.#",
+			"spec.0.template.0.spec.0.container.0.resources.0.requests.#"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesJobDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesJobConfig_wait_for_completion(name),
@@ -61,10 +64,11 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_job.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesJobDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_job.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesJobDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesJobConfig_basic(name),
@@ -120,10 +124,10 @@ func TestAccKubernetesJob_ttl_seconds_after_finished(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_job.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesJobDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_job.test",
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesJobDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesJobConfig_ttl_seconds_after_finished(name),
@@ -138,6 +142,7 @@ func TestAccKubernetesJob_ttl_seconds_after_finished(t *testing.T) {
 
 func testAccCheckKubernetesJobDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+
 	if err != nil {
 		return err
 	}
@@ -194,107 +199,107 @@ func testAccCheckKubernetesJobExists(n string, obj *api.Job) resource.TestCheckF
 
 func testAccKubernetesJobConfig_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_job" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		active_deadline_seconds = 120
-		backoff_limit = 10
-		completions = 10
-		parallelism = 2
-		template {
-			metadata {}
-			spec {
-				container {
-					name = "hello"
-					image = "alpine"
-					command = ["echo", "'hello'"]
-				}
-			}
-		}
-	}
+  metadata {
+    name = "%s"
+  }
+  spec {
+    active_deadline_seconds = 120
+    backoff_limit = 10
+    completions = 10
+    parallelism = 2
+    template {
+      metadata {}
+      spec {
+        container {
+          name = "hello"
+          image = "alpine"
+          command = ["echo", "'hello'"]
+        }
+      }
+    }
+  }
 }`, name)
 }
 
 func testAccKubernetesJobConfig_ttl_seconds_after_finished(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_job" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		backoff_limit = 10
-		completions = 10
-		parallelism = 2
-		ttl_seconds_after_finished = 10
-		template {
-			metadata {}
-			spec {
-				container {
-					name = "hello"
-					image = "alpine"
-					command = ["echo", "'hello'"]
-				}
-			}
-		}
-	}
+  metadata {
+    name = "%s"
+  }
+  spec {
+    backoff_limit = 10
+    completions = 10
+    parallelism = 2
+    ttl_seconds_after_finished = 10
+    template {
+      metadata {}
+      spec {
+        container {
+          name = "hello"
+          image = "alpine"
+          command = ["echo", "'hello'"]
+        }
+      }
+    }
+  }
 }`, name)
 }
 
 func testAccKubernetesJobConfig_wait_for_completion(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_job" "test" {
-	metadata {
-		name = "%s"
-	}
-	spec {
-		template {
-			metadata {
-				name = "wait-test"
-			}
-			spec {
-				container {
-					name = "wait-test"
-					image = "busybox"
-					command = ["sleep", "10"]
-				}
-			}
-		}
-	}
-	wait_for_completion = true
-	timeouts {
-		create = "1m"
-	}
+  metadata {
+    name = "%s"
+  }
+  spec {
+    template {
+      metadata {
+        name = "wait-test"
+      }
+      spec {
+        container {
+          name = "wait-test"
+          image = "busybox"
+          command = ["sleep", "10"]
+        }
+      }
+    }
+  }
+  wait_for_completion = true
+  timeouts {
+    create = "1m"
+  }
 }`, name)
 }
 
 func testAccKubernetesJobConfig_modified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_job" "test" {
-	metadata {
-		name = "%s"
-		labels = {
-			"foo" = "bar"
-		}
-	}
-	spec {
-		manual_selector = true
-		selector {
-			match_labels = {
-				"foo" = "bar"
-			}
-		}
-		template {
-			metadata {
-				labels = {
-					"foo" = "bar"
-				}
-			}
-			spec {
-				container {
-					name = "hello"
-					image = "alpine"
-					command = ["echo", "'hello'"]
-				}
-			}
-		}
-	}
+  metadata {
+    name = "%s"
+    labels = {
+      "foo" = "bar"
+    }
+  }
+  spec {
+    manual_selector = true
+    selector {
+      match_labels = {
+        "foo" = "bar"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          "foo" = "bar"
+        }
+      }
+      spec {
+        container {
+          name = "hello"
+          image = "alpine"
+          command = ["echo", "'hello'"]
+        }
+      }
+    }
+  }
 }`, name)
 }

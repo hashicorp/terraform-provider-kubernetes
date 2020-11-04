@@ -3,8 +3,9 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"k8s.io/api/certificates/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -19,11 +20,11 @@ func resourceKubernetesCertificateSigningRequest() *schema.Resource {
 	apiDocStatus := v1beta1.CertificateSigningRequestStatus{}.SwaggerDoc()
 
 	return &schema.Resource{
-		Create: resourceKubernetesCertificateSigningRequestCreate,
-		Read:   resourceKubernetesCertificateSigningRequestRead,
-		Delete: resourceKubernetesCertificateSigningRequestDelete,
+		CreateContext: resourceKubernetesCertificateSigningRequestCreate,
+		ReadContext:   resourceKubernetesCertificateSigningRequestRead,
+		DeleteContext: resourceKubernetesCertificateSigningRequestDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(5 * time.Minute),
@@ -82,17 +83,16 @@ func resourceKubernetesCertificateSigningRequest() *schema.Resource {
 	}
 }
 
-func resourceKubernetesCertificateSigningRequestCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesCertificateSigningRequestCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandCertificateSigningRequestSpec(d.Get("spec").([]interface{}))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	csr := v1beta1.CertificateSigningRequest{
@@ -102,7 +102,7 @@ func resourceKubernetesCertificateSigningRequestCreate(d *schema.ResourceData, m
 	log.Printf("[INFO] Creating new certificate signing request: %#v", csr)
 	newCSR, createErr := conn.CertificatesV1beta1().CertificateSigningRequests().Create(ctx, &csr, metav1.CreateOptions{})
 	if createErr != nil {
-		return fmt.Errorf("Failed to create certificate signing request: %s", err)
+		return diag.Errorf("Failed to create certificate signing request: %s", err)
 	}
 
 	// Get the name, since it might have been randomly generated during create.
@@ -128,7 +128,7 @@ func resourceKubernetesCertificateSigningRequestCreate(d *schema.ResourceData, m
 			return updateErr
 		})
 		if retryErr != nil {
-			panic(fmt.Errorf("CSR auto-approve update failed: %v", retryErr))
+			panic(diag.Errorf("CSR auto-approve update failed: %v", retryErr))
 		}
 		fmt.Println("CSR auto-approve update succeeded")
 	}
@@ -175,28 +175,28 @@ func resourceKubernetesCertificateSigningRequestCreate(d *schema.ResourceData, m
 	}
 	_, err = stateConf.WaitForState()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Certificate issued for request: %s", csrName)
 
 	issued, err := conn.CertificatesV1beta1().CertificateSigningRequests().Get(ctx, csrName, metav1.GetOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.SetId(csrName)
 	d.Set("certificate", string(issued.Status.Certificate))
 
-	return resourceKubernetesCertificateSigningRequestRead(d, meta)
+	return resourceKubernetesCertificateSigningRequestRead(ctx, d, meta)
 }
 
 // resourceKubernetesCertificateSigningRequestRead does not return any data, because Read functions exist to
 // sync the local state with the remote state. Since this data is local-only, there is nothing to read.
-func resourceKubernetesCertificateSigningRequestRead(_ *schema.ResourceData, _ interface{}) error {
-	return nil
+func resourceKubernetesCertificateSigningRequestRead(ctx context.Context, _ *schema.ResourceData, _ interface{}) diag.Diagnostics {
+	return diag.Diagnostics{}
 }
 
-func resourceKubernetesCertificateSigningRequestDelete(d *schema.ResourceData, _ interface{}) error {
+func resourceKubernetesCertificateSigningRequestDelete(ctx context.Context, d *schema.ResourceData, _ interface{}) diag.Diagnostics {
 	d.SetId("")
-	return nil
+	return diag.Diagnostics{}
 }

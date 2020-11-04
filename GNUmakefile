@@ -5,6 +5,9 @@ TEST         := "$(PROVIDER_DIR)/kubernetes"
 GOFMT_FILES  := $$(find $(PROVIDER_DIR) -name '*.go' |grep -v vendor)
 WEBSITE_REPO := github.com/hashicorp/terraform-website
 PKG_NAME     := kubernetes
+OS_ARCH      := $(shell go env GOOS)_$(shell go env GOARCH)
+TF_PROV_DOCS := $(PWD)/kubernetes/test-infra/tfproviderdocs
+EXT_PROV_DIR := $(PWD)/kubernetes/test-infra/external-providers
 
 ifneq ($(PWD),$(PROVIDER_DIR))
 $(error "Makefile must be run from the provider directory")
@@ -41,7 +44,13 @@ test: fmtcheck
 		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
 testacc: fmtcheck
-	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
+	rm -rf $(EXT_PROV_DIR)/.terraform $(EXT_PROV_DIR)/.terraform.lock.hcl || true
+	mkdir $(EXT_PROV_DIR)/.terraform
+	mkdir -p /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH) || true
+	go clean -cache
+	go build -o /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH)/terraform-provider-kubernetes_9.9.9_$(OS_ARCH)
+	cd $(EXT_PROV_DIR) && TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform terraform init -upgrade
+	TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
 
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \
@@ -118,13 +127,13 @@ website-lint: tools
 		echo "To automatically fix the formatting, run 'make website-lint-fix' and commit the changes."; \
 		exit 1)
 	@echo "==> Statically compiling provider for tfproviderdocs..."
-	@env CGO_ENABLED=0 GOOS=$$(go env GOOS) GOARCH=$$(go env GOARCH) go build -a -o terraform-providers-schema/terraform-provider-kubernetes
+	@env CGO_ENABLED=0 GOOS=$$(go env GOOS) GOARCH=$$(go env GOARCH) go build -a -o $(TF_PROV_DOCS)/terraform-provider-kubernetes
 	@echo "==> Getting provider schema for tfproviderdocs..."
-		@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(PROVIDER_DIR)/terraform-providers-schema:/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace hashicorp/terraform:0.12.29 init
-		@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(PROVIDER_DIR)/terraform-providers-schema:/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace hashicorp/terraform:0.12.29 providers schema -json > ./terraform-providers-schema/schema.json
+		@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(TF_PROV_DOCS):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace hashicorp/terraform:0.12.29 init
+		@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(TF_PROV_DOCS):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace hashicorp/terraform:0.12.29 providers schema -json > $(TF_PROV_DOCS)/schema.json
 	@echo "==> Running tfproviderdocs..."
-	@tfproviderdocs check -providers-schema-json terraform-providers-schema/schema.json -provider-name kubernetes
-	@rm -f terraform-providers-schema/schema.json terraform-providers-schema/terraform-provider-kubernetes
+	@tfproviderdocs check -providers-schema-json $(TF_PROV_DOCS)/schema.json -provider-name kubernetes
+	@rm -f $(TF_PROV_DOCS)/schema.json $(TF_PROV_DOCS)/terraform-provider-kubernetes
 #	@echo "==> Checking for broken links..."
 #@scripts/markdown-link-check.sh "$(DOCKER)" "$(DOCKER_RUN_OPTS)" "$(DOCKER_VOLUME_OPTS)" "$(PROVIDER_DIR)"
 # TODO: enable this check when links have been fixed.

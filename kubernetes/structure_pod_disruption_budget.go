@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )

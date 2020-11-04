@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	api "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -18,10 +18,10 @@ func TestAccKubernetesRoleBinding_basic(t *testing.T) {
 	resourceName := "kubernetes_role_binding.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: resourceName,
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesRoleBindingDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesRoleBindingDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesRoleBindingConfig_basic(name),
@@ -134,10 +134,10 @@ func TestAccKubernetesRoleBinding_sa_subject(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_role_binding.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesRoleBindingDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_role_binding.test",
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesRoleBindingDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesRoleBindingConfig_sa_subject(name),
@@ -167,10 +167,10 @@ func TestAccKubernetesRoleBinding_group_subject(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_role_binding.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesRoleBindingDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_role_binding.test",
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesRoleBindingDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesRoleBindingConfig_group_subject(name),
@@ -200,10 +200,10 @@ func TestAccKubernetesRoleBinding_Bug(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_role_binding.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesRoleBindingDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_role_binding.test",
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesRoleBindingDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesRoleBindingConfigBug_step_0(name),
@@ -286,6 +286,7 @@ func TestAccKubernetesRoleBinding_Bug(t *testing.T) {
 
 func testAccCheckKubernetesRoleBindingDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+
 	if err != nil {
 		return err
 	}

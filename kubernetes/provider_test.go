@@ -4,44 +4,71 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"os"
 	"strings"
 	"testing"
 
 	gversion "github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"github.com/hashicorp/terraform-provider-google/google"
-	"github.com/terraform-providers/terraform-provider-aws/aws"
-	"github.com/terraform-providers/terraform-provider-azurerm/azurerm"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var testAccProviders map[string]terraform.ResourceProvider
+var testAccProviders map[string]*schema.Provider
 var testAccProvider *schema.Provider
+var testAccExternalProviders map[string]resource.ExternalProvider
+var testAccProviderFactories = map[string]func() (*schema.Provider, error){
+	"kubernetes": func() (*schema.Provider, error) {
+		return Provider(), nil
+	},
+}
 
 func init() {
-	testAccProvider = Provider().(*schema.Provider)
-	testAccProviders = map[string]terraform.ResourceProvider{
+	testAccProvider = Provider()
+	testAccProviders = map[string]*schema.Provider{
 		"kubernetes": testAccProvider,
-		"google":     google.Provider(),
-		"aws":        aws.Provider(),
-		"azurerm":    azurerm.Provider(),
+	}
+	testAccProviderFactories = map[string]func() (*schema.Provider, error){
+		"kubernetes": func() (*schema.Provider, error) {
+			return Provider(), nil
+		},
+	}
+	testAccExternalProviders = map[string]resource.ExternalProvider{
+		"kubernetes-local": {
+			VersionConstraint: "9.9.9",
+			Source:            "localhost/test/kubernetes",
+		},
+		"kubernetes-released": {
+			VersionConstraint: "~> 1.13.2",
+			Source:            "hashicorp/kubernetes",
+		},
+		"aws": {
+			Source: "hashicorp/aws",
+		},
+		"google": {
+			Source: "hashicorp/google",
+		},
+		"azurerm": {
+			Source: "hashicorp/azurerm",
+		},
 	}
 }
 
 func TestProvider(t *testing.T) {
-	if err := Provider().(*schema.Provider).InternalValidate(); err != nil {
+	provider := Provider()
+	if err := provider.InternalValidate(); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 }
 
 func TestProvider_impl(t *testing.T) {
-	var _ terraform.ResourceProvider = Provider()
+	var _ schema.Provider = *Provider()
 }
 
 func TestProvider_configure(t *testing.T) {
+	ctx := context.TODO()
 	resetEnv := unsetEnv(t)
 	defer resetEnv()
 
@@ -50,9 +77,9 @@ func TestProvider_configure(t *testing.T) {
 
 	rc := terraform.NewResourceConfigRaw(map[string]interface{}{})
 	p := Provider()
-	err := p.Configure(rc)
-	if err != nil {
-		t.Fatal(err)
+	diags := p.Configure(ctx, rc)
+	if diags.HasError() {
+		t.Fatal(diags)
 	}
 }
 
@@ -173,6 +200,7 @@ func getEnv() *currentEnv {
 }
 
 func testAccPreCheck(t *testing.T) {
+	ctx := context.TODO()
 	hasFileCfg := (os.Getenv("KUBE_CTX_AUTH_INFO") != "" && os.Getenv("KUBE_CTX_CLUSTER") != "") ||
 		os.Getenv("KUBE_CTX") != "" ||
 		os.Getenv("KUBECONFIG") != "" ||
@@ -196,10 +224,11 @@ func testAccPreCheck(t *testing.T) {
 			}, ", "))
 	}
 
-	err := testAccProvider.Configure(terraform.NewResourceConfigRaw(nil))
-	if err != nil {
-		t.Fatal(err)
+	diags := testAccProvider.Configure(ctx, terraform.NewResourceConfigRaw(nil))
+	if diags.HasError() {
+		t.Fatal(diags[0].Summary)
 	}
+	return
 }
 
 func getClusterVersion() (*gversion.Version, error) {
@@ -291,6 +320,16 @@ func skipIfNotRunningInMinikube(t *testing.T) {
 	}
 	if !isInMinikube {
 		t.Skip("The Kubernetes endpoint must come from Minikube for this test to run - skipping")
+	}
+}
+
+func skipIfRunningInMinikube(t *testing.T) {
+	isInMinikube, err := isRunningInMinikube()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isInMinikube {
+		t.Skip("This test requires multiple Kubernetes nodes - skipping")
 	}
 }
 
@@ -409,4 +448,20 @@ type currentEnv struct {
 	Insecure          string
 	LoadConfigFile    string
 	Token             string
+}
+
+func requiredProviders() string {
+	return fmt.Sprintf(`terraform {
+  required_providers {
+    kubernetes-local = {
+      source  = "localhost/test/kubernetes"
+      version = "9.9.9"
+    }
+    kubernetes-released = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 1.13.2"
+    }
+  }
+}
+`)
 }

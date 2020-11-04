@@ -3,14 +3,15 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"regexp"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -113,6 +114,12 @@ func resourceKubernetesDaemonSet() *schema.Resource {
 					},
 				},
 			},
+			"wait_for_rollout": {
+				Type:        schema.TypeBool,
+				Description: "Wait for the rollout of the deployment to complete. Defaults to true.",
+				Default:     true,
+				Optional:    true,
+			},
 		},
 	}
 }
@@ -139,6 +146,14 @@ func resourceKubernetesDaemonSetCreate(ctx context.Context, d *schema.ResourceDa
 	out, err := conn.AppsV1().DaemonSets(metadata.Namespace).Create(ctx, &daemonset, metav1.CreateOptions{})
 	if err != nil {
 		return diag.Errorf("Failed to create daemonset: %s", err)
+	}
+
+	if d.Get("wait_for_rollout").(bool) {
+		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
+			waitForDaemonSetReplicasFunc(ctx, conn, metadata.Namespace, metadata.Name))
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	d.SetId(buildId(out.ObjectMeta))
@@ -184,10 +199,12 @@ func resourceKubernetesDaemonSetUpdate(ctx context.Context, d *schema.ResourceDa
 	}
 	log.Printf("[INFO] Submitted updated daemonset: %#v", out)
 
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
-		waitForDaemonSetReplicasFunc(ctx, conn, namespace, name))
-	if err != nil {
-		return diag.FromErr(err)
+	if d.Get("wait_for_rollout").(bool) {
+		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
+			waitForDaemonSetReplicasFunc(ctx, conn, namespace, name))
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return resourceKubernetesDaemonSetRead(ctx, d, meta)

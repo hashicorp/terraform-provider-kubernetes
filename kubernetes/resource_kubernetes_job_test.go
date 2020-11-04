@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -13,10 +12,6 @@ import (
 	api "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-func ttlAfterDisabled() (bool, string) {
-	return os.Getenv("FEATURE_GATE_TTL_AFTER_FINISHED") != "enabled", "TTLAfterFinished is not enabled"
-}
 
 func TestAccKubernetesJob_wait_for_completion(t *testing.T) {
 	var conf api.Job
@@ -86,7 +81,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.parallelism", "2"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", "alpine"),
-					resource.TestCheckNoResourceAttr("kubernetes_job.test", "wait_for_completion"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "wait_for_completion", "false"),
 				),
 			},
 			{
@@ -108,7 +103,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.manual_selector", "true"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", "alpine"),
-					resource.TestCheckNoResourceAttr("kubernetes_job.test", "wait_for_completion"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "wait_for_completion", "false"),
 				),
 			},
 		},
@@ -116,16 +111,18 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 }
 
 func TestAccKubernetesJob_ttl_seconds_after_finished(t *testing.T) {
-	if skip, reason := ttlAfterDisabled(); skip {
-		t.Skip(reason)
-	}
-
 	var conf api.Job
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_job.test",
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_job.test",
+		IDRefreshIgnore: []string{
+			"spec.0.selector.0.match_expressions.#",
+			"spec.0.selector.0.match_labels.%",
+			"spec.0.template.0.spec.0.container.0.resources.0.limits.#",
+			"spec.0.template.0.spec.0.container.0.resources.0.requests.#",
+		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesJobDestroy,
 		Steps: []resource.TestStep{
@@ -133,8 +130,12 @@ func TestAccKubernetesJob_ttl_seconds_after_finished(t *testing.T) {
 				Config: testAccKubernetesJobConfig_ttl_seconds_after_finished(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "10"),
+					// FIXME uncomment this check when the TTLSecondsAfterFinished feature gate defaults to true
+					// resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "60"),
 				),
+
+				// FIXME remove this when TTLSecondsAfterFinished defaults to true
+				ExpectNonEmptyPlan: true,
 			},
 		},
 	})
@@ -218,6 +219,8 @@ func testAccKubernetesJobConfig_basic(name string) string {
       }
     }
   }
+
+  wait_for_completion = false
 }`, name)
 }
 
@@ -230,7 +233,7 @@ func testAccKubernetesJobConfig_ttl_seconds_after_finished(name string) string {
     backoff_limit = 10
     completions = 10
     parallelism = 2
-    ttl_seconds_after_finished = 10
+    ttl_seconds_after_finished = "60"
     template {
       metadata {}
       spec {
@@ -301,5 +304,6 @@ func testAccKubernetesJobConfig_modified(name string) string {
       }
     }
   }
+  wait_for_completion = false
 }`, name)
 }

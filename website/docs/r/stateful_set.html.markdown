@@ -213,7 +213,7 @@ The following arguments are supported:
 
 * `metadata` - (Required) Standard Kubernetes object metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 * `spec` - (Required) Spec defines the specification of the desired behavior of the stateful set. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status)
-* `wait_for_rollout` - (Optional) Wait for the StatefulSet to finish rolling out. Defaults to `false`.
+* `wait_for_rollout` - (Optional) Wait for the StatefulSet to finish rolling out. Defaults to `true`.
 
 ## Nested Blocks
 

@@ -3,13 +3,14 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,8 +64,9 @@ func resourceKubernetesServiceAccount() *schema.Resource {
 			},
 			"automount_service_account_token": {
 				Type:        schema.TypeBool,
-				Description: "True to enable automatic mounting of the service account token",
+				Description: "Enable automatic mounting of the service account token",
 				Optional:    true,
+				Default:     true,
 			},
 			"default_secret_name": {
 				Type:     schema.TypeString,

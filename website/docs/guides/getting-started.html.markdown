@@ -251,7 +251,7 @@ Terraform will perform the following actions:
         }
 
       + spec {
-          + automount_service_account_token  = false
+          + automount_service_account_token  = true
           + dns_policy                       = "ClusterFirst"
           + enable_service_links             = false
           + host_ipc                         = false

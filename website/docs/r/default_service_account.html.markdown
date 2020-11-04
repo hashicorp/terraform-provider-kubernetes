@@ -37,7 +37,7 @@ The following arguments are supported:
 * `metadata` - (Required) Standard service account's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 * `image_pull_secret` - (Optional) A list of references to secrets in the same namespace to use for pulling any images in pods that reference this Service Account. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/secrets#manually-specifying-an-imagepullsecret)
 * `secret` - (Optional) A list of secrets allowed to be used by pods running using this Service Account. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/secrets)
-* `automount_service_account_token` - (Optional) Boolean, `true` to enable automatic mounting of the service account token
+* `automount_service_account_token` - (Optional) Boolean, `true` to enable automatic mounting of the service account token. Defaults to `true`.
 
 ## Nested Blocks
 

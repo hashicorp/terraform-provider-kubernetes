@@ -32,6 +32,7 @@ func TestAccKubernetesIngress_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.ingress_class_name", "ingress-class"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_name", "app1"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_port", "443"),
@@ -54,6 +55,7 @@ func TestAccKubernetesIngress_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.ingress_class_name", "other-ingress-class"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_name", "svc"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_port", "8443"),
@@ -234,6 +236,7 @@ func testAccKubernetesIngressConfig_basic(name string) string {
     name = "%s"
   }
   spec {
+	ingress_class_name = "ingress-class"
     backend {
       service_name = "app1"
       service_port = 443
@@ -260,6 +263,7 @@ func testAccKubernetesIngressConfig_modified(name string) string {
     name = "%s"
   }
   spec {
+	ingress_class_name = "other-ingress-class"
     backend {
       service_name = "svc"
       service_port = 8443

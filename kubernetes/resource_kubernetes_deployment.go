@@ -71,6 +71,7 @@ func resourceKubernetesDeployment() *schema.Resource {
 							Type:        schema.TypeInt,
 							Description: "The number of desired replicas. Defaults to 1. More info: http://kubernetes.io/docs/user-guide/replication-controller#what-is-a-replication-controller",
 							Optional:    true,
+							Computed:    true,
 							Default:     1,
 						},
 						"revision_history_limit": {

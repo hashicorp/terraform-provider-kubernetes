@@ -211,17 +211,24 @@ func testAccPreCheck(t *testing.T) {
 		os.Getenv("KUBE_CLUSTER_CA_CERT_DATA") != "") &&
 		(hasUserCredentials || hasClientCert || os.Getenv("KUBE_TOKEN") != "")
 
-	if !hasFileCfg && !hasStaticCfg {
+	if !hasFileCfg && !hasStaticCfg && !hasUserCredentials {
 		t.Fatalf("File config (KUBE_CTX_AUTH_INFO and KUBE_CTX_CLUSTER) or static configuration"+
-			" (%s) must be set for acceptance tests",
+			"(%s) or (%s) must be set for acceptance tests",
 			strings.Join([]string{
+				"KUBE_LOAD_CONFIG_FILE=false",
 				"KUBE_HOST",
 				"KUBE_USER",
 				"KUBE_PASSWORD",
+				"KUBE_CLUSTER_CA_CERT_DATA",
+			}, ", "),
+			strings.Join([]string{
+				"KUBE_LOAD_CONFIG_FILE=false",
+				"KUBE_HOST",
 				"KUBE_CLIENT_CERT_DATA",
 				"KUBE_CLIENT_KEY_DATA",
 				"KUBE_CLUSTER_CA_CERT_DATA",
-			}, ", "))
+			}, ", "),
+		)
 	}
 
 	diags := testAccProvider.Configure(ctx, terraform.NewResourceConfigRaw(nil))

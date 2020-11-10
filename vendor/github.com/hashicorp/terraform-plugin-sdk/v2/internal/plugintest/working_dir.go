@@ -231,11 +231,11 @@ func (wd *WorkingDir) SavedPlan() (*tfjson.Plan, error) {
 	return wd.tf.ShowPlanFile(context.Background(), wd.planFilename(), tfexec.Reattach(wd.reattachInfo))
 }
 
-// SavedPlanStdout returns a stdout capture of the current saved plan file, if any.
+// SavedPlanRawStdout returns a human readable stdout capture of the current saved plan file, if any.
 //
-// If no plan is saved or if the plan file cannot be read, SavedPlanStdout returns
+// If no plan is saved or if the plan file cannot be read, SavedPlanRawStdout returns
 // an error.
-func (wd *WorkingDir) SavedPlanStdout() (string, error) {
+func (wd *WorkingDir) SavedPlanRawStdout() (string, error) {
 	if !wd.HasSavedPlan() {
 		return "", fmt.Errorf("there is no current saved plan")
 	}
@@ -244,7 +244,7 @@ func (wd *WorkingDir) SavedPlanStdout() (string, error) {
 
 	wd.tf.SetStdout(&ret)
 	defer wd.tf.SetStdout(ioutil.Discard)
-	_, err := wd.tf.ShowPlanFile(context.Background(), wd.planFilename(), tfexec.Reattach(wd.reattachInfo))
+	_, err := wd.tf.ShowPlanFileRaw(context.Background(), wd.planFilename(), tfexec.Reattach(wd.reattachInfo))
 	if err != nil {
 		return "", err
 	}

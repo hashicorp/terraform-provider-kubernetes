@@ -19,6 +19,7 @@
 syntax = "proto3";
 
 package tfplugin5;
+option go_package = "github.com/hashicorp/terraform-plugin-go/tfprotov5/internal/tfplugin5";
 
 // DynamicValue is an opaque encoding of terraform data, with the field name
 // indicating the encoding scheme used.

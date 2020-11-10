@@ -34,7 +34,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/hcl/v2 v2.6.0 // indirect
 	github.com/hashicorp/terraform-json v0.6.0 // indirect
-	github.com/hashicorp/terraform-plugin-sdk/v2 v2.0.4-0.20200930154456-951f045a9f14
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.2.0
 	github.com/hashicorp/yamux v0.0.0-20200609203250-aecfd211c9ce // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
@@ -68,7 +68,6 @@ require (
 	golang.org/x/tools v0.0.0-20200911153331-7ad463ce66dd // indirect
 	google.golang.org/api v0.31.0 // indirect
 	google.golang.org/genproto v0.0.0-20200911024640-645f7a48b24f // indirect
-	google.golang.org/grpc v1.32.0 // indirect
 	gopkg.in/ini.v1 v1.61.0 // indirect
 	k8s.io/api v0.19.1
 	k8s.io/apimachinery v0.19.1

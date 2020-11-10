@@ -1,4 +1,4 @@
-package context
+package schema
 
 type Key string
 

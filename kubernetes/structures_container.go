@@ -1,7 +1,8 @@
 package kubernetes
 
 import (
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -204,6 +205,9 @@ func flattenResourceFieldSelector(in *v1.ResourceFieldSelector) []interface{} {
 	}
 	if in.Resource != "" {
 		att["resource"] = in.Resource
+	}
+	if in.Divisor.String() != "" {
+		att["divisor"] = in.Divisor.String()
 	}
 	return []interface{}{att}
 }
@@ -860,6 +864,13 @@ func expandResourceFieldRef(r []interface{}) (*v1.ResourceFieldSelector, error) 
 	}
 	if v, ok := in["resource"].(string); ok {
 		obj.Resource = v
+	}
+	if v, ok := in["divisor"].(string); ok {
+		q, err := resource.ParseQuantity(v)
+		if err != nil {
+			return obj, err
+		}
+		obj.Divisor = q
 	}
 	return obj, nil
 }

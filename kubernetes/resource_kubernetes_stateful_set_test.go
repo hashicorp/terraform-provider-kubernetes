@@ -17,8 +17,10 @@ func TestAccKubernetesStatefulSet_basic(t *testing.T) {
 	var conf api.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_stateful_set.test",
+		PreCheck:      func() { testAccPreCheck(t) },
+		IDRefreshName: "kubernetes_stateful_set.test",
+		IDRefreshIgnore: []string{"spec.0.template.0.spec.0.container.0.resources.0.limits",
+			"spec.0.template.0.spec.0.container.0.resources.0.requests"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{

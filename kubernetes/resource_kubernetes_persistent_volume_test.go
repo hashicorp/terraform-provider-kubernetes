@@ -184,7 +184,6 @@ func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.gce_persistent_disk.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.gce_persistent_disk.0.pd_name", diskName),
 				),
-				ExpectNonEmptyPlan: true, // GCP adds label "goog-gke-volume" to the disk.
 			},
 			{
 				Config: testAccKubernetesPersistentVolumeConfig_googleCloud_modified(name, diskName, zone),
@@ -220,7 +219,6 @@ func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.gce_persistent_disk.0.pd_name", diskName),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.gce_persistent_disk.0.read_only", "true"),
 				),
-				ExpectNonEmptyPlan: true, // GCP adds label "goog-gke-volume" to the disk.
 			},
 		},
 	})
@@ -342,7 +340,6 @@ func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.gce_persistent_disk.#", "1"),
 					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.gce_persistent_disk.0.pd_name"),
 				),
-				ExpectNonEmptyPlan: true, // GCP adds label "goog-gke-volume" to the disk.
 			},
 			{
 				ResourceName:      "kubernetes_persistent_volume.test",
@@ -1042,6 +1039,13 @@ resource "google_compute_disk" "test" {
   zone  = "%s"
   image = "debian-8-jessie-v20170523"
   size  = 10
+  labels = {
+    "test" = "tf-k8s-acc-test"
+  }
+
+  lifecycle {
+    ignore_changes = [labels]
+  }
 }
 `, name, zone, region, diskName, zone)
 }
@@ -1086,6 +1090,13 @@ resource "google_compute_disk" "test" {
   zone  = "%s"
   image = "debian-8-jessie-v20170523"
   size  = 10
+  labels = {
+    "test" = "tf-k8s-acc-test"
+  }
+
+  lifecycle {
+    ignore_changes = [labels]
+  }
 }
 `, name, diskName, zone)
 }
@@ -1117,6 +1128,13 @@ resource "google_compute_disk" "test" {
   zone  = "%s"
   image = "debian-8-jessie-v20170523"
   size  = 12
+  labels = {
+    "test" = "tf-k8s-acc-test"
+  }
+
+  lifecycle {
+    ignore_changes = [labels]
+  }
 }
 `, name, diskName, zone)
 }
@@ -1623,6 +1641,13 @@ resource "google_compute_disk" "test" {
   zone  = "%s"
   image = "debian-8-jessie-v20170523"
   size  = 12
+  labels = {
+    "test" = "tf-k8s-acc-test"
+  }
+
+  lifecycle {
+    ignore_changes = [labels]
+  }
 }
 
 resource "kubernetes_storage_class" "test" {

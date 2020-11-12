@@ -435,24 +435,15 @@ func TestAccKubernetesDeployment_with_container_security_context_run_as_group(t 
 					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.security_context.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.security_context.0.capabilities.#", "0"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.security_context.0.privileged", "true"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.security_context.0.se_linux_options.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.security_context.0.se_linux_options.0.level", "s0:c123,c456"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.0.allow_privilege_escalation", "true"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.0.capabilities.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.0.capabilities.0.add.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.0.capabilities.0.add.0", "NET_BIND_SERVICE"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.0.capabilities.0.drop.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.0.capabilities.0.drop.0", "all"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.0.privileged", "true"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.0.read_only_root_filesystem", "true"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.0.privileged", "false"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.0.run_as_group", "200"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.0.run_as_non_root", "true"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.0.run_as_non_root", "false"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.0.run_as_user", "201"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.0.se_linux_options.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.1.security_context.0.se_linux_options.0.level", "s0:c123,c789"),
 				),
 			},
 		},
@@ -1875,27 +1866,12 @@ func testAccKubernetesDeploymentConfigWithContainerSecurityContextRunAsGroup(dep
         }
 
         container {
-          image = "gcr.io/google_containers/liveness"
-          name  = "containername2"
-          args  = ["/server"]
-
+          name  = "container2"
+          image = "busybox"
+          command = ["sh", "-c", "echo The app is running! && sleep 3600"]
           security_context {
-            allow_privilege_escalation = true
-
-            capabilities {
-              drop = ["all"]
-              add  = ["NET_BIND_SERVICE"]
-            }
-
-            privileged                = true
-            read_only_root_filesystem = true
-            run_as_group              = 200
-            run_as_non_root           = true
-            run_as_user               = 201
-
-            se_linux_options {
-              level = "s0:c123,c789"
-            }
+            run_as_group = 200
+            run_as_user  = 201
           }
         }
       }

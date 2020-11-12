@@ -32,7 +32,6 @@ func TestAccKubernetesDeployment_basic(t *testing.T) {
 				Config: testAccKubernetesDeploymentConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf),
-					testAccCheckKubernetesDeploymentRolledOut("kubernetes_deployment.test"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -915,6 +914,7 @@ func TestAccKubernetesDeployment_regression(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_deployment.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
 		Steps: []resource.TestStep{
@@ -922,7 +922,6 @@ func TestAccKubernetesDeployment_regression(t *testing.T) {
 				Config: requiredProviders() + testAccKubernetesDeploymentConfig_regression("kubernetes-released", name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf1),
-					testAccCheckKubernetesDeploymentRolledOut("kubernetes_deployment.test"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -938,7 +937,7 @@ func TestAccKubernetesDeployment_regression(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_deployment.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_deployment.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", defaultNginxImage),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.name", "containername"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.rolling_update.0.max_surge", "25%"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.rolling_update.0.max_unavailable", "25%"),
@@ -949,7 +948,6 @@ func TestAccKubernetesDeployment_regression(t *testing.T) {
 				Config: requiredProviders() + testAccKubernetesDeploymentConfig_regression("kubernetes-local", name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf2),
-					testAccCheckKubernetesDeploymentRolledOut("kubernetes_deployment.test"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -965,7 +963,7 @@ func TestAccKubernetesDeployment_regression(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_deployment.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_deployment.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", defaultNginxImage),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.name", "containername"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.rolling_update.0.max_surge", "25%"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.rolling_update.0.max_unavailable", "25%"),
@@ -1140,21 +1138,6 @@ func testAccCheckKubernetesDeploymentRollingOut(n string) resource.TestCheckFunc
 
 		if d.Status.Replicas == d.Status.ReadyReplicas {
 			return fmt.Errorf("deployment has already rolled out")
-		}
-
-		return nil
-	}
-}
-
-func testAccCheckKubernetesDeploymentRolledOut(n string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		d, err := getDeploymentFromResourceName(s, n)
-		if err != nil {
-			return err
-		}
-
-		if d.Status.Replicas != d.Status.ReadyReplicas {
-			return fmt.Errorf("deployment is still rolling out")
 		}
 
 		return nil
@@ -2439,7 +2422,7 @@ func testAccKubernetesDeploymentConfig_regression(provider, name string) string 
       spec {
         container {
           image = %q
-          name  = "tf-acc-test"
+          name  = "containername"
 
           port {
             container_port = 80

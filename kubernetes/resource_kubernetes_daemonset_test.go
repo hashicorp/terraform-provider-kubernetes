@@ -261,6 +261,81 @@ func TestAccKubernetesDaemonSet_with_tolerations_unset_toleration_seconds(t *tes
 	})
 }
 
+func TestAccKubernetesDaemonSet_regression(t *testing.T) {
+	var conf1, conf2 appsv1.DaemonSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_daemonset.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ExternalProviders: testAccExternalProviders,
+		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: requiredProviders() + testAccKubernetesDaemonSetConfig_regression("kubernetes-released", name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf1),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.%", "2"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.TestAnnotationOne", "one"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.%", "3"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.TestLabelOne", "one"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.TestLabelTwo", "two"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.TestLabelThree", "three"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.8"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.rolling_update.0.max_unavailable", "1"),
+				),
+			},
+			{
+				Config: requiredProviders() + testAccKubernetesDaemonSetConfig_regression("kubernetes-local", name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf2),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.%", "2"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.TestAnnotationOne", "one"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.%", "3"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.TestLabelOne", "one"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.TestLabelTwo", "two"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.TestLabelThree", "three"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.self_link"),
+					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.8"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.rolling_update.0.max_unavailable", "1"),
+					testAccCheckKubernetesDaemonsetForceNew(&conf1, &conf2, false),
+				),
+			},
+		},
+	})
+}
+
+func testAccCheckKubernetesDaemonsetForceNew(old, new *appsv1.DaemonSet, wantNew bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if wantNew {
+			if old.ObjectMeta.UID == new.ObjectMeta.UID {
+				return fmt.Errorf("Expecting new resource for daemonset %s", old.ObjectMeta.UID)
+			}
+		} else {
+			if old.ObjectMeta.UID != new.ObjectMeta.UID {
+				return fmt.Errorf("Expecting daemonset UIDs to be the same: expected %s got %s", old.ObjectMeta.UID, new.ObjectMeta.UID)
+			}
+		}
+		return nil
+	}
+}
+
 func testAccCheckKubernetesDaemonSetDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
@@ -669,4 +744,52 @@ func testAccKubernetesDaemonSetConfigWithTolerations(rcName, imageName string, t
   }
 }
 `, rcName, operator, valueString, tolerationDuration, imageName)
+}
+
+func testAccKubernetesDaemonSetConfig_regression(provider, name string) string {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
+  provider = %s
+  metadata {
+    annotations = {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels = {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        TestLabelOne   = "one"
+        TestLabelTwo   = "two"
+        TestLabelThree = "three"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          TestLabelOne   = "one"
+          TestLabelTwo   = "two"
+          TestLabelThree = "three"
+        }
+      }
+
+      spec {
+        container {
+          image = "nginx:1.7.8"
+          name  = "tf-acc-test"
+        }
+      }
+    }
+  }
+}
+`, provider, name)
 }

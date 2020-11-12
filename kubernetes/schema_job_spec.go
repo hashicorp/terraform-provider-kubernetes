@@ -1,7 +1,9 @@
 package kubernetes
 
 import (
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"strconv"
 )
 
 func jobMetadataSchema() *schema.Schema {
@@ -21,7 +23,7 @@ func jobSpecFields() map[string]*schema.Schema {
 			ForceNew:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: podSpecFields(false, false, false),
+				Schema: podSpecFields(false, false),
 			},
 		},
 	}
@@ -36,17 +38,18 @@ func jobSpecFields() map[string]*schema.Schema {
 		"active_deadline_seconds": {
 			Type:         schema.TypeInt,
 			Optional:     true,
-			ForceNew:     true,
+			ForceNew:     false,
 			ValidateFunc: validatePositiveInteger,
 			Description:  "Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.",
 		},
 		"backoff_limit": {
 			Type:         schema.TypeInt,
 			Optional:     true,
-			ForceNew:     true,
+			ForceNew:     false,
 			ValidateFunc: validateNonNegativeInteger,
 			Description:  "Specifies the number of retries before marking this job failed. Defaults to 6",
 		},
+		// This field is immutable in Jobs.
 		"completions": {
 			Type:         schema.TypeInt,
 			Optional:     true,
@@ -58,17 +61,18 @@ func jobSpecFields() map[string]*schema.Schema {
 		"manual_selector": {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			ForceNew:    true,
-			Description: "Controls generation of pod labels and pod selectors. Leave unset unless you are certain what you are doing. When false or unset, the system pick labels unique to this job and appends those labels to the pod template. When true, the user is responsyble for picking unique labels and specifying the selector. Failure to pick a unique label may cause this and other jobs to not function correctly. More info: https://git.k8s.io/community/contributors/design-proposals/selector-generation.md",
+			ForceNew:    false,
+			Description: "Controls generation of pod labels and pod selectors. Leave unset unless you are certain what you are doing. When false or unset, the system pick labels unique to this job and appends those labels to the pod template. When true, the user is responsible for picking unique labels and specifying the selector. Failure to pick a unique label may cause this and other jobs to not function correctly. More info: https://git.k8s.io/community/contributors/design-proposals/selector-generation.md",
 		},
 		"parallelism": {
 			Type:         schema.TypeInt,
 			Optional:     true,
-			ForceNew:     true,
+			ForceNew:     false,
 			Default:      1,
 			ValidateFunc: validatePositiveInteger,
 			Description:  "Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
 		},
+		// This field is immutable in Jobs.
 		"selector": {
 			Type:        schema.TypeList,
 			Description: "A label query over volumes to consider for binding.",
@@ -117,6 +121,7 @@ func jobSpecFields() map[string]*schema.Schema {
 				},
 			},
 		},
+		// PodTemplate fields are immutable in Jobs.
 		"template": {
 			Type:        schema.TypeList,
 			Description: "Describes the pod that will be created when executing a job. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
@@ -127,12 +132,19 @@ func jobSpecFields() map[string]*schema.Schema {
 				Schema: podTemplateFields,
 			},
 		},
+		// This field can be edited in place.
 		"ttl_seconds_after_finished": {
-			Type:         schema.TypeString,
-			Optional:     true,
-			ForceNew:     true,
-			ValidateFunc: validateTypeStringNullableInt,
-			Description:  "ttlSecondsAfterFinished limits the lifetime of a Job that has finished execution (either Complete or Failed). If this field is set, ttlSecondsAfterFinished after the Job finishes, it is eligible to be automatically deleted. When the Job is being deleted, its lifecycle guarantees (e.g. finalizers) will be honored. If this field is unset, the Job won't be automatically deleted. If this field is set to zero, the Job becomes eligible to be deleted immediately after it finishes.",
+			Type:     schema.TypeString,
+			Optional: true,
+			ForceNew: false,
+			ValidateFunc: func(value interface{}, key string) ([]string, []error) {
+				v, err := strconv.Atoi(value.(string))
+				if err != nil {
+					return []string{}, []error{fmt.Errorf("%s is not a valid integer", key)}
+				}
+				return validateNonNegativeInteger(v, key)
+			},
+			Description: "ttlSecondsAfterFinished limits the lifetime of a Job that has finished execution (either Complete or Failed). If this field is set, ttlSecondsAfterFinished after the Job finishes, it is eligible to be automatically deleted. When the Job is being deleted, its lifecycle guarantees (e.g. finalizers) will be honored. If this field is unset, the Job won't be automatically deleted. If this field is set to zero, the Job becomes eligible to be deleted immediately after it finishes.",
 		},
 	}
 

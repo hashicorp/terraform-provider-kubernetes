@@ -52,7 +52,7 @@ func resourceKubernetesJobSchemaV1() map[string]*schema.Schema {
 			Description: "Spec of the job owned by the cluster",
 			Required:    true,
 			MaxItems:    1,
-			ForceNew:    true,
+			ForceNew:    false,
 			Elem: &schema.Resource{
 				Schema: jobSpecFields(),
 			},
@@ -120,6 +120,14 @@ func resourceKubernetesJobUpdate(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
+
+	if d.HasChange("spec") {
+		specOps, err := patchJobSpec("/spec", "spec.0.", d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		ops = append(ops, specOps...)
+	}
 
 	data, err := ops.MarshalJSON()
 	if err != nil {

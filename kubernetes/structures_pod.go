@@ -64,8 +64,6 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 
 	if in.EnableServiceLinks != nil {
 		att["enable_service_links"] = *in.EnableServiceLinks
-	} else {
-		att["enable_service_links"] = true
 	}
 
 	att["host_aliases"] = flattenHostaliases(in.HostAliases)

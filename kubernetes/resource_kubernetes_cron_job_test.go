@@ -15,6 +15,7 @@ import (
 func TestAccKubernetesCronJob_basic(t *testing.T) {
 	var conf v1beta1.CronJob
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := alpineImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -23,7 +24,7 @@ func TestAccKubernetesCronJob_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesCronJobDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesCronJobConfig_basic(name),
+				Config: testAccKubernetesCronJobConfig_basic(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesCronJobExists("kubernetes_cron_job.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_cron_job.test", "metadata.0.name", name),
@@ -42,11 +43,11 @@ func TestAccKubernetesCronJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cron_job.test", "spec.0.job_template.0.spec.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job.test", "spec.0.job_template.0.spec.0.backoff_limit", "2"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job.test", "spec.0.job_template.0.spec.0.template.0.spec.0.container.0.name", "hello"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job.test", "spec.0.job_template.0.spec.0.template.0.spec.0.container.0.image", "alpine"),
+					resource.TestCheckResourceAttr("kubernetes_cron_job.test", "spec.0.job_template.0.spec.0.template.0.spec.0.container.0.image", imageName),
 				),
 			},
 			{
-				Config: testAccKubernetesCronJobConfig_modified(name),
+				Config: testAccKubernetesCronJobConfig_modified(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesCronJobExists("kubernetes_cron_job.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_cron_job.test", "metadata.0.name", name),
@@ -75,6 +76,7 @@ func TestAccKubernetesCronJob_basic(t *testing.T) {
 func TestAccKubernetesCronJob_extra(t *testing.T) {
 	var conf v1beta1.CronJob
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := alpineImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -83,7 +85,7 @@ func TestAccKubernetesCronJob_extra(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesCronJobDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesCronJobConfig_extra(name),
+				Config: testAccKubernetesCronJobConfig_extra(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesCronJobExists("kubernetes_cron_job.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_cron_job.test", "metadata.0.name", name),
@@ -96,7 +98,7 @@ func TestAccKubernetesCronJob_extra(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesCronJobConfig_extraModified(name),
+				Config: testAccKubernetesCronJobConfig_extraModified(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesCronJobExists("kubernetes_cron_job.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_cron_job.test", "metadata.0.name", name),
@@ -169,7 +171,7 @@ func testAccCheckKubernetesCronJobExists(n string, obj *v1beta1.CronJob) resourc
 	}
 }
 
-func testAccKubernetesCronJobConfig_basic(name string) string {
+func testAccKubernetesCronJobConfig_basic(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
   metadata {
     name = "%s"
@@ -190,7 +192,7 @@ func testAccKubernetesCronJobConfig_basic(name string) string {
           spec {
             container {
               name = "hello"
-              image = "alpine"
+              image = "%s"
               command = ["echo", "'hello'"]
             }
           }
@@ -198,10 +200,10 @@ func testAccKubernetesCronJobConfig_basic(name string) string {
       }
     }
   }
-}`, name)
+}`, name, imageName)
 }
 
-func testAccKubernetesCronJobConfig_modified(name string) string {
+func testAccKubernetesCronJobConfig_modified(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
   metadata {
     name = "%s"
@@ -221,7 +223,7 @@ func testAccKubernetesCronJobConfig_modified(name string) string {
           spec {
             container {
               name = "hello"
-              image = "alpine"
+              image = "%s"
               command = ["echo", "'hello'"]
             }
           }
@@ -229,10 +231,10 @@ func testAccKubernetesCronJobConfig_modified(name string) string {
       }
     }
   }
-}`, name)
+}`, name, imageName)
 }
 
-func testAccKubernetesCronJobConfig_extra(name string) string {
+func testAccKubernetesCronJobConfig_extra(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
   metadata {
     name = "%s"
@@ -252,7 +254,7 @@ func testAccKubernetesCronJobConfig_extra(name string) string {
           spec {
             container {
               name = "hello"
-              image = "alpine"
+              image = "%s"
               command = ["echo", "'hello'"]
             }
           }
@@ -260,10 +262,10 @@ func testAccKubernetesCronJobConfig_extra(name string) string {
       }
     }
   }
-}`, name)
+}`, name, imageName)
 }
 
-func testAccKubernetesCronJobConfig_extraModified(name string) string {
+func testAccKubernetesCronJobConfig_extraModified(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
   metadata {
     name = "%s"
@@ -283,7 +285,7 @@ func testAccKubernetesCronJobConfig_extraModified(name string) string {
           spec {
             container {
               name = "hello"
-              image = "alpine"
+              image = "%s"
               command = ["echo", "'hello'"]
             }
           }
@@ -291,5 +293,5 @@ func testAccKubernetesCronJobConfig_extraModified(name string) string {
       }
     }
   }
-}`, name)
+}`, name, imageName)
 }

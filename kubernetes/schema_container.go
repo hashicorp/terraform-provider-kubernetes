@@ -156,26 +156,30 @@ func resourcesFieldV0() map[string]*schema.Schema {
 	}
 }
 
-func seLinuxOptionsField() map[string]*schema.Schema {
+func seLinuxOptionsField(isUpdatable bool) map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"level": {
 			Type:        schema.TypeString,
 			Optional:    true,
+			ForceNew:    !isUpdatable,
 			Description: "Level is SELinux level label that applies to the container.",
 		},
 		"role": {
 			Type:        schema.TypeString,
 			Optional:    true,
+			ForceNew:    !isUpdatable,
 			Description: "Role is a SELinux role label that applies to the container.",
 		},
 		"type": {
 			Type:        schema.TypeString,
 			Optional:    true,
+			ForceNew:    !isUpdatable,
 			Description: "Type is a SELinux type label that applies to the container.",
 		},
 		"user": {
 			Type:        schema.TypeString,
 			Optional:    true,
+			ForceNew:    !isUpdatable,
 			Description: "User is a SELinux user label that applies to the container.",
 		},
 	}
@@ -214,21 +218,19 @@ func volumeMountFields() map[string]*schema.Schema {
 	}
 }
 
-func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schema {
+func containerFields(isUpdatable bool) map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
 		"args": {
-			Type:     schema.TypeList,
-			Optional: true,
-			// The API will default this to [], so prevent non-empty plans by setting this to Computed.
-			Computed:    true,
+			Type:        schema.TypeList,
+			Optional:    true,
+			ForceNew:    !isUpdatable,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Description: "Arguments to the entrypoint. The docker image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/containers#containers-and-commands",
 		},
 		"command": {
-			Type:     schema.TypeList,
-			Optional: true,
-			// The API will default this to [], so prevent non-empty plans by setting this to Computed.
-			Computed:    true,
+			Type:        schema.TypeList,
+			Optional:    true,
+			ForceNew:    !isUpdatable,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Description: "Entrypoint array. Not executed within a shell. The docker image's ENTRYPOINT is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/containers#containers-and-commands",
 		},
@@ -241,6 +243,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 					"name": {
 						Type:        schema.TypeString,
 						Required:    true,
+						ForceNew:    !isUpdatable,
 						Description: "Name of the environment variable. Must be a C_IDENTIFIER",
 					},
 					"value": {
@@ -266,16 +269,19 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 											"key": {
 												Type:        schema.TypeString,
 												Optional:    true,
+												ForceNew:    !isUpdatable,
 												Description: "The key to select.",
 											},
 											"name": {
 												Type:        schema.TypeString,
 												Optional:    true,
+												ForceNew:    !isUpdatable,
 												Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
 											},
 											"optional": {
 												Type:        schema.TypeBool,
 												Optional:    true,
+												ForceNew:    !isUpdatable,
 												Description: "Specify whether the ConfigMap or its key must be defined.",
 											},
 										},
@@ -291,12 +297,14 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 											"api_version": {
 												Type:        schema.TypeString,
 												Optional:    true,
+												ForceNew:    !isUpdatable,
 												Default:     "v1",
 												Description: `Version of the schema the FieldPath is written in terms of, defaults to "v1".`,
 											},
 											"field_path": {
 												Type:        schema.TypeString,
 												Optional:    true,
+												ForceNew:    !isUpdatable,
 												Description: "Path of the field to select in the specified API version",
 											},
 										},
@@ -312,6 +320,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 											"container_name": {
 												Type:     schema.TypeString,
 												Optional: true,
+												ForceNew: !isUpdatable,
 											},
 											"divisor": {
 												Type:             schema.TypeString,
@@ -323,6 +332,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 											"resource": {
 												Type:        schema.TypeString,
 												Required:    true,
+												ForceNew:    !isUpdatable,
 												Description: "Resource to select",
 											},
 										},
@@ -338,16 +348,19 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 											"key": {
 												Type:        schema.TypeString,
 												Optional:    true,
+												ForceNew:    !isUpdatable,
 												Description: "The key of the secret to select from. Must be a valid secret key.",
 											},
 											"name": {
 												Type:        schema.TypeString,
 												Optional:    true,
+												ForceNew:    !isUpdatable,
 												Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
 											},
 											"optional": {
 												Type:        schema.TypeBool,
 												Optional:    true,
+												ForceNew:    !isUpdatable,
 												Description: "Specify whether the Secret or its key must be defined.",
 											},
 										},
@@ -375,11 +388,13 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 								"name": {
 									Type:        schema.TypeString,
 									Required:    true,
+									ForceNew:    !isUpdatable,
 									Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
 								},
 								"optional": {
 									Type:        schema.TypeBool,
 									Optional:    true,
+									ForceNew:    !isUpdatable,
 									Description: "Specify whether the ConfigMap must be defined",
 								},
 							},
@@ -388,6 +403,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 					"prefix": {
 						Type:        schema.TypeString,
 						Optional:    true,
+						ForceNew:    !isUpdatable,
 						Description: "An optional identifer to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.",
 					},
 					"secret_ref": {
@@ -400,11 +416,13 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 								"name": {
 									Type:        schema.TypeString,
 									Required:    true,
+									ForceNew:    !isUpdatable,
 									Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 								},
 								"optional": {
 									Type:        schema.TypeBool,
 									Optional:    true,
+									ForceNew:    !isUpdatable,
 									Description: "Specify whether the Secret must be defined",
 								},
 							},
@@ -416,12 +434,14 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 		"image": {
 			Type:        schema.TypeString,
 			Optional:    true,
+			ForceNew:    !isUpdatable,
 			Description: "Docker image name. More info: http://kubernetes.io/docs/user-guide/images",
 		},
 		"image_pull_policy": {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Computed:    true,
+			ForceNew:    !isUpdatable,
 			Description: "Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/images#updating-images",
 		},
 		"lifecycle": {
@@ -435,6 +455,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 						Type:        schema.TypeList,
 						Description: `post_start is called immediately after a container is created. If the handler fails, the container is terminated and restarted according to its restart policy. Other management of the container blocks until the hook completes. More info: http://kubernetes.io/docs/user-guide/container-environment#hook-details`,
 						Optional:    true,
+						ForceNew:    !isUpdatable,
 						Elem: &schema.Resource{
 							Schema: handlerFields(),
 						},
@@ -443,6 +464,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 						Type:        schema.TypeList,
 						Description: `pre_stop is called immediately before a container is terminated. The container is terminated after the handler completes. The reason for termination is passed to the handler. Regardless of the outcome of the handler, the container is eventually terminated. Other management of the container blocks until the hook completes. More info: http://kubernetes.io/docs/user-guide/container-environment#hook-details`,
 						Optional:    true,
+						ForceNew:    !isUpdatable,
 						Elem: &schema.Resource{
 							Schema: handlerFields(),
 						},
@@ -454,12 +476,14 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
+			ForceNew:    !isUpdatable,
 			Description: "Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/pod-states#container-probes",
 			Elem:        probeSchema(),
 		},
 		"name": {
 			Type:        schema.TypeString,
 			Required:    true,
+			ForceNew:    !isUpdatable,
 			Description: "Name of the container specified as a DNS_LABEL. Each container in a pod must have a unique name (DNS_LABEL). Cannot be updated.",
 		},
 		"port": {
@@ -472,27 +496,32 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 						Type:         schema.TypeInt,
 						Required:     true,
 						ValidateFunc: validatePortNumOrName,
+						ForceNew:     !isUpdatable,
 						Description:  "Number of port to expose on the pod's IP address. This must be a valid port number, 0 < x < 65536.",
 					},
 					"host_ip": {
 						Type:        schema.TypeString,
 						Optional:    true,
+						ForceNew:    !isUpdatable,
 						Description: "What host IP to bind the external port to.",
 					},
 					"host_port": {
 						Type:        schema.TypeInt,
 						Optional:    true,
+						ForceNew:    !isUpdatable,
 						Description: "Number of port to expose on the host. If specified, this must be a valid port number, 0 < x < 65536. If HostNetwork is specified, this must match ContainerPort. Most containers do not need this.",
 					},
 					"name": {
 						Type:         schema.TypeString,
 						Optional:     true,
+						ForceNew:     !isUpdatable,
 						ValidateFunc: validatePortNumOrName,
 						Description:  "If specified, this must be an IANA_SVC_NAME and unique within the pod. Each named port in a pod must have a unique name. Name for the port that can be referred to by services",
 					},
 					"protocol": {
 						Type:        schema.TypeString,
 						Optional:    true,
+						ForceNew:    !isUpdatable,
 						Description: `Protocol for port. Must be UDP or TCP. Defaults to "TCP".`,
 						Default:     "TCP",
 					},
@@ -503,6 +532,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
+			ForceNew:    !isUpdatable,
 			Description: "Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/pod-states#container-probes",
 			Elem:        probeSchema(),
 		},
@@ -510,6 +540,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
+			ForceNew:    !isUpdatable,
 			Computed:    true,
 			Description: "Compute Resources required by this container. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#resources",
 			Elem: &schema.Resource{
@@ -520,37 +551,43 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
+			ForceNew:    !isUpdatable,
 			Description: "Security options the pod should run with. More info: http://releases.k8s.io/HEAD/docs/design/security_context.md",
-			Elem:        securityContextSchema(),
+			Elem:        securityContextSchema(isUpdatable),
 		},
 		"startup_probe": {
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
+			ForceNew:    !isUpdatable,
 			Description: "StartupProbe indicates that the Pod has successfully initialized. If specified, no other probes are executed until this completes successfully. If this probe fails, the Pod will be restarted, just as if the livenessProbe failed. This can be used to provide different probe parameters at the beginning of a Pod's lifecycle, when it might take a long time to load data or warm a cache, than during steady-state operation. This cannot be updated. This is an alpha feature enabled by the StartupProbe feature flag. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes",
 			Elem:        probeSchema(),
 		},
 		"stdin": {
 			Type:        schema.TypeBool,
 			Optional:    true,
+			ForceNew:    !isUpdatable,
 			Default:     false,
 			Description: "Whether this container should allocate a buffer for stdin in the container runtime. If this is not set, reads from stdin in the container will always result in EOF. ",
 		},
 		"stdin_once": {
 			Type:        schema.TypeBool,
 			Optional:    true,
+			ForceNew:    !isUpdatable,
 			Default:     false,
 			Description: "Whether the container runtime should close the stdin channel after it has been opened by a single attach. When stdin is true the stdin stream will remain open across multiple attach sessions. If stdinOnce is set to true, stdin is opened on container start, is empty until the first client attaches to stdin, and then remains open and accepts data until the client disconnects, at which time stdin is closed and remains closed until the container is restarted. If this flag is false, a container processes that reads from stdin will never receive an EOF.",
 		},
 		"termination_message_path": {
 			Type:        schema.TypeString,
 			Optional:    true,
+			ForceNew:    !isUpdatable,
 			Default:     "/dev/termination-log",
 			Description: "Optional: Path at which the file to which the container's termination message will be written is mounted into the container's filesystem. Message written is intended to be brief final status, such as an assertion failure message. Defaults to /dev/termination-log. Cannot be updated.",
 		},
 		"termination_message_policy": {
 			Type:         schema.TypeString,
 			Optional:     true,
+			ForceNew:     !isUpdatable,
 			ValidateFunc: validation.StringInSlice([]string{"File", "FallbackToLogsOnError"}, false),
 			Computed:     true,
 			Description:  "Optional: Indicate how the termination message should be populated. File will use the contents of terminationMessagePath to populate the container status message on both success and failure. FallbackToLogsOnError will use the last chunk of container log output if the termination message file is empty and the container exited with an error. The log output is limited to 2048 bytes or 80 lines, whichever is smaller. Defaults to File. Cannot be updated.",
@@ -558,12 +595,14 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 		"tty": {
 			Type:        schema.TypeBool,
 			Optional:    true,
+			ForceNew:    !isUpdatable,
 			Default:     false,
 			Description: "Whether this container should allocate a TTY for itself",
 		},
 		"volume_mount": {
 			Type:        schema.TypeList,
 			Optional:    true,
+			ForceNew:    !isUpdatable,
 			Computed:    true,
 			Description: "Pod volumes to mount into the container's filesystem. Cannot be updated.",
 			Elem: &schema.Resource{
@@ -573,20 +612,10 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 		"working_dir": {
 			Type:        schema.TypeString,
 			Optional:    true,
+			ForceNew:    !isUpdatable,
 			Description: "Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.",
 		},
 	}
-
-	if !isUpdatable {
-		for k := range s {
-			if k == "image" && !isInitContainer {
-				// this field is updatable for non-init containers
-				continue
-			}
-			s[k].ForceNew = true
-		}
-	}
-
 	return s
 }
 
@@ -632,12 +661,13 @@ func probeSchema() *schema.Resource {
 
 }
 
-func securityContextSchema() *schema.Resource {
+func securityContextSchema(isUpdatable bool) *schema.Resource {
 	m := map[string]*schema.Schema{
 		"allow_privilege_escalation": {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Default:     true,
+			ForceNew:    !isUpdatable,
 			Description: `AllowPrivilegeEscalation controls whether a process can gain more privileges than its parent process. This bool directly controls if the no_new_privs flag will be set on the container process. AllowPrivilegeEscalation is true always when the container is: 1) run as Privileged 2) has CAP_SYS_ADMIN`,
 		},
 		"capabilities": {
@@ -650,12 +680,14 @@ func securityContextSchema() *schema.Resource {
 					"add": {
 						Type:        schema.TypeList,
 						Optional:    true,
+						ForceNew:    !isUpdatable,
 						Elem:        &schema.Schema{Type: schema.TypeString},
 						Description: "Added capabilities",
 					},
 					"drop": {
 						Type:        schema.TypeList,
 						Optional:    true,
+						ForceNew:    !isUpdatable,
 						Elem:        &schema.Schema{Type: schema.TypeString},
 						Description: "Removed capabilities",
 					},
@@ -665,12 +697,14 @@ func securityContextSchema() *schema.Resource {
 		"privileged": {
 			Type:        schema.TypeBool,
 			Optional:    true,
+			ForceNew:    !isUpdatable,
 			Default:     false,
 			Description: `Run container in privileged mode. Processes in privileged containers are essentially equivalent to root on the host. Defaults to false.`,
 		},
 		"read_only_root_filesystem": {
 			Type:        schema.TypeBool,
 			Optional:    true,
+			ForceNew:    !isUpdatable,
 			Default:     false,
 			Description: "Whether this container has a read-only root filesystem. Default is false.",
 		},
@@ -678,17 +712,20 @@ func securityContextSchema() *schema.Resource {
 			Type:         schema.TypeString,
 			Description:  "The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
 			Optional:     true,
+			ForceNew:     !isUpdatable,
 			ValidateFunc: validateTypeStringNullableInt,
 		},
 		"run_as_non_root": {
 			Type:        schema.TypeBool,
 			Description: "Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does. If unset or false, no such validation will be performed. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
+			ForceNew:    !isUpdatable,
 			Optional:    true,
 		},
 		"run_as_user": {
 			Type:         schema.TypeString,
 			Description:  "The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
 			Optional:     true,
+			ForceNew:     !isUpdatable,
 			ValidateFunc: validateTypeStringNullableInt,
 		},
 		"se_linux_options": {
@@ -697,7 +734,7 @@ func securityContextSchema() *schema.Resource {
 			Optional:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: seLinuxOptionsField(),
+				Schema: seLinuxOptionsField(isUpdatable),
 			},
 		},
 	}

@@ -721,7 +721,7 @@ func testAccKubernetesServiceConfig_basic(name string) string {
 
 func testAccKubernetesServiceConfig_regression(provider, name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service" "test" {
-  provider = "%s"
+  provider = %s
   metadata {
     annotations = {
       TestAnnotationOne = "one"

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
@@ -68,11 +70,11 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_CLUSTER_CA_CERT_DATA", ""),
 				Description: "PEM-encoded root certificates bundle for TLS authentication.",
 			},
-			"config_path": {
-				Type:        schema.TypeString,
+			"config_paths": {
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_CONFIG_PATH", ""),
-				Description: "Path to the kube config file. Can be set with KUBE_CONFIG_PATH environment variable.",
+				Description: "A list of paths to kube config files. Can be set with KUBE_CONFIG_PATHS environment variable.",
 			},
 			"config_context": {
 				Type:        schema.TypeString,
@@ -260,13 +262,26 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	overrides := &clientcmd.ConfigOverrides{}
 	loader := &clientcmd.ClientConfigLoadingRules{}
 
-	if configPath, ok := d.GetOk("config_path"); ok && configPath.(string) != "" {
-		path, err := homedir.Expand(configPath.(string))
-		if err != nil {
-			return nil, err
+	configPaths := []string{}
+	if v, ok := d.Get("config_paths").([]string); ok && len(v) > 0 {
+		configPaths = v
+	} else if v := os.Getenv("KUBE_CONFIG_PATHS"); v != "" {
+		// NOTE we have to do this here because the schema
+		// does not yet allow you to set a default for a TypeList
+		configPaths = strings.Split(v, ":")
+	}
+
+	if len(configPaths) > 0 {
+		expandedPaths := []string{}
+		for _, p := range configPaths {
+			path, err := homedir.Expand(p)
+			if err != nil {
+				return nil, err
+			}
+			log.Printf("[DEBUG] Using kubeconfig: %s", path)
+			expandedPaths = append(expandedPaths, path)
 		}
-		log.Printf("[DEBUG] Configuration file is: %s", path)
-		loader.ExplicitPath = path
+		loader.Precedence = expandedPaths
 
 		ctxSuffix := "; default context"
 

@@ -3,9 +3,10 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -17,10 +18,7 @@ import (
 
 func resourceKubernetesPod() *schema.Resource {
 	podSpecFields := podSpecFields(false, false, false)
-	// Setting this default to false prevents a perpetual diff caused by volume_mounts
-	// being mutated on the server side as Kubernetes automatically adds a mount
-	// for the service account token
-	podSpecFields["automount_service_account_token"].Default = false
+
 	return &schema.Resource{
 		CreateContext: resourceKubernetesPodCreate,
 		ReadContext:   resourceKubernetesPodRead,

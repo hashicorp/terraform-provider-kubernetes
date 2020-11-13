@@ -1146,6 +1146,8 @@ resource "kubernetes_pod" "test" {
   }
 
   spec {
+	automount_service_account_token = false
+
     container {
       image = "%s"
       name  = "containername"
@@ -1211,7 +1213,9 @@ func testAccKubernetesPodConfigWithInitContainer(podName string, image string) s
   }
 
   spec {
-    container {
+	automount_service_account_token = false
+
+	container {
       name  = "nginx"
       image = "nginx"
 
@@ -1501,7 +1505,9 @@ resource "kubernetes_pod" "test" {
   }
 
   spec {
-    container {
+	automount_service_account_token = false
+	
+	container {
       image = "%s"
       name  = "containername"
 
@@ -1545,6 +1551,8 @@ resource "kubernetes_pod" "test" {
   }
 
   spec {
+	automount_service_account_token = false
+
     container {
       image = "%s"
       name  = "containername"
@@ -1597,7 +1605,8 @@ resource "kubernetes_pod" "test" {
   }
 
   spec {
-    restart_policy = "Never"
+	restart_policy = "Never"
+	automount_service_account_token = false
 
     container {
       image = "%s"
@@ -1726,7 +1735,8 @@ resource "kubernetes_pod" "test" {
   }
 
   spec {
-    restart_policy = "Never"
+	restart_policy = "Never"
+	automount_service_account_token = false
 
     container {
       image = "%s"
@@ -1846,6 +1856,8 @@ func testAccKubernetesPodConfigWithEmptyDirVolumes(podName, imageName string) st
   }
 
   spec {
+	automount_service_account_token = false
+
     container {
       image = "%s"
       name  = "containername"
@@ -1879,6 +1891,8 @@ func testAccKubernetesPodConfigWithEmptyDirVolumesSizeLimit(podName, imageName s
   }
 
   spec {
+	automount_service_account_token = false
+
     container {
       image = "%s"
       name  = "containername"
@@ -2104,8 +2118,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigReadinessGate(secretName, configMapName, podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
   }
@@ -2157,6 +2170,8 @@ resource "kubernetes_pod" "test" {
   }
 
   spec {
+	automount_service_account_token = false
+
     readiness_gate {
       condition_type = "haha"
     }
@@ -2226,6 +2241,8 @@ func testAccKubernetesPod_regression(provider, name, imageName string) string {
   }
 
   spec {
+	automount_service_account_token = false
+
     container {
       image = %[3]q
       name  = "containername"

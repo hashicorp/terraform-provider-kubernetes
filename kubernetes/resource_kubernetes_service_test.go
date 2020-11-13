@@ -58,7 +58,7 @@ func TestAccKubernetesService_basic(t *testing.T) {
 				ResourceName:            "kubernetes_service.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
 			},
 			{
 				Config: testAccKubernetesServiceConfig_modified(name),

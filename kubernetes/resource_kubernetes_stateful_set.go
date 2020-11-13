@@ -3,8 +3,9 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -42,8 +43,8 @@ func resourceKubernetesStatefulSet() *schema.Resource {
 			},
 			"wait_for_rollout": {
 				Type:        schema.TypeBool,
-				Description: "Wait for the rollout of the stateful set to complete. Defaults to false.",
-				Default:     false,
+				Description: "Wait for the rollout of the stateful set to complete. Defaults to true.",
+				Default:     true,
 				Optional:    true,
 			},
 		},

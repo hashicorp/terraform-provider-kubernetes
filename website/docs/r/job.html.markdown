@@ -69,7 +69,7 @@ The following arguments are supported:
 * `metadata` - (Required) Standard resource's metadata. For more info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 * `spec` - (Required) Specification of the desired behavior of a job. For more info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
 * `wait_for_completion` - 
-(Optional) If `true` blocks job `create` or `update` until the status of the job has a `Complete` or `Failed` condition.
+(Optional) If `true` blocks job `create` or `update` until the status of the job has a `Complete` or `Failed` condition. Defaults to `true`.
 
 ## Nested Blocks
 

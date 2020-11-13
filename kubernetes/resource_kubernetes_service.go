@@ -3,9 +3,10 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -163,6 +164,12 @@ func resourceKubernetesService() *schema.Resource {
 					},
 				},
 			},
+			"wait_for_load_balancer": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Terraform will wait for the load balancer to have at least 1 endpoint before considering the resource created.",
+			},
 			"load_balancer_ingress": {
 				Type:     schema.TypeList,
 				Computed: true,
@@ -202,7 +209,7 @@ func resourceKubernetesServiceCreate(ctx context.Context, d *schema.ResourceData
 	log.Printf("[INFO] Submitted new service: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	if out.Spec.Type == api.ServiceTypeLoadBalancer {
+	if out.Spec.Type == api.ServiceTypeLoadBalancer && d.Get("wait_for_rollout").(bool) {
 		log.Printf("[DEBUG] Waiting for load balancer to assign IP/hostname")
 
 		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {

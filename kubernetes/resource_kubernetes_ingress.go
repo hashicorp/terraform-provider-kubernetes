@@ -3,9 +3,10 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	networking "k8s.io/api/networking/v1beta1"
-	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -123,7 +124,6 @@ func resourceKubernetesIngress() *schema.Resource {
 			"wait_for_load_balancer": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     false,
 				Description: "Terraform will wait for the load balancer to have at least 1 endpoint before considering the resource created.",
 			},
 		},

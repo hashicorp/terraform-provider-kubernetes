@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	"strconv"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	batchv1 "k8s.io/api/batch/v1"
 )
@@ -49,7 +51,7 @@ func flattenJobSpec(in batchv1.JobSpec, d *schema.ResourceData, prefix ...string
 	att["template"] = podSpec
 
 	if in.TTLSecondsAfterFinished != nil {
-		att["ttl_seconds_after_finished"] = *in.TTLSecondsAfterFinished
+		att["ttl_seconds_after_finished"] = strconv.Itoa(int(*in.TTLSecondsAfterFinished))
 	}
 
 	return []interface{}{att}, nil
@@ -94,8 +96,12 @@ func expandJobSpec(j []interface{}) (batchv1.JobSpec, error) {
 	}
 	obj.Template = *template
 
-	if v, ok := in["ttl_seconds_after_finished"].(int); ok && v >= 0 {
-		obj.TTLSecondsAfterFinished = ptrToInt32(int32(v))
+	if v, ok := in["ttl_seconds_after_finished"].(string); ok && v != "" {
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return obj, err
+		}
+		obj.TTLSecondsAfterFinished = ptrToInt32(int32(i))
 	}
 
 	return obj, nil

@@ -2,8 +2,9 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -192,7 +193,7 @@ func resourceKubernetesMutatingWebhookConfigurationRead(ctx context.Context, d *
 		return diag.FromErr(err)
 	}
 
-	err = d.Set("metadata", flattenMetadata(cfg.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(cfg.ObjectMeta, d, meta.(ProviderConfig).IgnoredKeys()))
 	if err != nil {
 		return nil
 	}

@@ -3,10 +3,11 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"log"
 )
 
 func dataSourceKubernetesPod() *schema.Resource {
@@ -57,7 +58,7 @@ func dataSourceKubernetesPodRead(ctx context.Context, d *schema.ResourceData, me
 	}
 	log.Printf("[INFO] Received pod: %#v", pod)
 
-	err = d.Set("metadata", flattenMetadata(pod.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(pod.ObjectMeta, d, meta.(ProviderConfig).IgnoredKeys()))
 	if err != nil {
 		return diag.FromErr(err)
 	}

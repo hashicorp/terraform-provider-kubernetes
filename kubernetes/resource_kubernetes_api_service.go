@@ -2,8 +2,9 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -144,7 +145,7 @@ func resourceKubernetesAPIServiceRead(ctx context.Context, d *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received API service: %#v", svc)
-	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta, d, meta.(ProviderConfig).IgnoredKeys()))
 	if err != nil {
 		return diag.FromErr(err)
 	}

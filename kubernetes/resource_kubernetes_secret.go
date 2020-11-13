@@ -2,8 +2,9 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/core/v1"
@@ -94,7 +95,7 @@ func resourceKubernetesSecretRead(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	log.Printf("[INFO] Received secret: %#v", secret)
-	err = d.Set("metadata", flattenMetadata(secret.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(secret.ObjectMeta, d, meta.(ProviderConfig).IgnoredKeys()))
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -2,8 +2,9 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/rbac/v1"
@@ -140,7 +141,7 @@ func resourceKubernetesClusterRoleRead(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received cluster role: %#v", cRole)
-	err = d.Set("metadata", flattenMetadata(cRole.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(cRole.ObjectMeta, d, meta.(ProviderConfig).IgnoredKeys()))
 	if err != nil {
 		return diag.FromErr(err)
 	}

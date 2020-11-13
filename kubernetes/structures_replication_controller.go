@@ -2,10 +2,10 @@ package kubernetes
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
-func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec, d *schema.ResourceData) ([]interface{}, error) {
+func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec, d *schema.ResourceData, ignoredKeys []string) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	att["min_ready_seconds"] = in.MinReadySeconds
 
@@ -24,7 +24,7 @@ func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec, d *schema
 		}
 		template := make(map[string]interface{})
 		template["spec"] = podSpec
-		template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d)
+		template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d, ignoredKeys)
 		att["template"] = []interface{}{template}
 	}
 

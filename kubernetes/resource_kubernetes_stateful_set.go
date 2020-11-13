@@ -166,10 +166,10 @@ func resourceKubernetesStatefulSetRead(ctx context.Context, d *schema.ResourceDa
 		}
 	}
 	log.Printf("[INFO] Received stateful set: %#v", statefulSet)
-	if d.Set("metadata", flattenMetadata(statefulSet.ObjectMeta, d)) != nil {
+	if d.Set("metadata", flattenMetadata(statefulSet.ObjectMeta, d, meta.(ProviderConfig).IgnoredKeys())) != nil {
 		return diag.Errorf("Error setting `metadata`: %+v", err)
 	}
-	sss, err := flattenStatefulSetSpec(statefulSet.Spec, d)
+	sss, err := flattenStatefulSetSpec(statefulSet.Spec, d, meta.(ProviderConfig).IgnoredKeys())
 	if err != nil {
 		return diag.Errorf("Error flattening `spec`: %+v", err)
 	}

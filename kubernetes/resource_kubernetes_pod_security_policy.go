@@ -2,8 +2,9 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	policy "k8s.io/api/policy/v1beta1"
@@ -416,7 +417,7 @@ func resourceKubernetesPodSecurityPolicyRead(ctx context.Context, d *schema.Reso
 	}
 
 	log.Printf("[INFO] Received PodSecurityPolicy: %#v", psp)
-	err = d.Set("metadata", flattenMetadata(psp.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(psp.ObjectMeta, d, meta.(ProviderConfig).IgnoredKeys()))
 	if err != nil {
 		return diag.FromErr(err)
 	}

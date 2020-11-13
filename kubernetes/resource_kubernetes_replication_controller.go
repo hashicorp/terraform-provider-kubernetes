@@ -3,9 +3,10 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -162,12 +163,12 @@ func resourceKubernetesReplicationControllerRead(ctx context.Context, d *schema.
 	}
 	log.Printf("[INFO] Received replication controller: %#v", rc)
 
-	err = d.Set("metadata", flattenMetadata(rc.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(rc.ObjectMeta, d, meta.(ProviderConfig).IgnoredKeys()))
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	spec, err := flattenReplicationControllerSpec(rc.Spec, d)
+	spec, err := flattenReplicationControllerSpec(rc.Spec, d, meta.(ProviderConfig).IgnoredKeys())
 	if err != nil {
 		return diag.FromErr(err)
 	}

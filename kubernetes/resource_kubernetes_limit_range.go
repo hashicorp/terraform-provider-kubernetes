@@ -2,8 +2,9 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/core/v1"
@@ -129,7 +130,7 @@ func resourceKubernetesLimitRangeRead(ctx context.Context, d *schema.ResourceDat
 	}
 	log.Printf("[INFO] Received limit range: %#v", limitRange)
 
-	err = d.Set("metadata", flattenMetadata(limitRange.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(limitRange.ObjectMeta, d, meta.(ProviderConfig).IgnoredKeys()))
 	if err != nil {
 		return diag.FromErr(err)
 	}

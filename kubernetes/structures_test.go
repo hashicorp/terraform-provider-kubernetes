@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestIsInternalKey(t *testing.T) {
+func TestIsIgnoredKey(t *testing.T) {
 	testCases := []struct {
 		Key      string
 		Expected bool
@@ -17,10 +17,11 @@ func TestIsInternalKey(t *testing.T) {
 		{"any.kubernetes.io", true},
 		{"kubernetes.io", true},
 		{"pv.kubernetes.io/any/path", true},
+		{"deprecated.daemonset.template.generation", true},
 	}
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			isInternal := isInternalKey(tc.Key)
+			isInternal := isIgnoredKey(internalKeys, tc.Key)
 			if tc.Expected && isInternal != tc.Expected {
 				t.Fatalf("Expected %q to be internal", tc.Key)
 			}

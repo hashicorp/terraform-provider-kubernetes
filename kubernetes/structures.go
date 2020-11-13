@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"encoding/base64"
 	"fmt"
-	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -11,6 +11,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+var internalKeys = []string{"kubernetes\\.io", "deprecated.daemonset.template.generation"}
 
 func idParts(id string) (string, string, error) {
 	parts := strings.Split(id, "/")
@@ -109,19 +111,19 @@ func expandStringSlice(s []interface{}) []string {
 	return result
 }
 
-func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, metaPrefix ...string) []interface{} {
+func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, ignoredKeys []string, metaPrefix ...string) []interface{} {
 	m := make(map[string]interface{})
 	prefix := ""
 	if len(metaPrefix) > 0 {
 		prefix = metaPrefix[0]
 	}
 	configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
-	m["annotations"] = removeInternalKeys(meta.Annotations, configAnnotations)
+	m["annotations"] = removeIgnoredKeys(ignoredKeys, meta.Annotations, configAnnotations)
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}
 	configLabels := d.Get(prefix + "metadata.0.labels").(map[string]interface{})
-	m["labels"] = removeInternalKeys(meta.Labels, configLabels)
+	m["labels"] = removeIgnoredKeys(ignoredKeys, meta.Labels, configLabels)
 	m["name"] = meta.Name
 	m["resource_version"] = meta.ResourceVersion
 	m["self_link"] = meta.SelfLink
@@ -135,9 +137,9 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, metaPrefix 
 	return []interface{}{m}
 }
 
-func removeInternalKeys(m map[string]string, d map[string]interface{}) map[string]string {
+func removeIgnoredKeys(ignored []string, m map[string]string, d map[string]interface{}) map[string]string {
 	for k := range m {
-		if isInternalKey(k) && !isKeyInMap(k, d) {
+		if isIgnoredKey(ignored, k) && !isKeyInMap(k, d) {
 			delete(m, k)
 		}
 	}
@@ -156,17 +158,16 @@ func isKeyInMap(key string, d map[string]interface{}) bool {
 	return false
 }
 
-func isInternalKey(annotationKey string) bool {
-	u, err := url.Parse("//" + annotationKey)
-	if err == nil && strings.HasSuffix(u.Hostname(), "kubernetes.io") {
-		return true
+func isIgnoredKey(ignoredKeys []string, annotationKey string) bool {
+	for _, exp := range append(ignoredKeys, internalKeys...) {
+		match, err := regexp.MatchString(exp, annotationKey)
+		if err != nil {
+			continue
+		}
+		if match {
+			return true
+		}
 	}
-
-	// Specific to DaemonSet annotations, generated & controlled by the server.
-	if strings.Contains(annotationKey, "deprecated.daemonset.template.generation") {
-		return true
-	}
-
 	return false
 }
 

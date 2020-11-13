@@ -2,8 +2,9 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/scheduling/v1"
@@ -98,7 +99,7 @@ func resourceKubernetesPriorityClassRead(ctx context.Context, d *schema.Resource
 	}
 	log.Printf("[INFO] Received priority class: %#v", priorityClass)
 
-	err = d.Set("metadata", flattenMetadata(priorityClass.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(priorityClass.ObjectMeta, d, meta.(ProviderConfig).IgnoredKeys()))
 	if err != nil {
 		return diag.FromErr(err)
 	}

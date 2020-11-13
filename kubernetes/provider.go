@@ -134,6 +134,14 @@ func Provider() *schema.Provider {
 				},
 				Description: "",
 			},
+			"ignored_metadata_keys": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "List of metadata annotation and label keys that the provider will ignore for all resources and not manage. Regular expressions can be used.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -199,45 +207,53 @@ type KubeClientsets interface {
 	AggregatorClientset() (*aggregator.Clientset, error)
 }
 
-type kubeClientsets struct {
+type ProviderConfig interface {
+	IgnoredKeys() []string
+}
+
+type providerConfig struct {
 	config              *restclient.Config
 	mainClientset       *kubernetes.Clientset
 	aggregatorClientset *aggregator.Clientset
-
-	configData *schema.ResourceData
+	configData          *schema.ResourceData
+	ignoredKeys         []string
 }
 
-func (k kubeClientsets) MainClientset() (*kubernetes.Clientset, error) {
-	if k.mainClientset != nil {
-		return k.mainClientset, nil
+func (p providerConfig) MainClientset() (*kubernetes.Clientset, error) {
+	if p.mainClientset != nil {
+		return p.mainClientset, nil
 	}
 
-	if err := checkConfigurationValid(k.configData); err != nil {
+	if err := checkConfigurationValid(p.configData); err != nil {
 		return nil, err
 	}
 
-	if k.config != nil {
-		kc, err := kubernetes.NewForConfig(k.config)
+	if p.config != nil {
+		kc, err := kubernetes.NewForConfig(p.config)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to configure client: %s", err)
 		}
-		k.mainClientset = kc
+		p.mainClientset = kc
 	}
-	return k.mainClientset, nil
+	return p.mainClientset, nil
 }
 
-func (k kubeClientsets) AggregatorClientset() (*aggregator.Clientset, error) {
-	if k.aggregatorClientset != nil {
-		return k.aggregatorClientset, nil
+func (p providerConfig) AggregatorClientset() (*aggregator.Clientset, error) {
+	if p.aggregatorClientset != nil {
+		return p.aggregatorClientset, nil
 	}
-	if k.config != nil {
-		ac, err := aggregator.NewForConfig(k.config)
+	if p.config != nil {
+		ac, err := aggregator.NewForConfig(p.config)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to configure client: %s", err)
 		}
-		k.aggregatorClientset = ac
+		p.aggregatorClientset = ac
 	}
-	return k.aggregatorClientset, nil
+	return p.aggregatorClientset, nil
+}
+
+func (k providerConfig) IgnoredKeys() []string {
+	return k.ignoredKeys
 }
 
 var apiTokenMountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
@@ -309,11 +325,16 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		}
 	}
 
-	m := kubeClientsets{
+	m := providerConfig{
 		config:              cfg,
 		mainClientset:       nil,
 		aggregatorClientset: nil,
 		configData:          d,
+	}
+	if v, ok := d.GetOk("ignored_metadata_keys"); ok {
+		for _, val := range v.([]interface{}) {
+			m.ignoredKeys = append(m.ignoredKeys, val.(string))
+		}
 	}
 	return m, diag.Diagnostics{}
 }

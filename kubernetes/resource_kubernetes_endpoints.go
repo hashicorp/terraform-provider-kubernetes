@@ -2,8 +2,9 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/core/v1"
@@ -82,7 +83,7 @@ func resourceKubernetesEndpointsRead(ctx context.Context, d *schema.ResourceData
 		return diag.Errorf("Failed to read endpoint because: %s", err)
 	}
 	log.Printf("[INFO] Received endpoints: %#v", ep)
-	err = d.Set("metadata", flattenMetadata(ep.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(ep.ObjectMeta, d, meta.(ProviderConfig).IgnoredKeys()))
 	if err != nil {
 		return diag.Errorf("Failed to read endpoints because: %s", err)
 	}

@@ -2,8 +2,9 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
@@ -64,7 +65,7 @@ func resourceKubernetesHorizontalPodAutoscalerV2Read(ctx context.Context, d *sch
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received horizontal pod autoscaler: %#v", hpa)
-	err = d.Set("metadata", flattenMetadata(hpa.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(hpa.ObjectMeta, d, meta.(ProviderConfig).IgnoredKeys()))
 	if err != nil {
 		return diag.FromErr(err)
 	}

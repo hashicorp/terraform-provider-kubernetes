@@ -231,7 +231,7 @@ func testAccCheckMetaAnnotations(om *metav1.ObjectMeta, expected map[string]stri
 		annotations := om.Annotations
 		for key := range annotations {
 			_, isExpected := expected[key]
-			if isInternalKey(key) && !isExpected {
+			if isIgnoredKey([]string{}, key) && !isExpected {
 				delete(annotations, key)
 			}
 		}
@@ -254,7 +254,7 @@ func testAccCheckMetaLabels(om *metav1.ObjectMeta, expected map[string]string) r
 		labels := om.Labels
 		for key := range labels {
 			_, isExpected := expected[key]
-			if isInternalKey(key) && !isExpected {
+			if isIgnoredKey([]string{}, key) && !isExpected {
 				delete(labels, key)
 			}
 		}

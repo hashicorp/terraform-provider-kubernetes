@@ -3,9 +3,10 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -177,7 +178,7 @@ func resourceKubernetesPersistentVolumeClaimRead(ctx context.Context, d *schema.
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received persistent volume claim: %#v", claim)
-	err = d.Set("metadata", flattenMetadata(claim.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(claim.ObjectMeta, d, meta.(ProviderConfig).IgnoredKeys()))
 	if err != nil {
 		return diag.FromErr(err)
 	}

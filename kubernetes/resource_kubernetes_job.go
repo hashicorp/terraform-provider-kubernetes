@@ -199,12 +199,12 @@ func resourceKubernetesJobRead(ctx context.Context, d *schema.ResourceData, meta
 		}
 	}
 
-	err = d.Set("metadata", flattenMetadata(job.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(job.ObjectMeta, d, meta.(ProviderConfig).IgnoredKeys()))
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	jobSpec, err := flattenJobSpec(job.Spec, d)
+	jobSpec, err := flattenJobSpec(job.Spec, d, meta.(ProviderConfig).IgnoredKeys())
 	if err != nil {
 		return diag.FromErr(err)
 	}

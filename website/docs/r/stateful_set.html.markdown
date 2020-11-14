@@ -93,12 +93,12 @@ resource "kubernetes_stateful_set" "prometheus" {
           }
 
           resources {
-            limits {
+            limits = {
               cpu    = "10m"
               memory = "10Mi"
             }
 
-            requests {
+            requests = {
               cpu    = "10m"
               memory = "10Mi"
             }
@@ -123,12 +123,12 @@ resource "kubernetes_stateful_set" "prometheus" {
           }
 
           resources {
-            limits {
+            limits = {
               cpu    = "200m"
               memory = "1000Mi"
             }
 
-            requests {
+            requests = {
               cpu    = "200m"
               memory = "1000Mi"
             }

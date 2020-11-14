@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -339,10 +339,10 @@ func flattenContainerPorts(in []v1.ContainerPort) []interface{} {
 func flattenContainerResourceRequirements(in v1.ResourceRequirements) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	if len(in.Limits) > 0 {
-		att["limits"] = []interface{}{flattenResourceList(in.Limits)}
+		att["limits"] = flattenResourceList(in.Limits)
 	}
 	if len(in.Requests) > 0 {
-		att["requests"] = []interface{}{flattenResourceList(in.Requests)}
+		att["requests"] = flattenResourceList(in.Requests)
 	}
 	return []interface{}{att}, nil
 }
@@ -960,38 +960,20 @@ func expandContainerResourceRequirements(l []interface{}) (*v1.ResourceRequireme
 	}
 	in := l[0].(map[string]interface{})
 
-	fn := func(in []interface{}) (*v1.ResourceList, error) {
-		for _, c := range in {
-			p := c.(map[string]interface{})
-			if p["cpu"] == "" {
-				delete(p, "cpu")
-			}
-			if p["memory"] == "" {
-				delete(p, "memory")
-			}
-			rl, err := expandMapToResourceList(p)
-			if err != nil {
-				return rl, err
-			}
-			return rl, nil
-		}
-		return nil, nil
-	}
-
-	if v, ok := in["limits"].([]interface{}); ok && len(v) > 0 {
-		rl, err := fn(v)
+	if v, ok := in["limits"].(map[string]interface{}); ok && len(v) > 0 {
+		r, err := expandMapToResourceList(v)
 		if err != nil {
 			return obj, err
 		}
-		obj.Limits = *rl
+		obj.Limits = *r
 	}
 
-	if v, ok := in["requests"].([]interface{}); ok && len(v) > 0 {
-		rq, err := fn(v)
+	if v, ok := in["requests"].(map[string]interface{}); ok && len(v) > 0 {
+		r, err := expandMapToResourceList(v)
 		if err != nil {
 			return obj, err
 		}
-		obj.Requests = *rq
+		obj.Requests = *r
 	}
 
 	return obj, nil

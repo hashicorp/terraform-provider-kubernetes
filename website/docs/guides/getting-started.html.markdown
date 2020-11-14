@@ -279,15 +279,8 @@ Terraform will perform the following actions:
                 }
 
               + resources {
-                  + limits {
-                      + cpu    = (known after apply)
-                      + memory = (known after apply)
-                    }
-
-                  + requests {
-                      + cpu    = (known after apply)
-                      + memory = (known after apply)
-                    }
+                  + limits = (known after apply)
+                  + requests = (known after apply)
                 }
 
               + volume_mount {
@@ -613,11 +606,11 @@ resource "kubernetes_deployment" "nginx" {
           }
 
           resources {
-            limits {
+            limits = {
               cpu    = "0.5"
               memory = "512Mi"
             }
-            requests {
+            requests = {
               cpu    = "250m"
               memory = "50Mi"
             }

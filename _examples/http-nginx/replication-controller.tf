@@ -29,11 +29,11 @@ resource "kubernetes_replication_controller" "example" {
         }
 
         resources {
-          limits {
+          limits = {
             cpu    = "0.5"
             memory = "512Mi"
           }
-          requests {
+          requests = {
             cpu    = "250m"
             memory = "50Mi"
           }

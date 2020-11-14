@@ -1163,7 +1163,7 @@ func testAccKubernetesDeploymentConfig_basic(name string) string {
           }
 
           resources {
-            requests {
+            requests = {
               memory = "64Mi"
               cpu    = "50m"
             }
@@ -1220,7 +1220,7 @@ func testAccKubernetesDeploymentConfig_initContainer(name string) string {
           command = ["sh", "-c", "echo The app is running! && sleep 3600"]
 
           resources {
-            requests {
+            requests = {
               memory = "64Mi"
               cpu    = "50m"
             }
@@ -1233,7 +1233,7 @@ func testAccKubernetesDeploymentConfig_initContainer(name string) string {
           command = ["sh", "-c", "until nslookup init-service.default.svc.cluster.local; do echo waiting for init-service; sleep 2; done"]
 
           resources {
-            requests {
+            requests = {
               memory = "64Mi"
               cpu    = "50m"
             }
@@ -1958,12 +1958,12 @@ func testAccKubernetesDeploymentConfigWithResourceRequirements(deploymentName, i
           name  = "containername"
 
           resources {
-            limits {
+            limits = {
               cpu    = "0.5"
               memory = "512Mi"
             }
 
-            requests {
+            requests = {
               cpu    = "250m"
               memory = "50Mi"
             }
@@ -2244,7 +2244,7 @@ func testAccKubernetesDeploymentConfigHostAliases(name string, imageName string)
           name  = "tf-acc-test"
 
           resources {
-            requests {
+            requests = {
               memory = "64Mi"
               cpu    = "50m"
             }
@@ -2397,7 +2397,7 @@ func testAccKubernetesDeploymentConfig_regression(provider, name string) string 
           }
 
           resources {
-            requests {
+            requests = {
               memory = "64Mi"
               cpu    = "50m"
             }

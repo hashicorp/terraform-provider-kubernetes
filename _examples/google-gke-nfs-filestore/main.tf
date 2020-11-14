@@ -207,11 +207,11 @@ resource "kubernetes_deployment" "mariadb" {
           }
 
           resources {
-            limits {
+            limits = {
               cpu    = "0.5"
               memory = "512Mi"
             }
-            requests {
+            requests = {
               cpu    = "250m"
               memory = "50Mi"
             }

@@ -41,11 +41,11 @@ resource "kubernetes_daemonset" "example" {
           name  = "example"
 
           resources {
-            limits {
+            limits = {
               cpu    = "0.5"
               memory = "512Mi"
             }
-            requests {
+            requests = {
               cpu    = "250m"
               memory = "50Mi"
             }
@@ -536,13 +536,6 @@ The `option` block supports the following:
 * `post_start` - (Optional) post_start is called immediately after a container is created. If the handler fails, the container is terminated and restarted according to its restart policy. Other management of the container blocks until the hook completes. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/container-environment#hook-details)
 * `pre_stop` - (Optional) pre_stop is called immediately before a container is terminated. The container is terminated after the handler completes. The reason for termination is passed to the handler. Regardless of the outcome of the handler, the container is eventually terminated. Other management of the container blocks until the hook completes. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/container-environment#hook-details)
 
-### `limits`
-
-#### Arguments
-
-* `cpu` - (Optional) CPU
-* `memory` - (Optional) Memory
-
 ### `liveness_probe`
 
 #### Arguments
@@ -646,13 +639,6 @@ The `option` block supports the following:
 
 * `limits` - (Optional) Describes the maximum amount of compute resources allowed. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/compute-resources)/
 * `requests` - (Optional) Describes the minimum amount of compute resources required.
-
-### `requests`
-
-#### Arguments
-
-* `cpu` - (Optional) CPU
-* `memory` - (Optional) Memory
 
 ### `resource_field_ref`
 

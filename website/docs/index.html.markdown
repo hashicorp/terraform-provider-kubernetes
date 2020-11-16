@@ -133,3 +133,4 @@ The following arguments are supported:
     * `command` - (Required) Command to execute.
     * `args` - (Optional) List of arguments to pass when executing the plugin.
     * `env` - (Optional) Map of environment variables to set when executing the plugin.
+* `ignored_metadata_keys` - (Optional) List of metadata annotation and label keys that the provider will ignore for all resources and not manage. Regular expressions can be used.

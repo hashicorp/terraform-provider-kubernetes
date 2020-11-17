@@ -95,53 +95,24 @@ func handlerFields() map[string]*schema.Schema {
 func resourcesField() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"limits": {
-			Type:        schema.TypeList,
+			Type:        schema.TypeMap,
 			Optional:    true,
 			Computed:    true,
-			MaxItems:    1,
 			Description: "Describes the maximum amount of compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"cpu": {
-						Type:             schema.TypeString,
-						Optional:         true,
-						Computed:         true,
-						ValidateFunc:     validateResourceQuantity,
-						DiffSuppressFunc: suppressEquivalentResourceQuantity,
-					},
-					"memory": {
-						Type:             schema.TypeString,
-						Optional:         true,
-						Computed:         true,
-						ValidateFunc:     validateResourceQuantity,
-						DiffSuppressFunc: suppressEquivalentResourceQuantity,
-					},
-				},
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
 			},
+			DiffSuppressFunc: suppressEquivalentResourceQuantity,
 		},
 		"requests": {
-			Type:     schema.TypeList,
-			Optional: true,
-			Computed: true,
-			MaxItems: 1,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"cpu": {
-						Type:             schema.TypeString,
-						Optional:         true,
-						Computed:         true,
-						ValidateFunc:     validateResourceQuantity,
-						DiffSuppressFunc: suppressEquivalentResourceQuantity,
-					},
-					"memory": {
-						Type:             schema.TypeString,
-						Optional:         true,
-						Computed:         true,
-						ValidateFunc:     validateResourceQuantity,
-						DiffSuppressFunc: suppressEquivalentResourceQuantity,
-					},
-				},
+			Type:        schema.TypeMap,
+			Optional:    true,
+			Computed:    true,
+			Description: "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/",
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
 			},
+			DiffSuppressFunc: suppressEquivalentResourceQuantity,
 		},
 	}
 }

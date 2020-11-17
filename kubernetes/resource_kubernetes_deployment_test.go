@@ -566,10 +566,12 @@ func TestAccKubernetesDeployment_with_resource_requirements(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.requests.0.memory", "50Mi"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.requests.0.cpu", "250m"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.limits.0.memory", "512Mi"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.limits.0.cpu", "500m"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.requests.memory", "50Mi"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.requests.cpu", "250m"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.requests.nvidia/gpu", "1"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.limits.memory", "512Mi"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.limits.cpu", "500m"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.limits.nvidia/gpu", "1"),
 				),
 			},
 		},
@@ -1163,7 +1165,7 @@ func testAccKubernetesDeploymentConfig_basic(name string) string {
           }
 
           resources {
-            requests {
+            requests = {
               memory = "64Mi"
               cpu    = "50m"
             }
@@ -1220,7 +1222,7 @@ func testAccKubernetesDeploymentConfig_initContainer(name string) string {
           command = ["sh", "-c", "echo The app is running! && sleep 3600"]
 
           resources {
-            requests {
+            requests = {
               memory = "64Mi"
               cpu    = "50m"
             }
@@ -1233,7 +1235,7 @@ func testAccKubernetesDeploymentConfig_initContainer(name string) string {
           command = ["sh", "-c", "until nslookup init-service.default.svc.cluster.local; do echo waiting for init-service; sleep 2; done"]
 
           resources {
-            requests {
+            requests = {
               memory = "64Mi"
               cpu    = "50m"
             }
@@ -1958,20 +1960,24 @@ func testAccKubernetesDeploymentConfigWithResourceRequirements(deploymentName, i
           name  = "containername"
 
           resources {
-            limits {
+            limits = {
               cpu    = "0.5"
               memory = "512Mi"
+              "nvidia/gpu" = "1"
             }
 
-            requests {
+            requests = {
               cpu    = "250m"
               memory = "50Mi"
+              "nvidia/gpu" = "1"
             }
           }
         }
       }
     }
   }
+
+  wait_for_rollout = false
 }
 `, deploymentName, imageName)
 }
@@ -2244,7 +2250,7 @@ func testAccKubernetesDeploymentConfigHostAliases(name string, imageName string)
           name  = "tf-acc-test"
 
           resources {
-            requests {
+            requests = {
               memory = "64Mi"
               cpu    = "50m"
             }
@@ -2397,7 +2403,7 @@ func testAccKubernetesDeploymentConfig_regression(provider, name string) string 
           }
 
           resources {
-            requests {
+            requests = {
               memory = "64Mi"
               cpu    = "50m"
             }

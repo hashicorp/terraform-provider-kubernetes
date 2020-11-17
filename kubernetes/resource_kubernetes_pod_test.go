@@ -576,10 +576,12 @@ func TestAccKubernetesPod_with_resource_requirements(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.resources.0.requests.0.memory", "50Mi"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.resources.0.requests.0.cpu", "250m"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.resources.0.limits.0.memory", "512Mi"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.resources.0.limits.0.cpu", "500m"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.resources.0.requests.memory", "50Mi"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.resources.0.requests.cpu", "250m"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.resources.0.requests.ephemeral-storage", "128Mi"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.resources.0.limits.memory", "512Mi"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.resources.0.limits.cpu", "500m"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.resources.0.limits.ephemeral-storage", "512Mi"),
 				),
 			},
 		},
@@ -1829,14 +1831,16 @@ func testAccKubernetesPodConfigWithResourceRequirements(podName, imageName strin
       name  = "containername"
 
       resources {
-        limits {
+        limits = {
           cpu    = "0.5"
-          memory = "512Mi"
+		  memory = "512Mi"
+		  "ephemeral-storage" = "512Mi"
         }
 
-        requests {
+        requests = {
           cpu    = "250m"
-          memory = "50Mi"
+		  memory = "50Mi"
+		  "ephemeral-storage" = "128Mi"
         }
       }
     }

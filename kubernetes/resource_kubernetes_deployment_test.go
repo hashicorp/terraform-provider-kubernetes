@@ -568,8 +568,10 @@ func TestAccKubernetesDeployment_with_resource_requirements(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.requests.memory", "50Mi"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.requests.cpu", "250m"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.requests.nvidia/gpu", "1"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.limits.memory", "512Mi"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.limits.cpu", "500m"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.limits.nvidia/gpu", "1"),
 				),
 			},
 		},
@@ -1961,17 +1963,21 @@ func testAccKubernetesDeploymentConfigWithResourceRequirements(deploymentName, i
             limits = {
               cpu    = "0.5"
               memory = "512Mi"
+              "nvidia/gpu" = "1"
             }
 
             requests = {
               cpu    = "250m"
               memory = "50Mi"
+              "nvidia/gpu" = "1"
             }
           }
         }
       }
     }
   }
+
+  wait_for_rollout = false
 }
 `, deploymentName, imageName)
 }

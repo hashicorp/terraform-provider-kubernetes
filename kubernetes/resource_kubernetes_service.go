@@ -170,18 +170,34 @@ func resourceKubernetesService() *schema.Resource {
 				Default:     true,
 				Description: "Terraform will wait for the load balancer to have at least 1 endpoint before considering the resource created.",
 			},
-			"load_balancer_ingress": {
+			"status": {
 				Type:     schema.TypeList,
 				Computed: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"ip": {
-							Type:     schema.TypeString,
+						"load_balancer": {
+							Type:     schema.TypeList,
 							Computed: true,
-						},
-						"hostname": {
-							Type:     schema.TypeString,
-							Computed: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"ingress": {
+										Type:     schema.TypeList,
+										Computed: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"ip": {
+													Type:     schema.TypeString,
+													Computed: true,
+												},
+												"hostname": {
+													Type:     schema.TypeString,
+													Computed: true,
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},
@@ -271,7 +287,11 @@ func resourceKubernetesServiceRead(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	err = d.Set("load_balancer_ingress", flattenLoadBalancerIngress(svc.Status.LoadBalancer.Ingress))
+	d.Set("status", []interface{}{
+		map[string][]interface{}{
+			"load_balancer": flattenLoadBalancerStatus(svc.Status.LoadBalancer),
+		},
+	})
 	if err != nil {
 		return diag.FromErr(err)
 	}

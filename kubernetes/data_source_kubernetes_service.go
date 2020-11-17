@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -119,18 +120,34 @@ func dataSourceKubernetesService() *schema.Resource {
 					},
 				},
 			},
-			"load_balancer_ingress": {
+			"status": {
 				Type:     schema.TypeList,
 				Computed: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"ip": {
-							Type:     schema.TypeString,
+						"load_balancer": {
+							Type:     schema.TypeList,
 							Computed: true,
-						},
-						"hostname": {
-							Type:     schema.TypeString,
-							Computed: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"ingress": {
+										Type:     schema.TypeList,
+										Computed: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"ip": {
+													Type:     schema.TypeString,
+													Computed: true,
+												},
+												"hostname": {
+													Type:     schema.TypeString,
+													Computed: true,
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},

@@ -209,7 +209,7 @@ func resourceKubernetesServiceCreate(ctx context.Context, d *schema.ResourceData
 	log.Printf("[INFO] Submitted new service: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	if out.Spec.Type == api.ServiceTypeLoadBalancer && d.Get("wait_for_rollout").(bool) {
+	if out.Spec.Type == api.ServiceTypeLoadBalancer && d.Get("wait_for_load_balancer").(bool) {
 		log.Printf("[DEBUG] Waiting for load balancer to assign IP/hostname")
 
 		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {

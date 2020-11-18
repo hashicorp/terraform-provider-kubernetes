@@ -1,4 +1,4 @@
-package plugin
+package schema
 
 import (
 	"fmt"

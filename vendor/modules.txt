@@ -547,7 +547,14 @@ github.com/hashicorp/terraform-exec/tfinstall
 # github.com/hashicorp/terraform-json v0.6.0
 ## explicit
 github.com/hashicorp/terraform-json
-# github.com/hashicorp/terraform-plugin-sdk/v2 v2.0.4-0.20200930154456-951f045a9f14
+# github.com/hashicorp/terraform-plugin-go v0.1.0
+github.com/hashicorp/terraform-plugin-go/tfprotov5
+github.com/hashicorp/terraform-plugin-go/tfprotov5/internal/fromproto
+github.com/hashicorp/terraform-plugin-go/tfprotov5/internal/tfplugin5
+github.com/hashicorp/terraform-plugin-go/tfprotov5/internal/toproto
+github.com/hashicorp/terraform-plugin-go/tfprotov5/server
+github.com/hashicorp/terraform-plugin-go/tfprotov5/tftypes
+# github.com/hashicorp/terraform-plugin-sdk/v2 v2.2.0
 ## explicit
 github.com/hashicorp/terraform-plugin-sdk/v2/diag
 github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest
@@ -560,13 +567,10 @@ github.com/hashicorp/terraform-plugin-sdk/v2/internal/addrs
 github.com/hashicorp/terraform-plugin-sdk/v2/internal/configs/configschema
 github.com/hashicorp/terraform-plugin-sdk/v2/internal/configs/hcl2shim
 github.com/hashicorp/terraform-plugin-sdk/v2/internal/helper/hashcode
-github.com/hashicorp/terraform-plugin-sdk/v2/internal/helper/plugin
-github.com/hashicorp/terraform-plugin-sdk/v2/internal/helper/plugin/context
 github.com/hashicorp/terraform-plugin-sdk/v2/internal/plans/objchange
 github.com/hashicorp/terraform-plugin-sdk/v2/internal/plugin/convert
 github.com/hashicorp/terraform-plugin-sdk/v2/internal/plugintest
 github.com/hashicorp/terraform-plugin-sdk/v2/internal/tfdiags
-github.com/hashicorp/terraform-plugin-sdk/v2/internal/tfplugin5
 github.com/hashicorp/terraform-plugin-sdk/v2/meta
 github.com/hashicorp/terraform-plugin-sdk/v2/plugin
 github.com/hashicorp/terraform-plugin-sdk/v2/terraform
@@ -777,7 +781,7 @@ github.com/ultraware/funlen
 github.com/ultraware/whitespace
 # github.com/uudashr/gocognit v1.0.1
 github.com/uudashr/gocognit
-# github.com/vmihailenco/msgpack v4.0.1+incompatible
+# github.com/vmihailenco/msgpack v4.0.4+incompatible
 github.com/vmihailenco/msgpack
 github.com/vmihailenco/msgpack/codes
 # github.com/xanzy/ssh-agent v0.2.1
@@ -989,7 +993,6 @@ google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/type/expr
 # google.golang.org/grpc v1.32.0
-## explicit
 google.golang.org/grpc
 google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff

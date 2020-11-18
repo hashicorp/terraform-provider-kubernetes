@@ -416,7 +416,7 @@ func waitForDeploymentReplicasFunc(ctx context.Context, conn *kubernetes.Clients
 			return resource.NonRetryableError(err)
 		}
 
-		var specReplicas int32 = 1 // default, acording to API docs
+		var specReplicas int32 = 1 // default, according to API docs
 		if dply.Spec.Replicas != nil {
 			specReplicas = *dply.Spec.Replicas
 		}
@@ -434,6 +434,10 @@ func waitForDeploymentReplicasFunc(ctx context.Context, conn *kubernetes.Clients
 
 			if dply.Status.Replicas > dply.Status.UpdatedReplicas {
 				return resource.RetryableError(fmt.Errorf("Waiting for rollout to finish: %d old replicas are pending termination...", dply.Status.Replicas-dply.Status.UpdatedReplicas))
+			}
+
+			if dply.Status.Replicas > dply.Status.ReadyReplicas {
+				return resource.RetryableError(fmt.Errorf("Waiting for rollout to finish: %d replicas wanted; %d replicas Ready", dply.Status.Replicas, dply.Status.ReadyReplicas))
 			}
 
 			if dply.Status.AvailableReplicas < dply.Status.UpdatedReplicas {

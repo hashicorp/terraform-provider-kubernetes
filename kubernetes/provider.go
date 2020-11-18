@@ -76,6 +76,12 @@ func Provider() *schema.Provider {
 				Optional:    true,
 				Description: "A list of paths to kube config files. Can be set with KUBE_CONFIG_PATHS environment variable.",
 			},
+			"config_path": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("KUBE_CONFIG_PATH", ""),
+				Description: "Path to the kube config file. Can be set with KUBE_CONFIG_PATH.",
+			},
 			"config_context": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -263,8 +269,13 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	loader := &clientcmd.ClientConfigLoadingRules{}
 
 	configPaths := []string{}
-	if v, ok := d.Get("config_paths").([]string); ok && len(v) > 0 {
-		configPaths = v
+
+	if v, ok := d.Get("config_path").(string); ok && v != "" {
+		configPaths = []string{v}
+	} else if v, ok := d.Get("config_paths").([]interface{}); ok && len(v) > 0 {
+		for _, p := range v {
+			configPaths = append(configPaths, p.(string))
+		}
 	} else if v := os.Getenv("KUBE_CONFIG_PATHS"); v != "" {
 		// NOTE we have to do this here because the schema
 		// does not yet allow you to set a default for a TypeList
@@ -281,7 +292,12 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 			log.Printf("[DEBUG] Using kubeconfig: %s", path)
 			expandedPaths = append(expandedPaths, path)
 		}
-		loader.Precedence = expandedPaths
+
+		if len(expandedPaths) == 1 {
+			loader.ExplicitPath = expandedPaths[0]
+		} else {
+			loader.Precedence = expandedPaths
+		}
 
 		ctxSuffix := "; default context"
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -88,32 +89,32 @@ func unsetEnv(t *testing.T) func() {
 	e := getEnv()
 
 	envVars := map[string]string{
-		"KUBE_CONFIG_PATH": e.ConfigPath,
-		"KUBE_CONFIG_PATHS": strings.Join(e.ConfigPaths, ":"),
-		"KUBE_CTX": e.Ctx,
-		"KUBE_CTX_AUTH_INFO": e.CtxAuthInfo,
-		"KUBE_CTX_CLUSTER": e.CtxCluster,
-		"KUBE_HOST": e.Host,
-		"KUBE_USER": e.User,
-		"KUBE_PASSWORD": e.Password,
-		"KUBE_CLIENT_CERT_DATA": e.ClientCertData,
-		"KUBE_CLIENT_KEY_DATA": e.ClientKeyData,
+		"KUBE_CONFIG_PATH":          e.ConfigPath,
+		"KUBE_CONFIG_PATHS":         filepath.Join(e.ConfigPaths...),
+		"KUBE_CTX":                  e.Ctx,
+		"KUBE_CTX_AUTH_INFO":        e.CtxAuthInfo,
+		"KUBE_CTX_CLUSTER":          e.CtxCluster,
+		"KUBE_HOST":                 e.Host,
+		"KUBE_USER":                 e.User,
+		"KUBE_PASSWORD":             e.Password,
+		"KUBE_CLIENT_CERT_DATA":     e.ClientCertData,
+		"KUBE_CLIENT_KEY_DATA":      e.ClientKeyData,
 		"KUBE_CLUSTER_CA_CERT_DATA": e.ClusterCACertData,
-		"KUBE_INSECURE": e.Insecure,
-		"KUBE_TOKEN": e.Token,
+		"KUBE_INSECURE":             e.Insecure,
+		"KUBE_TOKEN":                e.Token,
 	}
 
 	for k, _ := range envVars {
 		if err := os.Unsetenv(k); err != nil {
 			t.Fatalf("Error unsetting env var %s: %s", k, err)
-		}	
+		}
 	}
 
 	return func() {
 		for k, v := range envVars {
 			if err := os.Setenv(k, v); err != nil {
 				t.Fatalf("Error resetting env var %s: %s", k, err)
-			}	
+			}
 		}
 	}
 }
@@ -136,7 +137,7 @@ func getEnv() *currentEnv {
 		e.ConfigPath = v
 	}
 	if v := os.Getenv("KUBE_CONFIG_PATH"); v != "" {
-		e.ConfigPaths = strings.Split(v, ":")
+		e.ConfigPaths = filepath.SplitList(v)
 	}
 	return e
 }
@@ -381,7 +382,7 @@ func clusterVersionLessThan(vs string) bool {
 }
 
 type currentEnv struct {
-	ConfigPath       string
+	ConfigPath        string
 	ConfigPaths       []string
 	Ctx               string
 	CtxAuthInfo       string

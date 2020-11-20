@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
+	"path/filepath"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
@@ -279,7 +279,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	} else if v := os.Getenv("KUBE_CONFIG_PATHS"); v != "" {
 		// NOTE we have to do this here because the schema
 		// does not yet allow you to set a default for a TypeList
-		configPaths = strings.Split(v, ":")
+		configPaths = filepath.SplitList(v)
 	}
 
 	if len(configPaths) > 0 {

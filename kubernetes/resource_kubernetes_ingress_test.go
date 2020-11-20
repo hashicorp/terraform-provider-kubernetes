@@ -164,7 +164,7 @@ func TestAccKubernetesIngress_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 				Config: testAccKubernetesIngressConfig_waitForLoadBalancer(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "load_balancer_ingress.0.ip"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "status.0.load_balancer.0.ingress.0.ip"),
 				),
 			},
 		},

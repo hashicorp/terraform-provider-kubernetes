@@ -105,18 +105,34 @@ func resourceKubernetesIngress() *schema.Resource {
 					},
 				},
 			},
-			"load_balancer_ingress": {
+			"status": {
 				Type:     schema.TypeList,
 				Computed: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"ip": {
-							Type:     schema.TypeString,
+						"load_balancer": {
+							Type:     schema.TypeList,
 							Computed: true,
-						},
-						"hostname": {
-							Type:     schema.TypeString,
-							Computed: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"ingress": {
+										Type:     schema.TypeList,
+										Computed: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"ip": {
+													Type:     schema.TypeString,
+													Computed: true,
+												},
+												"hostname": {
+													Type:     schema.TypeString,
+													Computed: true,
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},
@@ -220,7 +236,11 @@ func resourceKubernetesIngressRead(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	err = d.Set("load_balancer_ingress", flattenLoadBalancerIngress(ing.Status.LoadBalancer.Ingress))
+	err = d.Set("status", []interface{}{
+		map[string][]interface{}{
+			"load_balancer": flattenLoadBalancerStatus(ing.Status.LoadBalancer),
+		},
+	})
 	if err != nil {
 		return diag.FromErr(err)
 	}

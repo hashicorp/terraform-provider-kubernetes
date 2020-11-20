@@ -156,6 +156,7 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.selector.App", "MyApp"),
 					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.type", "LoadBalancer"),
+					resource.TestCheckResourceAttrSet("kubernetes_service.test", "status.0.load_balancer.0.ingress.0.ip"),
 					testAccCheckServicePorts(&conf, []api.ServicePort{
 						{
 							Port:       int32(8888),

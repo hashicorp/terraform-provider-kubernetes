@@ -122,7 +122,7 @@ The following arguments are supported:
 * `client_certificate` - (Optional) PEM-encoded client certificate for TLS authentication. Can be sourced from `KUBE_CLIENT_CERT_DATA`.
 * `client_key` - (Optional) PEM-encoded client certificate key for TLS authentication. Can be sourced from `KUBE_CLIENT_KEY_DATA`.
 * `cluster_ca_certificate` - (Optional) PEM-encoded root certificates bundle for TLS authentication. Can be sourced from `KUBE_CLUSTER_CA_CERT_DATA`.
-* `config_path` - (Optional) A path to a kube config files. Can be sourced from `KUBE_CONFIG_PATH`.
+* `config_path` - (Optional) A path to a kube config file. Can be sourced from `KUBE_CONFIG_PATH`.
 * `config_paths` - (Optional) A list of paths to the kube config files. Can be sourced from `KUBE_CONFIG_PATHS`.
 * `config_context` - (Optional) Context to choose from the config file. Can be sourced from `KUBE_CTX`.
 * `config_context_auth_info` - (Optional) Authentication info context of the kube config (name of the kubeconfig user, `--user` flag in `kubectl`). Can be sourced from `KUBE_CTX_AUTH_INFO`.

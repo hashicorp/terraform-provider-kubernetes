@@ -77,10 +77,11 @@ func Provider() *schema.Provider {
 				Description: "A list of paths to kube config files. Can be set with KUBE_CONFIG_PATHS environment variable.",
 			},
 			"config_path": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_CONFIG_PATH", ""),
-				Description: "Path to the kube config file. Can be set with KUBE_CONFIG_PATH.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CONFIG_PATH", ""),
+				Description:   "Path to the kube config file. Can be set with KUBE_CONFIG_PATH.",
+				ConflictsWith: []string{"config_paths"},
 			},
 			"config_context": {
 				Type:        schema.TypeString,

@@ -9,9 +9,13 @@ BREAKING CHANGES:
 
 FEATURES:
 * Add timeout argument to kubernetes_stateful_set (#1047)
+* Add divisor to resource_field_ref (#1063)
+* Add upgrade test for daemonset (#1064)
 
 BUG FIXES:
 * fix(job): typo in error message (#1048)
+* fix assertion in TestAccKubernetesPersistentVolume_hostPath_nodeAffinty (#1067)
+* fix service load balancer crash (#1070)
 
 IMPROVEMENTS:
 

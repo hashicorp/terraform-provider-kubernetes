@@ -53,13 +53,13 @@ There are generally two ways to configure the Kubernetes provider.
 ### File config
 
 The provider always first tries to load **a config file** from a given
-(or default) location. Depending on whether you have current context set
+(or default) location. Depending on whether you have a current context set
 this _may_ require `config_context_auth_info` and/or `config_context_cluster`
 and/or `config_context`.
 
 #### Setting default config context
 
-Here's an example for how to set default context and avoid all provider configuration:
+Here's an example of how to set default context and avoid all provider configuration:
 
 ```
 kubectl config set-context default-system \
@@ -75,8 +75,8 @@ Read [more about `kubectl` in the official docs](https://kubernetes.io/docs/user
 
 If no other configuration is specified, and when it detects it is running in a kubernetes pod,
 the provider will try to use the service account token from the `/var/run/secrets/kubernetes.io/serviceaccount/token` path.
-Detection of in-cluster execution is based on the sole availability both of the `KUBERNETES_SERVICE_HOST` and `KUBERNETES_SERVICE_PORT` environment variables,
-with non empty values.
+Detection of in-cluster execution is based on the sole availability of both of the `KUBERNETES_SERVICE_HOST` and `KUBERNETES_SERVICE_PORT` environment variables,
+with non-empty values.
 
 ```hcl
 provider "kubernetes" {
@@ -117,7 +117,7 @@ provider "kubernetes" {
 
 
 
-~> If you have **both** valid configuration in a config file and static configuration, the static one is used as override.
+~> If you have **both** valid configurations in a config file and static configuration, the static one is used as an override.
 i.e. any static field will override its counterpart loaded from the config.
 
 ## Argument Reference
@@ -127,7 +127,7 @@ The following arguments are supported:
 * `host` - (Optional) The hostname (in form of URI) of Kubernetes master. Can be sourced from `KUBE_HOST`.
 * `username` - (Optional) The username to use for HTTP basic authentication when accessing the Kubernetes master endpoint. Can be sourced from `KUBE_USER`.
 * `password` - (Optional) The password to use for HTTP basic authentication when accessing the Kubernetes master endpoint. Can be sourced from `KUBE_PASSWORD`.
-* `insecure` - (Optional) Whether server should be accessed without verifying the TLS certificate. Can be sourced from `KUBE_INSECURE`. Defaults to `false`.
+* `insecure` - (Optional) Whether the server should be accessed without verifying the TLS certificate. Can be sourced from `KUBE_INSECURE`. Defaults to `false`.
 * `client_certificate` - (Optional) PEM-encoded client certificate for TLS authentication. Can be sourced from `KUBE_CLIENT_CERT_DATA`.
 * `client_key` - (Optional) PEM-encoded client certificate key for TLS authentication. Can be sourced from `KUBE_CLIENT_KEY_DATA`.
 * `cluster_ca_certificate` - (Optional) PEM-encoded root certificates bundle for TLS authentication. Can be sourced from `KUBE_CLUSTER_CA_CERT_DATA`.

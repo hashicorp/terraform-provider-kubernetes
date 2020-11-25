@@ -10,7 +10,7 @@ BREAKING CHANGES:
 FEATURES:
 * Add timeout argument to kubernetes_stateful_set (#1047)
 * Add divisor to resource_field_ref (#1063)
-* Add upgrade test for daemonset (#1064)
+* Add ingressClassName as field in Ingress manifest (#1057)
 
 BUG FIXES:
 * fix(job): typo in error message (#1048)
@@ -18,6 +18,7 @@ BUG FIXES:
 * fix service load balancer crash (#1070)
 
 IMPROVEMENTS:
+* Add upgrade test for daemonset (#1064)
 
 ## 1.13.3 (October 27, 2020)
 

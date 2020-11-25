@@ -1,3 +1,20 @@
+## 2.0.0 (Unreleased)
+
+BREAKING CHANGES:
+* Update Terraform SDK to v2 (#1027) 
+* Restructure service and ingress to match K8s API (#1071)
+* Normalize automount_service_account_token to be in line with the K8s API (#1054)
+* Normalize wait defaults across Deployment, DaemonSet, StatefulSet, Service, Ingress, and Job (#1053)
+* Change resources requests and limits to TypeMap (#1065)
+
+FEATURES:
+* Add timeout argument to kubernetes_stateful_set (#1047)
+
+BUG FIXES:
+* fix(job): typo in error message (#1048)
+
+IMPROVEMENTS:
+
 ## 1.13.3 (October 27, 2020)
 
 FEATURES:

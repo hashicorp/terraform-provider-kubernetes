@@ -55,6 +55,10 @@ func flattenIngressBackend(in *v1beta1.IngressBackend) []interface{} {
 func flattenIngressSpec(in v1beta1.IngressSpec) []interface{} {
 	att := make(map[string]interface{})
 
+	if in.IngressClassName != nil {
+		att["ingress_class_name"] = in.IngressClassName
+	}
+
 	if in.Backend != nil {
 		att["backend"] = flattenIngressBackend(in.Backend)
 	}
@@ -133,6 +137,10 @@ func expandIngressSpec(l []interface{}) v1beta1.IngressSpec {
 	}
 	in := l[0].(map[string]interface{})
 	obj := v1beta1.IngressSpec{}
+
+	if v, ok := in["ingress_class_name"].(string); ok && len(v) > 0 {
+		obj.IngressClassName = &v
+	}
 
 	if v, ok := in["backend"].([]interface{}); ok && len(v) > 0 {
 		obj.Backend = expandIngressBackend(v)

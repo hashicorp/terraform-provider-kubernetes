@@ -40,6 +40,11 @@ func resourceKubernetesIngress() *schema.Resource {
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"ingress_class_name": {
+							Type:        schema.TypeString,
+							Description: docIngressSpec["ingressClassName"],
+							Optional:    true,
+						},
 						"backend": backendSpecFields(defaultBackendDescription),
 						// FIXME: this field is inconsistent with the k8s API 'rules'
 						"rule": {

@@ -643,7 +643,7 @@ func TestAccKubernetesPersistentVolume_hostPath_nodeAffinity(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.node_affinity.0.required.0.node_selector_term.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", fmt.Sprintf("%s.match_expressions.#", keyName), "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", fmt.Sprintf("%s.#", keyName), "1"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", fmt.Sprintf("%s.0.key", keyName), "selectorLabelTest"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", fmt.Sprintf("%s.0.operator", keyName), "In"),
 					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", fmt.Sprintf("%s.0.values.#", keyName), "1"),

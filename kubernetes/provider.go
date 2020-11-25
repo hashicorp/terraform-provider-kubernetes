@@ -233,7 +233,43 @@ func (k kubeClientsets) AggregatorClientset() (*aggregator.Clientset, error) {
 	return k.aggregatorClientset, nil
 }
 
+func inCluster() bool {
+	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
+	return host != "" && port != ""
+}
+
+func checkConfigurationValid(d *schema.ResourceData) error {
+	if inCluster() {
+		log.Printf("[DEBUG] Terraform appears to be running inside the Kubernetes cluster")
+		return nil
+	}
+
+	if os.Getenv("KUBE_CONFIG_PATHS") != "" {
+		return nil
+	}
+
+	atLeastOneOf := []string{
+		"host",
+		"config_path",
+		"config_paths",
+		"client_certificate",
+		"token",
+		"exec",
+	}
+	for _, a := range atLeastOneOf {
+		if _, ok := d.GetOk(a); ok {
+			return nil
+		}
+	}
+
+	return fmt.Errorf(`provider not configured: you must configure a path to your kubeconfig
+or explicitly supply credentials in the provider block`)
+}
+
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {
+	if err := checkConfigurationValid(d); err != nil {
+		return nil, diag.FromErr(err)
+	}
 
 	// Config initialization
 	cfg, err := initializeConfiguration(d)
@@ -386,7 +422,6 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		return nil, nil
 	}
 
-	log.Printf("[INFO] Successfully initialized config")
 	return cfg, nil
 }
 

@@ -69,7 +69,7 @@ func TestProvider_impl(t *testing.T) {
 	var _ schema.Provider = *Provider()
 }
 
-func TestProvider_configure(t *testing.T) {
+func TestProvider_configure_path(t *testing.T) {
 	ctx := context.TODO()
 	resetEnv := unsetEnv(t)
 	defer resetEnv()
@@ -85,12 +85,31 @@ func TestProvider_configure(t *testing.T) {
 	}
 }
 
+func TestProvider_configure_paths(t *testing.T) {
+	ctx := context.TODO()
+	resetEnv := unsetEnv(t)
+	defer resetEnv()
+
+	os.Setenv("KUBE_CONFIG_PATHS", strings.Join([]string{
+		"test-fixtures/kube-config.yaml",
+		"test-fixtures/kube-config-secondary.yaml",
+	}, string(os.PathListSeparator)))
+	os.Setenv("KUBE_CTX", "oidc")
+
+	rc := terraform.NewResourceConfigRaw(map[string]interface{}{})
+	p := Provider()
+	diags := p.Configure(ctx, rc)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+}
+
 func unsetEnv(t *testing.T) func() {
 	e := getEnv()
 
 	envVars := map[string]string{
 		"KUBE_CONFIG_PATH":          e.ConfigPath,
-		"KUBE_CONFIG_PATHS":         filepath.Join(e.ConfigPaths...),
+		"KUBE_CONFIG_PATHS":         strings.Join(e.ConfigPaths, string(os.PathListSeparator)),
 		"KUBE_CTX":                  e.Ctx,
 		"KUBE_CTX_AUTH_INFO":        e.CtxAuthInfo,
 		"KUBE_CTX_CLUSTER":          e.CtxCluster,

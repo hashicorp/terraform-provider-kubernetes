@@ -79,7 +79,7 @@ func Provider() *schema.Provider {
 			"config_path": {
 				Type:          schema.TypeString,
 				Optional:      true,
-				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CONFIG_PATH", ""),
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CONFIG_PATH", nil),
 				Description:   "Path to the kube config file. Can be set with KUBE_CONFIG_PATH.",
 				ConflictsWith: []string{"config_paths"},
 			},
@@ -238,6 +238,8 @@ func inCluster() bool {
 	return host != "" && port != ""
 }
 
+var authDocumentationURL = "https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs#authentication"
+
 func checkConfigurationValid(d *schema.ResourceData) error {
 	if inCluster() {
 		log.Printf("[DEBUG] Terraform appears to be running inside the Kubernetes cluster")
@@ -263,7 +265,9 @@ func checkConfigurationValid(d *schema.ResourceData) error {
 	}
 
 	return fmt.Errorf(`provider not configured: you must configure a path to your kubeconfig
-or explicitly supply credentials in the provider block`)
+or explicitly supply credentials via the provider block or environment variables.
+
+See our documentation at: %s`, authDocumentationURL)
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {
@@ -326,6 +330,10 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 			if err != nil {
 				return nil, err
 			}
+			if _, err := os.Stat(path); err != nil {
+				return nil, fmt.Errorf("could not open kubeconfig %q: %v", p, err)
+			}
+
 			log.Printf("[DEBUG] Using kubeconfig: %s", path)
 			expandedPaths = append(expandedPaths, path)
 		}

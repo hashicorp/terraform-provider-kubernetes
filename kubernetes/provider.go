@@ -226,7 +226,7 @@ type KubeClientsets interface {
 }
 
 type kubeClientsets struct {
-	config              *restclient.Config
+	config              *clientcmd.ClientConfig
 	mainClientset       *kubernetes.Clientset
 	aggregatorClientset *aggregator.Clientset
 
@@ -239,7 +239,22 @@ func (k kubeClientsets) MainClientset() (*kubernetes.Clientset, error) {
 	}
 
 	if k.config != nil {
-		kc, err := kubernetes.NewForConfig(k.config)
+		cfg, err := (*k.config).ClientConfig()
+		if err != nil {
+			log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail: %v", err)
+			return nil, nil
+		}
+
+		cfg.UserAgent = fmt.Sprintf("HashiCorp/1.0 Terraform")
+
+		if logging.IsDebugOrHigher() {
+			log.Printf("[DEBUG] Enabling HTTP requests/responses tracing")
+			cfg.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+				return logging.NewTransport("Kubernetes", rt)
+			}
+		}
+
+		kc, err := kubernetes.NewForConfig(cfg)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to configure client: %s", err)
 		}
@@ -253,7 +268,22 @@ func (k kubeClientsets) AggregatorClientset() (*aggregator.Clientset, error) {
 		return k.aggregatorClientset, nil
 	}
 	if k.config != nil {
-		ac, err := aggregator.NewForConfig(k.config)
+		cfg, err := (*k.config).ClientConfig()
+		if err != nil {
+			log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail: %v", err)
+			return k.aggregatorClientset, nil
+		}
+
+		cfg.UserAgent = fmt.Sprintf("HashiCorp/1.0 Terraform")
+
+		if logging.IsDebugOrHigher() {
+			log.Printf("[DEBUG] Enabling HTTP requests/responses tracing")
+			cfg.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+				return logging.NewTransport("Kubernetes", rt)
+			}
+		}
+
+		ac, err := aggregator.NewForConfig(cfg)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to configure client: %s", err)
 		}
@@ -268,22 +298,6 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
-	if cfg == nil {
-		// This is a TEMPORARY measure to work around https://github.com/hashicorp/terraform/issues/24055
-		// IMPORTANT: this will NOT enable a workaround of issue: https://github.com/hashicorp/terraform/issues/4149
-		// IMPORTANT: if the supplied configuration is incomplete or invalid
-		///IMPORTANT: provider operations will fail or attempt to connect to localhost endpoints
-		cfg = &restclient.Config{}
-	}
-
-	cfg.UserAgent = fmt.Sprintf("HashiCorp/1.0 Terraform/%s", terraformVersion)
-
-	if logging.IsDebugOrHigher() {
-		log.Printf("[DEBUG] Enabling HTTP requests/responses tracing")
-		cfg.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
-			return logging.NewTransport("Kubernetes", rt)
-		}
-	}
 
 	m := kubeClientsets{
 		config:              cfg,
@@ -294,7 +308,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 	return m, diag.Diagnostics{}
 }
 
-func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error) {
+func initializeConfiguration(d *schema.ResourceData) (*clientcmd.ClientConfig, error) {
 	overrides := &clientcmd.ConfigOverrides{}
 	loader := &clientcmd.ClientConfigLoadingRules{}
 
@@ -410,13 +424,9 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	}
 
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
-	cfg, err := cc.ClientConfig()
-	if err != nil {
-		log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail: %v", err)
-		return nil, nil
-	}
 
-	return cfg, nil
+	log.Printf("[INFO] Successfully initialized config")
+	return &cc, nil
 }
 
 var useadmissionregistrationv1beta1 *bool

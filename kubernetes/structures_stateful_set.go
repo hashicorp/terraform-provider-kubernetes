@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/apps/v1"
@@ -24,8 +25,12 @@ func expandStatefulSetSpec(s []interface{}) (*v1.StatefulSetSpec, error) {
 		obj.PodManagementPolicy = v1.PodManagementPolicyType(v)
 	}
 
-	if v, ok := in["replicas"].(int); ok && v >= 0 {
-		obj.Replicas = ptrToInt32(int32(v))
+	if v, ok := in["replicas"].(string); ok && v != "" {
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return obj, err
+		}
+		obj.Replicas = ptrToInt32(int32(i))
 	}
 
 	if v, ok := in["revision_history_limit"].(int); ok {
@@ -160,7 +165,7 @@ func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData) ([]
 		att["pod_management_policy"] = spec.PodManagementPolicy
 	}
 	if spec.Replicas != nil {
-		att["replicas"] = *spec.Replicas
+		att["replicas"] = strconv.Itoa(int(*spec.Replicas))
 	}
 	if spec.RevisionHistoryLimit != nil {
 		att["revision_history_limit"] = *spec.RevisionHistoryLimit
@@ -232,10 +237,14 @@ func patchStatefulSetSpec(d *schema.ResourceData) (PatchOperations, error) {
 
 	if d.HasChange("spec.0.replicas") {
 		log.Printf("[TRACE] StatefulSet.Spec.Replicas has changes")
-		if v, ok := d.Get("spec.0.replicas").(int); ok {
+		if v, ok := d.Get("spec.0.replicas").(string); ok && v != "" {
+			vv, err := strconv.Atoi(v)
+			if err != nil {
+				return ops, err
+			}
 			ops = append(ops, &ReplaceOperation{
 				Path:  "/spec/replicas",
-				Value: v,
+				Value: vv,
 			})
 		}
 	}

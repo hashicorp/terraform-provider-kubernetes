@@ -51,7 +51,7 @@ func TestAccKubernetesStatefulSet_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.metadata.0.labels.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.metadata.0.labels.app", "ss-test"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.name", "ss-test"),
-					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.image", "k8s.gcr.io/pause:latest"),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.19"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.port.0.container_port", "80"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.port.0.name", "web"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.name", "workdir"),
@@ -139,7 +139,7 @@ func TestAccKubernetesStatefulSet_Update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetConfigUpdateReplicas(name, 5),
+				Config: testAccKubernetesStatefulSetConfigUpdateReplicas(name, "5"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetExists("kubernetes_stateful_set.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.name", name),
@@ -147,7 +147,16 @@ func TestAccKubernetesStatefulSet_Update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetConfigUpdateReplicas(name, 0),
+				Config: testAccKubernetesStatefulSetConfigUpdateReplicas(name, ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetExists("kubernetes_stateful_set.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.name", name),
+					// NOTE setting to empty should preserve the current replica count
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.replicas", "5"),
+				),
+			},
+			{
+				Config: testAccKubernetesStatefulSetConfigUpdateReplicas(name, "0"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetExists("kubernetes_stateful_set.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.name", name),
@@ -213,7 +222,7 @@ func TestAccKubernetesStatefulSet_Update(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesStatefulSet_waitForRollout(t *testing.T) {
+func TestAccKubernetesStatefulSet_waitForRollout_true(t *testing.T) {
 	var conf api.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.Test(t, resource.TestCase{
@@ -223,10 +232,30 @@ func TestAccKubernetesStatefulSet_waitForRollout(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesStatefulSetConfigWaitForRollout(name),
+				Config: testAccKubernetesStatefulSetConfigWaitForRollout(name, true),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetExists("kubernetes_stateful_set.test", &conf),
 					testAccCheckKubernetesStatefulSetRolledOut("kubernetes_stateful_set.test"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesStatefulSet_waitForRollout_false(t *testing.T) {
+	var conf api.StatefulSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_stateful_set.test",
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStatefulSetConfigWaitForRollout(name, false),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetExists("kubernetes_stateful_set.test", &conf),
+					testAccCheckKubernetesStatefulSetRollingOut("kubernetes_stateful_set.test"),
 				),
 			},
 		},
@@ -421,7 +450,7 @@ func testAccCheckKubernetesStatefulSetRollingOut(n string) resource.TestCheckFun
 			return err
 		}
 
-		if d.Status.Replicas == *d.Spec.Replicas {
+		if d.Status.ReadyReplicas == *d.Spec.Replicas {
 			return fmt.Errorf("StatefulSet has already rolled out")
 		}
 
@@ -436,7 +465,7 @@ func testAccCheckKubernetesStatefulSetRolledOut(n string) resource.TestCheckFunc
 			return err
 		}
 
-		if d.Status.Replicas != *d.Spec.Replicas {
+		if d.Status.ReadyReplicas != *d.Spec.Replicas {
 			return fmt.Errorf("StatefulSet is still rolling out")
 		}
 
@@ -483,16 +512,24 @@ func testAccKubernetesStatefulSetConfigBasic(name string) string {
 
       spec {
         container {
-          name  = "ss-test"
-          image = "k8s.gcr.io/pause:latest"
+          name = "ss-test"
+          image = "nginx:1.19"
 
           port {
-            container_port = "80"
             name           = "web"
+            container_port = 80
+          }
+
+          readiness_probe {
+            initial_delay_seconds = 5
+            http_get {
+              path = "/"
+              port = 80
+            }
           }
 
           volume_mount {
-            name       = "workdir"
+            name       = "ss-test"
             mount_path = "/work-dir"
           }
         }
@@ -523,6 +560,8 @@ func testAccKubernetesStatefulSetConfigBasic(name string) string {
       }
     }
   }
+
+  wait_for_rollout = true
 }
 `, name)
 }
@@ -575,7 +614,7 @@ func testAccKubernetesStatefulSetConfigUpdateImage(name string) string {
           }
 
           volume_mount {
-            name       = "workdir"
+            name       = "ss-test"
             mount_path = "/work-dir"
           }
         }
@@ -660,7 +699,7 @@ func testAccKubernetesStatefulSetConfigUpdatedSelectorLabels(name string) string
           }
 
           volume_mount {
-            name       = "workdir"
+            name       = "ss-test"
             mount_path = "/work-dir"
           }
         }
@@ -695,7 +734,7 @@ func testAccKubernetesStatefulSetConfigUpdatedSelectorLabels(name string) string
 `, name)
 }
 
-func testAccKubernetesStatefulSetConfigUpdateReplicas(name string, replicas int) string {
+func testAccKubernetesStatefulSetConfigUpdateReplicas(name string, replicas string) string {
 	return fmt.Sprintf(`resource "kubernetes_stateful_set" "test" {
   metadata {
     annotations = {
@@ -714,7 +753,7 @@ func testAccKubernetesStatefulSetConfigUpdateReplicas(name string, replicas int)
 
   spec {
     pod_management_policy  = "OrderedReady"
-    replicas               = %d
+    replicas               = %q
     revision_history_limit = 11
 
     selector {
@@ -743,7 +782,7 @@ func testAccKubernetesStatefulSetConfigUpdateReplicas(name string, replicas int)
           }
 
           volume_mount {
-            name       = "workdir"
+            name       = "ss-test"
             mount_path = "/work-dir"
           }
         }
@@ -831,7 +870,7 @@ func testAccKubernetesStatefulSetConfigUpdateTemplate(name string) string {
           }
 
           volume_mount {
-            name       = "workdir"
+            name       = "ss-test"
             mount_path = "/work-dir"
           }
         }
@@ -930,7 +969,7 @@ func testAccKubernetesStatefulSetConfigRollingUpdatePartition(name string) strin
           }
 
           volume_mount {
-            name       = "workdir"
+            name       = "ss-test"
             mount_path = "/work-dir"
           }
         }
@@ -1013,7 +1052,7 @@ func testAccKubernetesStatefulSetConfigUpdateStrategyOnDelete(name string) strin
           }
 
           volume_mount {
-            name       = "workdir"
+            name       = "ss-test"
             mount_path = "/work-dir"
           }
         }
@@ -1040,11 +1079,13 @@ func testAccKubernetesStatefulSetConfigUpdateStrategyOnDelete(name string) strin
       }
     }
   }
+
+  wait_for_rollout = false
 }
 `, name)
 }
 
-func testAccKubernetesStatefulSetConfigWaitForRollout(name string) string {
+func testAccKubernetesStatefulSetConfigWaitForRollout(name string, v bool) string {
 	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     name = "ss-test"
@@ -1111,9 +1152,9 @@ resource "kubernetes_stateful_set" "test" {
     }
   }
 
-  wait_for_rollout = true
+  wait_for_rollout = %t
 }
-`, name)
+`, name, v)
 }
 
 func testAccKubernetesStatefulSet_regression(provider, name string) string {
@@ -1165,7 +1206,7 @@ func testAccKubernetesStatefulSet_regression(provider, name string) string {
           }
 
           volume_mount {
-            name       = "workdir"
+            name       = "ss-test"
             mount_path = "/work-dir"
           }
         }

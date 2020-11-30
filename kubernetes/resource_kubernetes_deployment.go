@@ -68,10 +68,11 @@ func resourceKubernetesDeployment() *schema.Resource {
 							Default:     600,
 						},
 						"replicas": {
-							Type:        schema.TypeInt,
-							Description: "The number of desired replicas. Defaults to 1. More info: http://kubernetes.io/docs/user-guide/replication-controller#what-is-a-replication-controller",
-							Optional:    true,
-							Default:     1,
+							Type:         schema.TypeString,
+							Description:  "Number of desired pods. This is a string to be able to distinguish between explicit zero and not specified.",
+							Optional:     true,
+							Computed:     true,
+							ValidateFunc: validateTypeStringNullableInt,
 						},
 						"revision_history_limit": {
 							Type:        schema.TypeInt,

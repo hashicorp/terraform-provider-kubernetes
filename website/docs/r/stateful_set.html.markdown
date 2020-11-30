@@ -246,7 +246,7 @@ The following arguments are supported:
 
 * `pod_management_policy` - (Optional) podManagementPolicy controls how pods are created during initial scale up, when replacing pods on nodes, or when scaling down. The default policy is `OrderedReady`, where pods are created in increasing order (pod-0, then pod-1, etc) and the controller will wait until each pod is ready before continuing. When scaling down, the pods are removed in the opposite order. The alternative policy is `Parallel` which will create pods in parallel to match the desired scale without waiting, and on scale down will delete all pods at once. *Changing this forces a new resource to be created.*
 
-* `replicas` - (Optional) The desired number of replicas of the given Template. These are replicas in the sense that they are instantiations of the same Template, but individual replicas also have a consistent identity. If unspecified, defaults to 1.
+* `replicas` - (Optional) The desired number of replicas of the given Template. These are replicas in the sense that they are instantiations of the same Template, but individual replicas also have a consistent identity. If unspecified, defaults to 1. This attribute is a string to be able to distinguish between explicit zero and not specified.
 
 * `revision_history_limit` - (Optional)  The maximum number of revisions that will be maintained in the StatefulSet's revision history. The revision history consists of all revisions not represented by a currently applied StatefulSetSpec version. The default value is 10. *Changing this forces a new resource to be created.*
 

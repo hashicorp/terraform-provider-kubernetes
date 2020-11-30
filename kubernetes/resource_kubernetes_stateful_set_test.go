@@ -28,8 +28,8 @@ func TestAccKubernetesStatefulSet_basic(t *testing.T) {
 				Config: testAccKubernetesStatefulSetConfigBasic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetExists("kubernetes_stateful_set.test", &conf),
-					testAccCheckKubernetesStatefulSetRollingOut("kubernetes_stateful_set.test"),
-					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "wait_for_rollout", "false"),
+					testAccCheckKubernetesStatefulSetRolledOut("kubernetes_stateful_set.test"),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "wait_for_rollout", "true"),
 					resource.TestCheckResourceAttrSet("kubernetes_stateful_set.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_stateful_set.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_stateful_set.test", "metadata.0.self_link"),
@@ -54,7 +54,7 @@ func TestAccKubernetesStatefulSet_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.19"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.port.0.container_port", "80"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.port.0.name", "web"),
-					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.name", "workdir"),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.name", "ss-test"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.mount_path", "/work-dir"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.rolling_update.#", "1"),
@@ -560,8 +560,6 @@ func testAccKubernetesStatefulSetConfigBasic(name string) string {
       }
     }
   }
-
-  wait_for_rollout = true
 }
 `, name)
 }

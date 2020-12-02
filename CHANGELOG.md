@@ -16,6 +16,7 @@ BUG FIXES:
 * fix(job): typo in error message (#1048)
 * fix assertion in TestAccKubernetesPersistentVolume_hostPath_nodeAffinty (#1067)
 * fix service load balancer crash (#1070)
+* fix CronJob.ttl_seconds_after_finished causing requests to fail even without value specified (#929)
 
 IMPROVEMENTS:
 * Add upgrade test for daemonset (#1064)

@@ -26,7 +26,7 @@ func expandStatefulSetSpec(s []interface{}) (*v1.StatefulSetSpec, error) {
 	}
 
 	if v, ok := in["replicas"].(string); ok && v != "" {
-		i, err := strconv.Atoi(v)
+		i, err := strconv.ParseInt(v, 10, 32)
 		if err != nil {
 			return obj, err
 		}

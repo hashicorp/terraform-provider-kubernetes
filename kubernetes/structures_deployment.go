@@ -78,7 +78,7 @@ func expandDeploymentSpec(deployment []interface{}) (*appsv1.DeploymentSpec, err
 	obj.Paused = in["paused"].(bool)
 	obj.ProgressDeadlineSeconds = ptrToInt32(int32(in["progress_deadline_seconds"].(int)))
 	if v, ok := in["replicas"].(string); ok && v != "" {
-		i, err := strconv.Atoi(v)
+		i, err := strconv.ParseInt(v, 10, 32)
 		if err != nil {
 			return obj, err
 		}

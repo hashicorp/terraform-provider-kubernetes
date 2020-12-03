@@ -989,7 +989,7 @@ func TestAccKubernetesDeployment_with_resource_field_selector(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.limits.0.memory", "512Mi"),
+					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.resources.0.limits.memory", "512Mi"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.env.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.env.0.name", "K8S_LIMITS_CPU"),
 					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.env.0.value_from.0.resource_field_ref.0.container_name", "containername"),
@@ -2528,7 +2528,7 @@ func testAccKubernetesDeploymentConfigWithResourceFieldSelector(rcName, imageNam
           image = "%s"
           name  = "containername"
           resources {
-            limits {
+            limits = {
               memory = "512Mi"
             }
           }

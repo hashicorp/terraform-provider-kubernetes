@@ -23,6 +23,22 @@ The above changes have been made to encourage the best practice of configuring a
 
 You will therefore need to explicitly configure access to your Kubernetes cluster in the provider block going forward. For many users this will simply mean specifying the `config_path` attribute in the provider block. Users already explicitly configuring the provider should not be affected by this change, but will need to remove the `load_config_file` attribute if they are currently using it.
 
+### Changes to the `load_balancers_ingress` block on Service and Ingress
+https://github.com/hashicorp/terraform-provider-kubernetes/pull/1071
+
+### The `automount_service_account_token` attribute now defaults to `true` on Service, Deployment, StatefulSet, and DaemonSet 
+
+This change was made to align with the Kubernetes API default.
+
+Previously if `automount_service_account_token = true` was not set on the Service, Deployment, StatefulSet, or DaemonSet resources, the service account token was not mounted, even when a `service_account` was specified.  This lead to confusion for many users.
+
+In practice, this means that the provider will update all Service, Deployment, StatefulSet, and DaemonSet resources that don't have `automount_service_account_token = false` set explicitly, to `automount_service_account_token = true`. See the documentation for the specific resource in question for more information on this attribute.
+
+### Normalize wait defaults across Deployment, DaemonSet, StatefulSet, Service, Ingress, and Job
+https://github.com/hashicorp/terraform-provider-kubernetes/pull/1053
+
+### Changes to the `limits` and `requests` attributes to support extended resources
+https://github.com/hashicorp/terraform-provider-kubernetes/pull/1065
 
 ### Dropped support for Terraform 0.11
 

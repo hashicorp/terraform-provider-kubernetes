@@ -77,7 +77,6 @@ resource "kubernetes_deployment" "example" {
 ```
 
 ### Normalize wait defaults across Deployment, DaemonSet, StatefulSet, Service, Ingress, and Job
-https://github.com/hashicorp/terraform-provider-kubernetes/pull/1053
 
 All of the `wait_for` attributes now default to `true`, including:
 - `wait_for_rollout` on the `kubernetes_deployment`, `kubernetes_daemonset`, and `kubernetes_stateful_set` resources
@@ -111,7 +110,6 @@ resource "kubernetes_service" "myapp1" {
 ```
 
 ### Changes to the `limits` and `requests` attributes on all resources that support a PodSpec
-https://github.com/hashicorp/terraform-provider-kubernetes/pull/1065
 
 The `limits` and `requests` attributes on all resources that include a PodSpec, are now a map.  This means that `limits {}` must be changed to `limits = {}`, and the same for `requests`. This change impacts the following resources: `kubernetes_deployment`, `kubernetes_daemonset`, `kubernetes_stateful_set`, `kubernetes_pod`, `kubernetes_job`, `kubernetes_cron_job`. 
 

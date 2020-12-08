@@ -17,8 +17,6 @@ import (
 )
 
 func resourceKubernetesPod() *schema.Resource {
-	podSpecFields := podSpecFields(false, false, false)
-
 	return &schema.Resource{
 		CreateContext: resourceKubernetesPodCreate,
 		ReadContext:   resourceKubernetesPodRead,
@@ -27,26 +25,37 @@ func resourceKubernetesPod() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    resourceKubernetesPodV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceKubernetesPodUpgradeV0,
+			},
+		},
+		SchemaVersion: 1,
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(5 * time.Minute),
 			Delete: schema.DefaultTimeout(5 * time.Minute),
 		},
+		Schema: resourceKubernetesPodSchemaV1(),
+	}
+}
 
-		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("pod", true),
-			"spec": {
-				Type:        schema.TypeList,
-				Description: "Specification of the desired behavior of the pod.",
-				Required:    true,
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: podSpecFields,
-				},
+func resourceKubernetesPodSchemaV1() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"metadata": namespacedMetadataSchema("pod", true),
+		"spec": {
+			Type:        schema.TypeList,
+			Description: "Specification of the desired behavior of the pod.",
+			Required:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: podSpecFields(false, false, false),
 			},
 		},
 	}
 }
+
 func resourceKubernetesPodCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {

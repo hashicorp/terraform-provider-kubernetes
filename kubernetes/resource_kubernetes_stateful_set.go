@@ -29,33 +29,43 @@ func resourceKubernetesStatefulSet() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    resourceKubernetesStatefulSetV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceKubernetesStatefulSetUpgradeV0,
+			},
+		},
+		SchemaVersion: 1,
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
 			Read:   schema.DefaultTimeout(10 * time.Minute),
 			Update: schema.DefaultTimeout(10 * time.Minute),
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
+		Schema: resourceKubernetesStatefulSetSchemaV1(),
+	}
+}
 
-		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("stateful set", true),
-			"spec": {
-				Type:        schema.TypeList,
-				Description: "Spec defines the desired identities of pods in this set.",
-				Required:    true,
-				MaxItems:    1,
-				MinItems:    1,
-				ForceNew:    true,
-				Elem: &schema.Resource{
-					Schema: statefulSetSpecFields(false),
-				},
+func resourceKubernetesStatefulSetSchemaV1() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"metadata": namespacedMetadataSchema("stateful set", true),
+		"spec": {
+			Type:        schema.TypeList,
+			Description: "Spec defines the desired identities of pods in this set.",
+			Required:    true,
+			MaxItems:    1,
+			MinItems:    1,
+			ForceNew:    true,
+			Elem: &schema.Resource{
+				Schema: statefulSetSpecFields(false),
 			},
-			"wait_for_rollout": {
-				Type:        schema.TypeBool,
-				Description: "Wait for the rollout of the stateful set to complete. Defaults to true.",
-				Default:     true,
-				Optional:    true,
-			},
+		},
+		"wait_for_rollout": {
+			Type:        schema.TypeBool,
+			Description: "Wait for the rollout of the stateful set to complete. Defaults to true.",
+			Default:     true,
+			Optional:    true,
 		},
 	}
 }

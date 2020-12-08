@@ -129,7 +129,7 @@ func TestUpgradeTemplatePodSpecWithResourcesFieldV0(t *testing.T) {
 		}},
 	}
 
-	actual, _ := upgradeTemplatePodSpecWithResourcesFieldV0(context.Background(), v0, nil, "template")
+	actual, _ := upgradeTemplatePodSpecWithResourcesFieldV0(context.Background(), v0, nil)
 
 	if !reflect.DeepEqual(v1, actual) {
 		t.Fatalf("\n\nexpected:\n\n%#v\n\ngot:\n\n%#v\n\n", v1, actual)

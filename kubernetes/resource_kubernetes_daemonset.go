@@ -28,98 +28,108 @@ func resourceKubernetesDaemonSet() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    resourceKubernetesDaemonSetV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceKubernetesDaemonSetUpgradeV0,
+			},
+		},
+		SchemaVersion: 1,
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
 			Update: schema.DefaultTimeout(10 * time.Minute),
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
+		Schema: resourceKubernetesDaemonSetSchemaV1(),
+	}
+}
 
-		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("daemonset", true),
-			"spec": {
-				Type:        schema.TypeList,
-				Description: "Spec defines the specification of the desired behavior of the daemonset. More info: https://v1-9.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.9/#daemonset-v1-apps",
-				Required:    true,
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"min_ready_seconds": {
-							Type:        schema.TypeInt,
-							Description: "Minimum number of seconds for which a newly created pod should be ready without any of its container crashing, for it to be considered available. Defaults to 0 (pod will be considered available as soon as it is ready)",
-							Optional:    true,
-							Default:     0,
+func resourceKubernetesDaemonSetSchemaV1() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"metadata": namespacedMetadataSchema("daemonset", true),
+		"spec": {
+			Type:        schema.TypeList,
+			Description: "Spec defines the specification of the desired behavior of the daemonset. More info: https://v1-9.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.9/#daemonset-v1-apps",
+			Required:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"min_ready_seconds": {
+						Type:        schema.TypeInt,
+						Description: "Minimum number of seconds for which a newly created pod should be ready without any of its container crashing, for it to be considered available. Defaults to 0 (pod will be considered available as soon as it is ready)",
+						Optional:    true,
+						Default:     0,
+					},
+					"revision_history_limit": {
+						Type:        schema.TypeInt,
+						Description: "The number of old ReplicaSets to retain to allow rollback. This is a pointer to distinguish between explicit zero and not specified. Defaults to 10.",
+						Optional:    true,
+						Default:     10,
+					},
+					"selector": {
+						Type:        schema.TypeList,
+						Description: "A label query over pods that are managed by the DaemonSet.",
+						Optional:    true,
+						ForceNew:    true,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: labelSelectorFields(true),
 						},
-						"revision_history_limit": {
-							Type:        schema.TypeInt,
-							Description: "The number of old ReplicaSets to retain to allow rollback. This is a pointer to distinguish between explicit zero and not specified. Defaults to 10.",
-							Optional:    true,
-							Default:     10,
-						},
-						"selector": {
-							Type:        schema.TypeList,
-							Description: "A label query over pods that are managed by the DaemonSet.",
-							Optional:    true,
-							ForceNew:    true,
-							MaxItems:    1,
-							Elem: &schema.Resource{
-								Schema: labelSelectorFields(true),
-							},
-						},
-						"strategy": {
-							Type:        schema.TypeList,
-							Optional:    true,
-							Computed:    true,
-							Description: "The deployment strategy used to replace existing pods with new ones.",
-							MaxItems:    1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"type": {
-										Type:         schema.TypeString,
-										Description:  "Type of deployment. Can be 'RollingUpdate' or 'OnDelete'. Default is RollingUpdate.",
-										Optional:     true,
-										Default:      "RollingUpdate",
-										ValidateFunc: validation.StringInSlice([]string{"RollingUpdate", "OnDelete"}, false),
-									},
-									"rolling_update": {
-										Type:        schema.TypeList,
-										Description: "Rolling update config params. Present only if type = 'RollingUpdate'.",
-										Optional:    true,
-										Computed:    true,
-										MaxItems:    1,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"max_unavailable": {
-													Type:         schema.TypeString,
-													Description:  "The maximum number of DaemonSet pods that can be unavailable during the update. Value can be an absolute number (ex: 5) or a percentage of total number of DaemonSet pods at the start of the update (ex: 10%). Absolute number is calculated from percentage by rounding up. This cannot be 0. Default value is 1. Example: when this is set to 30%, at most 30% of the total number of nodes that should be running the daemon pod (i.e. status.desiredNumberScheduled) can have their pods stopped for an update at any given time. The update starts by stopping at most 30% of those DaemonSet pods and then brings up new DaemonSet pods in their place. Once the new pods are available, it then proceeds onto other DaemonSet pods, thus ensuring that at least 70% of original number of DaemonSet pods are available at all times during the update.",
-													Optional:     true,
-													Default:      1,
-													ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([1-9][0-9]*|[1-9][0-9]%|[1-9]%|100%)$`), ""),
-												},
+					},
+					"strategy": {
+						Type:        schema.TypeList,
+						Optional:    true,
+						Computed:    true,
+						Description: "The deployment strategy used to replace existing pods with new ones.",
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"type": {
+									Type:         schema.TypeString,
+									Description:  "Type of deployment. Can be 'RollingUpdate' or 'OnDelete'. Default is RollingUpdate.",
+									Optional:     true,
+									Default:      "RollingUpdate",
+									ValidateFunc: validation.StringInSlice([]string{"RollingUpdate", "OnDelete"}, false),
+								},
+								"rolling_update": {
+									Type:        schema.TypeList,
+									Description: "Rolling update config params. Present only if type = 'RollingUpdate'.",
+									Optional:    true,
+									Computed:    true,
+									MaxItems:    1,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"max_unavailable": {
+												Type:         schema.TypeString,
+												Description:  "The maximum number of DaemonSet pods that can be unavailable during the update. Value can be an absolute number (ex: 5) or a percentage of total number of DaemonSet pods at the start of the update (ex: 10%). Absolute number is calculated from percentage by rounding up. This cannot be 0. Default value is 1. Example: when this is set to 30%, at most 30% of the total number of nodes that should be running the daemon pod (i.e. status.desiredNumberScheduled) can have their pods stopped for an update at any given time. The update starts by stopping at most 30% of those DaemonSet pods and then brings up new DaemonSet pods in their place. Once the new pods are available, it then proceeds onto other DaemonSet pods, thus ensuring that at least 70% of original number of DaemonSet pods are available at all times during the update.",
+												Optional:     true,
+												Default:      1,
+												ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([1-9][0-9]*|[1-9][0-9]%|[1-9]%|100%)$`), ""),
 											},
 										},
 									},
 								},
 							},
 						},
-						"template": {
-							Type:        schema.TypeList,
-							Description: "An object that describes the pod that will be created. The DaemonSet will create exactly one copy of this pod on every node that matches the template's node selector (or on every node if no node selector is specified). More info: https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/#pod-template",
-							Required:    true,
-							MaxItems:    1,
-							Elem: &schema.Resource{
-								Schema: podTemplateFields("daemon set"),
-							},
+					},
+					"template": {
+						Type:        schema.TypeList,
+						Description: "An object that describes the pod that will be created. The DaemonSet will create exactly one copy of this pod on every node that matches the template's node selector (or on every node if no node selector is specified). More info: https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/#pod-template",
+						Required:    true,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: podTemplateFields("daemon set"),
 						},
 					},
 				},
 			},
-			"wait_for_rollout": {
-				Type:        schema.TypeBool,
-				Description: "Wait for the rollout of the deployment to complete. Defaults to true.",
-				Default:     true,
-				Optional:    true,
-			},
+		},
+		"wait_for_rollout": {
+			Type:        schema.TypeBool,
+			Description: "Wait for the rollout of the deployment to complete. Defaults to true.",
+			Default:     true,
+			Optional:    true,
 		},
 	}
 }

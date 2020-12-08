@@ -80,7 +80,7 @@ resource "kubernetes_deployment" "example" {
 https://github.com/hashicorp/terraform-provider-kubernetes/pull/1053
 
 All of the `wait_for` attributes now default to `true`, including:
-- `wait_for_rollout` on the `kubernetes_deployment`, `kubernetes_daemon_set`, and `kubernetes_stateful_set` resources
+- `wait_for_rollout` on the `kubernetes_deployment`, `kubernetes_daemonset`, and `kubernetes_stateful_set` resources
 - `wait_for_loadbalancer` on the `kubernetes_service` and `kubernetes_ingress` resources
 - `wait_for_completion` on the `kubernetes_job` resource
 
@@ -91,23 +91,61 @@ resource "kubernetes_service" "myapp1" {
   metadata {
     name = "myapp1"
   }
+
   spec {
     selector = {
       app = kubernetes_pod.example.metadata[0].labels.app
     }
+
     session_affinity = "ClientIP"
+    type = "LoadBalancer"
+
     port {
       port        = 8080
       target_port = 80
     }
-    type = "LoadBalancer"
-    wait_for_loadbalancer = "false"
+  }
+
+  wait_for_load_balancer = "false"
+}
+```
+
+### Changes to the `limits` and `requests` attributes on all resources that support a PodSpec
+https://github.com/hashicorp/terraform-provider-kubernetes/pull/1065
+
+The `limits` and `requests` attributes on all resources that include a PodSpec, are now a map.  This means that `limits {}` must be changed to `limits = {}`, and the same for `requests`. This change impacts the following resources: `kubernetes_deployment`, `kubernetes_daemonset`, `kubernetes_stateful_set`, `kubernetes_pod`, `kubernetes_job`, `kubernetes_cron_job`. 
+
+This change was made to enable the use of extended resources, such as GPUs, in these fields.
+
+```hcl
+resource "kubernetes_pod" "test" {
+  metadata {
+    name = "terraform-example"
+  }
+
+  spec {
+    container {
+      image = "nginx:1.7.9"
+      name  = "example"
+      
+      resources {
+        limits = {
+          cpu          = "0.5"
+          memory       = "512Mi"
+          "nvidia/gpu" = "1"
+        }
+
+        requests = {
+          cpu          = "250m"
+          memory       = "50Mi"
+          "nvidia/gpu" = "1"
+        }
+      }
+    }
   }
 }
 ```
 
-### Changes to the `limits` and `requests` attributes to support extended resources
-https://github.com/hashicorp/terraform-provider-kubernetes/pull/1065
 
 ### Dropped support for Terraform 0.11
 

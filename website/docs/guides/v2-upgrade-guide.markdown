@@ -24,18 +24,87 @@ The above changes have been made to encourage the best practice of configuring a
 You will therefore need to explicitly configure access to your Kubernetes cluster in the provider block going forward. For many users this will simply mean specifying the `config_path` attribute in the provider block. Users already explicitly configuring the provider should not be affected by this change, but will need to remove the `load_config_file` attribute if they are currently using it.
 
 ### Changes to the `load_balancers_ingress` block on Service and Ingress
-https://github.com/hashicorp/terraform-provider-kubernetes/pull/1071
+
+We changed the `load_balancers_ingress` block on the Service and Ingress resources and data sources to align with the upstream Kubernetes API. `load_balancers_ingress` was a computed attribute that allowed users to obtain the `ip` or `hostname` of a `load_balancer`. Instead of `load_balancers_ingress`, users should use `status[].load_balancer[].ingress[]` to obtain the `ip` or `hostname` attributes.
+
+```hcl
+output "ingress_hostname" {
+    value = kubernetes_ingress.example_ingress.status[0].load_balancer[0].ingress[0].hostname
+}
+```
 
 ### The `automount_service_account_token` attribute now defaults to `true` on Service, Deployment, StatefulSet, and DaemonSet 
 
-This change was made to align with the Kubernetes API default.
+Previously if `automount_service_account_token = true` was not set on the Service, Deployment, StatefulSet, or DaemonSet resources, the service account token was not mounted, even when a `service_account_name` was specified.  This lead to confusion for many users, because our implementation did not align with the default behavior of the Kubernetes API, which defaults to `true` for this attribute.
 
-Previously if `automount_service_account_token = true` was not set on the Service, Deployment, StatefulSet, or DaemonSet resources, the service account token was not mounted, even when a `service_account` was specified.  This lead to confusion for many users.
+```hcl
+resource "kubernetes_deployment" "example" {
+  metadata {
+    name = "terraform-example"
+    labels = {
+      test = "MyExampleApp"
+    }
+  }
 
-In practice, this means that the provider will update all Service, Deployment, StatefulSet, and DaemonSet resources that don't have `automount_service_account_token = false` set explicitly, to `automount_service_account_token = true`. See the documentation for the specific resource in question for more information on this attribute.
+  spec {
+    replicas = 1
+
+    selector {
+      match_labels = {
+        test = "MyExampleApp"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          test = "MyExampleApp"
+        }
+      }
+
+      spec {
+        container {
+          image = "nginx:1.7.8"
+          name  = "example"
+        }
+        
+        service_account_name = "default"
+        automount_service_account_token = false
+      }
+    }
+  }
+}
+```
 
 ### Normalize wait defaults across Deployment, DaemonSet, StatefulSet, Service, Ingress, and Job
 https://github.com/hashicorp/terraform-provider-kubernetes/pull/1053
+
+All of the `wait_for` attributes now default to `true`, including:
+- `wait_for_rollout` on the `kubernetes_deployment`, `kubernetes_daemon_set`, and `kubernetes_stateful_set` resources
+- `wait_for_loadbalancer` on the `kubernetes_service` and `kubernetes_ingress` resources
+- `wait_for_completion` on the `kubernetes_job` resource
+
+Previously some of them defaulted to `false` while others defaulted to `true`, causing an inconsistent user experience. If you don't want Terraform to wait for the specified condition before moving on, you must now always set the appropriate attribute to `false`
+
+```hcl
+resource "kubernetes_service" "myapp1" {
+  metadata {
+    name = "myapp1"
+  }
+  spec {
+    selector = {
+      app = kubernetes_pod.example.metadata[0].labels.app
+    }
+    session_affinity = "ClientIP"
+    port {
+      port        = 8080
+      target_port = 80
+    }
+    type = "LoadBalancer"
+    wait_for_loadbalancer = "false"
+  }
+}
+```
 
 ### Changes to the `limits` and `requests` attributes to support extended resources
 https://github.com/hashicorp/terraform-provider-kubernetes/pull/1065

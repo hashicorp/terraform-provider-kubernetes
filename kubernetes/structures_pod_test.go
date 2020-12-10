@@ -558,3 +558,141 @@ func TestExpandThenFlatten_projected_volume(t *testing.T) {
 	}
 
 }
+
+func TestExpandCSIVolumeSource(t *testing.T) {
+	cases := []struct {
+		Input          []interface{}
+		ExpectedOutput []*v1.CSIVolumeSource
+	}{
+		{
+			Input: []interface{}{
+				map[string]interface{}{
+					"driver":    "secrets-store.csi.k8s.io",
+					"read_only": true,
+					"volume_attributes": map[string]string{
+						"secretProviderClass": "azure-keyvault",
+					},
+					"fs_type": "nfs",
+					"node_publish_secret_ref": map[string]interface{}{
+						"name":      "secrets-store",
+						"namespace": "default",
+					},
+				},
+			},
+			ExpectedOutput: []*v1.CSIVolumeSource{
+				&v1.CSIVolumeSource{
+					Driver:   "secrets-store.csi.k8s.io",
+					ReadOnly: ptrToBool(true),
+					FSType:   ptrToString("nfs"),
+					VolumeAttributes: map[string]string{
+						"secretProviderClass": "azure-keyvault",
+					},
+					NodePublishSecretRef: &v1.LocalObjectReference{
+						Name: "secrets-store",
+					},
+				},
+			},
+		},
+		{
+			Input: []interface{}{
+				map[string]interface{}{
+					"driver": "other-csi-driver.k8s.io",
+					"volume_attributes": map[string]string{
+						"objects": `array: 
+						- |
+							objectName: secret-1
+							objectType: secret `,
+					},
+				},
+			},
+			ExpectedOutput: []*v1.CSIVolumeSource{
+				&v1.CSIVolumeSource{
+					Driver:   "other-csi-driver.k8s.io",
+					ReadOnly: nil,
+					FSType:   nil,
+					VolumeAttributes: map[string]string{
+						"objects": `array: 
+						- |
+							objectName: secret-1
+							objectType: secret `,
+					},
+					NodePublishSecretRef: nil,
+				},
+			},
+		},
+	}
+	for _, tc := range cases {
+		output := expandCSIVolumeSource(tc.Input)
+		if !reflect.DeepEqual(tc.ExpectedOutput, output) {
+			t.Fatalf("Unexpected output from CSI Volume Source Expander. \nExpected: %#v, Given: %#v",
+				tc.ExpectedOutput, output)
+		}
+	}
+}
+
+func TestFlattenCSIVolumeSource(t *testing.T) {
+	cases := []struct {
+		Input          *v1.CSIVolumeSource
+		ExpectedOutput []interface{}
+	}{
+		{
+			Input: &v1.CSIVolumeSource{
+				Driver:   "secrets-store.csi.k8s.io",
+				ReadOnly: ptrToBool(true),
+				FSType:   ptrToString("nfs"),
+				VolumeAttributes: map[string]string{
+					"secretProviderClass": "azure-keyvault",
+				},
+				NodePublishSecretRef: &v1.LocalObjectReference{
+					Name: "secrets-store",
+				},
+			},
+			ExpectedOutput: []interface{}{
+				map[string]interface{}{
+					"driver":    "secrets-store.csi.k8s.io",
+					"read_only": true,
+					"volume_attributes": map[string]string{
+						"secretProviderClass": "azure-keyvault",
+					},
+					"fs_type": "nfs",
+					"node_publish_secret_ref": map[string]interface{}{
+						"name":      "secrets-store",
+						"namespace": "default",
+					},
+				},
+			},
+		},
+		{
+			Input: &v1.CSIVolumeSource{
+				Driver:   "other-csi-driver.k8s.io",
+				ReadOnly: nil,
+				FSType:   nil,
+				VolumeAttributes: map[string]string{
+					"objects": `array: 
+					- |
+						objectName: secret-1
+						objectType: secret `,
+				},
+				NodePublishSecretRef: nil,
+			},
+			ExpectedOutput: []interface{}{
+				map[string]interface{}{
+					"driver": "other-csi-driver.k8s.io",
+					"volume_attributes": map[string]string{
+						"objects": `array: 
+						- |
+							objectName: secret-1
+							objectType: secret `,
+					},
+				},
+			},
+		},
+	}
+	for _, tc := range cases {
+		output := flattenCSIVolumeSource(tc.Input)
+		if !reflect.DeepEqual(tc.ExpectedOutput, output) {
+			t.Fatalf("Unexpected result from flattener. \nExpected %#v, \nGiven %#v",
+				tc.ExpectedOutput, output)
+		}
+	}
+}

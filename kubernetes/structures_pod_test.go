@@ -562,34 +562,33 @@ func TestExpandThenFlatten_projected_volume(t *testing.T) {
 func TestExpandCSIVolumeSource(t *testing.T) {
 	cases := []struct {
 		Input          []interface{}
-		ExpectedOutput []*v1.CSIVolumeSource
+		ExpectedOutput *v1.CSIVolumeSource
 	}{
 		{
 			Input: []interface{}{
 				map[string]interface{}{
 					"driver":    "secrets-store.csi.k8s.io",
 					"read_only": true,
-					"volume_attributes": map[string]string{
+					"volume_attributes": map[string]interface{}{
 						"secretProviderClass": "azure-keyvault",
 					},
 					"fs_type": "nfs",
-					"node_publish_secret_ref": map[string]interface{}{
-						"name":      "secrets-store",
-						"namespace": "default",
+					"node_publish_secret_ref": []interface{}{
+						map[string]interface{}{
+							"name": "secrets-store",
+						},
 					},
 				},
 			},
-			ExpectedOutput: []*v1.CSIVolumeSource{
-				&v1.CSIVolumeSource{
-					Driver:   "secrets-store.csi.k8s.io",
-					ReadOnly: ptrToBool(true),
-					FSType:   ptrToString("nfs"),
-					VolumeAttributes: map[string]string{
-						"secretProviderClass": "azure-keyvault",
-					},
-					NodePublishSecretRef: &v1.LocalObjectReference{
-						Name: "secrets-store",
-					},
+			ExpectedOutput: &v1.CSIVolumeSource{
+				Driver:   "secrets-store.csi.k8s.io",
+				ReadOnly: ptrToBool(true),
+				FSType:   ptrToString("nfs"),
+				VolumeAttributes: map[string]string{
+					"secretProviderClass": "azure-keyvault",
+				},
+				NodePublishSecretRef: &v1.LocalObjectReference{
+					Name: "secrets-store",
 				},
 			},
 		},
@@ -597,7 +596,7 @@ func TestExpandCSIVolumeSource(t *testing.T) {
 			Input: []interface{}{
 				map[string]interface{}{
 					"driver": "other-csi-driver.k8s.io",
-					"volume_attributes": map[string]string{
+					"volume_attributes": map[string]interface{}{
 						"objects": `array: 
 						- |
 							objectName: secret-1
@@ -605,19 +604,17 @@ func TestExpandCSIVolumeSource(t *testing.T) {
 					},
 				},
 			},
-			ExpectedOutput: []*v1.CSIVolumeSource{
-				&v1.CSIVolumeSource{
-					Driver:   "other-csi-driver.k8s.io",
-					ReadOnly: nil,
-					FSType:   nil,
-					VolumeAttributes: map[string]string{
-						"objects": `array: 
+			ExpectedOutput: &v1.CSIVolumeSource{
+				Driver:   "other-csi-driver.k8s.io",
+				ReadOnly: nil,
+				FSType:   nil,
+				VolumeAttributes: map[string]string{
+					"objects": `array: 
 						- |
 							objectName: secret-1
 							objectType: secret `,
-					},
-					NodePublishSecretRef: nil,
 				},
+				NodePublishSecretRef: nil,
 			},
 		},
 	}
@@ -655,9 +652,10 @@ func TestFlattenCSIVolumeSource(t *testing.T) {
 						"secretProviderClass": "azure-keyvault",
 					},
 					"fs_type": "nfs",
-					"node_publish_secret_ref": map[string]interface{}{
-						"name":      "secrets-store",
-						"namespace": "default",
+					"node_publish_secret_ref": []interface{}{
+						map[string]interface{}{
+							"name": "secrets-store",
+						},
 					},
 				},
 			},
@@ -680,9 +678,9 @@ func TestFlattenCSIVolumeSource(t *testing.T) {
 					"driver": "other-csi-driver.k8s.io",
 					"volume_attributes": map[string]string{
 						"objects": `array: 
-						- |
-							objectName: secret-1
-							objectType: secret `,
+					- |
+						objectName: secret-1
+						objectType: secret `,
 					},
 				},
 			},

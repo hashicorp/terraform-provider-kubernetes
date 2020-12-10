@@ -433,7 +433,21 @@ func flattenCSIPersistentVolumeSource(in *v1.CSIPersistentVolumeSource) []interf
 }
 
 func flattenCSIVolumeSource(in *v1.CSIVolumeSource) []interface{} {
-	panic("NOT IMPLEMENTED")
+	att := make(map[string]interface{})
+	att["driver"] = in.Driver
+	if in.ReadOnly != nil {
+		att["read_only"] = *in.ReadOnly
+	}
+	if in.FSType != nil {
+		att["fs_type"] = *in.FSType
+	}
+	if len(in.VolumeAttributes) > 0 {
+		att["volume_attributes"] = in.VolumeAttributes
+	}
+	if in.NodePublishSecretRef != nil {
+		att["node_publish_secret_ref"] = flattenLocalObjectReference(in.NodePublishSecretRef)
+	}
+	return []interface{}{att}
 }
 
 func flattenQuobyteVolumeSource(in *v1.QuobyteVolumeSource) []interface{} {
@@ -1065,7 +1079,26 @@ func expandCSIPersistentDiskVolumeSource(l []interface{}) *v1.CSIPersistentVolum
 }
 
 func expandCSIVolumeSource(l []interface{}) *v1.CSIVolumeSource {
-	panic("NOT IMPLEMENTED")
+	if len(l) == 0 || l[0] == nil {
+		return &v1.CSIVolumeSource{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.CSIVolumeSource{
+		Driver: in["driver"].(string),
+	}
+	if v, ok := in["read_only"].(bool); ok {
+		obj.ReadOnly = &v
+	}
+	if v, ok := in["fs_type"].(string); ok {
+		obj.FSType = &v
+	}
+	if v, ok := in["volume_attributes"].(map[string]interface{}); ok {
+		obj.VolumeAttributes = expandStringMap(v)
+	}
+	if v, ok := in["node_publish_secret_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.NodePublishSecretRef = expandLocalObjectReference(v)
+	}
+	return obj
 }
 
 func expandQuobyteVolumeSource(l []interface{}) *v1.QuobyteVolumeSource {

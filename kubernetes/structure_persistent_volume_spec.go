@@ -364,7 +364,7 @@ func flattenPersistentVolumeSource(in v1.PersistentVolumeSource) []interface{} {
 		att["photon_persistent_disk"] = flattenPhotonPersistentDiskVolumeSource(in.PhotonPersistentDisk)
 	}
 	if in.CSI != nil {
-		att["csi"] = flattenCSIVolumeSource(in.CSI)
+		att["csi"] = flattenCSIPersistentVolumeSource(in.CSI)
 	}
 	return []interface{}{att}
 }
@@ -406,7 +406,7 @@ func flattenPhotonPersistentDiskVolumeSource(in *v1.PhotonPersistentDiskVolumeSo
 	return []interface{}{att}
 }
 
-func flattenCSIVolumeSource(in *v1.CSIPersistentVolumeSource) []interface{} {
+func flattenCSIPersistentVolumeSource(in *v1.CSIPersistentVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["driver"] = in.Driver
 	att["volume_handle"] = in.VolumeHandle
@@ -430,6 +430,10 @@ func flattenCSIVolumeSource(in *v1.CSIPersistentVolumeSource) []interface{} {
 		att["node_stage_secret_ref"] = flattenSecretReference(in.NodeStageSecretRef)
 	}
 	return []interface{}{att}
+}
+
+func flattenCSIVolumeSource(in *v1.CSIVolumeSource) []interface{} {
+	panic("NOT IMPLEMENTED")
 }
 
 func flattenQuobyteVolumeSource(in *v1.QuobyteVolumeSource) []interface{} {
@@ -1058,6 +1062,10 @@ func expandCSIPersistentDiskVolumeSource(l []interface{}) *v1.CSIPersistentVolum
 		obj.ControllerExpandSecretRef = expandSecretReference(v)
 	}
 	return obj
+}
+
+func expandCSIVolumeSource(l []interface{}) *v1.CSIVolumeSource {
+	panic("NOT IMPLEMENTED")
 }
 
 func expandQuobyteVolumeSource(l []interface{}) *v1.QuobyteVolumeSource {

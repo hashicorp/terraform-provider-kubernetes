@@ -1,7 +1,9 @@
 package kubernetes
 
 import (
-	"k8s.io/api/core/v1"
+	"strconv"
+
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -30,13 +32,13 @@ func flattenContainerSecurityContext(in *v1.SecurityContext) []interface{} {
 		att["read_only_root_filesystem"] = *in.ReadOnlyRootFilesystem
 	}
 	if in.RunAsGroup != nil {
-		att["run_as_group"] = *in.RunAsGroup
+		att["run_as_group"] = strconv.Itoa(int(*in.RunAsGroup))
 	}
 	if in.RunAsNonRoot != nil {
 		att["run_as_non_root"] = *in.RunAsNonRoot
 	}
 	if in.RunAsUser != nil {
-		att["run_as_user"] = *in.RunAsUser
+		att["run_as_user"] = strconv.Itoa(int(*in.RunAsUser))
 	}
 	if in.SELinuxOptions != nil {
 		att["se_linux_options"] = flattenSeLinuxOptions(in.SELinuxOptions)
@@ -504,7 +506,11 @@ func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 			cs[i].TTY = v.(bool)
 		}
 		if v, ok := ctr["security_context"].([]interface{}); ok && len(v) > 0 {
-			cs[i].SecurityContext = expandContainerSecurityContext(v)
+			ctx, err := expandContainerSecurityContext(v)
+			if err != nil {
+				return cs, err
+			}
+			cs[i].SecurityContext = ctx
 		}
 
 		if v, ok := ctr["volume_mount"].([]interface{}); ok && len(v) > 0 {
@@ -550,9 +556,9 @@ func expandHTTPHeaders(l []interface{}) []v1.HTTPHeader {
 	}
 	return headers
 }
-func expandContainerSecurityContext(l []interface{}) *v1.SecurityContext {
+func expandContainerSecurityContext(l []interface{}) (*v1.SecurityContext, error) {
 	if len(l) == 0 || l[0] == nil {
-		return &v1.SecurityContext{}
+		return &v1.SecurityContext{}, nil
 	}
 	in := l[0].(map[string]interface{})
 	obj := v1.SecurityContext{}
@@ -568,20 +574,28 @@ func expandContainerSecurityContext(l []interface{}) *v1.SecurityContext {
 	if v, ok := in["read_only_root_filesystem"]; ok {
 		obj.ReadOnlyRootFilesystem = ptrToBool(v.(bool))
 	}
-	if v, ok := in["run_as_group"]; ok {
-		obj.RunAsGroup = ptrToInt64(int64(v.(int)))
+	if v, ok := in["run_as_group"].(string); ok && v != "" {
+		i, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return &obj, err
+		}
+		obj.RunAsGroup = ptrToInt64(int64(i))
 	}
 	if v, ok := in["run_as_non_root"]; ok {
 		obj.RunAsNonRoot = ptrToBool(v.(bool))
 	}
-	if v, ok := in["run_as_user"]; ok {
-		obj.RunAsUser = ptrToInt64(int64(v.(int)))
+	if v, ok := in["run_as_user"].(string); ok && v != "" {
+		i, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return &obj, err
+		}
+		obj.RunAsUser = ptrToInt64(int64(i))
 	}
 	if v, ok := in["se_linux_options"].([]interface{}); ok && len(v) > 0 {
 		obj.SELinuxOptions = expandSeLinuxOptions(v)
 	}
 
-	return &obj
+	return &obj, nil
 }
 
 func expandCapabilitySlice(s []interface{}) []v1.Capability {

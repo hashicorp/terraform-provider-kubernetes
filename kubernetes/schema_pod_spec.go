@@ -247,14 +247,16 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"fs_group": {
-						Type:        schema.TypeInt,
-						Description: "A special supplemental group that applies to all containers in a pod. Some volume types allow the Kubelet to change the ownership of that volume to be owned by the pod: 1. The owning GID will be the FSGroup 2. The setgid bit is set (new files created in the volume will be owned by FSGroup) 3. The permission bits are OR'd with rw-rw---- If unset, the Kubelet will not modify the ownership and permissions of any volume.",
-						Optional:    true,
+						Type:         schema.TypeString,
+						Description:  "A special supplemental group that applies to all containers in a pod. Some volume types allow the Kubelet to change the ownership of that volume to be owned by the pod: 1. The owning GID will be the FSGroup 2. The setgid bit is set (new files created in the volume will be owned by FSGroup) 3. The permission bits are OR'd with rw-rw---- If unset, the Kubelet will not modify the ownership and permissions of any volume.",
+						Optional:     true,
+						ValidateFunc: validateTypeStringNullableInt,
 					},
 					"run_as_group": {
-						Type:        schema.TypeInt,
-						Description: "The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.",
-						Optional:    true,
+						Type:         schema.TypeString,
+						Description:  "The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.",
+						Optional:     true,
+						ValidateFunc: validateTypeStringNullableInt,
 					},
 					"run_as_non_root": {
 						Type:        schema.TypeBool,
@@ -262,9 +264,10 @@ func podSpecFields(isUpdatable, isDeprecated, isComputed bool) map[string]*schem
 						Optional:    true,
 					},
 					"run_as_user": {
-						Type:        schema.TypeInt,
-						Description: "The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.",
-						Optional:    true,
+						Type:         schema.TypeString,
+						Description:  "The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.",
+						Optional:     true,
+						ValidateFunc: validateTypeStringNullableInt,
 					},
 					"se_linux_options": {
 						Type:        schema.TypeList,

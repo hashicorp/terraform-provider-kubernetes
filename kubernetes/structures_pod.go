@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -107,6 +108,23 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	}
 
 	if len(in.Volumes) > 0 {
+		// If the serviceAccountToken is being added to the list of volumes,
+		// we need to remove it prior to recording the state.
+		if in.AutomountServiceAccountToken != nil && *in.AutomountServiceAccountToken == true {
+			for i, volume := range in.Volumes {
+				nameMatchesDefaultToken, err := regexp.MatchString("default-token-([a-z0-9]{5})", volume.Name)
+				if err != nil {
+					return []interface{}{att}, err
+				}
+				if nameMatchesDefaultToken && volume.Secret != nil {
+					for _, secretVolume := range volume.Secret.Items {
+						if secretVolume.Path == "/var/run/secrets/kubernetes.io/serviceaccount" {
+							removeVolume(i, in.Volumes)
+						}
+					}
+				}
+			}
+		}
 		v, err := flattenVolumes(in.Volumes)
 		if err != nil {
 			return []interface{}{att}, err
@@ -114,6 +132,11 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["volume"] = v
 	}
 	return []interface{}{att}, nil
+}
+
+// removeVolume removes the specified Volume index (i) from the given list of Volumes.
+func removeVolume(i int, v []v1.Volume) []v1.Volume {
+	return append(v[:i], v[i+1:]...)
 }
 
 func flattenPodDNSConfig(in *v1.PodDNSConfig) ([]interface{}, error) {

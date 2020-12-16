@@ -116,12 +116,8 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 				if err != nil {
 					return []interface{}{att}, err
 				}
-				if nameMatchesDefaultToken && volume.Secret != nil {
-					for _, secretVolume := range volume.Secret.Items {
-						if secretVolume.Path == "/var/run/secrets/kubernetes.io/serviceaccount" {
-							removeVolume(i, in.Volumes)
-						}
-					}
+				if nameMatchesDefaultToken  {
+					in.Volumes = removeVolume(i, in.Volumes)
 				}
 			}
 		}

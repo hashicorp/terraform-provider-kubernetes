@@ -262,14 +262,6 @@ func flattenContainerVolumeMounts(in []v1.VolumeMount) ([]interface{}, error) {
 	att := make([]interface{}, len(in))
 
 	for i, v := range in {
-		// To avoid perpetual diff, skip adding default service account volumeMount to state.
-		skip, err := volumeMountIsDefaultServiceAccount(&v)
-		if err != nil {
-			return att, err
-		}
-		if skip {
-			continue
-		}
 		m := map[string]interface{}{}
 		m["read_only"] = v.ReadOnly
 
@@ -290,17 +282,6 @@ func flattenContainerVolumeMounts(in []v1.VolumeMount) ([]interface{}, error) {
 		att[i] = m
 	}
 	return att, nil
-}
-
-func volumeMountIsDefaultServiceAccount(v *v1.VolumeMount) (bool, error) {
-	nameMatchesDefaultToken, err := regexp.MatchString("default-token-([a-z0-9]{5})", v.Name)
-	if err != nil {
-		return false, err
-	}
-	if v.MountPath == "/var/run/secrets/kubernetes.io/serviceaccount" && nameMatchesDefaultToken {
-		return true, nil
-	}
-	return false, nil
 }
 
 func flattenContainerEnvs(in []v1.EnvVar) []interface{} {

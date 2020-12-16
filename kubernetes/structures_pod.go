@@ -108,6 +108,17 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	}
 
 	if len(in.Volumes) > 0 {
+		for i, volume := range in.Volumes {
+			// To avoid perpetual diff, remove the default service account token volume from PodSpec.
+			nameMatchesDefaultToken, err := regexp.MatchString("default-token-([a-z0-9]{5})", volume.Name)
+			if err != nil {
+				return []interface{}{att}, err
+			}
+			if nameMatchesDefaultToken {
+				in.Volumes = removeVolumeFromPodSpec(i, in.Volumes)
+			}
+		}
+
 		v, err := flattenVolumes(in.Volumes)
 		if err != nil {
 			return []interface{}{att}, err
@@ -115,6 +126,11 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["volume"] = v
 	}
 	return []interface{}{att}, nil
+}
+
+// removeVolumeFromPodSpec removes the specified Volume index (i) from the given list of Volumes.
+func removeVolumeFromPodSpec(i int, v []v1.Volume) []v1.Volume {
+	return append(v[:i], v[i+1:]...)
 }
 
 func flattenPodDNSConfig(in *v1.PodDNSConfig) ([]interface{}, error) {
@@ -255,14 +271,6 @@ func flattenTolerations(tolerations []v1.Toleration) []interface{} {
 func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
 	att := make([]interface{}, len(volumes))
 	for i, v := range volumes {
-		// To avoid perpetual diff, skip adding default service account volume to state.
-		skip, err := volumeIsDefaultServiceAccount(&v)
-		if err != nil {
-			return att, err
-		}
-		if skip {
-			continue
-		}
 		obj := map[string]interface{}{}
 
 		if v.Name != "" {
@@ -343,11 +351,6 @@ func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
 		att[i] = obj
 	}
 	return att, nil
-}
-
-// volumeIsDefaultServiceAccount determines if a Volume belongs to the default service account.
-func volumeIsDefaultServiceAccount(volume *v1.Volume) (bool, error) {
-	return regexp.MatchString("default-token-([a-z0-9]{5})", volume.Name)
 }
 
 func flattenPersistentVolumeClaimVolumeSource(in *v1.PersistentVolumeClaimVolumeSource) []interface{} {

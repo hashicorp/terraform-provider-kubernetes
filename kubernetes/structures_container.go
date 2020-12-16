@@ -425,6 +425,17 @@ func flattenContainers(in []v1.Container) ([]interface{}, error) {
 		}
 
 		if len(v.VolumeMounts) > 0 {
+			for num, m := range v.VolumeMounts {
+				// To avoid perpetual diff, remove the default service account token volume from the container's list of volumeMounts.
+				nameMatchesDefaultToken, err := regexp.MatchString("default-token-([a-z0-9]{5})", m.Name)
+				if err != nil {
+					return att, err
+				}
+				if nameMatchesDefaultToken {
+					v.VolumeMounts = removeVolumeMountFromContainer(num, v.VolumeMounts)
+				}
+			}
+
 			volumeMounts, err := flattenContainerVolumeMounts(v.VolumeMounts)
 			if err != nil {
 				return nil, err
@@ -434,6 +445,11 @@ func flattenContainers(in []v1.Container) ([]interface{}, error) {
 		att[i] = c
 	}
 	return att, nil
+}
+
+// removeVolumeMountFromContainer removes the specified VolumeMount index (i) from the given list of VolumeMounts.
+func removeVolumeMountFromContainer(i int, v []v1.VolumeMount) []v1.VolumeMount {
+	return append(v[:i], v[i+1:]...)
 }
 
 func expandContainers(ctrs []interface{}) ([]v1.Container, error) {

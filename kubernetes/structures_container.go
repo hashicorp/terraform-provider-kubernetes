@@ -353,7 +353,7 @@ func flattenContainerResourceRequirements(in v1.ResourceRequirements) ([]interfa
 	return []interface{}{att}, nil
 }
 
-func flattenContainers(in []v1.Container) ([]interface{}, error) {
+func flattenContainers(in []v1.Container, serviceAccountRegex string) ([]interface{}, error) {
 	att := make([]interface{}, len(in))
 	for i, v := range in {
 		c := make(map[string]interface{})
@@ -408,7 +408,7 @@ func flattenContainers(in []v1.Container) ([]interface{}, error) {
 		if len(v.VolumeMounts) > 0 {
 			for num, m := range v.VolumeMounts {
 				// To avoid perpetual diff, remove the default service account token volume from the container's list of volumeMounts.
-				nameMatchesDefaultToken, err := regexp.MatchString("default-token-([a-z0-9]{5})", m.Name)
+				nameMatchesDefaultToken, err := regexp.MatchString(serviceAccountRegex, m.Name)
 				if err != nil {
 					return att, err
 				}

@@ -28,7 +28,14 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["automount_service_account_token"] = *in.AutomountServiceAccountToken
 	}
 
-	containers, err := flattenContainers(in.Containers)
+	// To avoid perpetual diff, remove the service account token volume from PodSpec.
+	serviceAccountName := "default"
+	if in.ServiceAccountName != "" {
+		serviceAccountName = in.ServiceAccountName
+	}
+	serviceAccountRegex := fmt.Sprintf("%s-token-([a-z0-9]{5})", serviceAccountName)
+
+	containers, err := flattenContainers(in.Containers, serviceAccountRegex)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +47,7 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	}
 	att["readiness_gate"] = gates
 
-	initContainers, err := flattenContainers(in.InitContainers)
+	initContainers, err := flattenContainers(in.InitContainers, serviceAccountRegex)
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +95,7 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	if in.SecurityContext != nil {
 		att["security_context"] = flattenPodSecurityContext(in.SecurityContext)
 	}
+
 	if in.ServiceAccountName != "" {
 		att["service_account_name"] = in.ServiceAccountName
 	}
@@ -109,8 +117,8 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 
 	if len(in.Volumes) > 0 {
 		for i, volume := range in.Volumes {
-			// To avoid perpetual diff, remove the default service account token volume from PodSpec.
-			nameMatchesDefaultToken, err := regexp.MatchString("default-token-([a-z0-9]{5})", volume.Name)
+			// To avoid perpetual diff, remove the service account token volume from PodSpec.
+			nameMatchesDefaultToken, err := regexp.MatchString(serviceAccountRegex, volume.Name)
 			if err != nil {
 				return []interface{}{att}, err
 			}

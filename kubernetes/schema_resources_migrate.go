@@ -47,7 +47,7 @@ func upgradeJobTemplatePodSpecWithResourcesFieldV0(ctx context.Context, rawState
 
 	spec := s[0].(map[string]interface{})
 	jt, ok := spec["job_template"].([]interface{})
-	if !ok || len(jt) > 0 {
+	if !ok || len(jt) == 0 {
 		return rawState, nil
 	}
 

@@ -92,7 +92,7 @@ func handlerFields() map[string]*schema.Schema {
 	}
 }
 
-func resourcesField() map[string]*schema.Schema {
+func resourcesFieldV1() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"limits": {
 			Type:        schema.TypeMap,
@@ -113,6 +113,45 @@ func resourcesField() map[string]*schema.Schema {
 				Type: schema.TypeString,
 			},
 			DiffSuppressFunc: suppressEquivalentResourceQuantity,
+		},
+	}
+}
+
+func resourcesFieldV0() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"limits": {
+			Type:     schema.TypeList,
+			Optional: true,
+			MaxItems: 1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"cpu": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"memory": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+				},
+			},
+		},
+		"requests": {
+			Type:     schema.TypeList,
+			Optional: true,
+			MaxItems: 1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"cpu": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"memory": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+				},
+			},
 		},
 	}
 }
@@ -474,7 +513,7 @@ func containerFields(isUpdatable, isInitContainer bool) map[string]*schema.Schem
 			Computed:    true,
 			Description: "Compute Resources required by this container. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#resources",
 			Elem: &schema.Resource{
-				Schema: resourcesField(),
+				Schema: resourcesFieldV1(),
 			},
 		},
 		"security_context": {

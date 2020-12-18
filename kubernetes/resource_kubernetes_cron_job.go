@@ -3,9 +3,10 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -23,21 +24,31 @@ func resourceKubernetesCronJob() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-
 		Timeouts: &schema.ResourceTimeout{
 			Delete: schema.DefaultTimeout(1 * time.Minute),
 		},
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    resourceKubernetesCronJobV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceKubernetesCronJobUpgradeV0,
+			},
+		},
+		SchemaVersion: 1,
+		Schema:        resourceKubernetesCronJobSchemaV1(),
+	}
+}
 
-		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("cronjob", true),
-			"spec": {
-				Type:        schema.TypeList,
-				Description: "Spec of the cron job owned by the cluster",
-				Required:    true,
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: cronJobSpecFields(),
-				},
+func resourceKubernetesCronJobSchemaV1() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"metadata": namespacedMetadataSchema("cronjob", true),
+		"spec": {
+			Type:        schema.TypeList,
+			Description: "Spec of the cron job owned by the cluster",
+			Required:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: cronJobSpecFields(),
 			},
 		},
 	}

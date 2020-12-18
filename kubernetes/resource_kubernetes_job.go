@@ -27,30 +27,40 @@ func resourceKubernetesJob() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    resourceKubernetesJobV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceKubernetesJobUpgradeV0,
+			},
+		},
+		SchemaVersion: 1,
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(1 * time.Minute),
 			Update: schema.DefaultTimeout(1 * time.Minute),
 			Delete: schema.DefaultTimeout(1 * time.Minute),
 		},
+		Schema: resourceKubernetesJobSchemaV1(),
+	}
+}
 
-		Schema: map[string]*schema.Schema{
-			"metadata": jobMetadataSchema(),
-			"spec": {
-				Type:        schema.TypeList,
-				Description: "Spec of the job owned by the cluster",
-				Required:    true,
-				MaxItems:    1,
-				ForceNew:    true,
-				Elem: &schema.Resource{
-					Schema: jobSpecFields(),
-				},
+func resourceKubernetesJobSchemaV1() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"metadata": jobMetadataSchema(),
+		"spec": {
+			Type:        schema.TypeList,
+			Description: "Spec of the job owned by the cluster",
+			Required:    true,
+			MaxItems:    1,
+			ForceNew:    true,
+			Elem: &schema.Resource{
+				Schema: jobSpecFields(),
 			},
-			"wait_for_completion": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
-			},
+		},
+		"wait_for_completion": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  true,
 		},
 	}
 }

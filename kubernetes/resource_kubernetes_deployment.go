@@ -33,159 +33,169 @@ func resourceKubernetesDeployment() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
 			Update: schema.DefaultTimeout(10 * time.Minute),
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    resourceKubernetesDeploymentV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceKubernetesDeploymentUpgradeV0,
+			},
+		},
+		SchemaVersion: 1,
+		Schema:        resourceKubernetesDeploymentSchemaV1(),
+	}
+}
 
-		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("deployment", true),
-			"spec": {
-				Type:        schema.TypeList,
-				Description: "Spec defines the specification of the desired behavior of the deployment. More info: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.9/#deployment-v1-apps",
-				Required:    true,
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"min_ready_seconds": {
-							Type:        schema.TypeInt,
-							Description: "Minimum number of seconds for which a newly created pod should be ready without any of its container crashing, for it to be considered available. Defaults to 0 (pod will be considered available as soon as it is ready)",
-							Optional:    true,
-							Default:     0,
-						},
-						"paused": {
-							Type:        schema.TypeBool,
-							Description: "Indicates that the deployment is paused.",
-							Optional:    true,
-							Default:     false,
-						},
-						"progress_deadline_seconds": {
-							Type:        schema.TypeInt,
-							Description: "The maximum time in seconds for a deployment to make progress before it is considered to be failed. The deployment controller will continue to process failed deployments and a condition with a ProgressDeadlineExceeded reason will be surfaced in the deployment status. Note that progress will not be estimated during the time a deployment is paused. Defaults to 600s.",
-							Optional:    true,
-							Default:     600,
-						},
-						"replicas": {
-							Type:         schema.TypeString,
-							Description:  "Number of desired pods. This is a string to be able to distinguish between explicit zero and not specified.",
-							Optional:     true,
-							Computed:     true,
-							ValidateFunc: validateTypeStringNullableInt,
-						},
-						"revision_history_limit": {
-							Type:        schema.TypeInt,
-							Description: "The number of old ReplicaSets to retain to allow rollback. This is a pointer to distinguish between explicit zero and not specified. Defaults to 10.",
-							Optional:    true,
-							Default:     10,
-						},
-						"selector": {
-							Type:        schema.TypeList,
-							Description: "A label query over pods that should match the Replicas count.",
-							Optional:    true,
-							ForceNew:    true,
-							MaxItems:    1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"match_expressions": {
-										Type:        schema.TypeList,
-										Description: "A list of label selector requirements. The requirements are ANDed.",
-										Optional:    true,
-										ForceNew:    true,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"key": {
-													Type:        schema.TypeString,
-													Description: "The label key that the selector applies to.",
-													Optional:    true,
-													ForceNew:    true,
-												},
-												"operator": {
-													Type:        schema.TypeString,
-													Description: "A key's relationship to a set of values. Valid operators ard `In`, `NotIn`, `Exists` and `DoesNotExist`.",
-													Optional:    true,
-													ForceNew:    true,
-												},
-												"values": {
-													Type:        schema.TypeSet,
-													Description: "An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.",
-													Optional:    true,
-													ForceNew:    true,
-													Elem:        &schema.Schema{Type: schema.TypeString},
-													Set:         schema.HashString,
-												},
+func resourceKubernetesDeploymentSchemaV1() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"metadata": namespacedMetadataSchema("deployment", true),
+		"spec": {
+			Type:        schema.TypeList,
+			Description: "Spec defines the specification of the desired behavior of the deployment. More info: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.9/#deployment-v1-apps",
+			Required:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"min_ready_seconds": {
+						Type:        schema.TypeInt,
+						Description: "Minimum number of seconds for which a newly created pod should be ready without any of its container crashing, for it to be considered available. Defaults to 0 (pod will be considered available as soon as it is ready)",
+						Optional:    true,
+						Default:     0,
+					},
+					"paused": {
+						Type:        schema.TypeBool,
+						Description: "Indicates that the deployment is paused.",
+						Optional:    true,
+						Default:     false,
+					},
+					"progress_deadline_seconds": {
+						Type:        schema.TypeInt,
+						Description: "The maximum time in seconds for a deployment to make progress before it is considered to be failed. The deployment controller will continue to process failed deployments and a condition with a ProgressDeadlineExceeded reason will be surfaced in the deployment status. Note that progress will not be estimated during the time a deployment is paused. Defaults to 600s.",
+						Optional:    true,
+						Default:     600,
+					},
+					"replicas": {
+						Type:         schema.TypeString,
+						Description:  "Number of desired pods. This is a string to be able to distinguish between explicit zero and not specified.",
+						Optional:     true,
+						Computed:     true,
+						ValidateFunc: validateTypeStringNullableInt,
+					},
+					"revision_history_limit": {
+						Type:        schema.TypeInt,
+						Description: "The number of old ReplicaSets to retain to allow rollback. This is a pointer to distinguish between explicit zero and not specified. Defaults to 10.",
+						Optional:    true,
+						Default:     10,
+					},
+					"selector": {
+						Type:        schema.TypeList,
+						Description: "A label query over pods that should match the Replicas count.",
+						Optional:    true,
+						ForceNew:    true,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"match_expressions": {
+									Type:        schema.TypeList,
+									Description: "A list of label selector requirements. The requirements are ANDed.",
+									Optional:    true,
+									ForceNew:    true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"key": {
+												Type:        schema.TypeString,
+												Description: "The label key that the selector applies to.",
+												Optional:    true,
+												ForceNew:    true,
 											},
-										},
-									},
-									"match_labels": {
-										Type:        schema.TypeMap,
-										Description: "A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is \"key\", the operator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
-										Optional:    true,
-										ForceNew:    true,
-									},
-								},
-							},
-						},
-						"strategy": {
-							Type:        schema.TypeList,
-							Description: "The deployment strategy to use to replace existing pods with new ones.",
-							Optional:    true,
-							Computed:    true,
-							MaxItems:    1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"type": {
-										Type:         schema.TypeString,
-										Description:  "Type of deployment. Can be 'Recreate' or 'RollingUpdate'. Default is RollingUpdate.",
-										Optional:     true,
-										Default:      "RollingUpdate",
-										ValidateFunc: validation.StringInSlice([]string{"RollingUpdate", "Recreate"}, false),
-									},
-									"rolling_update": {
-										Type:        schema.TypeList,
-										Description: "Rolling update config params. Present only if DeploymentStrategyType = RollingUpdate.",
-										Optional:    true,
-										Computed:    true,
-										MaxItems:    1,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"max_surge": {
-													Type:         schema.TypeString,
-													Description:  "The maximum number of pods that can be scheduled above the desired number of pods. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). This can not be 0 if MaxUnavailable is 0. Absolute number is calculated from percentage by rounding up. Defaults to 25%. Example: when this is set to 30%, the new RC can be scaled up immediately when the rolling update starts, such that the total number of old and new pods do not exceed 130% of desired pods. Once old pods have been killed, new RC can be scaled up further, ensuring that total number of pods running at any time during the update is atmost 130% of desired pods.",
-													Optional:     true,
-													Default:      "25%",
-													ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([0-9]+|[0-9]+%|)$`), ""),
-												},
-												"max_unavailable": {
-													Type:         schema.TypeString,
-													Description:  "The maximum number of pods that can be unavailable during the update. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). Absolute number is calculated from percentage by rounding down. This can not be 0 if MaxSurge is 0. Defaults to 25%. Example: when this is set to 30%, the old RC can be scaled down to 70% of desired pods immediately when the rolling update starts. Once new pods are ready, old RC can be scaled down further, followed by scaling up the new RC, ensuring that the total number of pods available at all times during the update is at least 70% of desired pods.",
-													Optional:     true,
-													Default:      "25%",
-													ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([0-9]+|[0-9]+%|)$`), ""),
-												},
+											"operator": {
+												Type:        schema.TypeString,
+												Description: "A key's relationship to a set of values. Valid operators ard `In`, `NotIn`, `Exists` and `DoesNotExist`.",
+												Optional:    true,
+												ForceNew:    true,
+											},
+											"values": {
+												Type:        schema.TypeSet,
+												Description: "An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.",
+												Optional:    true,
+												ForceNew:    true,
+												Elem:        &schema.Schema{Type: schema.TypeString},
+												Set:         schema.HashString,
 											},
 										},
 									},
 								},
+								"match_labels": {
+									Type:        schema.TypeMap,
+									Description: "A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is \"key\", the operator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
+									Optional:    true,
+									ForceNew:    true,
+								},
 							},
 						},
-						"template": {
-							Type:        schema.TypeList,
-							Description: "Template describes the pods that will be created.",
-							Required:    true,
-							MaxItems:    1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"metadata": namespacedMetadataSchemaIsTemplate("pod", true, true),
-									"spec": {
-										Type:        schema.TypeList,
-										Description: "Spec defines the specification of the desired behavior of the deployment. More info: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.9/#deployment-v1-apps",
-										Required:    true,
-										MaxItems:    1,
-										Elem: &schema.Resource{
-											Schema: podSpecFields(true, false, false),
+					},
+					"strategy": {
+						Type:        schema.TypeList,
+						Description: "The deployment strategy to use to replace existing pods with new ones.",
+						Optional:    true,
+						Computed:    true,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"type": {
+									Type:         schema.TypeString,
+									Description:  "Type of deployment. Can be 'Recreate' or 'RollingUpdate'. Default is RollingUpdate.",
+									Optional:     true,
+									Default:      "RollingUpdate",
+									ValidateFunc: validation.StringInSlice([]string{"RollingUpdate", "Recreate"}, false),
+								},
+								"rolling_update": {
+									Type:        schema.TypeList,
+									Description: "Rolling update config params. Present only if DeploymentStrategyType = RollingUpdate.",
+									Optional:    true,
+									Computed:    true,
+									MaxItems:    1,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"max_surge": {
+												Type:         schema.TypeString,
+												Description:  "The maximum number of pods that can be scheduled above the desired number of pods. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). This can not be 0 if MaxUnavailable is 0. Absolute number is calculated from percentage by rounding up. Defaults to 25%. Example: when this is set to 30%, the new RC can be scaled up immediately when the rolling update starts, such that the total number of old and new pods do not exceed 130% of desired pods. Once old pods have been killed, new RC can be scaled up further, ensuring that total number of pods running at any time during the update is atmost 130% of desired pods.",
+												Optional:     true,
+												Default:      "25%",
+												ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([0-9]+|[0-9]+%|)$`), ""),
+											},
+											"max_unavailable": {
+												Type:         schema.TypeString,
+												Description:  "The maximum number of pods that can be unavailable during the update. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). Absolute number is calculated from percentage by rounding down. This can not be 0 if MaxSurge is 0. Defaults to 25%. Example: when this is set to 30%, the old RC can be scaled down to 70% of desired pods immediately when the rolling update starts. Once new pods are ready, old RC can be scaled down further, followed by scaling up the new RC, ensuring that the total number of pods available at all times during the update is at least 70% of desired pods.",
+												Optional:     true,
+												Default:      "25%",
+												ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([0-9]+|[0-9]+%|)$`), ""),
+											},
 										},
+									},
+								},
+							},
+						},
+					},
+					"template": {
+						Type:        schema.TypeList,
+						Description: "Template describes the pods that will be created.",
+						Required:    true,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"metadata": namespacedMetadataSchemaIsTemplate("pod", true, true),
+								"spec": {
+									Type:        schema.TypeList,
+									Description: "Spec defines the specification of the desired behavior of the deployment. More info: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.9/#deployment-v1-apps",
+									Required:    true,
+									MaxItems:    1,
+									Elem: &schema.Resource{
+										Schema: podSpecFields(true, false, false),
 									},
 								},
 							},
@@ -193,12 +203,12 @@ func resourceKubernetesDeployment() *schema.Resource {
 					},
 				},
 			},
-			"wait_for_rollout": {
-				Type:        schema.TypeBool,
-				Description: "Wait for the rollout of the deployment to complete. Defaults to true.",
-				Default:     true,
-				Optional:    true,
-			},
+		},
+		"wait_for_rollout": {
+			Type:        schema.TypeBool,
+			Description: "Wait for the rollout of the deployment to complete. Defaults to true.",
+			Default:     true,
+			Optional:    true,
 		},
 	}
 }

@@ -182,7 +182,13 @@ func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData) ([]
 	}
 	att["template"] = template
 	att["volume_claim_template"] = flattenPersistentVolumeClaim(spec.VolumeClaimTemplates, d)
-	att["update_strategy"] = flattenStatefulSetSpecUpdateStrategy(spec.UpdateStrategy)
+
+	// Only write update_strategy to state if the user has defined it,
+	// otherwise we get a perpetual diff.
+	updateStrategy := d.Get("spec.0.update_strategy")
+	if len(updateStrategy.([]interface{})) != 0 {
+		att["update_strategy"] = flattenStatefulSetSpecUpdateStrategy(spec.UpdateStrategy)
+	}
 
 	return []interface{}{att}, nil
 }

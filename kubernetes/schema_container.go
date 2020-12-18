@@ -636,9 +636,10 @@ func securityContextSchema() *schema.Resource {
 			Description: "Whether this container has a read-only root filesystem. Default is false.",
 		},
 		"run_as_group": {
-			Type:        schema.TypeInt,
-			Description: "The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
-			Optional:    true,
+			Type:         schema.TypeString,
+			Description:  "The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
+			Optional:     true,
+			ValidateFunc: validateTypeStringNullableInt,
 		},
 		"run_as_non_root": {
 			Type:        schema.TypeBool,
@@ -646,9 +647,10 @@ func securityContextSchema() *schema.Resource {
 			Optional:    true,
 		},
 		"run_as_user": {
-			Type:        schema.TypeInt,
-			Description: "The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
-			Optional:    true,
+			Type:         schema.TypeString,
+			Description:  "The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
+			Optional:     true,
+			ValidateFunc: validateTypeStringNullableInt,
 		},
 		"se_linux_options": {
 			Type:        schema.TypeList,

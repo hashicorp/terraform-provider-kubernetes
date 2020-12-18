@@ -159,16 +159,16 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	att := make(map[string]interface{})
 
 	if in.FSGroup != nil {
-		att["fs_group"] = *in.FSGroup
+		att["fs_group"] = strconv.Itoa(int(*in.FSGroup))
 	}
 	if in.RunAsGroup != nil {
-		att["run_as_group"] = *in.RunAsGroup
+		att["run_as_group"] = strconv.Itoa(int(*in.RunAsGroup))
 	}
 	if in.RunAsNonRoot != nil {
 		att["run_as_non_root"] = *in.RunAsNonRoot
 	}
 	if in.RunAsUser != nil {
-		att["run_as_user"] = *in.RunAsUser
+		att["run_as_user"] = strconv.Itoa(int(*in.RunAsUser))
 	}
 	if len(in.SupplementalGroups) > 0 {
 		att["supplemental_groups"] = newInt64Set(schema.HashSchema(&schema.Schema{
@@ -682,7 +682,11 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	}
 
 	if v, ok := in["security_context"].([]interface{}); ok && len(v) > 0 {
-		obj.SecurityContext = expandPodSecurityContext(v)
+		ctx, err := expandPodSecurityContext(v)
+		if err != nil {
+			return obj, err
+		}
+		obj.SecurityContext = ctx
 	}
 
 	if v, ok := in["service_account_name"].(string); ok {
@@ -763,23 +767,35 @@ func expandDNSConfigOptions(options []interface{}) ([]v1.PodDNSConfigOption, err
 	return opts, nil
 }
 
-func expandPodSecurityContext(l []interface{}) *v1.PodSecurityContext {
+func expandPodSecurityContext(l []interface{}) (*v1.PodSecurityContext, error) {
+	obj := &v1.PodSecurityContext{}
 	if len(l) == 0 || l[0] == nil {
-		return &v1.PodSecurityContext{}
+		return obj, nil
 	}
 	in := l[0].(map[string]interface{})
-	obj := &v1.PodSecurityContext{}
-	if v, ok := in["fs_group"].(int); ok {
-		obj.FSGroup = ptrToInt64(int64(v))
+	if v, ok := in["fs_group"].(string); ok && v != "" {
+		i, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return obj, err
+		}
+		obj.FSGroup = ptrToInt64(int64(i))
 	}
-	if v, ok := in["run_as_group"].(int); ok {
-		obj.RunAsGroup = ptrToInt64(int64(v))
+	if v, ok := in["run_as_group"].(string); ok && v != "" {
+		i, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return obj, err
+		}
+		obj.RunAsGroup = ptrToInt64(int64(i))
 	}
 	if v, ok := in["run_as_non_root"].(bool); ok {
 		obj.RunAsNonRoot = ptrToBool(v)
 	}
-	if v, ok := in["run_as_user"].(int); ok {
-		obj.RunAsUser = ptrToInt64(int64(v))
+	if v, ok := in["run_as_user"].(string); ok && v != "" {
+		i, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return obj, err
+		}
+		obj.RunAsUser = ptrToInt64(int64(i))
 	}
 	if v, ok := in["se_linux_options"].([]interface{}); ok && len(v) > 0 {
 		obj.SELinuxOptions = expandSeLinuxOptions(v)
@@ -791,7 +807,7 @@ func expandPodSecurityContext(l []interface{}) *v1.PodSecurityContext {
 		obj.Sysctls = expandSysctls(v)
 	}
 
-	return obj
+	return obj, nil
 }
 
 func expandSysctls(l []interface{}) []v1.Sysctl {

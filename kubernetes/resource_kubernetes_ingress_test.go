@@ -173,6 +173,48 @@ func TestAccKubernetesIngress_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesIngress_stateUpgradeV0_loadBalancerIngress(t *testing.T) {
+	var conf1, conf2 api.Ingress
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInEks(t) },
+		ExternalProviders: testAccExternalProviders,
+		IDRefreshName:     "kubernetes_ingress.test",
+		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: requiredProviders() + testAccKubernetesIngressConfig_stateUpgradev0("kubernetes-released", name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf1),
+				),
+			},
+			{
+				Config: requiredProviders() + testAccKubernetesIngressConfig_stateUpgradev0("kubernetes-local", name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf2),
+					testAccCheckKubernetesIngressForceNew(&conf1, &conf2, false),
+				),
+			},
+		},
+	})
+}
+
+func testAccCheckKubernetesIngressForceNew(old, new *api.Ingress, wantNew bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if wantNew {
+			if old.ObjectMeta.UID == new.ObjectMeta.UID {
+				return fmt.Errorf("Expecting new resource for Ingress %s", old.ObjectMeta.UID)
+			}
+		} else {
+			if old.ObjectMeta.UID != new.ObjectMeta.UID {
+				return fmt.Errorf("Expecting Ingress UIDs to be the same: expected %s got %s", old.ObjectMeta.UID, new.ObjectMeta.UID)
+			}
+		}
+		return nil
+	}
+}
+
 func testAccCheckKubernetesIngressDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
@@ -424,4 +466,48 @@ resource "kubernetes_ingress" "test" {
   }
   wait_for_load_balancer = true
 }`, name, name, name, name, name, name, name)
+}
+
+func testAccKubernetesIngressConfig_stateUpgradev0(provider, name string) string {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+  provider = "%s"
+  metadata {
+    name = "%s"
+  }
+  spec {
+    port {
+      port = 80
+      target_port = 80
+      protocol = "TCP"
+    }
+    type = "NodePort"
+  }
+}
+
+resource "kubernetes_ingress" "test" {
+  provider = "%s"
+  wait_for_load_balancer = false
+  metadata {
+    name = "%s"
+    annotations = {
+      "kubernetes.io/ingress.class" = "alb"
+      "alb.ingress.kubernetes.io/scheme" = "internet-facing"
+      "alb.ingress.kubernetes.io/target-type" = "ip"
+    }
+  }
+  spec {
+    rule {
+      http {
+        path {
+          path = "/*"
+          backend {
+            service_name = kubernetes_service.test.metadata.0.name
+            service_port = 80
+          }
+        }
+      }
+    }
+  }
+}
+`, provider, name, provider, name)
 }

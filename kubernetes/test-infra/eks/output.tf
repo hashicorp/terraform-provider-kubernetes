@@ -1,4 +1,8 @@
 output "kubeconfig_path" {
-  value = abspath("${local.kubeconfig_path}/${local.kubeconfig_name}")
+  value = abspath("${path.root}/kubeconfig")
+}
+
+output "cluster_name" {
+  value = module.vpc.cluster_name
 }
 

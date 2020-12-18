@@ -598,6 +598,36 @@ func TestAccKubernetesService_regression(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesService_stateUpgradeV0_loadBalancerIngress(t *testing.T) {
+	var conf1, conf2 api.Service
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInEks(t) },
+		IDRefreshName:     "kubernetes_service.test",
+		ExternalProviders: testAccExternalProviders,
+		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: requiredProviders() + testAccKubernetesServiceConfig_stateUpgradev0("kubernetes-released", name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceExists("kubernetes_service.test", &conf1),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.type", "LoadBalancer"),
+				),
+			},
+			{
+				Config: requiredProviders() + testAccKubernetesServiceConfig_stateUpgradev0("kubernetes-local", name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceExists("kubernetes_service.test", &conf2),
+					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.type", "LoadBalancer"),
+					testAccCheckKubernetesServiceForceNew(&conf1, &conf2, false),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesServiceForceNew(old, new *api.Service, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {
@@ -738,6 +768,24 @@ func testAccKubernetesServiceConfig_regression(provider, name string) string {
   }
 
   spec {
+    port {
+      port        = 8080
+      target_port = 80
+    }
+  }
+}
+`, provider, name)
+}
+
+func testAccKubernetesServiceConfig_stateUpgradev0(provider, name string) string {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+  provider = "%s"
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    type = "LoadBalancer"
     port {
       port        = 8080
       target_port = 80

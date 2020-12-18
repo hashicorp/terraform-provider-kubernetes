@@ -10,6 +10,21 @@ import (
 )
 
 func dataSourceKubernetesIngress() *schema.Resource {
+	return &schema.Resource{
+		ReadContext: dataSourceKubernetesIngressRead,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    dataSourceKubernetesIngressV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: dataSourceKubernetesIngressStateUpgradeV0,
+				Version: 0,
+			},
+		},
+		SchemaVersion: 1,
+		Schema:        dataSourceKubernetesIngressSchemaV1(),
+	}
+}
+
+func dataSourceKubernetesIngressSchemaV1() map[string]*schema.Schema {
 	docHTTPIngressPath := networking.HTTPIngressPath{}.SwaggerDoc()
 	docHTTPIngressRuleValue := networking.HTTPIngressPath{}.SwaggerDoc()
 	docIngress := networking.Ingress{}.SwaggerDoc()
@@ -17,50 +32,44 @@ func dataSourceKubernetesIngress() *schema.Resource {
 	docIngressRule := networking.IngressRule{}.SwaggerDoc()
 	docIngressSpec := networking.IngressSpec{}.SwaggerDoc()
 
-	return &schema.Resource{
-		ReadContext: dataSourceKubernetesIngressRead,
-
-		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("ingress", false),
-			"spec": {
-				Type:        schema.TypeList,
-				Description: docIngress["spec"],
-				Computed:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"backend": backendSpecFields(defaultBackendDescription),
-						// FIXME: this field is inconsistent with the k8s API 'rules'
-						"rule": {
-							Type:        schema.TypeList,
-							Description: docIngressSpec["rules"],
-							Computed:    true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"host": {
-										Type:        schema.TypeString,
-										Description: docIngressRule["host"],
-										Computed:    true,
-									},
-									"http": {
-										Type:        schema.TypeList,
-										Computed:    true,
-										Description: docIngressRule[""],
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												// FIXME: this field is inconsistent with the k8s API 'paths'
-												"path": {
-													Type:        schema.TypeList,
-													Computed:    true,
-													Description: docHTTPIngressRuleValue["paths"],
-													Elem: &schema.Resource{
-														Schema: map[string]*schema.Schema{
-															"path": {
-																Type:        schema.TypeString,
-																Description: docHTTPIngressPath["path"],
-																Computed:    true,
-															},
-															"backend": backendSpecFields(ruleBackedDescription),
+	return map[string]*schema.Schema{
+		"metadata": namespacedMetadataSchema("ingress", false),
+		"spec": {
+			Type:        schema.TypeList,
+			Description: docIngress["spec"],
+			Computed:    true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"backend": backendSpecFields(defaultBackendDescription),
+					"rule": {
+						Type:        schema.TypeList,
+						Description: docIngressSpec["rules"],
+						Computed:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"host": {
+									Type:        schema.TypeString,
+									Description: docIngressRule["host"],
+									Computed:    true,
+								},
+								"http": {
+									Type:        schema.TypeList,
+									Computed:    true,
+									Description: docIngressRule[""],
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"path": {
+												Type:        schema.TypeList,
+												Computed:    true,
+												Description: docHTTPIngressRuleValue["paths"],
+												Elem: &schema.Resource{
+													Schema: map[string]*schema.Schema{
+														"path": {
+															Type:        schema.TypeString,
+															Description: docHTTPIngressPath["path"],
+															Computed:    true,
 														},
+														"backend": backendSpecFields(ruleBackedDescription),
 													},
 												},
 											},
@@ -69,52 +78,52 @@ func dataSourceKubernetesIngress() *schema.Resource {
 								},
 							},
 						},
-						"tls": {
-							Type:        schema.TypeList,
-							Description: docIngressSpec["tls"],
-							Computed:    true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"hosts": {
-										Type:        schema.TypeList,
-										Description: docIngressTLS["hosts"],
-										Computed:    true,
-										Elem:        &schema.Schema{Type: schema.TypeString},
-									},
-									"secret_name": {
-										Type:        schema.TypeString,
-										Description: docIngressTLS["secretName"],
-										Computed:    true,
-									},
+					},
+					"tls": {
+						Type:        schema.TypeList,
+						Description: docIngressSpec["tls"],
+						Computed:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"hosts": {
+									Type:        schema.TypeList,
+									Description: docIngressTLS["hosts"],
+									Computed:    true,
+									Elem:        &schema.Schema{Type: schema.TypeString},
+								},
+								"secret_name": {
+									Type:        schema.TypeString,
+									Description: docIngressTLS["secretName"],
+									Computed:    true,
 								},
 							},
 						},
 					},
 				},
 			},
-			"status": {
-				Type:     schema.TypeList,
-				Computed: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"load_balancer": {
-							Type:     schema.TypeList,
-							Computed: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"ingress": {
-										Type:     schema.TypeList,
-										Computed: true,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"ip": {
-													Type:     schema.TypeString,
-													Computed: true,
-												},
-												"hostname": {
-													Type:     schema.TypeString,
-													Computed: true,
-												},
+		},
+		"status": {
+			Type:     schema.TypeList,
+			Computed: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"load_balancer": {
+						Type:     schema.TypeList,
+						Computed: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"ingress": {
+									Type:     schema.TypeList,
+									Computed: true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"ip": {
+												Type:     schema.TypeString,
+												Computed: true,
+											},
+											"hostname": {
+												Type:     schema.TypeString,
+												Computed: true,
 											},
 										},
 									},

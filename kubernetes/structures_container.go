@@ -414,6 +414,7 @@ func flattenContainers(in []v1.Container, serviceAccountRegex string) ([]interfa
 				}
 				if nameMatchesDefaultToken {
 					v.VolumeMounts = removeVolumeMountFromContainer(num, v.VolumeMounts)
+					break
 				}
 			}
 

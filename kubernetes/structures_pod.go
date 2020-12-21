@@ -124,6 +124,7 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 			}
 			if nameMatchesDefaultToken {
 				in.Volumes = removeVolumeFromPodSpec(i, in.Volumes)
+				break
 			}
 		}
 

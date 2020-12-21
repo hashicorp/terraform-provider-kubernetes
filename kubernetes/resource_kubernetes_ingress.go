@@ -16,12 +16,6 @@ import (
 )
 
 func resourceKubernetesIngress() *schema.Resource {
-	docHTTPIngressPath := networking.HTTPIngressPath{}.SwaggerDoc()
-	docHTTPIngressRuleValue := networking.HTTPIngressPath{}.SwaggerDoc()
-	docIngress := networking.Ingress{}.SwaggerDoc()
-	docIngressTLS := networking.IngressTLS{}.SwaggerDoc()
-	docIngressRule := networking.IngressRule{}.SwaggerDoc()
-	docIngressSpec := networking.IngressSpec{}.SwaggerDoc()
 	return &schema.Resource{
 		CreateContext: resourceKubernetesIngressCreate,
 		ReadContext:   resourceKubernetesIngressRead,
@@ -31,54 +25,71 @@ func resourceKubernetesIngress() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 
-		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("ingress", true),
-			"spec": {
-				Type:        schema.TypeList,
-				Description: docIngress["spec"],
-				Required:    true,
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"ingress_class_name": {
-							Type:        schema.TypeString,
-							Description: docIngressSpec["ingressClassName"],
-							Optional:    true,
-						},
-						"backend": backendSpecFields(defaultBackendDescription),
-						// FIXME: this field is inconsistent with the k8s API 'rules'
-						"rule": {
-							Type:        schema.TypeList,
-							Description: docIngress["rules"],
-							Optional:    true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"host": {
-										Type:        schema.TypeString,
-										Description: docIngressRule["host"],
-										Optional:    true,
-									},
-									"http": {
-										Type:        schema.TypeList,
-										Required:    true,
-										MaxItems:    1,
-										Description: "http is a list of http selectors pointing to backends. In the example: http:///? -> backend where where parts of the url correspond to RFC 3986, this resource will be used to match against everything after the last '/' and before the first '?' or '#'.",
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												// FIXME: this field is inconsistent with the k8s API 'paths'
-												"path": {
-													Type:        schema.TypeList,
-													Required:    true,
-													Description: docHTTPIngressRuleValue["paths"],
-													Elem: &schema.Resource{
-														Schema: map[string]*schema.Schema{
-															"path": {
-																Type:        schema.TypeString,
-																Description: docHTTPIngressPath["path"],
-																Optional:    true,
-															},
-															"backend": backendSpecFields(ruleBackedDescription),
+		SchemaVersion: 1,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceKubernetesIngressV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceKubernetesIngressStateUpgradeV0,
+				Version: 0,
+			},
+		},
+		Schema: resourceKubernetesIngressSchemaV1(),
+	}
+}
+
+func resourceKubernetesIngressSchemaV1() map[string]*schema.Schema {
+	docHTTPIngressPath := networking.HTTPIngressPath{}.SwaggerDoc()
+	docHTTPIngressRuleValue := networking.HTTPIngressPath{}.SwaggerDoc()
+	docIngress := networking.Ingress{}.SwaggerDoc()
+	docIngressTLS := networking.IngressTLS{}.SwaggerDoc()
+	docIngressRule := networking.IngressRule{}.SwaggerDoc()
+	docIngressSpec := networking.IngressSpec{}.SwaggerDoc()
+
+	return map[string]*schema.Schema{
+		"metadata": namespacedMetadataSchema("ingress", true),
+		"spec": {
+			Type:        schema.TypeList,
+			Description: docIngress["spec"],
+			Required:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"ingress_class_name": {
+						Type:        schema.TypeString,
+						Description: docIngressSpec["ingressClassName"],
+						Optional:    true,
+					},
+					"backend": backendSpecFields(defaultBackendDescription),
+					"rule": {
+						Type:        schema.TypeList,
+						Description: docIngress["rules"],
+						Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"host": {
+									Type:        schema.TypeString,
+									Description: docIngressRule["host"],
+									Optional:    true,
+								},
+								"http": {
+									Type:        schema.TypeList,
+									Required:    true,
+									MaxItems:    1,
+									Description: "http is a list of http selectors pointing to backends. In the example: http:///? -> backend where where parts of the url correspond to RFC 3986, this resource will be used to match against everything after the last '/' and before the first '?' or '#'.",
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"path": {
+												Type:        schema.TypeList,
+												Required:    true,
+												Description: docHTTPIngressRuleValue["paths"],
+												Elem: &schema.Resource{
+													Schema: map[string]*schema.Schema{
+														"path": {
+															Type:        schema.TypeString,
+															Description: docHTTPIngressPath["path"],
+															Optional:    true,
 														},
+														"backend": backendSpecFields(ruleBackedDescription),
 													},
 												},
 											},
@@ -87,52 +98,52 @@ func resourceKubernetesIngress() *schema.Resource {
 								},
 							},
 						},
-						"tls": {
-							Type:        schema.TypeList,
-							Description: docIngressSpec["tls"],
-							Optional:    true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"hosts": {
-										Type:        schema.TypeList,
-										Description: docIngressTLS["hosts"],
-										Optional:    true,
-										Elem:        &schema.Schema{Type: schema.TypeString},
-									},
-									"secret_name": {
-										Type:        schema.TypeString,
-										Description: docIngressTLS["secretName"],
-										Optional:    true,
-									},
+					},
+					"tls": {
+						Type:        schema.TypeList,
+						Description: docIngressSpec["tls"],
+						Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"hosts": {
+									Type:        schema.TypeList,
+									Description: docIngressTLS["hosts"],
+									Optional:    true,
+									Elem:        &schema.Schema{Type: schema.TypeString},
+								},
+								"secret_name": {
+									Type:        schema.TypeString,
+									Description: docIngressTLS["secretName"],
+									Optional:    true,
 								},
 							},
 						},
 					},
 				},
 			},
-			"status": {
-				Type:     schema.TypeList,
-				Computed: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"load_balancer": {
-							Type:     schema.TypeList,
-							Computed: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"ingress": {
-										Type:     schema.TypeList,
-										Computed: true,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"ip": {
-													Type:     schema.TypeString,
-													Computed: true,
-												},
-												"hostname": {
-													Type:     schema.TypeString,
-													Computed: true,
-												},
+		},
+		"status": {
+			Type:     schema.TypeList,
+			Computed: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"load_balancer": {
+						Type:     schema.TypeList,
+						Computed: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"ingress": {
+									Type:     schema.TypeList,
+									Computed: true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"ip": {
+												Type:     schema.TypeString,
+												Computed: true,
+											},
+											"hostname": {
+												Type:     schema.TypeString,
+												Computed: true,
 											},
 										},
 									},
@@ -142,11 +153,11 @@ func resourceKubernetesIngress() *schema.Resource {
 					},
 				},
 			},
-			"wait_for_load_balancer": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Description: "Terraform will wait for the load balancer to have at least 1 endpoint before considering the resource created.",
-			},
+		},
+		"wait_for_load_balancer": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "Terraform will wait for the load balancer to have at least 1 endpoint before considering the resource created.",
 		},
 	}
 }

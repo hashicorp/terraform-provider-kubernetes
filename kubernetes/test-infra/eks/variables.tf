@@ -8,7 +8,7 @@ variable "region" {
 
 variable "kubernetes_version" {
   type    = string
-  default = "1.11"
+  default = "1.18"
 }
 
 variable "workers_count" {
@@ -19,9 +19,3 @@ variable "workers_type" {
   type    = string
   default = "m4.large"
 }
-
-locals {
-  kubeconfig_name = "kubeconfig_${module.vpc.cluster_name}"
-  kubeconfig_path = path.root
-}
-

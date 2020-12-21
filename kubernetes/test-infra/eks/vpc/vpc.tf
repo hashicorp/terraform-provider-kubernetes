@@ -46,6 +46,7 @@ resource "aws_subnet" "k8s-acc" {
   tags = {
     "Name"                                                = "terraform-eks-k8s-acc-node"
     "kubernetes.io/cluster/${random_id.cluster_name.hex}" = "shared"
+    "kubernetes.io/role/elb"                              = 1
   }
 }
 
@@ -72,4 +73,5 @@ resource "aws_route_table_association" "k8s-acc" {
   subnet_id      = aws_subnet.k8s-acc[count.index].id
   route_table_id = aws_route_table.k8s-acc.id
 }
+
 

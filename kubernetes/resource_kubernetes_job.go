@@ -129,7 +129,9 @@ func resourceKubernetesJobUpdate(ctx context.Context, d *schema.ResourceData, me
 	if d.Get("wait_for_completion").(bool) {
 		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
 			retryUntilJobIsFinished(ctx, conn, namespace, name))
-		return diag.FromErr(err)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	return resourceKubernetesJobRead(ctx, d, meta)
 }

@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Config
+preferences: {}
+clusters:
+- cluster:
+    certificate-authority-data: ZHVtbXk=
+    server: https://127.0.0.1
+  name: default
+
+contexts:
+- context:
+    cluster: default
+    user: azure
+  name: azure
+- context:
+    cluster: default
+    user: gcp
+  name: gcp
+- context:
+    cluster: default
+    user: oidc
+  name: oidc
+
+users:
+- name: azure
+  user:
+    auth-provider:
+      config:
+        access-token: dummy
+        cmd-args: config config-helper --format=json
+        cmd-path: /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin/gcloud
+        expiry: 2017-06-19T14:02:42Z
+        expiry-key: '{.credential.token_expiry}'
+        token-key: '{.credential.access_token}'
+      name: azure
+- name: gcp
+  user:
+    auth-provider:
+      config:
+        access-token: dummy
+        cmd-args: config config-helper --format=json
+        cmd-path: /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin/gcloud
+        expiry: 2017-06-19T14:02:42Z
+        expiry-key: '{.credential.token_expiry}'
+        token-key: '{.credential.access_token}'
+      name: gcp
+- name: oidc
+  user:
+    auth-provider:
+      config:
+        access-token: dummy
+        cmd-args: config config-helper --format=json
+        cmd-path: /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin/gcloud
+        expiry: 2017-06-19T14:02:42Z
+        expiry-key: '{.credential.token_expiry}'
+        token-key: '{.credential.access_token}'
+      name: oidc

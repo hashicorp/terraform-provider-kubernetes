@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
 	gversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -67,13 +69,32 @@ func TestProvider_impl(t *testing.T) {
 	var _ schema.Provider = *Provider()
 }
 
-func TestProvider_configure(t *testing.T) {
+func TestProvider_configure_path(t *testing.T) {
 	ctx := context.TODO()
 	resetEnv := unsetEnv(t)
 	defer resetEnv()
 
-	os.Setenv("KUBECONFIG", "test-fixtures/kube-config.yaml")
+	os.Setenv("KUBE_CONFIG_PATH", "test-fixtures/kube-config.yaml")
 	os.Setenv("KUBE_CTX", "gcp")
+
+	rc := terraform.NewResourceConfigRaw(map[string]interface{}{})
+	p := Provider()
+	diags := p.Configure(ctx, rc)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+}
+
+func TestProvider_configure_paths(t *testing.T) {
+	ctx := context.TODO()
+	resetEnv := unsetEnv(t)
+	defer resetEnv()
+
+	os.Setenv("KUBE_CONFIG_PATHS", strings.Join([]string{
+		"test-fixtures/kube-config.yaml",
+		"test-fixtures/kube-config-secondary.yaml",
+	}, string(os.PathListSeparator)))
+	os.Setenv("KUBE_CTX", "oidc")
 
 	rc := terraform.NewResourceConfigRaw(map[string]interface{}{})
 	p := Provider()
@@ -86,91 +107,33 @@ func TestProvider_configure(t *testing.T) {
 func unsetEnv(t *testing.T) func() {
 	e := getEnv()
 
-	if err := os.Unsetenv("KUBECONFIG"); err != nil {
-		t.Fatalf("Error unsetting env var KUBECONFIG: %s", err)
+	envVars := map[string]string{
+		"KUBE_CONFIG_PATH":          e.ConfigPath,
+		"KUBE_CONFIG_PATHS":         strings.Join(e.ConfigPaths, string(os.PathListSeparator)),
+		"KUBE_CTX":                  e.Ctx,
+		"KUBE_CTX_AUTH_INFO":        e.CtxAuthInfo,
+		"KUBE_CTX_CLUSTER":          e.CtxCluster,
+		"KUBE_HOST":                 e.Host,
+		"KUBE_USER":                 e.User,
+		"KUBE_PASSWORD":             e.Password,
+		"KUBE_CLIENT_CERT_DATA":     e.ClientCertData,
+		"KUBE_CLIENT_KEY_DATA":      e.ClientKeyData,
+		"KUBE_CLUSTER_CA_CERT_DATA": e.ClusterCACertData,
+		"KUBE_INSECURE":             e.Insecure,
+		"KUBE_TOKEN":                e.Token,
 	}
-	if err := os.Unsetenv("KUBE_CONFIG"); err != nil {
-		t.Fatalf("Error unsetting env var KUBE_CONFIG: %s", err)
-	}
-	if err := os.Unsetenv("KUBE_CTX"); err != nil {
-		t.Fatalf("Error unsetting env var KUBE_CTX: %s", err)
-	}
-	if err := os.Unsetenv("KUBE_CTX_AUTH_INFO"); err != nil {
-		t.Fatalf("Error unsetting env var KUBE_CTX_AUTH_INFO: %s", err)
-	}
-	if err := os.Unsetenv("KUBE_CTX_CLUSTER"); err != nil {
-		t.Fatalf("Error unsetting env var KUBE_CTX_CLUSTER: %s", err)
-	}
-	if err := os.Unsetenv("KUBE_HOST"); err != nil {
-		t.Fatalf("Error unsetting env var KUBE_HOST: %s", err)
-	}
-	if err := os.Unsetenv("KUBE_USER"); err != nil {
-		t.Fatalf("Error unsetting env var KUBE_USER: %s", err)
-	}
-	if err := os.Unsetenv("KUBE_PASSWORD"); err != nil {
-		t.Fatalf("Error unsetting env var KUBE_PASSWORD: %s", err)
-	}
-	if err := os.Unsetenv("KUBE_CLIENT_CERT_DATA"); err != nil {
-		t.Fatalf("Error unsetting env var KUBE_CLIENT_CERT_DATA: %s", err)
-	}
-	if err := os.Unsetenv("KUBE_CLIENT_KEY_DATA"); err != nil {
-		t.Fatalf("Error unsetting env var KUBE_CLIENT_KEY_DATA: %s", err)
-	}
-	if err := os.Unsetenv("KUBE_CLUSTER_CA_CERT_DATA"); err != nil {
-		t.Fatalf("Error unsetting env var KUBE_CLUSTER_CA_CERT_DATA: %s", err)
-	}
-	if err := os.Unsetenv("KUBE_INSECURE"); err != nil {
-		t.Fatalf("Error unsetting env var KUBE_INSECURE: %s", err)
-	}
-	if err := os.Unsetenv("KUBE_LOAD_CONFIG_FILE"); err != nil {
-		t.Fatalf("Error unsetting env var KUBE_LOAD_CONFIG_FILE: %s", err)
-	}
-	if err := os.Unsetenv("KUBE_TOKEN"); err != nil {
-		t.Fatalf("Error unsetting env var KUBE_TOKEN: %s", err)
+
+	for k, _ := range envVars {
+		if err := os.Unsetenv(k); err != nil {
+			t.Fatalf("Error unsetting env var %s: %s", k, err)
+		}
 	}
 
 	return func() {
-		if err := os.Setenv("KUBE_CONFIG", e.Config); err != nil {
-			t.Fatalf("Error resetting env var KUBE_CONFIG: %s", err)
-		}
-		if err := os.Setenv("KUBECONFIG", e.Config); err != nil {
-			t.Fatalf("Error resetting env var KUBECONFIG: %s", err)
-		}
-		if err := os.Setenv("KUBE_CTX", e.Ctx); err != nil {
-			t.Fatalf("Error resetting env var KUBE_CTX: %s", err)
-		}
-		if err := os.Setenv("KUBE_CTX_AUTH_INFO", e.CtxAuthInfo); err != nil {
-			t.Fatalf("Error resetting env var KUBE_CTX_AUTH_INFO: %s", err)
-		}
-		if err := os.Setenv("KUBE_CTX_CLUSTER", e.CtxCluster); err != nil {
-			t.Fatalf("Error resetting env var KUBE_CTX_CLUSTER: %s", err)
-		}
-		if err := os.Setenv("KUBE_HOST", e.Host); err != nil {
-			t.Fatalf("Error resetting env var KUBE_HOST: %s", err)
-		}
-		if err := os.Setenv("KUBE_USER", e.User); err != nil {
-			t.Fatalf("Error resetting env var KUBE_USER: %s", err)
-		}
-		if err := os.Setenv("KUBE_PASSWORD", e.Password); err != nil {
-			t.Fatalf("Error resetting env var KUBE_PASSWORD: %s", err)
-		}
-		if err := os.Setenv("KUBE_CLIENT_CERT_DATA", e.ClientCertData); err != nil {
-			t.Fatalf("Error resetting env var KUBE_CLIENT_CERT_DATA: %s", err)
-		}
-		if err := os.Setenv("KUBE_CLIENT_KEY_DATA", e.ClientKeyData); err != nil {
-			t.Fatalf("Error resetting env var KUBE_CLIENT_KEY_DATA: %s", err)
-		}
-		if err := os.Setenv("KUBE_CLUSTER_CA_CERT_DATA", e.ClusterCACertData); err != nil {
-			t.Fatalf("Error resetting env var KUBE_CLUSTER_CA_CERT_DATA: %s", err)
-		}
-		if err := os.Setenv("KUBE_INSECURE", e.Insecure); err != nil {
-			t.Fatalf("Error resetting env var KUBE_INSECURE: %s", err)
-		}
-		if err := os.Setenv("KUBE_LOAD_CONFIG_FILE", e.LoadConfigFile); err != nil {
-			t.Fatalf("Error resetting env var KUBE_LOAD_CONFIG_FILE: %s", err)
-		}
-		if err := os.Setenv("KUBE_TOKEN", e.Token); err != nil {
-			t.Fatalf("Error resetting env var KUBE_TOKEN: %s", err)
+		for k, v := range envVars {
+			if err := os.Setenv(k, v); err != nil {
+				t.Fatalf("Error resetting env var %s: %s", k, err)
+			}
 		}
 	}
 }
@@ -187,14 +150,13 @@ func getEnv() *currentEnv {
 		ClientKeyData:     os.Getenv("KUBE_CLIENT_KEY_DATA"),
 		ClusterCACertData: os.Getenv("KUBE_CLUSTER_CA_CERT_DATA"),
 		Insecure:          os.Getenv("KUBE_INSECURE"),
-		LoadConfigFile:    os.Getenv("KUBE_LOAD_CONFIG_FILE"),
 		Token:             os.Getenv("KUBE_TOKEN"),
 	}
-	if cfg := os.Getenv("KUBE_CONFIG"); cfg != "" {
-		e.Config = cfg
+	if v := os.Getenv("KUBE_CONFIG_PATH"); v != "" {
+		e.ConfigPath = v
 	}
-	if cfg := os.Getenv("KUBECONFIG"); cfg != "" {
-		e.Config = cfg
+	if v := os.Getenv("KUBE_CONFIG_PATH"); v != "" {
+		e.ConfigPaths = filepath.SplitList(v)
 	}
 	return e
 }
@@ -203,8 +165,7 @@ func testAccPreCheck(t *testing.T) {
 	ctx := context.TODO()
 	hasFileCfg := (os.Getenv("KUBE_CTX_AUTH_INFO") != "" && os.Getenv("KUBE_CTX_CLUSTER") != "") ||
 		os.Getenv("KUBE_CTX") != "" ||
-		os.Getenv("KUBECONFIG") != "" ||
-		os.Getenv("KUBE_CONFIG") != ""
+		os.Getenv("KUBE_CONFIG_PATH") != ""
 	hasUserCredentials := os.Getenv("KUBE_USER") != "" && os.Getenv("KUBE_PASSWORD") != ""
 	hasClientCert := os.Getenv("KUBE_CLIENT_CERT_DATA") != "" && os.Getenv("KUBE_CLIENT_KEY_DATA") != ""
 	hasStaticCfg := (os.Getenv("KUBE_HOST") != "" &&
@@ -440,7 +401,8 @@ func clusterVersionLessThan(vs string) bool {
 }
 
 type currentEnv struct {
-	Config            string
+	ConfigPath        string
+	ConfigPaths       []string
 	Ctx               string
 	CtxAuthInfo       string
 	CtxCluster        string
@@ -451,7 +413,6 @@ type currentEnv struct {
 	ClientKeyData     string
 	ClusterCACertData string
 	Insecure          string
-	LoadConfigFile    string
 	Token             string
 }
 

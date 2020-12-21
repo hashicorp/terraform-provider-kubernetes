@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -67,16 +70,18 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_CLUSTER_CA_CERT_DATA", ""),
 				Description: "PEM-encoded root certificates bundle for TLS authentication.",
 			},
+			"config_paths": {
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
+				Description: "A list of paths to kube config files. Can be set with KUBE_CONFIG_PATHS environment variable.",
+			},
 			"config_path": {
-				Type:     schema.TypeString,
-				Optional: true,
-				DefaultFunc: schema.MultiEnvDefaultFunc(
-					[]string{
-						"KUBE_CONFIG",
-						"KUBECONFIG",
-					},
-					"~/.kube/config"),
-				Description: "Path to the kube config file, defaults to ~/.kube/config",
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CONFIG_PATH", nil),
+				Description:   "Path to the kube config file. Can be set with KUBE_CONFIG_PATH.",
+				ConflictsWith: []string{"config_paths"},
 			},
 			"config_context": {
 				Type:        schema.TypeString,
@@ -100,12 +105,6 @@ func Provider() *schema.Provider {
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_TOKEN", ""),
 				Description: "Token to authenticate an service account",
-			},
-			"load_config_file": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_LOAD_CONFIG_FILE", true),
-				Description: "Load local kubeconfig.",
 			},
 			"exec": {
 				Type:     schema.TypeList,
@@ -204,12 +203,19 @@ type kubeClientsets struct {
 	config              *restclient.Config
 	mainClientset       *kubernetes.Clientset
 	aggregatorClientset *aggregator.Clientset
+
+	configData *schema.ResourceData
 }
 
 func (k kubeClientsets) MainClientset() (*kubernetes.Clientset, error) {
 	if k.mainClientset != nil {
 		return k.mainClientset, nil
 	}
+
+	if err := checkConfigurationValid(k.configData); err != nil {
+		return nil, err
+	}
+
 	if k.config != nil {
 		kc, err := kubernetes.NewForConfig(k.config)
 		if err != nil {
@@ -234,8 +240,53 @@ func (k kubeClientsets) AggregatorClientset() (*aggregator.Clientset, error) {
 	return k.aggregatorClientset, nil
 }
 
-func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {
+var apiTokenMountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
 
+func inCluster() bool {
+	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
+	if host == "" || port == "" {
+		return false
+	}
+
+	if _, err := os.Stat(apiTokenMountPath); err != nil {
+		return false
+	}
+	return true
+}
+
+var authDocumentationURL = "https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs#authentication"
+
+func checkConfigurationValid(d *schema.ResourceData) error {
+	if inCluster() {
+		log.Printf("[DEBUG] Terraform appears to be running inside the Kubernetes cluster")
+		return nil
+	}
+
+	if os.Getenv("KUBE_CONFIG_PATHS") != "" {
+		return nil
+	}
+
+	atLeastOneOf := []string{
+		"host",
+		"config_path",
+		"config_paths",
+		"client_certificate",
+		"token",
+		"exec",
+	}
+	for _, a := range atLeastOneOf {
+		if _, ok := d.GetOk(a); ok {
+			return nil
+		}
+	}
+
+	return fmt.Errorf(`provider not configured: you must configure a path to your kubeconfig
+or explicitly supply credentials via the provider block or environment variables.
+
+See our documentation at: %s`, authDocumentationURL)
+}
+
+func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {
 	// Config initialization
 	cfg, err := initializeConfiguration(d)
 	if err != nil {
@@ -262,6 +313,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		config:              cfg,
 		mainClientset:       nil,
 		aggregatorClientset: nil,
+		configData:          d,
 	}
 	return m, diag.Diagnostics{}
 }
@@ -270,40 +322,64 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	overrides := &clientcmd.ConfigOverrides{}
 	loader := &clientcmd.ClientConfigLoadingRules{}
 
-	if d.Get("load_config_file").(bool) {
-		log.Printf("[DEBUG] Trying to load configuration from file")
-		if configPath, ok := d.GetOk("config_path"); ok && configPath.(string) != "" {
-			path, err := homedir.Expand(configPath.(string))
+	configPaths := []string{}
+
+	if v, ok := d.Get("config_path").(string); ok && v != "" {
+		configPaths = []string{v}
+	} else if v, ok := d.Get("config_paths").([]interface{}); ok && len(v) > 0 {
+		for _, p := range v {
+			configPaths = append(configPaths, p.(string))
+		}
+	} else if v := os.Getenv("KUBE_CONFIG_PATHS"); v != "" {
+		// NOTE we have to do this here because the schema
+		// does not yet allow you to set a default for a TypeList
+		configPaths = filepath.SplitList(v)
+	}
+
+	if len(configPaths) > 0 {
+		expandedPaths := []string{}
+		for _, p := range configPaths {
+			path, err := homedir.Expand(p)
 			if err != nil {
 				return nil, err
 			}
-			log.Printf("[DEBUG] Configuration file is: %s", path)
-			loader.ExplicitPath = path
-
-			ctxSuffix := "; default context"
-
-			kubectx, ctxOk := d.GetOk("config_context")
-			authInfo, authInfoOk := d.GetOk("config_context_auth_info")
-			cluster, clusterOk := d.GetOk("config_context_cluster")
-			if ctxOk || authInfoOk || clusterOk {
-				ctxSuffix = "; overriden context"
-				if ctxOk {
-					overrides.CurrentContext = kubectx.(string)
-					ctxSuffix += fmt.Sprintf("; config ctx: %s", overrides.CurrentContext)
-					log.Printf("[DEBUG] Using custom current context: %q", overrides.CurrentContext)
-				}
-
-				overrides.Context = clientcmdapi.Context{}
-				if authInfoOk {
-					overrides.Context.AuthInfo = authInfo.(string)
-					ctxSuffix += fmt.Sprintf("; auth_info: %s", overrides.Context.AuthInfo)
-				}
-				if clusterOk {
-					overrides.Context.Cluster = cluster.(string)
-					ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
-				}
-				log.Printf("[DEBUG] Using overidden context: %#v", overrides.Context)
+			if _, err := os.Stat(path); err != nil {
+				return nil, fmt.Errorf("could not open kubeconfig %q: %v", p, err)
 			}
+
+			log.Printf("[DEBUG] Using kubeconfig: %s", path)
+			expandedPaths = append(expandedPaths, path)
+		}
+
+		if len(expandedPaths) == 1 {
+			loader.ExplicitPath = expandedPaths[0]
+		} else {
+			loader.Precedence = expandedPaths
+		}
+
+		ctxSuffix := "; default context"
+
+		kubectx, ctxOk := d.GetOk("config_context")
+		authInfo, authInfoOk := d.GetOk("config_context_auth_info")
+		cluster, clusterOk := d.GetOk("config_context_cluster")
+		if ctxOk || authInfoOk || clusterOk {
+			ctxSuffix = "; overriden context"
+			if ctxOk {
+				overrides.CurrentContext = kubectx.(string)
+				ctxSuffix += fmt.Sprintf("; config ctx: %s", overrides.CurrentContext)
+				log.Printf("[DEBUG] Using custom current context: %q", overrides.CurrentContext)
+			}
+
+			overrides.Context = clientcmdapi.Context{}
+			if authInfoOk {
+				overrides.Context.AuthInfo = authInfo.(string)
+				ctxSuffix += fmt.Sprintf("; auth_info: %s", overrides.Context.AuthInfo)
+			}
+			if clusterOk {
+				overrides.Context.Cluster = cluster.(string)
+				ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
+			}
+			log.Printf("[DEBUG] Using overidden context: %#v", overrides.Context)
 		}
 	}
 
@@ -367,7 +443,6 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		return nil, nil
 	}
 
-	log.Printf("[INFO] Successfully initialized config")
 	return cfg, nil
 }
 

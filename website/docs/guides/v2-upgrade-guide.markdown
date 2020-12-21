@@ -13,7 +13,7 @@ This guide covers the changes introduced in v2.0.0 of the Kubernetes provider an
 
 Use `terraform init` to install version 2 of the provider. Then run `terraform plan` to determine if the upgrade will affect any existing resources. Some resources will have updated defaults and may be modified as a result. To opt out of this change, see the guide below and update your Terraform config file to match the existing resource settings (for example, set `automount_service_account_token=false`). Then run `terraform plan` again to ensure no resource updates will be applied.
 
-NOTE: Even if there are no resource updates to apply, you may need to run `terraform refresh` to update your schema to the newest version. Otherwise, some commands might fail with `Error: missing expected {`.
+NOTE: Even if there are no resource updates to apply, you may need to run `terraform refresh` to update your state to the newest version. Otherwise, some commands might fail with `Error: missing expected {`.
 
 ## Changes in v2.0.0
 

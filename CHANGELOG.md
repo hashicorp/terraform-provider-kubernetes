@@ -1,3 +1,30 @@
+## 2.0.0 (Unreleased)
+
+BREAKING CHANGES:
+* Update Terraform SDK to v2 (#1027) 
+* Restructure service and ingress to match K8s API (#1071)
+* Normalize automount_service_account_token to be in line with the K8s API (#1054)
+* Normalize wait defaults across Deployment, DaemonSet, StatefulSet, Service, Ingress, and Job (#1053)
+* Change resources requests and limits to TypeMap (#1065)
+
+FEATURES:
+* Add timeout argument to kubernetes_stateful_set (#1047)
+* Add divisor to resource_field_ref (#1063)
+* Add ingressClassName as field in Ingress manifest (#1057)
+
+BUG FIXES:
+* Fix typo in Job error message (#1048)
+* Fix assertion in TestAccKubernetesPersistentVolume_hostPath_nodeAffinty (#1067)
+* Fix service load balancer crash (#1070)
+* Fix `cronJob.ttl_seconds_after_finished` causing requests to fail even without value specified (#929)
+* Fix perpetual diff when using Pod resource with `automount_service_account_token=true` (#1085)
+* Fix perpetual diff in StatefulSet when `update_strategy` is not specified (#1088)
+* Fix delete/recreate when updating `init_containers` (#951)
+* Fix delete/recreate of Jobs when updating mutable fields (#1074)
+
+IMPROVEMENTS:
+* Add upgrade test for daemonset (#1064)
+
 ## 1.13.3 (October 27, 2020)
 
 FEATURES:

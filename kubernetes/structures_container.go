@@ -6,6 +6,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"regexp"
 )
 
 func flattenCapability(in []v1.Capability) []string {
@@ -261,6 +262,7 @@ func flattenValueFrom(in *v1.EnvVarSource) []interface{} {
 
 func flattenContainerVolumeMounts(in []v1.VolumeMount) ([]interface{}, error) {
 	att := make([]interface{}, len(in))
+
 	for i, v := range in {
 		m := map[string]interface{}{}
 		m["read_only"] = v.ReadOnly
@@ -353,7 +355,7 @@ func flattenContainerResourceRequirements(in v1.ResourceRequirements) ([]interfa
 	return []interface{}{att}, nil
 }
 
-func flattenContainers(in []v1.Container) ([]interface{}, error) {
+func flattenContainers(in []v1.Container, serviceAccountRegex string) ([]interface{}, error) {
 	att := make([]interface{}, len(in))
 	for i, v := range in {
 		c := make(map[string]interface{})
@@ -406,6 +408,18 @@ func flattenContainers(in []v1.Container) ([]interface{}, error) {
 		}
 
 		if len(v.VolumeMounts) > 0 {
+			for num, m := range v.VolumeMounts {
+				// To avoid perpetual diff, remove the default service account token volume from the container's list of volumeMounts.
+				nameMatchesDefaultToken, err := regexp.MatchString(serviceAccountRegex, m.Name)
+				if err != nil {
+					return att, err
+				}
+				if nameMatchesDefaultToken {
+					v.VolumeMounts = removeVolumeMountFromContainer(num, v.VolumeMounts)
+					break
+				}
+			}
+
 			volumeMounts, err := flattenContainerVolumeMounts(v.VolumeMounts)
 			if err != nil {
 				return nil, err
@@ -415,6 +429,11 @@ func flattenContainers(in []v1.Container) ([]interface{}, error) {
 		att[i] = c
 	}
 	return att, nil
+}
+
+// removeVolumeMountFromContainer removes the specified VolumeMount index (i) from the given list of VolumeMounts.
+func removeVolumeMountFromContainer(i int, v []v1.VolumeMount) []v1.VolumeMount {
+	return append(v[:i], v[i+1:]...)
 }
 
 func expandContainers(ctrs []interface{}) ([]v1.Container, error) {

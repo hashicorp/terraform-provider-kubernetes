@@ -50,7 +50,7 @@ func resourceKubernetesPodSchemaV1() map[string]*schema.Schema {
 			Required:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: podSpecFields(false, false, false),
+				Schema: podSpecFields(false, false),
 			},
 		},
 	}

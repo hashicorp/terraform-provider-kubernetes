@@ -76,38 +76,21 @@ func resourceKubernetesReplicationController() *schema.Resource {
 
 func replicationControllerTemplateFieldSpec() map[string]*schema.Schema {
 	metadata := namespacedMetadataSchemaIsTemplate("replication controller's template", true, true)
-	// TODO: make this required once the legacy fields are removed
-	metadata.Computed = true
-	metadata.Required = false
-	metadata.Optional = true
+	metadata.Required = true
 
 	templateFields := map[string]*schema.Schema{
 		"metadata": metadata,
 		"spec": {
 			Type:        schema.TypeList,
 			Description: "Spec of the pods managed by the replication controller",
-			Optional:    true, // TODO: make this required once the legacy fields are removed
-			Computed:    true,
+			Required:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: podSpecFields(false, false, true),
+				Schema: podSpecFields(false, true),
 			},
 		},
 	}
-
-	// Merge deprecated fields and mark them conflicting with the ones to avoid complex mixed use-cases
-	for k, v := range podSpecFields(true, true, true) {
-		v.ConflictsWith = []string{"spec.0.template.0.spec", "spec.0.template.0.metadata"}
-		templateFields[k] = v
-	}
-
 	return templateFields
-}
-
-func useDeprecatedSpecFields(d *schema.ResourceData) (deprecatedSpecFieldsExist bool) {
-	// Check which replication controller template spec fields are used
-	_, deprecatedSpecFieldsExist = d.GetOkExists("spec.0.template.0.container.0.name")
-	return
 }
 
 func resourceKubernetesReplicationControllerCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -118,7 +101,7 @@ func resourceKubernetesReplicationControllerCreate(ctx context.Context, d *schem
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
-	spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}), useDeprecatedSpecFields(d))
+	spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -184,7 +167,7 @@ func resourceKubernetesReplicationControllerRead(ctx context.Context, d *schema.
 		return diag.FromErr(err)
 	}
 
-	spec, err := flattenReplicationControllerSpec(rc.Spec, d, useDeprecatedSpecFields(d))
+	spec, err := flattenReplicationControllerSpec(rc.Spec, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -211,7 +194,7 @@ func resourceKubernetesReplicationControllerUpdate(ctx context.Context, d *schem
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("spec") {
-		spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}), useDeprecatedSpecFields(d))
+		spec, err := expandReplicationControllerSpec(d.Get("spec").([]interface{}))
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -281,6 +264,22 @@ func resourceKubernetesReplicationControllerDelete(ctx context.Context, d *schem
 		return diag.FromErr(err)
 	}
 
+	// Wait for Delete to finish. Necessary for ForceNew operations.
+	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+		_, err := conn.CoreV1().ReplicationControllers(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+				return nil
+			}
+			return resource.NonRetryableError(err)
+		}
+
+		e := fmt.Errorf("Replication Controller (%s) still exists", d.Id())
+		return resource.RetryableError(e)
+	})
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	log.Printf("[INFO] Replication controller %s deleted", name)
 
 	d.SetId("")

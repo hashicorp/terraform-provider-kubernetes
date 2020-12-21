@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Expanders
@@ -108,55 +107,6 @@ func expandStatefulSetSpecUpdateStrategy(s []interface{}) (*v1.StatefulSetUpdate
 	log.Printf("[DEBUG] Expanded StatefulSet.Spec.UpdateStrategy: %#v", ust)
 	return ust, nil
 }
-
-func expandStatefulSetSelectors(s []interface{}) (*metav1.LabelSelector, error) {
-	obj := &metav1.LabelSelector{}
-	if len(s) == 0 || s[0] == nil {
-		return obj, nil
-	}
-	in := s[0].(map[string]interface{})
-	log.Printf("[DEBUG] StatefulSet Selector: %#v", in)
-	if v, ok := in["match_labels"].(map[string]interface{}); ok {
-		log.Printf("[DEBUG] StatefulSet Selector MatchLabels: %#v", v)
-		ml := make(map[string]string)
-		for k, l := range v {
-			ml[k] = l.(string)
-			log.Printf("[DEBUG] StatefulSet Selector MatchLabel: %#v -> %#v", k, v)
-		}
-		obj.MatchLabels = ml
-	}
-	if v, ok := in["match_expressions"].([]interface{}); ok {
-		log.Printf("[DEBUG] StatefulSet Selector MatchExpressions: %#v", v)
-		me, err := expandMatchExpressions(v)
-		if err != nil {
-			return obj, err
-		}
-		obj.MatchExpressions = me
-	}
-	return obj, nil
-}
-
-func expandMatchExpressions(in []interface{}) ([]metav1.LabelSelectorRequirement, error) {
-	if len(in) == 0 {
-		return []metav1.LabelSelectorRequirement{}, nil
-	}
-	obj := make([]metav1.LabelSelectorRequirement, len(in))
-	for i, c := range in {
-		p := c.(map[string]interface{})
-		if v, ok := p["key"].(string); ok {
-			obj[i].Key = v
-		}
-		if v, ok := p["operator"].(metav1.LabelSelectorOperator); ok {
-			obj[i].Operator = v
-		}
-		if v, ok := p["values"].(*schema.Set); ok {
-			obj[i].Values = schemaSetToStringArray(v)
-		}
-	}
-	return obj, nil
-}
-
-// Flattners
 
 func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData) ([]interface{}, error) {
 	att := make(map[string]interface{})

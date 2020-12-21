@@ -98,13 +98,20 @@ func resourceKubernetesServiceAccountCreate(ctx context.Context, d *schema.Resou
 	d.SetId(buildId(out.ObjectMeta))
 
 	secret, err := getServiceAccountDefaultSecret(ctx, out.Name, svcAcc, d.Timeout(schema.TimeoutCreate), conn)
-	d.Set("default_secret_name", secret.Name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("default_secret_name", secret.Name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	return resourceKubernetesServiceAccountRead(ctx, d, meta)
 }
 
 func getServiceAccountDefaultSecret(ctx context.Context, name string, config api.ServiceAccount, timeout time.Duration, conn *kubernetes.Clientset) (*api.Secret, error) {
 	var svcAccTokens []api.Secret
-	err := resource.Retry(timeout, func() *resource.RetryError {
+	err := resource.RetryContext(ctx, timeout, func() *resource.RetryError {
 		resp, err := conn.CoreV1().ServiceAccounts(config.Namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
@@ -119,6 +126,10 @@ func getServiceAccountDefaultSecret(ctx context.Context, name string, config api
 		secretList, err := conn.CoreV1().Secrets(config.Namespace).List(ctx, metav1.ListOptions{
 			FieldSelector: fmt.Sprintf("type=%s", api.SecretTypeServiceAccountToken),
 		})
+		if err != nil {
+			return resource.NonRetryableError(err)
+		}
+
 		for _, secret := range secretList.Items {
 			for _, svcSecret := range diff {
 				if secret.Name != svcSecret.Name {
@@ -246,13 +257,19 @@ func resourceKubernetesServiceAccountRead(ctx context.Context, d *schema.Resourc
 			return diag.FromErr(err)
 		}
 	}
-	d.Set("image_pull_secret", flattenLocalObjectReferenceArray(svcAcc.ImagePullSecrets))
+	err = d.Set("image_pull_secret", flattenLocalObjectReferenceArray(svcAcc.ImagePullSecrets))
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	defaultSecretName := d.Get("default_secret_name").(string)
 	log.Printf("[DEBUG] Default secret name is %q", defaultSecretName)
 	secrets := flattenServiceAccountSecrets(svcAcc.Secrets, defaultSecretName)
 	log.Printf("[DEBUG] Flattened secrets: %#v", secrets)
-	d.Set("secret", secrets)
+	err = d.Set("secret", secrets)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }

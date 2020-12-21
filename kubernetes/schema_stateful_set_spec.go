@@ -5,7 +5,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
-func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
+func statefulSetSpecFields() map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
 		"pod_management_policy": {
 			Type:        schema.TypeString,

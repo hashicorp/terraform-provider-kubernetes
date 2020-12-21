@@ -433,6 +433,7 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_storageClass(t *testing.
 func TestAccKubernetesPersistentVolumeClaim_expansionGoogleCloud(t *testing.T) {
 	var conf1, conf2 api.PersistentVolumeClaim
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	imageName := alpineImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
@@ -442,7 +443,7 @@ func TestAccKubernetesPersistentVolumeClaim_expansionGoogleCloud(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimDestroy,
 		Steps: []resource.TestStep{
 			{ // GKE specific check -- initial create.
-				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, "1Gi"),
+				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, "1Gi", imageName),
 				SkipFunc: func() (bool, error) {
 					isInGke, err := isRunningInGke()
 					return !isInGke, err
@@ -454,7 +455,7 @@ func TestAccKubernetesPersistentVolumeClaim_expansionGoogleCloud(t *testing.T) {
 				),
 			},
 			{ // GKE specific check -- Update -- storage is increased in place.
-				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, "2Gi"),
+				Config: testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, "2Gi", imageName),
 				SkipFunc: func() (bool, error) {
 					isInGke, err := isRunningInGke()
 					return !isInGke, err
@@ -748,7 +749,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
 `, name, requests, limits)
 }
 
-func testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, requests string) string {
+func testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, requests, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
   metadata {
     name = "test"
@@ -778,7 +779,7 @@ resource "kubernetes_pod" "main" {
   spec {
     container {
       name    = "default"
-      image   = "alpine:latest"
+      image   = "%s"
       command = ["sleep", "3600s"]
       volume_mount {
         mount_path = "/etc/test"
@@ -793,7 +794,7 @@ resource "kubernetes_pod" "main" {
     }
   }
 }
-`, name, requests)
+`, name, requests, imageName)
 }
 
 func testAccKubernetesPersistentVolumeClaimConfig_metaModified(name string) string {

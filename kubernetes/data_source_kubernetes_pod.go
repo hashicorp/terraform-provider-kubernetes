@@ -10,7 +10,7 @@ import (
 )
 
 func dataSourceKubernetesPod() *schema.Resource {
-	podSpecFields := podSpecFields(false, false, false)
+	podSpecFields := podSpecFields(false, false)
 	// Setting this default to false prevents a perpetual diff caused by volume_mounts
 	// being mutated on the server side as Kubernetes automatically adds a mount
 	// for the service account token

@@ -15,7 +15,7 @@ func podTemplateFields(owner string) map[string]*schema.Schema {
 			Optional:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: podSpecFields(true, false, false),
+				Schema: podSpecFields(true, false),
 			},
 		},
 	}

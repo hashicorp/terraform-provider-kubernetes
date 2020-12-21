@@ -452,9 +452,15 @@ func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 		}
 		if command, ok := ctr["command"].([]interface{}); ok {
 			cs[i].Command = expandStringSlice(command)
+		} else {
+			// https://github.com/hashicorp/terraform-plugin-sdk/issues/142
+			// Set defaults manually until List defaults are supported in the SDK.
+			cs[i].Command = []string{}
 		}
 		if args, ok := ctr["args"].([]interface{}); ok {
 			cs[i].Args = expandStringSlice(args)
+		} else {
+			cs[i].Args = []string{}
 		}
 
 		if v, ok := ctr["resources"].([]interface{}); ok && len(v) > 0 {

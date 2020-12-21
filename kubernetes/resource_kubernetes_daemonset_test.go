@@ -16,6 +16,7 @@ import (
 func TestAccKubernetesDaemonSet_minimal(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -25,11 +26,11 @@ func TestAccKubernetesDaemonSet_minimal(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDaemonSetConfig_minimal(name),
+				Config: testAccKubernetesDaemonSetConfig_minimal(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.8"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
 				),
 			},
@@ -41,6 +42,8 @@ func TestAccKubernetesDaemonSet_basic(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemonset.test"
+	imageName := nginxImageVersion
+	imageName1 := nginxImageVersion1
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -50,7 +53,7 @@ func TestAccKubernetesDaemonSet_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDaemonSetConfig_basic(name),
+				Config: testAccKubernetesDaemonSetConfig_basic(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.%", "2"),
@@ -67,7 +70,7 @@ func TestAccKubernetesDaemonSet_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.8"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.rolling_update.0.max_unavailable", "1"),
@@ -81,7 +84,7 @@ func TestAccKubernetesDaemonSet_basic(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_rollout"},
 			},
 			{
-				Config: testAccKubernetesDaemonSetConfig_modified(name),
+				Config: testAccKubernetesDaemonSetConfig_modified(name, imageName1),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.%", "2"),
@@ -97,7 +100,7 @@ func TestAccKubernetesDaemonSet_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.9"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.image", imageName1),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.dns_config.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.dns_config.0.nameservers.#", "3"),
@@ -123,7 +126,7 @@ func TestAccKubernetesDaemonSet_with_template_metadata(t *testing.T) {
 	var conf appsv1.DaemonSet
 
 	depName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := "nginx:1.7.9"
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -163,6 +166,7 @@ func TestAccKubernetesDaemonSet_with_template_metadata(t *testing.T) {
 func TestAccKubernetesDaemonSet_initContainer(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -172,10 +176,10 @@ func TestAccKubernetesDaemonSet_initContainer(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDaemonSetWithInitContainer(name, "nginx:1.7.8"),
+				Config: testAccKubernetesDaemonSetWithInitContainer(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.init_container.0.image", "alpine"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.init_container.0.image", imageName),
 				),
 			},
 		},
@@ -193,7 +197,7 @@ func TestAccKubernetesDaemonSet_noTopLevelLabels(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDaemonSetWithNoTopLevelLabels(name, "nginx:1.7.8"),
+				Config: testAccKubernetesDaemonSetWithNoTopLevelLabels(name, nginxImageVersion1),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.%", "0"),
@@ -266,6 +270,7 @@ func TestAccKubernetesDaemonSet_with_tolerations_unset_toleration_seconds(t *tes
 func TestAccKubernetesDaemonSet_regression(t *testing.T) {
 	var conf1, conf2 appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -275,7 +280,7 @@ func TestAccKubernetesDaemonSet_regression(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: requiredProviders() + testAccKubernetesDaemonSetConfig_regression("kubernetes-released", name),
+				Config: requiredProviders() + testAccKubernetesDaemonSetConfig_regression("kubernetes-released", name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf1),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.%", "2"),
@@ -290,14 +295,14 @@ func TestAccKubernetesDaemonSet_regression(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.8"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.rolling_update.0.max_unavailable", "1"),
 				),
 			},
 			{
-				Config: requiredProviders() + testAccKubernetesDaemonSetConfig_regression("kubernetes-local", name),
+				Config: requiredProviders() + testAccKubernetesDaemonSetConfig_regression("kubernetes-local", name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf2),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.%", "2"),
@@ -312,7 +317,7 @@ func TestAccKubernetesDaemonSet_regression(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.image", "nginx:1.7.8"),
+					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.rolling_update.0.max_unavailable", "1"),
@@ -394,7 +399,7 @@ func testAccCheckKubernetesDaemonSetExists(n string, obj *appsv1.DaemonSet) reso
 	}
 }
 
-func testAccKubernetesDaemonSetConfig_minimal(name string) string {
+func testAccKubernetesDaemonSetConfig_minimal(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     name = "%s"
@@ -416,17 +421,17 @@ func testAccKubernetesDaemonSetConfig_minimal(name string) string {
 
       spec {
         container {
-          image = "nginx:1.7.8"
+          image = "%s"
           name  = "tf-acc-test"
         }
       }
     }
   }
 }
-`, name)
+`, name, imageName)
 }
 
-func testAccKubernetesDaemonSetConfig_basic(name string) string {
+func testAccKubernetesDaemonSetConfig_basic(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     annotations = {
@@ -463,17 +468,17 @@ func testAccKubernetesDaemonSetConfig_basic(name string) string {
 
       spec {
         container {
-          image = "nginx:1.7.8"
+          image = "%s"
           name  = "tf-acc-test"
         }
       }
     }
   }
 }
-`, name)
+`, name, imageName)
 }
 
-func testAccKubernetesDaemonSetConfig_modified(name string) string {
+func testAccKubernetesDaemonSetConfig_modified(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   metadata {
     annotations = {
@@ -509,7 +514,7 @@ func testAccKubernetesDaemonSetConfig_modified(name string) string {
 
       spec {
         container {
-          image = "nginx:1.7.9"
+          image = "%s"
           name  = "tf-acc-test"
         }
 
@@ -532,7 +537,7 @@ func testAccKubernetesDaemonSetConfig_modified(name string) string {
     }
   }
 }
-`, name)
+`, name, imageName)
 }
 
 func testAccKubernetesDaemonSetConfigWithTemplateMetadata(depName, imageName string) string {
@@ -648,7 +653,7 @@ func testAccKubernetesDaemonSetWithInitContainer(depName, imageName string) stri
       spec {
         init_container {
           name    = "hello"
-          image   = "alpine"
+          image   = "%s"
           command = ["echo", "'hello'"]
         }
 
@@ -660,7 +665,7 @@ func testAccKubernetesDaemonSetWithInitContainer(depName, imageName string) stri
     }
   }
 }
-`, depName, imageName)
+`, depName, imageName, imageName)
 }
 
 func testAccKubernetesDaemonSetWithNoTopLevelLabels(depName, imageName string) string {
@@ -748,7 +753,7 @@ func testAccKubernetesDaemonSetConfigWithTolerations(rcName, imageName string, t
 `, rcName, operator, valueString, tolerationDuration, imageName)
 }
 
-func testAccKubernetesDaemonSetConfig_regression(provider, name string) string {
+func testAccKubernetesDaemonSetConfig_regression(provider, name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
   provider = %s
   metadata {
@@ -786,12 +791,12 @@ func testAccKubernetesDaemonSetConfig_regression(provider, name string) string {
 
       spec {
         container {
-          image = "nginx:1.7.8"
+          image = "%s"
           name  = "tf-acc-test"
         }
       }
     }
   }
 }
-`, provider, name)
+`, provider, name, imageName)
 }

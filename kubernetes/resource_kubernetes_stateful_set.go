@@ -56,9 +56,8 @@ func resourceKubernetesStatefulSetSchemaV1() map[string]*schema.Schema {
 			Required:    true,
 			MaxItems:    1,
 			MinItems:    1,
-			ForceNew:    true,
 			Elem: &schema.Resource{
-				Schema: statefulSetSpecFields(false),
+				Schema: statefulSetSpecFields(),
 			},
 		},
 		"wait_for_rollout": {
@@ -271,6 +270,10 @@ func retryUntilStatefulSetRolloutComplete(ctx context.Context, conn *kubernetes.
 		res, err := conn.AppsV1().StatefulSets(ns).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
+		}
+
+		if res.Status.ReadyReplicas != *res.Spec.Replicas {
+			return resource.RetryableError(fmt.Errorf("StatefulSet %s/%s is not finished rolling out", ns, name))
 		}
 
 		// NOTE: This is what kubectl uses to determine if a rollout is done.

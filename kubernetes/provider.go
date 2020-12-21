@@ -203,12 +203,19 @@ type kubeClientsets struct {
 	config              *restclient.Config
 	mainClientset       *kubernetes.Clientset
 	aggregatorClientset *aggregator.Clientset
+
+	configData *schema.ResourceData
 }
 
 func (k kubeClientsets) MainClientset() (*kubernetes.Clientset, error) {
 	if k.mainClientset != nil {
 		return k.mainClientset, nil
 	}
+
+	if err := checkConfigurationValid(k.configData); err != nil {
+		return nil, err
+	}
+
 	if k.config != nil {
 		kc, err := kubernetes.NewForConfig(k.config)
 		if err != nil {
@@ -280,10 +287,6 @@ See our documentation at: %s`, authDocumentationURL)
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {
-	if err := checkConfigurationValid(d); err != nil {
-		return nil, diag.FromErr(err)
-	}
-
 	// Config initialization
 	cfg, err := initializeConfiguration(d)
 	if err != nil {
@@ -310,6 +313,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		config:              cfg,
 		mainClientset:       nil,
 		aggregatorClientset: nil,
+		configData:          d,
 	}
 	return m, diag.Diagnostics{}
 }

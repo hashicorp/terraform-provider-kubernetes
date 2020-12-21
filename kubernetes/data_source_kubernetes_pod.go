@@ -3,34 +3,44 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"log"
 )
 
 func dataSourceKubernetesPod() *schema.Resource {
-	podSpecFields := podSpecFields(false, false, false)
-	// Setting this default to false prevents a perpetual diff caused by volume_mounts
-	// being mutated on the server side as Kubernetes automatically adds a mount
-	// for the service account token
 	return &schema.Resource{
-		ReadContext: dataSourceKubernetesPodRead,
+		ReadContext:   dataSourceKubernetesPodRead,
+		Schema:        dataSourceKubernetesPodSchemaV1(),
+		SchemaVersion: 1,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    dataSourceKubernetesPodV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: dataSourceKubernetesPodUpgradeV0,
+			},
+		},
+	}
+}
 
-		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("pod", true),
-			"spec": {
-				Type:        schema.TypeList,
-				Description: "Specification of the desired behavior of the pod.",
-				Computed:    true,
-				Elem: &schema.Resource{
-					Schema: podSpecFields,
-				},
+func dataSourceKubernetesPodSchemaV1() map[string]*schema.Schema {
+	podSpecFields := podSpecFields(false, false, false)
+
+	return map[string]*schema.Schema{
+		"metadata": namespacedMetadataSchema("pod", true),
+		"spec": {
+			Type:        schema.TypeList,
+			Description: "Specification of the desired behavior of the pod.",
+			Computed:    true,
+			Elem: &schema.Resource{
+				Schema: podSpecFields,
 			},
-			"status": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
+		},
+		"status": {
+			Type:     schema.TypeString,
+			Computed: true,
 		},
 	}
 }

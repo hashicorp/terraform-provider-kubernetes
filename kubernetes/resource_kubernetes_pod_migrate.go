@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -13,5 +14,6 @@ func resourceKubernetesPodV0() *schema.Resource {
 }
 
 func resourceKubernetesPodUpgradeV0(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Println("[DEBUG] migrating state for kubernetes_pod")
 	return upgradePodSpecWithResourcesFieldV0(ctx, rawState, meta)
 }

@@ -9,6 +9,12 @@ description: |-
 
 This guide covers the changes introduced in v2.0.0 of the Kubernetes provider and what you may need to do to upgrade your configuration.
 
+## Installing and testing this update
+
+Use `terraform init` to install version 2 of the provider. Then run `terraform plan` to determine if the upgrade will affect any existing resources. Some resources will have updated defaults and may be modified as a result. To opt out of this change, see the guide below and update your Terraform config file to match the existing resource settings (for example, set `automount_service_account_token=false`). Then run `terraform plan` again to ensure no resource updates will be applied.
+
+NOTE: Even if there are no resource updates to apply, you may need to run `terraform refresh` to update your schema to the newest version. Otherwise, some commands might fail with `Error: missing expected {`.
+
 ## Changes in v2.0.0
 
 ### Changes to Kubernetes credentials supplied in the provider block
@@ -16,10 +22,10 @@ This guide covers the changes introduced in v2.0.0 of the Kubernetes provider an
 We have made several changes to the way access to Kubernetes is configured in the provider block.
 
 1. The `load_config_file` attribute has been removed.
-2. Support for the `KUBECONFIG` environment variable has been dropped.
+2. Support for the `KUBECONFIG` environment variable has been dropped. (Use `KUBE_CONFIG_PATH` or `KUBE_CONFIG_PATHS` instead).
 3. The `config_path` attribute will no longer default to `~/.kube/config`.
 
-The above changes have been made to encourage the best practice of configuring access to Kubernetes in the provider block explicitly, instead of relying upon default paths or `KUBECONFIG` being set. We have done this because allowing the provider to configure its access to Kubernetes implicitly caused confusion with a subset of our users. It also created risk for users who use Terraform to manage multiple clusters. Requiring explicit configuring for kubernetes in the provider block eliminates the possibility that the configuration will be applied to the wrong cluster.
+The above changes have been made to encourage the best practice of configuring access to Kubernetes in the provider block explicitly, instead of relying upon default paths or `KUBECONFIG` being set. We have done this because allowing the provider to configure its access to Kubernetes implicitly caused confusion with a subset of our users. It also created risk for users who use Terraform to manage multiple clusters. Requiring explicit configuration for Kubernetes in the provider block eliminates the possibility that the configuration will be applied to the wrong cluster.
 
 You will therefore need to explicitly configure access to your Kubernetes cluster in the provider block going forward. For many users this will simply mean specifying the `config_path` attribute in the provider block. Users already explicitly configuring the provider should not be affected by this change, but will need to remove the `load_config_file` attribute if they are currently using it.
 

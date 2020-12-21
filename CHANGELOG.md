@@ -13,10 +13,14 @@ FEATURES:
 * Add ingressClassName as field in Ingress manifest (#1057)
 
 BUG FIXES:
-* fix(job): typo in error message (#1048)
-* fix assertion in TestAccKubernetesPersistentVolume_hostPath_nodeAffinty (#1067)
-* fix service load balancer crash (#1070)
-* fix CronJob.ttl_seconds_after_finished causing requests to fail even without value specified (#929)
+* Fix typo in Job error message (#1048)
+* Fix assertion in TestAccKubernetesPersistentVolume_hostPath_nodeAffinty (#1067)
+* Fix service load balancer crash (#1070)
+* Fix `cronJob.ttl_seconds_after_finished` causing requests to fail even without value specified (#929)
+* Fix perpetual diff when using Pod resource with `automount_service_account_token=true` (#1085)
+* Fix perpetual diff in StatefulSet when `update_strategy` is not specified (#1088)
+* Fix delete/recreate when updating `init_containers` (#951)
+* Fix delete/recreate of Jobs when updating mutable fields (#1074)
 
 IMPROVEMENTS:
 * Add upgrade test for daemonset (#1064)

@@ -35,7 +35,7 @@ We changed the `load_balancers_ingress` block on the Service and Ingress resourc
 
 ```hcl
 output "ingress_hostname" {
-    value = kubernetes_ingress.example_ingress.status[0].load_balancer[0].ingress[0].hostname
+  value = kubernetes_ingress.example_ingress.status[0].load_balancer[0].ingress[0].hostname
 }
 ```
 
@@ -73,8 +73,8 @@ resource "kubernetes_deployment" "example" {
           image = "nginx:1.7.8"
           name  = "example"
         }
-        
-        service_account_name = "default"
+
+        service_account_name            = "default"
         automount_service_account_token = false
       }
     }
@@ -85,6 +85,7 @@ resource "kubernetes_deployment" "example" {
 ### Normalize wait defaults across Deployment, DaemonSet, StatefulSet, Service, Ingress, and Job
 
 All of the `wait_for` attributes now default to `true`, including:
+
 - `wait_for_rollout` on the `kubernetes_deployment`, `kubernetes_daemonset`, and `kubernetes_stateful_set` resources
 - `wait_for_loadbalancer` on the `kubernetes_service` and `kubernetes_ingress` resources
 - `wait_for_completion` on the `kubernetes_job` resource
@@ -103,7 +104,7 @@ resource "kubernetes_service" "myapp1" {
     }
 
     session_affinity = "ClientIP"
-    type = "LoadBalancer"
+    type             = "LoadBalancer"
 
     port {
       port        = 8080
@@ -131,7 +132,7 @@ resource "kubernetes_pod" "test" {
     container {
       image = "nginx:1.7.9"
       name  = "example"
-      
+
       resources {
         limits = {
           cpu          = "0.5"

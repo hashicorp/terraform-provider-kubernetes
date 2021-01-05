@@ -124,7 +124,6 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, metaPrefix 
 	m["labels"] = removeInternalKeys(meta.Labels, configLabels)
 	m["name"] = meta.Name
 	m["resource_version"] = meta.ResourceVersion
-	m["self_link"] = meta.SelfLink
 	m["uid"] = fmt.Sprintf("%v", meta.UID)
 	m["generation"] = meta.Generation
 

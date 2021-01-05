@@ -62,7 +62,6 @@ func TestAccKubernetesPod_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "metadata.0.name", podName),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.0.value_from.0.secret_key_ref.0.name", secretName),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.0.value_from.0.secret_key_ref.0.key", "one"),
@@ -152,7 +151,6 @@ func TestAccKubernetesPod_updateArgsForceNew(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "metadata.0.name", podName),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.args.#", "2"),
@@ -169,7 +167,6 @@ func TestAccKubernetesPod_updateArgsForceNew(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "metadata.0.name", podName),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.args.#", "2"),
@@ -206,7 +203,6 @@ func TestAccKubernetesPod_updateEnvForceNew(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "metadata.0.name", podName),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.#", "1"),
@@ -223,7 +219,6 @@ func TestAccKubernetesPod_updateEnvForceNew(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "metadata.0.name", podName),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env.#", "1"),
@@ -859,7 +854,6 @@ func TestAccKubernetesPod_enableServiceLinks(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "metadata.0.name", rName),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.enable_service_links", "false"),
 				),
@@ -1020,7 +1014,6 @@ func TestAccKubernetesPod_regression(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.active_deadline_seconds", "0"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.dns_policy", "ClusterFirst"),
@@ -1058,7 +1051,6 @@ func TestAccKubernetesPod_regression(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.active_deadline_seconds", "0"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.dns_policy", "ClusterFirst"),
@@ -1193,7 +1185,7 @@ resource "kubernetes_pod" "test" {
       name  = "containername"
 
       env {
-        name = "EXPORTED_VARIBALE_FROM_SECRET"
+        name = "EXPORTED_VARIABLE_FROM_SECRET"
 
         value_from {
           secret_key_ref {
@@ -1204,7 +1196,7 @@ resource "kubernetes_pod" "test" {
         }
       }
       env {
-        name = "EXPORTED_VARIBALE_FROM_CONFIG_MAP"
+        name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
         value_from {
           config_map_key_ref {
             name     = "${kubernetes_config_map.test.metadata.0.name}"
@@ -2210,7 +2202,7 @@ resource "kubernetes_pod" "test" {
       name  = "containername"
 
       env {
-        name = "EXPORTED_VARIBALE_FROM_SECRET"
+        name = "EXPORTED_VARIABLE_FROM_SECRET"
 
         value_from {
           secret_key_ref {
@@ -2221,7 +2213,7 @@ resource "kubernetes_pod" "test" {
         }
       }
       env {
-        name = "EXPORTED_VARIBALE_FROM_CONFIG_MAP"
+        name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
         value_from {
           config_map_key_ref {
             name     = "${kubernetes_config_map.test.metadata.0.name}"
@@ -2278,7 +2270,7 @@ func testAccKubernetesPod_regression(provider, name, imageName string) string {
       name  = "containername"
 
       env {
-        name = "EXPORTED_VARIBALE_FROM_SECRET"
+        name = "EXPORTED_VARIABLE_FROM_SECRET"
 
         value_from {
           secret_key_ref {
@@ -2289,7 +2281,7 @@ func testAccKubernetesPod_regression(provider, name, imageName string) string {
         }
       }
       env {
-        name = "EXPORTED_VARIBALE_FROM_CONFIG_MAP"
+        name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
         value_from {
           config_map_key_ref {
             name     = "${kubernetes_config_map.test.metadata.0.name}"

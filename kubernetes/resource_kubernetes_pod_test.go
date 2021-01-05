@@ -899,7 +899,7 @@ func TestAccKubernetesPod_bug1085(t *testing.T) {
 	var conf api.Pod
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
 		Steps: []resource.TestStep{

@@ -1004,57 +1004,15 @@ func TestAccKubernetesDeployment_regression(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: requiredProviders() + testAccKubernetesDeploymentConfigReleased("kubernetes-released", name, imageName),
+				Config: requiredProviders() + testAccKubernetesDeploymentConfig_beforeUpdate(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf1),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.%", "2"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.%", "3"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.TestLabelOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.TestLabelTwo", "two"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.TestLabelThree", "three"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelTwo": "two", "TestLabelThree": "three"}),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_deployment.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_deployment.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_deployment.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.name", "containername"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.type", "RollingUpdate"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.rolling_update.0.max_surge", "25%"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.rolling_update.0.max_unavailable", "25%"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "wait_for_rollout", "true"),
 				),
 			},
 			{
-				PlanOnly: true,
-				Config:   requiredProviders() + testAccKubernetesDeploymentConfigLocal("kubernetes-local", name, imageName),
-			},
-			{
-				Config: requiredProviders() + testAccKubernetesDeploymentConfigLocal("kubernetes-local", name, imageName),
+				Config: requiredProviders() + testAccKubernetesDeploymentConfig_afterUpdate(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf2),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.%", "2"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.%", "3"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.TestLabelOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.TestLabelTwo", "two"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.labels.TestLabelThree", "three"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelTwo": "two", "TestLabelThree": "three"}),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_deployment.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_deployment.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_deployment.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.name", "containername"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.type", "RollingUpdate"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.rolling_update.0.max_surge", "25%"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.rolling_update.0.max_unavailable", "25%"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "wait_for_rollout", "true"),
 					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, false),
 				),
 			},
@@ -2538,97 +2496,6 @@ func testAccKubernetesDeploymentConfigWithWaitForRolloutFalse(deploymentName, im
 `, deploymentName, nginxImageVersion)
 }
 
-func testAccKubernetesDeploymentConfigReleased(provider, name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
-  provider = %s
-  metadata {
-    annotations = {
-      TestAnnotationOne = "one"
-      TestAnnotationTwo = "two"
-    }
-
-    labels = {
-      TestLabelOne   = "one"
-      TestLabelTwo   = "two"
-      TestLabelThree = "three"
-    }
-
-    name = "%s"
-  }
-
-  spec {
-    replicas = 5
-
-    selector {
-      match_labels = {
-        TestLabelOne   = "one"
-        TestLabelTwo   = "two"
-        TestLabelThree = "three"
-      }
-    }
-
-    template {
-      metadata {
-        labels = {
-          TestLabelOne   = "one"
-          TestLabelTwo   = "two"
-          TestLabelThree = "three"
-        }
-      }
-
-      spec {
-        container {
-          image = %q
-          name  = "containername"
-
-          port {
-            container_port = 80
-          }
-
-          readiness_probe {
-            initial_delay_seconds = 5
-            http_get {
-              path = "/"
-              port = 80
-            }
-          }
-
-          resources {
-            requests {
-              memory = "64Mi"
-              cpu    = "50m"
-            }
-            limits {
-              memory = "100Mi"
-              cpu    = "100m"
-            }
-          }
-          env {
-            name = "LIMITS_CPU"
-            value_from {
-              resource_field_ref {
-                container_name = "containername"
-                resource       = "requests.cpu"
-              }
-            }
-          }
-          env {
-           name = "LIMITS_MEM"
-            value_from {
-              resource_field_ref {
-                container_name = "containername"
-                resource       = "requests.memory"
-              }
-            } 
-          }
-        }
-      }
-    }
-  }
-}
-`, provider, name, imageName)
-}
-
 func testAccKubernetesDeploymentConfigLocal(provider, name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   provider = %s
@@ -2820,4 +2687,88 @@ func testAccKubernetesDeploymentConfigWithResourceFieldSelector(rcName, imageNam
   }
 }
 `, rcName, imageName, resourceName, divisor)
+}
+
+func testAccKubernetesDeploymentConfig_beforeUpdate(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
+  provider = kubernetes-released
+  metadata {
+    name = "%s"
+  }
+  spec {
+    replicas = 2
+    selector {
+      match_labels = {
+        TestLabelOne   = "one"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          TestLabelOne   = "one"
+        }
+      }
+      spec {
+        container {
+          image = "%s"
+          name  = "tf-acc-test"
+
+          resources {
+            limits {
+              memory = "512M"
+              cpu = "1"
+            }
+            requests {
+              memory = "256M"
+              cpu = "50m"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, name, imageName)
+}
+
+func testAccKubernetesDeploymentConfig_afterUpdate(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
+  provider = kubernetes-local
+  metadata {
+    name = "%s"
+  }
+  spec {
+    replicas = 2
+    selector {
+      match_labels = {
+        TestLabelOne   = "one"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          TestLabelOne   = "one"
+        }
+      }
+      spec {
+        container {
+          image = "%s"
+          name  = "tf-acc-test"
+
+          resources {
+            limits = {
+              memory = "512M"
+              cpu = "1"
+            }
+            requests = {
+              memory = "256M"
+              cpu = "50m"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, name, imageName)
 }

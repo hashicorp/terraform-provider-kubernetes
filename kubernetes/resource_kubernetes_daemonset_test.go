@@ -278,45 +278,15 @@ func TestAccKubernetesDaemonSet_regression(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: requiredProviders() + testAccKubernetesDaemonSetConfig_regression("kubernetes-released", name, imageName),
+				Config: requiredProviders() + testAccKubernetesDaemonSetConfig_beforeUpdate(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf1),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.%", "2"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.%", "3"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.TestLabelOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.TestLabelTwo", "two"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.TestLabelThree", "three"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.type", "RollingUpdate"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.rolling_update.0.max_unavailable", "1"),
 				),
 			},
 			{
-				Config: requiredProviders() + testAccKubernetesDaemonSetConfig_regression("kubernetes-local", name, imageName),
+				Config: requiredProviders() + testAccKubernetesDaemonSetConfig_afterUpdate(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf2),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.%", "2"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.%", "3"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.TestLabelOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.TestLabelTwo", "two"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.labels.TestLabelThree", "three"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_daemonset.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.type", "RollingUpdate"),
-					resource.TestCheckResourceAttr("kubernetes_daemonset.test", "spec.0.strategy.0.rolling_update.0.max_unavailable", "1"),
 					testAccCheckKubernetesDaemonsetForceNew(&conf1, &conf2, false),
 				),
 			},
@@ -749,39 +719,24 @@ func testAccKubernetesDaemonSetConfigWithTolerations(rcName, imageName string, t
 `, rcName, operator, valueString, tolerationDuration, imageName)
 }
 
-func testAccKubernetesDaemonSetConfig_regression(provider, name, imageName string) string {
+func testAccKubernetesDaemonSetConfig_beforeUpdate(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
-  provider = %s
+  provider = kubernetes-released
   metadata {
-    annotations = {
-      TestAnnotationOne = "one"
-      TestAnnotationTwo = "two"
-    }
-
-    labels = {
-      TestLabelOne   = "one"
-      TestLabelTwo   = "two"
-      TestLabelThree = "three"
-    }
-
     name = "%s"
   }
 
   spec {
     selector {
       match_labels = {
-        TestLabelOne   = "one"
-        TestLabelTwo   = "two"
-        TestLabelThree = "three"
+        foo = "bar"
       }
     }
 
     template {
       metadata {
         labels = {
-          TestLabelOne   = "one"
-          TestLabelTwo   = "two"
-          TestLabelThree = "three"
+          foo = "bar"
         }
       }
 
@@ -789,10 +744,64 @@ func testAccKubernetesDaemonSetConfig_regression(provider, name, imageName strin
         container {
           image = "%s"
           name  = "tf-acc-test"
+          resources {
+            limits {
+              memory = "512M"
+              cpu = "1"
+            }
+            requests {
+              memory = "256M"
+              cpu = "50m"
+            }
+          }
         }
       }
     }
   }
 }
-`, provider, name, imageName)
+`, name, imageName)
+}
+
+func testAccKubernetesDaemonSetConfig_afterUpdate(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
+  provider = kubernetes-local
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        foo = "bar"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          foo = "bar"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "tf-acc-test"
+
+          resources {
+            limits = {
+              memory = "512M"
+              cpu = "1"
+            }
+            requests = {
+              memory = "256M"
+              cpu = "50m"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, name, imageName)
 }

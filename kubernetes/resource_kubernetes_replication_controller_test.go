@@ -170,6 +170,8 @@ func TestAccKubernetesReplicationController_regression(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf1),
 				),
+				// Version 1.13 of the provider has a perpetual diff with enable_service_links
+				ExpectNonEmptyPlan: true,
 			},
 			{
 				Config: requiredProviders() + testAccKubernetesReplicationControllerConfig_afterUpdate(name, imageName),
@@ -1301,7 +1303,6 @@ func testAccKubernetesReplicationControllerConfig_beforeUpdate(name, imageName s
         }
       }
       spec {
-        enable_service_links = true
         container {
           image = "%s"
           name  = "containername"
@@ -1343,7 +1344,7 @@ func testAccKubernetesReplicationControllerConfig_afterUpdate(name, imageName st
         }
       }
       spec {
-        enable_service_links = true
+        automount_service_account_token = false
         container {
           image = "%s"
           name  = "containername"

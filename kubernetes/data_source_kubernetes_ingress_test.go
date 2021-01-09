@@ -134,8 +134,8 @@ func testAccKubernetesDataSourceIngressConfig_regression(provider, name string) 
 	return fmt.Sprintf(`data "kubernetes_ingress" "test" {
   provider = %s
   metadata {
-    name = "%s"
-    namespace = kubernetes_namespace.test.metadata.0.name
+    name      = kubernetes_ingress.test.metadata.0.name
+    namespace = kubernetes_ingress.test.metadata.0.namespace
   }
 }
 
@@ -188,5 +188,5 @@ resource "kubernetes_ingress" "test" {
     }
   }
 }
-`, provider, name, provider, name, provider, name, provider, name)
+`, provider, provider, name, provider, name, provider, name)
 }

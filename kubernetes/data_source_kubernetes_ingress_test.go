@@ -62,40 +62,27 @@ func TestAccKubernetesDataSourceIngress_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesDataSourceIngress_stateUpgradeV0_loadBalancerIngress(t *testing.T) {
+func TestAccKubernetesDataSourceIngress_regression(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInEks(t) },
+		IDRefreshName:     "kubernetes_ingress.test",
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{
-			{ // Create resource using schema v0.
-				Config: requiredProviders() + testAccKubernetesDataSourceIngressConfig_stateUpgradev0("kubernetes-released", name),
+			{ // Create resource and data source using schema v0.
+				Config: requiredProviders() + testAccKubernetesDataSourceIngressConfig_regression("kubernetes-released", name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.name", name),
-				),
-			},
-			{ // Create data source using schema v0.
-				Config: requiredProviders() + testAccKubernetesDataSourceIngressConfig_stateUpgradev0("kubernetes-released", name) +
-					testAccKubernetesDataSourceIngressConfig_read(),
-				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("data.kubernetes_ingress.test", "load_balancer_ingress.0.hostname"),
 				),
 			},
-			{ // Apply StateUpgrade to resource. This will delete the data source, to be re-read on next apply.
-				Config: requiredProviders() + testAccKubernetesDataSourceIngressConfig_stateUpgradev0("kubernetes-local", name) +
-					testAccKubernetesDataSourceIngressConfig_read(),
+			{ // Apply StateUpgrade to resource. This will cause data source to re-read the data.
+				Config: requiredProviders() + testAccKubernetesDataSourceIngressConfig_regression("kubernetes-local", name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "status.0.load_balancer.0.ingress.0.hostname"),
 					resource.TestCheckNoResourceAttr("kubernetes_ingress.test", "load_balancer_ingress.0.hostname"),
-				),
-			},
-			{ // Re-populate the data source with the StateUpgraded resource data.
-				Config: requiredProviders() + testAccKubernetesDataSourceIngressConfig_stateUpgradev0("kubernetes-local", name) +
-					testAccKubernetesDataSourceIngressConfig_read(),
-				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckNoResourceAttr("data.kubernetes_ingress.test", "load_balancer_ingress.0.hostname"),
 					resource.TestCheckResourceAttrSet("data.kubernetes_ingress.test", "status.0.load_balancer.0.ingress.0.hostname"),
 				),
@@ -143,16 +130,24 @@ func testAccKubernetesDataSourceIngressConfig_read() string {
 
 // Note: this test uses a unique namespace in order to avoid name collisions in AWS.
 // This ensures a unique TargetGroup for each test run.
-func testAccKubernetesDataSourceIngressConfig_stateUpgradev0(provider, name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
-  provider = "%s"
+func testAccKubernetesDataSourceIngressConfig_regression(provider, name string) string {
+	return fmt.Sprintf(`data "kubernetes_ingress" "test" {
+  provider = %s
+  metadata {
+    name = "%s"
+    namespace = kubernetes_namespace.test.metadata.0.name
+  }
+}
+
+resource "kubernetes_namespace" "test" {
+  provider = %s
   metadata {
     name = "%s"
   }
 }
 
 resource "kubernetes_service" "test" {
-  provider = "%s"
+  provider = %s
   metadata {
     name = "%s"
     namespace = kubernetes_namespace.test.metadata.0.name
@@ -168,7 +163,7 @@ resource "kubernetes_service" "test" {
 }
 
 resource "kubernetes_ingress" "test" {
-  provider = "%s"
+  provider = %s
   wait_for_load_balancer = true
   metadata {
     name = "%s"
@@ -193,5 +188,5 @@ resource "kubernetes_ingress" "test" {
     }
   }
 }
-`, provider, name, provider, name, provider, name)
+`, provider, name, provider, name, provider, name, provider, name)
 }

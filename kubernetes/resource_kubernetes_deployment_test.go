@@ -2699,13 +2699,13 @@ func testAccKubernetesDeploymentConfig_beforeUpdate(name, imageName string) stri
     replicas = 2
     selector {
       match_labels = {
-        TestLabelOne   = "one"
+        TestLabelOne = "one"
       }
     }
     template {
       metadata {
         labels = {
-          TestLabelOne   = "one"
+          TestLabelOne = "one"
         }
       }
       spec {
@@ -2741,13 +2741,13 @@ func testAccKubernetesDeploymentConfig_afterUpdate(name, imageName string) strin
     replicas = 2
     selector {
       match_labels = {
-        TestLabelOne   = "one"
+        TestLabelOne = "one"
       }
     }
     template {
       metadata {
         labels = {
-          TestLabelOne   = "one"
+          TestLabelOne = "one"
         }
       }
       spec {

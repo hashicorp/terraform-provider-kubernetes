@@ -486,6 +486,24 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		overrides.AuthInfo.Token = token
 	}
 
+	var proxyURL string
+	if !providerConfig["proxy_url"].IsNull() && providerConfig["proxy_url"].IsKnown() {
+		err = providerConfig["proxy_url"].As(&proxyURL)
+		if err != nil {
+			// invalid attribute type - this shouldn't happen, bail out for now
+			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Provider configuration: failed to assert type of 'proxy_url' value",
+				Detail:   err.Error(),
+			})
+			return response, nil
+		}
+		overrides.ClusterDefaults.ProxyURL = proxyURL
+	}
+	if proxyUrl, ok := os.LookupEnv("KUBE_PROXY_URL"); ok && proxyUrl != "" {
+		overrides.ClusterDefaults.ProxyURL = proxyURL
+	}
+
 	if !providerConfig["exec"].IsNull() && providerConfig["exec"].IsKnown() {
 		var execBlock []tftypes.Value
 		err = providerConfig["exec"].As(&execBlock)

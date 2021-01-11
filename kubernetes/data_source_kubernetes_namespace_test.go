@@ -17,7 +17,6 @@ func TestAccKubernetesDataSourceNamespace_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("data.kubernetes_namespace.test", "metadata.0.name", "kube-system"),
 					resource.TestCheckResourceAttrSet("data.kubernetes_namespace.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("data.kubernetes_namespace.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("data.kubernetes_namespace.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("data.kubernetes_namespace.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("data.kubernetes_namespace.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("data.kubernetes_namespace.test", "spec.0.finalizers.#", "1"),

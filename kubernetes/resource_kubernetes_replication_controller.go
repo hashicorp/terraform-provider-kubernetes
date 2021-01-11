@@ -32,40 +32,53 @@ func resourceKubernetesReplicationController() *schema.Resource {
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
 
-		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("replication controller", true),
-			"spec": {
-				Type:        schema.TypeList,
-				Description: "Spec defines the specification of the desired behavior of the replication controller. More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#spec-and-status",
-				Required:    true,
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"min_ready_seconds": {
-							Type:        schema.TypeInt,
-							Description: "Minimum number of seconds for which a newly created pod should be ready without any of its container crashing, for it to be considered available. Defaults to 0 (pod will be considered available as soon as it is ready)",
-							Optional:    true,
-							Default:     0,
-						},
-						"replicas": {
-							Type:        schema.TypeInt,
-							Description: "The number of desired replicas. Defaults to 1. More info: http://kubernetes.io/docs/user-guide/replication-controller#what-is-a-replication-controller",
-							Optional:    true,
-							Default:     1,
-						},
-						"selector": {
-							Type:        schema.TypeMap,
-							Description: "A label query over pods that should match the Replicas count. If Selector is empty, it is defaulted to the labels present on the Pod template. Label keys and values that must match in order to be controlled by this replication controller, if empty defaulted to labels on Pod template. More info: http://kubernetes.io/docs/user-guide/labels#label-selectors",
-							Required:    true,
-						},
-						"template": {
-							Type:        schema.TypeList,
-							Description: "Describes the pod that will be created if insufficient replicas are detected. This takes precedence over a TemplateRef. More info: http://kubernetes.io/docs/user-guide/replication-controller#pod-template",
-							Required:    true,
-							MaxItems:    1,
-							Elem: &schema.Resource{
-								Schema: replicationControllerTemplateFieldSpec(),
-							},
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    resourceKubernetesReplicationControllerV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceKubernetesReplicationControllerUpgradeV0,
+			},
+		},
+		SchemaVersion: 1,
+		Schema:        resourceKubernetesReplicationControllerSchemaV1(),
+	}
+}
+
+func resourceKubernetesReplicationControllerSchemaV1() map[string]*schema.Schema {
+
+	return map[string]*schema.Schema{
+		"metadata": namespacedMetadataSchema("replication controller", true),
+		"spec": {
+			Type:        schema.TypeList,
+			Description: "Spec defines the specification of the desired behavior of the replication controller. More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#spec-and-status",
+			Required:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"min_ready_seconds": {
+						Type:        schema.TypeInt,
+						Description: "Minimum number of seconds for which a newly created pod should be ready without any of its container crashing, for it to be considered available. Defaults to 0 (pod will be considered available as soon as it is ready)",
+						Optional:    true,
+						Default:     0,
+					},
+					"replicas": {
+						Type:        schema.TypeInt,
+						Description: "The number of desired replicas. Defaults to 1. More info: http://kubernetes.io/docs/user-guide/replication-controller#what-is-a-replication-controller",
+						Optional:    true,
+						Default:     1,
+					},
+					"selector": {
+						Type:        schema.TypeMap,
+						Description: "A label query over pods that should match the Replicas count. If Selector is empty, it is defaulted to the labels present on the Pod template. Label keys and values that must match in order to be controlled by this replication controller, if empty defaulted to labels on Pod template. More info: http://kubernetes.io/docs/user-guide/labels#label-selectors",
+						Required:    true,
+					},
+					"template": {
+						Type:        schema.TypeList,
+						Description: "Describes the pod that will be created if insufficient replicas are detected. This takes precedence over a TemplateRef. More info: http://kubernetes.io/docs/user-guide/replication-controller#pod-template",
+						Required:    true,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: replicationControllerTemplateFieldSpec(),
 						},
 					},
 				},

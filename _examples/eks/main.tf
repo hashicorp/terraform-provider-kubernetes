@@ -2,7 +2,6 @@ terraform {
   required_providers {
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "9.9.9"
     }
     aws = {
       source  = "hashicorp/aws"
@@ -28,8 +27,9 @@ module "cluster" {
 
   cluster_name    = module.vpc.cluster_name
   cluster_version = var.kubernetes_version
-  manage_aws_auth = false
-  # This kubeconfig expires in 15 minutes, so we'll use another method.
+  manage_aws_auth = false # Managed in ./kubernetes-config/main.tf instead.
+  # This kubeconfig expires in 15 minutes, so we'll use an exec block instead.
+  # See ./kubernetes-config/main.tf provider block for details.
   write_kubeconfig = false
 
   worker_groups = [
@@ -45,10 +45,9 @@ module "cluster" {
   }
 }
 
-module "node-config" {
-  source                  = "./node-config"
+module "kubernetes-config" {
+  source                  = "./kubernetes-config"
   k8s_node_role_arn       = list(module.cluster.worker_iam_role_arn)
-  cluster_ca              = module.cluster.cluster_certificate_authority_data
   cluster_name            = module.cluster.cluster_id # creates dependency on cluster creation
   cluster_endpoint        = module.cluster.cluster_endpoint
   cluster_oidc_issuer_url = module.cluster.cluster_oidc_issuer_url

@@ -14,7 +14,7 @@ variable "cluster_name" {
 }
 
 variable "kubernetes_version" {
-  default = "1.16.8"
+  default = "1.18"
 }
 
 variable "username" {

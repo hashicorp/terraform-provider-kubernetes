@@ -16,7 +16,19 @@ terraform init
 terraform apply
 ```
 
-Optionally, the Kubernetes version can also be specified:
+## Kubeconfig for manual CLI access
+
+This example generates a kubeconfig file in the current working directory. However, the token in this config expires in 15 minutes. The token can be refreshed by running `terraform apply` again. Export the KUBECONFIG to manually access the cluster:
+
+```
+terraform apply
+export KUBECONFIG=$(terraform output kubeconfig_path)
+kubectl get pods -n test
+```
+
+## Optional variables
+
+The Kubernetes version can be specified at apply time:
 
 ```
 terraform apply -var=kubernetes_version=1.18
@@ -24,26 +36,11 @@ terraform apply -var=kubernetes_version=1.18
 
 See https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html for currently available versions.
 
-## Kubeconfig for manual CLI access
 
-This example generates a kubeconfig file in the current working directory. However, the token in this config expires in 15 minutes. I can be refreshed by running `terraform apply` again. Export the KUBECONFIG to manually access the cluster.
+### Worker node count and instance type
 
-```
-export KUBECONFIG=$(terraform output kubeconfig_path)
-kubectl get pods -n test
-```
-
-## Worker node count and instance type
-
-You can control the amount of worker nodes in the cluster as well as their machine type, using the following variables:
-
- - `TF_VAR_workers_count`
- - `TF_VAR_workers_type`
-
-Export values for them or pass them to the apply command line:
+The number of worker nodes, and the instance type, can be specified at apply time:
 
 ```
 terraform apply -var=workers_count=4 -var=workers_type=m4.xlarge
 ```
-
-

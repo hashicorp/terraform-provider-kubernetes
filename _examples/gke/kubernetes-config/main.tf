@@ -55,6 +55,26 @@ resource "kubernetes_deployment" "test" {
   }
 }
 
+provider "helm" {
+  kubernetes {
+    host = var.cluster_endpoint
+    token = data.google_client_config.default.access_token
+    cluster_ca_certificate = base64decode(var.cluster_ca_cert)
+  }
+}
+
+resource helm_release nginx_ingress {
+  name       = "nginx-ingress-controller"
+
+  repository = "https://charts.bitnami.com/bitnami"
+  chart      = "nginx-ingress-controller"
+
+  set {
+    name  = "service.type"
+    value = "ClusterIP"
+  }
+}
+
 data "template_file" "kubeconfig" {
   template = file("${path.module}/kubeconfig-template.yaml")
 

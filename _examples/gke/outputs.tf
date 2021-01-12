@@ -5,3 +5,7 @@ output "kubeconfig_path" {
 output "cluster_name" {
   value = local.cluster_name
 }
+
+output "google_zone" {
+  value = module.gke-cluster.google_zone
+}

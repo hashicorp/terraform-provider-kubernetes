@@ -1,19 +1,22 @@
 provider "google" {
-  // Provider settings to be provided via ENV variables
+  # Provider is configured using environment variables: GOOGLE_REGION, GOOGLE_PROJECT, GOOGLE_CREDENTIALS.
+  # This can be set statically, if preferred. See docs for details.
+  # https://registry.terraform.io/providers/hashicorp/google/latest/docs/guides/provider_reference#full-reference
 }
 
+# This is used to set local variable google_zone.
+# This can be replaced with a statically-configured zone, if preferred.
 data "google_compute_zones" "available" {
 }
 
-
 data "google_container_engine_versions" "supported" {
-  location           = data.google_compute_zones.available.names[0]
+  location           = local.google_zone
   version_prefix     = var.kubernetes_version
 }
 
 resource "google_container_cluster" "primary" {
   name               = var.cluster_name
-  location           = data.google_compute_zones.available.names[0]
+  location           = local.google_zone
   initial_node_count = var.workers_count
   min_master_version = data.google_container_engine_versions.supported.latest_master_version
   # node version must match master version

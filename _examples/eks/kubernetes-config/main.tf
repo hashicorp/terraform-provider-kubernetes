@@ -29,7 +29,7 @@ MAPPEDROLE
 }
 
 resource "kubernetes_config_map" "name" {
-  depends_on = [var.cluster_name]
+  depends_on  = [var.cluster_name]
   metadata {
     name      = "aws-auth"
     namespace = "kube-system"

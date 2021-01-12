@@ -9,3 +9,7 @@ variable "workers_count" {
 variable "cluster_name" {
   type = string
 }
+
+locals {
+  google_zone = data.google_compute_zones.available.names[0]
+}

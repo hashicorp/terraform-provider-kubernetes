@@ -17,3 +17,7 @@ output "cluster_ca_cert" {
 output "cluster_name" {
   value = google_container_cluster.primary.name
 }
+
+output "google_zone" {
+  value = local.google_zone
+}

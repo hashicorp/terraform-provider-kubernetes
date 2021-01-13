@@ -48,7 +48,7 @@ module "cluster" {
 module "kubernetes-config" {
   source                  = "./kubernetes-config"
   k8s_node_role_arn       = list(module.cluster.worker_iam_role_arn)
+  cluster_ca_cert         = module.cluster.cluster_certificate_authority_data
   cluster_name            = module.cluster.cluster_id # creates dependency on cluster creation
   cluster_endpoint        = module.cluster.cluster_endpoint
-  cluster_oidc_issuer_url = module.cluster.cluster_oidc_issuer_url
 }

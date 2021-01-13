@@ -42,9 +42,18 @@ gcloud container get-server-config --region $GOOGLE_REGION
 
 ## Kubeconfig for manual CLI access
 
-This example generates a kubeconfig file in the current working directory. However, the token in this config will expire after 1 hour. The token can be refreshed by running `terraform apply` again. Alternatively, a longer-lived configuration can be generated using the gcloud tool. Note: this command will overwrite the default kubeconfig at `$HOME/.kube/config`.
+This example generates a kubeconfig file in the current working directory. However, the token in this config will expire after 1 hour. The token can be refreshed by running `terraform apply` again.
+
+```
+terraform apply
+export KUBECONFIG=$(terraform output kubeconfig_path|jq -r)
+kubectl get pods -n test
+```
+
+Alternatively, a longer-lived configuration can be generated using the gcloud tool. Note: this command will overwrite the default kubeconfig at `$HOME/.kube/config`.
 
 ```
 gcloud container clusters get-credentials $(terraform output cluster_name|jq -r) --zone $(terraform output google_zone |jq -r)
+kubectl get pods -n test
 ```
 

@@ -1,31 +1,11 @@
-data "aws_eks_cluster_auth" "cluster" {
-  name = var.cluster_name
-}
-
-data "aws_eks_cluster" "cluster" {
-  name = var.cluster_name
-}
-
 provider "kubernetes" {
   host                   = var.cluster_endpoint
-  token                  = data.aws_eks_cluster_auth.cluster.token
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
+  cluster_ca_certificate = base64decode(var.cluster_ca_cert)
   exec {
     api_version = "client.authentication.k8s.io/v1alpha1"
     args        = ["eks", "get-token", "--cluster-name", var.cluster_name]
     command     = "aws"
   }
-}
-
-locals {
-  mapped_role_format = <<MAPPEDROLE
-- rolearn: %s
-  username: system:node:{{EC2PrivateDNSName}}
-  groups:
-    - system:bootstrappers
-    - system:nodes
-MAPPEDROLE
-
 }
 
 resource "kubernetes_config_map" "name" {
@@ -56,12 +36,14 @@ resource "null_resource" "generate-kubeconfig" {
 
 
 resource "kubernetes_namespace" "test" {
+  depends_on  = [var.cluster_name]
   metadata {
     name = "test"
   }
 }
 
 resource "kubernetes_deployment" "test" {
+  depends_on  = [var.cluster_name]
   metadata {
     name = "test"
     namespace= kubernetes_namespace.test.metadata.0.name
@@ -103,7 +85,7 @@ resource "kubernetes_deployment" "test" {
 provider "helm" {
   kubernetes {
     host                   = var.cluster_endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
+    cluster_ca_certificate = base64decode(var.cluster_ca_cert)
     exec {
       api_version = "client.authentication.k8s.io/v1alpha1"
       args        = ["eks", "get-token", "--cluster-name", var.cluster_name]
@@ -113,6 +95,7 @@ provider "helm" {
 }
 
 resource helm_release nginx_ingress {
+  depends_on  = [var.cluster_name]
   name       = "nginx-ingress-controller"
 
   repository = "https://charts.bitnami.com/bitnami"

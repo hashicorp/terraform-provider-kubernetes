@@ -44,3 +44,7 @@ The number of worker nodes, and the instance type, can be specified at apply tim
 ```
 terraform apply -var=workers_count=4 -var=workers_type=m4.xlarge
 ```
+
+## Additional configuration of EKS
+
+To view all available configuration options for the EKS module used in this example, see [terraform-aws-modules/eks docs](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest).

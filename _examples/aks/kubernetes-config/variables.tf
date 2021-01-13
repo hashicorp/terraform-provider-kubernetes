@@ -1,0 +1,1 @@
+azurerm_managed_disk.test.id

@@ -3,15 +3,15 @@ provider "azurerm" {
 }
 
 resource "azurerm_resource_group" "test" {
-  name     = local.cluster_name
+  name     = var.cluster_name
   location = var.location
 }
 
 resource "azurerm_kubernetes_cluster" "test" {
-  name                = local.cluster_name
+  name                = var.cluster_name
   location            = azurerm_resource_group.test.location
   resource_group_name = azurerm_resource_group.test.name
-  dns_prefix          = local.cluster_name
+  dns_prefix          = var.cluster_name
 
   default_node_pool {
     name       = "default"
@@ -21,28 +21,6 @@ resource "azurerm_kubernetes_cluster" "test" {
 
   identity {
     type = "SystemAssigned"
-  }
-
-  addon_profile {
-    aci_connector_linux {
-      enabled = false
-    }
-
-    azure_policy {
-      enabled = false
-    }
-
-    http_application_routing {
-      enabled = false
-    }
-
-    kube_dashboard {
-      enabled = true
-    }
-
-    oms_agent {
-      enabled = false
-    }
   }
 }
 

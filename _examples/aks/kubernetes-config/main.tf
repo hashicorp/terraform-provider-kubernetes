@@ -1,14 +1,21 @@
-# This fetches a new token, which will expire in 1 hour.
+provider "azurerm" {
+  features {}
+}
+
+# The client certificate used for authenticating into the AKS cluster will eventually expire,
+# (especially true if your clusters are created and destroyed periodically).
+# This data source fetches new authentication certificates.
+# Alternatively, use `terraform refresh` to fetch them manually.
 data "azurerm_kubernetes_cluster" "main" {
   name                = var.cluster_name
   resource_group_name = var.cluster_name
 }
 
 provider "kubernetes" {
-  host                   = "${data.azurerm_kubernetes_cluster.main.kube_config.0.host}"
-  client_certificate     = "${base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)}"
-  client_key             = "${base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_key)}"
-  cluster_ca_certificate = "${base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)}"
+  host                   = var.cluster_endpoint
+  cluster_ca_certificate = var.cluster_ca_cert
+  client_key             = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_key)
+  client_certificate     = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
 }
 
 resource "kubernetes_namespace" "test" {
@@ -31,7 +38,7 @@ depends_on = [var.cluster_name]
     persistent_volume_source {
       azure_disk {
         caching_mode = "None"
-        data_disk_uri = var.disk_uri
+        data_disk_uri = var.data_disk_uri
         disk_name = "managed"
         kind = "Managed"
       }
@@ -80,9 +87,10 @@ resource "kubernetes_deployment" "test" {
 
 provider "helm" {
   kubernetes {
-    host = var.cluster_endpoint
-    token = data.google_client_config.default.access_token
-    cluster_ca_certificate = base64decode(var.cluster_ca_cert)
+    host                   = var.cluster_endpoint
+    client_certificate     = var.cluster_ca_cert
+    client_key             = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_key)
+    cluster_ca_certificate = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
   }
 }
 
@@ -97,21 +105,3 @@ resource helm_release nginx_ingress {
     value = "ClusterIP"
   }
 }
-
-data "template_file" "kubeconfig" {
-  template = file("${path.module}/kubeconfig-template.yaml")
-
-  vars = {
-    cluster_name    = var.cluster_name
-    endpoint        = var.cluster_endpoint
-    cluster_ca      = var.cluster_ca_cert
-    cluster_token   = data.google_client_config.default.access_token
-  }
-}
-
-resource "local_file" "kubeconfig" {
-  depends_on = [var.cluster_id]
-  content  = data.template_file.kubeconfig.rendered
-  filename = "${path.root}/kubeconfig"
-}
-

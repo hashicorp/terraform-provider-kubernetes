@@ -9,3 +9,7 @@ variable "workers_count" {
 variable "cluster_name" {
   type = string
 }
+
+variable "location" {
+  type = string
+}

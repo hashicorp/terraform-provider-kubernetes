@@ -7,26 +7,27 @@ provider "azurerm" {
 # This data source fetches new authentication certificates.
 # Alternatively, use `terraform refresh` to fetch them manually.
 data "azurerm_kubernetes_cluster" "main" {
+depends_on = [var.cluster_id]
   name                = var.cluster_name
   resource_group_name = var.cluster_name
 }
 
 provider "kubernetes" {
-  host                   = var.cluster_endpoint
-  cluster_ca_certificate = var.cluster_ca_cert
+  host                   = data.azurerm_kubernetes_cluster.main.kube_config.0.host
   client_key             = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_key)
   client_certificate     = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
+  cluster_ca_certificate = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
 }
 
 resource "kubernetes_namespace" "test" {
-depends_on = [var.cluster_name]
+depends_on = [var.cluster_id]
   metadata {
     name = "test"
   }
 }
 
 resource "kubernetes_persistent_volume" "test" {
-depends_on = [var.cluster_name]
+depends_on = [var.cluster_id]
   metadata {
     name = "test"
   }
@@ -47,6 +48,7 @@ depends_on = [var.cluster_name]
 }
 
 resource "kubernetes_deployment" "test" {
+depends_on = [var.cluster_id]
   metadata {
     name = "test"
     namespace= kubernetes_namespace.test.metadata.0.name
@@ -87,9 +89,9 @@ resource "kubernetes_deployment" "test" {
 
 provider "helm" {
   kubernetes {
-    host                   = var.cluster_endpoint
-    client_certificate     = var.cluster_ca_cert
+    host                   = data.azurerm_kubernetes_cluster.main.kube_config.0.host
     client_key             = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_key)
+    client_certificate     = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
     cluster_ca_certificate = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
   }
 }

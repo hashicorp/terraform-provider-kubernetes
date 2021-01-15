@@ -1,8 +1,4 @@
-variable "cluster_ca_cert" {
-  type = string
-}
-
-variable "cluster_endpoint" {
+variable "cluster_id" {
   type = string
 }
 

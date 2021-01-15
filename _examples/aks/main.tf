@@ -30,8 +30,7 @@ module "aks-cluster" {
 # any Kubernetes resources are created.
 module "kubernetes-config" {
   source                  = "./kubernetes-config"
-  cluster_name            = module.aks-cluster.cluster_name
-  cluster_endpoint        = module.aks-cluster.cluster_endpoint
-  cluster_ca_cert         = module.aks-cluster.cluster_ca_cert
+  cluster_id              = module.aks-cluster.cluster_id
+  cluster_name            = local.cluster_name
   data_disk_uri           = module.aks-cluster.data_disk_uri
 }

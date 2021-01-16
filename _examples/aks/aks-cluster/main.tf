@@ -26,7 +26,7 @@ resource "azurerm_kubernetes_cluster" "test" {
 
 resource "local_file" "kubeconfig" {
   content = azurerm_kubernetes_cluster.test.kube_config_raw
-  filename = "${path.module}/kubeconfig"
+  filename = "${path.root}/kubeconfig"
 }
 
 resource "azurerm_managed_disk" "test" {

@@ -25,12 +25,9 @@ module "aks-cluster" {
   location                = var.location
 }
 
-# By referencing the aks-cluster module as inputs to the kubernetes-config module,
-# we establish a dependency between the two. This will create the AKS cluster before
-# any Kubernetes resources are created.
 module "kubernetes-config" {
   source                  = "./kubernetes-config"
-  cluster_id              = module.aks-cluster.cluster_id
+  cluster_id              = module.aks-cluster.cluster_id # creates dependency on cluster creation
   cluster_name            = local.cluster_name
   data_disk_uri           = module.aks-cluster.data_disk_uri
 }

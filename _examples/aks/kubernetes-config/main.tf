@@ -97,6 +97,7 @@ provider "helm" {
 }
 
 resource helm_release nginx_ingress {
+depends_on = [var.cluster_id]
   name       = "nginx-ingress-controller"
 
   repository = "https://charts.bitnami.com/bitnami"

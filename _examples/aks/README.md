@@ -27,23 +27,21 @@ export KUBECONFIG=$(terraform output kubeconfig_path|jq -r)
 kubectl get pods -n test
 ```
 
-However, in a real-world scenario, this config file would have to be replaced periodically as the AKS client certificates eventually expire (see the [Azure documentation](https://docs.microsoft.com/en-us/azure/aks/certificate-rotation) for the exact expiry dates). If the certificates are replaced, the AKS module will have to be targeted to pull in the new credentials before they can be passed into the Kubernetes or Helm providers.
+However, in a real-world scenario, this config file would have to be replaced periodically as the AKS client certificates eventually expire (see the [Azure documentation](https://docs.microsoft.com/en-us/azure/aks/certificate-rotation) for the exact expiry dates). If the certificates (or other authentication attributes) are replaced, run `terraform apply` to pull in the new credentials.
 
 ```
-terraform state rm module.kubernetes-config
-terraform plan
 terraform apply
 export KUBECONFIG=$(terraform output kubeconfig_path|jq -r)
 kubectl get pods -n test
 ```
 
-This approach prevents the Kubernetes and Helm provider from using cached, invalid credentials, which would cause provider configuration errors durring the plan and apply phases. (The resources that were previously deployed will not be affected by the `state rm`).
+This approach prevents the Kubernetes and Helm providers from attempting to use cached, invalid credentials, which would cause provider configuration errors durring the plan and apply phases.
 
-## Replacing the AKS cluster, or its authentication credentials
+## Replacing the AKS cluster and re-creating the Kubernetes / Helm resources
 
 When the cluster is initially created, the Kubernetes and Helm providers will not be initialized until authentication details are created for the cluster. However, for future operations that may involve replacing the underlying cluster (for example, changing VM sizes), the AKS cluster will have to be targeted without the Kubernetes/Helm providers, as shown below. This is done by removing the `module.kubernetes-config` from Terraform State prior to replacing cluster credentials, to avoid passing outdated credentials into the providers.
 
-This will create the new cluster and the Kubernetes resources in a single apply. If this is being applied to an existing cluster (such as in the case of credential rotation), the existing Kubernetes/Helm resources will continue running and simply undergo a credential refresh.
+This will create the new cluster and the Kubernetes resources in a single apply.
 
 ```
 terraform state rm module.kubernetes-config

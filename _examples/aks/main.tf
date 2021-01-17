@@ -15,19 +15,37 @@ terraform {
   }
 }
 
-resource "random_id" "cluster_name" {
-  byte_length = 5
+provider "kubernetes" {
+  host                   = module.aks-cluster.endpoint
+  client_key             = base64decode(module.aks-cluster.client_key)
+  client_certificate     = base64decode(module.aks-cluster.client_cert)
+  cluster_ca_certificate = base64decode(module.aks-cluster.ca_cert)
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = module.aks-cluster.endpoint
+    client_key             = base64decode(module.aks-cluster.client_key)
+    client_certificate     = base64decode(module.aks-cluster.client_cert)
+    cluster_ca_certificate = base64decode(module.aks-cluster.ca_cert)
+  }
+}
+
+provider "azurerm" {
+  features {}
 }
 
 module "aks-cluster" {
+  providers               = { azurerm = azurerm }
   source                  = "./aks-cluster"
   cluster_name            = local.cluster_name
   location                = var.location
 }
 
 module "kubernetes-config" {
+  providers               = { kubernetes = kubernetes, helm = helm }
+  depends_on              = [module.aks-cluster]
   source                  = "./kubernetes-config"
-  cluster_id              = module.aks-cluster.cluster_id # creates dependency on cluster creation
   cluster_name            = local.cluster_name
   data_disk_uri           = module.aks-cluster.data_disk_uri
 }

@@ -1,7 +1,3 @@
-provider "azurerm" {
-  features {}
-}
-
 resource "azurerm_resource_group" "test" {
   name     = var.cluster_name
   location = var.location
@@ -16,7 +12,8 @@ resource "azurerm_kubernetes_cluster" "test" {
   default_node_pool {
     name       = "default"
     node_count = 1
-    vm_size    = "Standard_DS2_v2"
+    #vm_size    = "Standard_DS2_v2"
+    vm_size    = "Standard_A2_v2"
   }
 
   identity {

@@ -9,7 +9,12 @@ You will need the following environment variables to be set:
   - `ARM_CLIENT_ID`
   - `ARM_CLIENT_SECRET`
 
-See [AWS Provider docs](https://www.terraform.io/docs/providers/aws/index.html#configuration-reference) for more details about these variables and alternatives, like `AWS_PROFILE`.
+Ensure that `KUBE_CONFIG_FILE` and `KUBE_CONFIG_FILES` environment variables are NOT set, as they will interfere with the cluster build.
+
+```
+unset KUBE_CONFIG_FILE
+unset KUBE_CONFIG_FILES
+```
 
 To install the AKS cluster using default values, run terraform init and apply from the directory containing this README.
 

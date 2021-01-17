@@ -18,6 +18,13 @@ GOOGLE_PROJECT=my-gcp-project
 
 See [Google Provider docs](https://registry.terraform.io/providers/hashicorp/google/latest/docs/guides/provider_reference#full-reference) for more details about these variables.
 
+Ensure that `KUBE_CONFIG_FILE` and `KUBE_CONFIG_FILES` environment variables are NOT set, as they will interfere with the cluster build.
+
+```
+unset KUBE_CONFIG_FILE
+unset KUBE_CONFIG_FILES
+```
+
 To install the GKE cluster using default values, run terraform init and apply from the directory containing this README.
 
 ```

@@ -55,3 +55,14 @@ terraform apply -var=workers_count=4 -var=workers_type=m4.xlarge
 ## Additional configuration of EKS
 
 To view all available configuration options for the EKS module used in this example, see [terraform-aws-modules/eks docs](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest).
+
+## Replacing the EKS cluster and re-creating the Kubernetes / Helm resources
+
+When the cluster is initially created, the Kubernetes and Helm providers will not be initialized until authentication details are created for the cluster. However, for future operations that may involve replacing the underlying cluster (for example, changing VM sizes), the EKS cluster will have to be targeted without the Kubernetes/Helm providers, as shown below. This is done by removing the `module.kubernetes-config` from Terraform State prior to replacing cluster credentials, to avoid passing outdated credentials into the providers.
+
+This will create the new cluster and the Kubernetes resources in a single apply.
+
+```
+terraform state rm module.kubernetes-config
+terraform apply
+```

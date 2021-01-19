@@ -27,14 +27,12 @@ require (
 	github.com/gookit/color v1.2.9 // indirect
 	github.com/gostaticanalysis/analysisutil v0.2.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
-	github.com/hashicorp/go-hclog v0.14.1 // indirect
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/hashicorp/go-version v1.2.1
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/hcl/v2 v2.6.0 // indirect
-	github.com/hashicorp/terraform-json v0.6.0 // indirect
-	github.com/hashicorp/terraform-plugin-sdk/v2 v2.2.0
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.4.0
 	github.com/hashicorp/yamux v0.0.0-20200609203250-aecfd211c9ce // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a

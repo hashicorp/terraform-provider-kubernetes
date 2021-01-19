@@ -32,12 +32,18 @@ export KUBECONFIG=$(terraform output -raw kubeconfig_path)
 kubectl get pods -n test
 ```
 
-However, in a real-world scenario, this config file would have to be replaced periodically as the AKS client certificates eventually expire (see the [Azure documentation](https://docs.microsoft.com/en-us/azure/aks/certificate-rotation) for the exact expiry dates). If the certificates (or other authentication attributes) are replaced, run `terraform apply` to pull in the new credentials.
+However, in a real-world scenario, this config file would have to be replaced periodically as the AKS client certificates eventually expire (see the [Azure documentation](https://docs.microsoft.com/en-us/azure/aks/certificate-rotation) for the exact expiry dates). If the certificates (or other authentication attributes) are replaced, run a targeted `terraform apply` to save the new credentials into state.
 
 ```
+terraform plan -target=module.aks-cluster
+terraform apply -target=module.aks-cluster
+```
+
+Once the targeted apply is finished, the Kubernetes and Helm providers will be available for use again. Run `terraform apply` again (without targeting) to apply any updates to Kubernetes resources.
+
+```
+terraform plan
 terraform apply
-export KUBECONFIG=$(terraform output -raw kubeconfig_path)
-kubectl get pods -n test
 ```
 
 This approach prevents the Kubernetes and Helm providers from attempting to use cached, invalid credentials, which would cause provider configuration errors durring the plan and apply phases.

@@ -47,5 +47,4 @@ module "kubernetes-config" {
   depends_on              = [module.aks-cluster]
   source                  = "./kubernetes-config"
   cluster_name            = local.cluster_name
-  data_disk_uri           = module.aks-cluster.data_disk_uri
 }

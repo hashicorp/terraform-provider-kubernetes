@@ -29,7 +29,7 @@ This example generates a kubeconfig file in the current working directory. Howev
 
 ```
 terraform apply
-export KUBECONFIG=$(terraform output kubeconfig_path|jq -r)
+export KUBECONFIG=$(terraform output -raw kubeconfig_path)
 kubectl get pods -n test
 ```
 

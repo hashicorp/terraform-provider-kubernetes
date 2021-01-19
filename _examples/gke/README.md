@@ -53,14 +53,14 @@ This example generates a kubeconfig file in the current working directory. Howev
 
 ```
 terraform apply
-export KUBECONFIG=$(terraform output kubeconfig_path|jq -r)
+export KUBECONFIG=$(terraform output -raw kubeconfig_path)
 kubectl get pods -n test
 ```
 
 Alternatively, a longer-lived configuration can be generated using the gcloud tool. Note: this command will overwrite the default kubeconfig at `$HOME/.kube/config`.
 
 ```
-gcloud container clusters get-credentials $(terraform output cluster_name|jq -r) --zone $(terraform output google_zone |jq -r)
+gcloud container clusters get-credentials $(terraform output -raw cluster_name) --zone $(terraform output -raw google_zone)
 kubectl get pods -n test
 ```
 

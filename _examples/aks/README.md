@@ -28,7 +28,7 @@ terraform apply
 This example generates a kubeconfig file in the current working directory, which can be used for manual CLI access to the cluster.
 
 ```
-export KUBECONFIG=$(terraform output kubeconfig_path|jq -r)
+export KUBECONFIG=$(terraform output -raw kubeconfig_path)
 kubectl get pods -n test
 ```
 
@@ -36,7 +36,7 @@ However, in a real-world scenario, this config file would have to be replaced pe
 
 ```
 terraform apply
-export KUBECONFIG=$(terraform output kubeconfig_path|jq -r)
+export KUBECONFIG=$(terraform output -raw kubeconfig_path)
 kubectl get pods -n test
 ```
 

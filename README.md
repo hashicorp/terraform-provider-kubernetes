@@ -5,8 +5,8 @@
     <img src="https://cdn.rawgit.com/hashicorp/terraform-website/master/content/source/assets/images/logo-hashicorp.svg" alt="Terraform logo" title="Terrafpr," align="right" height="50" />
 </a>
 
-- [Getting Started](https://learn.hashicorp.com/terraform?track=kubernetes#kubernetes)
-- Usage 
+- [Getting Started](https://learn.hashicorp.com/collections/terraform/kubernetes)
+- Usage
   - [Documentation](https://www.terraform.io/docs/providers/kubernetes/index.html)
   - [Examples](https://github.com/hashicorp/terraform-provider-kubernetes/tree/master/_examples)
 - Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)

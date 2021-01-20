@@ -25,19 +25,19 @@ resource "kubernetes_deployment" "test" {
     replicas = 2
     selector {
       match_labels = {
-        TestLabelOne   = "one"
+        app = "test"
       }
     }
     template {
       metadata {
         labels = {
-          TestLabelOne   = "one"
+          app  = "test"
         }
       }
       spec {
         container {
           image = "nginx:1.19.4"
-          name  = "tf-acc-test"
+          name  = "nginx"
 
           resources {
             limits = {

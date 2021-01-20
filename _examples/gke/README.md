@@ -1,6 +1,6 @@
 # GKE (Google Container Engine)
 
-This example shows how to use the Terraform Kubernetes Provider and Terraform Helm Provider to configure a GKE cluster. The example builds the GKE cluster and applies the Kubernetes configurations in a single operation.
+This example shows how to use the Terraform Kubernetes Provider and Terraform Helm Provider to configure a GKE cluster. The example config builds the GKE cluster and applies the Kubernetes configurations in a single operation.
 
 You will need the following environment variables to be set:
 

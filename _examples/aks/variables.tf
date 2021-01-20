@@ -9,5 +9,4 @@ resource "random_id" "cluster_name" {
 
 locals {
   cluster_name                = "tf-k8s-${random_id.cluster_name.hex}"
-  cluster_credentials_updated = timestamp()
 }

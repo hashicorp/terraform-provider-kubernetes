@@ -43,9 +43,12 @@ Terraform providers for various cloud providers feature resources to spin up man
 
 To use these credentials with the Kubernetes provider, they can be interpolated into the respective attributes of the Kubernetes provider configuration block.
 
-~> **WARNING** When using interpolation to pass credentials to the Kubernetes provider from other resources, these resources SHOULD NOT be created in the same `apply` operation where Kubernetes provider resources are also used. This will lead to intermittent and unpredictable errors which are hard to debug and diagnose. The root issue lies with the order in which Terraform itself evaluates the provider blocks vs. actual resources. Please refer to [this section of Terraform docs](https://www.terraform.io/docs/configuration/providers.html#provider-configuration) for further explanation.
+~> **WARNING** When using interpolation to pass credentials to the Kubernetes provider from other resources, these resources SHOULD NOT be created in the same Terraform module where Kubernetes provider resources are also used. This will lead to intermittent and unpredictable errors which are hard to debug and diagnose. The root issue lies with the order in which Terraform itself evaluates the provider blocks vs. actual resources. Please refer to [this section of Terraform docs](https://www.terraform.io/docs/configuration/providers.html#provider-configuration) for further explanation.
 
-The best-practice in this case is to ensure that the cluster itself and the Kubernetes provider resources are managed with separate `apply` operations. Data-sources can be used to convey values between the two stages as needed.
+The most reliable way to configure the Kubernetes provider is to ensure that the cluster itself and the Kubernetes provider resources can be managed with separate `apply` operations. Data-sources can be used to convey values between the two stages as needed.
+
+For specific usage examples, see the guides for [AKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/master/_examples/aks/README.md), [EKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/master/_examples/eks/README.md), and [GKE](https://github.com/hashicorp/terraform-provider-kubernetes/blob/master/_examples/gke/README.md).
+
 
 ## Authentication
 
@@ -110,6 +113,25 @@ provider "kubernetes" {
 
 ~> If you have **both** valid configurations in a config file and static configuration, the static one is used as an override.
 i.e. any static field will override its counterpart loaded from the config.
+
+## Exec-based credential plugins
+
+Some cloud providers have short-lived authentication tokens that can expire relatively quickly. To ensure the Kubernetes provider is receiving valid credentials, an exec-based plugin can be used to fetch a new token before initializing the provider. For example, on EKS, the command `eks get-token` can be used:
+
+```hcl
+provider "kubernetes" {
+￼ host                   = var.cluster_endpoint
+￼ cluster_ca_certificate = base64decode(var.cluster_ca_cert)
+￼ exec {
+￼   api_version = "client.authentication.k8s.io/v1alpha1"
+￼   args        = ["eks", "get-token", "--cluster-name", var.cluster_name]
+￼   command     = "aws"
+￼ }
+}
+```
+
+For further reading, see these examples which demonstrate different approaches to keeping the cluster credentials up to date: [AKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/master/_examples/aks/README.md), [EKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/master/_examples/eks/README.md), and [GKE](https://github.com/hashicorp/terraform-provider-kubernetes/blob/master/_examples/gke/README.md).
+
 
 ## Argument Reference
 

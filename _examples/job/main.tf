@@ -1,27 +1,39 @@
-provider "kubernetes" {
+terraform {
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = ">= 2.0"
+    }
+  }
 }
 
-resource "kubernetes_job" "test-pr" {
+variable "kube_config_file" {
+  default = "~/.kube/config"
+}
+
+provider "kubernetes" {
+  config_file = var.kube_config_file
+}
+
+resource "kubernetes_job" "test" {
   metadata {
-    name = "job-with-wait"
-    namespace = "default"
+    name = "test"
   }
   spec {
-    completions = 1
+    active_deadline_seconds = 120
+    backoff_limit = 10
+    completions = 10
+    parallelism = 2
     template {
       metadata {}
       spec {
         container {
-          name = "sleep"
-          image = "busybox:latest"
+          name = "hello"
+          image = "busybox"
           command = ["sleep", "30"]
         }
-        restart_policy = "Never"
       }
     }
   }
   wait_for_completion = true
-  timeouts {
-    create = "40s"
-  }
 }

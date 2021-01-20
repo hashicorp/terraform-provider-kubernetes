@@ -1,166 +1,54 @@
-provider "kubernetes" {
-}
-
-resource "kubernetes_ingress" "example" {
-  metadata {
-    name = "example"
-
-    annotations = {
-      "ingress.kubernetes.io/rewrite-target" = "/"
-    }
-  }
-
-  spec {
-    backend {
-      service_name = "echoserver"
-      service_port = 8080
-    }
-
-    rule {
-      host = "myminikube.info"
-
-      http {
-        path {
-          path = "/"
-
-          backend {
-            service_name = "echoserver"
-            service_port = 8080
-          }
-        }
-      }
-    }
-
-    rule {
-      host = "cheeses.all"
-
-      http {
-        path {
-          path = "/stilton"
-
-          backend {
-            service_name = "stilton-cheese"
-            service_port = 80
-          }
-        }
-
-        path {
-          path = "/cheddar"
-
-          backend {
-            service_name = "cheddar"
-            service_port = 80
-          }
-        }
-      }
+terraform {
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
     }
   }
 }
 
-resource "kubernetes_service" "echoserver" {
+resource "kubernetes_namespace" "test" {
   metadata {
-    name = "echoserver"
+    name = "test"
+    namespace = "test"
   }
+}
 
+resource "kubernetes_service" "test" {
+  metadata {
+    name = "test"
+    namespace = kubernetes_namespace.test.metadata.0.name
+  }
   spec {
-    selector = {
-      app = "echoserver"
-    }
-
     port {
-      port        = 8080
-      target_port = 8080
-    }
-
-    type = "NodePort"
-  }
-}
-
-resource "kubernetes_deployment" "echoserver" {
-  metadata {
-    name = "echoserver"
-  }
-
-  spec {
-    selector {
-      match_labels = {
-        app = "echoserver"
-      }
-    }
-
-    template {
-      metadata {
-        labels = {
-          app = "echoserver"
-        }
-      }
-
-      spec {
-        container {
-          name  = "echoserver"
-          image = "gcr.io/google_containers/echoserver:1.4"
-
-          port {
-            container_port = 8080
-          }
-        }
-      }
-    }
-  }
-}
-
-resource "kubernetes_deployment" "cheddar" {
-  metadata {
-    name = "cheddar-cheese"
-  }
-
-  spec {
-    selector {
-      match_labels = {
-        app = "cheddar"
-      }
-    }
-
-    template {
-      metadata {
-        labels = {
-          app = "cheddar"
-        }
-      }
-
-      spec {
-        container {
-          name  = "cheddar"
-          image = "errm/cheese:cheddar"
-
-          port {
-            container_port = 80
-          }
-        }
-      }
-    }
-  }
-}
-
-resource "kubernetes_service" "cheddar" {
-  metadata {
-    name = "cheddar"
-  }
-
-  spec {
-    selector = {
-      app = "cheddar"
-    }
-
-    port {
-      port        = 80
+      port = 80
       target_port = 80
+      protocol = "TCP"
     }
-
     type = "NodePort"
   }
 }
 
-output "ingress_ip" {
-  value = formatlist("%s ", kubernetes_ingress.example.load_balancer_ingress.*.ip)
+resource "kubernetes_ingress" "test" {
+  metadata {
+    name = "test"
+    namespace = kubernetes_namespace.test.metadata.0.name
+    annotations = {
+      "kubernetes.io/ingress.class" = "alb"
+      "alb.ingress.kubernetes.io/scheme" = "internet-facing"
+      "alb.ingress.kubernetes.io/target-type" = "ip"
+    }
+  }
+  spec {
+    rule {
+      http {
+        path {
+          path = "/*"
+          backend {
+            service_name = kubernetes_service.test.metadata.0.name
+            service_port = 80
+          }
+        }
+      }
+    }
+  }
 }

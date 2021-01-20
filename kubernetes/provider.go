@@ -212,10 +212,6 @@ func (k kubeClientsets) MainClientset() (*kubernetes.Clientset, error) {
 		return k.mainClientset, nil
 	}
 
-	if err := checkConfigurationValid(k.configData); err != nil {
-		return nil, err
-	}
-
 	if k.config != nil {
 		kc, err := kubernetes.NewForConfig(k.config)
 		if err != nil {
@@ -238,52 +234,6 @@ func (k kubeClientsets) AggregatorClientset() (*aggregator.Clientset, error) {
 		k.aggregatorClientset = ac
 	}
 	return k.aggregatorClientset, nil
-}
-
-var apiTokenMountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
-
-func inCluster() bool {
-	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
-	if host == "" || port == "" {
-		return false
-	}
-
-	if _, err := os.Stat(apiTokenMountPath); err != nil {
-		return false
-	}
-	return true
-}
-
-var authDocumentationURL = "https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs#authentication"
-
-func checkConfigurationValid(d *schema.ResourceData) error {
-	if inCluster() {
-		log.Printf("[DEBUG] Terraform appears to be running inside the Kubernetes cluster")
-		return nil
-	}
-
-	if os.Getenv("KUBE_CONFIG_PATHS") != "" {
-		return nil
-	}
-
-	atLeastOneOf := []string{
-		"host",
-		"config_path",
-		"config_paths",
-		"client_certificate",
-		"token",
-		"exec",
-	}
-	for _, a := range atLeastOneOf {
-		if _, ok := d.GetOk(a); ok {
-			return nil
-		}
-	}
-
-	return fmt.Errorf(`provider not configured: you must configure a path to your kubeconfig
-or explicitly supply credentials via the provider block or environment variables.
-
-See our documentation at: %s`, authDocumentationURL)
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {

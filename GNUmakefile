@@ -33,6 +33,18 @@ depscheck:
 	@git diff --exit-code -- vendor || \
 		(echo; echo "Unexpected difference in vendor/ directory. Run 'go mod vendor' command or revert any go.mod/go.sum/vendor changes and commit."; exit 1)
 
+examples-lint: tools
+	@echo "==> Checking _examples dir formatting..."
+	@./scripts/fmt-examples.sh || (echo; \
+		echo "Terraform formatting errors found in _examples dir."; \
+		echo "To see the full differences, run: ./scripts/fmt-examples.sh diff"; \
+		echo "To automatically fix the formatting, run 'make examples-lint-fix' and commit the changes."; \
+		exit 1)
+
+examples-lint-fix: tools
+	@echo "==> Fixing terraform formatting of _examples dir..."
+	@./scripts/fmt-examples.sh fix
+
 fmt:
 	gofmt -w $(GOFMT_FILES)
 

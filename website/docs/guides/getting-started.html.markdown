@@ -52,7 +52,7 @@ The provider needs to be configured with the proper credentials before it can be
 
 ```hcl
 provider "kubernetes" {
-  config_path = "/.kube/config"
+  config_path = "~/.kube/config"
 }
 ```
 

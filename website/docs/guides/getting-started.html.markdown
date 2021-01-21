@@ -96,11 +96,11 @@ data "google_container_cluster" "my_cluster" {
   zone = "us-east1-a"
 }
 ￼
-￼provider "kubernetes" {
-￼  host = "https://${data.google_container_cluster.my_cluster.endpoint}"
-￼  token = data.google_client_config.default.access_token
-￼  cluster_ca_certificate = base64decode(data.google_container_cluster.my_cluster.master_auth[0].cluster_ca_certificate)
-￼}
+provider "kubernetes" {
+￼ host = "https://${data.google_container_cluster.my_cluster.endpoint}"
+￼ token = data.google_client_config.default.access_token
+￼ cluster_ca_certificate = base64decode(data.google_container_cluster.my_cluster.master_auth[0].cluster_ca_certificate)
+}
 ```
 
 For short-lived authentication tokens, like those found in EKS, which [expire in 15 minutes](https://aws.github.io/aws-eks-best-practices/security/docs/iam/#controlling-access-to-eks-clusters), an exec-based credential plugin can be used to ensure the token is always up to date:
@@ -127,7 +127,7 @@ provider "kubernetes" {
 
 ## Creating your first Kubernetes resources
 
-Once the provider is configured, you can apply the Kubernetes resources defined in you Terraform config file. The following is an example Terraform config file containing a few Kubernetes resources. We'll use [minikube](https://minikube.sigs.k8s.io/docs/start/) for the Kubernetes cluster in this example. Ensure that a Kubernetes cluster of some kind is running before applying the example config below.
+Once the provider is configured, you can apply the Kubernetes resources defined in you Terraform config file. The following is an example Terraform config file containing a few Kubernetes resources. We'll use [minikube](https://minikube.sigs.k8s.io/docs/start/) for the Kubernetes cluster in this example, but any Kubernetes cluster can be used. Ensure that a Kubernetes cluster of some kind is running before applying the example config below.
 
 This configuration will create a scalable Nginx Deployment with 2 replicas. It will expose the Nginx frontend using a Service of type NodePort, which will make Nginx accessible via the public IP of the node running the containers.
 

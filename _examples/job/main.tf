@@ -12,7 +12,7 @@ variable "kube_config_file" {
 }
 
 provider "kubernetes" {
-  config_file = var.kube_config_file
+  config_path = var.kube_config_file
 }
 
 resource "kubernetes_job" "test" {

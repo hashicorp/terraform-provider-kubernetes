@@ -5,10 +5,12 @@
     <img src="https://cdn.rawgit.com/hashicorp/terraform-website/master/content/source/assets/images/logo-hashicorp.svg" alt="Terraform logo" title="Terrafpr," align="right" height="50" />
 </a>
 
-- [Getting Started](https://learn.hashicorp.com/terraform?track=kubernetes#kubernetes)
-- Usage 
-  - [Documentation](https://www.terraform.io/docs/providers/kubernetes/index.html)
+- [Getting Started](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/guides/getting-started)
+- [Interactive Tutorial](https://learn.hashicorp.com/collections/terraform/kubernetes)
+- Usage
+  - [Documentation](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs)
   - [Examples](https://github.com/hashicorp/terraform-provider-kubernetes/tree/master/_examples)
+  - [Kubernetes Provider 2.0 Upgrade guide](https://registry.terraform.io/providers/hashicorp/kubernetes/docs/guides/v2-upgrade-guide)
 - Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
 - Chat: [#terraform-providers in Kubernetes](https://kubernetes.slack.com/messages/CJY6ATQH4) ([Sign up here](http://slack.k8s.io/))
 - Roadmap: [Q3 2020](_about/ROADMAP.md)

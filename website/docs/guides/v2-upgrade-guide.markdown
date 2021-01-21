@@ -9,11 +9,155 @@ description: |-
 
 This guide covers the changes introduced in v2.0.0 of the Kubernetes provider and what you may need to do to upgrade your configuration.
 
-## Installing and testing this update
-
 Use `terraform init` to install version 2 of the provider. Then run `terraform plan` to determine if the upgrade will affect any existing resources. Some resources will have updated defaults and may be modified as a result. To opt out of this change, see the guide below and update your Terraform config file to match the existing resource settings (for example, set `automount_service_account_token=false`). Then run `terraform plan` again to ensure no resource updates will be applied.
 
 NOTE: Even if there are no resource updates to apply, you may need to run `terraform refresh` to update your state to the newest version. Otherwise, some commands might fail with `Error: missing expected {`.
+
+## Installing and testing this update
+
+The `required_providers` block can be used to move between version 1.x and version 2.x of the Kubernetes provider, for testing purposes. Please note that this is only possible using `terraform plan`. Once you run `terraform apply` or `terraform refresh`, the changes to Terraform State become permanent, and rolling back is no longer an option. It may be possible to roll back the State by making a copy of `.terraform.tfstate` before running `apply` or `refresh`, but this configuration is unsupported.
+
+### Using required_providers to test the update
+
+The version of the Kubernetes provider can be controlled using the `required_providers` block:
+
+```hcl
+terraform {
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = ">= 2.0"
+    }
+  }
+}
+```
+
+When the above code is in place, run `terraform init` to upgrade the provider version.
+
+```
+$ terraform init -upgrade
+```
+
+Ensure you have a valid provider block for 2.0 before proceeding with the `terraform plan` below. In version 2.0 of the provider, [provider configuration is now required](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs). A quick way to get up and running with the new provider configuration is to set `KUBE_CONFIG_PATH` to point to your existing kubeconfig.
+
+```
+export KUBE_CONFIG_PATH=$KUBECONFIG
+```
+
+Then run `terraform plan` to see what changes will be applied. This example shows the specific fields that would have been modified, and their effect on the resources, such as replacement or an in-place update. Some output is omitted for clarity.
+
+```
+$ export KUBE_CONFIG_PATH=$KUBECONFIG
+$ terraform plan
+
+kubernetes_pod.test: Refreshing state... [id=default/test]
+kubernetes_job.test: Refreshing state... [id=default/test]
+kubernetes_stateful_set.test: Refreshing state... [id=default/test]
+kubernetes_deployment.test: Refreshing state... [id=default/test]
+kubernetes_daemonset.test: Refreshing state... [id=default/test]
+kubernetes_cron_job.test: Refreshing state... [id=default/test]
+
+An execution plan has been generated and is shown below.
+Resource actions are indicated with the following symbols:
+  ~ update in-place
+-/+ destroy and then create replacement
+
+Terraform will perform the following actions:
+
+  # kubernetes_cron_job.test must be replaced
+-/+ resource "kubernetes_cron_job" "test" {
+                          ~ enable_service_links             = false -> true # forces replacement
+
+  # kubernetes_daemonset.test will be updated in-place
+  ~ resource "kubernetes_daemonset" "test" {
+      + wait_for_rollout = true
+          ~ template {
+              ~ spec {
+                  ~ enable_service_links             = false -> true
+
+  # kubernetes_deployment.test will be updated in-place
+  ~ resource "kubernetes_deployment" "test" {
+              ~ spec {
+                  ~ enable_service_links             = false -> true
+
+  # kubernetes_job.test must be replaced
+-/+ resource "kubernetes_job" "test" {
+                  ~ enable_service_links             = false -> true # forces replacement
+
+  # kubernetes_stateful_set.test will be updated in-place
+  ~ resource "kubernetes_stateful_set" "test" {
+              ~ spec {
+                  ~ enable_service_links             = false -> true
+
+Plan: 2 to add, 3 to change, 2 to destroy.
+```
+
+Using the output from `terraform plan`, you can make modifications to your existing Terraform config, to avoid any unwanted resource changes. For example, in the above config, adding `enable_service_links = false` to the resources would prevent any changes from occurring to the existing resources.
+
+#### Known limitation: Pod data sources need manual upgrade
+
+During `terraform plan`, you might encounter the error below:
+
+```
+Error: .spec[0].container[0].resources[0].limits: missing expected {
+```
+
+This ocurrs when a Pod data source is present during upgrade. To work around this error, remove the data source from state and try the plan again.
+
+```
+$ terraform state rm data.kubernetes_pod.test
+Removed data.kubernetes_pod.test
+Successfully removed 1 resource instance(s).
+
+$ terraform plan
+```
+
+The data source will automatically be added back to state with data from the upgraded schema.
+
+### Rolling back to version 1.x
+
+If you've run the above upgrade and plan, but you don't want to proceed with the 2.0 upgrade, you can roll back using the following steps. NOTE: this will only work if you haven't run `terraform apply` or `terraform refresh` while testing version 2 of the provider.
+
+```
+$ terraform version
+Terraform v0.14.4
++ provider registry.terraform.io/hashicorp/kubernetes v2.0
+```
+
+Set the provider version back to 1.x.
+
+```
+terraform {
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "1.13"
+    }
+  }
+}
+```
+
+Then run `terraform init -upgrade` to install the old provider version.
+
+```
+$ terraform init -upgrade
+
+Initializing the backend...
+
+Initializing provider plugins...
+- Finding hashicorp/kubernetes versions matching "1.13.0"...
+- Installing hashicorp/kubernetes v1.13.0...
+- Installed hashicorp/kubernetes v1.13.0 (signed by HashiCorp)
+```
+
+The provider is now downgraded.
+
+```
+$ terraform version
+Terraform v0.14.4
++ provider registry.terraform.io/hashicorp/kubernetes v1.13.0
+```
+
 
 ## Changes in v2.0.0
 

@@ -1,6 +1,9 @@
 ## 2.0.0 (Unreleased)
 
 BREAKING CHANGES:
+* Replace support for `KUBECONFIG` environment variable with `KUBE_CONFIG_PATH` (#1052)
+* Remove `load_config_file` attribute from provider block (#1052)
+* Remove default of `~/.kube/config` for `config_path` (#1052)
 * Update Terraform SDK to v2 (#1027) 
 * Restructure service and ingress to match K8s API (#1071)
 * Normalize automount_service_account_token to be in line with the K8s API (#1054)
@@ -24,6 +27,7 @@ BUG FIXES:
 
 IMPROVEMENTS:
 * Add upgrade test for daemonset (#1064)
+* Add `kube_config_paths` to provider block (#1052)
 
 ## 1.13.3 (October 27, 2020)
 

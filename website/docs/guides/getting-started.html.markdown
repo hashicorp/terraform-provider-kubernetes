@@ -69,7 +69,7 @@ provider "kubernetes" {
 }
 ```
 
-Static TLS certficate credentials are present in Azure AKS clusters by default, and can be used with the [azurerm_kubernetes_cluster](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/kubernetes_cluster) data source as shown below automatically read the certficate information from the AKS cluster.
+Static TLS certficate credentials are present in Azure AKS clusters by default, and can be used with the [azurerm_kubernetes_cluster](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/kubernetes_cluster) data source as shown below. This will automatically read the certficate information from the AKS cluster and pass it to the Kubernetes provider.
 
 ```hcl
 data "azurerm_kubernetes_cluster" "example" {

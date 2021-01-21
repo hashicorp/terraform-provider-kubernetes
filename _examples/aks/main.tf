@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     kubernetes = {
-      source  = "hashicorp/kubernetes"
+      source = "hashicorp/kubernetes"
     }
     azurerm = {
       source  = "hashicorp/azurerm"
@@ -35,15 +35,15 @@ provider "azurerm" {
 }
 
 module "aks-cluster" {
-  providers               = { azurerm = azurerm }
-  source                  = "./aks-cluster"
-  cluster_name            = local.cluster_name
-  location                = var.location
+  providers    = { azurerm = azurerm }
+  source       = "./aks-cluster"
+  cluster_name = local.cluster_name
+  location     = var.location
 }
 
 module "kubernetes-config" {
-  providers               = { kubernetes = kubernetes, helm = helm }
-  depends_on              = [module.aks-cluster]
-  source                  = "./kubernetes-config"
-  cluster_name            = local.cluster_name
+  providers    = { kubernetes = kubernetes, helm = helm }
+  depends_on   = [module.aks-cluster]
+  source       = "./kubernetes-config"
+  cluster_name = local.cluster_name
 }

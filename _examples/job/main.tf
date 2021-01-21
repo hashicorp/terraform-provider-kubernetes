@@ -21,15 +21,15 @@ resource "kubernetes_job" "test" {
   }
   spec {
     active_deadline_seconds = 120
-    backoff_limit = 10
-    completions = 10
-    parallelism = 2
+    backoff_limit           = 10
+    completions             = 10
+    parallelism             = 2
     template {
       metadata {}
       spec {
         container {
-          name = "hello"
-          image = "busybox"
+          name    = "hello"
+          image   = "busybox"
           command = ["sleep", "30"]
         }
       }

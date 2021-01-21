@@ -1,6 +1,6 @@
 # EKS (Amazon Elastic Kubernetes Service)
 
-This example shows how to use the Terraform Kubernetes Provider and Terraform Helm Provider to configure an EKS cluster. The example config builds the EKS cluster and applies the Kubernetes configurations in a single operation.
+This example shows how to use the Terraform Kubernetes Provider and Terraform Helm Provider to configure an EKS cluster. The example config builds the EKS cluster and applies the Kubernetes configurations in a single operation. This guide will also show you how to make changes to the underlying EKS cluster in such a way that Kuberntes/Helm resources are recreated after the underlying cluster is replaced.
 
 You will need the following environment variables to be set:
 

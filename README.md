@@ -6,11 +6,11 @@
 </a>
 
 - [Getting Started](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/guides/getting-started)
-- [Interactive Tutorial](https://learn.hashicorp.com/collections/terraform/kubernetes)
+- [Interactive Tutorial](https://learn.hashicorp.com/tutorials/terraform/kubernetes-provider?in=terraform/kubernetes)
 - Usage
   - [Documentation](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs)
   - [Examples](https://github.com/hashicorp/terraform-provider-kubernetes/tree/master/_examples)
-  - [Kubernetes Provider 2.0 Upgrade guide](https://registry.terraform.io/providers/hashicorp/kubernetes/docs/guides/v2-upgrade-guide)
+  - [Kubernetes Provider 2.0 Upgrade guide](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/guides/v2-upgrade-guide)
 - Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
 - Chat: [#terraform-providers in Kubernetes](https://kubernetes.slack.com/messages/CJY6ATQH4) ([Sign up here](http://slack.k8s.io/))
 - Roadmap: [Q3 2020](_about/ROADMAP.md)

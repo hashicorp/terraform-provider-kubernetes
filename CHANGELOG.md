@@ -6,6 +6,9 @@ BREAKING CHANGES:
 * Normalize automount_service_account_token to be in line with the K8s API (#1054)
 * Normalize wait defaults across Deployment, DaemonSet, StatefulSet, Service, Ingress, and Job (#1053)
 * Change resources requests and limits to TypeMap (#1065)
+* Remove implicit support for KUBECONFIG (#1052)
+* Remove load_config_file attribute (#1052)
+
 
 FEATURES:
 * Add timeout argument to kubernetes_stateful_set (#1047)

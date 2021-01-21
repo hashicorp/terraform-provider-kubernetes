@@ -1,4 +1,4 @@
-## 2.0.0 (Unreleased)
+## 2.0.0 (January 21, 2021)
 
 BREAKING CHANGES:
 * Replace support for `KUBECONFIG` environment variable with `KUBE_CONFIG_PATH` (#1052)

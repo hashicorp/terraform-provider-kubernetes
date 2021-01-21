@@ -6,7 +6,8 @@ BREAKING CHANGES:
 * Remove default of `~/.kube/config` for `config_path` (#1052)
 * Update Terraform SDK to v2 (#1027) 
 * Restructure service and ingress to match K8s API (#1071)
-* Normalize automount_service_account_token to be in line with the K8s API (#1054)
+* Normalize `automount_service_account_token` to be in line with the K8s API (#1054)
+* Normalize `enable_service_links` to be in line with the K8s API (#1074)
 * Normalize wait defaults across Deployment, DaemonSet, StatefulSet, Service, Ingress, and Job (#1053)
 * Change resources requests and limits to TypeMap (#1065)
 

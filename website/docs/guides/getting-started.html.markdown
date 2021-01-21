@@ -2,9 +2,8 @@
 layout: "kubernetes"
 page_title: "Kubernetes: Getting Started with Kubernetes provider"
 description: |-
-  This guide focuses on scheduling Kubernetes resources like Pods,
-  Replication Controllers, Services etc. on top of a properly configured
-  and running Kubernetes cluster.
+  This guide focuses on configuring authentication to your existing Kubernetes
+  cluster so that resources can be managed using the Kubernetes provider for Terraform.
 ---
 
 # Getting Started with Kubernetes provider
@@ -19,14 +18,10 @@ with focus on containerized applications.
 
 There are at least 2 steps involved in scheduling your first container
 on a Kubernetes cluster. You need the Kubernetes cluster with all its components
-running _somewhere_ and then schedule the Kubernetes resources, like Pods,
-Replication Controllers, Services etc.
+running _somewhere_ and then define the Kubernetes resources, such as Deployments, Services, etc.
 
 This guide focuses mainly on the latter part and expects you to have
 a properly configured & running Kubernetes cluster.
-
-The guide also expects you to run the cluster on a cloud provider
-where Kubernetes can automatically provision a load balancer.
 
 ## Why Terraform
 
@@ -54,52 +49,160 @@ orchestration with Terraform presents a few benefits.
 
 ## Provider Setup
 
-The easiest way to configure the provider is by creating/generating a config
-in a default location (`~/.kube/config`). That allows you
-to leave the provider block completely empty.
-
-```hcl
-provider "kubernetes" {}
-```
-
-If running in-cluster with an appropriate service account token available, you 
-just need to disable config file loading:
+The provider needs to be configured with the proper credentials before it can be used. The simplest configuration is to specify the kubeconfig path:
 
 ```hcl
 provider "kubernetes" {
-  load_config_file = "false"
+  config_path    = "~/.kube/config"
 }
 ```
 
-If you wish to configure the provider statically you can do so by providing TLS certificates:
+Another configuration option is to **statically** define TLS certificate credentials:
 
 ```hcl
 provider "kubernetes" {
   host = "https://104.196.242.174"
 
-  client_certificate     = file("~/.kube/client-cert.pem")
-  client_key             = file("~/.kube/client-key.pem")
-  cluster_ca_certificate = file("~/.kube/cluster-ca-cert.pem")
-
-  load_config_file = false # when you wish not to load the local config file
+  client_certificate     = "${file("~/.kube/client-cert.pem")}"
+  client_key             = "${file("~/.kube/client-key.pem")}"
+  cluster_ca_certificate = "${file("~/.kube/cluster-ca-cert.pem")}"
 }
 ```
 
-or by providing username and password (HTTP Basic Authorization):
+Static TLS certficate credentials are present in Azure AKS clusters by default, and can be used with the [azurerm_kubernetes_cluster](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/kubernetes_cluster) data source as shown below automatically read the certficate information from the AKS cluster.
 
 ```hcl
+data "azurerm_kubernetes_cluster" "example" {
+  name                = "myakscluster"
+  resource_group_name = "my-example-resource-group"
+}
+
 provider "kubernetes" {
-  host = "https://104.196.242.174"
-
-  username = "ClusterMaster"
-  password = "MindTheGap"
-
-  load_config_file = false # when you wish not to load the local config file
+  host                   = "${data.azurerm_kubernetes_cluster.main.kube_config.0.host}"
+  client_certificate     = "${base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)}"
+  client_key             = "${base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_key)}"
+  cluster_ca_certificate = "${base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)}"
 }
 ```
 
-After specifying the provider we may now run the following command
-to download the latest version of the Kubernetes provider.
+Another option is to use an oauth token, such as this example from a GKE cluster. The [google_client_config](https://registry.terraform.io/providers/hashicorp/google/latest/docs/data-sources/client_config) data source fetches a token from the Google Authorization server, which expires in 1 hour by default.
+
+```hcl
+data "google_client_config" "default" {
+￼}
+
+data "google_container_cluster" "my_cluster" {
+  name = "my-cluster"
+  zone = "us-east1-a"
+}
+￼
+￼provider "kubernetes" {
+￼  host = "https://${data.google_container_cluster.my_cluster.endpoint}"
+￼  token = data.google_client_config.default.access_token
+￼  cluster_ca_certificate = base64decode(data.google_container_cluster.my_cluster.master_auth[0].cluster_ca_certificate)
+￼}
+```
+
+For short-lived authentication tokens, like those found in EKS, which [expire in 15 minutes](https://aws.github.io/aws-eks-best-practices/security/docs/iam/#controlling-access-to-eks-clusters), an exec-based credential plugin can be used to ensure the token is always up to date:
+
+```hcl
+data "aws_eks_cluster" "example" {
+  name = "example"
+}
+
+data "aws_eks_cluster_auth" "example" {
+  name = "example"
+}
+
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.example.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.example.certificate_authority[0].data)
+￼ exec {
+￼   api_version = "client.authentication.k8s.io/v1alpha1"
+￼   args        = ["eks", "get-token", "--cluster-name", var.cluster_name]
+￼   command     = "aws"
+￼ }
+}
+```
+
+## Creating your first Kubernetes resources
+
+Once the provider is configured, you can apply the Kubernetes resources defined in you Terraform config file. The following is an example Terraform config file containing a few Kubernetes resources. We'll use [minikube](https://minikube.sigs.k8s.io/docs/start/) for the Kubernetes cluster in this example. Ensure that a Kubernetes cluster of some kind is running before applying the example config below.
+
+This configuration will create a scalable Nginx Deployment with 2 replicas. It will expose the Nginx frontend using a Service of type NodePort, which will make Nginx accessible via the public IP of the node running the containers.
+
+```hcl
+terraform {
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "9.9.9"
+    }
+  }
+}
+
+provider "kubernetes" {
+  config_path = "~/.kube/config"
+}
+
+resource "kubernetes_namespace" "test" {
+  metadata {
+    name = "nginx"
+  }
+}
+
+resource "kubernetes_deployment" "test" {
+  metadata {
+    name = "nginx"
+    namespace = kubernetes_namespace.test.metadata.0.name
+  }
+  spec {
+    replicas = 2
+    selector {
+      match_labels = {
+        app  = "MyTestApp"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          app = "MyTestApp"
+        }
+      }
+      spec {
+        container {
+          image = "nginx"
+          name  = "nginx-container"
+          port {
+            container_port = 80
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_service" "test" {
+  metadata {
+    name = "nginx"
+    namespace = kubernetes_namespace.test.metadata.0.name
+  }
+
+  spec {
+    selector = {
+      app = kubernetes_deployment.test.spec.0.template.0.metadata.0.labels.app
+    }
+    type = "NodePort"
+    port {
+      node_port   = 30201
+      port        = 80
+      target_port = 80
+    }
+  }
+}
+```
+
+Use `terraform init` to download the specified version of the Kubernetes provider:
 
 ```
 $ terraform init
@@ -107,18 +210,14 @@ $ terraform init
 Initializing the backend...
 
 Initializing provider plugins...
-- Checking for available provider plugins...
-- Downloading plugin for provider "kubernetes" (hashicorp/kubernetes) 1.10.1...
+- Finding hashicorp/kubernetes versions matching "2.0"...
+- Installing hashicorp/kubernetes v2.0...
+- Installed hashicorp/kubernetes v2.0 (unauthenticated)
 
-The following providers do not have any version constraints in configuration,
-so the latest version was installed.
-
-To prevent automatic upgrades to new major versions that may contain breaking
-changes, it is recommended to add version = "..." constraints to the
-corresponding provider blocks in configuration, with the constraint strings
-suggested below.
-
-* provider.kubernetes: version = "~> 1.10.1"
+Terraform has created a lock file .terraform.lock.hcl to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.
 
 Terraform has been successfully initialized!
 
@@ -131,102 +230,10 @@ rerun this command to reinitialize your working directory. If you forget, other
 commands will detect it and remind you to do so if necessary.
 ```
 
-## Scheduling a Simple Application
-
-The main object in any Kubernetes application is [a Pod](https://kubernetes.io/docs/concepts/workloads/pods/pod/#what-is-a-pod).
-Pod consists of one or more containers that are placed
-on cluster nodes based on CPU or memory availability.
-
-Here we create a pod with a single container running the nginx web server,
-exposing port 80 (HTTP) which can be then exposed
-through the load balancer to the real user.
-
-Unlike in this simple example you'd commonly run more than
-a single instance of your application in production to reach
-high availability and adding labels will allow Kubernetes to find all
-pods (instances) for the purpose of forwarding the traffic
-to the exposed port.
-
-```hcl
-resource "kubernetes_pod" "nginx" {
-  metadata {
-    name = "nginx-example"
-    labels = {
-      App = "nginx"
-    }
-  }
-
-  spec {
-    container {
-      image = "nginx:1.7.8"
-      name  = "example"
-
-      port {
-        container_port = 80
-      }
-    }
-  }
-}
-```
-
-The simplest way to expose your application to users is via [Service](https://kubernetes.io/docs/concepts/services-networking/service/).
-Service is capable of provisioning a load-balancer in some cloud providers
-and managing the relationship between pods and that load balancer
-as new pods are launched and others die for any reason.
-
-```hcl
-resource "kubernetes_service" "nginx" {
-  metadata {
-    name = "nginx-example"
-  }
-  spec {
-    selector = {
-      App = kubernetes_pod.nginx.metadata[0].labels.App
-    }
-    port {
-      port        = 80
-      target_port = 80
-    }
-
-    type = "LoadBalancer"
-  }
-}
-```
-
-We may also add an output which will expose the IP address to the user
-
-```hcl
-output "lb_ip" {
-  value = kubernetes_service.nginx.load_balancer_ingress[0].ip
-}
-```
-
-Please note that this assumes a cloud provider provisioning IP-based
-load balancer (like in Google Cloud Platform). If you run on a provider
-with hostname-based load balancer (like in Amazon Web Services) you
-should use the following snippet instead.
-
-```hcl
-output "lb_ip" {
-  value = kubernetes_service.nginx.load_balancer_ingress[0].hostname
-}
-```
-
-The plan will provide you an overview of planned changes, in this case
-we should see 2 resources (Pod + Service) being added.
-This commands gets more useful as your infrastructure grows and
-becomes more complex with more components depending on each other
-and it's especially helpful during updates.
+Next, use `terraform plan` to display a list of resources to be created, and highlight any possible unknown attributes at apply time. For Deployments, all disk options are shown at plan time, but none will be created unless explicitly configured in the Deployment resource.
 
 ```
 $ terraform plan
-
-Refreshing Terraform state in-memory prior to plan...
-The refreshed state will be used to calculate this plan, but will not be
-persisted to local or remote state storage.
-
-
-------------------------------------------------------------------------
 
 An execution plan has been generated and is shown below.
 Resource actions are indicated with the following symbols:
@@ -234,270 +241,411 @@ Resource actions are indicated with the following symbols:
 
 Terraform will perform the following actions:
 
-  # kubernetes_pod.nginx will be created
-  + resource "kubernetes_pod" "nginx" {
-      + id = (known after apply)
+  # kubernetes_deployment.test will be created
+  + resource "kubernetes_deployment" "test" {
+      + id               = (known after apply)
+      + wait_for_rollout = true
 
       + metadata {
           + generation       = (known after apply)
-          + labels           = {
-              + "App" = "nginx"
-            }
-          + name             = "nginx-example"
-          + namespace        = "default"
+          + name             = "nginx"
+          + namespace        = "nginx"
           + resource_version = (known after apply)
           + self_link        = (known after apply)
           + uid              = (known after apply)
         }
 
       + spec {
-          + automount_service_account_token  = true
-          + dns_policy                       = "ClusterFirst"
-          + enable_service_links             = false
-          + host_ipc                         = false
-          + host_network                     = false
-          + host_pid                         = false
-          + hostname                         = (known after apply)
-          + node_name                        = (known after apply)
-          + restart_policy                   = "Always"
-          + service_account_name             = (known after apply)
-          + share_process_namespace          = false
-          + termination_grace_period_seconds = 30
+          + min_ready_seconds         = 0
+          + paused                    = false
+          + progress_deadline_seconds = 600
+          + replicas                  = "2"
+          + revision_history_limit    = 10
 
-          + container {
-              + image                    = "nginx:1.7.8"
-              + image_pull_policy        = (known after apply)
-              + name                     = "example"
-              + stdin                    = false
-              + stdin_once               = false
-              + termination_message_path = "/dev/termination-log"
-              + tty                      = false
-
-              + port {
-                  + container_port = 80
-                  + protocol       = "TCP"
-                }
-
-              + resources {
-                  + limits = (known after apply)
-                  + requests = (known after apply)
-                }
-
-              + volume_mount {
-                  + mount_path = (known after apply)
-                  + name       = (known after apply)
-                  + read_only  = (known after apply)
-                  + sub_path   = (known after apply)
+          + selector {
+              + match_labels = {
+                  + "app" = "MyTestApp"
                 }
             }
 
-          + image_pull_secrets {
-              + name = (known after apply)
+          + strategy {
+              + type = (known after apply)
+
+              + rolling_update {
+                  + max_surge       = (known after apply)
+                  + max_unavailable = (known after apply)
+                }
             }
 
-          + volume {
-              + name = (known after apply)
-
-              + aws_elastic_block_store {
-                  + fs_type   = (known after apply)
-                  + partition = (known after apply)
-                  + read_only = (known after apply)
-                  + volume_id = (known after apply)
-                }
-
-              + azure_disk {
-                  + caching_mode  = (known after apply)
-                  + data_disk_uri = (known after apply)
-                  + disk_name     = (known after apply)
-                  + fs_type       = (known after apply)
-                  + read_only     = (known after apply)
-                }
-
-              + azure_file {
-                  + read_only   = (known after apply)
-                  + secret_name = (known after apply)
-                  + share_name  = (known after apply)
-                }
-
-              + ceph_fs {
-                  + monitors    = (known after apply)
-                  + path        = (known after apply)
-                  + read_only   = (known after apply)
-                  + secret_file = (known after apply)
-                  + user        = (known after apply)
-
-                  + secret_ref {
-                      + name = (known after apply)
+          + template {
+              + metadata {
+                  + generation       = (known after apply)
+                  + labels           = {
+                      + "app" = "MyTestApp"
                     }
+                  + name             = (known after apply)
+                  + resource_version = (known after apply)
+                  + self_link        = (known after apply)
+                  + uid              = (known after apply)
                 }
 
-              + cinder {
-                  + fs_type   = (known after apply)
-                  + read_only = (known after apply)
-                  + volume_id = (known after apply)
-                }
+              + spec {
+                  + automount_service_account_token  = true
+                  + dns_policy                       = "ClusterFirst"
+                  + enable_service_links             = true
+                  + host_ipc                         = false
+                  + host_network                     = false
+                  + host_pid                         = false
+                  + hostname                         = (known after apply)
+                  + node_name                        = (known after apply)
+                  + restart_policy                   = "Always"
+                  + service_account_name             = (known after apply)
+                  + share_process_namespace          = false
+                  + termination_grace_period_seconds = 30
 
-              + config_map {
-                  + default_mode = (known after apply)
-                  + name         = (known after apply)
+                  + container {
+                      + image                      = "nginx"
+                      + image_pull_policy          = (known after apply)
+                      + name                       = "nginx-container"
+                      + stdin                      = false
+                      + stdin_once                 = false
+                      + termination_message_path   = "/dev/termination-log"
+                      + termination_message_policy = (known after apply)
+                      + tty                        = false
 
-                  + items {
-                      + key  = (known after apply)
-                      + mode = (known after apply)
-                      + path = (known after apply)
-                    }
-                }
-
-              + downward_api {
-                  + default_mode = (known after apply)
-
-                  + items {
-                      + mode = (known after apply)
-                      + path = (known after apply)
-
-                      + field_ref {
-                          + api_version = (known after apply)
-                          + field_path  = (known after apply)
+                      + port {
+                          + container_port = 80
+                          + protocol       = "TCP"
                         }
 
-                      + resource_field_ref {
-                          + container_name = (known after apply)
-                          + quantity       = (known after apply)
-                          + resource       = (known after apply)
+                      + resources {
+                          + limits   = (known after apply)
+                          + requests = (known after apply)
+                        }
+
+                      + volume_mount {
+                          + mount_path        = (known after apply)
+                          + mount_propagation = (known after apply)
+                          + name              = (known after apply)
+                          + read_only         = (known after apply)
+                          + sub_path          = (known after apply)
                         }
                     }
-                }
 
-              + empty_dir {
-                  + medium = (known after apply)
-                }
-
-              + fc {
-                  + fs_type      = (known after apply)
-                  + lun          = (known after apply)
-                  + read_only    = (known after apply)
-                  + target_ww_ns = (known after apply)
-                }
-
-              + flex_volume {
-                  + driver    = (known after apply)
-                  + fs_type   = (known after apply)
-                  + options   = (known after apply)
-                  + read_only = (known after apply)
-
-                  + secret_ref {
+                  + image_pull_secrets {
                       + name = (known after apply)
                     }
-                }
 
-              + flocker {
-                  + dataset_name = (known after apply)
-                  + dataset_uuid = (known after apply)
-                }
+                  + readiness_gate {
+                      + condition_type = (known after apply)
+                    }
 
-              + gce_persistent_disk {
-                  + fs_type   = (known after apply)
-                  + partition = (known after apply)
-                  + pd_name   = (known after apply)
-                  + read_only = (known after apply)
-                }
-
-              + git_repo {
-                  + directory  = (known after apply)
-                  + repository = (known after apply)
-                  + revision   = (known after apply)
-                }
-
-              + glusterfs {
-                  + endpoints_name = (known after apply)
-                  + path           = (known after apply)
-                  + read_only      = (known after apply)
-                }
-
-              + host_path {
-                  + path = (known after apply)
-                }
-
-              + iscsi {
-                  + fs_type         = (known after apply)
-                  + iqn             = (known after apply)
-                  + iscsi_interface = (known after apply)
-                  + lun             = (known after apply)
-                  + read_only       = (known after apply)
-                  + target_portal   = (known after apply)
-                }
-
-              + local {
-                  + path = (known after apply)
-                }
-
-              + nfs {
-                  + path      = (known after apply)
-                  + read_only = (known after apply)
-                  + server    = (known after apply)
-                }
-
-              + persistent_volume_claim {
-                  + claim_name = (known after apply)
-                  + read_only  = (known after apply)
-                }
-
-              + photon_persistent_disk {
-                  + fs_type = (known after apply)
-                  + pd_id   = (known after apply)
-                }
-
-              + quobyte {
-                  + group     = (known after apply)
-                  + read_only = (known after apply)
-                  + registry  = (known after apply)
-                  + user      = (known after apply)
-                  + volume    = (known after apply)
-                }
-
-              + rbd {
-                  + ceph_monitors = (known after apply)
-                  + fs_type       = (known after apply)
-                  + keyring       = (known after apply)
-                  + rados_user    = (known after apply)
-                  + rbd_image     = (known after apply)
-                  + rbd_pool      = (known after apply)
-                  + read_only     = (known after apply)
-
-                  + secret_ref {
+                  + volume {
                       + name = (known after apply)
+
+                      + aws_elastic_block_store {
+                          + fs_type   = (known after apply)
+                          + partition = (known after apply)
+                          + read_only = (known after apply)
+                          + volume_id = (known after apply)
+                        }
+
+                      + azure_disk {
+                          + caching_mode  = (known after apply)
+                          + data_disk_uri = (known after apply)
+                          + disk_name     = (known after apply)
+                          + fs_type       = (known after apply)
+                          + kind          = (known after apply)
+                          + read_only     = (known after apply)
+                        }
+
+                      + azure_file {
+                          + read_only   = (known after apply)
+                          + secret_name = (known after apply)
+                          + share_name  = (known after apply)
+                        }
+
+                      + ceph_fs {
+                          + monitors    = (known after apply)
+                          + path        = (known after apply)
+                          + read_only   = (known after apply)
+                          + secret_file = (known after apply)
+                          + user        = (known after apply)
+
+                          + secret_ref {
+                              + name      = (known after apply)
+                              + namespace = (known after apply)
+                            }
+                        }
+
+                      + cinder {
+                          + fs_type   = (known after apply)
+                          + read_only = (known after apply)
+                          + volume_id = (known after apply)
+                        }
+
+                      + config_map {
+                          + default_mode = (known after apply)
+                          + name         = (known after apply)
+                          + optional     = (known after apply)
+
+                          + items {
+                              + key  = (known after apply)
+                              + mode = (known after apply)
+                              + path = (known after apply)
+                            }
+                        }
+
+                      + csi {
+                          + driver            = (known after apply)
+                          + fs_type           = (known after apply)
+                          + read_only         = (known after apply)
+                          + volume_attributes = (known after apply)
+                          + volume_handle     = (known after apply)
+
+                          + controller_expand_secret_ref {
+                              + name      = (known after apply)
+                              + namespace = (known after apply)
+                            }
+
+                          + controller_publish_secret_ref {
+                              + name      = (known after apply)
+                              + namespace = (known after apply)
+                            }
+
+                          + node_publish_secret_ref {
+                              + name      = (known after apply)
+                              + namespace = (known after apply)
+                            }
+
+                          + node_stage_secret_ref {
+                              + name      = (known after apply)
+                              + namespace = (known after apply)
+                            }
+                        }
+
+                      + downward_api {
+                          + default_mode = (known after apply)
+
+                          + items {
+                              + mode = (known after apply)
+                              + path = (known after apply)
+
+                              + field_ref {
+                                  + api_version = (known after apply)
+                                  + field_path  = (known after apply)
+                                }
+
+                              + resource_field_ref {
+                                  + container_name = (known after apply)
+                                  + divisor        = (known after apply)
+                                  + resource       = (known after apply)
+                                }
+                            }
+                        }
+
+                      + empty_dir {
+                          + medium     = (known after apply)
+                          + size_limit = (known after apply)
+                        }
+
+                      + fc {
+                          + fs_type      = (known after apply)
+                          + lun          = (known after apply)
+                          + read_only    = (known after apply)
+                          + target_ww_ns = (known after apply)
+                        }
+
+                      + flex_volume {
+                          + driver    = (known after apply)
+                          + fs_type   = (known after apply)
+                          + options   = (known after apply)
+                          + read_only = (known after apply)
+
+                          + secret_ref {
+                              + name      = (known after apply)
+                              + namespace = (known after apply)
+                            }
+                        }
+
+                      + flocker {
+                          + dataset_name = (known after apply)
+                          + dataset_uuid = (known after apply)
+                        }
+
+                      + gce_persistent_disk {
+                          + fs_type   = (known after apply)
+                          + partition = (known after apply)
+                          + pd_name   = (known after apply)
+                          + read_only = (known after apply)
+                        }
+
+                      + git_repo {
+                          + directory  = (known after apply)
+                          + repository = (known after apply)
+                          + revision   = (known after apply)
+                        }
+
+                      + glusterfs {
+                          + endpoints_name = (known after apply)
+                          + path           = (known after apply)
+                          + read_only      = (known after apply)
+                        }
+
+                      + host_path {
+                          + path = (known after apply)
+                          + type = (known after apply)
+                        }
+
+                      + iscsi {
+                          + fs_type         = (known after apply)
+                          + iqn             = (known after apply)
+                          + iscsi_interface = (known after apply)
+                          + lun             = (known after apply)
+                          + read_only       = (known after apply)
+                          + target_portal   = (known after apply)
+                        }
+
+                      + local {
+                          + path = (known after apply)
+                        }
+
+                      + nfs {
+                          + path      = (known after apply)
+                          + read_only = (known after apply)
+                          + server    = (known after apply)
+                        }
+
+                      + persistent_volume_claim {
+                          + claim_name = (known after apply)
+                          + read_only  = (known after apply)
+                        }
+
+                      + photon_persistent_disk {
+                          + fs_type = (known after apply)
+                          + pd_id   = (known after apply)
+                        }
+
+                      + projected {
+                          + default_mode = (known after apply)
+
+                          + sources {
+                              + config_map {
+                                  + name     = (known after apply)
+                                  + optional = (known after apply)
+
+                                  + items {
+                                      + key  = (known after apply)
+                                      + mode = (known after apply)
+                                      + path = (known after apply)
+                                    }
+                                }
+
+                              + downward_api {
+                                  + items {
+                                      + mode = (known after apply)
+                                      + path = (known after apply)
+
+                                      + field_ref {
+                                          + api_version = (known after apply)
+                                          + field_path  = (known after apply)
+                                        }
+
+                                      + resource_field_ref {
+                                          + container_name = (known after apply)
+                                          + quantity       = (known after apply)
+                                          + resource       = (known after apply)
+                                        }
+                                    }
+                                }
+
+                              + secret {
+                                  + name     = (known after apply)
+                                  + optional = (known after apply)
+
+                                  + items {
+                                      + key  = (known after apply)
+                                      + mode = (known after apply)
+                                      + path = (known after apply)
+                                    }
+                                }
+
+                              + service_account_token {
+                                  + audience           = (known after apply)
+                                  + expiration_seconds = (known after apply)
+                                  + path               = (known after apply)
+                                }
+                            }
+                        }
+
+                      + quobyte {
+                          + group     = (known after apply)
+                          + read_only = (known after apply)
+                          + registry  = (known after apply)
+                          + user      = (known after apply)
+                          + volume    = (known after apply)
+                        }
+
+                      + rbd {
+                          + ceph_monitors = (known after apply)
+                          + fs_type       = (known after apply)
+                          + keyring       = (known after apply)
+                          + rados_user    = (known after apply)
+                          + rbd_image     = (known after apply)
+                          + rbd_pool      = (known after apply)
+                          + read_only     = (known after apply)
+
+                          + secret_ref {
+                              + name      = (known after apply)
+                              + namespace = (known after apply)
+                            }
+                        }
+
+                      + secret {
+                          + default_mode = (known after apply)
+                          + optional     = (known after apply)
+                          + secret_name  = (known after apply)
+
+                          + items {
+                              + key  = (known after apply)
+                              + mode = (known after apply)
+                              + path = (known after apply)
+                            }
+                        }
+
+                      + vsphere_volume {
+                          + fs_type     = (known after apply)
+                          + volume_path = (known after apply)
+                        }
                     }
-                }
-
-              + secret {
-                  + default_mode = (known after apply)
-                  + optional     = (known after apply)
-                  + secret_name  = (known after apply)
-
-                  + items {
-                      + key  = (known after apply)
-                      + mode = (known after apply)
-                      + path = (known after apply)
-                    }
-                }
-
-              + vsphere_volume {
-                  + fs_type     = (known after apply)
-                  + volume_path = (known after apply)
                 }
             }
         }
     }
 
-  # kubernetes_service.nginx will be created
-  + resource "kubernetes_service" "nginx" {
-      + id                    = (known after apply)
-      + load_balancer_ingress = (known after apply)
+  # kubernetes_namespace.test will be created
+  + resource "kubernetes_namespace" "test" {
+      + id = (known after apply)
 
       + metadata {
           + generation       = (known after apply)
-          + name             = "nginx-example"
-          + namespace        = "default"
+          + name             = "nginx"
+          + resource_version = (known after apply)
+          + self_link        = (known after apply)
+          + uid              = (known after apply)
+        }
+    }
+
+  # kubernetes_service.test will be created
+  + resource "kubernetes_service" "test" {
+      + id                     = (known after apply)
+      + status                 = (known after apply)
+      + wait_for_load_balancer = true
+
+      + metadata {
+          + generation       = (known after apply)
+          + name             = "nginx"
+          + namespace        = "nginx"
           + resource_version = (known after apply)
           + self_link        = (known after apply)
           + uid              = (known after apply)
@@ -506,15 +654,16 @@ Terraform will perform the following actions:
       + spec {
           + cluster_ip                  = (known after apply)
           + external_traffic_policy     = (known after apply)
+          + health_check_node_port      = (known after apply)
           + publish_not_ready_addresses = false
           + selector                    = {
-              + "App" = "nginx"
+              + "app" = "MyTestApp"
             }
           + session_affinity            = "None"
-          + type                        = "LoadBalancer"
+          + type                        = "NodePort"
 
           + port {
-              + node_port   = (known after apply)
+              + node_port   = 30201
               + port        = 80
               + protocol    = "TCP"
               + target_port = "80"
@@ -522,7 +671,7 @@ Terraform will perform the following actions:
         }
     }
 
-Plan: 2 to add, 0 to change, 0 to destroy.
+Plan: 3 to add, 0 to change, 0 to destroy.
 
 ------------------------------------------------------------------------
 
@@ -531,285 +680,81 @@ can't guarantee that exactly these actions will be performed if
 "terraform apply" is subsequently run.
 ```
 
-As we're happy with the plan output we may carry on applying
-proposed changes. `terraform apply` will take of all the hard work
-which includes creating resources via API in the right order,
-supplying any defaults as necessary and waiting for
-resources to finish provisioning to the point when it can either
-present useful attributes or a failure (with reason) to the user.
+Use `terraform apply` to create the resources shown above.
 
 ```
-$ terraform apply -auto-approve
+$ terraform apply --auto-approve
 
-kubernetes_pod.nginx: Creating...
-kubernetes_pod.nginx: Creation complete after 8s [id=default/nginx-example]
-kubernetes_service.nginx: Creating...
-kubernetes_service.nginx: Still creating... [10s elapsed]
-kubernetes_service.nginx: Still creating... [20s elapsed]
-kubernetes_service.nginx: Still creating... [30s elapsed]
-kubernetes_service.nginx: Still creating... [40s elapsed]
-kubernetes_service.nginx: Still creating... [50s elapsed]
-kubernetes_service.nginx: Creation complete after 56s [id=default/nginx-example]
+kubernetes_namespace.test: Creating...
+kubernetes_namespace.test: Creation complete after 0s [id=nginx]
+kubernetes_deployment.test: Creating...
+kubernetes_deployment.test: Creation complete after 7s [id=nginx/nginx]
+kubernetes_service.test: Creating...
+kubernetes_service.test: Creation complete after 0s [id=nginx/nginx]
 
-Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
-
-Outputs:
-
-lb_ip = 34.77.88.233
+Apply complete! Resources: 3 added, 0 changed, 0 destroyed.
 ```
 
-You may now enter that IP address to your favourite browser
-and you should see the nginx welcome page.
+The resources are now visible in the Kubernetes cluster.
 
-The [Kubernetes UI](https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/)
-provides another way to check both the pod and the service there
-once they're scheduled.
+```
+$ kubectl get all -n nginx
 
-## Reaching Scalability and Availability
+NAME                         READY   STATUS    RESTARTS   AGE
+pod/nginx-86c669bff4-8g7g2   1/1     Running   0          38s
+pod/nginx-86c669bff4-zgjkv   1/1     Running   0          38s
 
-The Replication Controller allows you to replicate pods. This is useful
-for maintaining overall availability and scalability of your application
-exposed to the user.
+NAME            TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+service/nginx   NodePort   10.109.205.23   <none>        80:30201/TCP   30s
 
-We can just replace our Pod with RC from the previous config
-and keep the Service there.
+NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/nginx   2/2     2            2           38s
 
-```hcl
-resource "kubernetes_deployment" "nginx" {
-  metadata {
-    name = "scalable-nginx-example"
-    labels = {
-      App = "ScalableNginxExample"
+NAME                               DESIRED   CURRENT   READY   AGE
+replicaset.apps/nginx-86c669bff4   2         2         2       38s
+```
+
+The web server can be accessed using the public IP of the node running the Deployment. In this example, we're using minikube as the Kubernetes cluster, so the IP can be fetched using `minikube ip`.
+
+```
+$ curl $(minikube ip):30201
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+    body {
+        width: 35em;
+        margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
     }
-  }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
 
-  spec {
-    replicas = 2
-    selector {
-      match_labels = {
-        App = "ScalableNginxExample"
-      }
-    }
-    template {
-      metadata {
-        labels = {
-          App = "ScalableNginxExample"
-        }
-      }
-      spec {
-        container {
-          image = "nginx:1.7.8"
-          name  = "example"
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
 
-          port {
-            container_port = 80
-          }
-
-          resources {
-            limits = {
-              cpu    = "0.5"
-              memory = "512Mi"
-            }
-            requests = {
-              cpu    = "250m"
-              memory = "50Mi"
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-resource "kubernetes_service" "nginx" {
-  metadata {
-    name = "nginx-example"
-  }
-  spec {
-    selector = {
-      App = kubernetes_deployment.nginx.spec.0.template.0.metadata[0].labels.App
-    }
-    port {
-      port        = 80
-      target_port = 80
-    }
-
-    type = "LoadBalancer"
-  }
-}
-
-output "lb_ip" {
-  value = kubernetes_service.nginx.load_balancer_ingress[0].ip
-}
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
 ```
 
-You may notice we also specified how much CPU and memory do we expect
-single instance of that application to consume. This is incredibly
-helpful for Kubernetes as it helps avoiding under-provisioning or over-provisioning
-that would result in either unused resources (costing money) or lack
-of resources (causing the app to crash or slow down).
+Alternatively, look for the hostIP associated with a running Nginx pod and combine it with the NodePort to assemble the URL:
 
 ```
-$ terraform plan
+$ kubectl get pod nginx-86c669bff4-zgjkv -n nginx -o json |jq .status.hostIP
+"192.168.39.189"
 
-# ...
+$ kube get services -n nginx
+NAME    TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+nginx   NodePort   10.109.205.23   <none>        80:30201/TCP   19m
 
-Plan: 2 to add, 0 to change, 0 to destroy.
-
-------------------------------------------------------------------------
-# ...
-
+$ curl 192.168.39.189:30201
 ```
-
-```
-$ terraform apply -auto-approve
-kubernetes_deployment.nginx: Creating...
-kubernetes_deployment.nginx: Creation complete after 10s [id=default/scalable-nginx-example]
-kubernetes_service.nginx: Creating...
-kubernetes_service.nginx: Still creating... [10s elapsed]
-kubernetes_service.nginx: Still creating... [20s elapsed]
-kubernetes_service.nginx: Still creating... [30s elapsed]
-kubernetes_service.nginx: Still creating... [40s elapsed]
-kubernetes_service.nginx: Still creating... [50s elapsed]
-kubernetes_service.nginx: Creation complete after 59s [id=default/nginx-example]
-
-Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
-
-Outputs:
-
-lb_ip = 34.77.88.233
-```
-
-Unlike in previous example, the IP address here will direct traffic
-to one of the 2 pods scheduled in the cluster.
-
-### Updating Configuration
-
-As our application user-base grows we might need more instances to be scheduled.
-The easiest way to achieve this is to increase `replicas` field in the config
-accordingly.
-
-```hcl
-resource "kubernetes_deployment" "example" {
-  metadata {
-    #...
-  }
-  spec {
-    replicas = 2
-  }
-  template {
-    #...
-  }
-}
-```
-
-You can verify before hitting the API that you're only changing what
-you intended to change and that someone else didn't modify
-the resource you created earlier.
-
-```
-$ terraform plan
-
-Refreshing Terraform state in-memory prior to plan...
-The refreshed state will be used to calculate this plan, but will not be
-persisted to local or remote state storage.
-
-kubernetes_deployment.nginx: Refreshing state... (ID: default/scalable-nginx-example)
-kubernetes_service.nginx: Refreshing state... (ID: default/nginx-example)
-
-The Terraform execution plan has been generated and is shown below.
-Resources are shown in alphabetical order for quick scanning. Green resources
-will be created (or destroyed and then created if an existing resource
-exists), yellow resources are being changed in-place, and red resources
-will be destroyed. Cyan entries are data sources to be read.
-
-Note: You didn't specify an "-out" parameter to save this plan, so when
-"apply" is called, Terraform can't guarantee this is what will execute.
-
-  ~ kubernetes_deployment.nginx
-      spec.0.replicas: "2" => "5"
-
-
-Plan: 0 to add, 1 to change, 0 to destroy.
-```
-
-As we're happy with the proposed plan, we can just apply that change.
-
-```
-$ terraform apply
-```
-
-and 3 more replicas will be scheduled & attached to the load balancer.
-
-## Bonus: Managing Quotas and Limits
-
-As an operator managing cluster you're likely also responsible for
-using the cluster responsibly and fairly within teams.
-
-Resource Quotas and Limit Ranges both offer ways to put constraints
-in place around CPU, memory, disk space and other resources that
-will be consumed by cluster users.
-
-Resource Quota can constrain the whole namespace
-
-```hcl
-resource "kubernetes_resource_quota" "example" {
-  metadata {
-    name = "terraform-example"
-  }
-  spec {
-    hard = {
-      pods = 10
-    }
-    scopes = ["BestEffort"]
-  }
-}
-```
-
-whereas Limit Range can impose limits on a specific resource
-type (e.g. Pod or Persistent Volume Claim).
-
-```hcl
-resource "kubernetes_limit_range" "example" {
-  metadata {
-    name = "terraform-example"
-  }
-  spec {
-    limit {
-      type = "Pod"
-      max = {
-        cpu    = "200m"
-        memory = "1024M"
-      }
-    }
-    limit {
-      type = "PersistentVolumeClaim"
-      min = {
-        storage = "24M"
-      }
-    }
-    limit {
-      type = "Container"
-      default = {
-        cpu    = "50m"
-        memory = "24M"
-      }
-    }
-  }
-}
-```
-
-```
-$ terraform plan
-```
-
-```
-$ terraform apply
-```
-
-## Conclusion
-
-Terraform offers you an effective way to manage both compute for
-your Kubernetes cluster and Kubernetes resources. Check out
-the extensive documentation of the Kubernetes provider linked
-from the menu.

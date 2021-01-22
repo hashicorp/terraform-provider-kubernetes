@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -120,10 +121,15 @@ func upgradeContainers(rawState map[string]interface{}) map[string]interface{} {
 				if req, ok := resources["requests"].([]interface{}); ok && len(req) > 0 {
 					requests := req[0].(map[string]interface{})
 					resources["requests"] = requests
+				} else {
+					resources["requests"] = map[string]interface{}{}
 				}
+
 				if lim, ok := resources["limits"].([]interface{}); ok && len(lim) > 0 {
 					limits := lim[0].(map[string]interface{})
 					resources["limits"] = limits
+				} else {
+					resources["limits"] = map[string]interface{}{}
 				}
 			}
 		}
@@ -136,10 +142,15 @@ func upgradeContainers(rawState map[string]interface{}) map[string]interface{} {
 				if req, ok := resources["requests"].([]interface{}); ok && len(req) > 0 {
 					requests := req[0].(map[string]interface{})
 					resources["requests"] = requests
+				} else {
+					resources["requests"] = map[string]interface{}{}
 				}
+
 				if lim, ok := resources["limits"].([]interface{}); ok && len(lim) > 0 {
 					limits := lim[0].(map[string]interface{})
 					resources["limits"] = limits
+				} else {
+					resources["limits"] = map[string]interface{}{}
 				}
 			}
 		}

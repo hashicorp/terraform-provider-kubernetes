@@ -56,10 +56,10 @@ There are generally two ways to configure the Kubernetes provider.
 
 ### File config
 
-The provider always first tries to load **a config file** from a given
-(or default) location. Depending on whether you have a current context set
-this _may_ require `config_context_auth_info` and/or `config_context_cluster`
-and/or `config_context`.
+The provider always first tries to load **a config file** from a given (or default) location 
+when `config_path` or `config_paths` (or their equivalent environment variables) are set. 
+Depending on whether you have a current context set this _may_ require 
+`config_context_auth_info` and/or `config_context_cluster` and/or `config_context`.
 
 #### Setting default config context
 

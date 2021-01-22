@@ -24,7 +24,7 @@ resource "aws_route53_record" "example" {
   name    = "example"
   type    = "CNAME"
   ttl     = "300"
-  records = [data.kubernetes_ingress.example.load_balancer_ingress.0.hostname]
+  records = [data.kubernetes_ingress.example.status.0.load_balancer.0.ingress.0.hostname]
 }
 ```
 
@@ -94,11 +94,19 @@ The following arguments are supported:
 
 ## Attributes
 
-* `load_balancer_ingress` - A list containing ingress points for the load-balancer
+### `status`
 
-### `load_balancer_ingress`
+* `status` - Status is the current state of the Ingress. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 
-#### Attributes
+#### `load_balancer`
 
-* `ip` - IP which is set for load-balancer ingress points that are IP based (typically GCE or OpenStack load-balancers)
-* `hostname` - Hostname which is set for load-balancer ingress points that are DNS based (typically AWS load-balancers)
+* LoadBalancer contains the current status of the load-balancer, if one is present.
+
+##### `ingress`
+
+* `ingress` - Ingress is a list containing ingress points for the load-balancer. Traffic intended for the service should be sent to these ingress points.
+
+###### Attributes
+
+* `ip` -  IP is set for load-balancer ingress points that are IP based (typically GCE or OpenStack load-balancers).
+* `hostname` - Hostname is set for load-balancer ingress points that are DNS based (typically AWS load-balancers).

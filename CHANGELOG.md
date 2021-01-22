@@ -1,4 +1,4 @@
-## 2.0.1 (unreleased)
+## 2.0.1 (Unreleased)
 
 BUG FIXES:
 * Resources state migration should migrate empty array (#1124)

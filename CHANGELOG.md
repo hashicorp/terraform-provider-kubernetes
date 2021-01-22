@@ -1,4 +1,4 @@
-## 2.0.1 (Unreleased)
+## 2.0.1 (January 22, 2021)
 
 BUG FIXES:
 * Resources state migration should migrate empty array (#1124)

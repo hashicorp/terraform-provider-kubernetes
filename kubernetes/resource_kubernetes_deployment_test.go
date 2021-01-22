@@ -994,7 +994,6 @@ func TestAccKubernetesDeployment_with_host_aliases(t *testing.T) {
 func TestAccKubernetesDeployment_regression(t *testing.T) {
 	var conf1, conf2 appsv1.Deployment
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1004,13 +1003,13 @@ func TestAccKubernetesDeployment_regression(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: requiredProviders() + testAccKubernetesDeploymentConfig_beforeUpdate(name, imageName),
+				Config: requiredProviders() + testAccKubernetesDeploymentConfig_beforeUpdate(name, nginxImageVersion, busyboxImageVersion),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf1),
 				),
 			},
 			{
-				Config: requiredProviders() + testAccKubernetesDeploymentConfig_afterUpdate(name, imageName),
+				Config: requiredProviders() + testAccKubernetesDeploymentConfig_afterUpdate(name, nginxImageVersion, busyboxImageVersion),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf2),
 					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, false),
@@ -2689,7 +2688,7 @@ func testAccKubernetesDeploymentConfigWithResourceFieldSelector(rcName, imageNam
 `, rcName, imageName, resourceName, divisor)
 }
 
-func testAccKubernetesDeploymentConfig_beforeUpdate(name, imageName string) string {
+func testAccKubernetesDeploymentConfig_beforeUpdate(name, nginxImage, busyboxImage string) string {
 	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   provider = kubernetes-released
   metadata {
@@ -2715,11 +2714,27 @@ func testAccKubernetesDeploymentConfig_beforeUpdate(name, imageName string) stri
 
           resources {
             limits {
-              memory = "512M"
+              memory = "128Mi"
               cpu = "1"
             }
             requests {
-              memory = "256M"
+              memory = "64Mi"
+              cpu = "50m"
+            }
+          }
+        }
+        container {
+          image = "%s"
+          name  = "tf-acc-test-no-limits"
+
+          command = [
+            "sleep",
+            "infinity"
+          ]
+
+          resources {
+            requests {
+              memory = "32Mi"
               cpu = "50m"
             }
           }
@@ -2728,10 +2743,10 @@ func testAccKubernetesDeploymentConfig_beforeUpdate(name, imageName string) stri
     }
   }
 }
-`, name, imageName)
+`, name, nginxImage, busyboxImage)
 }
 
-func testAccKubernetesDeploymentConfig_afterUpdate(name, imageName string) string {
+func testAccKubernetesDeploymentConfig_afterUpdate(name, nginxImage, busyboxImage string) string {
 	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
   provider = kubernetes-local
   metadata {
@@ -2757,11 +2772,27 @@ func testAccKubernetesDeploymentConfig_afterUpdate(name, imageName string) strin
 
           resources {
             limits = {
-              memory = "512M"
+              memory = "128Mi"
               cpu = "1"
             }
             requests = {
-              memory = "256M"
+              memory = "64Mi"
+              cpu = "50m"
+            }
+          }
+        }
+        container {
+          image = "%s"
+          name  = "tf-acc-test-no-limits"
+
+          command = [
+            "sleep",
+            "infinity"
+          ]
+
+          resources {
+            requests = {
+              memory = "32Mi"
               cpu = "50m"
             }
           }
@@ -2770,5 +2801,5 @@ func testAccKubernetesDeploymentConfig_afterUpdate(name, imageName string) strin
     }
   }
 }
-`, name, imageName)
+`, name, nginxImage, busyboxImage)
 }

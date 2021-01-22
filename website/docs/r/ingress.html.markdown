@@ -111,7 +111,7 @@ resource "kubernetes_service" "example" {
 }
 
 resource "kubernetes_ingress" "example" {
-  wait_for_load_balancer =true
+  wait_for_load_balancer = true
   metadata {
     name = "example"
     annotations = {

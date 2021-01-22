@@ -19,7 +19,7 @@ resource "kubernetes_service" "example" {
   }
   spec {
     selector = {
-      app = "${kubernetes_pod.example.metadata.0.labels.app}"
+      app = kubernetes_pod.example.metadata.0.labels.app
     }
     session_affinity = "ClientIP"
     port {
@@ -47,6 +47,73 @@ resource "kubernetes_pod" "example" {
   }
 }
 ```
+
+## Example using AWS load balancer
+
+```
+variable "cluster_name" {
+  type = string
+}
+
+data "aws_eks_cluster" "example" {
+  name = var.cluster_name
+}
+
+data "aws_eks_cluster_auth" "example" {
+  name = var.cluster_name
+}
+
+provider "aws" {
+  region = "us-west-1"
+}
+
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.example.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.example.certificate_authority[0].data)
+  exec {
+    api_version = "client.authentication.k8s.io/v1alpha1"
+    args        = ["eks", "get-token", "--cluster-name", var.cluster_name]
+    command     = "aws"
+  }
+}
+
+resource "kubernetes_service" "example" {
+  metadata {
+    name = "example"
+  }
+  spec {
+    port {
+      port = 8080
+      target_port = 80
+    }
+    type = "LoadBalancer"
+  }
+}
+
+# Create a local variable for the load balancer name.
+locals {
+  lb_name = split("-", split(".", kubernetes_service.example.status.0.load_balancer.0.ingress.0.hostname).0).0
+}
+
+# Read information about the load balancer using the AWS provider.
+data "aws_elb" "example" {
+  name = local.lb_name
+}
+
+output "load_balancer_name" {
+  value = local.lb_name
+}
+
+output "load_balancer_hostname" {
+  value = kubernetes_service.example.status.0.load_balancer.0.ingress.0.hostname
+}
+
+output "load_balancer_info" {
+  value = data.aws_elb.example
+}
+```
+
+
 
 ## Argument Reference
 
@@ -110,14 +177,22 @@ The following arguments are supported:
 
 ## Attributes
 
-* `load_balancer_ingress` - A list containing ingress points for the load-balancer (only valid if `type = "LoadBalancer"`)
+### `status`
 
-### `load_balancer_ingress`
+* `status` - Most recently observed status of the service. Populated by the system. Read-only. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 
-#### Attributes
+#### `load_balancer`
 
-* `ip` - IP which is set for load-balancer ingress points that are IP based (typically GCE or OpenStack load-balancers)
-* `hostname` - Hostname which is set for load-balancer ingress points that are DNS based (typically AWS load-balancers)
+* LoadBalancer contains the current status of the load-balancer, if one is present.
+
+##### `ingress`
+
+* `ingress` - Ingress is a list containing ingress points for the load-balancer. Traffic intended for the service should be sent to these ingress points.
+
+###### Attributes
+
+* `ip` -  IP is set for load-balancer ingress points that are IP based (typically GCE or OpenStack load-balancers).
+* `hostname` - Hostname is set for load-balancer ingress points that are DNS based (typically AWS load-balancers).
 
 ## Import
 

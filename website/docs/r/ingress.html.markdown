@@ -93,6 +93,59 @@ resource "kubernetes_pod" "example2" {
 }
 ```
 
+## Example using Nginx ingress controller
+
+```
+resource "kubernetes_service" "example" {
+  metadata {
+    name = "ingress-service"
+  }
+  spec {
+    port {
+      port = 80
+      target_port = 80
+      protocol = "TCP"
+    }
+    type = "NodePort"
+  }
+}
+
+resource "kubernetes_ingress" "example" {
+  wait_for_load_balancer = true
+  metadata {
+    name = "example"
+    annotations = {
+      "kubernetes.io/ingress.class" = "nginx"
+    }
+  }
+  spec {
+    rule {
+      http {
+        path {
+          path = "/*"
+          backend {
+            service_name = kubernetes_service.example.metadata.0.name
+            service_port = 80
+          }
+        }
+      }
+    }
+  }
+}
+
+# Display load balancer hostname (typically present in AWS)
+output "load_balancer_hostname" {
+  value = kubernetes_ingress.example.status.0.load_balancer.0.ingress.0.hostname
+}
+
+# Display load balancer IP (typically present in GCP, or using Nginx ingress controller)
+output "load_balancer_ip" {
+  value = kubernetes_ingress.example.status.0.load_balancer.0.ingress.0.ip
+}
+```
+
+
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -167,14 +220,23 @@ The following arguments are supported:
 
 ## Attributes
 
-* `load_balancer_ingress` - A list containing ingress points for the load-balancer
+### `status`
 
-### `load_balancer_ingress`
+* `status` - Status is the current state of the Ingress. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 
-#### Attributes
+#### `load_balancer`
 
-* `ip` - IP which is set for load-balancer ingress points that are IP based (typically GCE or OpenStack load-balancers)
-* `hostname` - Hostname which is set for load-balancer ingress points that are DNS based (typically AWS load-balancers)
+* LoadBalancer contains the current status of the load-balancer, if one is present.
+
+##### `ingress`
+
+* `ingress` - Ingress is a list containing ingress points for the load-balancer. Traffic intended for the service should be sent to these ingress points.
+
+###### Attributes
+
+* `ip` -  IP is set for load-balancer ingress points that are IP based (typically GCE or OpenStack load-balancers).
+* `hostname` - Hostname is set for load-balancer ingress points that are DNS based (typically AWS load-balancers).
+
 
 ## Import
 

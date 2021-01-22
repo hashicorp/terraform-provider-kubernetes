@@ -135,3 +135,61 @@ func TestUpgradeTemplatePodSpecWithResourcesFieldV0(t *testing.T) {
 		t.Fatalf("\n\nexpected:\n\n%#v\n\ngot:\n\n%#v\n\n", v1, actual)
 	}
 }
+
+func TestUpgradeTemplatePodSpecWithResourcesFieldV0_empty(t *testing.T) {
+	v0 := map[string]interface{}{
+		"spec": []interface{}{map[string]interface{}{
+			"template": []interface{}{map[string]interface{}{
+				"spec": []interface{}{map[string]interface{}{
+					"init_container": []interface{}{
+						map[string]interface{}{
+							"resources": []interface{}{map[string]interface{}{
+								"requests": []interface{}{},
+								"limits":   []interface{}{},
+							}},
+						},
+					},
+					"container": []interface{}{
+						map[string]interface{}{
+							"resources": []interface{}{map[string]interface{}{
+								"requests": []interface{}{},
+								"limits":   []interface{}{},
+							}},
+						},
+					},
+				}},
+			}},
+		}},
+	}
+
+	v1 := map[string]interface{}{
+		"spec": []interface{}{map[string]interface{}{
+			"template": []interface{}{map[string]interface{}{
+				"spec": []interface{}{map[string]interface{}{
+					"init_container": []interface{}{
+						map[string]interface{}{
+							"resources": []interface{}{map[string]interface{}{
+								"requests": map[string]interface{}{},
+								"limits":   map[string]interface{}{},
+							}},
+						},
+					},
+					"container": []interface{}{
+						map[string]interface{}{
+							"resources": []interface{}{map[string]interface{}{
+								"requests": map[string]interface{}{},
+								"limits":   map[string]interface{}{},
+							}},
+						},
+					},
+				}},
+			}},
+		}},
+	}
+
+	actual, _ := upgradeTemplatePodSpecWithResourcesFieldV0(context.TODO(), v0, nil)
+
+	if !reflect.DeepEqual(v1, actual) {
+		t.Fatalf("\n\nexpected:\n\n%#v\n\ngot:\n\n%#v\n\n", v1, actual)
+	}
+}

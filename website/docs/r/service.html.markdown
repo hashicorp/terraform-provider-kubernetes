@@ -48,7 +48,7 @@ resource "kubernetes_pod" "example" {
 }
 ```
 
-# Example using AWS load balancer
+## Example using AWS load balancer
 
 ```
 variable "cluster_name" {

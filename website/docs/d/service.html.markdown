@@ -24,7 +24,7 @@ resource "aws_route53_record" "example" {
   name    = "example"
   type    = "CNAME"
   ttl     = "300"
-  records = [data.kubernetes_service.example.tatus.0.load_balancer.0.ingress.0.hostname]
+  records = [data.kubernetes_service.example.status.0.load_balancer.0.ingress.0.hostname]
 }
 ```
 

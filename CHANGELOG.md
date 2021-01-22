@@ -1,3 +1,11 @@
+## 2.0.1 (unreleased)
+
+BUG FIXES:
+* Resources state migration should migrate empty array (#1124)
+
+IMPROVEMENTS:
+* Update docs to reflect new schema for `load_balancer_ingress` (#1123)
+
 ## 2.0.0 (January 21, 2021)
 
 BREAKING CHANGES:

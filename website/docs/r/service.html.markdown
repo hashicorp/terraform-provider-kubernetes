@@ -194,6 +194,13 @@ The following arguments are supported:
 * `ip` -  IP is set for load-balancer ingress points that are IP based (typically GCE or OpenStack load-balancers).
 * `hostname` - Hostname is set for load-balancer ingress points that are DNS based (typically AWS load-balancers).
 
+### Timeouts
+
+`kubernetes_service` provides the following
+[Timeouts](/docs/configuration/resources.html#timeouts) configuration options:
+
+- `create` - Default `10 minutes`
+
 ## Import
 
 Service can be imported using its namespace and name, e.g.

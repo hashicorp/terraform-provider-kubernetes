@@ -307,6 +307,7 @@ func resourceKubernetesDeploymentRead(ctx context.Context, d *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 	if !exists {
+		d.SetId("")
 		return diag.Diagnostics{}
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()

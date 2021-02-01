@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -232,6 +233,7 @@ func resourceKubernetesPersistentVolumeRead(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 	if !exists {
+		d.SetId("")
 		return diag.Diagnostics{}
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()

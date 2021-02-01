@@ -2,8 +2,9 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/rbac/v1"
@@ -77,6 +78,7 @@ func resourceKubernetesRoleBindingRead(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 	if !exists {
+		d.SetId("")
 		return diag.Diagnostics{}
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()

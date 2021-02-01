@@ -3,8 +3,9 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -151,6 +152,7 @@ func resourceKubernetesStorageClassRead(ctx context.Context, d *schema.ResourceD
 		return diag.FromErr(err)
 	}
 	if !exists {
+		d.SetId("")
 		return diags
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()

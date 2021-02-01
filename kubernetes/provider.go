@@ -4,21 +4,20 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
-	"net/http"
-	"os"
-	"path/filepath"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/mitchellh/go-homedir"
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	restclient "k8s.io/client-go/rest"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
 
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -29,82 +28,117 @@ func Provider() *schema.Provider {
 	p := &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"host": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_HOST", ""),
-				Description: "The hostname (in form of URI) of Kubernetes master.",
+				Type:             schema.TypeString,
+				Optional:         true,
+				DefaultFunc:      schema.EnvDefaultFunc("KUBE_HOST", nil),
+				Description:      "The hostname (in form of URI) of Kubernetes master.",
+				ConflictsWith:    []string{"config_path", "config_paths"},
+				ValidateDiagFunc: validation.ToDiagFunc(validation.IsURLWithHTTPorHTTPS),
+				// TODO: enable this when AtLeastOneOf works with optional attributes.
+				// https://github.com/hashicorp/terraform-plugin-sdk/issues/705
+				// AtLeastOneOf: []string{"token", "exec", "username", "password", "client_certificate", "client_key"},
 			},
 			"username": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_USER", ""),
-				Description: "The username to use for HTTP basic authentication when accessing the Kubernetes master endpoint.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_USER", nil),
+				Description:   "The username to use for HTTP basic authentication when accessing the Kubernetes master endpoint.",
+				ConflictsWith: []string{"config_path", "config_paths", "exec", "token", "client_certificate", "client_key"},
+				RequiredWith:  []string{"password", "host"},
 			},
 			"password": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_PASSWORD", ""),
-				Description: "The password to use for HTTP basic authentication when accessing the Kubernetes master endpoint.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_PASSWORD", nil),
+				Description:   "The password to use for HTTP basic authentication when accessing the Kubernetes master endpoint.",
+				ConflictsWith: []string{"config_path", "config_paths", "exec", "token", "client_certificate", "client_key"},
+				RequiredWith:  []string{"username", "host"},
 			},
 			"insecure": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_INSECURE", false),
-				Description: "Whether server should be accessed without verifying the TLS certificate.",
+				Type:          schema.TypeBool,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_INSECURE", nil),
+				Description:   "Whether server should be accessed without verifying the TLS certificate.",
+				ConflictsWith: []string{"cluster_ca_certificate", "client_key", "client_certificate", "exec"},
 			},
 			"client_certificate": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_CLIENT_CERT_DATA", ""),
-				Description: "PEM-encoded client certificate for TLS authentication.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CLIENT_CERT_DATA", nil),
+				Description:   "PEM-encoded client certificate for TLS authentication.",
+				ConflictsWith: []string{"config_path", "config_paths", "username", "password", "insecure"},
+				RequiredWith:  []string{"client_key", "cluster_ca_certificate", "host"},
 			},
 			"client_key": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_CLIENT_KEY_DATA", ""),
-				Description: "PEM-encoded client certificate key for TLS authentication.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CLIENT_KEY_DATA", nil),
+				Description:   "PEM-encoded client certificate key for TLS authentication.",
+				ConflictsWith: []string{"config_path", "config_paths", "username", "password", "exec", "insecure"},
+				RequiredWith:  []string{"client_certificate", "cluster_ca_certificate", "host"},
 			},
 			"cluster_ca_certificate": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_CLUSTER_CA_CERT_DATA", ""),
-				Description: "PEM-encoded root certificates bundle for TLS authentication.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CLUSTER_CA_CERT_DATA", nil),
+				Description:   "PEM-encoded root certificates bundle for TLS authentication.",
+				ConflictsWith: []string{"config_path", "config_paths", "insecure"},
+				RequiredWith:  []string{"host"},
+				// TODO: enable this when AtLeastOneOf works with optional attributes.
+				// https://github.com/hashicorp/terraform-plugin-sdk/issues/705
+				// AtLeastOneOf:  []string{"token", "exec", "client_certificate", "client_key"},
 			},
 			"config_paths": {
 				Type:        schema.TypeList,
 				Elem:        &schema.Schema{Type: schema.TypeString},
+				DefaultFunc: configPathsEnv,
 				Optional:    true,
 				Description: "A list of paths to kube config files. Can be set with KUBE_CONFIG_PATHS environment variable.",
+				// config_paths conflicts with every attribute except for "insecure", since all of these options will be read from the kubeconfig.
+				ConflictsWith: []string{"config_path", "exec", "token", "host", "client_certificate", "client_key", "cluster_ca_certificate", "username", "password"},
 			},
 			"config_path": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CONFIG_PATH", nil),
-				Description:   "Path to the kube config file. Can be set with KUBE_CONFIG_PATH.",
-				ConflictsWith: []string{"config_paths"},
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("KUBE_CONFIG_PATH", nil),
+				Description: "Path to the kube config file. Can be set with KUBE_CONFIG_PATH.",
+				// config_path conflicts with every attribute except for "insecure", since all of these options will be read from the kubeconfig.
+				ConflictsWith: []string{"config_paths", "exec", "token", "host", "client_certificate", "client_key", "cluster_ca_certificate", "username", "password"},
 			},
 			"config_context": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_CTX", ""),
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CTX", nil),
+				Description:   "Context to choose from the kube config file. ",
+				ConflictsWith: []string{"exec", "token", "client_certificate", "client_key", "username", "password"},
+				// TODO: enable this when AtLeastOneOf works with optional attributes.
+				// AtLeastOneOf:  []string{"config_path", "config_paths"},
 			},
 			"config_context_auth_info": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_CTX_AUTH_INFO", ""),
-				Description: "",
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CTX_AUTH_INFO", nil),
+				Description:   "Authentication info context of the kube config (name of the kubeconfig user, --user flag in kubectl).",
+				ConflictsWith: []string{"exec", "token", "client_certificate", "client_key", "username", "password"},
+				// TODO: enable this when AtLeastOneOf works with optional attributes.
+				// AtLeastOneOf:  []string{"config_path", "config_paths"},
 			},
 			"config_context_cluster": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_CTX_CLUSTER", ""),
-				Description: "",
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CTX_CLUSTER", nil),
+				Description:   "Cluster context of the kube config (name of the kubeconfig cluster, --cluster flag in kubectl).",
+				ConflictsWith: []string{"exec", "token", "client_certificate", "client_key", "username", "password"},
+				// TODO: enable this when AtLeastOneOf works with optional attributes.
+				// AtLeastOneOf:  []string{"config_path", "config_paths"},
 			},
 			"token": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("KUBE_TOKEN", ""),
-				Description: "Token to authenticate an service account",
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_TOKEN", nil),
+				Description:   "Bearer token for authenticating the Kubernetes API.",
+				ConflictsWith: []string{"config_path", "config_paths", "exec", "client_certificate", "client_key", "username", "password"},
+				RequiredWith:  []string{"host"},
 			},
 			"exec": {
 				Type:     schema.TypeList,
@@ -132,7 +166,9 @@ func Provider() *schema.Provider {
 						},
 					},
 				},
-				Description: "",
+				Description:   "Configuration block to use an exec-based credential plugin, e.g. call an external command to receive user credentials.",
+				ConflictsWith: []string{"config_path", "config_paths", "token", "client_certificate", "client_key", "username", "password", "insecure"},
+				RequiredWith:  []string{"host", "cluster_ca_certificate"},
 			},
 		},
 
@@ -194,6 +230,22 @@ func Provider() *schema.Provider {
 	return p
 }
 
+// configPathsEnv fetches the value of the environment variable KUBE_CONFIG_PATHS, if defined.
+func configPathsEnv() (interface{}, error) {
+	value, exists := os.LookupEnv("KUBE_CONFIG_PATHS")
+	if exists {
+		log.Print("[DEBUG] using environment variable KUBE_CONFIG_PATHS to define config_paths")
+		log.Printf("[DEBUG] value of KUBE_CONFIG_PATHS: %v", value)
+		pathList := filepath.SplitList(value)
+		configPaths := new([]interface{})
+		for _, p := range pathList {
+			*configPaths = append(*configPaths, p)
+		}
+		return *configPaths, nil
+	}
+	return nil, nil
+}
+
 type KubeClientsets interface {
 	MainClientset() (*kubernetes.Clientset, error)
 	AggregatorClientset() (*aggregator.Clientset, error)
@@ -210,6 +262,10 @@ type kubeClientsets struct {
 func (k kubeClientsets) MainClientset() (*kubernetes.Clientset, error) {
 	if k.mainClientset != nil {
 		return k.mainClientset, nil
+	}
+
+	if err := checkConfigurationValid(k.configData); err != nil {
+		return nil, err
 	}
 
 	if k.config != nil {
@@ -234,6 +290,52 @@ func (k kubeClientsets) AggregatorClientset() (*aggregator.Clientset, error) {
 		k.aggregatorClientset = ac
 	}
 	return k.aggregatorClientset, nil
+}
+
+var apiTokenMountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
+
+func inCluster() bool {
+	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
+	if host == "" || port == "" {
+		return false
+	}
+
+	if _, err := os.Stat(apiTokenMountPath); err != nil {
+		return false
+	}
+	return true
+}
+
+var authDocumentationURL = "https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs#authentication"
+
+func checkConfigurationValid(d *schema.ResourceData) error {
+	if inCluster() {
+		log.Printf("[DEBUG] Terraform appears to be running inside the Kubernetes cluster")
+		return nil
+	}
+
+	if os.Getenv("KUBE_CONFIG_PATHS") != "" {
+		return nil
+	}
+
+	atLeastOneOf := []string{
+		"host",
+		"config_path",
+		"config_paths",
+		"client_certificate",
+		"token",
+		"exec",
+	}
+	for _, a := range atLeastOneOf {
+		if _, ok := d.GetOk(a); ok {
+			return nil
+		}
+	}
+
+	return fmt.Errorf(`provider not configured: you must configure a path to your kubeconfig
+or explicitly supply credentials via the provider block or environment variables.
+
+See our documentation at: %s`, authDocumentationURL)
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {
@@ -270,7 +372,9 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 
 func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error) {
 	overrides := &clientcmd.ConfigOverrides{}
-	loader := &clientcmd.ClientConfigLoadingRules{}
+	loader := &clientcmd.ClientConfigLoadingRules{
+		WarnIfAllMissing: true,
+	}
 
 	configPaths := []string{}
 
@@ -280,10 +384,6 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		for _, p := range v {
 			configPaths = append(configPaths, p.(string))
 		}
-	} else if v := os.Getenv("KUBE_CONFIG_PATHS"); v != "" {
-		// NOTE we have to do this here because the schema
-		// does not yet allow you to set a default for a TypeList
-		configPaths = filepath.SplitList(v)
 	}
 
 	if len(configPaths) > 0 {
@@ -310,7 +410,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		authInfo, authInfoOk := d.GetOk("config_context_auth_info")
 		cluster, clusterOk := d.GetOk("config_context_cluster")
 		if ctxOk || authInfoOk || clusterOk {
-			ctxSuffix = "; overriden context"
+			ctxSuffix = "; overridden context"
 			if ctxOk {
 				overrides.CurrentContext = kubectx.(string)
 				ctxSuffix += fmt.Sprintf("; config ctx: %s", overrides.CurrentContext)
@@ -331,16 +431,16 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	}
 
 	// Overriding with static configuration
-	if v, ok := d.GetOk("insecure"); ok {
+	if v, ok := d.GetOk("insecure"); ok && v != "" {
 		overrides.ClusterInfo.InsecureSkipTLSVerify = v.(bool)
 	}
-	if v, ok := d.GetOk("cluster_ca_certificate"); ok {
+	if v, ok := d.GetOk("cluster_ca_certificate"); ok && v != "" {
 		overrides.ClusterInfo.CertificateAuthorityData = bytes.NewBufferString(v.(string)).Bytes()
 	}
-	if v, ok := d.GetOk("client_certificate"); ok {
+	if v, ok := d.GetOk("client_certificate"); ok && v != "" {
 		overrides.AuthInfo.ClientCertificateData = bytes.NewBufferString(v.(string)).Bytes()
 	}
-	if v, ok := d.GetOk("host"); ok {
+	if v, ok := d.GetOk("host"); ok && v != "" {
 		// Server has to be the complete address of the kubernetes cluster (scheme://hostname:port), not just the hostname,
 		// because `overrides` are processed too late to be taken into account by `defaultServerUrlFor()`.
 		// This basically replicates what defaultServerUrlFor() does with config but for overrides,
@@ -355,16 +455,16 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 
 		overrides.ClusterInfo.Server = host.String()
 	}
-	if v, ok := d.GetOk("username"); ok {
+	if v, ok := d.GetOk("username"); ok && v != "" {
 		overrides.AuthInfo.Username = v.(string)
 	}
-	if v, ok := d.GetOk("password"); ok {
+	if v, ok := d.GetOk("password"); ok && v != "" {
 		overrides.AuthInfo.Password = v.(string)
 	}
-	if v, ok := d.GetOk("client_key"); ok {
+	if v, ok := d.GetOk("client_key"); ok && v != "" {
 		overrides.AuthInfo.ClientKeyData = bytes.NewBufferString(v.(string)).Bytes()
 	}
-	if v, ok := d.GetOk("token"); ok {
+	if v, ok := d.GetOk("token"); ok && v != "" {
 		overrides.AuthInfo.Token = v.(string)
 	}
 

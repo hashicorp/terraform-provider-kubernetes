@@ -10,6 +10,12 @@ TF_PROV_DOCS := $(PWD)/kubernetes/test-infra/tfproviderdocs
 EXT_PROV_DIR := $(PWD)/kubernetes/test-infra/external-providers
 EXT_PROV_BIN := /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH)/terraform-provider-kubernetes_9.9.9_$(OS_ARCH)
 
+ifdef KUBE_CONFIG_PATHS
+KUBECONFIG1  := $(shell echo $(KUBE_CONFIG_PATHS) | cut -d\: -f1)
+else
+KUBECONFIG1  := $(shell echo $(KUBECONFIG) | cut -d\: -f1)
+endif
+
 ifneq ($(PWD),$(PROVIDER_DIR))
 $(error "Makefile must be run from the provider directory")
 endif
@@ -57,11 +63,14 @@ test: fmtcheck
 		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
 testacc: fmtcheck vet
-	rm -rf $(EXT_PROV_DIR)/.terraform $(EXT_PROV_DIR)/.terraform.lock.hcl || true
-	mkdir $(EXT_PROV_DIR)/.terraform
-	mkdir -p /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH) || true
-	ls $(EXT_PROV_BIN) || go build -o $(EXT_PROV_BIN)
-	cd $(EXT_PROV_DIR) && TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform terraform init -upgrade
+	@rm -rf kubernetes/testdata || true
+	@mkdir kubernetes/testdata
+	@cp $(KUBECONFIG1) kubernetes/testdata/kubeconfig || (echo "Please set KUBE_CONFIG_PATHS or KUBECONFIG environment variable"; exit 1)
+	@rm -rf $(EXT_PROV_DIR)/.terraform $(EXT_PROV_DIR)/.terraform.lock.hcl || true
+	@mkdir $(EXT_PROV_DIR)/.terraform
+	@mkdir -p /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH) || true
+	@ls $(EXT_PROV_BIN) || go build -o $(EXT_PROV_BIN)
+	@cd $(EXT_PROV_DIR) && TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform terraform init -upgrade
 	TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
 
 test-compile:

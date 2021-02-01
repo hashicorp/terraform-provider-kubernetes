@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -166,6 +167,9 @@ func getEnv() *currentEnv {
 	return e
 }
 
+// testAccPreCheck verifies and sets required provider testing configuration
+// This PreCheck function should be present in every acceptance test. It allows
+// test configurations to omit a provider configuration
 func testAccPreCheck(t *testing.T) {
 	ctx := context.TODO()
 	hasFileCfg := (os.Getenv("KUBE_CTX_AUTH_INFO") != "" && os.Getenv("KUBE_CTX_CLUSTER") != "") ||
@@ -195,6 +199,37 @@ func testAccPreCheck(t *testing.T) {
 		)
 	}
 
+	diags := testAccProvider.Configure(ctx, terraform.NewResourceConfigRaw(nil))
+	if diags.HasError() {
+		t.Fatal(diags[0].Summary)
+	}
+	return
+}
+
+// testAccPreCheckInternal configures the provider for internal tests.
+// This is the equivalent of running `terraform init`, but with a bare
+// minimum configuration, to create a fully separate environment where
+// all configuration options (including environment variables) can be
+// tested separately from the user's environment. It is used exclusively
+// in functions labelled testAccKubernetesProvider_*.
+func testAccPreCheckInternal(t *testing.T) {
+	ctx := context.TODO()
+	unsetEnv(t)
+	diags := testAccProvider.Configure(ctx, terraform.NewResourceConfigRaw(nil))
+	if diags.HasError() {
+		t.Fatal(diags[0].Summary)
+	}
+	return
+}
+
+// testAccPreCheckInternal_setEnv is used for internal testing where
+// specific environment variables are needed to configure the provider.
+func testAccPreCheckInternal_setEnv(t *testing.T, envVars map[string]string) {
+	ctx := context.TODO()
+	unsetEnv(t)
+	for k, v := range envVars {
+		os.Setenv(k, v)
+	}
 	diags := testAccProvider.Configure(ctx, terraform.NewResourceConfigRaw(nil))
 	if diags.HasError() {
 		t.Fatal(diags[0].Summary)
@@ -435,4 +470,395 @@ func requiredProviders() string {
   }
 }
 `)
+}
+
+// testAccProviderFactoriesInternal is a factory used for provider configuration testing.
+// This should only be used for TestAccKubernetesProvider_ tests which need to
+// reference the provider instance itself. Other testing should use testAccProviderFactories.
+var testAccProviderFactoriesInternal = map[string]func() (*schema.Provider, error){
+	"kubernetes": func() (*schema.Provider, error) {
+		return Provider(), nil
+	},
+}
+
+func TestAccKubernetesProviderConfig_config_path(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheckInternal(t) },
+		ProviderFactories: testAccProviderFactoriesInternal,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_config_path("./testdata/kubeconfig"),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_config_path("./testdata/kubeconfig") +
+						providerConfig_config_context("test-context"),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_config_path("./missing/file"),
+				),
+				ExpectError:        regexp.MustCompile("could not open kubeconfig"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_config_path("./testdata/kubeconfig") +
+						providerConfig_token("test-token"),
+				),
+				ExpectError:        regexp.MustCompile(`"config_path": conflicts with token`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_config_path("./testdata/kubeconfig") +
+						providerConfig_host("test-host"),
+				),
+				ExpectError:        regexp.MustCompile(`"config_path": conflicts with host`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_config_path("./testdata/kubeconfig") +
+						providerConfig_cluster_ca_certificate("test-ca-cert"),
+				),
+				ExpectError:        regexp.MustCompile(`"config_path": conflicts with cluster_ca_certificate`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_config_path("./testdata/kubeconfig") +
+						providerConfig_client_cert("test-client-cert"),
+				),
+				ExpectError:        regexp.MustCompile(`"config_path": conflicts with client_certificate`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_config_path("./testdata/kubeconfig") +
+						providerConfig_client_key("test-client-key"),
+				),
+				ExpectError:        regexp.MustCompile(`"config_path": conflicts with client_key`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
+func TestAccKubernetesProviderConfig_config_paths(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheckInternal(t) },
+		ProviderFactories: testAccProviderFactoriesInternal,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_config_paths(`["./testdata/kubeconfig", "./testdata/kubeconfig"]`),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_config_paths(`["./testdata/kubeconfig"]`) +
+						providerConfig_config_context("test-context"),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_config_paths(`["./missing/file", "./testdata/kubeconfig"]`),
+				),
+				ExpectError:        regexp.MustCompile("could not open kubeconfig"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_config_path("./internal/testdata/kubeconfig") +
+						providerConfig_config_paths(`["./testdata/kubeconfig", "./testdata/kubeconfig"]`),
+				),
+				ExpectError:        regexp.MustCompile(`"config_path": conflicts with config_paths`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
+func TestAccKubernetesProviderConfig_config_paths_env(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheckInternal_setEnv(t, map[string]string{
+				"KUBE_CONFIG_PATHS": strings.Join([]string{
+					"./testdata/kubeconfig",
+					"./testdata/kubeconfig",
+				}, string(os.PathListSeparator)),
+			})
+		},
+		ProviderFactories: testAccProviderFactoriesInternal,
+		Steps: []resource.TestStep{
+			{
+				Config:             testAccKubernetesProviderConfig("# empty"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config:             testAccKubernetesProviderConfig("# empty"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
+func TestAccKubernetesProviderConfig_config_paths_env_wantError(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheckInternal_setEnv(t, map[string]string{
+				"KUBE_CONFIG_PATHS": strings.Join([]string{
+					"./testdata/kubeconfig",
+					"./testdata/kubeconfig",
+				}, string(os.PathListSeparator)),
+				"KUBE_CONFIG_PATH": "./testdata/kubeconfig",
+			})
+		},
+		ProviderFactories: testAccProviderFactoriesInternal,
+		Steps: []resource.TestStep{
+			{
+				Config:             testAccKubernetesProviderConfig("# empty"),
+				ExpectError:        regexp.MustCompile(`"config_path": conflicts with config_paths`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
+func TestAccKubernetesProviderConfig_host_env_wantError(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheckInternal_setEnv(t, map[string]string{
+				"KUBE_HOST": "test-host",
+				"KUBE_CONFIG_PATHS": strings.Join([]string{
+					"./testdata/kubeconfig",
+					"./testdata/kubeconfig",
+				}, string(os.PathListSeparator)),
+			})
+		},
+		ProviderFactories: testAccProviderFactoriesInternal,
+		Steps: []resource.TestStep{
+			{
+				Config:             testAccKubernetesProviderConfig("# empty"),
+				ExpectError:        regexp.MustCompile(`"host": conflicts with config_paths`),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
+func TestAccKubernetesProviderConfig_host(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheckInternal(t) },
+		ProviderFactories: testAccProviderFactoriesInternal,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_host("https://test-host") +
+						providerConfig_token("test-token"),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_host("http://test-host") +
+						providerConfig_token("test-token"),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_host("https://127.0.0.1") +
+						providerConfig_token("test-token"),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_host("test-host") +
+						providerConfig_token("test-token"),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+				ExpectError:        regexp.MustCompile(`Error: expected "host" to have a host, got test-host`),
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_exec("test-exec"),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+				// Error: "exec": all of `host,exec` must be specified
+				ExpectError: regexp.MustCompile("exec,host"),
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_exec("test-exec") +
+						providerConfig_cluster_ca_certificate("test-ca-cert"),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+				// Error: "exec": all of `cluster_ca_certificate,exec,host` must be specified
+				ExpectError: regexp.MustCompile("cluster_ca_certificate,exec,host"),
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_exec("test-exec") +
+						providerConfig_host("https://test-host") +
+						providerConfig_cluster_ca_certificate("test-ca-cert"),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_token("test-token"),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+				// Error: "host": all of `host,token` must be specified
+				ExpectError: regexp.MustCompile("host,token"),
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_cluster_ca_certificate("test-cert"),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+				// Error: "cluster_ca_certificate": all of `cluster_ca_certificate,host` must be specified
+				ExpectError: regexp.MustCompile("cluster_ca_certificate,host"),
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_host("https://test-host") +
+						providerConfig_cluster_ca_certificate("test-cert"),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_host("https://test-host") +
+						providerConfig_cluster_ca_certificate("test-cert") +
+						providerConfig_token("test-token"),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesProviderConfig(
+					providerConfig_host("https://test-host") +
+						providerConfig_cluster_ca_certificate("test-ca-cert") +
+						providerConfig_client_cert("test-client-cert"),
+				),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+				// Error: "client_certificate": all of `client_certificate,client_key,cluster_ca_certificate,host` must be specified
+				ExpectError: regexp.MustCompile("client_certificate,client_key,cluster_ca_certificate,host"),
+			},
+		},
+	})
+}
+
+// testAccKubernetesProviderConfig is used together with the providerConfig_* functions
+// to assemble a Kubernetes provider configuration with interchangeable options.
+func testAccKubernetesProviderConfig(providerConfig string) string {
+	return fmt.Sprintf(`provider "kubernetes" {
+  %s
+}
+
+# Needed for provider initialization.
+resource kubernetes_namespace "test" {
+  metadata {
+    name = "tf-k8s-acc-test"
+  }
+}
+`, providerConfig)
+}
+
+func providerConfig_config_path(path string) string {
+	return fmt.Sprintf(`
+  config_path = "%s"
+`, path)
+}
+
+func providerConfig_config_context(context string) string {
+	return fmt.Sprintf(`
+  config_context = "%s"
+`, context)
+}
+
+func providerConfig_config_paths(paths string) string {
+	return fmt.Sprintf(`
+  config_paths = %s
+`, paths)
+}
+
+func providerConfig_token(token string) string {
+	return fmt.Sprintf(`
+  token = "%s"
+`, token)
+}
+
+func providerConfig_cluster_ca_certificate(ca_cert string) string {
+	return fmt.Sprintf(`
+  cluster_ca_certificate = "%s"
+`, ca_cert)
+}
+
+func providerConfig_client_cert(client_cert string) string {
+	return fmt.Sprintf(`
+  client_certificate = "%s"
+`, client_cert)
+}
+
+func providerConfig_client_key(client_key string) string {
+	return fmt.Sprintf(`
+  client_key = "%s"
+`, client_key)
+}
+
+func providerConfig_host(host string) string {
+	return fmt.Sprintf(`
+  host = "%s"
+`, host)
+}
+
+func providerConfig_exec(clusterName string) string {
+	return fmt.Sprintf(`
+  exec {
+    api_version = "client.authentication.k8s.io/v1alpha1"
+    args        = ["eks", "get-token", "--cluster-name", "%s"]
+    command     = "aws"
+  }
+`, clusterName)
 }

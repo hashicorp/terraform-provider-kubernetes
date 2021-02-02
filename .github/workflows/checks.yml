@@ -1,0 +1,140 @@
+name: "Checks"
+
+# TODO: Reduce the duplication when github will allow the YAML anchors
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [master]
+jobs:
+  website-lint:
+    runs-on: ubuntu-20.04
+    env:
+      GO111MODULE: on
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up GO 1.14.x
+      uses: actions/setup-go@v1
+      with:
+        go-version: '1.14'
+    - run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      # This script is used by the Github actions to install a cookie for
+      # go.googlesource.com so rate limits are higher when using `go get` to fetch
+      # packages that live there.
+      # See: https://github.com/golang/go/issues/12933
+    - name: Install cookie
+      run: bash scripts/gogetcookie.sh
+    - run: make website-lint
+  depscheck:
+    runs-on: ubuntu-20.04
+    env:
+      GO111MODULE: on
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up GO 1.14.x
+      uses: actions/setup-go@v1
+      with:
+        go-version: '1.14'
+    - run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      # This script is used by the Travis build to install a cookie for
+      # go.googlesource.com so rate limits are higher when using `go get` to fetch
+      # packages that live there.
+      # See: https://github.com/golang/go/issues/12933
+    - name: Install cookie
+      run: bash scripts/gogetcookie.sh
+    - run: make depscheck
+  fmtcheck:
+    runs-on: ubuntu-20.04
+    env:
+      GO111MODULE: on
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up GO 1.14.x
+      uses: actions/setup-go@v1
+      with:
+        go-version: '1.14'
+    - run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      # This script is used by the Travis build to install a cookie for
+      # go.googlesource.com so rate limits are higher when using `go get` to fetch
+      # packages that live there.
+      # See: https://github.com/golang/go/issues/12933
+    - name: Install cookie
+      run: bash scripts/gogetcookie.sh
+    - run: make website-lint
+  test:
+    runs-on: ubuntu-20.04
+    env:
+      GO111MODULE: on
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up GO 1.14.x
+      uses: actions/setup-go@v1
+      with:
+        go-version: '1.14'
+    - run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      # This script is used by the Travis build to install a cookie for
+      # go.googlesource.com so rate limits are higher when using `go get` to fetch
+      # packages that live there.
+      # See: https://github.com/golang/go/issues/12933
+    - name: Install cookie
+      run: bash scripts/gogetcookie.sh
+
+#    - name: Setup tmate session
+#      uses: mxschmitt/action-tmate@v3
+    - run: make test
+  test-compile:
+    runs-on: ubuntu-20.04
+    env:
+      GO111MODULE: on
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up GO 1.14.x
+      uses: actions/setup-go@v1
+      with:
+        go-version: '1.14'
+    - run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      # This script is used by the Travis build to install a cookie for
+      # go.googlesource.com so rate limits are higher when using `go get` to fetch
+      # packages that live there.
+      # See: https://github.com/golang/go/issues/12933
+    - name: Install cookie
+      run: bash scripts/gogetcookie.sh
+    - run: make test-compile
+  tests-lint:
+    runs-on: ubuntu-20.04
+    env:
+      GO111MODULE: on
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up GO 1.14.x
+      uses: actions/setup-go@v1
+      with:
+        go-version: '1.14'
+    - run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      # This script is used by the Travis build to install a cookie for
+      # go.googlesource.com so rate limits are higher when using `go get` to fetch
+      # packages that live there.
+      # See: https://github.com/golang/go/issues/12933
+    - name: Install cookie
+      run: bash scripts/gogetcookie.sh
+    - run: make tests-lint
+  vet:
+    runs-on: ubuntu-20.04
+    env:
+      GO111MODULE: on
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up GO 1.14.x
+      uses: actions/setup-go@v1
+      with:
+        go-version: '1.14'
+    - run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      # This script is used by the Travis build to install a cookie for
+      # go.googlesource.com so rate limits are higher when using `go get` to fetch
+      # packages that live there.
+      # See: https://github.com/golang/go/issues/12933
+    - name: Install cookie
+      run: bash scripts/gogetcookie.sh
+    - run: make vet

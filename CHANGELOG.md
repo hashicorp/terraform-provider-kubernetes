@@ -1,3 +1,11 @@
+## 2.0.2 (Unreleased)
+
+BUG FIXES:
+* Read operation should set resource id to null if not found (#1136)
+
+IMPROVEMENTS:
+* Add service timeouts docs (#963)
+
 ## 2.0.1 (January 22, 2021)
 
 BUG FIXES:

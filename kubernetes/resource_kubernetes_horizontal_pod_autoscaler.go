@@ -2,8 +2,9 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/autoscaling/v1"
@@ -123,6 +124,7 @@ func resourceKubernetesHorizontalPodAutoscalerRead(ctx context.Context, d *schem
 		return diag.FromErr(err)
 	}
 	if !exists {
+		d.SetId("")
 		return diag.Diagnostics{}
 	}
 	if useV2(d) {

@@ -96,11 +96,12 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Set: schema.HashString,
 						},
 						"capacity": {
-							Type:         schema.TypeMap,
-							Description:  "A description of the persistent volume's resources and capacity. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#capacity",
-							Required:     true,
-							Elem:         schema.TypeString,
-							ValidateFunc: validateResourceList,
+							Type:             schema.TypeMap,
+							Description:      "A description of the persistent volume's resources and capacity. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#capacity",
+							Required:         true,
+							Elem:             schema.TypeString,
+							ValidateFunc:     validateResourceList,
+							DiffSuppressFunc: suppressEquivalentResourceQuantity,
 						},
 						"persistent_volume_reclaim_policy": {
 							Type:        schema.TypeString,

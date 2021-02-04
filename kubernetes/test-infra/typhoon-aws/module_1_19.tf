@@ -6,11 +6,11 @@ locals {
     enabled_1_19 = length(regexall("v?1.19.?[0-9]{0,2}", var.kubernetes_version))
 }
 
-# This module builds a 1.19.x Typhoon cluster. It is mutually exlusive to the 1.18.x module.
+# This module builds a 1.19.x Typhoon cluster. It is mutually exlusive to other modules of different versions.
 #
 module "typhoon-acc-1_19" {
   count = local.enabled_1_19
-  source = "git::https://github.com/poseidon/typhoon//aws/fedora-coreos/kubernetes?ref=v1.19.0"
+  source = "git::https://github.com/poseidon/typhoon//aws/flatcar-linux/kubernetes?ref=v1.19.4"
 
   cluster_name = var.cluster_name
   dns_zone     = var.base_domain

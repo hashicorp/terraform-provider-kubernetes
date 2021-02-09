@@ -129,7 +129,7 @@ func resourceKubernetesNamespaceDelete(ctx context.Context, d *schema.ResourceDa
 		Refresh: func() (interface{}, string, error) {
 			out, err := conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 			if err != nil {
-				if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+				if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 					return nil, "", nil
 				}
 				log.Printf("[ERROR] Received error: %#v", err)
@@ -161,7 +161,7 @@ func resourceKubernetesNamespaceExists(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[INFO] Checking namespace %s", name)
 	_, err = conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

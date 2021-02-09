@@ -168,7 +168,7 @@ func resourceKubernetesEndpointsExists(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[INFO] Checking endpoints %s", name)
 	_, err = conn.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

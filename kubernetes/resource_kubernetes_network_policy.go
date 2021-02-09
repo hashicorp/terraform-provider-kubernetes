@@ -372,7 +372,7 @@ func resourceKubernetesNetworkPolicyExists(ctx context.Context, d *schema.Resour
 	log.Printf("[INFO] Checking network policy %s", name)
 	_, err = conn.NetworkingV1().NetworkPolicies(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

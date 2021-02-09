@@ -320,7 +320,7 @@ func testAccCheckKubernetesValdiatingWebhookConfigurationDestroy(s *terraform.St
 		}
 
 		if err != nil {
-			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
 			return err

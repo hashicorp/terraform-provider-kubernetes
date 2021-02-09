@@ -318,7 +318,7 @@ func resourceKubernetesMutatingWebhookConfigurationExists(ctx context.Context, d
 	}
 
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		return false, err

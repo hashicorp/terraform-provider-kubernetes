@@ -494,7 +494,7 @@ func resourceKubernetesPodSecurityPolicyExists(ctx context.Context, d *schema.Re
 	log.Printf("[INFO] Checking PodSecurityPolicy %s", name)
 	_, err = conn.PolicyV1beta1().PodSecurityPolicies().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

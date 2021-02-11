@@ -186,7 +186,7 @@ func findDefaultServiceAccount(ctx context.Context, sa *api.ServiceAccount, conn
 			continue
 		}
 
-		if secret.CreationTimestamp.Sub(sa.CreationTimestamp.Time) > (3 * time.Second) {
+		if secret.CreationTimestamp.Sub(sa.CreationTimestamp.Time) > (60 * time.Second) {
 			log.Printf("[DEBUG] Skipping %s as it wasn't created at the same time as the service account", saSecret.Name)
 			continue
 		}

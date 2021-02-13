@@ -2159,7 +2159,7 @@ resource "kubernetes_config_map" "test_from" {
 resource "kubernetes_pod" "test" {
   metadata {
     labels = {
-      "app.kubernetes.io/instance" = "terraform-example"
+	  app = "pod_label"
     }
 
     name = "%s"

@@ -221,6 +221,7 @@ The following arguments are supported:
 * `subdomain` - (Optional) If specified, the fully qualified Pod hostname will be "...svc.". If not specified, the pod will not have a domainname at all..
 * `termination_grace_period_seconds` - (Optional) Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request. Value must be non-negative integer. The value zero indicates delete immediately. If this value is nil, the default grace period will be used instead. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Set this value longer than the expected cleanup time for your process.
 * `toleration` - (Optional) Optional pod node tolerations. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/)
+* `topology_spread_constraint` - (Optional) describes how a group of pods ought to spread across topology domains. Scheduler will schedule pods in a way which abides by the constraints. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/)
 * `volume` - (Optional) List of volumes that can be mounted by containers belonging to the pod. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes)
 * `readiness_gate` - (Optional) If specified, all readiness gates will be evaluated for pod readiness. A pod is ready when all its containers are ready AND all conditions specified in the readiness gates have status equal to "True". [More info](https://git.k8s.io/enhancements/keps/sig-network/0007-pod-ready++.md)
 
@@ -803,6 +804,14 @@ The `items` block supports the following:
 * `toleration_seconds` - (Optional) TolerationSeconds represents the period of time the toleration (which must be of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default, it is not set, which means tolerate the taint forever (do not evict). Zero and negative values will be treated as 0 (evict immediately) by the system.
 * `value` - (Optional) Value is the taint value the toleration matches to. If the operator is Exists, the value should be empty, otherwise just a regular string.
 
+### `topology_spread_constraint`
+
+#### Arguments
+
+* `max_skew` - (Optional) Describes the degree to which pods may be unevenly distributed.
+* `topology_key` - (Optional) The key of node labels. Nodes that have a label with this key and identical values are considered to be in the same topology.
+* `when_unsatisfiable` - (Optional) Indicates how to deal with a pod if it doesn't satisfy the spread constraint. Valid values are `DoNotSchedule` and `ScheduleAnyway`. Default value is `DoNotSchedule`.
+* `label_selector` - (Optional) A label query over a set of resources, in this case pods.
 ### `value_from`
 
 #### Arguments

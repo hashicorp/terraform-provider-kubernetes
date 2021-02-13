@@ -2159,7 +2159,7 @@ resource "kubernetes_config_map" "test_from" {
 resource "kubernetes_pod" "test" {
   metadata {
     labels = {
-	  app = "pod_label"
+      app = "pod_label"
     }
 
     name = "%s"

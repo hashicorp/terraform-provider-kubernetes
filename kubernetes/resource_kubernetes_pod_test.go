@@ -972,9 +972,9 @@ func TestAccKubernetesPod_topologySpreadConstraint(t *testing.T) {
 	imageName := "nginx:1.7.9"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckKubernetesPodDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodTopologySpreadConstraintConfig(podName, imageName),
@@ -983,7 +983,7 @@ func TestAccKubernetesPod_topologySpreadConstraint(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.max_skew", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.topology_key", "failure-domain.beta.kubernetes.io/zone"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.when_unsatisfiable", "DoNotSchedule"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.when_unsatisfiable", "ScheduleAnyway"),
 				),
 			},
 			{
@@ -2408,9 +2408,6 @@ func testAccKubernetesPodTopologySpreadConstraintConfig(podName, imageName strin
 	return fmt.Sprintf(`
 resource "kubernetes_pod" "test" {
   metadata {
-    labels = {
-      "app.kubernetes.io/instance" = "terraform-example"
-    }
     name = "%s"
   }
   spec {
@@ -2420,8 +2417,8 @@ resource "kubernetes_pod" "test" {
     }
     topology_spread_constraint {
       max_skew           = 1
-      topology_key       = "kubernetes.io/hostname"
-      when_unsatisfiable = "DoNotSchedule"
+      topology_key       = "failure-domain.beta.kubernetes.io/zone"
+      when_unsatisfiable = "ScheduleAnyway"
       label_selector {
         match_labels = {
           "app.kubernetes.io/instance" = "terraform-example"

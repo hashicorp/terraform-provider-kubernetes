@@ -314,6 +314,22 @@ func resourceKubernetesIngressDelete(ctx context.Context, d *schema.ResourceData
 		return diag.Errorf("Failed to delete Ingress %s because: %s", d.Id(), err)
 	}
 
+	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+		_, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+				return nil
+			}
+			return resource.NonRetryableError(err)
+		}
+
+		e := fmt.Errorf("Ingress (%s) still exists", d.Id())
+		return resource.RetryableError(e)
+	})
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	log.Printf("[INFO] Ingress %s deleted", name)
 
 	d.SetId("")
@@ -334,7 +350,7 @@ func resourceKubernetesIngressExists(ctx context.Context, d *schema.ResourceData
 	log.Printf("[INFO] Checking ingress %s", name)
 	_, err = conn.ExtensionsV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

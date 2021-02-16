@@ -376,7 +376,7 @@ func resourceKubernetesServiceDelete(ctx context.Context, d *schema.ResourceData
 	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		_, err := conn.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
 			return resource.NonRetryableError(err)
@@ -409,7 +409,7 @@ func resourceKubernetesServiceExists(ctx context.Context, d *schema.ResourceData
 	log.Printf("[INFO] Checking service %s", name)
 	_, err = conn.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

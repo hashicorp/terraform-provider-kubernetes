@@ -185,7 +185,7 @@ func resourceKubernetesSecretExists(ctx context.Context, d *schema.ResourceData,
 	log.Printf("[INFO] Checking secret %s", name)
 	_, err = conn.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

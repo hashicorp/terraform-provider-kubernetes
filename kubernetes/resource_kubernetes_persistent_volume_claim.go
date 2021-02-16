@@ -284,7 +284,7 @@ func resourceKubernetesPersistentVolumeClaimExists(ctx context.Context, d *schem
 	log.Printf("[INFO] Checking persistent volume claim %s", name)
 	_, err = conn.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

@@ -224,7 +224,7 @@ func resourceKubernetesStorageClassDelete(ctx context.Context, d *schema.Resourc
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		_, err := conn.StorageV1().StorageClasses().Get(ctx, d.Id(), metav1.GetOptions{})
 		if err != nil {
-			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
 			return resource.NonRetryableError(err)
@@ -252,7 +252,7 @@ func resourceKubernetesStorageClassExists(ctx context.Context, d *schema.Resourc
 	log.Printf("[INFO] Checking storage class %s", name)
 	_, err = conn.StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

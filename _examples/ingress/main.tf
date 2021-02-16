@@ -8,8 +8,7 @@ terraform {
 
 resource "kubernetes_namespace" "test" {
   metadata {
-    name      = "test"
-    namespace = "test"
+    name = "test"
   }
 }
 

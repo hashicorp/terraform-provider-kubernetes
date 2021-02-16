@@ -83,19 +83,20 @@ The following arguments are supported:
 
 ## Attributes
 
+* `status` - Status is a list containing the most recently observed status of the service. Populated by the system. Read-only. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+
 ### `status`
+#### Attributes
 
-* `status` - Most recently observed status of the service. Populated by the system. Read-only. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+* `load_balancer` - a list containing the current status of the load-balancer, if one is present.
 
-#### `load_balancer`
+### `load_balancer`
+#### Attributes
 
-* LoadBalancer contains the current status of the load-balancer, if one is present.
+* `ingress` - a list containing ingress points for the load-balancer. Traffic intended for the service should be sent to these ingress points.
 
-##### `ingress`
-
-* `ingress` - Ingress is a list containing ingress points for the load-balancer. Traffic intended for the service should be sent to these ingress points.
-
-###### Attributes
+### `ingress`
+#### Attributes
 
 * `ip` -  IP is set for load-balancer ingress points that are IP based (typically GCE or OpenStack load-balancers).
 * `hostname` - Hostname is set for load-balancer ingress points that are DNS based (typically AWS load-balancers).

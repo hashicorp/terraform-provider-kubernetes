@@ -1,11 +1,6 @@
 #
 # Variables Configuration
 #
-variable "region" {
-  default = "us-west-1"
-  type    = string
-}
-
 variable "kubernetes_version" {
   type    = string
   default = "1.18"

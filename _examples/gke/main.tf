@@ -2,7 +2,7 @@ terraform {
   required_providers {
     kubernetes = {
       source = "hashicorp/kubernetes"
-      version = ">= 2.0.0"
+      version = ">= 2.0.3"
     }
     google = {
       source  = "hashicorp/google"
@@ -10,17 +10,45 @@ terraform {
     }
     helm = {
       source  = "hashicorp/helm"
-      version = ">= 2.0.1"
+      version = ">= 2.1.0"
     }
   }
 }
 
-resource "random_id" "cluster_name" {
-  byte_length = 5
+# Provider is configured using environment variables: GOOGLE_REGION, GOOGLE_PROJECT, GOOGLE_CREDENTIALS.
+# This can be set statically, if preferred. See docs for details.
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/guides/provider_reference#full-reference
+provider "google" {}
+
+# Configure kubernetes provider with Oauth2 access token.
+# https://registry.terraform.io/providers/hashicorp/google/latest/docs/data-sources/client_config
+# This fetches a new token, which will expire in 1 hour.
+data "google_client_config" "default" {
+  depends_on = [module.gke-cluster]
 }
 
-locals {
-  cluster_name = "tf-k8s-${random_id.cluster_name.hex}"
+# Defer reading the cluster data until the GKE cluster exists.
+data "google_container_cluster" "default" {
+  name = local.cluster_name
+  depends_on = [module.gke-cluster]
+}
+
+provider "kubernetes" {
+  host  = "https://${data.google_container_cluster.default.endpoint}"
+  token = data.google_client_config.default.access_token
+  cluster_ca_certificate = base64decode(
+    data.google_container_cluster.default.master_auth[0].cluster_ca_certificate,
+  )
+}
+
+provider "helm" {
+  kubernetes {
+    host  = "https://${data.google_container_cluster.default.endpoint}"
+    token = data.google_client_config.default.access_token
+    cluster_ca_certificate = base64decode(
+      data.google_container_cluster.default.master_auth[0].cluster_ca_certificate,
+    )
+  }
 }
 
 module "gke-cluster" {
@@ -29,10 +57,8 @@ module "gke-cluster" {
 }
 
 module "kubernetes-config" {
+  depends_on       = [module.gke-cluster]
   source           = "./kubernetes-config"
-  cluster_name     = module.gke-cluster.cluster_name
-  cluster_id       = module.gke-cluster.cluster_id # creates dependency on cluster creation
-  cluster_endpoint = module.gke-cluster.cluster_endpoint
-  cluster_ca_cert  = module.gke-cluster.cluster_ca_cert
+  cluster_name     = local.cluster_name
 }
 

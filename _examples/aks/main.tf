@@ -2,7 +2,7 @@ terraform {
   required_providers {
     kubernetes = {
       source = "hashicorp/kubernetes"
-      version = ">= 2.0.0"
+      version = ">= 2.0.3"
     }
     azurerm = {
       source  = "hashicorp/azurerm"
@@ -10,24 +10,30 @@ terraform {
     }
     helm = {
       source  = "hashicorp/helm"
-      version = ">= 2.0.1"
+      version = ">= 2.1.0"
     }
   }
 }
 
+data "azurerm_kubernetes_cluster" "default" {
+  depends_on          = [module.aks-cluster] # refresh cluster state before reading
+  name                = local.cluster_name
+  resource_group_name = local.cluster_name
+}
+
 provider "kubernetes" {
-  host                   = module.aks-cluster.endpoint
-  client_key             = base64decode(module.aks-cluster.client_key)
-  client_certificate     = base64decode(module.aks-cluster.client_cert)
-  cluster_ca_certificate = base64decode(module.aks-cluster.ca_cert)
+  host                   = data.azurerm_kubernetes_cluster.default.kube_config.0.host
+  client_certificate     = base64decode(data.azurerm_kubernetes_cluster.default.kube_config.0.client_certificate)
+  client_key             = base64decode(data.azurerm_kubernetes_cluster.default.kube_config.0.client_key)
+  cluster_ca_certificate = base64decode(data.azurerm_kubernetes_cluster.default.kube_config.0.cluster_ca_certificate)
 }
 
 provider "helm" {
   kubernetes {
-    host                   = module.aks-cluster.endpoint
-    client_key             = base64decode(module.aks-cluster.client_key)
-    client_certificate     = base64decode(module.aks-cluster.client_cert)
-    cluster_ca_certificate = base64decode(module.aks-cluster.ca_cert)
+    host                   = data.azurerm_kubernetes_cluster.default.kube_config.0.host
+    client_certificate     = base64decode(data.azurerm_kubernetes_cluster.default.kube_config.0.client_certificate)
+    client_key             = base64decode(data.azurerm_kubernetes_cluster.default.kube_config.0.client_key)
+    cluster_ca_certificate = base64decode(data.azurerm_kubernetes_cluster.default.kube_config.0.cluster_ca_certificate)
   }
 }
 
@@ -36,15 +42,14 @@ provider "azurerm" {
 }
 
 module "aks-cluster" {
-  providers    = { azurerm = azurerm }
   source       = "./aks-cluster"
   cluster_name = local.cluster_name
   location     = var.location
 }
 
 module "kubernetes-config" {
-  providers    = { kubernetes = kubernetes, helm = helm }
   depends_on   = [module.aks-cluster]
   source       = "./kubernetes-config"
   cluster_name = local.cluster_name
+  kubeconfig   = data.azurerm_kubernetes_cluster.default.kube_config_raw
 }

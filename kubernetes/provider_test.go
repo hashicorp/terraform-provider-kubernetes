@@ -211,7 +211,7 @@ func testAccPreCheck(t *testing.T) {
 // minimum configuration, to create a fully separate environment where
 // all configuration options (including environment variables) can be
 // tested separately from the user's environment. It is used exclusively
-// in functions labelled testAccKubernetesProvider_*.
+// in functions labelled testAccKubernetesProviderConfig_*.
 func testAccPreCheckInternal(t *testing.T) {
 	ctx := context.TODO()
 	unsetEnv(t)
@@ -473,7 +473,7 @@ func requiredProviders() string {
 }
 
 // testAccProviderFactoriesInternal is a factory used for provider configuration testing.
-// This should only be used for TestAccKubernetesProvider_ tests which need to
+// This should only be used for TestAccKubernetesProviderConfig_ tests which need to
 // reference the provider instance itself. Other testing should use testAccProviderFactories.
 var testAccProviderFactoriesInternal = map[string]func() (*schema.Provider, error){
 	"kubernetes": func() (*schema.Provider, error) {

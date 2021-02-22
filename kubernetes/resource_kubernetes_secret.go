@@ -49,9 +49,16 @@ func resourceKubernetesSecretCreate(ctx context.Context, d *schema.ResourceData,
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	secret := api.Secret{
-		ObjectMeta: metadata,
-		Data:       expandStringMapToByteMap(d.Get("data").(map[string]interface{})),
+	var secret api.Secret
+	if data, ok := d.GetOk("data"); ok {
+		secret = api.Secret{
+			ObjectMeta: metadata,
+			Data:       expandStringMapToByteMap(data.(map[string]interface{})),
+		}
+	} else {
+		secret = api.Secret{
+			ObjectMeta: metadata,
+		}
 	}
 
 	if v, ok := d.GetOk("type"); ok {
@@ -101,7 +108,9 @@ func resourceKubernetesSecretRead(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	d.Set("data", flattenByteMapToStringMap(secret.Data))
+	if _, ok := d.GetOk("data"); ok {
+		d.Set("data", flattenByteMapToStringMap(secret.Data))
+	}
 	d.Set("type", secret.Type)
 
 	return nil

@@ -396,7 +396,7 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						Description:  "describes the degree to which pods may be unevenly distributed.",
 						Optional:     true,
 						Default:      1,
-						ValidateFunc: validation.IntNotInSlice([]int{0}),
+						ValidateFunc: validation.IntAtLeast(1),
 					},
 					"topology_key": {
 						Type:        schema.TypeString,

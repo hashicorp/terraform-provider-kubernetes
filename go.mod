@@ -95,4 +95,4 @@ replace (
 	golang.org/x/sys => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 )
 
-go 1.15
+go 1.16

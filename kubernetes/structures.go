@@ -293,6 +293,10 @@ func flattenResourceQuotaSpec(in api.ResourceQuotaSpec) []interface{} {
 	m["hard"] = flattenResourceList(in.Hard)
 	m["scopes"] = flattenResourceQuotaScopes(in.Scopes)
 
+	if in.ScopeSelector != nil {
+		m["scope_selector"] = flattenResourceQuotaScopes(in.Scopes)
+	}
+
 	out[0] = m
 	return out
 }
@@ -316,6 +320,10 @@ func expandResourceQuotaSpec(s []interface{}) (*api.ResourceQuotaSpec, error) {
 		out.Scopes = expandResourceQuotaScopes(v.(*schema.Set).List())
 	}
 
+	if v, ok := m["scope_selector"]; ok {
+		out.ScopeSelector = expandResourceQuotaScopeSelector(v.([]interface{}))
+	}
+
 	return out, nil
 }
 
@@ -334,6 +342,70 @@ func expandResourceQuotaScopes(s []interface{}) []api.ResourceQuotaScope {
 	}
 	return out
 }
+
+func expandResourceQuotaScopeSelector(s []interface{}) *api.ScopeSelector {
+	if len(s) < 1 {
+		return nil
+	}
+	m := s[0].(map[string]interface{})
+
+	att := &api.ScopeSelector{}
+
+	if v, ok := m["match_expression"].([]interface{}); ok {
+		att.MatchExpressions = expandResourceQuotaScopeSelectorMatchExpressions(v)
+	}
+
+	return att
+}
+
+func expandResourceQuotaScopeSelectorMatchExpressions(s []interface{}) []api.ScopedResourceSelectorRequirement {
+	out := make([]api.ScopedResourceSelectorRequirement, len(s), len(s))
+
+	for i, raw := range s {
+		matchExp := raw.(map[string]interface{})
+
+		if v, ok := matchExp["scope_name"].(string); ok {
+			out[i].ScopeName = api.ResourceQuotaScope(v)
+		}
+
+		if v, ok := matchExp["operator"].(string); ok {
+			out[i].Operator = api.ScopeSelectorOperator(v)
+		}
+
+		if v, ok := matchExp["values"].(*schema.Set); ok && v.Len() > 0 {
+			out[i].Values = sliceOfString(v.List())
+		}
+	}
+	return out
+}
+
+func flattenResourceQuotaScopeSelector(in api.ScopeSelector) []interface{} {
+	out := make([]interface{}, 1)
+
+	m := make(map[string]interface{}, 0)
+	m["match_expression"] = flattenResourceQuotaScopeSelectorMatchExpressions(in.MatchExpressions)
+
+	out[0] = m
+	return out
+}
+
+func flattenResourceQuotaScopeSelectorMatchExpressions(in []api.ScopedResourceSelectorRequirement]) []interface{} {
+	if len(in) == 0 {
+		return []interface{}{}
+	}
+
+	for i, l := range in {
+		m := make(map[string]interface{}, 0)
+		m["default"] = string(l.Operator)
+		m["default_request"] = string(l.ScopeName)
+
+		limits[i] = m
+	}
+	out[0] = map[string]interface{}{
+	}
+	return out
+}
+
 
 func newStringSet(f schema.SchemaSetFunc, in []string) *schema.Set {
 	var out = make([]interface{}, len(in), len(in))

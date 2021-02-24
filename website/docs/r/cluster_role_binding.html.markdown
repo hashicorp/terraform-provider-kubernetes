@@ -87,7 +87,7 @@ The following arguments are supported:
 * `name` - (Required) The name of this ClusterRole to bind Subjects to.
 * `namespace` - (Optional) Namespace defines the namespace of the ServiceAccount to bind to. This value only applies to kind `ServiceAccount`
 * `kind` - (Required) The type of binding to use. This value must be `ServiceAccount`, `User` or `Group`
-* `api_group` - (Required) The API group to drive authorization decisions. This value only applies to kind `User` and `Group`. It must be `rbac.authorization.k8s.io`
+* `api_group` - (Optional) The API group to drive authorization decisions. This is required for kind `User` and `Group`, where the value must be `rbac.authorization.k8s.io`. This is not required for kind `ServiceAccount`
 
 ## Import
 

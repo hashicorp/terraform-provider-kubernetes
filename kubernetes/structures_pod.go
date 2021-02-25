@@ -113,6 +113,10 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["toleration"] = flattenTolerations(in.Tolerations)
 	}
 
+	if len(in.TopologySpreadConstraints) > 0 {
+		att["topology_spread_constraint"] = flattenTopologySpreadConstraints(in.TopologySpreadConstraints)
+	}
+
 	if len(in.Volumes) > 0 {
 		for i, volume := range in.Volumes {
 			// To avoid perpetual diff, remove the service account token volume from PodSpec.
@@ -269,6 +273,28 @@ func flattenTolerations(tolerations []v1.Toleration) []interface{} {
 		}
 		if v.Value != "" {
 			obj["value"] = v.Value
+		}
+		att = append(att, obj)
+	}
+	return att
+}
+
+func flattenTopologySpreadConstraints(tsc []v1.TopologySpreadConstraint) []interface{} {
+	att := []interface{}{}
+	for _, v := range tsc {
+		obj := map[string]interface{}{}
+
+		if v.TopologyKey != "" {
+			obj["topology_key"] = v.TopologyKey
+		}
+		if v.MaxSkew != 0 {
+			obj["max_skew"] = v.MaxSkew
+		}
+		if v.WhenUnsatisfiable != "" {
+			obj["when_unsatisfiable"] = string(v.WhenUnsatisfiable)
+		}
+		if v.LabelSelector != nil {
+			obj["label_selector"] = flattenLabelSelector(v.LabelSelector)
 		}
 		att = append(att, obj)
 	}
@@ -746,6 +772,17 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		}
 		obj.Volumes = cs
 	}
+
+	if v, ok := in["topology_spread_constraint"].([]interface{}); ok && len(v) > 0 {
+		ts, err := expandTopologySpreadConstraints(v)
+		if err != nil {
+			return obj, err
+		}
+		for _, t := range ts {
+			obj.TopologySpreadConstraints = append(obj.TopologySpreadConstraints, *t)
+		}
+	}
+
 	return obj, nil
 }
 
@@ -1263,6 +1300,35 @@ func expandTolerations(tolerations []interface{}) ([]*v1.Toleration, error) {
 		if value, ok := m["value"]; ok {
 			ts[i].Value = value.(string)
 		}
+	}
+	return ts, nil
+}
+
+func expandTopologySpreadConstraints(tsc []interface{}) ([]*v1.TopologySpreadConstraint, error) {
+	if len(tsc) == 0 {
+		return []*v1.TopologySpreadConstraint{}, nil
+	}
+	ts := make([]*v1.TopologySpreadConstraint, len(tsc))
+	for i, t := range tsc {
+		m := t.(map[string]interface{})
+		ts[i] = &v1.TopologySpreadConstraint{}
+
+		if value, ok := m["topology_key"].(string); ok {
+			ts[i].TopologyKey = value
+		}
+
+		if v, ok := m["label_selector"].([]interface{}); ok && len(v) > 0 {
+			ts[i].LabelSelector = expandLabelSelector(v)
+		}
+
+		if value, ok := m["when_unsatisfiable"].(string); ok {
+			ts[i].WhenUnsatisfiable = v1.UnsatisfiableConstraintAction(value)
+		}
+
+		if value, ok := m["max_skew"].(int); ok {
+			ts[i].MaxSkew = int32(value)
+		}
+
 	}
 	return ts, nil
 }

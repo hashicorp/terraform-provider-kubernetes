@@ -137,6 +137,7 @@ func Provider() *schema.Provider {
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
+			"kubernetes_config":                  dataSourceKubernetesConfig(),
 			"kubernetes_all_namespaces":          dataSourceKubernetesAllNamespaces(),
 			"kubernetes_config_map":              dataSourceKubernetesConfigMap(),
 			"kubernetes_ingress":                 dataSourceKubernetesIngress(),

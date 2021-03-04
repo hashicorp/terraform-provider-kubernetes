@@ -2,7 +2,7 @@
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_storage_class"
 description: |-
-  Storage class is the foundation of dynamic provisioning, allowing cluster administrators to define abstractions for the underlying storage platform.
+This data source reads data from a Storage class.
 ---
 
 # kubernetes_storage_class

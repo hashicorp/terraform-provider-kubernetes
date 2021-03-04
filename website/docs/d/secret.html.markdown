@@ -2,18 +2,15 @@
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_secret"
 description: |-
-  The resource provides mechanisms to inject containers with sensitive information while keeping containers agnostic of Kubernetes.
+This data source reads data from a Secret.
 ---
 
 # kubernetes_secret
 
-The resource provides mechanisms to inject containers with sensitive information, such as passwords, while keeping containers agnostic of Kubernetes.
+Secrets provide mechanisms to inject containers with sensitive information, such as passwords, while keeping containers agnostic of Kubernetes.
 Secrets can be used to store sensitive information either as individual properties or coarse-grained entries like entire files or JSON blobs.
-The resource will by default create a secret which is available to any pod in the specified (or default) namespace.
 
-~> Read more about security properties and risks involved with using Kubernetes secrets: [Kubernetes reference](https://kubernetes.io/docs/user-guide/secrets/#security-properties)
-
-~> **Note:** All arguments including the secret data will be stored in the raw state as plain-text. [Read more about sensitive data in state](/docs/state/sensitive-data.html).
+The data source will lookup secret resource by name, enabling access to its data.
 
 ## Example Usage
 

@@ -2,7 +2,7 @@
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_service"
 description: |-
-  A Service is an abstraction which defines a logical set of pods and a policy by which to access them - sometimes called a micro-service.
+  Queries attributes of a Service.
 ---
 
 # kubernetes_service

@@ -91,7 +91,7 @@ You can also configure the host, basic auth credentials, and client certificate 
 
 ```hcl
 provider "kubernetes" {
-  host     = "https://cluster_endpoint:port"
+  host = "https://cluster_endpoint:port"
 
   client_certificate     = file("~/.kube/client-cert.pem")
   client_key             = file("~/.kube/client-key.pem")

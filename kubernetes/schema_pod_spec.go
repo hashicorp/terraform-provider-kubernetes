@@ -879,9 +879,12 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 																	Type:     schema.TypeString,
 																	Required: true,
 																},
-																"quantity": {
-																	Type:     schema.TypeString,
-																	Optional: true,
+																"divisor": {
+																	Type:             schema.TypeString,
+																	Optional:         true,
+																	Default:          "1",
+																	ValidateFunc:     validateResourceQuantity,
+																	DiffSuppressFunc: suppressEquivalentResourceQuantity,
 																},
 																"resource": {
 																	Type:        schema.TypeString,

@@ -535,6 +535,7 @@ func TestAccKubernetesPod_with_projected_volume(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.1.resource_field_ref.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.1.resource_field_ref.0.container_name", "containername"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.1.resource_field_ref.0.resource", "limits.cpu"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.1.resource_field_ref.0.divisor", "1"),
 				),
 			},
 		},

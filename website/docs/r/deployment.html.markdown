@@ -656,6 +656,7 @@ The `option` block supports the following:
 
 * `container_name` - (Optional) The name of the container
 * `resource` - (Required) Resource to select
+* `divisor` - (Optional) Specifies the output format of the exposed resources, defaults to "1".
 
 ### `se_linux_options`
 

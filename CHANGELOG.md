@@ -1,3 +1,18 @@
+## 2.0.3 (Unreleased)
+
+BUG FIXES:
+
+* Fix resource_field_ref schema for projected_volume (#1189)
+* Add diff suppression to persistent_volume and persistent_volume_claim (#1145)
+
+
+IMPROVEMENTS:
+
+* Support topologySpreadConstraint in pod spec schema (#1022)
+* Wait for kubernetes_ingress to be deleted (#1143)
+* Improve docs for configuring the provider (#1132)
+* Update docs to reflect Kubernetes service status attribute (#1148)
+
 ## 2.0.2 (February 02, 2021)
 
 BUG FIXES:

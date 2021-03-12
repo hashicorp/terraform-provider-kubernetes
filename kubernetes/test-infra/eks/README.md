@@ -1,56 +1,57 @@
-# Amazon EKS Clusters
+# EKS test infrastructure
 
-You will need the standard AWS environment variables to be set, e.g.
+This directory contains files used for testing the Kubernetes provider in our internal CI system. See the [examples](https://github.com/hashicorp/terraform-provider-kubernetes/tree/master/_examples/eks) directory instead, if you're looking for example code.
+
+To run this test infrastructure, you will need the following environment variables to be set:
 
   - `AWS_ACCESS_KEY_ID`
   - `AWS_SECRET_ACCESS_KEY`
 
-See [AWS Provider docs](https://www.terraform.io/docs/providers/aws/index.html#configuration-reference) for more details about these variables
-and alternatives, like `AWS_PROFILE`.
+See [AWS Provider docs](https://www.terraform.io/docs/providers/aws/index.html#configuration-reference) for more details about these variables and alternatives, like `AWS_PROFILE`.
 
-## Versions
+Ensure that `KUBE_CONFIG_PATH` and `KUBE_CONFIG_PATHS` environment variables are NOT set, as they will interfere with the cluster build.
 
-You can set the desired version of Kubernetes via the `kubernetes_version` TF variable.
-
-See https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html for currently available versions.
-
-You can set the desired version of Kubernetes via the `kubernetes_version` TF variable, like this:
 ```
-export TF_VAR_kubernetes_version="1.11"
+unset KUBE_CONFIG_PATH
+unset KUBE_CONFIG_PATHS
 ```
-Alternatively you can pass it to the `apply` command line, like below.
 
-## Worker node count and instance type
-
-You can control the amount of worker nodes in the cluster as well as their machine type, using the following variables:
-
- - `TF_VAR_workers_count`
- - `TF_VAR_workers_type`
-
-Export values for them or pass them to the apply command line.
-
-## Build the cluster
+To install the EKS cluster using default values, run terraform init and apply from the directory containing this README.
 
 ```
 terraform init
-terraform apply -var=kubernetes_version=1.11
+terraform apply
 ```
 
-## Exporting K8S variables
-To access the cluster you need to export the `KUBECONFIG` variable pointing to the `kubeconfig` file for the current cluster.
+## Kubeconfig for manual CLI access
+
+The token contained in the kubeconfig expires in 15 minutes. The token can be refreshed by running `terraform apply` again. Export the KUBECONFIG to manually access the cluster:
+
 ```
-export KUBECONFIG="$(terraform output kubeconfig_path)"
+terraform apply
+export KUBECONFIG=$(terraform output -raw kubeconfig_path)
+kubectl get pods -n test
 ```
 
-Now you can access the cluster via `kubectl` and you can run acceptance tests against it.
+## Optional variables
 
-To run acceptance tests, your the following command in the root of the repository.
+The Kubernetes version can be specified at apply time:
+
 ```
-TESTARGS="-run '^TestAcc'" make testacc
+terraform apply -var=kubernetes_version=1.18
 ```
 
-To run only a specific set of tests, you can replace `^TestAcc` with any regular expression to filter tests by name.
-For example, to run tests for Pod resources, you can do:
+See https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html for currently available versions.
+
+
+### Worker node count and instance type
+
+The number of worker nodes, and the instance type, can be specified at apply time:
+
 ```
-TESTARGS="-run '^TestAccKubernetesPod_'" make testacc
+terraform apply -var=workers_count=4 -var=workers_type=m4.xlarge
 ```
+
+## Additional configuration of EKS
+
+To view all available configuration options for the EKS module used in this example, see [terraform-aws-modules/eks docs](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest).

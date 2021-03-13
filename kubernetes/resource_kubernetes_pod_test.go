@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	api "k8s.io/api/core/v1"
@@ -873,17 +874,8 @@ func TestAccKubernetesPod_bug961EmptyBlocks(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodConfigEmptyBlocks(name, busyboxImageVersion),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
-				),
-			},
-			{
-				Config:   testAccKubernetesPodConfigMinimal(name, busyboxImageVersion),
-				PlanOnly: true,
+				ExpectError: regexp.MustCompile("Missing required argument"),
+				Config:      testAccKubernetesPodConfigEmptyBlocks(name, busyboxImageVersion),
 			},
 		},
 	})

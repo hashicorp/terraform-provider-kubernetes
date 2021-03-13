@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	api "k8s.io/api/core/v1"
@@ -693,10 +694,6 @@ func TestAccKubernetesPod_config_with_automount_service_account_token(t *testing
 					testAccCheckKubernetesServiceAccountExists("kubernetes_service_account.test", &confSA),
 					testAccCheckKubernetesPodExists("kubernetes_pod.test", &confPod),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.automount_service_account_token", "true"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.mount_path", "/var/run/secrets/kubernetes.io/serviceaccount"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.secret.#", "1"),
 				),
 			},
 		},
@@ -873,17 +870,8 @@ func TestAccKubernetesPod_bug961EmptyBlocks(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodConfigEmptyBlocks(name, busyboxImageVersion),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
-				),
-			},
-			{
-				Config:   testAccKubernetesPodConfigMinimal(name, busyboxImageVersion),
-				PlanOnly: true,
+				ExpectError: regexp.MustCompile("Missing required argument"),
+				Config:      testAccKubernetesPodConfigEmptyBlocks(name, busyboxImageVersion),
 			},
 		},
 	})

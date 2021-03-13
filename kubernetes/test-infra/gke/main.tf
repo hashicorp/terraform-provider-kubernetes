@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    kubernetes = {
+      source = "localhost/test/kubernetes"
+      version = "9.9.9"
+    }
+  }
+}
+
 provider "google" {
   // Provider settings to be provided via ENV variables
 }

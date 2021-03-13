@@ -2,7 +2,7 @@ terraform {
   required_providers {
     kubernetes = {
       source = "localhost/test/kubernetes"
-      version = ">= 2.0.2"
+      version = "9.9.9"
     }
     helm = {
       source  = "hashicorp/helm"

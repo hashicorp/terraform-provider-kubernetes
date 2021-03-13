@@ -293,9 +293,6 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 			if err != nil {
 				return nil, err
 			}
-			if _, err := os.Stat(path); err != nil {
-				return nil, fmt.Errorf("could not open kubeconfig %q: %v", p, err)
-			}
 
 			log.Printf("[DEBUG] Using kubeconfig: %s", path)
 			expandedPaths = append(expandedPaths, path)

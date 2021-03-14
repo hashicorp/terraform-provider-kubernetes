@@ -806,56 +806,47 @@ resource kubernetes_namespace "test" {
 }
 
 func providerConfig_config_path(path string) string {
-	return fmt.Sprintf(`
-  config_path = "%s"
+	return fmt.Sprintf(`  config_path = "%s"
 `, path)
 }
 
 func providerConfig_config_context(context string) string {
-	return fmt.Sprintf(`
-  config_context = "%s"
+	return fmt.Sprintf(`  config_context = "%s"
 `, context)
 }
 
 func providerConfig_config_paths(paths string) string {
-	return fmt.Sprintf(`
-  config_paths = %s
+	return fmt.Sprintf(`  config_paths = %s
 `, paths)
 }
 
 func providerConfig_token(token string) string {
-	return fmt.Sprintf(`
-  token = "%s"
+	return fmt.Sprintf(`  token = "%s"
 `, token)
 }
 
 func providerConfig_cluster_ca_certificate(ca_cert string) string {
-	return fmt.Sprintf(`
-  cluster_ca_certificate = "%s"
+	return fmt.Sprintf(`  cluster_ca_certificate = "%s"
 `, ca_cert)
 }
 
 func providerConfig_client_cert(client_cert string) string {
-	return fmt.Sprintf(`
-  client_certificate = "%s"
+	return fmt.Sprintf(`  client_certificate = "%s"
 `, client_cert)
 }
 
 func providerConfig_client_key(client_key string) string {
-	return fmt.Sprintf(`
-  client_key = "%s"
+	return fmt.Sprintf(`  client_key = "%s"
 `, client_key)
 }
 
 func providerConfig_host(host string) string {
-	return fmt.Sprintf(`
-  host = "%s"
+	return fmt.Sprintf(`  host = "%s"
 `, host)
 }
 
 func providerConfig_exec(clusterName string) string {
-	return fmt.Sprintf(`
-  exec {
+	return fmt.Sprintf(`  exec {
     api_version = "client.authentication.k8s.io/v1alpha1"
     args        = ["eks", "get-token", "--cluster-name", "%s"]
     command     = "aws"

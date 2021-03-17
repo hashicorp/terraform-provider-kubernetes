@@ -180,7 +180,8 @@ The following arguments are supported:
 #### Arguments
 
 * `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to false (read/write).
-* `secret_name` - (Required) The name of secret that contains Azure Storage Account Name and Key
+* `secret_name` - (Required) The name of secret that contains Azure Storage Account Name and Key.
+* `secret_namespace` - (Optional) The namespace of the secret that contains Azure Storage Account Name and Key. For Kubernetes up to 1.18.x the default is the same as the Pod. For Kubernetes 1.19.x and later the default is \"default\" namespace.
 * `share_name` - (Required) Share Name
 
 ### `ceph_fs`
@@ -287,11 +288,11 @@ The following arguments are supported:
 
 #### Arguments
 
-* `annotations` - (Optional) An unstructured key value map stored with the persistent volume that may be used to store arbitrary metadata. 
+* `annotations` - (Optional) An unstructured key value map stored with the persistent volume that may be used to store arbitrary metadata.
 
 ~> By default, the provider ignores any annotations whose key names end with *kubernetes.io*. This is necessary because such annotations can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such annotations in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/annotations)
 
-* `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the persistent volume. May match selectors of replication controllers and services. 
+* `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the persistent volume. May match selectors of replication controllers and services.
 
 ~> By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
 

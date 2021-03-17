@@ -4,7 +4,7 @@ BUG FIXES:
 
 * Fix resource_field_ref schema for projected_volume (#1189)
 * Add diff suppression to persistent_volume and persistent_volume_claim (#1145)
-
+* Remove error for missing kubeconfig, to allow generating it at apply time (#1142)
 
 IMPROVEMENTS:
 

@@ -1,21 +1,13 @@
-resource "kubernetes_config_map" "name" {
-  metadata {
-    name      = "aws-auth"
-    namespace = "kube-system"
-  }
-
-  data = {
-    mapRoles = join(
-      "\n",
-      formatlist(local.mapped_role_format, var.k8s_node_role_arn),
-    )
-  }
-}
-
-# Optional: this kubeconfig file is only used for manual CLI access to the cluster.
-resource "null_resource" "generate-kubeconfig" {
-  provisioner "local-exec" {
-    command = "aws eks update-kubeconfig --name ${var.cluster_name} --kubeconfig ${path.root}/kubeconfig"
+terraform {
+  required_providers {
+    kubernetes = {
+      source = "localhost/test/kubernetes"
+      version = "9.9.9"
+    }
+    helm = {
+      source  = "localhost/test/helm"
+      version = "9.9.9"
+    }
   }
 }
 

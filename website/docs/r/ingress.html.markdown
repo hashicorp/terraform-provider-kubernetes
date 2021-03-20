@@ -32,7 +32,7 @@ resource "kubernetes_ingress" "example_ingress" {
             service_port = 8080
           }
 
-          path = "/app1/*"
+          path = "/app1"
         }
 
         path {
@@ -41,7 +41,7 @@ resource "kubernetes_ingress" "example_ingress" {
             service_port = 8080
           }
 
-          path = "/app2/*"
+          path = "/app2"
         }
       }
     }
@@ -208,7 +208,7 @@ The following arguments are supported:
 
 #### `path`
 
-* `path` - (Required)  A string or an extended POSIX regular expression as defined by IEEE Std 1003.1, (i.e this follows the egrep/unix syntax, not the perl syntax) matched against the path of an incoming request. Currently it can contain characters disallowed from the conventional \"path\" part of a URL as defined by RFC 3986. Paths must begin with a '/'. If unspecified, the path defaults to a catch all sending traffic to the backend.
+* `path` - (Required) Path is matched against the URL path of the incoming request. The exact nature of this value depends on your ingress controller, see [Kubenetes reference](https://kubernetes.io/docs/concepts/services-networking/ingress/#path-types) for more information. The reference NGINX ingress controller defaults to case insensitive string prefix, see [ingress path matching](https://kubernetes.github.io/ingress-nginx/user-guide/ingress-path-matching/) in the NGINX ingress controller docs for more information.
 * `backend` - (Required) Backend defines the referenced service endpoint to which the traffic will be forwarded to.
 
 ### `tls`

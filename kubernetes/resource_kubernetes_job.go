@@ -54,7 +54,7 @@ func resourceKubernetesJobSchemaV1() map[string]*schema.Schema {
 			MaxItems:    1,
 			ForceNew:    false,
 			Elem: &schema.Resource{
-				Schema: jobSpecFields(),
+				Schema: jobSpecFields(false),
 			},
 		},
 		"wait_for_completion": {

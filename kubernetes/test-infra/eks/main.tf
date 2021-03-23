@@ -83,6 +83,7 @@ module "cluster" {
   cluster_version  = var.kubernetes_version
   manage_aws_auth  = true
   write_kubeconfig = true
+  kubeconfig_name  = "kubeconfig"
 
   # See this file for more options
   # https://github.com/terraform-aws-modules/terraform-aws-eks/blob/master/local.tf#L28

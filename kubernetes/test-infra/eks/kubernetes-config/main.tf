@@ -56,14 +56,10 @@ resource "kubernetes_deployment" "test" {
   }
 }
 
-resource helm_release nginx_ingress {
-  name       = "nginx-ingress-controller"
-
-  repository = "https://charts.bitnami.com/bitnami"
-  chart      = "nginx-ingress-controller"
-
-  set {
-    name  = "service.type"
-    value = "ClusterIP"
-  }
+resource "helm_release" "nginx_ingress" {
+  wait       = false
+  name       = "ingress-nginx"
+  repository = "https://kubernetes.github.io/ingress-nginx"
+  chart      = "ingress-nginx"
+  version    = "v3.24.0"
 }

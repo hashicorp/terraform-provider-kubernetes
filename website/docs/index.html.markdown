@@ -47,7 +47,7 @@ To use these credentials with the Kubernetes provider, they can be interpolated 
 
 The most reliable way to configure the Kubernetes provider is to ensure that the cluster itself and the Kubernetes provider resources can be managed with separate `apply` operations. Data-sources can be used to convey values between the two stages as needed.
 
-For specific usage examples, see the guides for [AKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/master/_examples/aks/README.md), [EKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/master/_examples/eks/README.md), and [GKE](https://github.com/hashicorp/terraform-provider-kubernetes/blob/master/_examples/gke/README.md).
+For specific usage examples, see the guides for [AKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/main/_examples/aks/README.md), [EKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/main/_examples/eks/README.md), and [GKE](https://github.com/hashicorp/terraform-provider-kubernetes/blob/main/_examples/gke/README.md).
 
 
 ## Authentication
@@ -123,16 +123,16 @@ provider "kubernetes" {
 
 ## Examples 
 
-For further reading, see these examples which demonstrate different approaches to keeping the cluster credentials up to date: [AKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/master/_examples/aks/README.md), [EKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/master/_examples/eks/README.md), and [GKE](https://github.com/hashicorp/terraform-provider-kubernetes/blob/master/_examples/gke/README.md).
+For further reading, see these examples which demonstrate different approaches to keeping the cluster credentials up to date: [AKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/main/_examples/aks/README.md), [EKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/main/_examples/eks/README.md), and [GKE](https://github.com/hashicorp/terraform-provider-kubernetes/blob/main/_examples/gke/README.md).
 
 
 ## Argument Reference
 
 The following arguments are supported:
 
-* `host` - (Optional) The hostname (in form of URI) of Kubernetes master. Can be sourced from `KUBE_HOST`.
-* `username` - (Optional) The username to use for HTTP basic authentication when accessing the Kubernetes master endpoint. Can be sourced from `KUBE_USER`.
-* `password` - (Optional) The password to use for HTTP basic authentication when accessing the Kubernetes master endpoint. Can be sourced from `KUBE_PASSWORD`.
+* `host` - (Optional) The hostname (in form of URI) of the Kubernetes API. Can be sourced from `KUBE_HOST`.
+* `username` - (Optional) The username to use for HTTP basic authentication when accessing the Kubernetes API. Can be sourced from `KUBE_USER`.
+* `password` - (Optional) The password to use for HTTP basic authentication when accessing the Kubernetes API. Can be sourced from `KUBE_PASSWORD`.
 * `insecure` - (Optional) Whether the server should be accessed without verifying the TLS certificate. Can be sourced from `KUBE_INSECURE`. Defaults to `false`.
 * `client_certificate` - (Optional) PEM-encoded client certificate for TLS authentication. Can be sourced from `KUBE_CLIENT_CERT_DATA`.
 * `client_key` - (Optional) PEM-encoded client certificate key for TLS authentication. Can be sourced from `KUBE_CLIENT_KEY_DATA`.

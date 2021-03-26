@@ -879,6 +879,50 @@ func TestAccKubernetesPersistentVolume_regression(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPersistentVolume_hostPath_claimRef(t *testing.T) {
+	var conf api.PersistentVolume
+	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	name := fmt.Sprintf("tf-acc-test-%s", randString)
+	claimNamespace := "default"
+	claimName := "expected-claim-name"
+
+	const resourceName = "kubernetes_persistent_volume.test"
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
+		Steps: []resource.TestStep{
+			// create a volume without a claimRef
+			{
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_basic(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.#", "0"),
+				),
+			},
+			// set the claimRef and assert it's present
+			{
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_claimRef(name, claimNamespace, claimName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.0.namespace", claimNamespace),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.0.name", claimName),
+				),
+			},
+			// unset the claimRef and assert it's absent
+			{
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_basic(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.#", "0"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesPersistentVolumeForceNew(old, new *api.PersistentVolume, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {
@@ -1716,6 +1760,52 @@ func testAccKubernetesPersistentVolumeConfig_hostPath_mountOptions(name string) 
     }
   }
 }`, name)
+}
+
+func testAccKubernetesPersistentVolumeConfig_hostPath_basic(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    capacity = {
+      storage = "1Gi"
+    }
+    access_modes = ["ReadWriteMany"]
+    mount_options = ["foo"]
+
+    persistent_volume_source {
+      host_path {
+        path = "/mnt/local-volume"
+      }
+    }
+  }
+}`, name)
+}
+
+func testAccKubernetesPersistentVolumeConfig_hostPath_claimRef(name string, claimNamespace string, claimName string) string {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    capacity = {
+      storage = "1Gi"
+    }
+    access_modes = ["ReadWriteMany"]
+    mount_options = ["foo"]
+    claim_ref {
+       name = "%s"
+       namespace = "%s"
+    }
+
+    persistent_volume_source {
+      host_path {
+        path = "/mnt/local-volume"
+      }
+    }
+  }
+}`, name, claimName, claimNamespace)
 }
 
 func testAccKubernetesPersistentVolume_regression(provider, name, path, typ string) string {

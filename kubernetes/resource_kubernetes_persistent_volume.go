@@ -114,6 +114,28 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 								"Retain",
 							}, false),
 						},
+						"claim_ref": {
+							Type:        schema.TypeList,
+							Description: "A reference to the persistent volume claim details for statically managed PVs. More Info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#binding",
+							Optional:    true,
+							MaxItems:    1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"namespace": {
+										Type:        schema.TypeString,
+										Description: "The namespace of the PersistentVolumeClaim",
+										Elem:        schema.TypeString,
+										Required:    true,
+									},
+									"name": {
+										Type:        schema.TypeString,
+										Description: "The name of the PersistentVolumeClaim",
+										Elem:        schema.TypeString,
+										Required:    true,
+									},
+								},
+							},
+						},
 						"persistent_volume_source": {
 							Type:        schema.TypeList,
 							Description: "The specification of a persistent volume.",

@@ -888,10 +888,10 @@ func TestAccKubernetesPersistentVolume_hostPath_claimRef(t *testing.T) {
 
 	const resourceName = "kubernetes_persistent_volume.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: resourceName,
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesPersistentVolumeDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
 			// create a volume without a claimRef
 			{
@@ -1794,7 +1794,7 @@ func testAccKubernetesPersistentVolumeConfig_hostPath_claimRef(name string, clai
     }
     access_modes = ["ReadWriteMany"]
     mount_options = ["foo"]
-	claim_ref {
+    claim_ref {
        name = "%s"
        namespace = "%s"
     }

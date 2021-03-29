@@ -137,6 +137,50 @@ func TestAccKubernetesPersistentVolume_azure_blobStorageDisk(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPersistentVolume_azure_file(t *testing.T) {
+	var conf1, conf2 api.PersistentVolume
+	// name must not contain dashes, due to the Azure API requirements for storage accounts.
+	name := fmt.Sprintf("tfacctest%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	namespace := fmt.Sprintf("tfacctest%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	secretName := fmt.Sprintf("tfacctest%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	location := os.Getenv("TF_VAR_location")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
+		IDRefreshName:     "kubernetes_persistent_volume.test",
+		ProviderFactories: testAccProviderFactories,
+		ExternalProviders: testAccExternalProviders,
+		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
+		Steps: []resource.TestStep{
+			{ // Create a PV using the existing Azure storage share (without secret_namespace).
+				Config: testAccKubernetesPersistentVolumeConfig_azure_file(name, location) +
+					testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeAzureFile(name, secretName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf1),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.azure_file.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.azure_file.0.share_name", name),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.azure_file.0.secret_name", secretName),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.azure_file.0.secret_namespace", ""),
+				),
+			},
+			{ // Create a PV using the existing Azure storage share (with secret_namespace).
+				Config: testAccKubernetesPersistentVolumeConfig_azure_file(name, location) +
+					testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeAzureFileNamespace(name, namespace, secretName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists("kubernetes_persistent_volume.test", &conf2),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.azure_file.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.azure_file.0.share_name", name),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.azure_file.0.secret_name", secretName),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.persistent_volume_source.0.azure_file.0.secret_namespace", namespace),
+					testAccCheckKubernetesPersistentVolumeForceNew(&conf1, &conf2, true),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 	var conf api.PersistentVolume
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
@@ -1353,6 +1397,99 @@ resource "azurerm_storage_container" "test" {
   name                  = %[1]q
   storage_account_name  = azurerm_storage_account.test.name
   container_access_type = "private"
+}
+`, name, location)
+}
+
+func testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeAzureFile(name, secretName string) string {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
+  metadata {
+    name = %[1]q
+  }
+  spec {
+    capacity = {
+      storage = "1Gi"
+    }
+    access_modes = ["ReadWriteOnce"]
+    persistent_volume_source {
+      azure_file {
+        secret_name      = %[2]q
+        share_name       = %[1]q
+        read_only        = false
+      }
+    }
+  }
+}`, name, secretName)
+}
+
+func testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeAzureFileNamespace(name, namespace, secretName string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+  metadata {
+    name = %[2]q
+  }
+}
+
+resource "kubernetes_secret" "test" {
+  metadata {
+    name      = %[3]q
+    namespace = %[2]q
+  }
+
+  data = {
+    azurestorageaccountname = azurerm_storage_account.test.name
+    azurestorageaccountkey  = azurerm_storage_account.test.primary_access_key
+  }
+}
+
+resource "kubernetes_persistent_volume" "test" {
+  metadata {
+    name = %[1]q
+  }
+  spec {
+    capacity = {
+      storage = "1Gi"
+    }
+    access_modes = ["ReadWriteOnce"]
+    persistent_volume_source {
+      azure_file {
+        secret_name      = %[3]q
+        secret_namespace = %[2]q
+        share_name       = %[1]q
+        read_only        = false
+      }
+    }
+  }
+}`, name, namespace, secretName)
+}
+
+func testAccKubernetesPersistentVolumeConfig_azure_file(name, location string) string {
+	return fmt.Sprintf(`provider "azurerm" {
+  features {}
+}
+resource "azurerm_resource_group" "test" {
+  name     = "%s"
+  location = "%s"
+  tags = {
+    environment = "terraform-provider-kubernetes-test"
+  }
+}
+resource "azurerm_storage_account" "test" {
+  name                     = %[1]q
+  resource_group_name      = azurerm_resource_group.test.name
+  location                 = azurerm_resource_group.test.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  account_kind             = "StorageV2"
+	# needed for Azure File kubernetes cifs mount
+	enable_https_traffic_only = false
+  tags = {
+    environment = "terraform-provider-kubernetes-test"
+  }
+}
+resource "azurerm_storage_share" "test" {
+  name                  = %[1]q
+  storage_account_name  = azurerm_storage_account.test.name
+  quota                 = 1
 }
 `, name, location)
 }

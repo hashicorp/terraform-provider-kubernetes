@@ -350,9 +350,10 @@ Terraform will perform the following actions:
                         }
 
                       + azure_file {
-                          + read_only   = (known after apply)
-                          + secret_name = (known after apply)
-                          + share_name  = (known after apply)
+                          + read_only        = (known after apply)
+                          + secret_name      = (known after apply)
+                          + share_name       = (known after apply)
+                          + secret_namespace = (known after apply)
                         }
 
                       + ceph_fs {

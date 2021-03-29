@@ -57,6 +57,9 @@ func flattenAzureFilePersistentVolumeSource(in *v1.AzureFilePersistentVolumeSour
 	if in.ReadOnly != false {
 		att["read_only"] = in.ReadOnly
 	}
+	if in.SecretNamespace != nil {
+		att["secret_namespace"] = *in.SecretNamespace
+	}
 	return []interface{}{att}
 }
 
@@ -582,6 +585,9 @@ func expandAzureFilePersistentVolumeSource(l []interface{}) *v1.AzureFilePersist
 	}
 	if v, ok := in["read_only"].(bool); ok {
 		obj.ReadOnly = v
+	}
+	if v, ok := in["secret_namespace"].(string); ok && v != "" {
+		obj.SecretNamespace = &v
 	}
 	return obj
 }

@@ -143,7 +143,7 @@ func commonVolumeSources() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "The namespace of the secret that contains Azure Storage Account Name and Key. For Kubernetes up to 1.18.x the default is the same as the Pod. For Kubernetes 1.19.x and later the default is \"default\" namespace.",
 						Optional:    true,
-						Computed:    true,
+						Computed:    false,
 						ForceNew:    true,
 					},
 					"share_name": {

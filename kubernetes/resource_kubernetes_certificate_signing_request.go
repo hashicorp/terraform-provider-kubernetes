@@ -102,7 +102,7 @@ func resourceKubernetesCertificateSigningRequestCreate(ctx context.Context, d *s
 	log.Printf("[INFO] Creating new certificate signing request: %#v", csr)
 	newCSR, createErr := conn.CertificatesV1beta1().CertificateSigningRequests().Create(ctx, &csr, metav1.CreateOptions{})
 	if createErr != nil {
-		return diag.Errorf("Failed to create certificate signing request: %s", err)
+		return diag.Errorf("Failed to create certificate signing request: %s", createErr)
 	}
 
 	// Get the name, since it might have been randomly generated during create.

@@ -1,3 +1,16 @@
+## 2.1.0 (Unreleased)
+
+BUG FIXES:
+* Fix `kubernetes_cron_job` ForceNew when modifying `job_template` (#1212)
+* Fix error returned by Create CSR (#1206)
+* Fix `kubernetes_pod_disruption_budget`: `100%` now is a valid value (#1107)
+
+IMPROVEMENTS:
+* Add support for setting the persistent volume claimRef (#1020)
+* Add `secret_namespace` to `volume_source` `azure_file` (#1204)
+* Docs: fix grammar in Network Policy (#1210)
+* Docs: `kubernetes_cron_job` add link to Kubernetes reference (#1200)
+
 ## 2.0.3 (March 17, 2021)
 
 BUG FIXES:

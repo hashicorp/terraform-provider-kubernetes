@@ -1,8 +1,8 @@
 terraform {
   required_providers {
     kubernetes = {
-      source = "localhost/test/kubernetes"
-      version = "9.9.9"
+      source = "hashicorp/kubernetes"
+      version = ">=2.0.3"
     }
   }
 }

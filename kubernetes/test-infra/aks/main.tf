@@ -1,12 +1,3 @@
-terraform {
-  required_providers {
-    kubernetes = {
-      source = "hashicorp/kubernetes"
-      version = ">=2.0.3"
-    }
-  }
-}
-
 locals {
   random_prefix = "${var.prefix}-${random_id.tf-k8s-acc.hex}"
 }

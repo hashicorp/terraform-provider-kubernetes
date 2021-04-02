@@ -10,7 +10,7 @@ terraform {
     # A "required_providers" block needs to be added to all sub-modules in order to use a custom "source" and "version".
     # Otherwise, the sub-module will use defaults, which in our case means an empty provider config.
     # https://github.com/hashicorp/terraform/issues/27361
-    kubernetes-released = {
+    kubernetes = {
       source = "hashicorp/kubernetes"
       version = ">= 2.0.2"
     }
@@ -29,13 +29,12 @@ data "aws_eks_cluster" "default" {
   name = module.cluster.cluster_id
 }
 
-# This configuration relies on a plugin binary to fetch the token to the EKS cluster.
-# The main advantage is that the token will always be up-to-date, even when the `terraform apply` runs for
-# a longer time than the token TTL. The downside of this approach is that the binary must be present
-# on the system running terraform, either in $PATH as shown below, or in another location, which can be
-# specified in the `command`.
-# See the commented provider blocks below for alternative configuration options.
-provider "kubernetes-released" {
+data "aws_eks_cluster_auth" "default" {
+  name = module.cluster.cluster_id
+}
+
+# Test exec plugin based auth.
+provider "kubernetes" {
   host                   = data.aws_eks_cluster.default.endpoint
   cluster_ca_certificate = base64decode(data.aws_eks_cluster.default.certificate_authority[0].data)
   exec {
@@ -52,15 +51,15 @@ provider "kubernetes-local" {
   config_path = module.cluster.kubeconfig_filename
 }
 
+# Test token data source based auth.
 provider "helm" {
+  experiments {
+    manifest = true
+  }
   kubernetes {
     host                   = data.aws_eks_cluster.default.endpoint
     cluster_ca_certificate = base64decode(data.aws_eks_cluster.default.certificate_authority[0].data)
-    exec {
-      api_version = "client.authentication.k8s.io/v1alpha1"
-      args        = ["eks", "get-token", "--cluster-name", module.vpc.cluster_name]
-      command     = "aws"
-    }
+    token                  = data.aws_eks_cluster_auth.default.token
   }
 }
 
@@ -72,7 +71,6 @@ module "vpc" {
 }
 
 module "cluster" {
-  providers         =  {kubernetes = kubernetes-released}
   source  = "terraform-aws-modules/eks/aws"
   version = "14.0.0"
 
@@ -83,7 +81,6 @@ module "cluster" {
   cluster_version  = var.kubernetes_version
   manage_aws_auth  = true
   write_kubeconfig = true
-  kubeconfig_name  = "kubeconfig"
 
   # See this file for more options
   # https://github.com/terraform-aws-modules/terraform-aws-eks/blob/master/local.tf#L28
@@ -107,7 +104,6 @@ module "cluster" {
 }
 
 module "kubernetes-config" {
-  providers         =  {kubernetes = kubernetes-local}
   cluster_name      = module.cluster.cluster_id # creates dependency on cluster creation
   source            = "./kubernetes-config"
   k8s_node_role_arn = module.cluster.worker_iam_role_arn

@@ -1,12 +1,3 @@
-terraform {
-  required_providers {
-    kubernetes = {
-      source = "localhost/test/kubernetes"
-      version = "9.9.9"
-    }
-  }
-}
-
 locals {
   random_prefix = "${var.prefix}-${random_id.tf-k8s-acc.hex}"
 }

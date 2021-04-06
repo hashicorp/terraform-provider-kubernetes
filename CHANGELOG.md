@@ -1,3 +1,39 @@
+## 2.1.0 (Unreleased)
+
+BUG FIXES:
+* Fix `kubernetes_cron_job` ForceNew when modifying `job_template` (#1212)
+* Fix error returned by Create CSR (#1206)
+* Fix `kubernetes_pod_disruption_budget`: `100%` now is a valid value (#1107)
+
+IMPROVEMENTS:
+* Add support for setting the persistent volume claimRef (#1020)
+* Add `secret_namespace` to `volume_source` `azure_file` (#1204)
+* Docs: fix grammar in Network Policy (#1210)
+* Docs: `kubernetes_cron_job` add link to Kubernetes reference (#1200)
+
+## 2.0.3 (March 17, 2021)
+
+BUG FIXES:
+
+* Fix resource_field_ref schema for projected_volume (#1189)
+* Add diff suppression to persistent_volume and persistent_volume_claim (#1145)
+* Remove error for missing kubeconfig, to allow generating it at apply time (#1142)
+
+IMPROVEMENTS:
+
+* Support topologySpreadConstraint in pod spec schema (#1022)
+* Wait for kubernetes_ingress to be deleted (#1143)
+* Improve docs for configuring the provider (#1132)
+* Update docs to reflect Kubernetes service status attribute (#1148)
+
+## 2.0.2 (February 02, 2021)
+
+BUG FIXES:
+* Read operation should set resource id to null if not found (#1136)
+
+IMPROVEMENTS:
+* Add service timeouts docs (#963)
+
 ## 2.0.1 (January 22, 2021)
 
 BUG FIXES:

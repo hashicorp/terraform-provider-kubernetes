@@ -13,7 +13,7 @@ import (
 )
 
 func TestAccKubernetesCronJob_basic(t *testing.T) {
-	var conf v1beta1.CronJob
+	var conf1, conf2 v1beta1.CronJob
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := alpineImageVersion
 
@@ -26,7 +26,7 @@ func TestAccKubernetesCronJob_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesCronJobConfig_basic(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesCronJobExists("kubernetes_cron_job.test", &conf),
+					testAccCheckKubernetesCronJobExists("kubernetes_cron_job.test", &conf1),
 					resource.TestCheckResourceAttr("kubernetes_cron_job.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_cron_job.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_cron_job.test", "metadata.0.resource_version"),
@@ -46,9 +46,9 @@ func TestAccKubernetesCronJob_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesCronJobConfig_modified(name, imageName),
+				Config: testAccKubernetesCronJobConfig_modified(name, "test"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesCronJobExists("kubernetes_cron_job.test", &conf),
+					testAccCheckKubernetesCronJobExists("kubernetes_cron_job.test", &conf2),
 					resource.TestCheckResourceAttr("kubernetes_cron_job.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_cron_job.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_cron_job.test", "metadata.0.resource_version"),
@@ -65,6 +65,7 @@ func TestAccKubernetesCronJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cron_job.test", "spec.0.job_template.0.spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job.test", "spec.0.job_template.0.spec.0.template.0.metadata.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job.test", "spec.0.job_template.0.spec.0.template.0.metadata.0.labels.%", "1"),
+					testAccCheckKubernetesCronJobForceNew(&conf1, &conf2, false),
 				),
 			},
 		},
@@ -292,4 +293,19 @@ func testAccKubernetesCronJobConfig_extraModified(name, imageName string) string
     }
   }
 }`, name, imageName)
+}
+
+func testAccCheckKubernetesCronJobForceNew(old, new *v1beta1.CronJob, wantNew bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if wantNew {
+			if old.ObjectMeta.UID != new.ObjectMeta.UID {
+				return fmt.Errorf("Expecting forced replacement")
+			}
+		} else {
+			if old.ObjectMeta.UID != new.ObjectMeta.UID {
+				return fmt.Errorf("Unexpected forced replacement")
+			}
+		}
+		return nil
+	}
 }

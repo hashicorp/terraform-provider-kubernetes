@@ -77,10 +77,10 @@ data "azurerm_kubernetes_cluster" "example" {
 }
 
 provider "kubernetes" {
-  host                   = "${data.azurerm_kubernetes_cluster.main.kube_config.0.host}"
-  client_certificate     = "${base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)}"
-  client_key             = "${base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_key)}"
-  cluster_ca_certificate = "${base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)}"
+  host                   = "${data.azurerm_kubernetes_cluster.example.kube_config.0.host}"
+  client_certificate     = "${base64decode(data.azurerm_kubernetes_cluster.example.kube_config.0.client_certificate)}"
+  client_key             = "${base64decode(data.azurerm_kubernetes_cluster.example.kube_config.0.client_key)}"
+  cluster_ca_certificate = "${base64decode(data.azurerm_kubernetes_cluster.example.kube_config.0.cluster_ca_certificate)}"
 }
 ```
 
@@ -350,9 +350,10 @@ Terraform will perform the following actions:
                         }
 
                       + azure_file {
-                          + read_only   = (known after apply)
-                          + secret_name = (known after apply)
-                          + share_name  = (known after apply)
+                          + read_only        = (known after apply)
+                          + secret_name      = (known after apply)
+                          + share_name       = (known after apply)
+                          + secret_namespace = (known after apply)
                         }
 
                       + ceph_fs {

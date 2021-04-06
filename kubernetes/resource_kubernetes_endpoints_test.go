@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -38,22 +37,6 @@ func TestAccKubernetesEndpoints_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.0.name", "httptransport"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.0.port", "80"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.0.protocol", "TCP"),
-					testAccCheckEndpointSubsets(&conf, []api.EndpointSubset{
-						{
-							Addresses: []api.EndpointAddress{
-								{
-									IP: "10.0.0.4",
-								},
-							},
-							Ports: []api.EndpointPort{
-								{
-									Name:     "httptransport",
-									Port:     80,
-									Protocol: api.ProtocolTCP,
-								},
-							},
-						},
-					}),
 				),
 			},
 			{
@@ -99,60 +82,6 @@ func TestAccKubernetesEndpoints_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.not_ready_address.0.ip", "10.0.0.10"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.not_ready_address.1.ip", "10.0.0.11"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.not_ready_address.1.%", "3"),
-
-					testAccCheckEndpointSubsets(&conf, []api.EndpointSubset{
-						{
-							Addresses: []api.EndpointAddress{
-								{
-									IP: "10.0.0.5",
-								},
-							},
-							Ports: []api.EndpointPort{
-								{
-									Name:     "httptransport",
-									Port:     82,
-									Protocol: api.ProtocolTCP,
-								},
-							},
-						},
-						{
-							Addresses: []api.EndpointAddress{
-								{
-									IP:       "10.0.0.6",
-									Hostname: "test-hostname",
-									NodeName: ptrToString("test-nodename"),
-								},
-								{
-									IP: "10.0.0.7",
-								},
-							},
-							NotReadyAddresses: []api.EndpointAddress{
-								{
-									IP: "10.0.0.10",
-								},
-								{
-									IP: "10.0.0.11",
-								},
-							},
-							Ports: []api.EndpointPort{
-								{
-									Name:     "httpstransport2",
-									Port:     444,
-									Protocol: api.ProtocolTCP,
-								},
-								{
-									Name:     "httpstransport",
-									Port:     443,
-									Protocol: api.ProtocolTCP,
-								},
-								{
-									Name:     "aaaa",
-									Port:     442,
-									Protocol: api.ProtocolTCP,
-								},
-							},
-						},
-					}),
 				),
 			},
 			{
@@ -169,22 +98,6 @@ func TestAccKubernetesEndpoints_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.0.name", "httptransport"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.0.port", "80"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.0.protocol", "TCP"),
-					testAccCheckEndpointSubsets(&conf, []api.EndpointSubset{
-						{
-							Addresses: []api.EndpointAddress{
-								{
-									IP: "10.0.0.4",
-								},
-							},
-							Ports: []api.EndpointPort{
-								{
-									Name:     "httptransport",
-									Port:     80,
-									Protocol: api.ProtocolTCP,
-								},
-							},
-						},
-					}),
 				),
 			},
 		},
@@ -224,21 +137,6 @@ func TestAccKubernetesEndpoints_generatedName(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testAccCheckEndpointSubsets(svc *api.Endpoints, expected []api.EndpointSubset) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if len(expected) == 0 && len(svc.Subsets) == 0 {
-			return nil
-		}
-
-		subsets := svc.Subsets
-		if diff := cmp.Diff(expected, subsets); diff != "" {
-			return fmt.Errorf("Unexpected output from expander: mismatch (-want +got):\n%s", diff)
-		}
-
-		return nil
-	}
 }
 
 func testAccCheckKubernetesEndpointDestroy(s *terraform.State) error {

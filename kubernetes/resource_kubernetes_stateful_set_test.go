@@ -88,10 +88,18 @@ func TestAccKubernetesStatefulSet_basic(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:            "kubernetes_stateful_set.test",
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"wait_for_rollout"},
+				ResourceName:      "kubernetes_stateful_set.test",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"wait_for_rollout",
+					"spec.0.update_strategy.#",
+					"spec.0.update_strategy.0.%",
+					"spec.0.update_strategy.0.rolling_update.#",
+					"spec.0.update_strategy.0.rolling_update.0.%",
+					"spec.0.update_strategy.0.rolling_update.0.partition",
+					"spec.0.update_strategy.0.type",
+				},
 			},
 		},
 	})

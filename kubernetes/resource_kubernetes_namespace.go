@@ -3,9 +3,10 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -61,6 +62,7 @@ func resourceKubernetesNamespaceRead(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 	if !exists {
+		d.SetId("")
 		return diag.Diagnostics{}
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -127,7 +129,7 @@ func resourceKubernetesNamespaceDelete(ctx context.Context, d *schema.ResourceDa
 		Refresh: func() (interface{}, string, error) {
 			out, err := conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 			if err != nil {
-				if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+				if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 					return nil, "", nil
 				}
 				log.Printf("[ERROR] Received error: %#v", err)
@@ -159,7 +161,7 @@ func resourceKubernetesNamespaceExists(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[INFO] Checking namespace %s", name)
 	_, err = conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

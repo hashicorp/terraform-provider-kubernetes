@@ -4,7 +4,7 @@ services:
   - docker
 language: go
 go:
-  - 1.14.x
+  - 1.16.x
 
 env:
   - GO111MODULE=on
@@ -27,7 +27,7 @@ script:
 
 branches:
   only:
-    - master
+    - main
 matrix:
   fast_finish: true
   allow_failures:

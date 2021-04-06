@@ -19,10 +19,10 @@ Example:
 ## Versions
 
 You can set the desired version of Kubernetes via the `kubernetes_version` Terraform variable. If unset it defaults to 
-version 1.18.
+version 1.20.
 Example:
 ```
-export TF_VAR_kubernetes_version=1.18
+export TF_VAR_kubernetes_version=1.20
 ```
 
 This configuration is only compatible with Terraform 0.13 and up due to the use of the count-on-module feature which is not available in earlier versions.

@@ -9,7 +9,7 @@
 - [Interactive Tutorial](https://learn.hashicorp.com/tutorials/terraform/kubernetes-provider?in=terraform/kubernetes)
 - Usage
   - [Documentation](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs)
-  - [Examples](https://github.com/hashicorp/terraform-provider-kubernetes/tree/master/_examples)
+  - [Examples](https://github.com/hashicorp/terraform-provider-kubernetes/tree/main/_examples)
   - [Kubernetes Provider 2.0 Upgrade guide](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/guides/v2-upgrade-guide)
 - Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
 - Chat: [#terraform-providers in Kubernetes](https://kubernetes.slack.com/messages/CJY6ATQH4) ([Sign up here](http://slack.k8s.io/))
@@ -23,7 +23,7 @@ Please note: We take Terraform's security and our users' trust very seriously. I
 ## Requirements
 
 -	[Terraform](https://www.terraform.io/downloads.html) 0.12.x
--	[Go](https://golang.org/doc/install) 1.15.x (to build the provider plugin)
+-	[Go](https://golang.org/doc/install) 1.16.x (to build the provider plugin)
 
 
 ## Kubernetes Alpha Provider

@@ -2,8 +2,9 @@ package kubernetes
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strconv"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func jobMetadataSchema() *schema.Schema {
@@ -13,7 +14,7 @@ func jobMetadataSchema() *schema.Schema {
 	return m
 }
 
-func jobSpecFields() map[string]*schema.Schema {
+func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 	podTemplateFields := map[string]*schema.Schema{
 		"metadata": metadataSchema("job", true),
 		"spec": {
@@ -23,7 +24,7 @@ func jobSpecFields() map[string]*schema.Schema {
 			ForceNew:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: podSpecFields(false, false),
+				Schema: podSpecFields(specUpdatable, false),
 			},
 		},
 	}

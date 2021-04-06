@@ -3,8 +3,9 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -151,6 +152,7 @@ func resourceKubernetesStorageClassRead(ctx context.Context, d *schema.ResourceD
 		return diag.FromErr(err)
 	}
 	if !exists {
+		d.SetId("")
 		return diags
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -222,7 +224,7 @@ func resourceKubernetesStorageClassDelete(ctx context.Context, d *schema.Resourc
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		_, err := conn.StorageV1().StorageClasses().Get(ctx, d.Id(), metav1.GetOptions{})
 		if err != nil {
-			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
 			return resource.NonRetryableError(err)
@@ -250,7 +252,7 @@ func resourceKubernetesStorageClassExists(ctx context.Context, d *schema.Resourc
 	log.Printf("[INFO] Checking storage class %s", name)
 	_, err = conn.StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

@@ -385,6 +385,42 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 				},
 			},
 		},
+		"topology_spread_constraint": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Description: "describes how a group of pods ought to spread across topology domains. Scheduler will schedule pods in a way which abides by the constraints.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"max_skew": {
+						Type:         schema.TypeInt,
+						Description:  "describes the degree to which pods may be unevenly distributed.",
+						Optional:     true,
+						Default:      1,
+						ValidateFunc: validation.IntAtLeast(1),
+					},
+					"topology_key": {
+						Type:        schema.TypeString,
+						Description: "the key of node labels. Nodes that have a label with this key and identical values are considered to be in the same topology.",
+						Optional:    true,
+					},
+					"when_unsatisfiable": {
+						Type:         schema.TypeString,
+						Description:  "indicates how to deal with a pod if it doesn't satisfy the spread constraint.",
+						Default:      "DoNotSchedule",
+						Optional:     true,
+						ValidateFunc: validation.StringInSlice([]string{"DoNotSchedule", "ScheduleAnyway"}, false),
+					},
+					"label_selector": {
+						Type:        schema.TypeList,
+						Description: "A label query over a set of resources, in this case pods.",
+						Optional:    true,
+						Elem: &schema.Resource{
+							Schema: labelSelectorFields(true),
+						},
+					},
+				},
+			},
+		},
 		"volume": {
 			Type:        schema.TypeList,
 			Optional:    true,
@@ -843,9 +879,12 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 																	Type:     schema.TypeString,
 																	Required: true,
 																},
-																"quantity": {
-																	Type:     schema.TypeString,
-																	Optional: true,
+																"divisor": {
+																	Type:             schema.TypeString,
+																	Optional:         true,
+																	Default:          "1",
+																	ValidateFunc:     validateResourceQuantity,
+																	DiffSuppressFunc: suppressEquivalentResourceQuantity,
 																},
 																"resource": {
 																	Type:        schema.TypeString,

@@ -8,7 +8,7 @@ variable "cluster_name" {
 
 variable "kubernetes_version" {
     type = string
-    default = "1.18.8"
+    default = "1.20.2"
 }
 
 variable "controller_count" {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	api "k8s.io/api/core/v1"
@@ -79,6 +80,7 @@ func TestAccKubernetesPod_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env_from.1.secret_ref.0.optional", "false"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.env_from.1.prefix", "FROM_S_"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.image", imageName1),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.topology_spread_constraint.#", "0"),
 				),
 			},
 			{
@@ -534,6 +536,7 @@ func TestAccKubernetesPod_with_projected_volume(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.1.resource_field_ref.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.1.resource_field_ref.0.container_name", "containername"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.1.resource_field_ref.0.resource", "limits.cpu"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.projected.0.sources.3.downward_api.0.items.1.resource_field_ref.0.divisor", "1"),
 				),
 			},
 		},
@@ -691,10 +694,6 @@ func TestAccKubernetesPod_config_with_automount_service_account_token(t *testing
 					testAccCheckKubernetesServiceAccountExists("kubernetes_service_account.test", &confSA),
 					testAccCheckKubernetesPodExists("kubernetes_pod.test", &confPod),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.automount_service_account_token", "true"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.mount_path", "/var/run/secrets/kubernetes.io/serviceaccount"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.secret.#", "1"),
 				),
 			},
 		},
@@ -871,17 +870,8 @@ func TestAccKubernetesPod_bug961EmptyBlocks(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodConfigEmptyBlocks(name, busyboxImageVersion),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod.test", "metadata.0.uid"),
-				),
-			},
-			{
-				Config:   testAccKubernetesPodConfigMinimal(name, busyboxImageVersion),
-				PlanOnly: true,
+				ExpectError: regexp.MustCompile("Missing required argument"),
+				Config:      testAccKubernetesPodConfigEmptyBlocks(name, busyboxImageVersion),
 			},
 		},
 	})
@@ -959,6 +949,38 @@ func TestAccKubernetesPod_readinessGate(t *testing.T) {
 					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf1),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.readiness_gate.0.condition_type", "haha"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPod_topologySpreadConstraint(t *testing.T) {
+	var conf1 api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod.test"
+	imageName := "nginx:1.7.9"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodTopologySpreadConstraintConfig(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists(resourceName, &conf1),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.max_skew", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.topology_key", "failure-domain.beta.kubernetes.io/zone"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.when_unsatisfiable", "ScheduleAnyway"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})
@@ -2370,4 +2392,30 @@ func testAccKubernetesPodConfig_afterUpdate(name, imageName string) string {
   }
 }
 `, name, imageName)
+}
+
+func testAccKubernetesPodTopologySpreadConstraintConfig(podName, imageName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_pod" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+    topology_spread_constraint {
+      max_skew           = 1
+      topology_key       = "failure-domain.beta.kubernetes.io/zone"
+      when_unsatisfiable = "ScheduleAnyway"
+      label_selector {
+        match_labels = {
+          "app.kubernetes.io/instance" = "terraform-example"
+        }
+      }
+    }
+  }
+}
+`, podName, imageName)
 }

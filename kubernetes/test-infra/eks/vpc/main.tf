@@ -1,4 +1,12 @@
-#
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "3.22.0"
+    }
+  }
+}
+
 # VPC Resources
 #  * VPC
 #  * Subnets
@@ -11,13 +19,6 @@ data "aws_region" "current" {
 }
 
 data "aws_availability_zones" "available" {
-}
-
-# Not required: currently used in conjuction with using
-# icanhazip.com to determine local workstation external IP
-# to open EC2 Security Group access to the Kubernetes cluster.
-# See workstation-external-ip.tf for additional information.
-provider "http" {
 }
 
 resource "random_id" "cluster_name" {
@@ -73,5 +74,3 @@ resource "aws_route_table_association" "k8s-acc" {
   subnet_id      = aws_subnet.k8s-acc[count.index].id
   route_table_id = aws_route_table.k8s-acc.id
 }
-
-

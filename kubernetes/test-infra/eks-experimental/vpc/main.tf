@@ -1,4 +1,12 @@
-#
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "3.22.0"
+    }
+  }
+}
+
 # VPC Resources
 #  * VPC
 #  * Subnets

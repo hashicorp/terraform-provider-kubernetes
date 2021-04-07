@@ -61,6 +61,11 @@ The Kubernetes provider can get its configuration in two ways:
 2. _Implicitly_ through environment variables. This includes:
    * [Using the in-cluster config](#in-cluster-config)
 
+The provider always first tries to load **a config file** from a given location
+when `config_path` or `config_paths` (or their equivalent environment variables) are set. 
+Depending on whether you have a current context set this _may_ require 
+`config_context_auth_info` and/or `config_context_cluster` and/or `config_context`.
+
 For a full list of supported provider authentication arguments and their corresponding environment variables, see the [argument reference](#argument-reference) below.
 
 

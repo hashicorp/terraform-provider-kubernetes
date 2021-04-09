@@ -403,6 +403,17 @@ func flattenPersistentVolumeSpec(in v1.PersistentVolumeSpec) []interface{} {
 	return []interface{}{att}
 }
 
+func flattenObjectRef(in *v1.ObjectReference) []interface{} {
+	att := make(map[string]interface{})
+	if in.Name != "" {
+		att["name"] = in.Name
+	}
+	if in.Namespace != "" {
+		att["namespace"] = in.Namespace
+	}
+	return []interface{}{att}
+}
+
 func flattenPhotonPersistentDiskVolumeSource(in *v1.PhotonPersistentDiskVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["pd_id"] = in.PdID
@@ -1025,11 +1036,11 @@ func expandPersistentVolumeSpec(l []interface{}) (*v1.PersistentVolumeSpec, erro
 	return obj, nil
 }
 
-func expandClaimRef(v []interface{}) *v1.ObjectReference {
-	if len(v) == 0 || v[0] == nil {
-		return nil
+func expandClaimRef(l []interface{}) *v1.ObjectReference {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.ObjectReference{}
 	}
-	o := v[0].(map[string]interface{})
+	o := l[0].(map[string]interface{})
 	return &v1.ObjectReference{
 		Name:      o["name"].(string),
 		Namespace: o["namespace"].(string),

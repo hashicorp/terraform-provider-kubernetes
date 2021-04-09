@@ -1,3 +1,16 @@
+terraform {
+  required_providers {
+    kubernetes = {
+      source = "hashicorp/kubernetes"
+      version = ">= 2.0.3"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = ">= 2.1.0"
+    }
+  }
+}
+
 resource "kubernetes_namespace" "test" {
   metadata {
     name = "test"
@@ -53,4 +66,9 @@ resource helm_release nginx_ingress {
     name  = "service.type"
     value = "ClusterIP"
   }
+}
+
+resource "local_file" "kubeconfig" {
+  content = var.kubeconfig
+  filename = "${path.root}/kubeconfig"
 }

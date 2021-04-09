@@ -1,10 +1,12 @@
-#
-# VPC Resources
-#  * VPC
-#  * Subnets
-#  * Internet Gateway
-#  * Route Table
-#
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "3.22.0"
+    }
+  }
+}
+
 # Using these data sources allows the configuration to be
 # generic for any region.
 data "aws_region" "current" {

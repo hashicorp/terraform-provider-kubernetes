@@ -716,11 +716,6 @@ resource "kubernetes_persistent_volume" "test" {
       }
     }
   }
-  lifecycle {
-    ignore_changes = [
-      spec[0].claim_ref,
-    ]
-  }
 }
 resource "kubernetes_persistent_volume_claim" "test" {
   wait_until_bound = true

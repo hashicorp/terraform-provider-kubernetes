@@ -16,6 +16,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func TestAccKubernetesPersistentVolume_minimal(t *testing.T) {
+	var conf api.PersistentVolume
+	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	name := fmt.Sprintf("tf-acc-test-%s", randString)
+
+	const resourceName = "kubernetes_persistent_volume.test"
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_basic(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.#", "0"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesPersistentVolume_azure_basic(t *testing.T) {
 	var conf api.PersistentVolume
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
@@ -923,12 +946,11 @@ func TestAccKubernetesPersistentVolume_regression(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPersistentVolume_hostPath_claimRef(t *testing.T) {
-	var conf api.PersistentVolume
+func TestAccKubernetesPersistentVolume_hostpath_claimRef(t *testing.T) {
+	var conf1, conf2 api.PersistentVolume
+	var conf3 api.PersistentVolumeClaim
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
-	claimNamespace := "default"
-	claimName := "expected-claim-name"
 
 	const resourceName = "kubernetes_persistent_volume.test"
 	resource.Test(t, resource.TestCase{
@@ -937,30 +959,32 @@ func TestAccKubernetesPersistentVolume_hostPath_claimRef(t *testing.T) {
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
-			// create a volume without a claimRef
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_hostPath_basic(name),
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_claimRef_noNamespace(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.#", "0"),
-				),
-			},
-			// set the claimRef and assert it's present
-			{
-				Config: testAccKubernetesPersistentVolumeConfig_hostPath_claimRef(name, claimNamespace, claimName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf),
+					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.0.namespace", claimNamespace),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.0.name", claimName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.0.namespace", "default"),
 				),
 			},
-			// unset the claimRef and assert it's absent
 			{
-				Config: testAccKubernetesPersistentVolumeConfig_hostPath_basic(name),
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_claimRef_withNamespace(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.#", "0"),
+					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf2),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.0.namespace", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.0.name", name),
+					testAccCheckKubernetesPersistentVolumeForceNew(&conf1, &conf2, false),
+				),
+			},
+			{
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_claimRef_withPVC(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf2),
+					testAccCheckKubernetesPersistentVolumeClaimExists("kubernetes_persistent_volume_claim.test", &conf3),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.0.namespace", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.0.name", name),
+					testAccCheckKubernetesPersistentVolumeForceNew(&conf1, &conf2, false),
 				),
 			},
 		},
@@ -1920,8 +1944,68 @@ func testAccKubernetesPersistentVolumeConfig_hostPath_basic(name string) string 
 }`, name)
 }
 
-func testAccKubernetesPersistentVolumeConfig_hostPath_claimRef(name string, claimNamespace string, claimName string) string {
+func testAccKubernetesPersistentVolumeConfig_hostPath_claimRef_noNamespace(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    capacity = {
+      storage = "1Gi"
+    }
+    access_modes = ["ReadWriteMany"]
+    mount_options = ["foo"]
+    claim_ref {
+       name = "%s"
+    }
+
+    persistent_volume_source {
+      host_path {
+        path = "/mnt/local-volume"
+      }
+    }
+  }
+}`, name, name)
+}
+
+func testAccKubernetesPersistentVolumeConfig_hostPath_claimRef_withNamespace(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+  metadata {
+    name = "%s"
+  }
+}
+resource "kubernetes_persistent_volume" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    capacity = {
+      storage = "1Gi"
+    }
+    access_modes = ["ReadWriteMany"]
+    mount_options = ["foo"]
+    claim_ref {
+       name = "%s"
+       namespace = kubernetes_namespace.test.metadata.0.name
+    }
+
+    persistent_volume_source {
+      host_path {
+        path = "/mnt/local-volume"
+      }
+    }
+  }
+}`, name, name, name)
+}
+
+func testAccKubernetesPersistentVolumeConfig_hostPath_claimRef_withPVC(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+  metadata {
+    name = "%s"
+  }
+}
+
+resource "kubernetes_persistent_volume" "test" {
   metadata {
     name = "%s"
   }
@@ -1942,7 +2026,27 @@ func testAccKubernetesPersistentVolumeConfig_hostPath_claimRef(name string, clai
       }
     }
   }
-}`, name, claimName, claimNamespace)
+}
+
+resource "kubernetes_persistent_volume_claim" "test" {
+  metadata {
+    name = "%s"
+    namespace = "%s"
+  }
+
+  spec {
+    access_modes       = ["ReadWriteOnce"]
+
+    resources {
+      requests = {
+        storage = "1Gi"
+      }
+    }
+
+    volume_name = kubernetes_persistent_volume.test.metadata.0.name
+  }
+}
+`, name, name, name, name, name, name)
 }
 
 func testAccKubernetesPersistentVolume_regression(provider, name, path, typ string) string {

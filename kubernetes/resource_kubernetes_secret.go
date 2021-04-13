@@ -31,6 +31,12 @@ func resourceKubernetesSecret() *schema.Resource {
 				Optional:    true,
 				Sensitive:   true,
 			},
+			"binary_data": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Sensitive:   true,
+				Description: "A map of the secret data in base64 encoding. Use this for binary data.",
+			},
 			"type": {
 				Type:        schema.TypeString,
 				Description: "Type of secret",
@@ -51,7 +57,23 @@ func resourceKubernetesSecretCreate(ctx context.Context, d *schema.ResourceData,
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	secret := api.Secret{
 		ObjectMeta: metadata,
-		Data:       expandStringMapToByteMap(d.Get("data").(map[string]interface{})),
+	}
+
+	if v, ok := d.GetOk("data"); ok {
+		m := map[string]string{}
+		for k, v := range v.(map[string]interface{}) {
+			vv := v.(string)
+			m[k] = vv
+		}
+		secret.StringData = m
+	}
+
+	if v, ok := d.GetOk("binary_data"); ok {
+		m, err := base64DecodeStringMap(v.(map[string]interface{}))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		secret.Data = m
 	}
 
 	if v, ok := d.GetOk("type"); ok {
@@ -101,7 +123,23 @@ func resourceKubernetesSecretRead(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	d.Set("data", flattenByteMapToStringMap(secret.Data))
+	binaryDataKeys := []string{}
+	if v, ok := d.GetOk("binary_data"); ok {
+		binaryData := map[string][]byte{}
+		for k := range v.(map[string]interface{}) {
+			binaryData[k] = secret.Data[k]
+			binaryDataKeys = append(binaryDataKeys, k)
+		}
+		d.Set("binary_data", base64EncodeByteMap(binaryData))
+	}
+
+	if _, ok := d.GetOk("data"); ok {
+		for _, k := range binaryDataKeys {
+			delete(secret.Data, k)
+		}
+		d.Set("data", flattenByteMapToStringMap(secret.Data))
+	}
+
 	d.Set("type", secret.Type)
 
 	return nil
@@ -119,16 +157,34 @@ func resourceKubernetesSecretUpdate(ctx context.Context, d *schema.ResourceData,
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
+
+	newData := map[string]interface{}{}
 	if d.HasChange("data") {
-		oldV, newV := d.GetChange("data")
-
-		oldV = base64EncodeStringMap(oldV.(map[string]interface{}))
-		newV = base64EncodeStringMap(newV.(map[string]interface{}))
-
-		diffOps := diffStringMap("/data/", oldV.(map[string]interface{}), newV.(map[string]interface{}))
-
-		ops = append(ops, diffOps...)
+		_, new := d.GetChange("data")
+		new = base64EncodeStringMap(new.(map[string]interface{}))
+		for k, v := range new.(map[string]interface{}) {
+			newData[k] = v
+		}
+	} else if v, ok := d.GetOk("data"); ok {
+		for k, vv := range v.(map[string]interface{}) {
+			newData[k] = base64EncodeStringMap(vv.(map[string]interface{}))
+		}
 	}
+	if d.HasChange("binary_data") {
+		_, new := d.GetChange("binary_data")
+		for k, v := range new.(map[string]interface{}) {
+			newData[k] = v
+		}
+	} else if v, ok := d.GetOk("binary_data"); ok {
+		for k, vv := range v.(map[string]interface{}) {
+			newData[k] = vv
+		}
+	}
+
+	ops = append(ops, &AddOperation{
+		Path:  "/data",
+		Value: newData,
+	})
 
 	data, err := ops.MarshalJSON()
 	if err != nil {

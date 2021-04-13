@@ -385,6 +385,8 @@ func testAccKubernetesSecretConfig_noData(name string) string {
   metadata {
     name = "%s"
   }
+
+  data = {}
 }
 `, name)
 }

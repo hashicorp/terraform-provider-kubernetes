@@ -29,6 +29,7 @@ func resourceKubernetesSecret() *schema.Resource {
 				Type:        schema.TypeMap,
 				Description: "A map of the secret data.",
 				Optional:    true,
+				Computed:    true,
 				Sensitive:   true,
 			},
 			"binary_data": {
@@ -133,15 +134,11 @@ func resourceKubernetesSecretRead(ctx context.Context, d *schema.ResourceData, m
 		d.Set("binary_data", base64EncodeByteMap(binaryData))
 	}
 
-	if _, ok := d.GetOk("data"); ok {
-		for _, k := range binaryDataKeys {
-			delete(secret.Data, k)
-		}
-		d.Set("data", flattenByteMapToStringMap(secret.Data))
+	for _, k := range binaryDataKeys {
+		delete(secret.Data, k)
 	}
-
+	d.Set("data", flattenByteMapToStringMap(secret.Data))
 	d.Set("type", secret.Type)
-
 	return nil
 }
 
@@ -166,8 +163,8 @@ func resourceKubernetesSecretUpdate(ctx context.Context, d *schema.ResourceData,
 			newData[k] = v
 		}
 	} else if v, ok := d.GetOk("data"); ok {
-		for k, vv := range v.(map[string]interface{}) {
-			newData[k] = base64EncodeStringMap(vv.(map[string]interface{}))
+		for k, vv := range base64EncodeStringMap(v.(map[string]interface{})) {
+			newData[k] = vv
 		}
 	}
 	if d.HasChange("binary_data") {

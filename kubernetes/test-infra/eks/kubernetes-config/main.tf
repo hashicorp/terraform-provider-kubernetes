@@ -1,4 +1,5 @@
 resource "kubernetes_config_map" "name" {
+depends_on = [var.cluster_name]
   metadata {
     name      = "aws-auth"
     namespace = "kube-system"
@@ -20,12 +21,14 @@ resource "null_resource" "generate-kubeconfig" {
 }
 
 resource "kubernetes_namespace" "test" {
+depends_on = [var.cluster_name]
   metadata {
     name = "test"
   }
 }
 
 resource "kubernetes_deployment" "test" {
+depends_on = [var.cluster_name]
   metadata {
     name = "test"
     namespace= kubernetes_namespace.test.metadata.0.name

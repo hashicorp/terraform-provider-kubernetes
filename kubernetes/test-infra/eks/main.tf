@@ -75,9 +75,7 @@ module "cluster" {
   cluster_name    = module.vpc.cluster_name
   cluster_version = var.kubernetes_version
   manage_aws_auth = false # Managed in ./kubernetes-config/main.tf instead.
-  # This kubeconfig expires in 15 minutes, so we'll use an exec block instead.
-  # See ./kubernetes-config/main.tf provider block for details.
-  write_kubeconfig = false
+  write_kubeconfig = true
 
   workers_group_defaults = {
     root_volume_type = "gp2"

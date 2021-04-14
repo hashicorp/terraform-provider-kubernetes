@@ -13,13 +13,6 @@ depends_on = [var.cluster_name]
   }
 }
 
-# Optional: this kubeconfig file is only used for manual CLI access to the cluster.
-resource "null_resource" "generate-kubeconfig" {
-  provisioner "local-exec" {
-    command = "aws eks update-kubeconfig --name ${var.cluster_name} --kubeconfig ${path.root}/kubeconfig"
-  }
-}
-
 resource "kubernetes_namespace" "test" {
 depends_on = [var.cluster_name]
   metadata {
@@ -27,47 +20,8 @@ depends_on = [var.cluster_name]
   }
 }
 
-resource "kubernetes_deployment" "test" {
-depends_on = [var.cluster_name]
-  metadata {
-    name = "test"
-    namespace= kubernetes_namespace.test.metadata.0.name
-  }
-  spec {
-    replicas = 2
-    selector {
-      match_labels = {
-        app  = "test"
-      }
-    }
-    template {
-      metadata {
-        labels = {
-          app  = "test"
-        }
-      }
-      spec {
-        container {
-          image = "nginx:1.19.4"
-          name  = "nginx"
-
-          resources {
-            limits = {
-              memory = "512M"
-              cpu = "1"
-            }
-            requests = {
-              memory = "256M"
-              cpu = "50m"
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
 resource helm_release nginx_ingress {
+depends_on = [var.cluster_name]
   name       = "nginx-ingress-controller"
 
   repository = "https://charts.bitnami.com/bitnami"

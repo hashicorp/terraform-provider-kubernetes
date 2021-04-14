@@ -218,6 +218,26 @@ func base64EncodeStringMap(m map[string]interface{}) map[string]interface{} {
 	return result
 }
 
+func base64EncodeByteMap(m map[string][]byte) map[string]interface{} {
+	result := map[string]interface{}{}
+	for k, v := range m {
+		result[k] = base64.StdEncoding.EncodeToString(v)
+	}
+	return result
+}
+
+func base64DecodeStringMap(m map[string]interface{}) (map[string][]byte, error) {
+	mm := map[string][]byte{}
+	for k, v := range m {
+		d, err := base64.StdEncoding.DecodeString(v.(string))
+		if err != nil {
+			return nil, err
+		}
+		mm[k] = []byte(d)
+	}
+	return mm, nil
+}
+
 func flattenResourceList(l api.ResourceList) map[string]string {
 	m := make(map[string]string)
 	for k, v := range l {

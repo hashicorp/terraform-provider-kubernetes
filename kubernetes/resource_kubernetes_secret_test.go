@@ -194,38 +194,41 @@ func TestAccKubernetesSecret_generatedName(t *testing.T) {
 	})
 }
 
-// Disabled - this test loads binary data from a file and passes it through configuration
-//            which is no longer supported in TF 0.12.
-//            Instead, the resource attribute should be adapted to transport base64 encoded
-//            data and decode it when constructing the API object for client-go.
-//
-// func TestAccKubernetesSecret_binaryData(t *testing.T) {
-//   var conf api.Secret
-//   prefix := "tf-acc-test-gen-"
-//
-//   resource.Test(t, resource.TestCase{
-//     PreCheck:      func() { testAccPreCheck(t) },
-//     IDRefreshName: "kubernetes_secret.test",
-//     ProviderFactories: testAccProviderFactories,
-//     CheckDestroy:  testAccCheckKubernetesSecretDestroy,
-//     Steps: []resource.TestStep{
-//       {
-//         Config: testAccKubernetesSecretConfig_binaryData(prefix),
-//         Check: resource.ComposeAggregateTestCheckFunc(
-//           testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
-//           resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "1"),
-//         ),
-//       },
-//       {
-//         Config: testAccKubernetesSecretConfig_binaryData2(prefix),
-//         Check: resource.ComposeAggregateTestCheckFunc(
-//           testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
-//           resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "2"),
-//         ),
-//       },
-//     },
-//   })
-// }
+func TestAccKubernetesSecret_binaryData(t *testing.T) {
+	var conf api.Secret
+	prefix := "tf-acc-test-gen-"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_secret.test",
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesSecretDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesSecretConfig_binaryData(prefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "binary_data.%", "1"),
+				),
+			},
+			{
+				Config: testAccKubernetesSecretConfig_binaryData2(prefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "binary_data.%", "2"),
+				),
+			},
+			{
+				Config: testAccKubernetesSecretConfig_binaryDataCombined(prefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretExists("kubernetes_secret.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "2"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "binary_data.%", "2"),
+				),
+			},
+		},
+	})
+}
 
 func testAccCheckSecretData(m *api.Secret, expected map[string]string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
@@ -382,6 +385,8 @@ func testAccKubernetesSecretConfig_noData(name string) string {
   metadata {
     name = "%s"
   }
+
+  data = {}
 }
 `, name)
 }
@@ -422,11 +427,8 @@ func testAccKubernetesSecretConfig_binaryData(prefix string) string {
     generate_name = "%s"
   }
 
-  data = {
-    one = <<EOF
-"${filebase64("./test-fixtures/binary.data")}"
-EOF
-
+  binary_data = {
+    one = filebase64("./test-fixtures/binary.data")
   }
 }
 `, prefix)
@@ -438,15 +440,28 @@ func testAccKubernetesSecretConfig_binaryData2(prefix string) string {
     generate_name = "%s"
   }
 
+  binary_data = {
+    one = filebase64("./test-fixtures/binary.data")
+    two = filebase64("./test-fixtures/binary2.data")
+  }
+}
+`, prefix)
+}
+
+func testAccKubernetesSecretConfig_binaryDataCombined(prefix string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+  metadata {
+    generate_name = "%s"
+  }
+
   data = {
-    one = <<EOF
-"${filebase64("./test-fixtures/binary2.data")}"
-EOF
+	  "HOST" = "127.0.0.1"
+	  "PORT" = "80"
+  }
 
-    two = <<EOF
-"${filebase64("./test-fixtures/binary.data")}"
-EOF
-
+  binary_data = {
+    one = filebase64("./test-fixtures/binary.data")
+    two = filebase64("./test-fixtures/binary2.data")
   }
 }
 `, prefix)

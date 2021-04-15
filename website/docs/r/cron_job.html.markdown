@@ -125,3 +125,11 @@ The following arguments are supported:
 These arguments are the same as the for the `spec` block of a Pod.
 
 Please see the [Pod resource](pod.html#spec-1) for reference.
+
+## Import
+
+CronJob can be imported using its namespace and name, e.g.
+
+```
+$ terraform import kubernetes_cron_job.example default/terraform-name
+```

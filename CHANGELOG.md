@@ -1,4 +1,4 @@
-## 2.1.0 (Unreleased)
+## 2.1.0 (April 15, 2021)
 
 BUG FIXES:
 * Fix `kubernetes_cron_job` ForceNew when modifying `job_template` (#1212)

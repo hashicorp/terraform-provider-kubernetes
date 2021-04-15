@@ -4,6 +4,7 @@ BUG FIXES:
 * Fix `kubernetes_cron_job` ForceNew when modifying `job_template` (#1212)
 * Fix error returned by Create CSR (#1206)
 * Fix `kubernetes_pod_disruption_budget`: `100%` now is a valid value (#1107)
+* Fix perpetual diff in persistent volume claimRef (#1227)
 
 IMPROVEMENTS:
 * Add support for setting the persistent volume claimRef (#1020)

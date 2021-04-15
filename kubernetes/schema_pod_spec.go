@@ -337,7 +337,7 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 		"service_account_name": {
 			Type:        schema.TypeString,
 			Optional:    true,
-			Computed:    true,
+			Default:     "default",
 			ForceNew:    !isUpdatable,
 			Description: "ServiceAccountName is the name of the ServiceAccount to use to run this pod. More info: http://releases.k8s.io/HEAD/docs/design/service_accounts.md.",
 		},

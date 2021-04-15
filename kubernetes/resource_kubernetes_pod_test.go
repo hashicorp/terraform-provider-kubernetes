@@ -89,6 +89,7 @@ func TestAccKubernetesPod_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.env_from.1.prefix", "FROM_S_"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.service_account_name", "default"),
 				),
 			},
 			{

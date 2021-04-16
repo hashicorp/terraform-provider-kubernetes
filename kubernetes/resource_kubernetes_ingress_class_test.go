@@ -14,7 +14,7 @@ import (
 
 func TestAccKubernetesIngressClass_basic(t *testing.T) {
 	var conf networking.IngressClass
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_ingress_class.test"
 
 	resource.Test(t, resource.TestCase{
@@ -24,15 +24,20 @@ func TestAccKubernetesIngressClass_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesIngressClassDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesIngressClassConfig_basic(name),
+				Config: testAccKubernetesIngressClassConfig_basic(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesIngressClassExists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.controller", "example.com/ingress-controller"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.#", "0"),
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})

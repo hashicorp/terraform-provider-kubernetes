@@ -217,10 +217,10 @@ resource "kubernetes_ingress_class" "test" {
   }
   spec {
     controller = "example.com/ingress-controller"
-	parameters {
+    parameters {
       kind = "IngressParameters"
       name = %[2]q
-	}
+    }
   }
 }
 `, name, paramName)
@@ -234,11 +234,11 @@ resource "kubernetes_ingress_class" "test" {
   }
   spec {
     controller = "example.com/ingress-controller"
-	parameters {
+    parameters {
 	  api_group = %[2]q
       kind      = "IngressParameters"
       name      = %[2]q
-	}
+    }
   }
 }
 `, name, paramName)

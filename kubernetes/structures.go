@@ -294,7 +294,7 @@ func flattenResourceQuotaSpec(in api.ResourceQuotaSpec) []interface{} {
 	m["scopes"] = flattenResourceQuotaScopes(in.Scopes)
 
 	if in.ScopeSelector != nil {
-		m["scope_selector"] = flattenResourceQuotaScopes(in.Scopes)
+		m["scope_selector"] = flattenResourceQuotaScopeSelector(in.ScopeSelector)
 	}
 
 	out[0] = m
@@ -379,7 +379,7 @@ func expandResourceQuotaScopeSelectorMatchExpressions(s []interface{}) []api.Sco
 	return out
 }
 
-func flattenResourceQuotaScopeSelector(in api.ScopeSelector) []interface{} {
+func flattenResourceQuotaScopeSelector(in *api.ScopeSelector) []interface{} {
 	out := make([]interface{}, 1)
 
 	m := make(map[string]interface{}, 0)
@@ -389,23 +389,25 @@ func flattenResourceQuotaScopeSelector(in api.ScopeSelector) []interface{} {
 	return out
 }
 
-func flattenResourceQuotaScopeSelectorMatchExpressions(in []api.ScopedResourceSelectorRequirement]) []interface{} {
+func flattenResourceQuotaScopeSelectorMatchExpressions(in []api.ScopedResourceSelectorRequirement) []interface{} {
 	if len(in) == 0 {
 		return []interface{}{}
 	}
+	out := make([]interface{}, 1)
 
 	for i, l := range in {
 		m := make(map[string]interface{}, 0)
-		m["default"] = string(l.Operator)
-		m["default_request"] = string(l.ScopeName)
+		m["operator"] = string(l.Operator)
+		m["scope_name"] = string(l.ScopeName)
 
-		limits[i] = m
-	}
-	out[0] = map[string]interface{}{
+		if l.Values != nil && len(l.Values) > 0 {
+			m["values"] = newStringSet(schema.HashString, l.Values)
+		}
+
+		out[i] = m
 	}
 	return out
 }
-
 
 func newStringSet(f schema.SchemaSetFunc, in []string) *schema.Set {
 	var out = make([]interface{}, len(in), len(in))

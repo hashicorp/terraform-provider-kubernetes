@@ -115,7 +115,6 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 	}
 	in := l[0].(map[string]interface{})
 	obj := v1.ServiceSpec{}
-	typeValue, typeOk := in["type"].(string)
 
 	if v, ok := in["port"].([]interface{}); ok && len(v) > 0 {
 		obj.Ports = expandServicePort(v)
@@ -123,11 +122,11 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 	if v, ok := in["selector"].(map[string]interface{}); ok && len(v) > 0 {
 		obj.Selector = expandStringMap(v)
 	}
-	if v, ok := in["cluster_ip"].(string); ok && typeOk && typeValue != "ExternalName" {
+	if v, ok := in["cluster_ip"].(string); ok {
 		obj.ClusterIP = v
 	}
-	if typeOk {
-		obj.Type = v1.ServiceType(typeValue)
+	if v, ok := in["type"].(string); ok {
+		obj.Type = v1.ServiceType(v)
 	}
 	if v, ok := in["external_ips"].(*schema.Set); ok && v.Len() > 0 {
 		obj.ExternalIPs = sliceOfString(v.List())
@@ -168,6 +167,13 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 		})
 	}
 	if d.HasChange(keyPrefix + "type") {
+		o, n := d.GetChange(keyPrefix + "type")
+
+		if o.(string) == "ClusterIP" && n.(string) == "ExternalName" {
+			ops = append(ops, &RemoveOperation{
+				Path: pathPrefix + "clusterIP",
+			})
+		}
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "type",
 			Value: d.Get(keyPrefix + "type").(string),

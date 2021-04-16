@@ -34,7 +34,7 @@ func resourceKubernetesIngressClassSchema() map[string]*schema.Schema {
 	docIngressClassSpecParametes := core.TypedLocalObjectReference{}.SwaggerDoc()
 
 	return map[string]*schema.Schema{
-		"metadata": namespacedMetadataSchema("IngressClass", true),
+		"metadata": metadataSchema("ingress_class", true),
 		"spec": {
 			Type:        schema.TypeList,
 			Description: docIngressClass["spec"],
@@ -44,7 +44,7 @@ func resourceKubernetesIngressClassSchema() map[string]*schema.Schema {
 				Schema: map[string]*schema.Schema{
 					"controller": {
 						Type:        schema.TypeString,
-						Description: docIngressClassSpec["Controller"],
+						Description: docIngressClassSpec["controller"],
 						Optional:    true,
 					},
 					"parameters": {

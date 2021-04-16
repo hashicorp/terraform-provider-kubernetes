@@ -47,6 +47,11 @@ func TestAccKubernetesIngress_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testAccKubernetesIngressConfig_modified(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesIngressExists(resourceName, &conf),
@@ -98,6 +103,11 @@ func TestAccKubernetesIngress_pathType(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.0.service_name", "app2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.0.service_port", "80"),
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			{
 				Config: testAccKubernetesIngressConfig_pathType(rName, "Exact"),
@@ -152,6 +162,11 @@ func TestAccKubernetesIngress_TLS(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testAccKubernetesIngressConfig_TLS_modified(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesIngressExists(resourceName, &conf),
@@ -201,6 +216,11 @@ func TestAccKubernetesIngress_InternalKey(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
 				Config: testAccKubernetesIngressConfig_internalKey(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesIngressExists(resourceName, &conf),
@@ -231,6 +251,11 @@ func TestAccKubernetesIngress_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "status.0.load_balancer.0.ingress.0.ip"),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
@@ -251,6 +276,11 @@ func TestAccKubernetesIngress_stateUpgradeV0_loadBalancerIngress(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesIngressExists(resourceName, &conf1),
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 			{
 				Config: requiredProviders() + testAccKubernetesIngressConfig_stateUpgradev0("kubernetes-local", rName),

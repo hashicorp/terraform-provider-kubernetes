@@ -88,6 +88,7 @@ The following arguments are supported:
 * `volume_name` - (Optional) The binding reference to the PersistentVolume backing this claim.
 * `storage_class_name` - (Optional) Name of the storage class requested by the claim
 * `volume_mode` - (Optional) Defines if a volume is used with a formatted filesystem or to remain in raw block state. Possible values are `Block` and `Filesystem`. Default value is `Filesystem`. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#volume-mode)
+
 ### `match_expressions`
 
 #### Arguments

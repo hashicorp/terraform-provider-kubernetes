@@ -96,14 +96,14 @@ func testAccCheckKubernetesIngressClassExists(n string, obj *networking.IngressC
 }
 
 func testAccKubernetesIngressClassConfig_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_ingress_class" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_ingress_class" "test" {
   metadata {
     name = "%s"
   }
   spec {
     controller = "example.com/ingress-controller"
-	
-
   }
-}`, name)
+}
+`, name)
 }

@@ -28,9 +28,12 @@ func flattenIngressRuleHttp(in *v1beta1.HTTPIngressRuleValue) []interface{} {
 	pathAtts := make([]interface{}, len(in.Paths), len(in.Paths))
 	for i, p := range in.Paths {
 		path := map[string]interface{}{
-			"path":      p.Path,
-			"path_type": p.PathType,
-			"backend":   flattenIngressBackend(&p.Backend),
+			"path":    p.Path,
+			"backend": flattenIngressBackend(&p.Backend),
+		}
+
+		if p.PathType != nil {
+			path["path_type"] = p.PathType
 		}
 		pathAtts[i] = path
 	}

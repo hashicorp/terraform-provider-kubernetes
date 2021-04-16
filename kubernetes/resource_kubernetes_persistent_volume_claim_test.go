@@ -50,12 +50,6 @@ func TestAccKubernetesPersistentVolumeClaim_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_mode", "Filesystem"),
 				),
 			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
-			},
 			//      { // GKE specific check
 			//        Config: testAccKubernetesPersistentVolumeClaimConfig_basic(name),
 			//        SkipFunc: func() (bool, error) {
@@ -170,12 +164,6 @@ func TestAccKubernetesPersistentVolumeClaim_volumeMode(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "5Gi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_mode", "Block"),
 				),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})
@@ -377,12 +365,6 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_volumeUpdate(t *testing.
 				),
 			},
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
-			},
-			{
 				Config: testAccKubernetesPersistentVolumeClaimConfig_volumeUpdate(volumeName, claimName, "10Gi", diskName, zone),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeClaimExists(resourceName, &pvcConf),
@@ -449,12 +431,6 @@ func TestAccKubernetesPersistentVolumeClaim_googleCloud_storageClass(t *testing.
 					testAccCheckKubernetesStorageClassExists("kubernetes_storage_class.test", &storageClass),
 					//testAccCheckMetaAnnotations(&storageClass.ObjectMeta, map[string]string{}),
 				),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesPersistentVolumeClaimConfig_storageClassUpdated(className, claimName),
@@ -616,12 +592,6 @@ func TestAccKubernetesPersistentVolumeClaim_regression(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "5Gi"),
 				),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{ // The second apply uses a local, compiled version of the current branch.
 				Config: requiredProviders() + testAccKubernetesPersistentVolumeClaimConfig_regression("kubernetes-local", name),

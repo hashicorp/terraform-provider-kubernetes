@@ -80,7 +80,7 @@ func resourceKubernetesResourceQuota() *schema.Resource {
 												},
 												"values": {
 													Type:        schema.TypeSet,
-													Description: "Represents a scope's relationship to a set of values.",
+													Description: "A list of scope selector requirements by scope of the resources.",
 													Optional:    true,
 													Elem:        &schema.Schema{Type: schema.TypeString},
 												},

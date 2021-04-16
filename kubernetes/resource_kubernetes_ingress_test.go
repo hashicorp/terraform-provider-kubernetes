@@ -14,49 +14,112 @@ import (
 
 func TestAccKubernetesIngress_basic(t *testing.T) {
 	var conf api.Ingress
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_ingress.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_ingress.test",
+		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesIngressConfig_basic(name),
+				Config: testAccKubernetesIngressConfig_basic(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.ingress_class_name", "ingress-class"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_name", "app1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_port", "443"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.host", "server.domain.com"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.path", "/.*"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service_name", "app2"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service_port", "80"),
+					testAccCheckKubernetesIngressExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress_class_name", "ingress-class"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backend.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backend.0.service_name", "app1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backend.0.service_port", "443"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.host", "server.domain.com"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.path", "/.*"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.path_type", "ImplementationSpecific"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.0.service_name", "app2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.0.service_port", "80"),
 				),
 			},
 			{
-				Config: testAccKubernetesIngressConfig_modified(name),
+				Config: testAccKubernetesIngressConfig_modified(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.ingress_class_name", "other-ingress-class"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_name", "svc"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_port", "8443"),
+					testAccCheckKubernetesIngressExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress_class_name", "other-ingress-class"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backend.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backend.0.service_name", "svc"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backend.0.service_port", "8443"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesIngress_pathType(t *testing.T) {
+	var conf api.Ingress
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_ingress.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressConfig_pathType(rName, "Prefix"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress_class_name", "ingress-class"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backend.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backend.0.service_name", "app1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backend.0.service_port", "443"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.host", "server.domain.com"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.path", "/.*"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.path_type", "Prefix"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.0.service_name", "app2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.0.service_port", "80"),
+				),
+			},
+			{
+				Config: testAccKubernetesIngressConfig_pathType(rName, "Exact"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress_class_name", "ingress-class"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backend.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backend.0.service_name", "app1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backend.0.service_port", "443"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.host", "server.domain.com"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.path", "/.*"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.path_type", "Exact"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.0.service_name", "app2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.0.service_port", "80"),
 				),
 			},
 		},
@@ -65,41 +128,42 @@ func TestAccKubernetesIngress_basic(t *testing.T) {
 
 func TestAccKubernetesIngress_TLS(t *testing.T) {
 	var conf api.Ingress
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_ingress.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_ingress.test",
+		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesIngressConfig_TLS(name),
+				Config: testAccKubernetesIngressConfig_TLS(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.tls.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.tls.0.hosts.0", "host1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.tls.0.secret_name", "super-sekret"),
+					testAccCheckKubernetesIngressExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.tls.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.tls.0.hosts.0", "host1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.tls.0.secret_name", "super-sekret"),
 				),
 			},
 			{
-				Config: testAccKubernetesIngressConfig_TLS_modified(name),
+				Config: testAccKubernetesIngressConfig_TLS_modified(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.tls.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.tls.0.hosts.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.tls.0.hosts.1", "host2"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.tls.0.secret_name", "super-sekret"),
+					testAccCheckKubernetesIngressExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.tls.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.tls.0.hosts.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.tls.0.hosts.1", "host2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.tls.0.secret_name", "super-sekret"),
 				),
 			},
 		},
@@ -108,40 +172,41 @@ func TestAccKubernetesIngress_TLS(t *testing.T) {
 
 func TestAccKubernetesIngress_InternalKey(t *testing.T) {
 	var conf api.Ingress
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_ingress.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_ingress.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesIngressConfig_internalKey(name),
+				Config: testAccKubernetesIngressConfig_internalKey(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.annotations.kubernetes.io/ingress-anno", "one"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.labels.kubernetes.io/ingress-label", "one"),
+					testAccCheckKubernetesIngressExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.kubernetes.io/ingress-anno", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.kubernetes.io/ingress-label", "one"),
 				),
 			},
 			{
-				Config: testAccKubernetesIngressConfig_internalKey_removed(name),
+				Config: testAccKubernetesIngressConfig_internalKey_removed(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.name", name),
-					resource.TestCheckNoResourceAttr("kubernetes_ingress.test", "metadata.0.annotations.kubernetes.io/ingress-anno"),
-					resource.TestCheckNoResourceAttr("kubernetes_ingress.test", "metadata.0.labels.kubernetes.io/ingress-label"),
+					testAccCheckKubernetesIngressExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.0.annotations.kubernetes.io/ingress-anno"),
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.0.labels.kubernetes.io/ingress-label"),
 				),
 			},
 			{
-				Config: testAccKubernetesIngressConfig_internalKey(name),
+				Config: testAccKubernetesIngressConfig_internalKey(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.annotations.kubernetes.io/ingress-anno", "one"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.labels.kubernetes.io/ingress-label", "one"),
+					testAccCheckKubernetesIngressExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.kubernetes.io/ingress-anno", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.kubernetes.io/ingress-label", "one"),
 				),
 			},
 		},
@@ -150,19 +215,20 @@ func TestAccKubernetesIngress_InternalKey(t *testing.T) {
 
 func TestAccKubernetesIngress_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 	var conf api.Ingress
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_ingress.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
-		IDRefreshName:     "kubernetes_ingress.test",
+		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesIngressConfig_waitForLoadBalancer(name),
+				Config: testAccKubernetesIngressConfig_waitForLoadBalancer(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "status.0.load_balancer.0.ingress.0.ip"),
+					testAccCheckKubernetesIngressExists(resourceName, &conf),
+					resource.TestCheckResourceAttrSet(resourceName, "status.0.load_balancer.0.ingress.0.ip"),
 				),
 			},
 		},
@@ -171,24 +237,25 @@ func TestAccKubernetesIngress_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 
 func TestAccKubernetesIngress_stateUpgradeV0_loadBalancerIngress(t *testing.T) {
 	var conf1, conf2 api.Ingress
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_ingress.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInEks(t) },
 		ExternalProviders: testAccExternalProviders,
-		IDRefreshName:     "kubernetes_ingress.test",
+		IDRefreshName:     resourceName,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: requiredProviders() + testAccKubernetesIngressConfig_stateUpgradev0("kubernetes-released", name),
+				Config: requiredProviders() + testAccKubernetesIngressConfig_stateUpgradev0("kubernetes-released", rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf1),
+					testAccCheckKubernetesIngressExists(resourceName, &conf1),
 				),
 			},
 			{
-				Config: requiredProviders() + testAccKubernetesIngressConfig_stateUpgradev0("kubernetes-local", name),
+				Config: requiredProviders() + testAccKubernetesIngressConfig_stateUpgradev0("kubernetes-local", rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf2),
+					testAccCheckKubernetesIngressExists(resourceName, &conf2),
 					testAccCheckKubernetesIngressForceNew(&conf1, &conf2, false),
 				),
 			},
@@ -506,4 +573,32 @@ resource "kubernetes_ingress" "test" {
   }
 }
 `, provider, name, provider, name)
+}
+
+func testAccKubernetesIngressConfig_pathType(name, typ string) string {
+	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+	ingress_class_name = "ingress-class"
+    backend {
+      service_name = "app1"
+      service_port = 443
+    }
+    rule {
+      host = "server.domain.com"
+      http {
+        path {
+          backend {
+            service_name = "app2"
+            service_port = 80
+          }
+          path = "/.*"
+		  path_type = %[2]q
+        }
+      }
+    }
+  }
+}`, name, typ)
 }

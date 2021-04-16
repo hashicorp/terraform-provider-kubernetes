@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -88,6 +89,17 @@ func resourceKubernetesIngressSchemaV1() map[string]*schema.Schema {
 															Type:        schema.TypeString,
 															Description: docHTTPIngressPath["path"],
 															Optional:    true,
+														},
+														"path_type": {
+															Type:        schema.TypeString,
+															Description: docHTTPIngressPath["pathType"],
+															Optional:    true,
+															Default:     "ImplementationSpecific",
+															ValidateFunc: validation.StringInSlice([]string{
+																"ImplementationSpecific",
+																"Prefix",
+																"Exact",
+															}, false),
 														},
 														"backend": backendSpecFields(ruleBackedDescription),
 													},

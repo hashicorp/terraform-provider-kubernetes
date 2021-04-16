@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"k8s.io/api/extensions/v1beta1"
+	ext "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -27,8 +28,9 @@ func flattenIngressRuleHttp(in *v1beta1.HTTPIngressRuleValue) []interface{} {
 	pathAtts := make([]interface{}, len(in.Paths), len(in.Paths))
 	for i, p := range in.Paths {
 		path := map[string]interface{}{
-			"path":    p.Path,
-			"backend": flattenIngressBackend(&p.Backend),
+			"path":      p.Path,
+			"path_type": p.PathType,
+			"backend":   flattenIngressBackend(&p.Backend),
 		}
 		pathAtts[i] = path
 	}
@@ -113,6 +115,12 @@ func expandIngressRule(l []interface{}) []v1beta1.IngressRule {
 							Path:    p["path"].(string),
 							Backend: *expandIngressBackend(p["backend"].([]interface{})),
 						}
+
+						if v, ok := p["path_type"].(string); ok {
+							pathType := ext.PathType(v)
+							hip.PathType = &pathType
+						}
+
 						paths[i] = hip
 					}
 				}

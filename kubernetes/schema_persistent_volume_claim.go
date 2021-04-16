@@ -85,5 +85,16 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 			Computed:    true,
 			ForceNew:    true,
 		},
+		"volume_mode": {
+			Type:        schema.TypeString,
+			Description: "Defines if a volume is intended to be used with a formatted filesystem. or to remain in raw block state.",
+			Optional:    true,
+			ForceNew:    true,
+			Default:     "Filesystem",
+			ValidateFunc: validation.StringInSlice([]string{
+				"Block",
+				"Filesystem",
+			}, false),
+		},
 	}
 }

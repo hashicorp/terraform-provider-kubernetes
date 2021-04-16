@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 // Flatteners
@@ -22,6 +22,10 @@ func flattenPersistentVolumeClaimSpec(in v1.PersistentVolumeClaimSpec) []interfa
 	}
 	if in.StorageClassName != nil {
 		att["storage_class_name"] = *in.StorageClassName
+	}
+
+	if in.VolumeMode != nil {
+		att["volume_mode"] = in.VolumeMode
 	}
 	return []interface{}{att}
 }
@@ -81,6 +85,11 @@ func expandPersistentVolumeClaimSpec(l []interface{}) (*v1.PersistentVolumeClaim
 	}
 	if v, ok := in["storage_class_name"].(string); ok && v != "" {
 		obj.StorageClassName = ptrToString(v)
+	}
+
+	if v, ok := in["volume_mode"].(string); ok {
+		volumeMode := v1.PersistentVolumeMode(v)
+		obj.VolumeMode = &volumeMode
 	}
 	return obj, nil
 }

@@ -24,7 +24,7 @@ func TestAccKubernetesIngressClass_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesIngressClassDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesIngressClassConfig_basic(rName),
+				Config: testAccKubernetesIngressClassConfigBasic(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesIngressClassExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
@@ -38,6 +38,53 @@ func TestAccKubernetesIngressClass_basic(t *testing.T) {
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccKubernetesIngressClass_parameters(t *testing.T) {
+	var conf networking.IngressClass
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	rNameUpdated := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_ingress_class.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesIngressClassDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressClassConfigParameters(rName, rName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressClassExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.controller", "example.com/ingress-controller"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.0.kind", "IngressParameters"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.0.name", rName),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccKubernetesIngressClassConfigParameters(rName, rNameUpdated),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressClassExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.controller", "example.com/ingress-controller"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.0.kind", "IngressParameters"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.0.name", rNameUpdated),
+				),
 			},
 		},
 	})
@@ -100,15 +147,32 @@ func testAccCheckKubernetesIngressClassExists(n string, obj *networking.IngressC
 	}
 }
 
-func testAccKubernetesIngressClassConfig_basic(name string) string {
+func testAccKubernetesIngressClassConfigBasic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_ingress_class" "test" {
   metadata {
-    name = "%s"
+    name = %[1]q
   }
   spec {
     controller = "example.com/ingress-controller"
   }
 }
 `, name)
+}
+
+func testAccKubernetesIngressClassConfigParameters(name, paramName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_ingress_class" "test" {
+  metadata {
+    name = %[1]q
+  }
+  spec {
+    controller = "example.com/ingress-controller"
+	parameters {
+      kind = "IngressParameters"
+      name = %[2]q
+	}
+  }
+}
+`, name, paramName)
 }

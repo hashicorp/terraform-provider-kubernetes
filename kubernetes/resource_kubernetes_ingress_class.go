@@ -253,7 +253,7 @@ func expandIngressClassParameters(l []interface{}) *core.TypedLocalObjectReferen
 	in := l[0].(map[string]interface{})
 	obj := &core.TypedLocalObjectReference{}
 
-	if v, ok := in["api_group"].(string); ok {
+	if v, ok := in["api_group"].(string); ok && v != "" {
 		obj.APIGroup = &v
 	}
 

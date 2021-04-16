@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	core "k8s.io/api/core/v1"
-	networking "k8s.io/api/networking/v1beta1"
+	networking "k8s.io/api/networking/v1"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -89,7 +89,7 @@ func resourceKubernetesIngressClassCreate(ctx context.Context, d *schema.Resourc
 	}
 	ing.ObjectMeta = metadata
 	log.Printf("[INFO] Creating new Ingress Class: %#v", ing)
-	out, err := conn.NetworkingV1beta1().IngressClasses().Create(ctx, ing, metav1.CreateOptions{})
+	out, err := conn.NetworkingV1().IngressClasses().Create(ctx, ing, metav1.CreateOptions{})
 	if err != nil {
 		return diag.Errorf("Failed to create Ingress Class '%s' because: %s", buildId(ing.ObjectMeta), err)
 	}
@@ -119,7 +119,7 @@ func resourceKubernetesIngressClassRead(ctx context.Context, d *schema.ResourceD
 	}
 
 	log.Printf("[INFO] Reading Ingress Class %s", name)
-	ing, err := conn.NetworkingV1beta1().IngressClasses().Get(ctx, name, metav1.GetOptions{})
+	ing, err := conn.NetworkingV1().IngressClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.Errorf("Failed to read Ingress Class '%s' because: %s", buildId(ing.ObjectMeta), err)
@@ -158,7 +158,7 @@ func resourceKubernetesIngressClassUpdate(ctx context.Context, d *schema.Resourc
 		Spec:       spec,
 	}
 
-	out, err := conn.NetworkingV1beta1().IngressClasses().Update(ctx, ingressClass, metav1.UpdateOptions{})
+	out, err := conn.NetworkingV1().IngressClasses().Update(ctx, ingressClass, metav1.UpdateOptions{})
 	if err != nil {
 		return diag.Errorf("Failed to update Ingress Class %s because: %s", buildId(ingressClass.ObjectMeta), err)
 	}
@@ -179,13 +179,13 @@ func resourceKubernetesIngressClassDelete(ctx context.Context, d *schema.Resourc
 	}
 
 	log.Printf("[INFO] Deleting Ingress Class: %#v", name)
-	err = conn.NetworkingV1beta1().IngressClasses().Delete(ctx, name, metav1.DeleteOptions{})
+	err = conn.NetworkingV1().IngressClasses().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		return diag.Errorf("Failed to delete Ingress Class %s because: %s", d.Id(), err)
 	}
 
 	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
-		_, err := conn.NetworkingV1beta1().IngressClasses().Get(ctx, name, metav1.GetOptions{})
+		_, err := conn.NetworkingV1().IngressClasses().Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
@@ -218,7 +218,7 @@ func resourceKubernetesIngressClassExists(ctx context.Context, d *schema.Resourc
 	}
 
 	log.Printf("[INFO] Checking Ingress Class %s", name)
-	_, err = conn.NetworkingV1beta1().IngressClasses().Get(ctx, name, metav1.GetOptions{})
+	_, err = conn.NetworkingV1().IngressClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
@@ -290,7 +290,7 @@ func flattenIngressClassParameters(in *core.TypedLocalObjectReference) []interfa
 	m["name"] = in.Name
 
 	if in.APIGroup != nil {
-		m["api_group"] = &in.APIGroup
+		m["api_group"] = *in.APIGroup
 	}
 
 	att[0] = m

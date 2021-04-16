@@ -235,7 +235,7 @@ resource "kubernetes_ingress_class" "test" {
   spec {
     controller = "example.com/ingress-controller"
     parameters {
-	  api_group = %[2]q
+      api_group = %[2]q
       kind      = "IngressParameters"
       name      = %[2]q
     }

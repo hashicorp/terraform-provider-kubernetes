@@ -34,7 +34,7 @@ func Provider() *schema.Provider {
 				DefaultFunc:       schema.EnvDefaultFunc("KUBE_HOST", nil),
 				Description:       "The hostname (in form of URI) of Kubernetes master.",
 				ConflictsWith:     []string{"config_path", "config_paths"},
-				ConditionsMode:    "warning",
+				ConditionsMode:    schema.SchemaConditionsModeWarning,
 				ConditionsMessage: conditionsMessage,
 				// TODO: enable this when AtLeastOneOf works with optional attributes.
 				// https://github.com/hashicorp/terraform-plugin-sdk/issues/705
@@ -47,7 +47,7 @@ func Provider() *schema.Provider {
 				Description:       "The username to use for HTTP basic authentication when accessing the Kubernetes master endpoint.",
 				ConflictsWith:     []string{"config_path", "config_paths", "exec", "token", "client_certificate", "client_key"},
 				RequiredWith:      []string{"password", "host"},
-				ConditionsMode:    "warning",
+				ConditionsMode:    schema.SchemaConditionsModeWarning,
 				ConditionsMessage: conditionsMessage,
 			},
 			"password": {
@@ -57,7 +57,7 @@ func Provider() *schema.Provider {
 				Description:       "The password to use for HTTP basic authentication when accessing the Kubernetes master endpoint.",
 				ConflictsWith:     []string{"config_path", "config_paths", "exec", "token", "client_certificate", "client_key"},
 				RequiredWith:      []string{"username", "host"},
-				ConditionsMode:    "warning",
+				ConditionsMode:    schema.SchemaConditionsModeWarning,
 				ConditionsMessage: conditionsMessage,
 			},
 			"insecure": {
@@ -66,7 +66,7 @@ func Provider() *schema.Provider {
 				DefaultFunc:       schema.EnvDefaultFunc("KUBE_INSECURE", nil),
 				Description:       "Whether server should be accessed without verifying the TLS certificate.",
 				ConflictsWith:     []string{"cluster_ca_certificate", "client_key", "client_certificate", "exec"},
-				ConditionsMode:    "warning",
+				ConditionsMode:    schema.SchemaConditionsModeWarning,
 				ConditionsMessage: conditionsMessage,
 			},
 			"client_certificate": {
@@ -76,7 +76,7 @@ func Provider() *schema.Provider {
 				Description:       "PEM-encoded client certificate for TLS authentication.",
 				ConflictsWith:     []string{"config_path", "config_paths", "username", "password", "insecure"},
 				RequiredWith:      []string{"client_key", "cluster_ca_certificate", "host"},
-				ConditionsMode:    "warning",
+				ConditionsMode:    schema.SchemaConditionsModeWarning,
 				ConditionsMessage: conditionsMessage,
 			},
 			"client_key": {
@@ -86,7 +86,7 @@ func Provider() *schema.Provider {
 				Description:       "PEM-encoded client certificate key for TLS authentication.",
 				ConflictsWith:     []string{"config_path", "config_paths", "username", "password", "exec", "insecure"},
 				RequiredWith:      []string{"client_certificate", "cluster_ca_certificate", "host"},
-				ConditionsMode:    "warning",
+				ConditionsMode:    schema.SchemaConditionsModeWarning,
 				ConditionsMessage: conditionsMessage,
 			},
 			"cluster_ca_certificate": {
@@ -96,7 +96,7 @@ func Provider() *schema.Provider {
 				Description:       "PEM-encoded root certificates bundle for TLS authentication.",
 				ConflictsWith:     []string{"config_path", "config_paths", "insecure"},
 				RequiredWith:      []string{"host"},
-				ConditionsMode:    "warning",
+				ConditionsMode:    schema.SchemaConditionsModeWarning,
 				ConditionsMessage: conditionsMessage,
 				// TODO: enable this when AtLeastOneOf works with optional attributes.
 				// https://github.com/hashicorp/terraform-plugin-sdk/issues/705
@@ -110,7 +110,7 @@ func Provider() *schema.Provider {
 				Description: "A list of paths to kube config files. Can be set with KUBE_CONFIG_PATHS environment variable.",
 				// config_paths conflicts with every attribute except for "insecure", since all of these options will be read from the kubeconfig.
 				ConflictsWith:     []string{"config_path", "exec", "token", "host", "client_certificate", "client_key", "cluster_ca_certificate", "username", "password"},
-				ConditionsMode:    "warning",
+				ConditionsMode:    schema.SchemaConditionsModeWarning,
 				ConditionsMessage: conditionsMessage,
 			},
 			"config_path": {
@@ -120,7 +120,7 @@ func Provider() *schema.Provider {
 				Description: "Path to the kube config file. Can be set with KUBE_CONFIG_PATH.",
 				// config_path conflicts with every attribute except for "insecure", since all of these options will be read from the kubeconfig.
 				ConflictsWith:     []string{"config_paths", "exec", "token", "host", "client_certificate", "client_key", "cluster_ca_certificate", "username", "password"},
-				ConditionsMode:    "warning",
+				ConditionsMode:    schema.SchemaConditionsModeWarning,
 				ConditionsMessage: conditionsMessage,
 			},
 			"config_context": {
@@ -129,7 +129,7 @@ func Provider() *schema.Provider {
 				DefaultFunc:       schema.EnvDefaultFunc("KUBE_CTX", nil),
 				Description:       "Context to choose from the kube config file. ",
 				ConflictsWith:     []string{"exec", "token", "client_certificate", "client_key", "username", "password"},
-				ConditionsMode:    "warning",
+				ConditionsMode:    schema.SchemaConditionsModeWarning,
 				ConditionsMessage: "This functionality will be removed in a later release. Please update your configuration.",
 				// TODO: enable this when AtLeastOneOf works with optional attributes.
 				// AtLeastOneOf:  []string{"config_path", "config_paths"},
@@ -140,7 +140,7 @@ func Provider() *schema.Provider {
 				DefaultFunc:       schema.EnvDefaultFunc("KUBE_CTX_AUTH_INFO", nil),
 				Description:       "Authentication info context of the kube config (name of the kubeconfig user, --user flag in kubectl).",
 				ConflictsWith:     []string{"exec", "token", "client_certificate", "client_key", "username", "password"},
-				ConditionsMode:    "warning",
+				ConditionsMode:    schema.SchemaConditionsModeWarning,
 				ConditionsMessage: "This functionality will be removed in a later release. Please update your configuration.",
 				// TODO: enable this when AtLeastOneOf works with optional attributes.
 				// AtLeastOneOf:  []string{"config_path", "config_paths"},
@@ -151,6 +151,7 @@ func Provider() *schema.Provider {
 				DefaultFunc:       schema.EnvDefaultFunc("KUBE_CTX_CLUSTER", nil),
 				Description:       "Cluster context of the kube config (name of the kubeconfig cluster, --cluster flag in kubectl).",
 				ConflictsWith:     []string{"exec", "token", "client_certificate", "client_key", "username", "password"},
+				ConditionsMode:    schema.SchemaConditionsModeWarning,
 				ConditionsMessage: "Specifying more than one authentication method can lead to unpredictable behavior. This option will be removed in a future release. Please update your configuration.",
 				// TODO: enable this when AtLeastOneOf works with optional attributes.
 				// AtLeastOneOf:  []string{"config_path", "config_paths"},
@@ -161,7 +162,7 @@ func Provider() *schema.Provider {
 				DefaultFunc:       schema.EnvDefaultFunc("KUBE_TOKEN", nil),
 				Description:       "Bearer token for authenticating the Kubernetes API.",
 				ConflictsWith:     []string{"config_path", "config_paths", "exec", "client_certificate", "client_key", "username", "password"},
-				ConditionsMode:    "warning",
+				ConditionsMode:    schema.SchemaConditionsModeWarning,
 				ConditionsMessage: "Specifying more than one authentication method can lead to unpredictable behavior. This option will be removed in a future release. Please update your configuration.",
 				RequiredWith:      []string{"host"},
 			},
@@ -194,7 +195,7 @@ func Provider() *schema.Provider {
 				Description:       "Configuration block to use an exec-based credential plugin, e.g. call an external command to receive user credentials.",
 				ConflictsWith:     []string{"config_path", "config_paths", "token", "client_certificate", "client_key", "username", "password", "insecure"},
 				RequiredWith:      []string{"host", "cluster_ca_certificate"},
-				ConditionsMode:    "warning",
+				ConditionsMode:    schema.SchemaConditionsModeWarning,
 				ConditionsMessage: "Specifying more than one authentication method can lead to unpredictable behavior. This option will be removed in a future release. Please update your configuration.",
 			},
 		},

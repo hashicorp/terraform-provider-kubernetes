@@ -7,6 +7,7 @@ BUG FIXES:
 * Fix perpetual diff in persistent volume claimRef (#1227)
 
 IMPROVEMENTS:
+* Add `binary_data` field to `kubernetes_secret` (#1228)
 * Add support for setting the persistent volume claimRef (#1020)
 * Add `secret_namespace` to `volume_source` `azure_file` (#1204)
 * Docs: fix grammar in Network Policy (#1210)

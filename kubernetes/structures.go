@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"encoding/base64"
 	"fmt"
-	"net/url"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -11,6 +10,24 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// https://kubernetes.io/docs/reference/labels-annotations-taints
+var builtInAnnotations = map[string]string{
+	api.LabelHostname:                 "",
+	api.LabelZoneFailureDomain:        "",
+	api.LabelZoneRegion:               "",
+	api.LabelZoneFailureDomainStable:  "",
+	api.LabelZoneRegionStable:         "",
+	api.LabelInstanceType:             "",
+	api.LabelInstanceTypeStable:       "",
+	api.LabelOSStable:                 "",
+	api.LabelArchStable:               "",
+	api.LabelWindowsBuild:             "",
+	api.LabelNamespaceSuffixKubelet:   "",
+	api.LabelNamespaceSuffixNode:      "",
+	api.LabelNamespaceNodeRestriction: "",
+	api.IsHeadlessService:             "",
+}
 
 func idParts(id string) (string, string, error) {
 	parts := strings.Split(id, "/")
@@ -156,8 +173,12 @@ func isKeyInMap(key string, d map[string]interface{}) bool {
 }
 
 func isInternalKey(annotationKey string) bool {
-	u, err := url.Parse("//" + annotationKey)
-	if err == nil && strings.HasSuffix(u.Hostname(), "kubernetes.io") {
+	// u, err := url.Parse("//" + annotationKey)
+	// if err == nil && strings.HasSuffix(u.Hostname(), "kubernetes.io") {
+	// 	return true
+	// }
+
+	if _, ok := builtInAnnotations[annotationKey]; ok {
 		return true
 	}
 

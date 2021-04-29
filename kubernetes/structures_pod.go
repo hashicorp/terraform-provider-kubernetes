@@ -5,12 +5,22 @@ import (
 	"log"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
+
+// https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions
+var builtInTolerations = map[string]string{
+	v1.TaintNodeNotReady:           "",
+	v1.TaintNodeUnreachable:        "",
+	v1.TaintNodeUnschedulable:      "",
+	v1.TaintNodeMemoryPressure:     "",
+	v1.TaintNodeDiskPressure:       "",
+	v1.TaintNodeNetworkUnavailable: "",
+	v1.TaintNodePIDPressure:        "",
+}
 
 // Flatteners
 
@@ -253,7 +263,7 @@ func flattenTolerations(tolerations []v1.Toleration) []interface{} {
 	att := []interface{}{}
 	for _, v := range tolerations {
 		// The API Server may automatically add several Tolerations to pods, strip these to avoid TF diff.
-		if strings.Contains(v.Key, "node.kubernetes.io/") {
+		if _, ok := builtInTolerations[v.Key]; ok {
 			log.Printf("[INFO] ignoring toleration with key: %s", v.Key)
 			continue
 		}

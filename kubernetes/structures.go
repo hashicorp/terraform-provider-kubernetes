@@ -12,7 +12,7 @@ import (
 )
 
 // https://kubernetes.io/docs/reference/labels-annotations-taints
-var builtInAnnotations = map[string]string{
+var builtInLabels = map[string]string{
 	api.LabelHostname:                 "",
 	api.LabelZoneFailureDomain:        "",
 	api.LabelZoneRegion:               "",
@@ -173,7 +173,7 @@ func isKeyInMap(key string, d map[string]interface{}) bool {
 }
 
 func isInternalKey(annotationKey string) bool {
-	if _, ok := builtInAnnotations[annotationKey]; ok {
+	if _, ok := builtInLabels[annotationKey]; ok {
 		return true
 	}
 

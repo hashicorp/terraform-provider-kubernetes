@@ -986,6 +986,28 @@ func TestAccKubernetesPod_topologySpreadConstraint(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPod_filterAnnotations(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodConfigFilterAnnotations(name, busyboxImageVersion),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.kubernetes.io/ingress.class", "gce-multi-cluster"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.kubernetes.io/ingress.class", "gce-multi-cluster"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesPodDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
@@ -2416,4 +2438,27 @@ func testAccKubernetesPodTopologySpreadConstraintConfig(podName, imageName strin
   }
 }
 `, podName, imageName)
+}
+
+func testAccKubernetesPodConfigFilterAnnotations(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+  metadata {
+    name = "%s"
+
+	labels = {
+	  "kubernetes.io/ingress.class" = "gce-multi-cluster"
+	}
+
+	annotations = {
+	  "kubernetes.io/ingress.class" = "gce-multi-cluster"
+	}
+  }
+  spec {
+    container {
+        image = "%s"
+        name  = "containername"
+    }
+  }
+}
+`, name, imageName)
 }

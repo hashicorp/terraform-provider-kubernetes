@@ -67,7 +67,7 @@ module "vpc" {
 
 module "cluster" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "14.0.0"
+  version = "15.1.0"
 
   vpc_id  = module.vpc.vpc_id
   subnets = module.vpc.subnets

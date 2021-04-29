@@ -13,13 +13,13 @@ import (
 
 // https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions
 var builtInTolerations = map[string]string{
-	"node.kubernetes.io/not-ready":           "",
-	"node.kubernetes.io/unreachable":         "",
-	"node.kubernetes.io/out-of-disk":         "",
-	"node.kubernetes.io/memory-pressure":     "",
-	"node.kubernetes.io/disk-pressure":       "",
-	"node.kubernetes.io/network-unavailable": "",
-	"node.kubernetes.io/unschedulable":       "",
+	v1.TaintNodeNotReady:           "",
+	v1.TaintNodeUnreachable:        "",
+	v1.TaintNodeUnschedulable:      "",
+	v1.TaintNodeMemoryPressure:     "",
+	v1.TaintNodeDiskPressure:       "",
+	v1.TaintNodeNetworkUnavailable: "",
+	v1.TaintNodePIDPressure:        "",
 }
 
 // Flatteners

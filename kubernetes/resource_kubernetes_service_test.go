@@ -530,6 +530,15 @@ func TestAccKubernetesService_externalName_toClusterIp(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "ExternalName"),
 				),
 			},
+			{
+				Config: testAccKubernetesServiceConfig_basic(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.cluster_ip"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "ClusterIP"),
+				),
+			},
 		},
 	})
 }

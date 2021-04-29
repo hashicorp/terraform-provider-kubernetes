@@ -41,11 +41,12 @@ func resourceKubernetesResourceQuota() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"hard": {
-							Type:         schema.TypeMap,
-							Description:  "The set of desired hard limits for each named resource. More info: http://releases.k8s.io/HEAD/docs/design/admission_control_resource_quota.md#admissioncontrol-plugin-resourcequota",
-							Optional:     true,
-							Elem:         schema.TypeString,
-							ValidateFunc: validateResourceList,
+							Type:             schema.TypeMap,
+							Description:      "The set of desired hard limits for each named resource. More info: http://releases.k8s.io/HEAD/docs/design/admission_control_resource_quota.md#admissioncontrol-plugin-resourcequota",
+							Optional:         true,
+							Elem:             schema.TypeString,
+							ValidateFunc:     validateResourceList,
+							DiffSuppressFunc: suppressEquivalentResourceQuantity,
 						},
 						"scopes": {
 							Type:        schema.TypeSet,

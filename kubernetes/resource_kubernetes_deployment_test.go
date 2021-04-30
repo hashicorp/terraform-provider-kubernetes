@@ -746,6 +746,7 @@ func TestAccKubernetesDeployment_with_deployment_strategy_rollingupdate(t *testi
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := nginxImageVersion
+	resourceName := "kubernetes_deployment.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -755,12 +756,32 @@ func TestAccKubernetesDeployment_with_deployment_strategy_rollingupdate(t *testi
 			{
 				Config: testAccKubernetesDeploymentConfigWithDeploymentStrategy(deploymentName, "RollingUpdate", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.type", "RollingUpdate"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.rolling_update.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.rolling_update.0.max_surge", "25%"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.strategy.0.rolling_update.0.max_unavailable", "25%"),
+					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "25%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "25%"),
+				),
+			},
+			{
+				Config: testAccKubernetesDeploymentConfigWithDeploymentStrategy(deploymentName, "Recreate", imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "Recreate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "0"),
+				),
+			},
+			{
+				Config: testAccKubernetesDeploymentConfigWithDeploymentStrategy(deploymentName, "RollingUpdate", imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "25%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "25%"),
 				),
 			},
 		},

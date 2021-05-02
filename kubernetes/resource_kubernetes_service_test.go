@@ -396,7 +396,7 @@ func TestAccKubernetesService_nodePort(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.target_port", "22"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.name", "second"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.node_port", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.port", "10333"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.port", "10334"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.protocol", "TCP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.target_port", "33"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.%", "1"),
@@ -1112,7 +1112,7 @@ func testAccKubernetesServiceConfig_nodePort_toClusterIP(name string) string {
 
     port {
       name        = "second"
-      port        = 10333
+      port        = 10334
       target_port = 33
     }
 

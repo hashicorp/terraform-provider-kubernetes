@@ -167,27 +167,6 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 		})
 	}
 
-	if d.HasChange(keyPrefix + "type") {
-		_, n := d.GetChange(keyPrefix + "type")
-
-		if n.(string) == "ExternalName" {
-			ops = append(ops, &RemoveOperation{
-				Path: pathPrefix + "clusterIP",
-			})
-		}
-
-		if n.(string) == "ClusterIP" {
-			ops = append(ops, &ReplaceOperation{
-				Path:  pathPrefix + "ports",
-				Value: expandServicePort(d.Get(keyPrefix+"port").([]interface{}), true),
-			})
-		}
-
-		ops = append(ops, &ReplaceOperation{
-			Path:  pathPrefix + "type",
-			Value: d.Get(keyPrefix + "type").(string),
-		})
-	}
 	if d.HasChange(keyPrefix + "session_affinity") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "sessionAffinity",
@@ -210,6 +189,27 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "ports",
 			Value: expandServicePort(d.Get(keyPrefix+"port").([]interface{}), false),
+		})
+	}
+	if d.HasChange(keyPrefix + "type") {
+		_, n := d.GetChange(keyPrefix + "type")
+
+		if n.(string) == "ExternalName" {
+			ops = append(ops, &RemoveOperation{
+				Path: pathPrefix + "clusterIP",
+			})
+		}
+
+		if n.(string) == "ClusterIP" {
+			ops = append(ops, &ReplaceOperation{
+				Path:  pathPrefix + "ports",
+				Value: expandServicePort(d.Get(keyPrefix+"port").([]interface{}), true),
+			})
+		}
+
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "type",
+			Value: d.Get(keyPrefix + "type").(string),
 		})
 	}
 	if d.HasChange(keyPrefix + "external_ips") {

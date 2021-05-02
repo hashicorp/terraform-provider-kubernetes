@@ -376,6 +376,35 @@ func TestAccKubernetesService_nodePort(t *testing.T) {
 					}),
 				),
 			},
+			{
+				Config: testAccKubernetesServiceConfig_nodePort_toClusterIP(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.cluster_ip"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.external_ips.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.external_ips.0", "10.0.0.4"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.external_ips.1", "10.0.0.5"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.external_name", "ext-name-"+name),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.load_balancer_ip", "12.0.0.125"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.name", "first"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.node_port", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.port", "10222"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.protocol", "TCP"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.target_port", "22"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.name", "second"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.node_port", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.port", "10333"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.protocol", "TCP"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.target_port", "33"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyApp"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "ClientIP"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "ClusterIP"),
+				),
+			},
 		},
 	})
 }
@@ -1053,6 +1082,41 @@ func testAccKubernetesServiceConfig_nodePort(name string) string {
     }
 
     type = "NodePort"
+  }
+}
+`, name)
+}
+
+func testAccKubernetesServiceConfig_nodePort_toClusterIP(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+  metadata {
+    name = "%[1]s"
+  }
+
+  spec {
+    external_name    = "ext-name-%[1]s"
+    external_ips     = ["10.0.0.4", "10.0.0.5"]
+    load_balancer_ip = "12.0.0.125"
+
+    selector = {
+      App = "MyApp"
+    }
+
+    session_affinity = "ClientIP"
+
+    port {
+      name        = "first"
+      port        = 10222
+      target_port = 22
+    }
+
+    port {
+      name        = "second"
+      port        = 10333
+      target_port = 33
+    }
+
+    type = "ClusterIP"
   }
 }
 `, name)

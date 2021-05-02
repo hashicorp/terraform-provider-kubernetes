@@ -169,7 +169,7 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 	if d.HasChange(keyPrefix + "type") {
 		o, n := d.GetChange(keyPrefix + "type")
 
-		if o.(string) == "ClusterIP" && n.(string) == "ExternalName" {
+		if n.(string) == "ExternalName" {
 			ops = append(ops, &RemoveOperation{
 				Path: pathPrefix + "clusterIP",
 			})

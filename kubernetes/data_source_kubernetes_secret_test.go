@@ -84,8 +84,7 @@ func testAccKubernetesDataSourceSecretConfig_basic(name string) string {
 }
 
 func testAccKubernetesDataSourceSecretConfig_read() string {
-	return fmt.Sprintf(`
-data "kubernetes_secret" "test" {
+	return fmt.Sprintf(`data "kubernetes_secret" "test" {
   metadata {
     name = "${kubernetes_secret.test.metadata.0.name}"
   }

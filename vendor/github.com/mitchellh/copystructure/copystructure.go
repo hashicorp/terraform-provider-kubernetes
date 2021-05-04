@@ -8,7 +8,30 @@ import (
 	"github.com/mitchellh/reflectwalk"
 )
 
+const tagKey = "copy"
+
 // Copy returns a deep copy of v.
+//
+// Copy is unable to copy unexported fields in a struct (lowercase field names).
+// Unexported fields can't be reflected by the Go runtime and therefore
+// copystructure can't perform any data copies.
+//
+// For structs, copy behavior can be controlled with struct tags. For example:
+//
+//   struct {
+//     Name string
+//     Data *bytes.Buffer `copy:"shallow"`
+//   }
+//
+// The available tag values are:
+//
+// * "ignore" - The field will be ignored, effectively resulting in it being
+//   assigned the zero value in the copy.
+//
+// * "shallow" - The field will be be shallow copied. This means that references
+//   values such as pointers, maps, slices, etc. will be directly assigned
+//   versus deep copied.
+//
 func Copy(v interface{}) (interface{}, error) {
 	return Config{}.Copy(v)
 }
@@ -65,6 +88,7 @@ func (c Config) Copy(v interface{}) (interface{}, error) {
 	if c.Copiers == nil {
 		c.Copiers = Copiers
 	}
+	w.copiers = c.Copiers
 
 	err := reflectwalk.Walk(v, w)
 	if err != nil {
@@ -93,6 +117,7 @@ func ifaceKey(pointers, depth int) uint64 {
 type walker struct {
 	Result interface{}
 
+	copiers     map[reflect.Type]CopierFunc
 	depth       int
 	ignoreDepth int
 	vals        []reflect.Value
@@ -356,7 +381,7 @@ func (w *walker) Struct(s reflect.Value) error {
 	w.lock(s)
 
 	var v reflect.Value
-	if c, ok := Copiers[s.Type()]; ok {
+	if c, ok := w.copiers[s.Type()]; ok {
 		// We have a Copier for this struct, so we use that copier to
 		// get the copy, and we ignore anything deeper than this.
 		w.ignoreDepth = w.depth
@@ -396,9 +421,29 @@ func (w *walker) StructField(f reflect.StructField, v reflect.Value) error {
 		return reflectwalk.SkipEntry
 	}
 
+	switch f.Tag.Get(tagKey) {
+	case "shallow":
+		// If we're shallow copying then assign the value directly to the
+		// struct and skip the entry.
+		if v.IsValid() {
+			s := w.cs[len(w.cs)-1]
+			sf := reflect.Indirect(s).FieldByName(f.Name)
+			if sf.CanSet() {
+				sf.Set(v)
+			}
+		}
+
+		return reflectwalk.SkipEntry
+
+	case "ignore":
+		// Do nothing
+		return reflectwalk.SkipEntry
+	}
+
 	// Push the field onto the stack, we'll handle it when we exit
 	// the struct field in Exit...
 	w.valPush(reflect.ValueOf(f))
+
 	return nil
 }
 

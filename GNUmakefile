@@ -95,14 +95,11 @@ test-update: fmtcheck vet
 	TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform TF_ACC=1 go test $(TEST) -v -run 'regression' $(TESTARGS)
 
 tools:
-	go install github.com/bflad/tfproviderdocs
-	go install github.com/client9/misspell/cmd/misspell
-	go install github.com/katbyte/terrafmt
-	go mod tidy
-	go mod vendor
-# TODO:
-# go install github.com/bflad/tfproviderlint/cmd/tfproviderlint
-# go install github.com/golangci/golangci-lint/cmd/golangci-lint
+	go install github.com/client9/misspell/cmd/misspell@v0.3.4
+	go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@v0.26.0
+	go install github.com/bflad/tfproviderdocs@v0.9.1
+	go install github.com/katbyte/terrafmt@v0.3.0
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.39.0
 
 vet:
 	@echo "go vet ."

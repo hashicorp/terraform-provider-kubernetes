@@ -137,21 +137,22 @@ The following arguments are supported:
 * `aws_elastic_block_store` - (Optional) Represents an AWS Disk resource that is attached to a kubelet's host machine and then exposed to the pod. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#awselasticblockstore)
 * `azure_disk` - (Optional) Represents an Azure Data Disk mount on the host and bind mount to the pod.
 * `azure_file` - (Optional) Represents an Azure File Service mount on the host and bind mount to the pod.
-* `ceph_fs` - (Optional) Represents a Ceph FS mount on the host that shares a pod's lifetime
-* `cinder` - (Optional) Represents a cinder volume attached and mounted on kubelets host machine. For more info see http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
+* `ceph_fs` - (Optional) Represents a Ceph FS mount on the host that shares a pod's lifetime.
+* `cinder` - (Optional) Represents a cinder volume attached and mounted on kubelets host machine. For more info see https://github.com/kubernetes/examples/tree/master/mysql-cinder-pd#mysql-installation-with-cinder-volume-plugin.
+* `csi` - (Optional) CSI represents storage that is handled by an external CSI driver. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes/#csi).
 * `fc` - (Optional) Represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.
 * `flex_volume` - (Optional) Represents a generic volume resource that is provisioned/attached using an exec based plugin. This is an alpha feature and may change in future.
-* `flocker` - (Optional) Represents a Flocker volume attached to a kubelet's host machine and exposed to the pod for its usage. This depends on the Flocker control service being running
-* `gce_persistent_disk` - (Optional) Represents a GCE Disk resource that is attached to a kubelet's host machine and then exposed to the pod. Provisioned by an admin. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#gcepersistentdisk)
-* `glusterfs` - (Optional) Represents a Glusterfs volume that is attached to a host and exposed to the pod. Provisioned by an admin. For more info see http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md
+* `flocker` - (Optional) Represents a Flocker volume attached to a kubelet's host machine and exposed to the pod for its usage. This depends on the Flocker control service being running.
+* `gce_persistent_disk` - (Optional) Represents a GCE Disk resource that is attached to a kubelet's host machine and then exposed to the pod. Provisioned by an admin. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#gcepersistentdisk).
+* `glusterfs` - (Optional) Represents a Glusterfs volume that is attached to a host and exposed to the pod. Provisioned by an admin. For more info see https://github.com/kubernetes/examples/tree/master/volumes/glusterfs#glusterfs.
 * `host_path` - (Optional) Represents a directory on the host. Provisioned by a developer or tester. This is useful for single-node development and testing only! On-host storage is not supported in any way and WILL NOT WORK in a multi-node cluster. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#hostpath)
 * `iscsi` - (Optional) Represents an ISCSI Disk resource that is attached to a kubelet's host machine and then exposed to the pod. Provisioned by an admin.
-* `local` - (Optional) Represents a local storage volume on the host. Provisioned by an admin. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes/#local)
-* `nfs` - (Optional) Represents an NFS mount on the host. Provisioned by an admin. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#nfs)
-* `photon_persistent_disk` - (Optional) Represents a PhotonController persistent disk attached and mounted on kubelets host machine
-* `quobyte` - (Optional) Quobyte represents a Quobyte mount on the host that shares a pod's lifetime
-* `rbd` - (Optional) Represents a Rados Block Device mount on the host that shares a pod's lifetime. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md
-* `vsphere_volume` - (Optional) Represents a vSphere volume attached and mounted on kubelets host machine
+* `local` - (Optional) Represents a local storage volume on the host. Provisioned by an admin. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes/#local).
+* `nfs` - (Optional) Represents an NFS mount on the host. Provisioned by an admin. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#nfs).
+* `photon_persistent_disk` - (Optional) Represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+* `quobyte` - (Optional) Quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+* `rbd` - (Optional) Represents a Rados Block Device mount on the host that shares a pod's lifetime. For more info see https://kubernetes.io/docs/concepts/storage/volumes/#rbd.
+* `vsphere_volume` - (Optional) Represents a vSphere volume attached and mounted on kubelets host machine.
 
 
 ### `aws_elastic_block_store`
@@ -186,20 +187,20 @@ The following arguments are supported:
 
 #### Arguments
 
-* `monitors` - (Required) Monitors is a collection of Ceph monitors For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
-* `path` - (Optional) Used as the mounted root, rather than the full Ceph tree, default is /
-* `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to `false` (read/write). For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
-* `secret_file` - (Optional) The path to key ring for User, default is /etc/ceph/user.secret For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
-* `secret_ref` - (Optional) Reference to the authentication secret for User, default is empty. For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it. see [secret_ref](#secret_ref) for more details.
-* `user` - (Optional) User is the rados user name, default is admin. For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
+* `monitors` - (Required) Monitors is a collection of Ceph monitors. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
+* `path` - (Optional) Used as the mounted root, rather than the full Ceph tree, default is /.
+* `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to `false` (read/write).  For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
+* `secret_file` - (Optional) The path to key ring for User, default is /etc/ceph/user.secret. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
+* `secret_ref` - (Optional) Reference to the authentication secret for User, default is empty. sFor more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it. see [secret_ref](#secret_ref) for more details.
+* `user` - (Optional) User is the rados user name, default is admin. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
 
 ### `cinder`
 
 #### Arguments
 
-* `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. For more info see http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
-* `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to false (read/write). For more info see http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
-* `volume_id` - (Required) Volume ID used to identify the volume in Cinder. For more info see http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
+* `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. For more info see https://github.com/kubernetes/examples/blob/master/mysql-cinder-pd/README.md#mysql-installation-with-cinder-volume-plugin.
+* `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to false (read/write). For more info see https://github.com/kubernetes/examples/blob/master/mysql-cinder-pd/README.md#mysql-installation-with-cinder-volume-plugin. 
+* `volume_id` - (Required) Volume ID used to identify the volume in Cinder. For more info see https://github.com/kubernetes/examples/blob/master/mysql-cinder-pd/README.md#mysql-installation-with-cinder-volume-plugin.
 
 ### `csi`
 
@@ -254,9 +255,9 @@ The following arguments are supported:
 
 #### Arguments
 
-* `endpoints_name` - (Required) The endpoint name that details Glusterfs topology. For more info see http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
-* `path` - (Required) The Glusterfs volume path. For more info see http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
-* `read_only` - (Optional) Whether to force the Glusterfs volume to be mounted with read-only permissions. Defaults to false. For more info see http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
+* `endpoints_name` - (Required) The endpoint name that details Glusterfs topology. For more info see https://github.com/kubernetes/examples/tree/master/volumes/glusterfs#create-a-pod.
+* `path` - (Required) The Glusterfs volume path. For more info see https://github.com/kubernetes/examples/tree/master/volumes/glusterfs#create-a-pod.
+* `read_only` - (Optional) Whether to force the Glusterfs volume to be mounted with read-only permissions. Defaults to false. For more info see https://github.com/kubernetes/examples/tree/master/volumes/glusterfs#create-a-pod.
 
 ### `host_path`
 
@@ -332,14 +333,14 @@ The following arguments are supported:
 
 #### Arguments
 
-* `ceph_monitors` - (Required) A collection of Ceph monitors. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+* `ceph_monitors` - (Required) A collection of Ceph monitors. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
 * `fs_type` - (Optional) Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#rbd)
-* `keyring` - (Optional) Keyring is the path to key ring for RBDUser. Default is /etc/ceph/keyring. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
-* `rados_user` - (Optional) The rados user name. Default is admin. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
-* `rbd_image` - (Required) The rados image name. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
-* `rbd_pool` - (Optional) The rados pool name. Default is rbd. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it.
-* `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to false. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
-* `secret_ref` - (Optional) Name of the authentication secret for RBDUser. If provided overrides keyring. Default is nil. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it. see [secret_ref](#secret_ref) for more details.
+* `keyring` - (Optional) Keyring is the path to key ring for RBDUser. Default is /etc/ceph/keyring. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
+* `rados_user` - (Optional) The rados user name. Default is admin. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
+* `rbd_image` - (Required) The rados image name. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
+* `rbd_pool` - (Optional) The rados pool name. Default is rbd. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
+* `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to false. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
+* `secret_ref` - (Optional) Name of the authentication secret for RBDUser. If provided overrides keyring. Default is nil. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it. see [secret_ref](#secret_ref) for more details.
 
 ### `secret_ref`
 

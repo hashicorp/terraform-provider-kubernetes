@@ -166,4 +166,3 @@ website-lint-fix: tools
 	@terrafmt fmt ./website --pattern '*.markdown'
 
 .PHONY: build test testacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix website-lint website-lint-fix
-

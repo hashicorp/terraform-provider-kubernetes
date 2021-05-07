@@ -1,6 +1,6 @@
 # EKS (Amazon Elastic Kubernetes Service)
 
-This example shows how to use the Terraform Kubernetes Provider and Terraform Helm Provider to configure an EKS cluster. The example config builds the EKS cluster and applies the Kubernetes configurations in a single operation. This guide will also show you how to make changes to the underlying EKS cluster in such a way that Kuberntes/Helm resources are recreated after the underlying cluster is replaced.
+This example demonstrates the most reliable way to use the Kubernetes provider together with the AWS provider to create an EKS cluster. By keeping the two providers' resources in separate Terraform states (or separate workspaces using [Terraform Cloud](https://app.terraform.io/)), we can limit the scope of impact to apply the right changes to the right place. (For example, updating the underlying EKS infrastructure without having to navigate the Kubernetes provider configuration challenges caused by modifying EKS cluster attributes in a single apply).
 
 You will need the following environment variables to be set:
 
@@ -9,33 +9,27 @@ You will need the following environment variables to be set:
 
 See [AWS Provider docs](https://www.terraform.io/docs/providers/aws/index.html#configuration-reference) for more details about these variables and alternatives, like `AWS_PROFILE`.
 
-Ensure that `KUBE_CONFIG_FILE` and `KUBE_CONFIG_FILES` environment variables are NOT set, as they will interfere with the cluster build.
 
-```
-unset KUBE_CONFIG_FILE
-unset KUBE_CONFIG_FILES
-```
+## Create EKS cluster
 
-To install the EKS cluster using default values, run terraform init and apply from the directory containing this README.
+Choose a name for the cluster, or use the terraform config in the current directory to create a random name.
 
 ```
 terraform init
-terraform apply
+terraform apply --auto-approve
+export CLUSTERNAME=$(terraform output -raw cluster_name)
 ```
 
-## Kubeconfig for manual CLI access
-
-This example generates a kubeconfig file in the current working directory. However, the token in this config expires in 15 minutes. The token can be refreshed by running `terraform apply` again. Export the KUBECONFIG to manually access the cluster:
+Change into the eks-cluster directory and create the EKS cluster infrastrcture.
 
 ```
-terraform apply
-export KUBECONFIG=$(terraform output -raw kubeconfig_path)
-kubectl get pods -n test
+cd eks-cluster
+terraform init
+terraform apply -var=cluster_name=$CLUSTERNAME
+cd -
 ```
 
-## Optional variables
-
-The Kubernetes version can be specified at apply time:
+Optionally, the Kubernetes version can be specified at apply time:
 
 ```
 terraform apply -var=kubernetes_version=1.18
@@ -44,25 +38,30 @@ terraform apply -var=kubernetes_version=1.18
 See https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html for currently available versions.
 
 
-### Worker node count and instance type
+## Create Kubernetes resources
 
-The number of worker nodes, and the instance type, can be specified at apply time:
-
-```
-terraform apply -var=workers_count=4 -var=workers_type=m4.xlarge
-```
-
-## Additional configuration of EKS
-
-To view all available configuration options for the EKS module used in this example, see [terraform-aws-modules/eks docs](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest).
-
-## Replacing the EKS cluster and re-creating the Kubernetes / Helm resources
-
-When the cluster is initially created, the Kubernetes and Helm providers will not be initialized until authentication details are created for the cluster. However, for future operations that may involve replacing the underlying cluster (for example, changing the network where the EKS cluster resides), the EKS cluster will have to be targeted without the Kubernetes/Helm providers, as shown below. This is done by removing the `module.kubernetes-config` from Terraform State prior to replacing cluster credentials, to avoid passing outdated credentials into the providers.
-
-This will create the new cluster and the Kubernetes resources in a single apply.
+Change into the kubernetes-config directory to apply Kubernetes resources to the new cluster.
 
 ```
-terraform state rm module.kubernetes-config
-terraform apply
+cd kubernetes-config
+terraform init
+terraform apply -var=cluster_name=$CLUSTERNAME
+```
+
+## Deleting the cluster
+
+First, delete the Kubernetes resources as shown below. This will give Ingress and Service related Load Balancers a chance to delete before the other AWS resources are removed.
+
+```
+cd kubernetes-config
+terraform destroy -var=cluster_name=$CLUSTERNAME
+cd -
+```
+
+Then delete the EKS related resources:
+
+```
+cd eks-cluster
+terraform destroy -var=cluster_name=$CLUSTERNAME
+cd -
 ```

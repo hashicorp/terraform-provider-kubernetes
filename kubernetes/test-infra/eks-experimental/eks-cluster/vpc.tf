@@ -1,29 +1,7 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "3.22.0"
-    }
-  }
-}
-
-# VPC Resources
-#  * VPC
-#  * Subnets
-#  * Internet Gateway
-#  * Route Table
-#
-# Using these data sources allows the configuration to be
-# generic for any region.
 data "aws_region" "current" {
 }
 
 data "aws_availability_zones" "available" {
-}
-
-resource "random_id" "cluster_name" {
-  byte_length = 2
-  prefix      = "k8s-acc-"
 }
 
 resource "aws_vpc" "k8s-acc" {
@@ -31,8 +9,8 @@ resource "aws_vpc" "k8s-acc" {
   enable_dns_support   = true
   enable_dns_hostnames = true
   tags = {
-    "Name"                                                = "terraform-eks-k8s-acc-node"
-    "kubernetes.io/cluster/${random_id.cluster_name.hex}" = "shared"
+    "Name"                                        = "terraform-eks-k8s-acc-node"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
   }
 }
 
@@ -45,9 +23,9 @@ resource "aws_subnet" "k8s-acc" {
   map_public_ip_on_launch = true
 
   tags = {
-    "Name"                                                = "terraform-eks-k8s-acc-node"
-    "kubernetes.io/cluster/${random_id.cluster_name.hex}" = "shared"
-    "kubernetes.io/role/elb"                              = 1
+    "Name"                                      = "terraform-eks-k8s-acc-node"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    "kubernetes.io/role/elb"                    = 1
   }
 }
 
@@ -74,3 +52,5 @@ resource "aws_route_table_association" "k8s-acc" {
   subnet_id      = aws_subnet.k8s-acc[count.index].id
   route_table_id = aws_route_table.k8s-acc.id
 }
+
+

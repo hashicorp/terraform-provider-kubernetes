@@ -223,7 +223,7 @@ The following arguments are supported:
 * `toleration` - (Optional) Optional pod node tolerations. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/)
 * `topology_spread_constraint` - (Optional) Describes how a group of pods ought to spread across topology domains. Scheduler will schedule pods in a way which abides by the constraints. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/)
 * `volume` - (Optional) List of volumes that can be mounted by containers belonging to the pod. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes)
-* `readiness_gate` - (Optional) If specified, all readiness gates will be evaluated for pod readiness. A pod is ready when all its containers are ready AND all conditions specified in the readiness gates have status equal to "True". [More info](https://git.k8s.io/enhancements/keps/sig-network/0007-pod-ready++.md)
+* `readiness_gate` - (Optional) If specified, all readiness gates will be evaluated for pod readiness. A pod is ready when all its containers are ready AND all conditions specified in the readiness gates have status equal to "True". [More info](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate)
 
 ### `affinity`
 

@@ -152,10 +152,8 @@ website-lint: tools
 	@echo "==> Running tfproviderdocs..."
 	@tfproviderdocs check -providers-schema-json $(TF_PROV_DOCS)/schema.json -provider-name kubernetes
 	@rm -f $(TF_PROV_DOCS)/schema.json $(TF_PROV_DOCS)/terraform-provider-kubernetes
-#	@echo "==> Checking for broken links..."
-#@scripts/markdown-link-check.sh "$(DOCKER)" "$(DOCKER_RUN_OPTS)" "$(DOCKER_VOLUME_OPTS)" "$(PROVIDER_DIR)"
-# TODO: enable this check when links have been fixed.
-# https://github.com/hashicorp/terraform-provider-kubernetes/issues/990
+	@echo "==> Checking for broken links..."
+	@scripts/markdown-link-check.sh "$(DOCKER)" "$(DOCKER_RUN_OPTS)" "$(DOCKER_VOLUME_OPTS)" "$(PROVIDER_DIR)"
 
 website-lint-fix: tools
 	@echo "==> Applying automatic website linter fixes..."

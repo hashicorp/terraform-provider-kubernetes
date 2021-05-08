@@ -122,7 +122,7 @@ provider "kubernetes" {
 
 ## Creating your first Kubernetes resources
 
-Once the provider is configured, you can apply the Kubernetes resources defined in you Terraform config file. The following is an example Terraform config file containing a few Kubernetes resources. We'll use [minikube](https://minikube.sigs.k8s.io/docs/start/) for the Kubernetes cluster in this example, but any Kubernetes cluster can be used. Ensure that a Kubernetes cluster of some kind is running before applying the example config below.
+Once the provider is configured, you can apply the Kubernetes resources defined in your Terraform config file. The following is an example Terraform config file containing a few Kubernetes resources. We'll use [minikube](https://minikube.sigs.k8s.io/docs/start/) for the Kubernetes cluster in this example, but any Kubernetes cluster can be used. Ensure that a Kubernetes cluster of some kind is running before applying the example config below.
 
 This configuration will create a scalable Nginx Deployment with 2 replicas. It will expose the Nginx frontend using a Service of type NodePort, which will make Nginx accessible via the public IP of the node running the containers.
 

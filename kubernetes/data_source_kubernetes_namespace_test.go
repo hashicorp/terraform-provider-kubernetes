@@ -31,9 +31,9 @@ func TestAccKubernetesDataSourceNamespace_basic(t *testing.T) {
 func testAccKubernetesDataSourceNamespaceConfig_basic() string {
 	return `
 data "kubernetes_namespace" "test" {
-	metadata {
-		name = "kube-system"
-	}
+  metadata {
+    name = "kube-system"
+  }
 }
 `
 }

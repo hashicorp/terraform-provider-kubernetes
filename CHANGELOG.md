@@ -1,4 +1,4 @@
-## 2.2.0 (Unreleased)
+## 2.2.0 (May 12, 2021)
 
 IMPROVEMENTS:
 * Match specific tolerations to prevent diffs (#978)

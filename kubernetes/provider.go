@@ -20,6 +20,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	restclient "k8s.io/client-go/rest"
 
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	aggregator "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
@@ -184,6 +185,8 @@ func Provider() *schema.Provider {
 			"kubernetes_storage_class":                    resourceKubernetesStorageClass(),
 			"kubernetes_validating_webhook_configuration": resourceKubernetesValidatingWebhookConfiguration(),
 			"kubernetes_mutating_webhook_configuration":   resourceKubernetesMutatingWebhookConfiguration(),
+			"kubernetes_patch":                            resourceKubernetesPatch(),
+			"kubernetes_manifest":                         resourceKubernetesManifest(),
 		},
 	}
 
@@ -197,12 +200,16 @@ func Provider() *schema.Provider {
 type KubeClientsets interface {
 	MainClientset() (*kubernetes.Clientset, error)
 	AggregatorClientset() (*aggregator.Clientset, error)
+	DynamicClient() (dynamic.Interface, error)
+	DiscoveryClient() (discovery.DiscoveryInterface, error)
 }
 
 type kubeClientsets struct {
 	config              *restclient.Config
 	mainClientset       *kubernetes.Clientset
 	aggregatorClientset *aggregator.Clientset
+	dynamicClient       dynamic.Interface
+	discoveryClient     discovery.DiscoveryInterface
 
 	configData *schema.ResourceData
 }
@@ -234,6 +241,36 @@ func (k kubeClientsets) AggregatorClientset() (*aggregator.Clientset, error) {
 		k.aggregatorClientset = ac
 	}
 	return k.aggregatorClientset, nil
+}
+
+func (k kubeClientsets) DynamicClient() (dynamic.Interface, error) {
+	if k.dynamicClient != nil {
+		return k.dynamicClient, nil
+	}
+
+	if k.config != nil {
+		kc, err := dynamic.NewForConfig(k.config)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to configure dynamic client: %s", err)
+		}
+		k.dynamicClient = kc
+	}
+	return k.dynamicClient, nil
+}
+
+func (k kubeClientsets) DiscoveryClient() (discovery.DiscoveryInterface, error) {
+	if k.discoveryClient != nil {
+		return k.discoveryClient, nil
+	}
+
+	if k.config != nil {
+		kc, err := discovery.NewDiscoveryClientForConfig(k.config)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to configure discovery client: %s", err)
+		}
+		k.discoveryClient = kc
+	}
+	return k.discoveryClient, nil
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {

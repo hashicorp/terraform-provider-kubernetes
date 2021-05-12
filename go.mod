@@ -59,7 +59,7 @@ require (
 	k8s.io/kube-aggregator v0.21.0
 	k8s.io/kube-openapi v0.0.0-20210323165736-1a6458611d18 // indirect
 	k8s.io/kubectl v0.21.0
-	k8s.io/utils v0.0.0-20210305010621-2afb4311ab10 // indirect
+	k8s.io/utils v0.0.0-20210305010621-2afb4311ab10
 	sigs.k8s.io/kustomize/api v0.8.7 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.1 // indirect
 )

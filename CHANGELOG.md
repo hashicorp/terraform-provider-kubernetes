@@ -1,3 +1,12 @@
+## 2.2.0 (Unreleased)
+
+IMPROVEMENTS:
+* Match specific tolerations to prevent diffs (#978)
+* Update all go modules (#1240)
+* Docs: fix broken links (#1041)
+* Docs: fix typo in getting started guide (#1262)
+
+
 ## 2.1.0 (April 15, 2021)
 
 BUG FIXES:

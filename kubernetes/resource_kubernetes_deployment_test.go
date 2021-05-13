@@ -547,7 +547,7 @@ func TestAccKubernetesDeployment_with_volume_mount(t *testing.T) {
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
+	resourceName := "kubernetes_deployment.test"
 	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
@@ -558,13 +558,21 @@ func TestAccKubernetesDeployment_with_volume_mount(t *testing.T) {
 			{
 				Config: testAccKubernetesDeploymentConfigWithVolumeMounts(secretName, deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists("kubernetes_deployment.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.volume_mount.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.mount_path", "/tmp/my_path"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.name", "db"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.read_only", "false"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "spec.0.template.0.spec.0.container.0.volume_mount.0.sub_path", ""),
+					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.mount_path", "/tmp/my_path"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.name", "db"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.read_only", "false"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.sub_path", ""),
+				),
+			},
+			{
+				Config: testAccKubernetesDeploymentConfigWithVolumeMountsNone(secretName, deploymentName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.#", "0"),
 				),
 			},
 		},
@@ -2062,6 +2070,60 @@ resource "kubernetes_deployment" "test" {
             mount_path = "/tmp/my_path"
             name       = "db"
           }
+        }
+
+        volume {
+          name = "db"
+
+          secret {
+            secret_name = "${kubernetes_secret.test.metadata.0.name}"
+          }
+        }
+      }
+    }
+  }
+}
+`, secretName, deploymentName, imageName)
+}
+
+func testAccKubernetesDeploymentConfigWithVolumeMountsNone(secretName, deploymentName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  data = {
+    one = "first"
+  }
+}
+
+resource "kubernetes_deployment" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
         }
 
         volume {

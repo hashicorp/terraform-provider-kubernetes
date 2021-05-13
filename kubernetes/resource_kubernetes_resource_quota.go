@@ -73,7 +73,7 @@ func resourceKubernetesResourceQuota() *schema.Resource {
 													Type:         schema.TypeString,
 													Description:  "The name of the scope that the selector applies to.",
 													Required:     true,
-													ValidateFunc: validation.StringInSlice([]string{"Terminating", "NotTerminating", "BestEffort", "NotBestEffort"}, false),
+													ValidateFunc: validation.StringInSlice([]string{"Terminating", "NotTerminating", "BestEffort", "NotBestEffort", "PriorityClass"}, false),
 												},
 												"operator": {
 													Type:         schema.TypeString,

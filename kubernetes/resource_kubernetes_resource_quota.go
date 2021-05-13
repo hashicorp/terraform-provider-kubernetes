@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,8 +53,48 @@ func resourceKubernetesResourceQuota() *schema.Resource {
 							Description: "A collection of filters that must match each object tracked by a quota. If not specified, the quota matches all objects.",
 							Optional:    true,
 							ForceNew:    true,
-							Elem:        &schema.Schema{Type: schema.TypeString},
-							Set:         schema.HashString,
+							Elem: &schema.Schema{
+								Type:         schema.TypeString,
+								ValidateFunc: validation.StringInSlice([]string{"Terminating", "NotTerminating", "BestEffort", "NotBestEffort", "PriorityClass"}, false),
+							},
+							Set: schema.HashString,
+						},
+						"scope_selector": {
+							Type:        schema.TypeList,
+							Description: "A collection of filters like scopes that must match each object tracked by a quota but expressed using ScopeSelectorOperator in combination with possible values. For a resource to match, both scopes AND scopeSelector (if specified in spec), must be matched.",
+							Optional:    true,
+							MaxItems:    1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"match_expression": {
+										Type:        schema.TypeList,
+										Description: "A list of scope selector requirements by scope of the resources.",
+										Optional:    true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"scope_name": {
+													Type:         schema.TypeString,
+													Description:  "The name of the scope that the selector applies to.",
+													Required:     true,
+													ValidateFunc: validation.StringInSlice([]string{"Terminating", "NotTerminating", "BestEffort", "NotBestEffort", "PriorityClass"}, false),
+												},
+												"operator": {
+													Type:         schema.TypeString,
+													Description:  "Represents a scope's relationship to a set of values.",
+													Required:     true,
+													ValidateFunc: validation.StringInSlice([]string{"In", "NotIn", "Exists", "DoesNotExist"}, false),
+												},
+												"values": {
+													Type:        schema.TypeSet,
+													Description: "A list of scope selector requirements by scope of the resources.",
+													Optional:    true,
+													Elem:        &schema.Schema{Type: schema.TypeString},
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},

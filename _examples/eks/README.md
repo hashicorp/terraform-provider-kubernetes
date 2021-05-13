@@ -32,7 +32,7 @@ cd -
 Optionally, the Kubernetes version can be specified at apply time:
 
 ```
-terraform apply -var=kubernetes_version=1.18
+terraform apply -var=cluster_name=$CLUSTERNAME -var=kubernetes_version=1.18
 ```
 
 See https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html for currently available versions.

@@ -1,5 +1,6 @@
 resource "aws_eks_cluster" "k8s-acc" {
   name     = var.cluster_name
+  version  = var.kubernetes_version
   role_arn = aws_iam_role.k8s-acc-cluster.arn
 
   vpc_config {

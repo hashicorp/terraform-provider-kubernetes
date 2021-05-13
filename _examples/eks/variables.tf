@@ -1,16 +1,8 @@
-#
-# Variables Configuration
-#
-variable "kubernetes_version" {
-  type    = string
-  default = "1.18"
+resource "random_id" "cluster_name" {
+  byte_length = 2
+  prefix      = "k8s-acc-"
 }
 
-variable "workers_count" {
-  default = 2
-}
-
-variable "workers_type" {
-  type    = string
-  default = "m4.large"
+locals {
+  cluster_name = random_id.cluster_name.hex
 }

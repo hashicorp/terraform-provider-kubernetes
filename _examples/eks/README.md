@@ -1,6 +1,6 @@
 # EKS (Amazon Elastic Kubernetes Service)
 
-This example demonstrates the most reliable way to use the Kubernetes provider together with the AWS provider to create an EKS cluster. By keeping the two providers' resources in separate Terraform states (or separate workspaces using [Terraform Cloud](https://app.terraform.io/)), we can limit the scope of impact to apply the right changes to the right place. (For example, updating the underlying EKS infrastructure without having to navigate the Kubernetes provider configuration challenges caused by modifying EKS cluster attributes in a single apply).
+This example demonstrates the most reliable way to use the Kubernetes provider together with the AWS provider to create an EKS cluster. By keeping the two providers' resources in separate Terraform states (or separate workspaces using [Terraform Cloud](https://app.terraform.io/)), we can limit the scope of changes to either the EKS cluster or the Kubernetes resources. This will prevent dependency issues between the AWS and Kubernetes providers, since terraform's [provider configurations must be known before a configuration can be applied](https://www.terraform.io/docs/language/providers/configuration.html).
 
 You will need the following environment variables to be set:
 
@@ -20,7 +20,7 @@ terraform apply --auto-approve
 export CLUSTERNAME=$(terraform output -raw cluster_name)
 ```
 
-Change into the eks-cluster directory and create the EKS cluster infrastrcture.
+Change into the eks-cluster directory and create the EKS cluster infrastructure.
 
 ```
 cd eks-cluster

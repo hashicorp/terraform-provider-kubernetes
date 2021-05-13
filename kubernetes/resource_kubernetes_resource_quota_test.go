@@ -125,6 +125,12 @@ func TestAccKubernetesResourceQuota_generatedName(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.scopes.#", "0"),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
 		},
 	})
 }
@@ -157,6 +163,12 @@ func TestAccKubernetesResourceQuota_withScopes(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.scopes.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.scopes.0", "BestEffort"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesResourceQuotaConfig_withScopesModified(name),

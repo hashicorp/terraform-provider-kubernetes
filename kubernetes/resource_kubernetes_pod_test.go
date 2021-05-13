@@ -2021,8 +2021,7 @@ func testAccKubernetesTerminationMessagePolicyWithFallBackToLogsOnErr(podName, i
 }
 
 func testAccKubernetesPodConfigEnableServiceLinks(podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2043,8 +2042,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodConfigReadinessGate(secretName, configMapName, podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
   }

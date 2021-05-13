@@ -138,8 +138,8 @@ The following arguments are supported:
 
 #### Arguments
 
-* `metadata` - (Required) Standard object's metadata. For more info see https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-* `spec` - (Required) Specification of the desired behavior of the pod. For more info see https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
+* `metadata` - (Required) Standard object's metadata. For more info see https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata.
+* `spec` - (Required) Specification of the desired behavior of the pod. For more info see https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status.
 
 ### template `spec`
 
@@ -149,7 +149,7 @@ The following arguments are supported:
 * `active_deadline_seconds` - (Optional) Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.
 * `automount_service_account_token` - (Optional) Indicates whether a service account token should be automatically mounted. Defaults to `false`.
 * `container` - (Optional) List of containers belonging to the pod. Containers cannot currently be added or removed. There must be at least one container in a Pod. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/containers)
-* `readiness_gate` - (Optional) If specified, all readiness gates will be evaluated for pod readiness. A pod is ready when all its containers are ready AND all conditions specified in the readiness gates have status equal to "True". [More info](https://git.k8s.io/enhancements/keps/sig-network/0007-pod-ready++.md)
+* `readiness_gate` - (Optional) If specified, all readiness gates will be evaluated for pod readiness. A pod is ready when all its containers are ready AND all conditions specified in the readiness gates have status equal to "True". [More info](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate)
 * `init_container` - (Optional) List of init containers belonging to the pod. Init containers always run to completion and each must complete successfully before the next is started. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/pods/init-containers)/
 * `dns_policy` - (Optional) Set DNS policy for containers within the pod. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'. Optional: Defaults to 'ClusterFirst', see [Kubernetes reference](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy).
 * `dns_config` - (Optional) Specifies the DNS parameters of a pod. Parameters specified here will be merged to the generated DNS configuration based on DNSPolicy. Defaults to empty. See `dns_config` block definition below.
@@ -165,7 +165,7 @@ The following arguments are supported:
 * `priority_class_name` - (Optional) If specified, indicates the pod's priority. 'system-node-critical' and 'system-cluster-critical' are two special keywords which indicate the highest priorities with the formerer being the highest priority. Any other name must be defined by creating a PriorityClass object with that name. If not specified, the pod priority will be default or zero if there is no default.
 * `restart_policy` - (Optional) Restart policy for all containers within the pod. One of Always, OnFailure, Never. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/pod-states#restartpolicy).
 * `security_context` - (Optional) SecurityContext holds pod-level security attributes and common container settings. Optional: Defaults to empty
-* `service_account_name` - (Optional) ServiceAccountName is the name of the ServiceAccount to use to run this pod. For more info see http://releases.k8s.io/HEAD/docs/design/service_accounts.md.
+* `service_account_name` - (Optional) ServiceAccountName is the name of the ServiceAccount to use to run this pod. For more info see https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/.
 * `share_process_namespace` - (Optional) Share a single process namespace between all of the containers in a pod. When this is set containers will be able to view and signal processes from other containers in the same pod, and the first process in each container will not be assigned PID 1. HostPID and ShareProcessNamespace cannot both be set.
 * `subdomain` - (Optional) If specified, the fully qualified Pod hostname will be "...svc.". If not specified, the pod will not have a domainname at all..
 * `termination_grace_period_seconds` - (Optional) Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request. Value must be non-negative integer. The value zero indicates delete immediately. If this value is nil, the default grace period will be used instead. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Set this value longer than the expected cleanup time for your process.
@@ -285,7 +285,7 @@ The following arguments are supported:
 * `port` - (Optional) List of ports to expose from the container. Exposing a port here gives the system additional information about the network connections a container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that port from being exposed. Any port which is listening on the default "0.0.0.0" address inside a container will be accessible from the network. Cannot be updated.
 * `readiness_probe` - (Optional) Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/pod-states#container-probes)
 * `resources` - (Optional) Compute Resources required by this container. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/persistent-volumes#resources)
-* `security_context` - (Optional) Security options the pod should run with. For more info see http://releases.k8s.io/HEAD/docs/design/security_context.md
+* `security_context` - (Optional) Security options the pod should run with. For more info see https://kubernetes.io/docs/tasks/configure-pod-container/security-context/.
 * `startup_probe` - (Optional) StartupProbe indicates that the Pod has successfully initialized. If specified, no other probes are executed until this completes successfully. If this probe fails, the Pod will be restarted, just as if the livenessProbe failed. This can be used to provide different probe parameters at the beginning of a Pod's lifecycle, when it might take a long time to load data or warm a cache, than during steady-state operation. This cannot be updated. For more info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes **NOTE: This field is behind a [feature gate](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/) prior to v1.17**
 * `stdin` - (Optional) Whether this container should allocate a buffer for stdin in the container runtime. If this is not set, reads from stdin in the container will always result in EOF.
 * `stdin_once` - (Optional) Whether the container runtime should close the stdin channel after it has been opened by a single attach. When stdin is true the stdin stream will remain open across multiple attach sessions. If stdinOnce is set to true, stdin is opened on container start, is empty until the first client attaches to stdin, and then remains open and accepts data until the client disconnects, at which time stdin is closed and remains closed until the container is restarted. If this flag is false, a container processes that reads from stdin will never receive an EOF.
@@ -338,20 +338,20 @@ The following arguments are supported:
 
 #### Arguments
 
-* `monitors` - (Required) Monitors is a collection of Ceph monitors For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
-* `path` - (Optional) Used as the mounted root, rather than the full Ceph tree, default is /
-* `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to `false` (read/write). For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
-* `secret_file` - (Optional) The path to key ring for User, default is /etc/ceph/user.secret For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
-* `secret_ref` - (Optional) Reference to the authentication secret for User, default is empty. For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
-* `user` - (Optional) User is the rados user name, default is admin. For more info see http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it
+* `monitors` - (Required) Monitors is a collection of Ceph monitors. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
+* `path` - (Optional) Used as the mounted root, rather than the full Ceph tree, default is /.
+* `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to `false` (read/write). For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
+* `secret_file` - (Optional) The path to key ring for User, default is /etc/ceph/user.secret. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
+* `secret_ref` - (Optional) Reference to the authentication secret for User, default is empty. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
+* `user` - (Optional) User is the rados user name, default is admin. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
 
 ### `cinder`
 
 #### Arguments
 
-* `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. For more info see http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
-* `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to false (read/write). For more info see http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
-* `volume_id` - (Required) Volume ID used to identify the volume in Cinder. For more info see http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
+* `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. For more info see https://github.com/kubernetes/examples/blob/master/mysql-cinder-pd/README.md#mysql-installation-with-cinder-volume-plugin.
+* `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to false (read/write). For more info see https://github.com/kubernetes/examples/blob/master/mysql-cinder-pd/README.md#mysql-installation-with-cinder-volume-plugin.
+* `volume_id` - (Required) Volume ID used to identify the volume in Cinder. For more info see https://github.com/kubernetes/examples/blob/master/mysql-cinder-pd/README.md#mysql-installation-with-cinder-volume-plugin.
 
 ### `config_map`
 
@@ -480,9 +480,9 @@ The `option` block supports the following:
 
 #### Arguments
 
-* `endpoints_name` - (Required) The endpoint name that details Glusterfs topology. For more info see http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
-* `path` - (Required) The Glusterfs volume path. For more info see http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
-* `read_only` - (Optional) Whether to force the Glusterfs volume to be mounted with read-only permissions. Defaults to false. For more info see http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod
+* `endpoints_name` - (Required) The endpoint name that details Glusterfs topology. For more info see https://github.com/kubernetes/examples/tree/master/volumes/glusterfs#create-a-pod.
+* `path` - (Required) The Glusterfs volume path. For more info see https://github.com/kubernetes/examples/tree/master/volumes/glusterfs#create-a-pod.
+* `read_only` - (Optional) Whether to force the Glusterfs volume to be mounted with read-only permissions. Defaults to false. For more info see https://github.com/kubernetes/examples/tree/master/volumes/glusterfs#create-a-pod.
 
 ### `host_aliases`
 
@@ -629,14 +629,14 @@ The `option` block supports the following:
 
 #### Arguments
 
-* `ceph_monitors` - (Required) A collection of Ceph monitors. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+* `ceph_monitors` - (Required) A collection of Ceph monitors. For more info see https://github.com/kubernetes/examples/tree/master/volumes/rbd#how-to-use-it.
 * `fs_type` - (Optional) Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#rbd)
-* `keyring` - (Optional) Keyring is the path to key ring for RBDUser. Default is /etc/ceph/keyring. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
-* `rados_user` - (Optional) The rados user name. Default is admin. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
-* `rbd_image` - (Required) The rados image name. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
-* `rbd_pool` - (Optional) The rados pool name. Default is rbd. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it.
-* `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to false. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
-* `secret_ref` - (Optional) Name of the authentication secret for RBDUser. If provided overrides keyring. Default is nil. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it
+* `keyring` - (Optional) Keyring is the path to key ring for RBDUser. Default is /etc/ceph/keyring. For more info see https://github.com/kubernetes/examples/tree/master/volumes/rbd#how-to-use-it.
+* `rados_user` - (Optional) The rados user name. Default is admin. For more info see https://github.com/kubernetes/examples/tree/master/volumes/rbd#how-to-use-it.
+* `rbd_image` - (Required) The rados image name. For more info see https://github.com/kubernetes/examples/tree/master/volumes/rbd#how-to-use-it.
+* `rbd_pool` - (Optional) The rados pool name. Default is rbd. For more info see https://github.com/kubernetes/examples/tree/master/volumes/rbd#how-to-use-it.
+* `read_only` - (Optional) Whether to force the read-only setting in VolumeMounts. Defaults to false. For more info see https://github.com/kubernetes/examples/tree/master/volumes/rbd#how-to-use-it.
+* `secret_ref` - (Optional) Name of the authentication secret for RBDUser. If provided overrides keyring. Default is nil. For more info see https://github.com/kubernetes/examples/tree/master/volumes/rbd#how-to-use-it.
 
 ### `readiness_probe`
 
@@ -811,7 +811,7 @@ The `items` block supports the following:
 * `azure_disk` - (Optional) Represents an Azure Data Disk mount on the host and bind mount to the pod.
 * `azure_file` - (Optional) Represents an Azure File Service mount on the host and bind mount to the pod.
 * `ceph_fs` - (Optional) Represents a Ceph FS mount on the host that shares a pod's lifetime
-* `cinder` - (Optional) Represents a cinder volume attached and mounted on kubelets host machine. For more info see http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md
+* `cinder` - (Optional) Represents a cinder volume attached and mounted on kubelets host machine. For more info see https://github.com/kubernetes/examples/blob/master/mysql-cinder-pd/README.md#mysql-installation-with-cinder-volume-plugin.
 * `config_map` - (Optional) ConfigMap represents a configMap that should populate this volume
 * `downward_api` - (Optional) DownwardAPI represents downward API about the pod that should populate this volume
 * `empty_dir` - (Optional) EmptyDir represents a temporary directory that shares a pod's lifetime. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#emptydir)
@@ -820,7 +820,7 @@ The `items` block supports the following:
 * `flocker` - (Optional) Represents a Flocker volume attached to a kubelet's host machine and exposed to the pod for its usage. This depends on the Flocker control service being running
 * `gce_persistent_disk` - (Optional) Represents a GCE Disk resource that is attached to a kubelet's host machine and then exposed to the pod. Provisioned by an admin. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#gcepersistentdisk)
 * `git_repo` - (Optional) GitRepo represents a git repository at a particular revision.
-* `glusterfs` - (Optional) Represents a Glusterfs volume that is attached to a host and exposed to the pod. Provisioned by an admin. For more info see http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md
+* `glusterfs` - (Optional) Represents a Glusterfs volume that is attached to a host and exposed to the pod. Provisioned by an admin. For more info see https://github.com/kubernetes/examples/tree/master/volumes/glusterfs#glusterfs.
 * `host_path` - (Optional) Represents a directory on the host. Provisioned by a developer or tester. This is useful for single-node development and testing only! On-host storage is not supported in any way and WILL NOT WORK in a multi-node cluster. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#hostpath)
 * `iscsi` - (Optional) Represents an ISCSI Disk resource that is attached to a kubelet's host machine and then exposed to the pod. Provisioned by an admin.
 * `name` - (Optional) Volume's name. Must be a DNS_LABEL and unique within the pod. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
@@ -829,7 +829,7 @@ The `items` block supports the following:
 * `photon_persistent_disk` - (Optional) Represents a PhotonController persistent disk attached and mounted on kubelets host machine
 * `projected` (Optional) Items for all in one resources secrets, configmaps, and downward API.
 * `quobyte` - (Optional) Quobyte represents a Quobyte mount on the host that shares a pod's lifetime
-* `rbd` - (Optional) Represents a Rados Block Device mount on the host that shares a pod's lifetime. For more info see http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md
+* `rbd` - (Optional) Represents a Rados Block Device mount on the host that shares a pod's lifetime. For more info see https://kubernetes.io/docs/concepts/storage/volumes/#rbd.
 * `secret` - (Optional) Secret represents a secret that should populate this volume. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#secrets)
 * `vsphere_volume` - (Optional) Represents a vSphere volume attached and mounted on kubelets host machine
 

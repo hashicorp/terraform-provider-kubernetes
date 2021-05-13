@@ -22,7 +22,7 @@ Please note: We take Terraform's security and our users' trust very seriously. I
 
 -	[Terraform](https://www.terraform.io/downloads.html) 0.12.x
     - Note that version 0.11.x currently works, but is [deprecated](https://www.hashicorp.com/blog/deprecating-terraform-0-11-support-in-terraform-providers/)
--	[Go](https://golang.org/doc/install) 1.14.x (to build the provider plugin)
+-	[Go](https://golang.org/doc/install) 1.16.x (to build the provider plugin)
 
 
 ## Kubernetes Alpha Provider

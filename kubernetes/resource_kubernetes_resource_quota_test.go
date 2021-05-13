@@ -332,7 +332,7 @@ func testAccKubernetesResourceQuotaConfig_basic(name string) string {
   spec {
     hard = {
       "limits.cpu"    = 2
-      "limits.memory" = "2Gi"
+      "limits.memory" = "2048Mi"
       pods            = 4
     }
   }

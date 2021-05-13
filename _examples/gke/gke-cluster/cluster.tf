@@ -1,17 +1,3 @@
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "3.52"
-    }
-  }
-}
-
-# This is used to set local variable google_zone.
-# This can be replaced with a statically-configured zone, if preferred.
-data "google_compute_zones" "available" {
-}
-
 data "google_container_engine_versions" "supported" {
   location           = local.google_zone
   version_prefix     = var.kubernetes_version

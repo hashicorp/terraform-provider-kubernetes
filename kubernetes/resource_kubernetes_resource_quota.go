@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,14 +70,16 @@ func resourceKubernetesResourceQuota() *schema.Resource {
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"scope_name": {
-													Type:        schema.TypeString,
-													Description: "The name of the scope that the selector applies to.",
-													Required:    true,
+													Type:         schema.TypeString,
+													Description:  "The name of the scope that the selector applies to.",
+													Required:     true,
+													ValidateFunc: validation.StringInSlice([]string{"Terminating", "NotTerminating", "BestEffort", "NotBestEffort"}, false),
 												},
 												"operator": {
-													Type:        schema.TypeString,
-													Description: "Represents a scope's relationship to a set of values.",
-													Required:    true,
+													Type:         schema.TypeString,
+													Description:  "Represents a scope's relationship to a set of values.",
+													Required:     true,
+													ValidateFunc: validation.StringInSlice([]string{"In", "NotIn", "Exists", "DoesNotExist"}, false),
 												},
 												"values": {
 													Type:        schema.TypeSet,

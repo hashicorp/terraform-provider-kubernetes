@@ -53,8 +53,11 @@ func resourceKubernetesResourceQuota() *schema.Resource {
 							Description: "A collection of filters that must match each object tracked by a quota. If not specified, the quota matches all objects.",
 							Optional:    true,
 							ForceNew:    true,
-							Elem:        &schema.Schema{Type: schema.TypeString},
-							Set:         schema.HashString,
+							Elem: &schema.Schema{
+								Type:         schema.TypeString,
+								ValidateFunc: validation.StringInSlice([]string{"Terminating", "NotTerminating", "BestEffort", "NotBestEffort", "PriorityClass"}, false),
+							},
+							Set: schema.HashString,
 						},
 						"scope_selector": {
 							Type:        schema.TypeList,

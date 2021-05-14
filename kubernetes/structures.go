@@ -7,6 +7,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/core/v1"
+	discovery "k8s.io/api/discovery/v1beta1"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -27,6 +29,11 @@ var builtInLabels = map[string]string{
 	api.LabelNamespaceSuffixNode:      "",
 	api.LabelNamespaceNodeRestriction: "",
 	api.IsHeadlessService:             "",
+	api.BetaStorageClassAnnotation:    "",
+	api.MountOptionAnnotation:         "",
+	discovery.LabelServiceName:        "",
+	discovery.LabelManagedBy:          "",
+	discovery.LabelSkipMirror:         "",
 }
 
 func idParts(id string) (string, string, error) {

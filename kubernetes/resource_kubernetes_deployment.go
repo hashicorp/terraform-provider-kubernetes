@@ -278,6 +278,17 @@ func resourceKubernetesDeploymentUpdate(ctx context.Context, d *schema.ResourceD
 			Value: spec,
 		})
 	}
+
+	if d.HasChange("spec.0.strategy") {
+		o, n := d.GetChange("spec.0.strategy.0.type")
+
+		if o.(string) == "RollingUpdate" && n.(string) == "Recreate" {
+			ops = append(ops, &RemoveOperation{
+				Path: "/spec/strategy/rollingUpdate",
+			})
+		}
+	}
+
 	data, err := ops.MarshalJSON()
 	if err != nil {
 		return diag.Errorf("Failed to marshal update operations: %s", err)

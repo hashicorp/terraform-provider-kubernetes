@@ -61,14 +61,6 @@ var builtInLabels = map[string]string{
 	api.TaintNodeNetworkUnavailable:              "",
 	api.TaintNodePIDPressure:                     "",
 
-	// Secrete Types
-	string(api.SecretTypeServiceAccountToken): "",
-	string(api.SecretTypeDockercfg):           "",
-	string(api.SecretTypeDockerConfigJson):    "",
-	string(api.SecretTypeSSHAuth):             "",
-	string(api.SecretTypeTLS):                 "",
-	string(api.SecretTypeBootstrapToken):      "",
-
 	//Networking
 	networking.AnnotationIsDefaultIngressClass: "",
 	networking.AnnotationIngressClass:          "",

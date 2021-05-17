@@ -428,28 +428,3 @@ func resourceKubernetesServiceExists(ctx context.Context, d *schema.ResourceData
 	}
 	return true, err
 }
-
-// func resourceKubernetesServiceHash(v interface{}) int {
-// 	var buf bytes.Buffer
-// 	m := v.(map[string]interface{})
-
-// 	if v, ok := m["name"]; ok {
-// 		buf.WriteString(fmt.Sprintf("%s-", v.(string)))
-// 	}
-// 	if v, ok := m["node_port"]; ok {
-// 		buf.WriteString(fmt.Sprintf("%d-", v.(int)))
-// 	}
-// 	if v, ok := m["port"]; ok {
-// 		buf.WriteString(fmt.Sprintf("%d-", v.(int)))
-// 	}
-// 	if v, ok := m["protocol"]; ok {
-// 		buf.WriteString(fmt.Sprintf("%s-", v.(string)))
-// 	}
-// 	if v, ok := m["target_port"]; ok {
-// 		buf.WriteString(fmt.Sprintf("%s-", v.(string)))
-// 	}
-
-// 	log.Printf("[DEBUG] lol: %s", buf.String())
-
-// 	return hashcode.String(buf.String())
-// }

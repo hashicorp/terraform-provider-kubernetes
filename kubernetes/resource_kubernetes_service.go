@@ -53,18 +53,21 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"cluster_ip": {
-						Type:        schema.TypeString,
-						Description: "The IP address of the service. It is usually assigned randomly by the master. If an address is specified manually and is not in use by others, it will be allocated to the service; otherwise, creation of the service will fail. `None` can be specified for headless services when proxying is not required. Ignored if type is `ExternalName`. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",
-						Optional:    true,
-						ForceNew:    true,
-						Computed:    true,
+						Type:         schema.TypeString,
+						Description:  "The IP address of the service. It is usually assigned randomly by the master. If an address is specified manually and is not in use by others, it will be allocated to the service; otherwise, creation of the service will fail. `None` can be specified for headless services when proxying is not required. Ignored if type is `ExternalName`. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",
+						Optional:     true,
+						ForceNew:     true,
+						Computed:     true,
+						ValidateFunc: validation.IsIPAddress,
 					},
 					"external_ips": {
 						Type:        schema.TypeSet,
 						Description: "A list of IP addresses for which nodes in the cluster will also accept traffic for this service. These IPs are not managed by Kubernetes. The user is responsible for ensuring that traffic arrives at a node with this IP.  A common example is external load-balancers that are not part of the Kubernetes system.",
 						Optional:    true,
-						Elem:        &schema.Schema{Type: schema.TypeString},
-						Set:         schema.HashString,
+						Elem: &schema.Schema{
+							Type:         schema.TypeString,
+							ValidateFunc: validation.IsIPAddress,
+						},
 					},
 					"external_name": {
 						Type:        schema.TypeString,
@@ -72,23 +75,29 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 						Optional:    true,
 					},
 					"external_traffic_policy": {
-						Type:         schema.TypeString,
-						Description:  "Denotes if this Service desires to route external traffic to node-local or cluster-wide endpoints. `Local` preserves the client source IP and avoids a second hop for LoadBalancer and Nodeport type services, but risks potentially imbalanced traffic spreading. `Cluster` obscures the client source IP and may cause a second hop to another node, but should have good overall load-spreading. More info: https://kubernetes.io/docs/tutorials/services/source-ip/",
-						Optional:     true,
-						Computed:     true,
-						ValidateFunc: validation.StringInSlice([]string{"Local", "Cluster"}, false),
+						Type:        schema.TypeString,
+						Description: "Denotes if this Service desires to route external traffic to node-local or cluster-wide endpoints. `Local` preserves the client source IP and avoids a second hop for LoadBalancer and Nodeport type services, but risks potentially imbalanced traffic spreading. `Cluster` obscures the client source IP and may cause a second hop to another node, but should have good overall load-spreading. More info: https://kubernetes.io/docs/tutorials/services/source-ip/",
+						Optional:    true,
+						Computed:    true,
+						ValidateFunc: validation.StringInSlice([]string{
+							string(api.ServiceExternalTrafficPolicyTypeLocal),
+							string(api.ServiceExternalTrafficPolicyTypeCluster),
+						}, false),
 					},
 					"load_balancer_ip": {
-						Type:        schema.TypeString,
-						Description: "Only applies to `type = LoadBalancer`. LoadBalancer will get created with the IP specified in this field. This feature depends on whether the underlying cloud-provider supports specifying this field when a load balancer is created. This field will be ignored if the cloud-provider does not support the feature.",
-						Optional:    true,
+						Type:         schema.TypeString,
+						Description:  "Only applies to `type = LoadBalancer`. LoadBalancer will get created with the IP specified in this field. This feature depends on whether the underlying cloud-provider supports specifying this field when a load balancer is created. This field will be ignored if the cloud-provider does not support the feature.",
+						Optional:     true,
+						ValidateFunc: validation.IsIPAddress,
 					},
 					"load_balancer_source_ranges": {
 						Type:        schema.TypeSet,
 						Description: "If specified and supported by the platform, this will restrict traffic through the cloud-provider load-balancer will be restricted to the specified client IPs. This field will be ignored if the cloud-provider does not support the feature. More info: http://kubernetes.io/docs/user-guide/services-firewalls",
 						Optional:    true,
-						Elem:        &schema.Schema{Type: schema.TypeString},
-						Set:         schema.HashString,
+						Elem: &schema.Schema{
+							Type:         schema.TypeString,
+							ValidateFunc: validation.IsCIDR,
+						},
 					},
 					"port": {
 						Type:        schema.TypeList,
@@ -103,25 +112,27 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 									Optional:    true,
 								},
 								"node_port": {
-									Type:        schema.TypeInt,
-									Description: "The port on each node on which this service is exposed when `type` is `NodePort` or `LoadBalancer`. Usually assigned by the system. If specified, it will be allocated to the service if unused or else creation of the service will fail. Default is to auto-allocate a port if the `type` of this service requires one. More info: http://kubernetes.io/docs/user-guide/services#type--nodeport",
-									Computed:    true,
-									Optional:    true,
+									Type:         schema.TypeInt,
+									Description:  "The port on each node on which this service is exposed when `type` is `NodePort` or `LoadBalancer`. Usually assigned by the system. If specified, it will be allocated to the service if unused or else creation of the service will fail. Default is to auto-allocate a port if the `type` of this service requires one. More info: http://kubernetes.io/docs/user-guide/services#type--nodeport",
+									Computed:     true,
+									Optional:     true,
+									ValidateFunc: validation.IsPortNumberOrZero,
 								},
 								"port": {
-									Type:        schema.TypeInt,
-									Description: "The port that will be exposed by this service.",
-									Required:    true,
+									Type:         schema.TypeInt,
+									Description:  "The port that will be exposed by this service.",
+									Required:     true,
+									ValidateFunc: validation.IsPortNumber,
 								},
 								"protocol": {
 									Type:        schema.TypeString,
 									Description: "The IP protocol for this port. Supports `TCP` and `UDP`. Default is `TCP`.",
 									Optional:    true,
-									Default:     "TCP",
+									Default:     string(api.ProtocolTCP),
 									ValidateFunc: validation.StringInSlice([]string{
-										"TCP",
-										"UDP",
-										"SCTP",
+										string(api.ProtocolTCP),
+										string(api.ProtocolUDP),
+										string(api.ProtocolSCTP),
 									}, false),
 								},
 								"target_port": {
@@ -148,30 +159,31 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Used to maintain session affinity. Supports `ClientIP` and `None`. Defaults to `None`. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",
 						Optional:    true,
-						Default:     "None",
+						Default:     string(api.ServiceAffinityNone),
 						ValidateFunc: validation.StringInSlice([]string{
-							"ClientIP",
-							"None",
+							string(api.ServiceAffinityClientIP),
+							string(api.ServiceAffinityNone),
 						}, false),
 					},
 					"type": {
 						Type:        schema.TypeString,
 						Description: "Determines how the service is exposed. Defaults to `ClusterIP`. Valid options are `ExternalName`, `ClusterIP`, `NodePort`, and `LoadBalancer`. `ExternalName` maps to the specified `external_name`. More info: http://kubernetes.io/docs/user-guide/services#overview",
 						Optional:    true,
-						Default:     "ClusterIP",
+						Default:     string(api.ServiceTypeClusterIP),
 						ValidateFunc: validation.StringInSlice([]string{
-							"ClusterIP",
-							"ExternalName",
-							"NodePort",
-							"LoadBalancer",
+							string(api.ServiceTypeClusterIP),
+							string(api.ServiceTypeExternalName),
+							string(api.ServiceTypeNodePort),
+							string(api.ServiceTypeLoadBalancer),
 						}, false),
 					},
 					"health_check_node_port": {
-						Type:        schema.TypeInt,
-						Description: "Specifies the Healthcheck NodePort for the service. Only effects when type is set to `LoadBalancer` and external_traffic_policy is set to `Local`.",
-						Optional:    true,
-						Computed:    true,
-						ForceNew:    true,
+						Type:         schema.TypeInt,
+						Description:  "Specifies the Healthcheck NodePort for the service. Only effects when type is set to `LoadBalancer` and external_traffic_policy is set to `Local`.",
+						Optional:     true,
+						Computed:     true,
+						ForceNew:     true,
+						ValidateFunc: validation.IsPortNumber,
 					},
 				},
 			},
@@ -416,3 +428,28 @@ func resourceKubernetesServiceExists(ctx context.Context, d *schema.ResourceData
 	}
 	return true, err
 }
+
+// func resourceKubernetesServiceHash(v interface{}) int {
+// 	var buf bytes.Buffer
+// 	m := v.(map[string]interface{})
+
+// 	if v, ok := m["name"]; ok {
+// 		buf.WriteString(fmt.Sprintf("%s-", v.(string)))
+// 	}
+// 	if v, ok := m["node_port"]; ok {
+// 		buf.WriteString(fmt.Sprintf("%d-", v.(int)))
+// 	}
+// 	if v, ok := m["port"]; ok {
+// 		buf.WriteString(fmt.Sprintf("%d-", v.(int)))
+// 	}
+// 	if v, ok := m["protocol"]; ok {
+// 		buf.WriteString(fmt.Sprintf("%s-", v.(string)))
+// 	}
+// 	if v, ok := m["target_port"]; ok {
+// 		buf.WriteString(fmt.Sprintf("%s-", v.(string)))
+// 	}
+
+// 	log.Printf("[DEBUG] lol: %s", buf.String())
+
+// 	return hashcode.String(buf.String())
+// }

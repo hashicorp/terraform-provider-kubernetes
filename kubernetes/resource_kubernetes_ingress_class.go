@@ -68,6 +68,16 @@ func resourceKubernetesIngressClassSchema() map[string]*schema.Schema {
 									Description: docIngressClassSpecParametes["name"],
 									Required:    true,
 								},
+								"scope": {
+									Type:        schema.TypeString,
+									Description: docIngressClassSpecParametes["scope"],
+									Optional:    true,
+								},
+								"namespace": {
+									Type:        schema.TypeString,
+									Description: docIngressClassSpecParametes["namespace"],
+									Optional:    true,
+								},
 							},
 						},
 					},
@@ -246,12 +256,12 @@ func expandIngressClassSpec(l []interface{}) networking.IngressClassSpec {
 	return obj
 }
 
-func expandIngressClassParameters(l []interface{}) *core.TypedLocalObjectReference {
+func expandIngressClassParameters(l []interface{}) *networking.IngressClassParametersReference {
 	if len(l) == 0 || l[0] == nil {
-		return &core.TypedLocalObjectReference{}
+		return &networking.IngressClassParametersReference{}
 	}
 	in := l[0].(map[string]interface{})
-	obj := &core.TypedLocalObjectReference{}
+	obj := &networking.IngressClassParametersReference{}
 
 	if v, ok := in["api_group"].(string); ok && v != "" {
 		obj.APIGroup = &v
@@ -263,6 +273,14 @@ func expandIngressClassParameters(l []interface{}) *core.TypedLocalObjectReferen
 
 	if v, ok := in["name"].(string); ok {
 		obj.Name = v
+	}
+
+	if v, ok := in["scope"].(string); ok {
+		obj.Scope = &v
+	}
+
+	if v, ok := in["namespace"].(string); ok {
+		obj.Namespace = &v
 	}
 
 	return obj
@@ -282,7 +300,7 @@ func flattenIngressClassSpec(in networking.IngressClassSpec) []interface{} {
 	return []interface{}{att}
 }
 
-func flattenIngressClassParameters(in *core.TypedLocalObjectReference) []interface{} {
+func flattenIngressClassParameters(in *networking.IngressClassParametersReference) []interface{} {
 	att := make([]interface{}, 1, 1)
 
 	m := make(map[string]interface{})
@@ -291,6 +309,14 @@ func flattenIngressClassParameters(in *core.TypedLocalObjectReference) []interfa
 
 	if in.APIGroup != nil {
 		m["api_group"] = *in.APIGroup
+	}
+
+	if in.Scope != nil {
+		m["scope"] = *in.Scope
+	}
+
+	if in.Namespace != nil {
+		m["namespace"] = *in.Namespace
 	}
 
 	att[0] = m

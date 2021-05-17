@@ -77,6 +77,8 @@ The following arguments are supported:
 * `name` - (Required) The name of resource being referenced.
 * `kind` - (Required) The type of resource being referenced.
 * `api_group` - (Optional) The group for the resource being referenced. If APIGroup is not specified, the specified Kind must be in the core API group.
+* `scope` - (Optional) Refers to a cluster or namespace scoped resource. This may be set to "Cluster" (default) or "Namespace". Field can be enabled with IngressClassNamespacedParams feature gate.
+* `namespace` - (Optional) The namespace of the resource being referenced. This field is required when scope is set to "Namespace" and must be unset when scope is set to "Cluster".
 
 ## Import
 

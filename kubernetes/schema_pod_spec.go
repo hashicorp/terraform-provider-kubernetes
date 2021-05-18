@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	api "k8s.io/api/core/v1"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
@@ -71,8 +73,14 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Optional:    true,
 			Computed:    isComputed,
 			ForceNew:    !isUpdatable,
-			Default:     conditionalDefault(!isComputed, "ClusterFirst"),
+			Default:     conditionalDefault(!isComputed, string(api.DNSClusterFirst)),
 			Description: "Set DNS policy for containers within the pod. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'. Optional: Defaults to 'ClusterFirst', see [Kubernetes reference](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy).",
+			ValidateFunc: validation.StringInSlice([]string{
+				string(api.DNSClusterFirst),
+				string(api.DNSClusterFirstWithHostNet),
+				string(api.DNSDefault),
+				string(api.DNSNone),
+			}, false),
 		},
 		"dns_config": {
 			Type:        schema.TypeList,
@@ -148,10 +156,11 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						Elem:        &schema.Schema{Type: schema.TypeString},
 					},
 					"ip": {
-						Type:        schema.TypeString,
-						Required:    true,
-						ForceNew:    !isUpdatable,
-						Description: "IP address of the host file entry.",
+						Type:         schema.TypeString,
+						Required:     true,
+						ForceNew:     !isUpdatable,
+						Description:  "IP address of the host file entry.",
+						ValidateFunc: validation.IsIPAddress,
 					},
 				},
 			},
@@ -231,8 +240,13 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Optional:    true,
 			Computed:    isComputed,
 			ForceNew:    !isUpdatable,
-			Default:     conditionalDefault(!isComputed, "Always"),
+			Default:     conditionalDefault(!isComputed, string(api.RestartPolicyAlways)),
 			Description: "Restart policy for all containers within the pod. One of Always, OnFailure, Never. More info: http://kubernetes.io/docs/user-guide/pod-states#restartpolicy.",
+			ValidateFunc: validation.StringInSlice([]string{
+				string(api.RestartPolicyAlways),
+				string(api.RestartPolicyOnFailure),
+				string(api.RestartPolicyNever),
+			}, false),
 		},
 		"security_context": {
 			Type:        schema.TypeList,
@@ -348,11 +362,15 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"effect": {
-						Type:         schema.TypeString,
-						Description:  "Effect indicates the taint effect to match. Empty means match all taint effects. When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.",
-						Optional:     true,
-						ForceNew:     !isUpdatable,
-						ValidateFunc: validation.StringInSlice([]string{"NoSchedule", "PreferNoSchedule", "NoExecute"}, false),
+						Type:        schema.TypeString,
+						Description: "Effect indicates the taint effect to match. Empty means match all taint effects. When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.",
+						Optional:    true,
+						ForceNew:    !isUpdatable,
+						ValidateFunc: validation.StringInSlice([]string{
+							string(api.TaintEffectNoSchedule),
+							string(api.TaintEffectPreferNoSchedule),
+							string(api.TaintEffectNoExecute),
+						}, false),
 					},
 					"key": {
 						Type:        schema.TypeString,
@@ -361,12 +379,15 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						ForceNew:    !isUpdatable,
 					},
 					"operator": {
-						Type:         schema.TypeString,
-						Description:  "Operator represents a key's relationship to the value. Valid operators are Exists and Equal. Defaults to Equal. Exists is equivalent to wildcard for value, so that a pod can tolerate all taints of a particular category.",
-						Default:      "Equal",
-						Optional:     true,
-						ForceNew:     !isUpdatable,
-						ValidateFunc: validation.StringInSlice([]string{"Exists", "Equal"}, false),
+						Type:        schema.TypeString,
+						Description: "Operator represents a key's relationship to the value. Valid operators are Exists and Equal. Defaults to Equal. Exists is equivalent to wildcard for value, so that a pod can tolerate all taints of a particular category.",
+						Default:     string(api.TolerationOpEqual),
+						Optional:    true,
+						ForceNew:    !isUpdatable,
+						ValidateFunc: validation.StringInSlice([]string{
+							string(api.TolerationOpExists),
+							string(api.TolerationOpEqual),
+						}, false),
 					},
 					"toleration_seconds": {
 						// Use TypeString to allow an "unspecified" value,
@@ -404,11 +425,14 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						Optional:    true,
 					},
 					"when_unsatisfiable": {
-						Type:         schema.TypeString,
-						Description:  "indicates how to deal with a pod if it doesn't satisfy the spread constraint.",
-						Default:      "DoNotSchedule",
-						Optional:     true,
-						ValidateFunc: validation.StringInSlice([]string{"DoNotSchedule", "ScheduleAnyway"}, false),
+						Type:        schema.TypeString,
+						Description: "indicates how to deal with a pod if it doesn't satisfy the spread constraint.",
+						Default:     string(api.DoNotSchedule),
+						Optional:    true,
+						ValidateFunc: validation.StringInSlice([]string{
+							string(api.DoNotSchedule),
+							string(api.ScheduleAnyway),
+						}, false),
 					},
 					"label_selector": {
 						Type:        schema.TypeList,

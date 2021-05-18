@@ -166,6 +166,12 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
+			},
+			{
 				Config: testAccKubernetesServiceConfig_loadBalancer_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceExists(resourceName, &conf),
@@ -221,6 +227,12 @@ func TestAccKubernetesService_loadBalancer_healthcheck(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.health_check_node_port", "31111"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
 			},
 			{
 				Config: testAccKubernetesServiceConfig_loadBalancer_healthcheck(name, 31112),
@@ -280,6 +292,12 @@ func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 						},
 					}),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
 			},
 			{
 				Config: testAccKubernetesServiceConfig_loadBalancer_annotations_aws_modified(name),
@@ -377,6 +395,12 @@ func TestAccKubernetesService_nodePort(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
+			},
+			{
 				Config: testAccKubernetesServiceConfig_nodePort_toClusterIP(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceExists(resourceName, &conf),
@@ -459,6 +483,12 @@ func TestAccKubernetesService_noTargetPort(t *testing.T) {
 					}),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
+			},
 		},
 	})
 }
@@ -486,6 +516,12 @@ func TestAccKubernetesService_stringTargetPort(t *testing.T) {
 						},
 					}),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
 			},
 		},
 	})
@@ -518,6 +554,12 @@ func TestAccKubernetesService_externalName(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "None"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "ExternalName"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
 			},
 		},
 	})
@@ -648,6 +690,12 @@ func TestAccKubernetesService_regression(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
+			},
+			{
 				Config: requiredProviders() + testAccKubernetesServiceConfig_regression("kubernetes-local", name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceExists(resourceName, &conf2),
@@ -698,6 +746,12 @@ func TestAccKubernetesService_stateUpgradeV0_loadBalancerIngress(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
 			},
 			{
 				Config: requiredProviders() + testAccKubernetesServiceConfig_stateUpgradev0("kubernetes-local", name),

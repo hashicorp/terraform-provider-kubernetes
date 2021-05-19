@@ -63,7 +63,6 @@ var builtInLabels = map[string]string{
 
 	//Networking
 	networking.AnnotationIsDefaultIngressClass: "",
-	networking.AnnotationIngressClass:          "",
 
 	//Discovery
 	discovery.LabelServiceName: "",

@@ -1,4 +1,4 @@
-## 1.13.4 (Unreleased)
+## 1.13.4 (May 19, 2021)
 
 IMPROVEMENTS:
 

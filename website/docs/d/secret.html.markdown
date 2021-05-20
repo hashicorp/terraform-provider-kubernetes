@@ -67,3 +67,4 @@ data "kubernetes_secret" "example" {
 ```
 
 * `type` - The secret type. Defaults to `Opaque`. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/c7151dd8dd7e487e96e5ce34c6a416bb3b037609/contributors/design-proposals/auth/secrets.md#proposed-design)
+* `immutable` - Ensures that data stored in the Secret cannot be updated (only object metadata can be modified).

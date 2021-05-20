@@ -100,6 +100,7 @@ The following arguments are supported:
 * `binary_data` - (Optional) A map base64 encoded map of the secret data.
 * `metadata` - (Required) Standard secret's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 * `type` - (Optional) The secret type. Defaults to `Opaque`. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/c7151dd8dd7e487e96e5ce34c6a416bb3b037609/contributors/design-proposals/auth/secrets.md#proposed-design)
+* `immutable` - (Optional) Ensures that data stored in the Secret cannot be updated (only object metadata can be modified). If not set to true, the field can be modified at any time.
 
 ## Nested Blocks
 

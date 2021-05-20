@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -56,13 +57,21 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 							Type:        schema.TypeString,
 							Description: webhookDoc["failurePolicy"],
 							Optional:    true,
-							Default:     "Fail",
+							Default:     string(admissionregistrationv1.Fail),
+							ValidateFunc: validation.StringInSlice([]string{
+								string(admissionregistrationv1.Fail),
+								string(admissionregistrationv1.Ignore),
+							}, false),
 						},
 						"match_policy": {
 							Type:        schema.TypeString,
 							Description: webhookDoc["matchPolicy"],
 							Optional:    true,
-							Default:     "Equivalent",
+							Default:     string(admissionregistrationv1.Equivalent),
+							ValidateFunc: validation.StringInSlice([]string{
+								string(admissionregistrationv1.Equivalent),
+								string(admissionregistrationv1.Exact),
+							}, false),
 						},
 						"name": {
 							Type:        schema.TypeString,
@@ -100,12 +109,19 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 							Type:        schema.TypeString,
 							Description: webhookDoc["sideEffects"],
 							Optional:    true,
+							ValidateFunc: validation.StringInSlice([]string{
+								string(admissionregistrationv1.SideEffectClassUnknown),
+								string(admissionregistrationv1.SideEffectClassNone),
+								string(admissionregistrationv1.SideEffectClassSome),
+								string(admissionregistrationv1.SideEffectClassNoneOnDryRun),
+							}, false),
 						},
 						"timeout_seconds": {
-							Type:        schema.TypeInt,
-							Description: webhookDoc["timeoutSeconds"],
-							Default:     10,
-							Optional:    true,
+							Type:         schema.TypeInt,
+							Description:  webhookDoc["timeoutSeconds"],
+							Default:      10,
+							Optional:     true,
+							ValidateFunc: validation.IntBetween(1, 30),
 						},
 					},
 				},

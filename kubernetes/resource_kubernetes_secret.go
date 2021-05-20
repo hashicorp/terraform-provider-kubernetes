@@ -60,7 +60,7 @@ func resourceKubernetesSecret() *schema.Resource {
 			"immutable": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "If set to true, ensures that data stored in the Secret cannot be updated (only object metadata can be modified).",
+				Description: "Ensures that data stored in the Secret cannot be updated (only object metadata can be modified).",
 			},
 			"type": {
 				Type:        schema.TypeString,

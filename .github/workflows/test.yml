@@ -1,0 +1,36 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+      - migrate-tests-to-actions
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version: [1.16.x]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@37335c7bb261b353407cff977110895fa0b4f7d8
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Checkout code
+      uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+    - name: Run website lint
+      run: make website-lint
+    - name: Run depscheck
+      run: make depscheck
+    - name: Run fmtcheck
+      run: make fmtcheck
+    - name: Run tests
+      run: make test
+    - name: Run test-compile
+      run: make test-compile
+    - name: Run tests-lint
+      run: make tests-lint
+    - name: Run make vet
+      run: make vet

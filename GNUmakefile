@@ -155,6 +155,34 @@ website-lint: tools
 	@echo "==> Checking for broken links..."
 	@scripts/markdown-link-check.sh "$(DOCKER)" "$(DOCKER_RUN_OPTS)" "$(DOCKER_VOLUME_OPTS)" "$(PROVIDER_DIR)"
 
+# Contains everything in the website-lint target except calling out to markdown-link-check
+# Which runs in github actions as a separate CI job on merges to the repo's default branch
+ci-website-lint: tools
+	@echo "==> Checking website against linters..."
+	@misspell -error -source=text ./website || (echo; \
+		echo "Unexpected mispelling found in website files."; \
+		echo "To automatically fix the misspelling, run 'make website-lint-fix' and commit the changes."; \
+		exit 1)
+	@echo "==> Running markdownlint-cli using DOCKER='$(DOCKER)', DOCKER_RUN_OPTS='$(DOCKER_RUN_OPTS)' and DOCKER_VOLUME_OPTS='$(DOCKER_VOLUME_OPTS)'"
+	@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(PROVIDER_DIR):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace 06kellyjac/markdownlint-cli ./website || (echo; \
+		echo "Unexpected issues found in website Markdown files."; \
+		echo "To apply any automatic fixes, run 'make website-lint-fix' and commit the changes."; \
+		exit 1)
+	@echo "==> Running terrafmt diff..."
+	@terrafmt diff ./website --check --pattern '*.markdown' --quiet || (echo; \
+		echo "Unexpected differences in website HCL formatting."; \
+		echo "To see the full differences, run: terrafmt diff ./website --pattern '*.markdown'"; \
+		echo "To automatically fix the formatting, run 'make website-lint-fix' and commit the changes."; \
+		exit 1)
+	@echo "==> Statically compiling provider for tfproviderdocs..."
+	@env CGO_ENABLED=0 GOOS=$$(go env GOOS) GOARCH=$$(go env GOARCH) go build -a -o $(TF_PROV_DOCS)/terraform-provider-kubernetes
+	@echo "==> Getting provider schema for tfproviderdocs..."
+		@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(TF_PROV_DOCS):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace hashicorp/terraform:0.12.29 init
+		@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(TF_PROV_DOCS):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace hashicorp/terraform:0.12.29 providers schema -json > $(TF_PROV_DOCS)/schema.json
+	@echo "==> Running tfproviderdocs..."
+	@tfproviderdocs check -providers-schema-json $(TF_PROV_DOCS)/schema.json -provider-name kubernetes
+	@rm -f $(TF_PROV_DOCS)/schema.json $(TF_PROV_DOCS)/terraform-provider-kubernetes
+
 website-lint-fix: tools
 	@echo "==> Applying automatic website linter fixes..."
 	@misspell -w -source=text ./website

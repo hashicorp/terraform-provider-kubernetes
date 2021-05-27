@@ -42,7 +42,7 @@ jobs:
       run: scripts/gogetcookie.sh
     - name: Run tests
       run: |
-        make ci-website-lint
+        make website-lint
         make depscheck
         make fmtcheck
         make test

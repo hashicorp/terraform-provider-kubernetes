@@ -49,4 +49,5 @@ The following arguments are supported:
 ## Attribute Reference
 
 * `data` - A map of the secret data.
+* `base64_data` - A map of the secret data with values encoded in base64 format.
 * `type` - The secret type. Defaults to `Opaque`. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/c7151dd8dd7e487e96e5ce34c6a416bb3b037609/contributors/design-proposals/auth/secrets.md#proposed-design)

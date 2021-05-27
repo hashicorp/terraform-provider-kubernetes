@@ -38,6 +38,13 @@ func resourceKubernetesSecret() *schema.Resource {
 				Sensitive:   true,
 				Description: "A map of the secret data in base64 encoding. Use this for binary data.",
 			},
+			"base64_data": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Computed:    true,
+				Sensitive:   true,
+				Description: "A map of the secret data with values in base64 encoding.",
+			},
 			"type": {
 				Type:        schema.TypeString,
 				Description: "Type of secret",
@@ -138,6 +145,7 @@ func resourceKubernetesSecretRead(ctx context.Context, d *schema.ResourceData, m
 		delete(secret.Data, k)
 	}
 	d.Set("data", flattenByteMapToStringMap(secret.Data))
+	d.Set("base64_data", flattenByteMapToBase64Map(secret.Data))
 	d.Set("type", secret.Type)
 	return nil
 }

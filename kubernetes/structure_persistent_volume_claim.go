@@ -4,7 +4,8 @@ import (
 	"errors"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Flatteners
@@ -38,8 +39,8 @@ func flattenResourceRequirements(in v1.ResourceRequirements) []interface{} {
 
 // Expanders
 
-func expandPersistentVolumeClaim(p map[string]interface{}) (*v1.PersistentVolumeClaim, error) {
-	pvc := &v1.PersistentVolumeClaim{}
+func expandPersistentVolumeClaim(p map[string]interface{}) (*corev1.PersistentVolumeClaim, error) {
+	pvc := &corev1.PersistentVolumeClaim{}
 	if len(p) == 0 {
 		return pvc, nil
 	}

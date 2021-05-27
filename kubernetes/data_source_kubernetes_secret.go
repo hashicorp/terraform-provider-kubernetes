@@ -20,10 +20,10 @@ func dataSourceKubernetesSecret() *schema.Resource {
 				Computed:    true,
 				Sensitive:   true,
 			},
-			"base64_data" : {
+			"binary_data" : {
 				Type: schema.TypeMap,
 				Description: "A map of the secret data with values encoded in base64 format",
-				Computed: true,
+				Optional: true,
 				Sensitive: true,
 			},
 			"type": {

@@ -49,4 +49,21 @@ The following arguments are supported:
 ## Attribute Reference
 
 * `data` - A map of the secret data.
+* `binary_data` - A map of the secret data with values encoded in base64 format.
+
+~> In case the secret has been created outside terraform in order to retrieve binary data from the secret in base64 format you need to define a `binary_data` map with data to retrieve as key and an empty string as a value
+
+```hcl
+data "kubernetes_secret" "example" {
+  metadata {
+    name      = "example-secret"
+    namespace = "kube-system"
+  }
+  binary_data = {
+    "keystore.p12" = ""
+    another_field  = ""
+  }
+}
+```
+
 * `type` - The secret type. Defaults to `Opaque`. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/c7151dd8dd7e487e96e5ce34c6a416bb3b037609/contributors/design-proposals/auth/secrets.md#proposed-design)

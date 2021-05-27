@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,6 +18,12 @@ func dataSourceKubernetesSecret() *schema.Resource {
 				Type:        schema.TypeMap,
 				Description: "A map of the secret data.",
 				Computed:    true,
+				Sensitive:   true,
+			},
+			"binary_data": {
+				Type:        schema.TypeMap,
+				Description: "A map of the secret data with values encoded in base64 format",
+				Optional:    true,
 				Sensitive:   true,
 			},
 			"type": {

@@ -32,6 +32,7 @@ func TestAccKubernetesDataSourceSecret_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.one", "first"),
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.two", "second"),
 					resource.TestCheckResourceAttr("kubernetes_secret.test", "type", "Opaque"),
+					resource.TestCheckResourceAttr("kubernetes_secret.test", "binary_data.raw", "UmF3IGRhdGEgc2hvdWxkIGNvbWUgYmFjayBhcyBpcyBpbiB0aGUgcG9k"),
 				),
 			},
 			{
@@ -52,6 +53,7 @@ func TestAccKubernetesDataSourceSecret_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "data.one", "first"),
 					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "data.two", "second"),
 					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "type", "Opaque"),
+					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "binary_data.raw", "UmF3IGRhdGEgc2hvdWxkIGNvbWUgYmFjayBhcyBpcyBpbiB0aGUgcG9k"),
 				),
 			},
 		},
@@ -79,6 +81,10 @@ func testAccKubernetesDataSourceSecretConfig_basic(name string) string {
     one = "first"
     two = "second"
   }
+
+  binary_data = {
+    raw = "${base64encode("Raw data should come back as is in the pod")}"
+  }
 }
 `, name)
 }
@@ -87,6 +93,10 @@ func testAccKubernetesDataSourceSecretConfig_read() string {
 	return fmt.Sprintf(`data "kubernetes_secret" "test" {
   metadata {
     name = "${kubernetes_secret.test.metadata.0.name}"
+  }
+
+  binary_data = {
+    raw = ""
   }
 }
 `)

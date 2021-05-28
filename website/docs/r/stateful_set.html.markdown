@@ -316,3 +316,11 @@ The following [Timeout](/docs/configuration/resources.html#operation-timeouts) c
 * `read`   - (Default `10 minutes`) Used for reading a StatefulSet
 * `update` - (Default `10 minutes`) Used for updating a StatefulSet
 * `delete` - (Default `10 minutes`) Used for destroying a StatefulSet
+
+## Import
+
+kubernetes_stateful_set can be imported using its namespace and name, e.g.
+
+```
+$ terraform import kubernetes_stateful_set.example default/terraform-example
+```

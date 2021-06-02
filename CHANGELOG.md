@@ -1,3 +1,22 @@
+## Unreleased
+
+BUG FIXES:
+* Add missing annotations ([#1289](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1289))
+
+
+IMPROVEMENTS:
+* Datasource: `kubernetes_secret`: add `binary_data` attribute ([#1285](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1285))
+* Add validations to `validating_webhook_configuration` ([#1279](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1279))
+* Add validations to `mutating_webhook_configuration` ([#1278](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1278))
+* Add validations to `storage_class` ([#1276](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1276))
+* Add validations to container PodSpec ([#1275](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1275))
+* Add validations to `service` ([#1273](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1273))
+* Update EKS example to use two applies ([#1260](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1260))
+* Resource `kubernetes_deployment`: allow changing strategy from `rolling` to `recreate` ([#1255](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1255))
+* Filter well known labels and annotations ([#1253](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1253))
+* Resource `kubernetes_resource_quota`: suppress diff for no-op changes ([#1251](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1251))
+* Resource `kubernetes_deployment`: allow removing volume mount ([#1246](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1246))
+
 ## 2.2.0 (May 12, 2021)
 
 IMPROVEMENTS:

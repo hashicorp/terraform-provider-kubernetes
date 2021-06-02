@@ -1,4 +1,4 @@
-## 2.3.0 (Unreleased)
+## 2.3.0 (June 02, 2021)
 
 BUG FIXES:
 * Add missing annotations ([#1289](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1289))

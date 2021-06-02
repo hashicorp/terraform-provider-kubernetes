@@ -6,81 +6,11 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	apps "k8s.io/api/apps/v1beta1"
-	cert "k8s.io/api/certificates/v1beta1"
 	api "k8s.io/api/core/v1"
-	discovery "k8s.io/api/discovery/v1beta1"
-	networking "k8s.io/api/networking/v1beta1"
-	rbac "k8s.io/api/rbac/v1beta1"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// https://kubernetes.io/docs/reference/labels-annotations-taints
-var builtInLabels = map[string]string{
-	//Core Api
-	api.LabelHostname:                            "",
-	api.LabelZoneFailureDomain:                   "",
-	api.LabelZoneRegion:                          "",
-	api.LabelZoneFailureDomainStable:             "",
-	api.LabelZoneRegionStable:                    "",
-	api.LabelInstanceType:                        "",
-	api.LabelInstanceTypeStable:                  "",
-	api.LabelOSStable:                            "",
-	api.LabelArchStable:                          "",
-	api.LabelWindowsBuild:                        "",
-	api.LabelNamespaceSuffixKubelet:              "",
-	api.LabelNamespaceSuffixNode:                 "",
-	api.LabelNamespaceNodeRestriction:            "",
-	api.IsHeadlessService:                        "",
-	api.BetaStorageClassAnnotation:               "",
-	api.MountOptionAnnotation:                    "",
-	api.ResourceDefaultNamespacePrefix:           "",
-	api.ServiceAccountNameKey:                    "",
-	api.ServiceAccountUIDKey:                     "",
-	api.PodPresetOptOutAnnotationKey:             "",
-	api.MirrorPodAnnotationKey:                   "",
-	api.TolerationsAnnotationKey:                 "",
-	api.TaintsAnnotationKey:                      "",
-	api.SeccompPodAnnotationKey:                  "",
-	api.SeccompContainerAnnotationKeyPrefix:      "",
-	api.AppArmorBetaContainerAnnotationKeyPrefix: "",
-	api.AppArmorBetaDefaultProfileAnnotationKey:  "",
-	api.AppArmorBetaAllowedProfilesAnnotationKey: "",
-	api.PreferAvoidPodsAnnotationKey:             "",
-	api.NonConvertibleAnnotationPrefix:           "",
-	api.AnnotationLoadBalancerSourceRangesKey:    "",
-	api.EndpointsLastChangeTriggerTime:           "",
-	api.MigratedPluginsAnnotationKey:             "",
-	api.TaintNodeNotReady:                        "",
-	api.TaintNodeUnreachable:                     "",
-	api.TaintNodeUnschedulable:                   "",
-	api.TaintNodeMemoryPressure:                  "",
-	api.TaintNodeDiskPressure:                    "",
-	api.TaintNodeNetworkUnavailable:              "",
-	api.TaintNodePIDPressure:                     "",
-
-	//Networking
-	networking.AnnotationIsDefaultIngressClass: "",
-
-	//Discovery
-	discovery.LabelServiceName: "",
-	discovery.LabelManagedBy:   "",
-	discovery.LabelSkipMirror:  "",
-
-	//Certificate
-	cert.KubeAPIServerClientSignerName:        "",
-	cert.KubeAPIServerClientKubeletSignerName: "",
-	cert.KubeletServingSignerName:             "",
-	cert.LegacyUnknownSignerName:              "",
-
-	//Apps
-	apps.StatefulSetPodNameLabel: "",
-
-	//RBAC
-	rbac.AutoUpdateAnnotationKey: "",
-}
 
 func idParts(id string) (string, string, error) {
 	parts := strings.Split(id, "/")
@@ -225,16 +155,10 @@ func isKeyInMap(key string, d map[string]interface{}) bool {
 	return false
 }
 
-func isInternalKey(annotationKey string) bool {
-	if _, ok := builtInLabels[annotationKey]; ok {
+func isInternalKey(key string) bool {
+	if _, ok := knownLabelsAnnotations[key]; ok {
 		return true
 	}
-
-	// Specific to DaemonSet annotations, generated & controlled by the server.
-	if strings.Contains(annotationKey, "deprecated.daemonset.template.generation") {
-		return true
-	}
-
 	return false
 }
 

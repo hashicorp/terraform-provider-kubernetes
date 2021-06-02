@@ -13,8 +13,9 @@ IMPROVEMENTS:
 * Add validations to `service` ([#1273](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1273))
 * Update EKS example to use two applies ([#1260](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1260))
 * Resource `kubernetes_deployment`: allow changing strategy from `rolling` to `recreate` ([#1255](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1255))
-* Resource `kubernetes_deployment`: allow removing volume mount ([#1246](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1246))
+* Filter well known labels and annotations ([#1253](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1253))
 * Resource `kubernetes_resource_quota`: suppress diff for no-op changes ([#1251](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1251))
+* Resource `kubernetes_deployment`: allow removing volume mount ([#1246](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1246))
 
 ## 2.2.0 (May 12, 2021)
 

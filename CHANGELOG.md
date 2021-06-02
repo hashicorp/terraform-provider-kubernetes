@@ -1,7 +1,8 @@
 ## Unreleased
 
 BUG FIXES:
-*
+* Add missing annotations ([#1289](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1289))
+
 
 IMPROVEMENTS:
 * Datasource: `kubernetes_secret`: add `binary_data` attribute ([#1285](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1285))

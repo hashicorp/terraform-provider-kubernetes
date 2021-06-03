@@ -15,10 +15,10 @@ import (
 var knownLabelsAnnotations = map[string]string{
 	// core
 	api.LabelHostname:                            "",
+	api.LabelTopologyZone:                        "",
+	api.LabelTopologyRegion:                      "",
 	api.LabelZoneFailureDomain:                   "",
 	api.LabelZoneRegion:                          "",
-	api.LabelZoneFailureDomainStable:             "",
-	api.LabelZoneRegionStable:                    "",
 	api.LabelInstanceType:                        "",
 	api.LabelInstanceTypeStable:                  "",
 	api.LabelOSStable:                            "",
@@ -54,6 +54,8 @@ var knownLabelsAnnotations = map[string]string{
 	api.TaintNodeDiskPressure:                    "",
 	api.TaintNodeNetworkUnavailable:              "",
 	api.TaintNodePIDPressure:                     "",
+	api.LabelMetadataName:                        "",
+	api.LabelNodeExcludeBalancers:                "",
 
 	// networking
 	networking.AnnotationIsDefaultIngressClass: "",

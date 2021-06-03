@@ -1,3 +1,8 @@
+## 2.3.1 (Unreleased)
+
+BUG FIXES:
+* `cluster_ip` for `kubernetes_service` should support value `None` (#1291)
+
 ## 2.3.0 (June 02, 2021)
 
 BUG FIXES:

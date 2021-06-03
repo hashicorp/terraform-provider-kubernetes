@@ -3,6 +3,8 @@
 BUG FIXES:
 * `cluster_ip` for `kubernetes_service` should support value `None` ([#1291](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1291))
 * Remove `self_link` from metadata ([#1294](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1294))
+* Add missing labels to fix "`kubernetes.io/metadata.name` always in plan" ([#1293](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1293))
+
 
 ## 2.3.0 (June 02, 2021)
 

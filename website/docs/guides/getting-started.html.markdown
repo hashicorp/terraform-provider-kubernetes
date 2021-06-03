@@ -241,7 +241,6 @@ Terraform will perform the following actions:
           + name             = "nginx"
           + namespace        = "nginx"
           + resource_version = (known after apply)
-          + self_link        = (known after apply)
           + uid              = (known after apply)
         }
 
@@ -275,7 +274,6 @@ Terraform will perform the following actions:
                     }
                   + name             = (known after apply)
                   + resource_version = (known after apply)
-                  + self_link        = (known after apply)
                   + uid              = (known after apply)
                 }
 
@@ -622,7 +620,6 @@ Terraform will perform the following actions:
           + generation       = (known after apply)
           + name             = "nginx"
           + resource_version = (known after apply)
-          + self_link        = (known after apply)
           + uid              = (known after apply)
         }
     }
@@ -638,7 +635,6 @@ Terraform will perform the following actions:
           + name             = "nginx"
           + namespace        = "nginx"
           + resource_version = (known after apply)
-          + self_link        = (known after apply)
           + uid              = (known after apply)
         }
 

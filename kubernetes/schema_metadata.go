@@ -40,11 +40,6 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 			Description: fmt.Sprintf("An opaque value that represents the internal version of this %s that can be used by clients to determine when %s has changed. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency", objectName, objectName),
 			Computed:    true,
 		},
-		"self_link": {
-			Type:        schema.TypeString,
-			Description: fmt.Sprintf("A URL representing this %s.", objectName),
-			Computed:    true,
-		},
 		"uid": {
 			Type:        schema.TypeString,
 			Description: fmt.Sprintf("The unique in time and space value for this %s. More info: http://kubernetes.io/docs/user-guide/identifiers#uids", objectName),

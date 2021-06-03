@@ -53,12 +53,15 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"cluster_ip": {
-						Type:         schema.TypeString,
-						Description:  "The IP address of the service. It is usually assigned randomly by the master. If an address is specified manually and is not in use by others, it will be allocated to the service; otherwise, creation of the service will fail. `None` can be specified for headless services when proxying is not required. Ignored if type is `ExternalName`. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",
-						Optional:     true,
-						ForceNew:     true,
-						Computed:     true,
-						ValidateFunc: validation.IsIPAddress,
+						Type:        schema.TypeString,
+						Description: "The IP address of the service. It is usually assigned randomly by the master. If an address is specified manually and is not in use by others, it will be allocated to the service; otherwise, creation of the service will fail. `None` can be specified for headless services when proxying is not required. Ignored if type is `ExternalName`. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",
+						Optional:    true,
+						ForceNew:    true,
+						Computed:    true,
+						ValidateFunc: validation.Any(
+							validation.StringInSlice([]string{api.ClusterIPNone}, false),
+							validation.IsIPAddress,
+						),
 					},
 					"external_ips": {
 						Type:        schema.TypeSet,

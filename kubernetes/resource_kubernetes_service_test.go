@@ -247,6 +247,28 @@ func TestAccKubernetesService_loadBalancer_healthcheck(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesService_headless(t *testing.T) {
+	var conf api.Service
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_service.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesServiceConfig_headless(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.cluster_ip", "None"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
@@ -1073,6 +1095,25 @@ func testAccKubernetesServiceConfig_loadBalancer_annotations_aws_modified(name s
     }
 
     type = "LoadBalancer"
+  }
+}
+`, name)
+}
+
+func testAccKubernetesServiceConfig_headless(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    cluster_ip = "None"
+    selector   = {
+      App = "MyApp"
+    }
+    port {
+      port        = 8888
+      target_port = 80
+    }
   }
 }
 `, name)

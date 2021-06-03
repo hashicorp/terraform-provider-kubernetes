@@ -1,4 +1,4 @@
-## 2.3.1 (Unreleased)
+## 2.3.1 (June 03, 2021)
 
 BUG FIXES:
 * `cluster_ip` for `kubernetes_service` should support value `None` ([#1291](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1291))

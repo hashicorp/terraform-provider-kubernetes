@@ -3,11 +3,15 @@ package kubernetes
 import (
 	"encoding/base64"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/core/v1"
+<<<<<<< HEAD
 
+=======
+>>>>>>> parent of e5b56a9f... Filter well known labels and annotations (#1253)
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -155,8 +159,15 @@ func isKeyInMap(key string, d map[string]interface{}) bool {
 	return false
 }
 
-func isInternalKey(key string) bool {
-	if _, ok := knownLabelsAnnotations[key]; ok {
+
+func isInternalKey(annotationKey string) bool {
+	u, err := url.Parse("//" + annotationKey)
+	if err == nil && strings.HasSuffix(u.Hostname(), "kubernetes.io") {
+		return true
+	}
+
+	// Specific to DaemonSet annotations, generated & controlled by the server.
+	if strings.Contains(annotationKey, "deprecated.daemonset.template.generation") {
 		return true
 	}
 	return false

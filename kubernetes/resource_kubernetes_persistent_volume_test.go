@@ -1265,10 +1265,6 @@ func testAccKubernetesPersistentVolumeConfig_aws_basic(name, region, zone string
   }
 }
 
-provider "aws" {
-  region = "%s"
-}
-
 resource "aws_ebs_volume" "test" {
   availability_zone = "%s"
   size              = 1
@@ -1315,10 +1311,6 @@ func testAccKubernetesPersistentVolumeConfig_aws_modified(name, region, zone str
   }
 }
 
-provider "aws" {
-  region = "%s"
-}
-
 resource "aws_ebs_volume" "test" {
   availability_zone = "%s"
   size              = 10
@@ -1331,10 +1323,7 @@ resource "aws_ebs_volume" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_azure_managedDisk(name, location string) string {
-	return fmt.Sprintf(`provider "azurerm" {
-  features {}
-}
-resource "azurerm_resource_group" "test" {
+	return fmt.Sprintf(`resource "azurerm_resource_group" "test" {
   name     = %[1]q
   location = %[2]q
   tags = {
@@ -1396,10 +1385,7 @@ func testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeKind(name, da
 }
 
 func testAccKubernetesPersistentVolumeConfig_azure_blobStorage(name, location string) string {
-	return fmt.Sprintf(`provider "azurerm" {
-  features {}
-}
-resource "azurerm_resource_group" "test" {
+	return fmt.Sprintf(`resource "azurerm_resource_group" "test" {
   name     = "%s"
   location = "%s"
   tags = {
@@ -1487,10 +1473,7 @@ resource "kubernetes_persistent_volume" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_azure_file(name, location string) string {
-	return fmt.Sprintf(`provider "azurerm" {
-  features {}
-}
-resource "azurerm_resource_group" "test" {
+	return fmt.Sprintf(`resource "azurerm_resource_group" "test" {
   name     = "%s"
   location = "%s"
   tags = {

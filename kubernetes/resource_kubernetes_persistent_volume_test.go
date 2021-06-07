@@ -1234,6 +1234,7 @@ resource "google_compute_disk" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_aws_basic(name, region, zone string) string {
+	//lintignore:AT004
 	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     annotations = {
@@ -1281,6 +1282,7 @@ resource "aws_ebs_volume" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_aws_modified(name, region, zone string) string {
+	//lintignore:AT004
 	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {
     annotations = {
@@ -1331,6 +1333,7 @@ resource "aws_ebs_volume" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_azure_managedDisk(name, location string) string {
+	//lintignore:AT004
 	return fmt.Sprintf(`provider "azurerm" {
   features {}
 }
@@ -1396,6 +1399,7 @@ func testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeKind(name, da
 }
 
 func testAccKubernetesPersistentVolumeConfig_azure_blobStorage(name, location string) string {
+	//lintignore:AT004
 	return fmt.Sprintf(`provider "azurerm" {
   features {}
 }
@@ -1487,6 +1491,7 @@ resource "kubernetes_persistent_volume" "test" {
 }
 
 func testAccKubernetesPersistentVolumeConfig_azure_file(name, location string) string {
+	//lintignore:AT004
 	return fmt.Sprintf(`provider "azurerm" {
   features {}
 }

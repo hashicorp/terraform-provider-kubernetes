@@ -16,6 +16,15 @@ jobs:
       with:
         config-file: '.github/workflows/markdown.links.config.json'
         folder-path: 'website/'
+  tfproviderlint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+    - name: Run tfproviderlint
+      uses: bflad/tfproviderlint-github-action@3d16e28385eb2783700821cdf1b70f9f318bed3d
+      with:
+        args: ./...
   test:
     env:
       GO111MODULE: on

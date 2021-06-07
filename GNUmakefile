@@ -96,7 +96,6 @@ test-update: fmtcheck vet
 
 tools:
 	go install github.com/client9/misspell/cmd/misspell@v0.3.4
-	go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@v0.26.0
 	go install github.com/bflad/tfproviderdocs@v0.9.1
 	go install github.com/katbyte/terrafmt@v0.3.0
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.39.0

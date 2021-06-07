@@ -1,8 +1,8 @@
 variable "kubernetes_version" {
-  default = "1.18"
+  default = "1.21.1"
 }
 
-variable "workers_count" {
+variable "node_count" {
   default = "3"
 }
 
@@ -11,5 +11,5 @@ variable "cluster_name" {
 }
 
 variable "location" {
-  type = string
+  default = "westus2"
 }

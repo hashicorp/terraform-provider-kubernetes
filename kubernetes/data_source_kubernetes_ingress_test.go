@@ -9,7 +9,7 @@ import (
 )
 
 func TestAccKubernetesDataSourceIngress_basic(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -61,7 +61,7 @@ func TestAccKubernetesDataSourceIngress_basic(t *testing.T) {
 }
 
 func TestAccKubernetesDataSourceIngress_regression(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInEks(t) },

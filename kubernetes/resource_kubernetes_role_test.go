@@ -15,7 +15,7 @@ import (
 
 func TestAccKubernetesRole_basic(t *testing.T) {
 	var conf api.Role
-	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -109,7 +109,7 @@ func TestAccKubernetesRole_generatedName(t *testing.T) {
 
 func TestAccKubernetesRole_Bug(t *testing.T) {
 	var conf api.Role
-	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandString(8))
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,

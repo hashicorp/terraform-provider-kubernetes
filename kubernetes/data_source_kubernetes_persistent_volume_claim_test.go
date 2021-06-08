@@ -9,7 +9,7 @@ import (
 )
 
 func TestAccKubernetesDataSourcePVC_basic(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },

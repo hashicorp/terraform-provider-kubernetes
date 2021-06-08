@@ -15,7 +15,7 @@ import (
 
 func TestAccKubernetesDaemonSet_minimal(t *testing.T) {
 	var conf appsv1.DaemonSet
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
@@ -38,7 +38,7 @@ func TestAccKubernetesDaemonSet_minimal(t *testing.T) {
 
 func TestAccKubernetesDaemonSet_basic(t *testing.T) {
 	var conf appsv1.DaemonSet
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	resourceName := "kubernetes_daemonset.test"
 	imageName := nginxImageVersion
 	imageName1 := nginxImageVersion1
@@ -119,7 +119,7 @@ func TestAccKubernetesDaemonSet_basic(t *testing.T) {
 func TestAccKubernetesDaemonSet_with_template_metadata(t *testing.T) {
 	var conf appsv1.DaemonSet
 
-	depName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	depName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
@@ -157,7 +157,7 @@ func TestAccKubernetesDaemonSet_with_template_metadata(t *testing.T) {
 
 func TestAccKubernetesDaemonSet_initContainer(t *testing.T) {
 	var conf appsv1.DaemonSet
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
@@ -177,7 +177,7 @@ func TestAccKubernetesDaemonSet_initContainer(t *testing.T) {
 }
 func TestAccKubernetesDaemonSet_noTopLevelLabels(t *testing.T) {
 	var conf appsv1.DaemonSet
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -198,7 +198,7 @@ func TestAccKubernetesDaemonSet_noTopLevelLabels(t *testing.T) {
 func TestAccKubernetesDaemonSet_with_tolerations(t *testing.T) {
 	var conf api.DaemonSet
 
-	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := "redis:5.0.2"
 	tolerationSeconds := 6000
 	operator := "Equal"
@@ -226,7 +226,7 @@ func TestAccKubernetesDaemonSet_with_tolerations(t *testing.T) {
 func TestAccKubernetesDaemonSet_with_tolerations_unset_toleration_seconds(t *testing.T) {
 	var conf api.DaemonSet
 
-	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := "redis:5.0.2"
 	operator := "Equal"
 	value := "value"
@@ -253,7 +253,7 @@ func TestAccKubernetesDaemonSet_with_tolerations_unset_toleration_seconds(t *tes
 
 func TestAccKubernetesDaemonSet_regression(t *testing.T) {
 	var conf1, conf2 appsv1.DaemonSet
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{

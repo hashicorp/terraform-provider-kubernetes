@@ -11,7 +11,7 @@ import (
 // TestAccKubernetesDataSourceConfigMap_basic tests that the data source is able to read
 // plaintext data, binary data, annotation, label, and name of the config map resource.
 func TestAccKubernetesDataSourceConfigMap_basic(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },

@@ -15,7 +15,7 @@ import (
 
 func TestAccKubernetesJob_wait_for_completion(t *testing.T) {
 	var conf api.Job
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -52,7 +52,7 @@ func testAccCheckJobWaited(minDuration time.Duration) func(*terraform.State) err
 
 func TestAccKubernetesJob_basic(t *testing.T) {
 	var conf api.Job
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := alpineImageVersion
 
 	resource.Test(t, resource.TestCase{
@@ -105,7 +105,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 
 func TestAccKubernetesJob_update(t *testing.T) {
 	var conf1, conf2, conf3 api.Job
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := alpineImageVersion
 	imageName1 := busyboxImageVersion
 
@@ -184,7 +184,7 @@ func TestAccKubernetesJob_update(t *testing.T) {
 // FIXME uncomment this check when the TTLSecondsAfterFinished feature gate defaults to true
 //func TestAccKubernetesJob_ttl_seconds_after_finished(t *testing.T) {
 //	var conf api.Job
-//	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+//	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 //
 //	resource.Test(t, resource.TestCase{
 //		PreCheck:      func() { testAccPreCheck(t) },

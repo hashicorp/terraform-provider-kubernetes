@@ -14,7 +14,7 @@ import (
 
 func TestAccKubernetesIngress_basic(t *testing.T) {
 	var conf api.Ingress
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -64,7 +64,7 @@ func TestAccKubernetesIngress_basic(t *testing.T) {
 
 func TestAccKubernetesIngress_TLS(t *testing.T) {
 	var conf api.Ingress
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -106,7 +106,7 @@ func TestAccKubernetesIngress_TLS(t *testing.T) {
 
 func TestAccKubernetesIngress_InternalKey(t *testing.T) {
 	var conf api.Ingress
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -146,7 +146,7 @@ func TestAccKubernetesIngress_InternalKey(t *testing.T) {
 
 func TestAccKubernetesIngress_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 	var conf api.Ingress
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
@@ -166,7 +166,7 @@ func TestAccKubernetesIngress_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 
 func TestAccKubernetesIngress_stateUpgradeV0_loadBalancerIngress(t *testing.T) {
 	var conf1, conf2 api.Ingress
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInEks(t) },

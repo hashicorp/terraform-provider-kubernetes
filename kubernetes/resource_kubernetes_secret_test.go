@@ -16,7 +16,7 @@ import (
 
 func TestAccKubernetesSecret_basic(t *testing.T) {
 	var conf api.Secret
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	resourceName := "kubernetes_secret.test"
 
 	resource.Test(t, resource.TestCase{

@@ -9,7 +9,7 @@ import (
 )
 
 func TestAccKubernetesDataSourceStorageClass_minikube(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
@@ -69,7 +69,7 @@ func TestAccKubernetesDataSourceStorageClass_minikube(t *testing.T) {
 }
 
 func TestAccKubernetesDataSourceStorageClass_gke(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },

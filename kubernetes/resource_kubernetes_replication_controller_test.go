@@ -14,7 +14,7 @@ import (
 )
 
 func TestAccKubernetesReplicationController_minimal(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := busyboxImageVersion
 
 	resource.Test(t, resource.TestCase{
@@ -40,7 +40,7 @@ func TestAccKubernetesReplicationController_minimal(t *testing.T) {
 
 func TestAccKubernetesReplicationController_basic(t *testing.T) {
 	var conf api.ReplicationController
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
@@ -105,7 +105,7 @@ func TestAccKubernetesReplicationController_basic(t *testing.T) {
 
 func TestAccKubernetesReplicationController_initContainer(t *testing.T) {
 	var conf1, conf2 api.ReplicationController
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -152,7 +152,7 @@ func TestAccKubernetesReplicationController_initContainer(t *testing.T) {
 
 func TestAccKubernetesReplicationController_regression(t *testing.T) {
 	var conf1, conf2 api.ReplicationController
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := busyboxImageVersion
 
 	resource.Test(t, resource.TestCase{
@@ -217,7 +217,7 @@ func TestAccKubernetesReplicationController_generatedName(t *testing.T) {
 func TestAccKubernetesReplicationController_with_security_context(t *testing.T) {
 	var conf api.ReplicationController
 
-	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
@@ -243,7 +243,7 @@ func TestAccKubernetesReplicationController_with_security_context(t *testing.T) 
 func TestAccKubernetesReplicationController_with_security_context_run_as_group(t *testing.T) {
 	var conf api.ReplicationController
 
-	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
@@ -270,7 +270,7 @@ func TestAccKubernetesReplicationController_with_security_context_run_as_group(t
 func TestAccKubernetesReplicationController_with_container_liveness_probe_using_exec(t *testing.T) {
 	var conf api.ReplicationController
 
-	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := "gcr.io/google_containers/busybox"
 
 	resource.Test(t, resource.TestCase{
@@ -299,7 +299,7 @@ func TestAccKubernetesReplicationController_with_container_liveness_probe_using_
 func TestAccKubernetesReplicationController_with_container_liveness_probe_using_http_get(t *testing.T) {
 	var conf api.ReplicationController
 
-	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := "gcr.io/google_containers/liveness"
 
 	resource.Test(t, resource.TestCase{
@@ -329,7 +329,7 @@ func TestAccKubernetesReplicationController_with_container_liveness_probe_using_
 func TestAccKubernetesReplicationController_with_container_liveness_probe_using_tcp(t *testing.T) {
 	var conf api.ReplicationController
 
-	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := "gcr.io/google_containers/liveness"
 
 	resource.Test(t, resource.TestCase{
@@ -354,7 +354,7 @@ func TestAccKubernetesReplicationController_with_container_liveness_probe_using_
 func TestAccKubernetesReplicationController_with_container_lifecycle(t *testing.T) {
 	var conf api.ReplicationController
 
-	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := "gcr.io/google_containers/liveness"
 
 	resource.Test(t, resource.TestCase{
@@ -385,7 +385,7 @@ func TestAccKubernetesReplicationController_with_container_lifecycle(t *testing.
 func TestAccKubernetesReplicationController_with_container_security_context(t *testing.T) {
 	var conf api.ReplicationController
 
-	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
@@ -407,8 +407,8 @@ func TestAccKubernetesReplicationController_with_container_security_context(t *t
 func TestAccKubernetesReplicationController_with_volume_mount(t *testing.T) {
 	var conf api.ReplicationController
 
-	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
+	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	imageName := nginxImageVersion
 
@@ -436,7 +436,7 @@ func TestAccKubernetesReplicationController_with_volume_mount(t *testing.T) {
 func TestAccKubernetesReplicationController_with_resource_requirements(t *testing.T) {
 	var conf api.ReplicationController
 
-	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 
 	imageName := nginxImageVersion
 
@@ -463,7 +463,7 @@ func TestAccKubernetesReplicationController_with_resource_requirements(t *testin
 func TestAccKubernetesReplicationController_with_empty_dir_volume(t *testing.T) {
 	var conf api.ReplicationController
 
-	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{

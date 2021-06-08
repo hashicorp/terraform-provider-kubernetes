@@ -488,7 +488,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 							"path": {
 								Type:         schema.TypeString,
 								Optional:     true,
-								ValidateFunc: validateAttributeValueDoesNotContain(".."),
+								ValidateFunc: validation.StringNotInSlice([]string{".."}, true),
 								Description:  `The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.`,
 							},
 						},
@@ -526,7 +526,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 					Type:         schema.TypeString,
 					Description:  "Target directory name. Must not contain or start with '..'. If '.' is supplied, the volume directory will be the git repository. Otherwise, if specified, the volume will contain the git repository in the subdirectory with the given name.",
 					Optional:     true,
-					ValidateFunc: validateAttributeValueDoesNotContain(".."),
+					ValidateFunc: validation.StringNotInSlice([]string{".."}, true),
 				},
 				"repository": {
 					Type:        schema.TypeString,
@@ -591,7 +591,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 							"path": {
 								Type:         schema.TypeString,
 								Required:     true,
-								ValidateFunc: validateAttributeValueDoesNotContain(".."),
+								ValidateFunc: validation.StringNotInSlice([]string{".."}, true),
 								Description:  `Path is the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'`,
 							},
 							"resource_field_ref": {
@@ -640,7 +640,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 					Optional:     true,
 					Default:      "",
 					ForceNew:     !isUpdatable,
-					ValidateFunc: validateAttributeValueIsIn([]string{"", "Memory"}),
+					ValidateFunc: validation.StringInSlice([]string{"", "Memory"}, false),
 				},
 				"size_limit": {
 					Type:             schema.TypeString,
@@ -710,7 +710,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 							"path": {
 								Type:         schema.TypeString,
 								Optional:     true,
-								ValidateFunc: validateAttributeValueDoesNotContain(".."),
+								ValidateFunc: validation.StringNotInSlice([]string{".."}, true),
 								Description:  "The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.",
 							},
 						},
@@ -787,7 +787,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 													"path": {
 														Type:         schema.TypeString,
 														Optional:     true,
-														ValidateFunc: validateAttributeValueDoesNotContain(".."),
+														ValidateFunc: validation.StringNotInSlice([]string{".."}, true),
 														Description:  "The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.",
 													},
 												},
@@ -833,7 +833,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 													"path": {
 														Type:         schema.TypeString,
 														Optional:     true,
-														ValidateFunc: validateAttributeValueDoesNotContain(".."),
+														ValidateFunc: validation.StringNotInSlice([]string{".."}, true),
 														Description:  "The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.",
 													},
 												},
@@ -891,7 +891,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 													"path": {
 														Type:         schema.TypeString,
 														Required:     true,
-														ValidateFunc: validateAttributeValueDoesNotContain(".."),
+														ValidateFunc: validation.StringNotInSlice([]string{".."}, true),
 														Description:  "Path is the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'",
 													},
 													"resource_field_ref": {

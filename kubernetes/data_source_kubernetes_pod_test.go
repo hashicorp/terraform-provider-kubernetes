@@ -9,7 +9,7 @@ import (
 )
 
 func TestAccKubernetesDataSourcePod_basic(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := "hashicorp/http-echo:latest"
 
 	resource.Test(t, resource.TestCase{

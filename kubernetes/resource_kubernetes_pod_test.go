@@ -592,10 +592,10 @@ func TestAccKubernetesPod_with_cfg_map_volume_mount(t *testing.T) {
 func TestAccKubernetesPod_with_projected_volume(t *testing.T) {
 	var conf api.Pod
 
-	cfgMapName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	cfgMap2Name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	cfgMapName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
+	cfgMap2Name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
+	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := busyboxImageVersion
 	resourceName := "kubernetes_pod.test"
 
@@ -918,7 +918,7 @@ func TestAccKubernetesPod_config_container_startup_probe(t *testing.T) {
 func TestAccKubernetesPod_termination_message_policy_default(t *testing.T) {
 	var confPod api.Pod
 
-	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
@@ -949,7 +949,7 @@ func TestAccKubernetesPod_termination_message_policy_default(t *testing.T) {
 func TestAccKubernetesPod_termination_message_policy_override_as_file(t *testing.T) {
 	var confPod api.Pod
 
-	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
@@ -980,7 +980,7 @@ func TestAccKubernetesPod_termination_message_policy_override_as_file(t *testing
 func TestAccKubernetesPod_termination_message_policy_override_as_fallback_to_logs_on_err(t *testing.T) {
 	var confPod api.Pod
 
-	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 

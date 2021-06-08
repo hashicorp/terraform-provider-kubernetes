@@ -16,7 +16,7 @@ import (
 
 func TestAccKubernetesConfigMap_basic(t *testing.T) {
 	var conf api.ConfigMap
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	resourceName := "kubernetes_config_map.test"
 
 	resource.Test(t, resource.TestCase{
@@ -118,7 +118,7 @@ func TestAccKubernetesConfigMap_basic(t *testing.T) {
 
 func TestAccKubernetesConfigMap_delete_regression(t *testing.T) {
 	var conf api.ConfigMap
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	resourceName := "kubernetes_config_map.test"
 
 	// NOTE this test is to assert that if the resource is deleted

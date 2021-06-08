@@ -11,7 +11,7 @@ import (
 
 func TestAccKubernetesPod_with_node_affinity_with_required_during_scheduling_ignored_during_execution(t *testing.T) {
 	var conf api.Pod
-	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 	keyName := "spec.0.affinity.0.node_affinity.0.required_during_scheduling_ignored_during_execution"
 
@@ -44,7 +44,7 @@ func TestAccKubernetesPod_with_node_affinity_with_required_during_scheduling_ign
 
 func TestAccKubernetesPod_with_node_affinity_with_preferred_during_scheduling_ignored_during_execution(t *testing.T) {
 	var conf api.Pod
-	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 	keyName := "spec.0.affinity.0.node_affinity.0.preferred_during_scheduling_ignored_during_execution"
 
@@ -81,7 +81,7 @@ func TestAccKubernetesPod_with_node_affinity_with_preferred_during_scheduling_ig
 
 func TestAccKubernetesPod_with_pod_affinity_with_required_during_scheduling_ignored_during_execution(t *testing.T) {
 	var conf api.Pod
-	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 	keyName := "spec.0.affinity.0.pod_affinity.0.required_during_scheduling_ignored_during_execution"
 
@@ -115,7 +115,7 @@ func TestAccKubernetesPod_with_pod_affinity_with_required_during_scheduling_igno
 
 func TestAccKubernetesPod_with_pod_affinity_with_preferred_during_scheduling_ignored_during_execution(t *testing.T) {
 	var conf api.Pod
-	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 	keyName := "spec.0.affinity.0.pod_affinity.0.preferred_during_scheduling_ignored_during_execution"
 
@@ -152,7 +152,7 @@ func TestAccKubernetesPod_with_pod_affinity_with_preferred_during_scheduling_ign
 
 func TestAccKubernetesPod_with_pod_anti_affinity_with_required_during_scheduling_ignored_during_execution(t *testing.T) {
 	var conf api.Pod
-	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 	keyName := "spec.0.affinity.0.pod_anti_affinity.0.required_during_scheduling_ignored_during_execution"
 
@@ -186,7 +186,7 @@ func TestAccKubernetesPod_with_pod_anti_affinity_with_required_during_scheduling
 
 func TestAccKubernetesPod_with_pod_anti_affinity_with_preferred_during_scheduling_ignored_during_execution(t *testing.T) {
 	var conf api.Pod
-	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	imageName := nginxImageVersion
 	keyName := "spec.0.affinity.0.pod_anti_affinity.0.preferred_during_scheduling_ignored_during_execution"
 

@@ -16,7 +16,7 @@ import (
 
 func TestAccKubernetesStorageClass_minikube(t *testing.T) {
 	var conf api.StorageClass
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	resourceName := "kubernetes_storage_class.test"
 
 	resource.Test(t, resource.TestCase{
@@ -86,7 +86,7 @@ func TestAccKubernetesStorageClass_minikube(t *testing.T) {
 
 func TestAccKubernetesStorageClass_basic(t *testing.T) {
 	var conf api.StorageClass
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	resourceName := "kubernetes_storage_class.test"
 
 	resource.Test(t, resource.TestCase{
@@ -183,7 +183,7 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 
 func TestAccKubernetesStorageClass_allowedTopologies_minikube(t *testing.T) {
 	var conf api.StorageClass
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
 	resourceName := "kubernetes_storage_class.test"
 
 	resource.Test(t, resource.TestCase{

@@ -18,7 +18,7 @@ import (
 
 func TestAccKubernetesPersistentVolume_minimal(t *testing.T) {
 	var conf api.PersistentVolume
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	randString := acctest.RandString(8)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 
 	const resourceName = "kubernetes_persistent_volume.test"
@@ -40,7 +40,7 @@ func TestAccKubernetesPersistentVolume_minimal(t *testing.T) {
 
 func TestAccKubernetesPersistentVolume_azure_basic(t *testing.T) {
 	var conf api.PersistentVolume
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	randString := acctest.RandString(8)
 	name := fmt.Sprintf("tfacctest%s", randString)
 	location := os.Getenv("TF_VAR_location")
 	subscriptionID := os.Getenv("ARM_SUBSCRIPTION_ID")
@@ -69,7 +69,7 @@ func TestAccKubernetesPersistentVolume_azure_basic(t *testing.T) {
 }
 
 func TestAccKubernetesPersistentVolume_azure_ManagedDiskExpectErrors(t *testing.T) {
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	randString := acctest.RandString(8)
 	name := fmt.Sprintf("tfacctest%s", randString)
 	location := os.Getenv("TF_VAR_location")
 	subscriptionID := os.Getenv("ARM_SUBSCRIPTION_ID")
@@ -103,7 +103,7 @@ func TestAccKubernetesPersistentVolume_azure_ManagedDiskExpectErrors(t *testing.
 
 func TestAccKubernetesPersistentVolume_azure_blobStorageDisk(t *testing.T) {
 	var conf1, conf2 api.PersistentVolume
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	randString := acctest.RandString(8)
 	// name must not contain dashes, due to the Azure API requirements for storage accounts.
 	name := fmt.Sprintf("tfacctest%s", randString)
 	location := os.Getenv("TF_VAR_location")
@@ -160,9 +160,9 @@ func TestAccKubernetesPersistentVolume_azure_blobStorageDisk(t *testing.T) {
 func TestAccKubernetesPersistentVolume_azure_file(t *testing.T) {
 	var conf1, conf2 api.PersistentVolume
 	// name must not contain dashes, due to the Azure API requirements for storage accounts.
-	name := fmt.Sprintf("tfacctest%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	namespace := fmt.Sprintf("tfacctest%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	secretName := fmt.Sprintf("tfacctest%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := fmt.Sprintf("tfacctest%s", acctest.RandString(8))
+	namespace := fmt.Sprintf("tfacctest%s", acctest.RandString(8))
+	secretName := fmt.Sprintf("tfacctest%s", acctest.RandString(8))
 	location := os.Getenv("TF_VAR_location")
 
 	resource.Test(t, resource.TestCase{
@@ -202,7 +202,7 @@ func TestAccKubernetesPersistentVolume_azure_file(t *testing.T) {
 
 func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 	var conf api.PersistentVolume
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	randString := acctest.RandString(8)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 	diskName := fmt.Sprintf("tf-acc-test-disk-%s", randString)
 
@@ -286,7 +286,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 
 func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 	var conf api.PersistentVolume
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	randString := acctest.RandString(8)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 
 	zone := os.Getenv("AWS_ZONE")
@@ -365,7 +365,7 @@ func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 
 func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
 	var conf api.PersistentVolume
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	randString := acctest.RandString(8)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 	diskName := fmt.Sprintf("tf-acc-test-disk-%s", randString)
 	zone := os.Getenv("GOOGLE_ZONE")
@@ -428,7 +428,7 @@ func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
 
 func TestAccKubernetesPersistentVolume_hostPath_volumeSource(t *testing.T) {
 	var conf api.PersistentVolume
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	randString := acctest.RandString(8)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 
 	resource.Test(t, resource.TestCase{
@@ -488,7 +488,7 @@ func TestAccKubernetesPersistentVolume_hostPath_volumeSource(t *testing.T) {
 
 func TestAccKubernetesPersistentVolume_local_volumeSource(t *testing.T) {
 	var conf1, conf2 api.PersistentVolume
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	randString := acctest.RandString(8)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 
 	resource.Test(t, resource.TestCase{
@@ -538,7 +538,7 @@ func TestAccKubernetesPersistentVolume_local_volumeSource(t *testing.T) {
 
 func TestAccKubernetesPersistentVolume_cephFsSecretRef(t *testing.T) {
 	var conf api.PersistentVolume
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	randString := acctest.RandString(8)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 
 	resource.Test(t, resource.TestCase{
@@ -576,7 +576,7 @@ func TestAccKubernetesPersistentVolume_cephFsSecretRef(t *testing.T) {
 
 func TestAccKubernetesPersistentVolume_storageClass(t *testing.T) {
 	var conf api.PersistentVolume
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	randString := acctest.RandString(8)
 
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 	storageClassName := fmt.Sprintf("tf-acc-test-sc-%s", randString)
@@ -634,7 +634,7 @@ func TestAccKubernetesPersistentVolume_storageClass(t *testing.T) {
 
 func TestAccKubernetesPersistentVolume_hostPath_nodeAffinity(t *testing.T) {
 	var conf api.PersistentVolume
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	randString := acctest.RandString(8)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 	keyName := "spec.0.node_affinity.0.required.0.node_selector_term.0.match_expressions"
 
@@ -699,7 +699,7 @@ func TestAccKubernetesPersistentVolume_hostPath_nodeAffinity(t *testing.T) {
 
 func TestAccKubernetesPersistentVolume_hostPath_mountOptions(t *testing.T) {
 	var conf api.PersistentVolume
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	randString := acctest.RandString(8)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 
 	resource.Test(t, resource.TestCase{
@@ -874,7 +874,7 @@ func TestAccKubernetesPersistentVolume_volumeMode(t *testing.T) {
 
 func TestAccKubernetesPersistentVolume_regression(t *testing.T) {
 	var conf1, conf2 api.PersistentVolume
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	randString := acctest.RandString(8)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 
 	resource.Test(t, resource.TestCase{
@@ -932,7 +932,7 @@ func TestAccKubernetesPersistentVolume_regression(t *testing.T) {
 func TestAccKubernetesPersistentVolume_hostpath_claimRef(t *testing.T) {
 	var conf1, conf2 api.PersistentVolume
 	var conf3 api.PersistentVolumeClaim
-	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	randString := acctest.RandString(8)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 
 	const resourceName = "kubernetes_persistent_volume.test"

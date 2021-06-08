@@ -46,6 +46,7 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 				Schema: map[string]*schema.Schema{
 					"limits": {
 						Type:             schema.TypeMap,
+						Elem: &schema.Schema{Type: schema.TypeString},
 						Description:      "Map describing the maximum amount of compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
 						Optional:         true,
 						ForceNew:         true,

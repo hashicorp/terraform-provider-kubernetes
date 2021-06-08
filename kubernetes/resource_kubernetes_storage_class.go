@@ -185,6 +185,7 @@ func resourceKubernetesStorageClassRead(ctx context.Context, d *schema.ResourceD
 
 	sc := flattenStorageClass(*storageClass)
 	for k, v := range sc {
+		//lintignore:R001
 		err = d.Set(k, v)
 		if err != nil {
 			diags = append(diags, diag.FromErr(err)[0])

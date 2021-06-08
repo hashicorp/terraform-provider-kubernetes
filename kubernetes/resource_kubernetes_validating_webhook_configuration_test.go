@@ -21,7 +21,6 @@ func TestAccKubernetesValidatingWebhookConfiguration_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotAdmissionRegistrationV1(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesValdiatingWebhookConfigurationDestroy,
 		Steps: []resource.TestStep{
@@ -121,7 +120,6 @@ func TestAccKubernetesValidatingWebhookConfiguration_regressionV1(t *testing.T) 
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotAdmissionRegistrationV1(t) },
-		IDRefreshName:     resourceName,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesValdiatingWebhookConfigurationDestroy,
 		Steps: []resource.TestStep{
@@ -211,7 +209,6 @@ func TestAccKubernetesValidatingWebhookConfiguration_regressionV1Beta1(t *testin
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotAdmissionRegistrationV1Beta1(t) },
-		IDRefreshName:     resourceName,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesValdiatingWebhookConfigurationDestroy,
 		Steps: []resource.TestStep{

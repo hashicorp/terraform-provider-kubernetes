@@ -24,7 +24,6 @@ func TestAccKubernetesPersistentVolume_minimal(t *testing.T) {
 	const resourceName = "kubernetes_persistent_volume.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
@@ -49,7 +48,6 @@ func TestAccKubernetesPersistentVolume_azure_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
@@ -114,7 +112,6 @@ func TestAccKubernetesPersistentVolume_azure_blobStorageDisk(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
@@ -170,7 +167,6 @@ func TestAccKubernetesPersistentVolume_azure_file(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
@@ -215,7 +211,6 @@ func TestAccKubernetesPersistentVolume_googleCloud_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
@@ -299,7 +294,6 @@ func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInEks(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
@@ -378,7 +372,6 @@ func TestAccKubernetesPersistentVolume_googleCloud_volumeSource(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
@@ -440,7 +433,6 @@ func TestAccKubernetesPersistentVolume_hostPath_volumeSource(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
@@ -501,7 +493,6 @@ func TestAccKubernetesPersistentVolume_local_volumeSource(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
@@ -552,7 +543,6 @@ func TestAccKubernetesPersistentVolume_cephFsSecretRef(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
@@ -596,7 +586,6 @@ func TestAccKubernetesPersistentVolume_storageClass(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
@@ -651,7 +640,6 @@ func TestAccKubernetesPersistentVolume_hostPath_nodeAffinity(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
@@ -716,7 +704,6 @@ func TestAccKubernetesPersistentVolume_hostPath_mountOptions(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
@@ -737,7 +724,6 @@ func TestAccKubernetesPersistentVolume_csi_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
@@ -809,7 +795,6 @@ func TestAccKubernetesPersistentVolume_csi_secrets(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
@@ -857,7 +842,6 @@ func TestAccKubernetesPersistentVolume_volumeMode(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
@@ -895,7 +879,6 @@ func TestAccKubernetesPersistentVolume_regression(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_persistent_volume.test",
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{
@@ -955,7 +938,6 @@ func TestAccKubernetesPersistentVolume_hostpath_claimRef(t *testing.T) {
 	const resourceName = "kubernetes_persistent_volume.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
 		Steps: []resource.TestStep{

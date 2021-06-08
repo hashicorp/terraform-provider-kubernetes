@@ -21,7 +21,6 @@ func TestAccKubernetesConfigMap_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesConfigMapDestroy,
 		Steps: []resource.TestStep{
@@ -126,7 +125,6 @@ func TestAccKubernetesConfigMap_delete_regression(t *testing.T) {
 	// outside of terraform then we should get a plan with a diff
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -155,7 +153,6 @@ func TestAccKubernetesConfigMap_binaryData(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesConfigMapDestroy,
 		Steps: []resource.TestStep{
@@ -189,7 +186,6 @@ func TestAccKubernetesConfigMap_generatedName(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesConfigMapDestroy,
 		Steps: []resource.TestStep{

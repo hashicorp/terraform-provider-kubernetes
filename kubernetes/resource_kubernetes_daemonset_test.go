@@ -20,8 +20,6 @@ func TestAccKubernetesDaemonSet_minimal(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_daemonset.test",
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
@@ -47,8 +45,6 @@ func TestAccKubernetesDaemonSet_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
@@ -129,8 +125,6 @@ func TestAccKubernetesDaemonSet_with_template_metadata(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		IDRefreshName:     "kubernetes_daemonset.test",
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -168,8 +162,6 @@ func TestAccKubernetesDaemonSet_initContainer(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_daemonset.test",
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
@@ -189,8 +181,6 @@ func TestAccKubernetesDaemonSet_noTopLevelLabels(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_daemonset.test",
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
@@ -216,8 +206,6 @@ func TestAccKubernetesDaemonSet_with_tolerations(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		IDRefreshName:     "kubernetes_daemonset.test",
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -246,8 +234,6 @@ func TestAccKubernetesDaemonSet_with_tolerations_unset_toleration_seconds(t *tes
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		IDRefreshName:     "kubernetes_daemonset.test",
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -272,8 +258,6 @@ func TestAccKubernetesDaemonSet_regression(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_daemonset.test",
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{

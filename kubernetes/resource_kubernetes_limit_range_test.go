@@ -19,7 +19,6 @@ func TestAccKubernetesLimitRange_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_limit_range.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesLimitRangeDestroy,
 		Steps: []resource.TestStep{
@@ -119,7 +118,6 @@ func TestAccKubernetesLimitRange_empty(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_limit_range.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesLimitRangeDestroy,
 		Steps: []resource.TestStep{
@@ -148,7 +146,6 @@ func TestAccKubernetesLimitRange_generatedName(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_limit_range.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesLimitRangeDestroy,
 		Steps: []resource.TestStep{
@@ -178,7 +175,6 @@ func TestAccKubernetesLimitRange_typeChange(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_limit_range.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesLimitRangeDestroy,
 		Steps: []resource.TestStep{
@@ -230,7 +226,6 @@ func TestAccKubernetesLimitRange_multipleLimits(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_limit_range.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesLimitRangeDestroy,
 		Steps: []resource.TestStep{

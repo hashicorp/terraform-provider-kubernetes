@@ -17,7 +17,6 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_horizontal_pod_autoscaler.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
 		Steps: []resource.TestStep{

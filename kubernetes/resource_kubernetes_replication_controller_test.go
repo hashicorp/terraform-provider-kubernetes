@@ -19,7 +19,6 @@ func TestAccKubernetesReplicationController_minimal(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_replication_controller.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
 		Steps: []resource.TestStep{
@@ -46,8 +45,6 @@ func TestAccKubernetesReplicationController_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_replication_controller.test",
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
 		Steps: []resource.TestStep{
@@ -112,7 +109,6 @@ func TestAccKubernetesReplicationController_initContainer(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_replication_controller.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
 		Steps: []resource.TestStep{
@@ -161,7 +157,6 @@ func TestAccKubernetesReplicationController_regression(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_replication_controller.test",
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
 		Steps: []resource.TestStep{
@@ -191,8 +186,6 @@ func TestAccKubernetesReplicationController_generatedName(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_replication_controller.test",
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
 		Steps: []resource.TestStep{

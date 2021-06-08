@@ -18,7 +18,6 @@ func TestAccKubernetesStatefulSet_minimal(t *testing.T) {
 	imageName := nginxImageVersion
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_stateful_set.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{
@@ -39,10 +38,7 @@ func TestAccKubernetesStatefulSet_basic(t *testing.T) {
 	var conf api.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_stateful_set.test",
-		IDRefreshIgnore: []string{"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests"},
+		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{
@@ -109,10 +105,7 @@ func TestAccKubernetesStatefulSet_basic_idempotency(t *testing.T) {
 	var conf api.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_stateful_set.test",
-		IDRefreshIgnore: []string{"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests"},
+		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{
@@ -138,10 +131,7 @@ func TestAccKubernetesStatefulSet_Update(t *testing.T) {
 	var conf api.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_stateful_set.test",
-		IDRefreshIgnore: []string{"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests"},
+		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{
@@ -260,13 +250,7 @@ func TestAccKubernetesStatefulSet_waitForRollout(t *testing.T) {
 	imageName1 := nginxImageVersion1
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_stateful_set.test",
-		IDRefreshIgnore: []string{
-			"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests",
-			"metadata.0.resource_version",
-		},
+		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{
@@ -295,7 +279,6 @@ func TestAccKubernetesStatefulSet_regression(t *testing.T) {
 	imageName := nginxImageVersion
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_stateful_set.test",
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{

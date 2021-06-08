@@ -18,7 +18,6 @@ func TestAccKubernetesClusterRole_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
 		Steps: []resource.TestStep{
@@ -70,7 +69,6 @@ func TestAccKubernetesClusterRole_UpdatePatchOperationsOrderWithRemovals(t *test
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
 		Steps: []resource.TestStep{
@@ -144,7 +142,6 @@ func TestAccKubernetesClusterRole_aggregationRuleBasic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
 		Steps: []resource.TestStep{
@@ -188,7 +185,6 @@ func TestAccKubernetesClusterRole_aggregationRuleRuleAggregation(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
 		Steps: []resource.TestStep{

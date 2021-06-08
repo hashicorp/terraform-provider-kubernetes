@@ -18,11 +18,7 @@ func TestAccKubernetesJob_wait_for_completion(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_job.test",
-		IDRefreshIgnore: []string{"spec.0.selector.0.match_expressions.#",
-			"spec.0.template.0.spec.0.container.0.resources.0.limits.#",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests.#"},
+		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesJobDestroy,
 		Steps: []resource.TestStep{
@@ -61,8 +57,6 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_job.test",
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesJobDestroy,
 		Steps: []resource.TestStep{
@@ -117,8 +111,6 @@ func TestAccKubernetesJob_update(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_job.test",
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesJobDestroy,
 		Steps: []resource.TestStep{
@@ -196,10 +188,6 @@ func TestAccKubernetesJob_update(t *testing.T) {
 //
 //	resource.Test(t, resource.TestCase{
 //		PreCheck:      func() { testAccPreCheck(t) },
-//		IDRefreshName: "kubernetes_job.test",
-//		IDRefreshIgnore: []string{
-//			"spec.0.selector.0.match_expressions.#",
-//		},
 //		ProviderFactories: testAccProviderFactories,
 //		CheckDestroy:      testAccCheckKubernetesJobDestroy,
 //		Steps: []resource.TestStep{

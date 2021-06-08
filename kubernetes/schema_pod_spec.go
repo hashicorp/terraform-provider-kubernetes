@@ -353,7 +353,7 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Computed:     isComputed,
 			ForceNew:     !isUpdatable,
 			Default:      conditionalDefault(!isComputed, 30),
-			ValidateFunc: validateTerminationGracePeriodSeconds,
+			ValidateFunc: validation.IntAtLeast(0),
 			Description:  "Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request. Value must be non-negative integer. The value zero indicates delete immediately. If this value is nil, the default grace period will be used instead. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Set this value longer than the expected cleanup time for your process.",
 		},
 		"toleration": {

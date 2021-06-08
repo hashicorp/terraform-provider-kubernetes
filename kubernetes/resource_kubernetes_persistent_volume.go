@@ -125,14 +125,12 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 									"namespace": {
 										Type:        schema.TypeString,
 										Description: "The namespace of the PersistentVolumeClaim. Uses 'default' namespace if none is specified.",
-										Elem:        schema.TypeString,
 										Optional:    true,
 										Default:     "default",
 									},
 									"name": {
 										Type:        schema.TypeString,
 										Description: "The name of the PersistentVolumeClaim",
-										Elem:        schema.TypeString,
 										Required:    true,
 									},
 								},

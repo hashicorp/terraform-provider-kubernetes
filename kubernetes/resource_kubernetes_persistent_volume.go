@@ -97,7 +97,7 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 						},
 						"capacity": {
 							Type:             schema.TypeMap,
-							Elem: &schema.Schema{Type: schema.TypeString},
+							Elem:             &schema.Schema{Type: schema.TypeString},
 							Description:      "A description of the persistent volume's resources and capacity. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#capacity",
 							Required:         true,
 							ValidateFunc:     validateResourceList,

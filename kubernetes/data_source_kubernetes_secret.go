@@ -16,14 +16,14 @@ func dataSourceKubernetesSecret() *schema.Resource {
 			"metadata": namespacedMetadataSchema("secret", false),
 			"data": {
 				Type:        schema.TypeMap,
-				Elem: &schema.Schema{Type: schema.TypeString},
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "A map of the secret data.",
 				Computed:    true,
 				Sensitive:   true,
 			},
 			"binary_data": {
 				Type:        schema.TypeMap,
-				Elem: &schema.Schema{Type: schema.TypeString},
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "A map of the secret data with values encoded in base64 format",
 				Optional:    true,
 				Sensitive:   true,

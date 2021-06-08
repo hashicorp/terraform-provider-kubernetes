@@ -98,7 +98,7 @@ func dataSourceKubernetesService() *schema.Resource {
 						},
 						"selector": {
 							Type:        schema.TypeMap,
-							Elem: &schema.Schema{Type: schema.TypeString},
+							Elem:        &schema.Schema{Type: schema.TypeString},
 							Description: "Route service traffic to pods with label keys and values matching this selector. Only applies to types `ClusterIP`, `NodePort`, and `LoadBalancer`. More info: http://kubernetes.io/docs/user-guide/services#overview",
 							Computed:    true,
 						},

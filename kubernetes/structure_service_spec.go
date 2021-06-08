@@ -192,7 +192,7 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 		})
 	}
 	if d.HasChange(keyPrefix + "type") {
-		_, n := d.GetChange(keyPrefix + "type")
+		n := d.Get(keyPrefix + "type")
 
 		if n.(string) == "ExternalName" {
 			ops = append(ops, &RemoveOperation{

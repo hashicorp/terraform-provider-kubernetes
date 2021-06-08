@@ -157,7 +157,7 @@ func resourceKubernetesSecretUpdate(ctx context.Context, d *schema.ResourceData,
 
 	newData := map[string]interface{}{}
 	if d.HasChange("data") {
-		_, new := d.GetChange("data")
+		new := d.Get("data")
 		new = base64EncodeStringMap(new.(map[string]interface{}))
 		for k, v := range new.(map[string]interface{}) {
 			newData[k] = v
@@ -168,7 +168,7 @@ func resourceKubernetesSecretUpdate(ctx context.Context, d *schema.ResourceData,
 		}
 	}
 	if d.HasChange("binary_data") {
-		_, new := d.GetChange("binary_data")
+		new := d.Get("binary_data")
 		for k, v := range new.(map[string]interface{}) {
 			newData[k] = v
 		}

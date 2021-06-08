@@ -523,6 +523,7 @@ func TestAccKubernetesPersistentVolumeClaim_regression(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
+		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimDestroy,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{ // The first apply downloads and uses the latest released version of the provider.

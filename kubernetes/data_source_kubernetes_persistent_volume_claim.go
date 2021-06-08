@@ -36,12 +36,14 @@ func dataSourceKubernetesPersistentVolumeClaim() *schema.Resource {
 								Schema: map[string]*schema.Schema{
 									"limits": {
 										Type:        schema.TypeMap,
+										Elem:        &schema.Schema{Type: schema.TypeString},
 										Description: "Map describing the maximum amount of compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
 										Optional:    true,
 										Computed:    true,
 									},
 									"requests": {
 										Type:        schema.TypeMap,
+										Elem:        &schema.Schema{Type: schema.TypeString},
 										Description: "Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
 										Optional:    true,
 										Computed:    true,

@@ -996,6 +996,7 @@ func waitForPersistentVolumeDeleted(pvName string, poll, timeout time.Duration) 
 	}
 	ctx := context.TODO()
 
+	//lintignore:R018
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(poll) {
 		_, err := conn.CoreV1().PersistentVolumes().Get(ctx, pvName, metav1.GetOptions{})
 		if err != nil && apierrs.IsNotFound(err) {

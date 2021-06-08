@@ -223,7 +223,7 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 		},
 		"node_selector": {
 			Type:        schema.TypeMap,
-			Elem: &schema.Schema{Type: schema.TypeString},
+			Elem:        &schema.Schema{Type: schema.TypeString},
 			Optional:    true,
 			Computed:    isComputed,
 			ForceNew:    !isUpdatable,
@@ -942,7 +942,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 											Optional:     true,
 											Default:      3600,
 											Description:  "ExpirationSeconds is the expected duration of validity of the service account token. It defaults to 1 hour and must be at least 10 minutes (600 seconds).",
-											ValidateFunc:  validation.IntAtLeast(600),
+											ValidateFunc: validation.IntAtLeast(600),
 										},
 										"path": {
 											Type:        schema.TypeString,

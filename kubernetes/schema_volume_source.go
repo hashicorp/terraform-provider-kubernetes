@@ -235,7 +235,7 @@ func commonVolumeSources() map[string]*schema.Schema {
 					},
 					"volume_attributes": {
 						Type:        schema.TypeMap,
-						Elem: &schema.Schema{Type: schema.TypeString},
+						Elem:        &schema.Schema{Type: schema.TypeString},
 						Description: "Attributes of the volume to publish.",
 						Optional:    true,
 					},
@@ -307,7 +307,7 @@ func commonVolumeSources() map[string]*schema.Schema {
 					},
 					"options": {
 						Type:        schema.TypeMap,
-						Elem: &schema.Schema{Type: schema.TypeString},
+						Elem:        &schema.Schema{Type: schema.TypeString},
 						Description: "Extra command options if any.",
 						Optional:    true,
 					},

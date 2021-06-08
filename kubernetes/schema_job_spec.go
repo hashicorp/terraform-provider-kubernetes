@@ -113,7 +113,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 					},
 					"match_labels": {
 						Type:        schema.TypeMap,
-						Elem: &schema.Schema{Type: schema.TypeString},
+						Elem:        &schema.Schema{Type: schema.TypeString},
 						Description: "A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is \"key\", the operator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
 						Optional:    true,
 						ForceNew:    true,
@@ -134,11 +134,11 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 		},
 		// This field can be edited in place.
 		"ttl_seconds_after_finished": {
-			Type:     schema.TypeString,
-			Optional: true,
-			ForceNew: false,
+			Type:         schema.TypeString,
+			Optional:     true,
+			ForceNew:     false,
 			ValidateFunc: validation.IntAtLeast(1),
-			Description: "ttlSecondsAfterFinished limits the lifetime of a Job that has finished execution (either Complete or Failed). If this field is set, ttlSecondsAfterFinished after the Job finishes, it is eligible to be automatically deleted. When the Job is being deleted, its lifecycle guarantees (e.g. finalizers) will be honored. If this field is unset, the Job won't be automatically deleted. If this field is set to zero, the Job becomes eligible to be deleted immediately after it finishes.",
+			Description:  "ttlSecondsAfterFinished limits the lifetime of a Job that has finished execution (either Complete or Failed). If this field is set, ttlSecondsAfterFinished after the Job finishes, it is eligible to be automatically deleted. When the Job is being deleted, its lifecycle guarantees (e.g. finalizers) will be honored. If this field is unset, the Job won't be automatically deleted. If this field is set to zero, the Job becomes eligible to be deleted immediately after it finishes.",
 		},
 	}
 

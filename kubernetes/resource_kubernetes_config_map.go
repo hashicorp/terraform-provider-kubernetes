@@ -27,14 +27,14 @@ func resourceKubernetesConfigMap() *schema.Resource {
 			"metadata": namespacedMetadataSchema("config map", true),
 			"binary_data": {
 				Type:         schema.TypeMap,
-				Elem: &schema.Schema{Type: schema.TypeString},
+				Elem:         &schema.Schema{Type: schema.TypeString},
 				Description:  "BinaryData contains the binary data. Each key must consist of alphanumeric characters, '-', '_' or '.'. BinaryData can contain byte sequences that are not in the UTF-8 range. The keys stored in BinaryData must not overlap with the ones in the Data field, this is enforced during validation process. Using this field will require 1.10+ apiserver and kubelet. This field only accepts base64-encoded payloads that will be decoded/encoded before being sent/received to/from the apiserver.",
 				Optional:     true,
 				ValidateFunc: validateBase64EncodedMap,
 			},
 			"data": {
 				Type:        schema.TypeMap,
-				Elem: &schema.Schema{Type: schema.TypeString},
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "Data contains the configuration data. Each key must consist of alphanumeric characters, '-', '_' or '.'. Values with non-UTF-8 byte sequences must use the BinaryData field. The keys stored in Data must not overlap with the keys in the BinaryData field, this is enforced during validation process.",
 				Optional:    true,
 			},

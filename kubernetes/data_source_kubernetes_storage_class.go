@@ -13,7 +13,7 @@ func dataSourceKubernetesStorageClass() *schema.Resource {
 			"metadata": metadataSchema("storage class", false),
 			"parameters": {
 				Type:        schema.TypeMap,
-				Elem: &schema.Schema{Type: schema.TypeString},
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "The parameters for the provisioner that should create volumes of this storage class",
 				Optional:    true,
 				Computed:    true,

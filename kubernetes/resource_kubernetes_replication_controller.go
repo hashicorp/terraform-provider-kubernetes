@@ -70,7 +70,7 @@ func resourceKubernetesReplicationControllerSchemaV1() map[string]*schema.Schema
 					},
 					"selector": {
 						Type:        schema.TypeMap,
-						Elem: &schema.Schema{Type: schema.TypeString},
+						Elem:        &schema.Schema{Type: schema.TypeString},
 						Description: "A label query over pods that should match the Replicas count. If Selector is empty, it is defaulted to the labels present on the Pod template. Label keys and values that must match in order to be controlled by this replication controller, if empty defaulted to labels on Pod template. More info: http://kubernetes.io/docs/user-guide/labels#label-selectors",
 						Required:    true,
 					},

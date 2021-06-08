@@ -27,6 +27,7 @@ func resourceKubernetesSecret() *schema.Resource {
 			"metadata": namespacedMetadataSchema("secret", true),
 			"data": {
 				Type:        schema.TypeMap,
+				Elem: &schema.Schema{Type: schema.TypeString},
 				Description: "A map of the secret data.",
 				Optional:    true,
 				Computed:    true,
@@ -34,6 +35,7 @@ func resourceKubernetesSecret() *schema.Resource {
 			},
 			"binary_data": {
 				Type:        schema.TypeMap,
+				Elem: &schema.Schema{Type: schema.TypeString},
 				Optional:    true,
 				Sensitive:   true,
 				Description: "A map of the secret data in base64 encoding. Use this for binary data.",

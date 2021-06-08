@@ -1,10 +1,8 @@
 package kubernetes
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func jobMetadataSchema() *schema.Schema {
@@ -40,14 +38,14 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			Type:         schema.TypeInt,
 			Optional:     true,
 			ForceNew:     false,
-			ValidateFunc: validatePositiveInteger,
+			ValidateFunc: validation.IntAtLeast(0),
 			Description:  "Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.",
 		},
 		"backoff_limit": {
 			Type:         schema.TypeInt,
 			Optional:     true,
 			ForceNew:     false,
-			ValidateFunc: validateNonNegativeInteger,
+			ValidateFunc: validation.IntAtLeast(0),
 			Description:  "Specifies the number of retries before marking this job failed. Defaults to 6",
 		},
 		// This field is immutable in Jobs.
@@ -56,7 +54,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			Optional:     true,
 			ForceNew:     true,
 			Default:      1,
-			ValidateFunc: validatePositiveInteger,
+			ValidateFunc: validation.IntAtLeast(1),
 			Description:  "Specifies the desired number of successfully finished pods the job should be run with. Setting to nil means that the success of any pod signals the success of all pods, and allows parallelism to have any positive value. Setting to 1 means that parallelism is limited to 1 and the success of that pod signals the success of the job. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
 		},
 		"manual_selector": {
@@ -70,7 +68,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			Optional:     true,
 			ForceNew:     false,
 			Default:      1,
-			ValidateFunc: validatePositiveInteger,
+			ValidateFunc: validation.IntAtLeast(1),
 			Description:  "Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
 		},
 		// This field is immutable in Jobs.
@@ -115,6 +113,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 					},
 					"match_labels": {
 						Type:        schema.TypeMap,
+						Elem: &schema.Schema{Type: schema.TypeString},
 						Description: "A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is \"key\", the operator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
 						Optional:    true,
 						ForceNew:    true,
@@ -138,13 +137,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			Type:     schema.TypeString,
 			Optional: true,
 			ForceNew: false,
-			ValidateFunc: func(value interface{}, key string) ([]string, []error) {
-				v, err := strconv.Atoi(value.(string))
-				if err != nil {
-					return []string{}, []error{fmt.Errorf("%s is not a valid integer", key)}
-				}
-				return validateNonNegativeInteger(v, key)
-			},
+			ValidateFunc: validation.IntAtLeast(1),
 			Description: "ttlSecondsAfterFinished limits the lifetime of a Job that has finished execution (either Complete or Failed). If this field is set, ttlSecondsAfterFinished after the Job finishes, it is eligible to be automatically deleted. When the Job is being deleted, its lifecycle guarantees (e.g. finalizers) will be honored. If this field is unset, the Job won't be automatically deleted. If this field is set to zero, the Job becomes eligible to be deleted immediately after it finishes.",
 		},
 	}

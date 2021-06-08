@@ -99,9 +99,9 @@ func namespacedMetadataSchemaIsTemplate(objectName string, generatableName, isTe
 			Optional:      true,
 			ForceNew:      true,
 			ValidateFunc:  validateGenerateName,
-			ConflictsWith: []string{"metadata.name"},
+			ConflictsWith: []string{"metadata.0.name"},
 		}
-		fields["name"].ConflictsWith = []string{"metadata.generate_name"}
+		fields["name"].ConflictsWith = []string{"metadata.0.generate_name"}
 	}
 
 	return &schema.Schema{

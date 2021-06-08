@@ -40,27 +40,32 @@ func resourceKubernetesLimitRange() *schema.Resource {
 								Schema: map[string]*schema.Schema{
 									"default": {
 										Type:        schema.TypeMap,
+										Elem: &schema.Schema{Type: schema.TypeString},
 										Description: "Default resource requirement limit value by resource name if resource limit is omitted.",
 										Optional:    true,
 									},
 									"default_request": {
 										Type:        schema.TypeMap,
+										Elem: &schema.Schema{Type: schema.TypeString},
 										Description: "The default resource requirement request value by resource name if resource request is omitted.",
 										Optional:    true,
 										Computed:    true,
 									},
 									"max": {
 										Type:        schema.TypeMap,
+										Elem: &schema.Schema{Type: schema.TypeString},
 										Description: "Max usage constraints on this kind by resource name.",
 										Optional:    true,
 									},
 									"max_limit_request_ratio": {
 										Type:        schema.TypeMap,
+										Elem: &schema.Schema{Type: schema.TypeString},
 										Description: "The named resource must have a request and limit that are both non-zero where limit divided by request is less than or equal to the enumerated value; this represents the max burst for the named resource.",
 										Optional:    true,
 									},
 									"min": {
 										Type:        schema.TypeMap,
+										Elem: &schema.Schema{Type: schema.TypeString},
 										Description: "Min usage constraints on this kind by resource name.",
 										Optional:    true,
 									},

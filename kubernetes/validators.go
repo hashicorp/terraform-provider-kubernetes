@@ -165,38 +165,12 @@ func validateResourceQuantity(value interface{}, key string) (ws []string, es []
 	return
 }
 
-func validateNonNegativeInteger(value interface{}, key string) (ws []string, es []error) {
-	v := value.(int)
-	if v < 0 {
-		es = append(es, fmt.Errorf("%s must be greater than or equal to 0", key))
-	}
-	return
-}
-
-func validatePositiveInteger(value interface{}, key string) (ws []string, es []error) {
-	v := value.(int)
-	if v <= 0 {
-		es = append(es, fmt.Errorf("%s must be greater than 0", key))
-	}
-	return
-}
-
 func validateTerminationGracePeriodSeconds(value interface{}, key string) (ws []string, es []error) {
 	v := value.(int)
 	if v < 0 {
 		es = append(es, fmt.Errorf("%s must be greater than or equal to 0", key))
 	}
 	return
-}
-
-func validateIntGreaterThan(minValue int) func(value interface{}, key string) (ws []string, es []error) {
-	return func(value interface{}, key string) (ws []string, es []error) {
-		v := value.(int)
-		if v < minValue {
-			es = append(es, fmt.Errorf("%s must be greater than or equal to %d", key, minValue))
-		}
-		return
-	}
 }
 
 // validateTypeStringNullableInt provides custom error messaging for TypeString ints

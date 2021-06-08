@@ -58,16 +58,6 @@ Then use the `kubernetes_version` variable to install the cluster:
 terraform apply -var=kubernetes_version=1.21.1 -var=location=westus2
 ```
 
-## Kubeconfig for manual CLI access
-
-This example generates a kubeconfig file which can be used for manual CLI access to the cluster.
-
-```
-cd kubernetes-config
-export KUBECONFIG=$(terraform output -raw kubeconfig_path)
-kubectl get pods -n test
-```
-
 ## Create Kubernetes resources
 
 Change into the kubernetes-config directory to apply Kubernetes resources to the new cluster.
@@ -76,6 +66,16 @@ Change into the kubernetes-config directory to apply Kubernetes resources to the
 cd kubernetes-config
 terraform init
 terraform apply -var=cluster_name=$CLUSTERNAME
+```
+
+### Kubeconfig for manual CLI access
+
+This example generates a kubeconfig file which can be used for manual CLI access to the cluster.
+
+```
+cd kubernetes-config
+export KUBECONFIG=$(terraform output -raw kubeconfig)
+kubectl get pods -n test
 ```
 
 ## Deleting the cluster

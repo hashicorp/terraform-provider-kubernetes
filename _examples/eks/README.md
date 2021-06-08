@@ -48,6 +48,16 @@ terraform init
 terraform apply -var=cluster_name=$CLUSTERNAME
 ```
 
+### Kubeconfig for manual CLI access
+
+This example generates a kubeconfig file which can be used for manual CLI access to the cluster.
+
+```
+cd kubernetes-config
+export KUBECONFIG=$(terraform output -raw kubeconfig)
+kubectl get pods -n test
+```
+
 ## Deleting the cluster
 
 First, delete the Kubernetes resources as shown below. This will give Ingress and Service related Load Balancers a chance to delete before the other AWS resources are removed.

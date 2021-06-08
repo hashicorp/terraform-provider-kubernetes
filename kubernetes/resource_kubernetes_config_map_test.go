@@ -126,6 +126,7 @@ func TestAccKubernetesConfigMap_delete_regression(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesConfigMapDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesConfigMapConfig_basic(name),

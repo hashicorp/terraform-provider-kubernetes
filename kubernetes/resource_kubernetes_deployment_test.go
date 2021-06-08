@@ -702,7 +702,7 @@ func TestAccKubernetesDeployment_with_empty_dir_volume(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesDeploymentUpdate_basic(t *testing.T) {
+func TestAccKubernetesDeployment_update_basic(t *testing.T) {
 	var conf1, conf2 appsv1.Deployment
 	imageName := nginxImageVersion
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))

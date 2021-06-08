@@ -261,14 +261,14 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						Type:         schema.TypeString,
 						Description:  "A special supplemental group that applies to all containers in a pod. Some volume types allow the Kubelet to change the ownership of that volume to be owned by the pod: 1. The owning GID will be the FSGroup 2. The setgid bit is set (new files created in the volume will be owned by FSGroup) 3. The permission bits are OR'd with rw-rw---- If unset, the Kubelet will not modify the ownership and permissions of any volume.",
 						Optional:     true,
-						ValidateFunc: validateTypeStringNullableInt,
+						ValidateFunc: validation.StringMatch(regexp.MustCompile("[0-9]+"), "Must be a positive number"),
 						ForceNew:     !isUpdatable,
 					},
 					"run_as_group": {
 						Type:         schema.TypeString,
 						Description:  "The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.",
 						Optional:     true,
-						ValidateFunc: validateTypeStringNullableInt,
+						ValidateFunc: validation.StringMatch(regexp.MustCompile("[0-9]+"), "Must be a positive number"),
 						ForceNew:     !isUpdatable,
 					},
 					"run_as_non_root": {
@@ -281,7 +281,7 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						Type:         schema.TypeString,
 						Description:  "The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.",
 						Optional:     true,
-						ValidateFunc: validateTypeStringNullableInt,
+						ValidateFunc: validation.StringMatch(regexp.MustCompile("[0-9]+"), "Must be a positive number"),
 						ForceNew:     !isUpdatable,
 					},
 					"se_linux_options": {
@@ -396,7 +396,7 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						Description:  "TolerationSeconds represents the period of time the toleration (which must be of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default, it is not set, which means tolerate the taint forever (do not evict). Zero and negative values will be treated as 0 (evict immediately) by the system.",
 						Optional:     true,
 						ForceNew:     !isUpdatable,
-						ValidateFunc: validateTypeStringNullableInt,
+						ValidateFunc: validation.StringMatch(regexp.MustCompile("[0-9]+"), "Must be a positive number"),
 					},
 					"value": {
 						Type:        schema.TypeString,

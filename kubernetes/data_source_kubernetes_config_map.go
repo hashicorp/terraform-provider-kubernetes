@@ -15,11 +15,13 @@ func dataSourceKubernetesConfigMap() *schema.Resource {
 			"metadata": namespacedMetadataSchema("config_map", false),
 			"data": {
 				Type:        schema.TypeMap,
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "A map of the config map data.",
 				Computed:    true,
 			},
 			"binary_data": {
 				Type:        schema.TypeMap,
+				Elem:        &schema.Schema{Type: schema.TypeString},
 				Description: "A map of the config map binary data.",
 				Computed:    true,
 			},

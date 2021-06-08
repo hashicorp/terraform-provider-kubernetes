@@ -1,7 +1,10 @@
+name: Unit tests and linters
+
 on:
   push:
     branches:
       - main
+      - tfproviderlinttest
   pull_request:
     branches:
       - main

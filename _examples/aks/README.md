@@ -1,6 +1,6 @@
 # AKS (Azure Kubernetes Service)
 
-This example demonstrates the most reliable way to use the Kubernetes provider together with the AWS provider to create an AKS cluster. By keeping the two providers' resources in separate Terraform states (or separate workspaces using [Terraform Cloud](https://app.terraform.io/)), we can limit the scope of changes to either the AKS cluster or the Kubernetes resources. This will prevent dependency issues between the AWS and Kubernetes providers, since terraform's [provider configurations must be known before a configuration can be applied](https://www.terraform.io/docs/language/providers/configuration.html).
+This example demonstrates the most reliable way to use the Kubernetes provider together with the Azurerm provider to create an AKS cluster. By keeping the two providers' resources in separate Terraform states (or separate workspaces using [Terraform Cloud](https://app.terraform.io/)), we can limit the scope of changes to either the AKS cluster or the Kubernetes resources. This will prevent dependency issues between the Azurerm and Kubernetes providers, since terraform's [provider configurations must be known before a configuration can be applied](https://www.terraform.io/docs/language/providers/configuration.html).
 
 You will need the following environment variables to be set:
 

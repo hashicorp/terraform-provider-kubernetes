@@ -138,7 +138,7 @@ func TestAccKubernetesSecret_basic(t *testing.T) {
 	})
 }
 
-func TestAccKuberNetesSecret_dotInName(t *testing.T) {
+func TestAccKubernetesSecret_dotInName(t *testing.T) {
 	var conf api.Secret
 
 	resource.Test(t, resource.TestCase{

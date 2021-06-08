@@ -253,7 +253,7 @@ func resourceKubernetesServiceAccountRead(ctx context.Context, d *schema.Resourc
 			return diag.FromErr(err)
 		}
 	} else {
-		err = d.Set("automount_service_account_token", *svcAcc.AutomountServiceAccountToken)
+		err = d.Set("automount_service_account_token", svcAcc.AutomountServiceAccountToken)
 		if err != nil {
 			return diag.FromErr(err)
 		}

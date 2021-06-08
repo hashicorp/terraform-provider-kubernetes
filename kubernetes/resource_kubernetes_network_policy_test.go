@@ -19,7 +19,6 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_network_policy.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesNetworkPolicyDestroy,
 		Steps: []resource.TestStep{
@@ -280,7 +279,6 @@ func TestAccKubernetesNetworkPolicy_withEgressAtCreation(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_network_policy.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesNetworkPolicyDestroy,
 		Steps: []resource.TestStep{

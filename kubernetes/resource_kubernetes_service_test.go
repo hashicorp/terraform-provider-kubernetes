@@ -22,7 +22,6 @@ func TestAccKubernetesService_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
 		Steps: []resource.TestStep{
@@ -127,7 +126,6 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
 		Steps: []resource.TestStep{
@@ -215,7 +213,6 @@ func TestAccKubernetesService_loadBalancer_healthcheck(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
 		Steps: []resource.TestStep{
@@ -254,7 +251,6 @@ func TestAccKubernetesService_headless(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
 		Steps: []resource.TestStep{
@@ -276,7 +272,6 @@ func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
 		Steps: []resource.TestStep{
@@ -369,7 +364,6 @@ func TestAccKubernetesService_nodePort(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
 		Steps: []resource.TestStep{
@@ -462,7 +456,6 @@ func TestAccKubernetesService_noTargetPort(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
 		Steps: []resource.TestStep{
@@ -522,7 +515,6 @@ func TestAccKubernetesService_stringTargetPort(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
 		Steps: []resource.TestStep{
@@ -556,7 +548,6 @@ func TestAccKubernetesService_externalName(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
 		Steps: []resource.TestStep{
@@ -594,7 +585,6 @@ func TestAccKubernetesService_externalName_toClusterIp(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
 		Steps: []resource.TestStep{
@@ -643,7 +633,6 @@ func TestAccKubernetesService_generatedName(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
 		Steps: []resource.TestStep{
@@ -679,7 +668,6 @@ func TestAccKubernetesService_regression(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
 		Steps: []resource.TestStep{
@@ -757,7 +745,6 @@ func TestAccKubernetesService_stateUpgradeV0_loadBalancerIngress(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInEks(t) },
-		IDRefreshName:     resourceName,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
 		Steps: []resource.TestStep{

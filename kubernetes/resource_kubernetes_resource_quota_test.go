@@ -19,7 +19,6 @@ func TestAccKubernetesResourceQuota_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaDestroy,
 		Steps: []resource.TestStep{
@@ -104,7 +103,6 @@ func TestAccKubernetesResourceQuota_generatedName(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaDestroy,
 		Steps: []resource.TestStep{
@@ -142,7 +140,6 @@ func TestAccKubernetesResourceQuota_withScopes(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaDestroy,
 		Steps: []resource.TestStep{
@@ -199,7 +196,6 @@ func TestAccKubernetesResourceQuota_scopeSelector(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaDestroy,
 		Steps: []resource.TestStep{

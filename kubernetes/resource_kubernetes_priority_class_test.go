@@ -19,7 +19,6 @@ func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPriorityClassDestroy,
 		Steps: []resource.TestStep{
@@ -95,7 +94,6 @@ func TestAccKubernetesPriorityClass_generatedName(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_priority_class.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPriorityClassDestroy,
 		Steps: []resource.TestStep{

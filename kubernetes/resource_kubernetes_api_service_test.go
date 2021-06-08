@@ -18,7 +18,6 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_api_service.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesAPIServiceDestroy,
 		Steps: []resource.TestStep{

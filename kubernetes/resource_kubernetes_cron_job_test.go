@@ -19,7 +19,6 @@ func TestAccKubernetesCronJob_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_cron_job.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCronJobDestroy,
 		Steps: []resource.TestStep{
@@ -79,7 +78,6 @@ func TestAccKubernetesCronJob_extra(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_cron_job.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCronJobDestroy,
 		Steps: []resource.TestStep{

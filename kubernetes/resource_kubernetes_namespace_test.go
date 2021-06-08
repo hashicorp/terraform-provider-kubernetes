@@ -21,7 +21,6 @@ func TestAccKubernetesNamespace_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_namespace.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesNamespaceDestroy,
 		Steps: []resource.TestStep{
@@ -120,7 +119,6 @@ func TestAccKubernetesNamespace_generatedName(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_namespace.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesNamespaceDestroy,
 		Steps: []resource.TestStep{
@@ -155,7 +153,6 @@ func TestAccKubernetesNamespace_withSpecialCharacters(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_namespace.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesNamespaceDestroy,
 		Steps: []resource.TestStep{
@@ -193,7 +190,6 @@ func TestAccKubernetesNamespace_deleteTimeout(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_namespace.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesNamespaceDestroy,
 		Steps: []resource.TestStep{

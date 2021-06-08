@@ -19,7 +19,6 @@ func TestAccKubernetesEndpoints_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_endpoints.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesEndpointDestroy,
 		Steps: []resource.TestStep{
@@ -110,7 +109,6 @@ func TestAccKubernetesEndpoints_generatedName(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_endpoints.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesEndpointDestroy,
 		Steps: []resource.TestStep{

@@ -1,10 +1,11 @@
-name: "Pull Request Triage"
+name: Pull Request Triage
 
 on:
   pull_request:
     branches:
       - main
   push:
+    branches:
       - tfproviderlinttest
 
 permissions:

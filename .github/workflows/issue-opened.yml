@@ -31,3 +31,5 @@ jobs:
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         configuration-path: .github/labeler-issue-triage.yml
+        enable-versioned-regex: 0
+        not-before: 2021-06-01T00:00:00Z

@@ -27,7 +27,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
     - name: Label new issue
-      uses: github/issue-labeler@a326d12b9b64d4395a18e50f648214c609501643
+      uses: github/issue-labeler@829a8bf1b184f74cc575b5435093a92c7b846983
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         configuration-path: .github/labeler-issue-triage.yml

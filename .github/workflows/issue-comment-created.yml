@@ -8,7 +8,7 @@ jobs:
   issue_comment_triage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions-ecosystem/action-remove-labels@v1
+      - uses: actions-ecosystem/action-remove-labels@335648fbc85ddf08e2d79fb5def7642e77936dec
         with:
           labels: |
             stale

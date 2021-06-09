@@ -3,6 +3,7 @@ name: Issue Opened Triage
 on:
   issues:
     types: [opened]
+  workflow_dispatch:
 
 permissions:
   actions: none

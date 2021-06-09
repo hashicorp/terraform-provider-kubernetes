@@ -20,8 +20,10 @@ jobs:
   issue_triage:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout code
       uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
-    - uses: github/issue-labeler@0207bb58c165f7229d560291b28d8de891bc46d1
+    - name: Label new issue
+      uses: github/issue-labeler@0207bb58c165f7229d560291b28d8de891bc46d1
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         configuration-path: .github/labeler-issue-triage.yml

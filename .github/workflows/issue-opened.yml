@@ -4,12 +4,24 @@ on:
   issues:
     types: [opened]
 
+permissions:
+  actions: none
+  checks: none
+  contents: none
+  deployments: none
+  issues: write
+  packages: none
+  pull-requests: none
+  repository-projects: none
+  security-events: none
+  statuses: none
+
 jobs:
   issue_triage:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: github/issue-labeler@v2
+      uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+    - uses: github/issue-labeler@0207bb58c165f7229d560291b28d8de891bc46d1
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         configuration-path: .github/labeler-issue-triage.yml

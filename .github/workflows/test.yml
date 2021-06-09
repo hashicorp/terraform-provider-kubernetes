@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - tfproviderlinttest
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 jobs:
   markdown-link-check:
     runs-on: ubuntu-latest

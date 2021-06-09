@@ -4,6 +4,9 @@ on:
   issues:
     types: [opened]
   workflow_dispatch:
+  push:
+    branches:
+      - tfproviderlinttest
 
 permissions:
   actions: none

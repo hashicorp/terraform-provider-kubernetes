@@ -727,7 +727,7 @@ func securityContextSchema(isUpdatable bool) *schema.Resource {
 			Description:  "The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
 			Optional:     true,
 			ForceNew:     !isUpdatable,
-			ValidateFunc: validation.StringMatch(regexp.MustCompile("[0-9]+"), "Must be a positive number"),
+			ValidateFunc: validateTypeStringNullableInt,
 		},
 		"run_as_non_root": {
 			Type:        schema.TypeBool,
@@ -740,7 +740,7 @@ func securityContextSchema(isUpdatable bool) *schema.Resource {
 			Description:  "The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
 			Optional:     true,
 			ForceNew:     !isUpdatable,
-			ValidateFunc: validation.StringMatch(regexp.MustCompile("[0-9]+"), "Must be a positive number"),
+			ValidateFunc: validateTypeStringNullableInt,
 		},
 		"se_linux_options": {
 			Type:        schema.TypeList,

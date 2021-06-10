@@ -83,7 +83,7 @@ func resourceKubernetesDeploymentSchemaV1() map[string]*schema.Schema {
 						Description:  "Number of desired pods. This is a string to be able to distinguish between explicit zero and not specified.",
 						Optional:     true,
 						Computed:     true,
-						ValidateFunc: validation.StringMatch(regexp.MustCompile("[0-9]+"), "Must be a positive number"),
+						ValidateFunc: validateTypeStringNullableInt,
 					},
 					"revision_history_limit": {
 						Type:        schema.TypeInt,

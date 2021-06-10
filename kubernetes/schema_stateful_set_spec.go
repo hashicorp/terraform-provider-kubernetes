@@ -24,14 +24,14 @@ func statefulSetSpecFields() map[string]*schema.Schema {
 			Optional:     true,
 			Computed:     true,
 			Description:  "The desired number of replicas of the given Template, in the sense that they are instantiations of the same Template. Value must be a positive integer.",
-			ValidateFunc: validation.StringMatch(regexp.MustCompile("[0-9]+"), "Must be a positive number"),
+			ValidateFunc: validateTypeStringNullableInt,
 		},
 		"revision_history_limit": {
 			Type:         schema.TypeInt,
 			Optional:     true,
 			ForceNew:     true,
 			Computed:     true,
-			ValidateFunc: validation.IntAtLeast(1),
+			ValidateFunc: validation.IntAtLeast(0),
 			Description:  "The maximum number of revisions that will be maintained in the StatefulSet's revision history. The default value is 10.",
 		},
 		"selector": {

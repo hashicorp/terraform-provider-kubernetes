@@ -1,12 +1,9 @@
 name: Pull Request Triage
 
 on:
-  pull_request:
-    branches:
-      - main
-  push:
-    branches:
-      - tfproviderlinttest
+  pull_request_target:
+    types:
+      - opened
 
 permissions:
   actions: read

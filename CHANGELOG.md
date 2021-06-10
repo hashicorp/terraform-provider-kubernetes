@@ -1,3 +1,12 @@
+## 2.3.2 (Unreleased)
+
+BUG FIXES:
+* Revert "Filter well known labels and annotations" ([#1298](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1298))
+
+IMPROVEMENTS:
+* docs/stateful_set: add import section ([#1287](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1287))
+
+
 ## 2.3.1 (June 03, 2021)
 
 BUG FIXES:

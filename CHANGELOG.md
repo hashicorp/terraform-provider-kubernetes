@@ -1,4 +1,4 @@
-## 2.3.2 (Unreleased)
+## 2.3.2 (June 10, 2021)
 
 BUG FIXES:
 * Revert "Filter well known labels and annotations" ([#1298](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1298))

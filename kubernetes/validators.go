@@ -181,6 +181,7 @@ func validateModeBits(value interface{}, key string) (ws []string, es []error) {
 // validateTypeStringNullableInt provides custom error messaging for TypeString ints
 // Some arguments require an int value or unspecified, empty field.
 // TODO: FIXME: make this an int and use a pointer to differentiate between 0 and unset.
+
 //lintignore:V013
 func validateTypeStringNullableInt(v interface{}, k string) (ws []string, es []error) {
 	value, ok := v.(string)

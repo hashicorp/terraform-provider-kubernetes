@@ -1,0 +1,21 @@
+name: Terraform provider lint
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - "**.go"
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "**.go"
+jobs:
+  tfproviderlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: bflad/tfproviderlint-github-action@master
+        with:
+          args: ./...

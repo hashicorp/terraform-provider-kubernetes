@@ -1,0 +1,56 @@
+env:
+  - CGO_ENABLED=0
+
+before:
+  hooks:
+    - make test
+
+builds:
+  - id: signed
+    targets:
+      - darwin_amd64
+      - darwin_arm64
+      - windows_386
+      - windows_amd64
+    hooks:
+      post: |
+        docker run
+          -e ARTIFACTORY_TOKEN={{ .Env.ARTIFACTORY_TOKEN }}
+          -e ARTIFACTORY_USER={{ .Env.ARTIFACTORY_USER }}
+          -e CIRCLE_TOKEN={{ .Env.CIRCLE_TOKEN }}
+          -v {{ dir .Path }}:/workdir
+          {{ .Env.CODESIGN_IMAGE }}
+          sign -product-name={{ .ProjectName }} {{ .Name }}
+  - id: unsigned
+    targets:
+      - freebsd_386
+      - freebsd_amd64
+      - freebsd_arm
+      - linux_386
+      - linux_amd64
+      - linux_arm
+      - openbsd_386
+      - openbsd_amd64
+      - solaris_amd64
+
+release:
+  github:
+    owner: hashicorp
+    name: terraform-provider-kubernetes-alpha
+  prerelease: true
+  draft: true
+
+archives:
+  - format: zip
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    wrap_in_directory: false
+    # only add the binary to the archive
+    files:
+      - none*
+
+checksum:
+  name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
+  algorithm: sha256
+
+changelog:
+  skip: true

@@ -106,34 +106,34 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_TOKEN", ""),
 				Description: "Token to authenticate an service account",
 			},
-			"exec": {
-				Type:     schema.TypeList,
-				Optional: true,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"api_version": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"command": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"env": {
-							Type:     schema.TypeMap,
-							Optional: true,
-							Elem:     &schema.Schema{Type: schema.TypeString},
-						},
-						"args": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem:     &schema.Schema{Type: schema.TypeString},
-						},
-					},
-				},
-				Description: "",
-			},
+			// "exec": {
+			// 	Type:     schema.TypeList,
+			// 	Optional: true,
+			// 	MaxItems: 1,
+			// 	Elem: &schema.Resource{
+			// 		Schema: map[string]*schema.Schema{
+			// 			"api_version": {
+			// 				Type:     schema.TypeString,
+			// 				Required: true,
+			// 			},
+			// 			"command": {
+			// 				Type:     schema.TypeString,
+			// 				Required: true,
+			// 			},
+			// 			"env": {
+			// 				Type:     schema.TypeMap,
+			// 				Optional: true,
+			// 				Elem:     &schema.Schema{Type: schema.TypeString},
+			// 			},
+			// 			"args": {
+			// 				Type:     schema.TypeList,
+			// 				Optional: true,
+			// 				Elem:     &schema.Schema{Type: schema.TypeString},
+			// 			},
+			// 		},
+			// 	},
+			// 	Description: "",
+			// },
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{

@@ -181,26 +181,25 @@ func TestAccKubernetesJob_update(t *testing.T) {
 	})
 }
 
-// FIXME uncomment this check when the TTLSecondsAfterFinished feature gate defaults to true
-//func TestAccKubernetesJob_ttl_seconds_after_finished(t *testing.T) {
-//	var conf api.Job
-//	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
-//
-//	resource.Test(t, resource.TestCase{
-//		PreCheck:      func() { testAccPreCheck(t) },
-//		ProviderFactories: testAccProviderFactories,
-//		CheckDestroy:      testAccCheckKubernetesJobDestroy,
-//		Steps: []resource.TestStep{
-//			{
-//				Config: testAccKubernetesJobConfig_ttl_seconds_after_finished(name, busyboxImageVersion),
-//				Check: resource.ComposeAggregateTestCheckFunc(
-//					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
-//					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "60"),
-//				),
-//			},
-//		},
-//	})
-//}
+func TestAccKubernetesJob_ttl_seconds_after_finished(t *testing.T) {
+	var conf api.Job
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(8))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesJobDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesJobConfig_ttl_seconds_after_finished(name, busyboxImageVersion),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "60"),
+				),
+			},
+		},
+	})
+}
 
 func testAccCheckKubernetesJobForceNew(old, new *api.Job, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {

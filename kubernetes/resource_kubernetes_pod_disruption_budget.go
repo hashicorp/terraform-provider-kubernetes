@@ -2,11 +2,8 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"log"
-	"regexp"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/policy/v1beta1"
@@ -51,14 +48,14 @@ func resourceKubernetesPodDisruptionBudget() *schema.Resource {
 							Description:  podDisruptionBudgetSpecMaxUnavailableDoc,
 							Optional:     true,
 							ForceNew:     true,
-							ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([0-9]+|[0-9]+%|)$`), "Must be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%)."),
+							ValidateFunc: validateNumberOrPercentageOfPods(),
 						},
 						"min_available": {
 							Type:         schema.TypeString,
 							Description:  podDisruptionBudgetSpecMinAvailableDoc,
 							Optional:     true,
 							ForceNew:     true,
-							ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([0-9]+|[0-9]+%|)$`), "Must be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%)."),
+							ValidateFunc: validateNumberOrPercentageOfPods(),
 						},
 						"selector": {
 							Type:        schema.TypeList,

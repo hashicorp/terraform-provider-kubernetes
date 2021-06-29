@@ -3,6 +3,9 @@ package kubernetes
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -176,6 +179,10 @@ func validateModeBits(value interface{}, key string) (ws []string, es []error) {
 		es = append(es, fmt.Errorf("%s (%#o) expects octal notation (a value between 0 and 0777)", key, v))
 	}
 	return
+}
+
+func validateNumberOrPercentageOfPods() schema.SchemaValidateFunc {
+	return validation.StringMatch(regexp.MustCompile(`^([0-9]+|[0-9]+%|)$`), "Must be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%).")
 }
 
 // validateTypeStringNullableInt provides custom error messaging for TypeString ints

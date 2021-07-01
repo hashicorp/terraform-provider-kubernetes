@@ -758,14 +758,23 @@ func TestAccKubernetesPod_with_secret_vol_items(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodConfigWithSecretItemsVolume(secretName, podName, imageName),
+				Config: testAccKubernetesPodConfigWithSecretItemsVolume(secretName, podName, imageName, "path/to/one"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.secret.0.items.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.secret.0.items.0.key", "one"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.secret.0.items.0.path", "path/to/one"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.secret.0.items.0.path", "path/to/one"),
 				),
+			},
+			{ // Test path validation
+				ExpectError: regexp.MustCompile(`not contain any of ".."`),
+				Config:      testAccKubernetesPodConfigWithSecretItemsVolume(secretName, podName, imageName, ".."),
+			},
+			{
+				ExpectError: regexp.MustCompile(`not contain any of ".."`),
+				Config:      testAccKubernetesPodConfigWithSecretItemsVolume(secretName, podName, imageName, "../testpath"),
 			},
 			{
 				ResourceName:            resourceName,
@@ -1718,7 +1727,7 @@ resource "kubernetes_pod" "test" {
 `, secretName, podName, imageName)
 }
 
-func testAccKubernetesPodConfigWithSecretItemsVolume(secretName, podName, imageName string) string {
+func testAccKubernetesPodConfigWithSecretItemsVolume(secretName, podName, imageName, path string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
@@ -1759,13 +1768,13 @@ resource "kubernetes_pod" "test" {
 
         items {
           key  = "one"
-          path = "path/to/one"
+          path = "%s"
         }
       }
     }
   }
 }
-`, secretName, podName, imageName)
+`, secretName, podName, imageName, path)
 }
 
 func testAccKubernetesPodConfigWithConfigMapVolume(secretName, podName, imageName string) string {

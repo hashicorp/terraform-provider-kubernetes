@@ -38,14 +38,14 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			Type:         schema.TypeInt,
 			Optional:     true,
 			ForceNew:     false,
-			ValidateFunc: validation.IntAtLeast(0),
+			ValidateFunc: validation.IntAtLeast(1),
 			Description:  "Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.",
 		},
 		"backoff_limit": {
 			Type:         schema.TypeInt,
 			Optional:     true,
 			ForceNew:     false,
-			ValidateFunc: validation.IntAtLeast(0),
+			ValidateFunc: validation.IntAtLeast(1),
 			Description:  "Specifies the number of retries before marking this job failed. Defaults to 6",
 		},
 		// This field is immutable in Jobs.

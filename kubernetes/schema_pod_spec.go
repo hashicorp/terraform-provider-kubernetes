@@ -525,7 +525,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 					Type:         schema.TypeString,
 					Description:  "Target directory name. Must not contain or start with '..'. If '.' is supplied, the volume directory will be the git repository. Otherwise, if specified, the volume will contain the git repository in the subdirectory with the given name.",
 					Optional:     true,
-					ValidateFunc: validateRelativePath(),
+					ValidateFunc: validation.StringDoesNotContainAny(".."),
 				},
 				"repository": {
 					Type:        schema.TypeString,

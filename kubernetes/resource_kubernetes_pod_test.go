@@ -777,6 +777,10 @@ func TestAccKubernetesPod_with_secret_vol_items(t *testing.T) {
 				Config:      testAccKubernetesPodConfigWithSecretItemsVolume(secretName, podName, imageName, "../testpath"),
 			},
 			{
+				ExpectError: regexp.MustCompile(`must be a relative path`),
+				Config:      testAccKubernetesPodConfigWithSecretItemsVolume(secretName, podName, imageName, "/absolute/path/not/allowed"),
+			},
+			{
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,

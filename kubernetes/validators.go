@@ -185,6 +185,10 @@ func validateNumberOrPercentageOfPods() schema.SchemaValidateFunc {
 	return validation.StringMatch(regexp.MustCompile(`^([0-9]+|[0-9]+%|)$`), "Must be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%).")
 }
 
+func validateRelativePath() schema.SchemaValidateFunc {
+	return validation.All(validation.StringDoesNotContainAny(".."), validation.StringDoesNotMatch(regexp.MustCompile("^/"), "must be a relative path"))
+}
+
 // validateTypeStringNullableInt provides custom error messaging for TypeString ints
 // Some arguments require an int value or unspecified, empty field.
 // TODO: FIXME: make this an int and use a pointer to differentiate between 0 and unset.

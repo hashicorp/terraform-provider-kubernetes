@@ -45,7 +45,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			Type:         schema.TypeInt,
 			Optional:     true,
 			ForceNew:     false,
-			ValidateFunc: validation.IntAtLeast(1),
+			ValidateFunc: validation.IntAtLeast(0),
 			Description:  "Specifies the number of retries before marking this job failed. Defaults to 6",
 		},
 		// This field is immutable in Jobs.

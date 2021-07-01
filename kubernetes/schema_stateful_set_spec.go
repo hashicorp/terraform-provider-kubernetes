@@ -30,7 +30,7 @@ func statefulSetSpecFields() map[string]*schema.Schema {
 			Optional:     true,
 			ForceNew:     true,
 			Computed:     true,
-			ValidateFunc: validation.IntAtLeast(0),
+			ValidateFunc: validation.IntAtLeast(1),
 			Description:  "The maximum number of revisions that will be maintained in the StatefulSet's revision history. The default value is 10.",
 		},
 		"selector": {

@@ -186,7 +186,7 @@ func validateNumberOrPercentageOfPods() schema.SchemaValidateFunc {
 }
 
 func validateRelativePath() schema.SchemaValidateFunc {
-	return validation.All(validation.StringDoesNotContainAny(".."), validation.StringDoesNotMatch(regexp.MustCompile("^/"), "must be a relative path"))
+	return validation.StringDoesNotMatch(regexp.MustCompile("^/|\\.\\."), "May not be an absolute path. May not contain the path element '..'")
 }
 
 // validateTypeStringNullableInt provides custom error messaging for TypeString ints

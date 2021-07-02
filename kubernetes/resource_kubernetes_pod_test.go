@@ -758,25 +758,25 @@ func TestAccKubernetesPod_with_secret_vol_items(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodConfigWithSecretItemsVolume(secretName, podName, imageName, "path/to/one"),
+				Config: testAccKubernetesPodConfigWithSecretItemsVolume(secretName, podName, imageName, "path/to/one.txt"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.secret.0.items.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.secret.0.items.0.key", "one"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.secret.0.items.0.path", "path/to/one"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.secret.0.items.0.path", "path/to/one.txt"),
 				),
 			},
 			{ // Test path validation
-				ExpectError: regexp.MustCompile(`not contain any of ".."`),
+				ExpectError: regexp.MustCompile("May not be an absolute path. May not contain the path element '..'"),
 				Config:      testAccKubernetesPodConfigWithSecretItemsVolume(secretName, podName, imageName, ".."),
 			},
 			{
-				ExpectError: regexp.MustCompile(`not contain any of ".."`),
+				ExpectError: regexp.MustCompile("May not be an absolute path. May not contain the path element '..'"),
 				Config:      testAccKubernetesPodConfigWithSecretItemsVolume(secretName, podName, imageName, "../testpath"),
 			},
 			{
-				ExpectError: regexp.MustCompile(`must be a relative path`),
+				ExpectError: regexp.MustCompile("May not be an absolute path. May not contain the path element '..'"),
 				Config:      testAccKubernetesPodConfigWithSecretItemsVolume(secretName, podName, imageName, "/absolute/path/not/allowed"),
 			},
 			{

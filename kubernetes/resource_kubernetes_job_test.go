@@ -191,10 +191,17 @@ func TestAccKubernetesJob_ttl_seconds_after_finished(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesJobDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesJobConfig_ttl_seconds_after_finished(name, busyboxImageVersion),
+				Config: testAccKubernetesJobConfig_ttl_seconds_after_finished(name, busyboxImageVersion, "60"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "60"),
+				),
+			},
+			{
+				Config: testAccKubernetesJobConfig_ttl_seconds_after_finished(name, busyboxImageVersion, "0"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "0"),
 				),
 			},
 		},
@@ -349,7 +356,7 @@ func testAccKubernetesJobConfig_updateImmutableFields(name, imageName, completio
 }`, name, completions, imageName)
 }
 
-func testAccKubernetesJobConfig_ttl_seconds_after_finished(name, imageName string) string {
+func testAccKubernetesJobConfig_ttl_seconds_after_finished(name, imageName, seconds string) string {
 	return fmt.Sprintf(`resource "kubernetes_job" "test" {
   metadata {
     name = "%s"
@@ -358,7 +365,7 @@ func testAccKubernetesJobConfig_ttl_seconds_after_finished(name, imageName strin
     backoff_limit = 10
     completions = 10
     parallelism = 2
-    ttl_seconds_after_finished = "60"
+    ttl_seconds_after_finished = "%s"
     template {
       metadata {}
       spec {
@@ -370,7 +377,7 @@ func testAccKubernetesJobConfig_ttl_seconds_after_finished(name, imageName strin
       }
     }
   }
-}`, name, imageName)
+}`, name, seconds, imageName)
 }
 
 func testAccKubernetesJobConfig_wait_for_completion(name, imageName string) string {

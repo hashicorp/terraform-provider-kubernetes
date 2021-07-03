@@ -133,11 +133,12 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			},
 		},
 		// This field can be edited in place.
+		// TODO: FIXME: this field should be an int. (A pointer can differentiate between unset and 0).
 		"ttl_seconds_after_finished": {
 			Type:         schema.TypeString,
 			Optional:     true,
 			ForceNew:     false,
-			ValidateFunc: validation.IntAtLeast(1),
+			ValidateFunc: validateTypeStringNullableInt,
 			Description:  "ttlSecondsAfterFinished limits the lifetime of a Job that has finished execution (either Complete or Failed). If this field is set, ttlSecondsAfterFinished after the Job finishes, it is eligible to be automatically deleted. When the Job is being deleted, its lifecycle guarantees (e.g. finalizers) will be honored. If this field is unset, the Job won't be automatically deleted. If this field is set to zero, the Job becomes eligible to be deleted immediately after it finishes.",
 		},
 	}

@@ -1,0 +1,7 @@
+project_name: terraform-plugin-mux
+build:
+  skip: true
+release:
+  github:
+changelog:
+  skip: true

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -95,10 +96,52 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			diags = append(diags, &tfprotov5.Diagnostic{
 				Severity: tfprotov5.DiagnosticSeverityInvalid,
 				Summary:  "Invalid attribute in provider configuration",
-				Detail:   "'config_path' refers to an invalid path: " + configPathAbs,
+				Detail:   fmt.Sprintf("'config_path' refers to an invalid path: %q: %v", configPathAbs, err),
 			})
 		}
 		loader.ExplicitPath = configPathAbs
+	}
+	// Handle 'config_paths' attribute
+	//
+	var precedence []string
+	if !providerConfig["config_paths"].IsNull() && providerConfig["config_paths"].IsKnown() {
+		var configPaths []tftypes.Value
+		err = providerConfig["config_paths"].As(&configPaths)
+		if err != nil {
+			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Provider configuration: failed to extract 'config_paths' value",
+				Detail:   err.Error(),
+			})
+			return response, nil
+		}
+		for _, p := range configPaths {
+			var pp string
+			p.As(&pp)
+			precedence = append(precedence, pp)
+		}
+	}
+	//
+	// check environment for KUBE_CONFIG_PATHS
+	if configPathsEnv, ok := os.LookupEnv("KUBE_CONFIG_PATHS"); ok && configPathsEnv != "" {
+		precedence = filepath.SplitList(configPathsEnv)
+	}
+	if len(precedence) > 0 {
+		for i, p := range precedence {
+			absPath, err := homedir.Expand(p)
+			if err == nil {
+				_, err = os.Stat(absPath)
+			}
+			if err != nil {
+				diags = append(diags, &tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityInvalid,
+					Summary:  "Invalid attribute in provider configuration",
+					Detail:   fmt.Sprintf("'config_paths' refers to an invalid path: %q: %v", absPath, err),
+				})
+			}
+			precedence[i] = absPath
+		}
+		loader.Precedence = precedence
 	}
 
 	// Handle 'client_certificate' attribute

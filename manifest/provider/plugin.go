@@ -37,26 +37,6 @@ func Provider() func() tfprotov5.ProviderServer {
 	}
 }
 
-// ServeReattach is the entrypoint for manually starting the provider
-// as a process in reattach mode for debugging.
-func ServeReattach(ctx context.Context, logger hclog.Logger) error {
-	reattachConfigCh := make(chan *plugin.ReattachConfig)
-	go func() {
-		reattachConfig, err := waitForReattachConfig(reattachConfigCh)
-		if err != nil {
-			fmt.Printf("Error getting reattach config: %s\n", err)
-			return
-		}
-		printReattachConfig(reattachConfig)
-	}()
-
-	return tf5server.Serve(providerName,
-		func() tfprotov5.ProviderServer { return &(RawProviderServer{logger: logger}) },
-		tf5server.WithDebug(ctx, reattachConfigCh, nil),
-		tf5server.WithGoPluginLogger(logger),
-	)
-}
-
 // ServeTest is for serving the provider in-process when testing.
 // Returns a ReattachInfo or an error.
 func ServeTest(ctx context.Context, logger hclog.Logger) (tfexec.ReattachInfo, error) {

@@ -55,6 +55,11 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 			Block: &tfprotov5.SchemaBlock{
 				Attributes: []*tfprotov5.SchemaAttribute{
 					{
+						Name:     "id",
+						Type:     tftypes.String,
+						Computed: true,
+					},
+					{
 						Name:        "manifest",
 						Type:        tftypes.DynamicPseudoType,
 						Required:    true,

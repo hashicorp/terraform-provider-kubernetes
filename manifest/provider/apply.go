@@ -205,9 +205,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		if err != nil {
 			return resp, err
 		}
-
 		resp.NewState = &newResState
-
 	case applyPlannedState.IsNull():
 		// Delete the resource
 		priorStateVal := make(map[string]tftypes.Value)

@@ -276,8 +276,6 @@ github.com/hashicorp/terraform-provider-kubernetes-alpha/morph
 github.com/hashicorp/terraform-provider-kubernetes-alpha/openapi
 github.com/hashicorp/terraform-provider-kubernetes-alpha/payload
 github.com/hashicorp/terraform-provider-kubernetes-alpha/provider
-github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes
-github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state
 # github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864
 ## explicit
 github.com/hashicorp/yamux

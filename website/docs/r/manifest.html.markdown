@@ -15,17 +15,14 @@ Once applied, the `object` attribute contains the state of the resource as retur
 
 
 ### Example: Create a Kubernetes ConfigMap
-```hcl
-provider "kubernetes-alpha" {
-  config_path = "~/.kube/config" 
-}
 
+```hcl
 resource "kubernetes_manifest" "test-configmap" {
   manifest = {
     "apiVersion" = "v1"
-    "kind" = "ConfigMap"
+    "kind"       = "ConfigMap"
     "metadata" = {
-      "name" = "test-config"
+      "name"      = "test-config"
       "namespace" = "default"
     }
     "data" = {
@@ -38,27 +35,28 @@ resource "kubernetes_manifest" "test-configmap" {
 ### Example: Create a Kubernetes Custom Resource Definition
 
 ```hcl
-provider "kubernetes-alpha" {
-  config_path = "~/.kube/config" 
-}
-
 resource "kubernetes_manifest" "test-crd" {
   manifest = {
     apiVersion = "apiextensions.k8s.io/v1"
-    kind = "CustomResourceDefinition"
+    kind       = "CustomResourceDefinition"
+
     metadata = {
       name = "testcrds.hashicorp.com"
     }
+
     spec = {
       group = "hashicorp.com"
+
       names = {
-        kind = "TestCrd"
+        kind   = "TestCrd"
         plural = "testcrds"
       }
+
       scope = "Namespaced"
+
       versions = [{
-        name = "v1"
-        served = true
+        name    = "v1"
+        served  = true
         storage = true
         schema = {
           openAPIV3Schema = {

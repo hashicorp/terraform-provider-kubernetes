@@ -1,0 +1,33 @@
+name: Unit tests
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - "**.go"
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "**.go"
+jobs:
+  unit_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Read go-version
+        id: go-version
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: ./.go-version
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ steps.go-version.outputs.content }}
+      - name: Go mod verify
+        run: go mod verify
+      - name: Run unit tests
+        run: |
+          go test -v -timeout=30s -parallel=4 ./manifest/...

@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -11,15 +10,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/mod/semver"
-	"k8s.io/apimachinery/pkg/runtime"
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -549,31 +544,10 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		}
 	}
 
-	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
-	clientConfig, err := cc.ClientConfig()
-	if err != nil {
-		s.logger.Error("[Configure]", "Failed to load config:", spew.Sdump(cc))
-		if errors.Is(err, clientcmd.ErrEmptyConfig) {
-			// this is a terrible fix for if the configuration is a calculated value
-			return response, nil
-		}
-		response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Provider configuration: cannot load Kubernetes client config",
-			Detail:   err.Error(),
-		})
-		return response, nil
-	}
+	s.overrides = overrides
+	s.loader = loader
 
-	if s.logger.IsTrace() {
-		clientConfig.WrapTransport = loggingTransport
-	}
-
-	codec := runtime.NoopEncoder{Decoder: scheme.Codecs.UniversalDecoder()}
-	clientConfig.NegotiatedSerializer = serializer.NegotiatedSerializerWrapper(runtime.SerializerInfo{Serializer: codec})
-
-	s.logger.Trace("[Configure]", "[ClientConfig]", spew.Sdump(*clientConfig))
-	s.clientConfig = clientConfig
+	s.logger.Trace("[ConfigureProvider] Configured loading rules and overrides", loader, overrides)
 
 	return response, nil
 }

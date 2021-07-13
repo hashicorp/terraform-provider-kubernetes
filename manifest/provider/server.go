@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 func init() {
@@ -27,6 +28,8 @@ type RawProviderServer struct {
 	// Thus it needs a way to persist state between the gRPC calls. These attributes store values that need to be persisted between gRPC calls,
 	// such as instances of the Kubernetes clients, configuration options needed at runtime.
 	logger          hclog.Logger
+	overrides       *clientcmd.ConfigOverrides
+	loader          *clientcmd.ClientConfigLoadingRules
 	clientConfig    *rest.Config
 	dynamicClient   dynamic.Interface
 	discoveryClient discovery.DiscoveryInterface

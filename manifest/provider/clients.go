@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -12,10 +13,14 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes-alpha/openapi"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/tools/clientcmd"
 
 	// this is how client-go expects auth plugins to be loaded
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -26,15 +31,47 @@ const (
 	OAPIFoundry string = "OPENAPIFOUNDRY"
 )
 
+func (ps *RawProviderServer) getClientConfig() (*rest.Config, error) {
+	if ps.clientConfig != nil {
+		ps.logger.Trace("[getClientConfig] re-using clientConfig that was already created")
+		return ps.clientConfig, nil
+	}
+
+	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(ps.loader, ps.overrides)
+	clientConfig, err := cc.ClientConfig()
+	if err != nil {
+		ps.logger.Error("[getClientConfig]", "Failed to load config:", spew.Sdump(cc))
+		if errors.Is(err, clientcmd.ErrEmptyConfig) {
+			// this is a terrible fix for if the configuration is a calculated value
+			ps.clientConfig = clientConfig
+			return clientConfig, nil
+		}
+		return nil, err
+	}
+
+	if ps.logger.IsTrace() {
+		clientConfig.WrapTransport = loggingTransport
+	}
+
+	codec := runtime.NoopEncoder{Decoder: scheme.Codecs.UniversalDecoder()}
+	clientConfig.NegotiatedSerializer = serializer.NegotiatedSerializerWrapper(runtime.SerializerInfo{Serializer: codec})
+
+	ps.logger.Trace("[getClientConfig]", spew.Sdump(*clientConfig))
+
+	ps.clientConfig = clientConfig
+	return clientConfig, nil
+}
+
 // getDynamicClient returns a configured unstructured (dynamic) client instance
 func (ps *RawProviderServer) getDynamicClient() (dynamic.Interface, error) {
 	if ps.dynamicClient != nil {
 		return ps.dynamicClient, nil
 	}
-	if ps.clientConfig == nil {
-		return nil, fmt.Errorf("cannot create dynamic client: no client config")
+	clientConfig, err := ps.getClientConfig()
+	if err != nil {
+		return nil, err
 	}
-	dynClient, err := dynamic.NewForConfig(ps.clientConfig)
+	dynClient, err := dynamic.NewForConfig(clientConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -47,10 +84,11 @@ func (ps *RawProviderServer) getDiscoveryClient() (discovery.DiscoveryInterface,
 	if ps.discoveryClient != nil {
 		return ps.discoveryClient, nil
 	}
-	if ps.clientConfig == nil {
-		return nil, fmt.Errorf("cannot create discovery client: no client config")
+	clientConfig, err := ps.getClientConfig()
+	if err != nil {
+		return nil, err
 	}
-	discoClient, err := discovery.NewDiscoveryClientForConfig(ps.clientConfig)
+	discoClient, err := discovery.NewDiscoveryClientForConfig(clientConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -81,10 +119,11 @@ func (ps *RawProviderServer) getRestClient() (rest.Interface, error) {
 	if ps.restClient != nil {
 		return ps.restClient, nil
 	}
-	if ps.clientConfig == nil {
-		return nil, fmt.Errorf("cannot create REST client: no client config")
+	clientConfig, err := ps.getClientConfig()
+	if err != nil {
+		return nil, err
 	}
-	restClient, err := rest.UnversionedRESTClientFor(ps.clientConfig)
+	restClient, err := rest.UnversionedRESTClientFor(clientConfig)
 	if err != nil {
 		return nil, err
 	}

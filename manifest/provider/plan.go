@@ -302,17 +302,6 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		proposedVal["object"] = updatedObj
 	}
 
-	id, err := createIDFromManifest(proposedVal["manifest"])
-	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Could not generate ID for resource",
-			Detail:   err.Error(),
-		})
-		return resp, nil
-	}
-	proposedVal["id"] = id
-
 	propStateVal := tftypes.NewValue(proposedState.Type(), proposedVal)
 	s.logger.Trace("[PlanResourceChange]", "new planned state", spew.Sdump(propStateVal))
 
@@ -340,22 +329,4 @@ func getAttributeValue(v tftypes.Value, path string) (tftypes.Value, error) {
 		return tftypes.Value{}, err
 	}
 	return vv.(tftypes.Value), nil
-}
-
-func createIDFromManifest(manifest tftypes.Value) (tftypes.Value, error) {
-	id := ""
-	name, err := getAttributeValue(manifest, "metadata.name")
-	if err != nil {
-		return tftypes.Value{}, err
-	}
-	var s string
-	name.As(&s)
-	id += s
-	namespace, err := getAttributeValue(manifest, "metadata.namespace")
-	if err != nil {
-		return tftypes.NewValue(tftypes.String, id), nil
-	}
-	namespace.As(&s)
-	id += "/" + s
-	return tftypes.NewValue(tftypes.String, id), nil
 }

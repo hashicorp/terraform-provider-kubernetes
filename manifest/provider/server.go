@@ -33,6 +33,8 @@ type RawProviderServer struct {
 	restMapper      meta.RESTMapper
 	restClient      rest.Interface
 	OAPIFoundry     openapi.Foundry
+
+	providerEnabled bool
 }
 
 // PrepareProviderConfig function

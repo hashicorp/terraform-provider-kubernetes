@@ -38,6 +38,8 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
+	os.Setenv("TF_X_KUBERNETES_MANIFEST_RESOURCE", "true")
+
 	tfhelper = tftest.AutoInitProviderHelper(sourceDir)
 	defer tfhelper.Close()
 

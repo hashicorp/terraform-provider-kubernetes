@@ -78,6 +78,15 @@ func (s *RawProviderServer) dryRun(ctx context.Context, obj tftypes.Value) error
 func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfprotov5.PlanResourceChangeRequest) (*tfprotov5.PlanResourceChangeResponse, error) {
 	resp := &tfprotov5.PlanResourceChangeResponse{}
 
+	if !s.providerEnabled {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Experimental feature not enabled.",
+			Detail:   "The `kubernetes_manifest` resource is an experimental feature and must be explicitly enabled in the provider configuration block.",
+		})
+		return resp, nil
+	}
+
 	// test if credentials are valid - we're going to need them further down
 	resp.Diagnostics = append(resp.Diagnostics, s.checkValidCredentials(ctx)...)
 	if len(resp.Diagnostics) > 0 {

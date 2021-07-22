@@ -205,6 +205,28 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 					},
 				},
 			},
+			{
+				TypeName: "experiments",
+				Nesting:  tfprotov5.SchemaNestedBlockNestingModeList,
+				MinItems: 0,
+				MaxItems: 1,
+				Block: &tfprotov5.SchemaBlock{
+					Description: "Enable and disable experimental features.",
+					Attributes: []*tfprotov5.SchemaAttribute{
+						{
+							Name:            "manifest_resource",
+							Type:            tftypes.Bool,
+							Required:        false,
+							Optional:        true,
+							Computed:        false,
+							Sensitive:       false,
+							Description:     "Enable the `kubernetes_manifest` resource.",
+							DescriptionKind: 0,
+							Deprecated:      false,
+						},
+					},
+				},
+			},
 		},
 	}
 

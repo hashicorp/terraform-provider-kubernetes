@@ -65,6 +65,66 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		return response, nil
 	}
 
+	var providerEnabled bool
+	if !providerConfig["experiments"].IsNull() && providerConfig["experiments"].IsKnown() {
+		var experimentsBlock []tftypes.Value
+		err = providerConfig["experiments"].As(&experimentsBlock)
+		if err != nil {
+			// invalid configuration schema - this shouldn't happen, bail out now
+			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Provider configuration: failed to extract 'experiments' value",
+				Detail:   err.Error(),
+			})
+			return response, nil
+		}
+		if len(experimentsBlock) > 0 {
+			var experimentsObj map[string]tftypes.Value
+			err := experimentsBlock[0].As(&experimentsObj)
+			if err != nil {
+				// invalid configuration schema - this shouldn't happen, bail out now
+				response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityError,
+					Summary:  "Provider configuration: failed to extract 'experiments' value",
+					Detail:   err.Error(),
+				})
+				return response, nil
+			}
+			if !experimentsObj["manifest_resource"].IsNull() && experimentsObj["manifest_resource"].IsKnown() {
+				err = experimentsObj["manifest_resource"].As(&providerEnabled)
+				if err != nil {
+					// invalid attribute type - this shouldn't happen, bail out for now
+					response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
+						Severity: tfprotov5.DiagnosticSeverityError,
+						Summary:  "Provider configuration: failed to extract 'manifest_resource' value",
+						Detail:   err.Error(),
+					})
+					return response, nil
+				}
+			}
+		}
+	}
+	if v := os.Getenv("TF_X_KUBERNETES_MANIFEST_RESOURCE"); v != "" {
+		providerEnabled, err = strconv.ParseBool(v)
+		if err != nil {
+			if err != nil {
+				// invalid attribute type - this shouldn't happen, bail out for now
+				response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityError,
+					Summary:  "Provider configuration: failed to parse boolean from `TF_X_KUBERNETES_MANIFEST_RESOURCE` env var",
+					Detail:   err.Error(),
+				})
+				return response, nil
+			}
+		}
+	}
+	s.providerEnabled = providerEnabled
+
+	if !providerEnabled {
+		// Configure should be a noop when not enabled in the provider block
+		return response, nil
+	}
+
 	overrides := &clientcmd.ConfigOverrides{}
 	loader := &clientcmd.ClientConfigLoadingRules{}
 

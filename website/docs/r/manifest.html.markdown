@@ -126,17 +126,6 @@ resource "kubernetes_manifest" "test" {
       "status.readyReplicas" = "2"
     }
   }
-}
-```
-
-## Configuring timeouts
-
-resource "kubernetes_manifest" "test" {
-  provider = kubernetes-alpha
-
-  manifest = {
-    // ...
-  }
 
   timeouts {
     create = "10m"
@@ -144,6 +133,32 @@ resource "kubernetes_manifest" "test" {
     delete = "30s"
   }
 }
+```
+
+## Configuring `field_manager`
+
+The `kubernetes_manifest` exposes configuration of the field manager through the optional `field_manager` block.
+
+```hcl
+resource "kubernetes_manifest" "test" {
+  provider = kubernetes-alpha
+
+  manifest = {
+    // ...
+  }
+
+  field_manager {
+    fields = {
+      # set the name of the field manager
+      name = "myteam"
+
+      # force field manager conflicts to be overridden
+      force_conflicts = true
+    }
+  }
+}
+
+```
 
 ## Argument Reference
 
@@ -152,12 +167,20 @@ The following arguments are supported:
 - `manifest` (Required) An object Kubernetes manifest describing the desired state of the resource in HCL format.
 - `object` (Optional) The resulting resource state, as returned by the API server after applying the desired state from `manifest`.
 - `wait_for` (Optional) An object which allows you configure the provider to wait for certain conditions to be met. See below for schema. 
+- `field_manager` (Optional) Configure field manager options. See below.
 
 ### `wait_for`
 
 #### Arguments
 
 - **fields** (Required) A map of fields and a corresponding regular expression with a pattern to wait for. The provider will wait until the field matches the regular expression. Use `*` for any value. 
+
+### `field_manager`
+
+#### Arguments
+
+- **name** (Optional) The name of the field manager to use when applying the resource. Defaults to `Terraform`.
+- **force_conflicts** (Optional) Forcibly override any field manager conflicts when applying the resource. Defaults to `false`.
 
 ### `timeouts`
 

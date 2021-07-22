@@ -3,7 +3,7 @@ clusters:
 - cluster:
     certificate-authority-data: ${ca_cert}
     server: ${endpoint}
-  name: gke_terraform-strategic-providers_us-west1-a_k8s-acc-5642
+  name: gke_${project}_${zone}_${cluster_name}
 contexts:
 - context:
     cluster: gke_${project}_${zone}_${cluster_name}
@@ -18,7 +18,7 @@ users:
     auth-provider:
       config:
         cmd-args: config config-helper --format=json
-        cmd-path: gcloud
+        cmd-path: /var/lib/snapd/snap/bin/gcloud
         expiry-key: '{.credential.token_expiry}'
         token-key: '{.credential.access_token}'
       name: gcp

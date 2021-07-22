@@ -1,12 +1,13 @@
-# GKE (Google Container Engine)
+# GKE (Google Kubernetes Engine)
 
-This example shows how to use the Terraform Kubernetes Provider and Terraform Helm Provider to configure a GKE cluster. The example config builds the GKE cluster and applies the Kubernetes configurations in a single operation. This guide will also show you how to make changes to the underlying GKE cluster in such a way that Kuberntes/Helm resources are recreated after the underlying cluster is replaced.
+This example demonstrates the most reliable way to use the Kubernetes provider together with the Google provider to create a GKE cluster. By keeping the two providers' resources in separate Terraform states (or separate workspaces using [Terraform Cloud](https://app.terraform.io/)), we can limit the scope of changes to either the GKE cluster or the Kubernetes resources. This will prevent dependency issues between the Google and Kubernetes providers, since terraform's [provider configurations must be known before a configuration can be applied](https://www.terraform.io/docs/language/providers/configuration.html).
 
 You will need the following environment variables to be set:
 
  - `GOOGLE_CREDENTIALS`
  - `GOOGLE_PROJECT`
  - `GOOGLE_REGION`
+
 
 For example:
 ```
@@ -18,59 +19,85 @@ GOOGLE_PROJECT=my-gcp-project
 
 See [Google Provider docs](https://registry.terraform.io/providers/hashicorp/google/latest/docs/guides/provider_reference#full-reference) for more details about these variables.
 
-Ensure that `KUBE_CONFIG_FILE` and `KUBE_CONFIG_FILES` environment variables are NOT set, as they will interfere with the cluster build.
+## Create GKE cluster
 
-```
-unset KUBE_CONFIG_FILE
-unset KUBE_CONFIG_FILES
-```
-
-To install the GKE cluster using default values, run terraform init and apply from the directory containing this README.
+Choose a name for the cluster, or use the terraform config in the current directory to create a random name.
 
 ```
 terraform init
-terraform apply
+terraform apply --auto-approve
+export CLUSTERNAME=$(terraform output -raw cluster_name)
 ```
 
-Optionally, the Kubernetes version can also be specified:
+Change into the gke-cluster directory and create the GKE cluster infrastructure.
 
 ```
-terraform apply -var=kubernetes_version=1.18
+cd gke-cluster
+terraform init
+terraform apply -var=cluster_name=$CLUSTERNAME
+cd -
 ```
 
-
-## Versions
-
-Valid versions for the GKE cluster can be found by using the gcloud tool.
+Optionally, the Kubernetes version can be specified at apply time:
 
 ```
-gcloud container get-server-config --region $GOOGLE_REGION
+terraform apply -var=cluster_name=$CLUSTERNAME -var=kubernetes_version=1.18
 ```
 
-## Kubeconfig for manual CLI access
-
-This example generates a kubeconfig file in the current working directory. However, the token in this config will expire after 1 hour. The token can be refreshed by running `terraform apply` again.
+A full list of versions is available per Zone or Region, using the gcloud tool:
 
 ```
-terraform apply
-export KUBECONFIG=$(terraform output -raw kubeconfig_path)
+$ gcloud container get-server-config --flatten="channels" --filter="channels.channel=STABLE" \
+     --format="yaml(channels.channel,channels.validVersions)" --region=$GOOGLE_REGION
+
+Fetching server config for us-west1
+---
+channels:
+  channel: STABLE
+  validVersions:
+  - 1.19.11-gke.2101
+  - 1.19.10-gke.1000
+  - 1.18.19-gke.1701
+  - 1.18.17-gke.1901
+```
+
+See Google's [GKE documentation](https://cloud.google.com/kubernetes-engine/versioning) for more information.
+
+
+## Create Kubernetes resources
+
+Change into the kubernetes-config directory to apply Kubernetes resources to the new cluster.
+
+```
+cd kubernetes-config
+terraform init
+terraform apply -var=cluster_name=$CLUSTERNAME
+```
+
+### Kubeconfig for manual CLI access
+
+This example generates a kubeconfig file which can be used for manual CLI access to the cluster.
+
+```
+cd kubernetes-config
+export KUBECONFIG=$(terraform output -raw kubeconfig)
 kubectl get pods -n test
 ```
 
-Alternatively, a longer-lived configuration can be generated using the gcloud tool. Note: this command will overwrite the default kubeconfig at `$HOME/.kube/config`.
+## Deleting the cluster
+
+First, delete the Kubernetes resources as shown below. This will give Ingress and Service related Load Balancers a chance to delete before the other cluster infrastructure is removed.
 
 ```
-gcloud container clusters get-credentials $(terraform output -raw cluster_name) --zone $(terraform output -raw google_zone)
-kubectl get pods -n test
+cd kubernetes-config
+terraform destroy -var=cluster_name=$CLUSTERNAME
+cd -
 ```
 
-## Replacing the GKE cluster and re-creating the Kubernetes / Helm resources
-
-When the cluster is initially created, the Kubernetes and Helm providers will not be initialized until authentication details are created for the cluster. However, for future operations that may involve replacing the underlying cluster (for example, changing VM sizes), the GKE cluster will have to be targeted without the Kubernetes/Helm providers, as shown below. This is done by removing the `module.kubernetes-config` from Terraform State prior to replacing cluster credentials, to avoid passing outdated credentials into the providers.
-
-This will create the new cluster and the Kubernetes resources in a single apply.
+Then delete the GKE related resources:
 
 ```
-terraform state rm module.kubernetes-config
-terraform apply
+cd gke-cluster
+terraform destroy -var=cluster_name=$CLUSTERNAME
+cd -
 ```

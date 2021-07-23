@@ -94,12 +94,12 @@ resource "kubernetes_horizontal_pod_autoscaler" "example" {
           type           = "Pods"
           value          = 1
         }
-        
+
         policy {
           period_seconds = 310
           type           = "Percent"
           value          = 100
-        } 
+        }
       }
       scale_up {
         stabilization_window_seconds = 600

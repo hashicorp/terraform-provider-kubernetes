@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-provider-kubernetes-alpha/openapi"
@@ -37,16 +36,20 @@ type RawProviderServer struct {
 	providerEnabled bool
 }
 
+func dump(v interface{}) hclog.Format {
+	return hclog.Fmt("%v", v)
+}
+
 // PrepareProviderConfig function
 func (s *RawProviderServer) PrepareProviderConfig(ctx context.Context, req *tfprotov5.PrepareProviderConfigRequest) (*tfprotov5.PrepareProviderConfigResponse, error) {
-	s.logger.Trace("[PrepareProviderConfig][Request]\n%s\n", spew.Sdump(*req))
+	s.logger.Trace("[PrepareProviderConfig][Request]\n%s\n", dump(*req))
 	resp := &tfprotov5.PrepareProviderConfigResponse{}
 	return resp, nil
 }
 
 // ValidateDataSourceConfig function
 func (s *RawProviderServer) ValidateDataSourceConfig(ctx context.Context, req *tfprotov5.ValidateDataSourceConfigRequest) (*tfprotov5.ValidateDataSourceConfigResponse, error) {
-	s.logger.Trace("[ValidateDataSourceConfig][Request]\n%s\n", spew.Sdump(*req))
+	s.logger.Trace("[ValidateDataSourceConfig][Request]\n%s\n", dump(*req))
 	resp := &tfprotov5.ValidateDataSourceConfigResponse{}
 	return resp, nil
 }
@@ -92,14 +95,14 @@ func (*RawProviderServer) ImportResourceState(ctx context.Context, req *tfprotov
 
 // ReadDataSource function
 func (s *RawProviderServer) ReadDataSource(ctx context.Context, req *tfprotov5.ReadDataSourceRequest) (*tfprotov5.ReadDataSourceResponse, error) {
-	s.logger.Trace("[ReadDataSource][Request]\n%s\n", spew.Sdump(*req))
+	s.logger.Trace("[ReadDataSource][Request]\n%s\n", dump(*req))
 
 	return nil, status.Errorf(codes.Unimplemented, "method ReadDataSource not implemented")
 }
 
 // StopProvider function
 func (s *RawProviderServer) StopProvider(ctx context.Context, req *tfprotov5.StopProviderRequest) (*tfprotov5.StopProviderResponse, error) {
-	s.logger.Trace("[StopProvider][Request]\n%s\n", spew.Sdump(*req))
+	s.logger.Trace("[StopProvider][Request]\n%s\n", dump(*req))
 
 	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
 }

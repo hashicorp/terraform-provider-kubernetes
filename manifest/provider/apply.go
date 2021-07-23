@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes-alpha/morph"
@@ -39,7 +38,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		})
 		return resp, nil
 	}
-	s.logger.Trace("[ApplyResourceChange]", "[PlannedState]", spew.Sdump(applyPlannedState))
+	s.logger.Trace("[ApplyResourceChange][PlannedState] %#v", applyPlannedState)
 
 	applyPriorState, err := req.PriorState.Unmarshal(rt)
 	if err != nil {
@@ -50,7 +49,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		})
 		return resp, nil
 	}
-	s.logger.Trace("[ApplyResourceChange]", "[PriorState]", spew.Sdump(applyPriorState))
+	s.logger.Trace("[ApplyResourceChange]", "[PriorState]", dump(applyPriorState))
 
 	c, err := s.getDynamicClient()
 	if err != nil {
@@ -107,13 +106,13 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		}
 
 		minObj := morph.UnknownToNull(obj)
-		s.logger.Trace("[ApplyResourceChange][Apply]", "[UnknownToNull]", spew.Sdump(minObj))
+		s.logger.Trace("[ApplyResourceChange][Apply]", "[UnknownToNull]", dump(minObj))
 
 		pu, err := payload.FromTFValue(minObj, tftypes.NewAttributePath())
 		if err != nil {
 			return resp, err
 		}
-		s.logger.Trace("[ApplyResourceChange][Apply]", "[payload.FromTFValue]", spew.Sdump(pu))
+		s.logger.Trace("[ApplyResourceChange][Apply]", "[payload.FromTFValue]", dump(pu))
 
 		// remove null attributes - the API doesn't appreciate requests that include them
 		rqObj := mapRemoveNulls(pu.(map[string]interface{}))
@@ -159,7 +158,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		// Call the Kubernetes API to create the new resource
 		result, err := rs.Patch(ctx, rname, types.ApplyPatchType, jsonManifest, metav1.PatchOptions{FieldManager: "Terraform"})
 		if err != nil {
-			s.logger.Error("[ApplyResourceChange][Apply]", "API error", spew.Sdump(err), "API response", spew.Sdump(result))
+			s.logger.Error("[ApplyResourceChange][Apply]", "API error", dump(err), "API response", dump(result))
 			if status := apierrors.APIStatus(nil); errors.As(err, &status) {
 				resp.Diagnostics = append(resp.Diagnostics, APIStatusErrorToDiagnostics(status.Status())...)
 			} else {
@@ -177,7 +176,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		if err != nil {
 			return resp, err
 		}
-		s.logger.Trace("[ApplyResourceChange][Apply]", "[payload.ToTFValue]", spew.Sdump(newResObject))
+		s.logger.Trace("[ApplyResourceChange][Apply]", "[payload.ToTFValue]", dump(newResObject))
 
 		wt, err := s.TFTypeFromOpenAPI(ctx, gvk, true)
 		if err != nil {
@@ -199,7 +198,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		plannedStateVal["object"] = morph.UnknownToNull(compObj)
 
 		newStateVal := tftypes.NewValue(applyPlannedState.Type(), plannedStateVal)
-		s.logger.Trace("[ApplyResourceChange][Apply]", "new state value", spew.Sdump(newStateVal))
+		s.logger.Trace("[ApplyResourceChange][Apply]", "new state value", dump(newStateVal))
 
 		newResState, err := tfprotov5.NewDynamicValue(newStateVal.Type(), newStateVal)
 		if err != nil {

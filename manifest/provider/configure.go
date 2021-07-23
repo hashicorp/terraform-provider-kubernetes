@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/mitchellh/go-homedir"
@@ -612,7 +611,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 	clientConfig, err := cc.ClientConfig()
 	if err != nil {
-		s.logger.Error("[Configure]", "Failed to load config:", spew.Sdump(cc))
+		s.logger.Error("[Configure]", "Failed to load config:", dump(cc))
 		if errors.Is(err, clientcmd.ErrEmptyConfig) {
 			// this is a terrible fix for if the configuration is a calculated value
 			return response, nil
@@ -632,7 +631,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	codec := runtime.NoopEncoder{Decoder: scheme.Codecs.UniversalDecoder()}
 	clientConfig.NegotiatedSerializer = serializer.NegotiatedSerializerWrapper(runtime.SerializerInfo{Serializer: codec})
 
-	s.logger.Trace("[Configure]", "[ClientConfig]", spew.Sdump(*clientConfig))
+	s.logger.Trace("[Configure]", "[ClientConfig]", dump(*clientConfig))
 	s.clientConfig = clientConfig
 
 	return response, nil

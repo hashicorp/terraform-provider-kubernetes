@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-provider-kubernetes-alpha/openapi"
@@ -166,7 +165,7 @@ func (ps *RawProviderServer) checkValidCredentials(ctx context.Context) (diags [
 				Detail:   rs.Error().Error(),
 			})
 		}
-		ps.logger.Debug("[InvalidClientConfiguration]", "Config", spew.Sdump(ps.clientConfig))
+		ps.logger.Debug("[InvalidClientConfiguration]", "Config", dump(ps.clientConfig))
 	}
 	return
 }

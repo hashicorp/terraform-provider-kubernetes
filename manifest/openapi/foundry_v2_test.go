@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -233,7 +232,7 @@ func TestGetType(t *testing.T) {
 					t.Fatal(fmt.Errorf("GetTypeByID() failed: %s", err))
 				}
 				if !rt.Is(s.want) {
-					t.Fatalf("\nRETURNED %s\nEXPECTED: %s", spew.Sdump(rt), spew.Sdump(s.want))
+					t.Fatalf("\nRETURNED %#v\nEXPECTED: %#v", rt, s.want)
 				}
 			})
 	}

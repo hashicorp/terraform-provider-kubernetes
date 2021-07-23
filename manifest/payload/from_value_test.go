@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
@@ -77,9 +76,9 @@ func TestFromTFValue(t *testing.T) {
 			}
 			if !reflect.DeepEqual(s.Out, r) {
 				t.Logf("Result doesn't match expectation for sample '%s'", n)
-				t.Logf("\t Sample:\t%s", spew.Sdump(s.In))
-				t.Logf("\t Expected:\t%s", spew.Sdump(s.Out))
-				t.Logf("\t Received:\t%s", spew.Sdump(r))
+				t.Logf("\t Sample:\t%#v", s.In)
+				t.Logf("\t Expected:\t%#v", s.Out)
+				t.Logf("\t Received:\t%#v", r)
 				t.Fail()
 			}
 		})

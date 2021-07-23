@@ -5,7 +5,6 @@ require (
 	github.com/Azure/go-autorest/autorest v0.11.18 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/aws/aws-sdk-go v1.38.20 // indirect
-	github.com/davecgh/go-spew v1.1.1
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/getkin/kin-openapi v0.66.0
 	github.com/go-errors/errors v1.1.1 // indirect

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes-alpha/morph"
@@ -74,7 +73,7 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 		})
 		return resp, nil
 	}
-	s.logger.Trace("[ReadResource]", "[unstructured.FromTFValue]", spew.Sdump(cu))
+	s.logger.Trace("[ReadResource]", "[unstructured.FromTFValue]", dump(cu))
 
 	rm, err := s.getRestMapper()
 	if err != nil {
@@ -121,7 +120,7 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 		}
 		d := tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  fmt.Sprintf("Cannot GET resource %s", spew.Sdump(co)),
+			Summary:  fmt.Sprintf("Cannot GET resource %s", dump(co)),
 			Detail:   err.Error(),
 		}
 		resp.Diagnostics = append(resp.Diagnostics, &d)

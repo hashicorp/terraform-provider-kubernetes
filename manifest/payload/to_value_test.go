@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
@@ -281,9 +280,9 @@ func TestToTFValue(t *testing.T) {
 			} else {
 				if !reflect.DeepEqual(s.Out, r) {
 					t.Logf("Result doesn't match expectation for sample '%s'", name)
-					t.Logf("\t Sample:\t%s", spew.Sdump(s.In))
-					t.Logf("\t Expected:\t%s", spew.Sdump(s.Out))
-					t.Logf("\t Received:\t%s", spew.Sdump(r))
+					t.Logf("\t Sample:\t%#v", s.In)
+					t.Logf("\t Expected:\t%#v", s.Out)
+					t.Logf("\t Received:\t%#v", r)
 					t.Fail()
 				}
 			}
@@ -325,9 +324,9 @@ func TestSliceToTFDynamicValue(t *testing.T) {
 			} else {
 				if !cmp.Equal(s.Out, r, cmpCompareAllOption) {
 					t.Logf("Result doesn't match expectation for sample '%s'", name)
-					t.Logf("\t Sample:\t%s", spew.Sdump(s.In))
-					t.Logf("\t Expected:\t%s", spew.Sdump(s.Out))
-					t.Logf("\t Received:\t%s", spew.Sdump(r))
+					t.Logf("\t Sample:\t%#v", s.In)
+					t.Logf("\t Expected:\t%#v", s.Out)
+					t.Logf("\t Received:\t%#v", r)
 					t.Fail()
 				}
 			}
@@ -369,9 +368,9 @@ func TestSliceToTFTupleValue(t *testing.T) {
 			} else {
 				if !cmp.Equal(s.Out, r, cmpCompareAllOption) {
 					t.Logf("Result doesn't match expectation for sample '%s'", name)
-					t.Logf("\t Sample:\t%s", spew.Sdump(s.In))
-					t.Logf("\t Expected:\t%s", spew.Sdump(s.Out))
-					t.Logf("\t Received:\t%s", spew.Sdump(r))
+					t.Logf("\t Sample:\t%#v", s.In)
+					t.Logf("\t Expected:\t%#v", s.Out)
+					t.Logf("\t Received:\t%#v", r)
 					t.Fail()
 				}
 			}
@@ -413,9 +412,9 @@ func TestSliceToTFSetValue(t *testing.T) {
 			} else {
 				if !cmp.Equal(s.Out, r, cmpCompareAllOption) {
 					t.Logf("Result doesn't match expectation for sample '%s'", name)
-					t.Logf("\t Sample:\t%s", spew.Sdump(s.In))
-					t.Logf("\t Expected:\t%s", spew.Sdump(s.Out))
-					t.Logf("\t Received:\t%s", spew.Sdump(r))
+					t.Logf("\t Sample:\t%#v", s.In)
+					t.Logf("\t Expected:\t%#v", s.Out)
+					t.Logf("\t Received:\t%#v", r)
 					t.Fail()
 				}
 			}
@@ -457,9 +456,9 @@ func TestSliceToTFListValue(t *testing.T) {
 			} else {
 				if !cmp.Equal(s.Out, r, cmpCompareAllOption) {
 					t.Logf("Result doesn't match expectation for sample '%s'", name)
-					t.Logf("\t Sample:\t%s", spew.Sdump(s.In))
-					t.Logf("\t Expected:\t%s", spew.Sdump(s.Out))
-					t.Logf("\t Received:\t%s", spew.Sdump(r))
+					t.Logf("\t Sample:\t%#v", s.In)
+					t.Logf("\t Expected:\t%#v", s.Out)
+					t.Logf("\t Received:\t%#v", r)
 					t.Fail()
 				}
 			}
@@ -506,9 +505,9 @@ func TestMapToTFMapValue(t *testing.T) {
 			} else {
 				if !cmp.Equal(s.Out, r, cmpCompareAllOption) {
 					t.Logf("Result doesn't match expectation for sample '%s'", name)
-					t.Logf("\t Sample:\t%s", spew.Sdump(s.In))
-					t.Logf("\t Expected:\t%s", spew.Sdump(s.Out))
-					t.Logf("\t Received:\t%s", spew.Sdump(r))
+					t.Logf("\t Sample:\t%#v", s.In)
+					t.Logf("\t Expected:\t%#v", s.Out)
+					t.Logf("\t Received:\t%#v", r)
 					t.Fail()
 				}
 			}
@@ -562,9 +561,9 @@ func TestMapToTFObjectValue(t *testing.T) {
 			} else {
 				if !cmp.Equal(s.Out, r, cmpCompareAllOption) {
 					t.Logf("Result doesn't match expectation for sample '%s'", name)
-					t.Logf("\t Sample:\t%s", spew.Sdump(s.In))
-					t.Logf("\t Expected:\t%s", spew.Sdump(s.Out))
-					t.Logf("\t Received:\t%s", spew.Sdump(r))
+					t.Logf("\t Sample:\t%#v", s.In)
+					t.Logf("\t Expected:\t%#v", s.Out)
+					t.Logf("\t Received:\t%#v", r)
 					t.Fail()
 				}
 			}
@@ -594,9 +593,9 @@ func TestMapToTFDynamicValue(t *testing.T) {
 			} else {
 				if !cmp.Equal(s.Out, r, cmpCompareAllOption) {
 					t.Logf("Result doesn't match expectation for sample '%s'", name)
-					t.Logf("\t Sample:\t%s", spew.Sdump(s.In))
-					t.Logf("\t Expected:\t%s", spew.Sdump(s.Out))
-					t.Logf("\t Received:\t%s", spew.Sdump(r))
+					t.Logf("\t Sample:\t%#v", s.In)
+					t.Logf("\t Expected:\t%#v", s.Out)
+					t.Logf("\t Received:\t%#v", r)
 					t.Fail()
 				}
 			}

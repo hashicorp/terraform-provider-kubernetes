@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
@@ -365,9 +364,9 @@ func TestMorphValueToType(t *testing.T) {
 			}
 			if !cmp.Equal(r, s.Out, cmp.Exporter(func(t reflect.Type) bool { return true })) {
 				t.Logf("Result doesn't match expectation for sample '%s'", n)
-				t.Logf("\t Sample:\t%s", spew.Sdump(s.In))
-				t.Logf("\t Expected:\t%s", spew.Sdump(s.Out))
-				t.Logf("\t Received:\t%s", spew.Sdump(r))
+				t.Logf("\t Sample:\t%#v", s.In)
+				t.Logf("\t Expected:\t%#v", s.Out)
+				t.Logf("\t Received:\t%#v", r)
 				t.Fail()
 			}
 		})

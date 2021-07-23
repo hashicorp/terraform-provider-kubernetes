@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes-alpha/morph"
@@ -112,7 +111,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		})
 		return resp, nil
 	}
-	s.logger.Trace("[PlanResourceChange]", "[ProposedState]", spew.Sdump(proposedState))
+	s.logger.Trace("[PlanResourceChange]", "[ProposedState]", dump(proposedState))
 
 	proposedVal := make(map[string]tftypes.Value)
 	err = proposedState.As(&proposedVal)
@@ -135,7 +134,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		})
 		return resp, nil
 	}
-	s.logger.Trace("[PlanResourceChange]", "[PriorState]", spew.Sdump(priorState))
+	s.logger.Trace("[PlanResourceChange]", "[PriorState]", dump(priorState))
 
 	priorVal := make(map[string]tftypes.Value)
 	err = priorState.As(&priorVal)
@@ -234,7 +233,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	}
 
 	so := objectType.(tftypes.Object)
-	s.logger.Debug("[PlanUpdateResource]", "OAPI type", spew.Sdump(so))
+	s.logger.Debug("[PlanUpdateResource]", "OAPI type", dump(so))
 
 	// Transform the input manifest to adhere to the type model from the OpenAPI spec
 	mobj, err := morph.ValueToType(ppMan, objectType, tftypes.NewAttributePath())
@@ -246,7 +245,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		})
 		return resp, nil
 	}
-	s.logger.Debug("[PlanResourceChange]", "morphed manifest", spew.Sdump(mobj))
+	s.logger.Debug("[PlanResourceChange]", "morphed manifest", dump(mobj))
 
 	completeObj, err := morph.DeepUnknown(objectType, mobj, tftypes.NewAttributePath())
 	if err != nil {
@@ -257,10 +256,10 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		})
 		return resp, nil
 	}
-	s.logger.Debug("[PlanResourceChange]", "backfilled manifest", spew.Sdump(completeObj))
+	s.logger.Debug("[PlanResourceChange]", "backfilled manifest", dump(completeObj))
 
 	if proposedVal["object"].IsNull() { // plan for Create
-		s.logger.Debug("[PlanResourceChange]", "creating object", spew.Sdump(completeObj))
+		s.logger.Debug("[PlanResourceChange]", "creating object", dump(completeObj))
 		proposedVal["object"] = completeObj
 	} else { // plan for Update
 		priorObj, ok := priorVal["object"]
@@ -312,7 +311,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	}
 
 	propStateVal := tftypes.NewValue(proposedState.Type(), proposedVal)
-	s.logger.Trace("[PlanResourceChange]", "new planned state", spew.Sdump(propStateVal))
+	s.logger.Trace("[PlanResourceChange]", "new planned state", dump(propStateVal))
 
 	plannedState, err := tfprotov5.NewDynamicValue(propStateVal.Type(), propStateVal)
 	if err != nil {

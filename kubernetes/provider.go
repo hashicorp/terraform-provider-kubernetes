@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
@@ -133,6 +134,31 @@ func Provider() *schema.Provider {
 					},
 				},
 				Description: "",
+			},
+			"experiments": {
+				Type:        schema.TypeList,
+				MaxItems:    1,
+				Optional:    true,
+				Description: "Enable and disable experimental features.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"manifest_resource": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							DefaultFunc: func() (interface{}, error) {
+								if v := os.Getenv("TF_X_KUBERNETES_MANIFEST"); v != "" {
+									vv, err := strconv.ParseBool(v)
+									if err != nil {
+										return false, err
+									}
+									return vv, nil
+								}
+								return false, nil
+							},
+							Description: "Enable the `kubernetes_manifest` resource.",
+						},
+					},
+				},
 			},
 		},
 

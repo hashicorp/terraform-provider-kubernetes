@@ -4,8 +4,10 @@ require (
 	cloud.google.com/go/storage v1.14.0 // indirect
 	github.com/Azure/go-autorest/autorest v0.11.18 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
+	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/aws/aws-sdk-go v1.38.20 // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
+	github.com/fatih/color v1.10.0 // indirect
 	github.com/getkin/kin-openapi v0.66.0
 	github.com/go-errors/errors v1.1.1 // indirect
 	github.com/go-openapi/jsonreference v0.19.5 // indirect
@@ -30,14 +32,16 @@ require (
 	github.com/hashicorp/terraform-plugin-mux v0.2.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.7.0
 	github.com/hashicorp/terraform-plugin-test/v2 v2.2.1
-	github.com/hashicorp/terraform-provider-kubernetes-alpha v0.5.0
 	github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864 // indirect
 	github.com/jinzhu/copier v0.2.9
 	github.com/klauspost/compress v1.12.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
+	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/hashstructure v1.1.0
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
+	github.com/oklog/run v1.1.0 // indirect
 	github.com/robfig/cron v1.2.0
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/stretchr/objx v0.3.0 // indirect

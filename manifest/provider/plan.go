@@ -6,8 +6,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
-	"github.com/hashicorp/terraform-provider-kubernetes-alpha/morph"
-	"github.com/hashicorp/terraform-provider-kubernetes-alpha/payload"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/payload"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"

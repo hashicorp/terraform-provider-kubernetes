@@ -13,7 +13,6 @@
   - [Kubernetes Provider 2.0 Upgrade guide](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/guides/v2-upgrade-guide)
 - Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
 - Chat: [#terraform-providers in Kubernetes](https://kubernetes.slack.com/messages/CJY6ATQH4) ([Sign up here](http://slack.k8s.io/))
-- Roadmap: [Q3 2020](_about/ROADMAP.md)
 
 The Kubernetes provider for Terraform is a plugin that enables full lifecycle management of Kubernetes resources. This provider is maintained internally by HashiCorp.
 
@@ -24,11 +23,6 @@ Please note: We take Terraform's security and our users' trust very seriously. I
 
 -	[Terraform](https://www.terraform.io/downloads.html) 0.12.x
 -	[Go](https://golang.org/doc/install) 1.16.x (to build the provider plugin)
-
-
-## Kubernetes Alpha Provider
-
-A new [experimental provider](https://registry.terraform.io/providers/hashicorp/kubernetes-alpha/latest) is now available that enables management of all Kubernetes resources, including CustomResourceDefinitions (CRDs). Our intent is to eventually merge these two providers.
 
 
 ## Contributing to the provider

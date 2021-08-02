@@ -11,17 +11,9 @@ Earlier this year we announced a new provider capable of managing any kind of Ku
 
 The `kubernetes_manifest` resource in now available in the official provider for Kubernetes. This guide walks through the actions needed to adopt existing `kubernetes_manifest` resources into configurations that use the Kubernetes provider.
 
-Depending on use-case, the following actions are needed to perform the migration.
+Follow these steps to migrate your configuration and continue using the `kubernetes_manifest` resource with the Kubernetes provider.
 
-# Use Case A
-
-## Using only `kubernetes_manifest` resources
-
-If you've already been using the experimental `kubernetes-alpha` provider, you are likely falling in this use-case. If you have other `kubernetes_*` resources in your configuration, please also see [Use-case B](#use-case-b)
-
-In case your configuration only uses `kubrenetes_manifest`, but no other resources of the Kubernetes provider (e.g. `kubernetes_*` resources) follow these steps to migrate.
-
-### Step 1: Provider configuration blocks
+## Step 1: Provider configuration blocks
 
 The provider configuration blocks for the `kubernetes-alpha` provider are no longer supported. To carry over the configuration, simply rename the provider block to "kubernetes".
 
@@ -44,7 +36,7 @@ provider "kubernetes" {
 }
 ```
 
-### Step 2: Provider references on resources
+## Step 2: Provider references on resources
 
 The provider references to `kubernetes-alpha` are no longer required. Simply remove the `provider = kubernetes-alpha` text from all `kubernetes_manifest` resources in your configuration.
 
@@ -61,7 +53,7 @@ resource "kubernetes_manifest" "my-resource" {
   manifest = {....}
 }
 ```
-### Step 3: Provider version constraints
+## Step 3: Provider version constraints
 
 If your configuration includes a `terraform` block which specifies required provider versions, you should remove any references to provider `kubernetes-alpha` from that block. At the same time, you should add a requirement for provider `kubernetes` version 2.4.0 and above.
 
@@ -92,7 +84,7 @@ terraform {
 
 If you made any changes to existing entries in the `required_providers` section, make sure to run `terraform init -upgrade` to let Terraform retrieve any required new provider versions.
 
-### Step 4: Replace providers in existing state
+## Step 4: Replace providers in existing state
 
 If your configuration was already in use with the `kubernetes_alpha` provider, you likely also have Terraform state generated from it.
 It is recommended to start fresh and re-apply configurations using the kubernetes provider from a clean slate.
@@ -103,8 +95,7 @@ Run the following command in the directory where the `terraform.tfstate` file is
 terraform state replace-provider hashicorp/kubernetes-alpha hashicorp/kubernetes
 ```
 
-# Use Case B
-## Mixing `kubrenetes_manifest` and other `kubernetes_*` resources
+## Mixing 'kubrenetes_manifest' with other 'kubernetes_*' resources
 
 In case you plan on adding `kubrenetes_manifest` resources to your existing configuration which contains other resources of the Kubernetes provider there are some important aspects to be aware of.
 
@@ -114,4 +105,3 @@ As a solution, choose one of the following options:
 * separate the cluster creation in the a different `apply` operation.
 * add a new `apply` operation only for the `kubernetes_manifest` resources.
 
-Once the configuration meets the above requirements, follow the steps outlined in [Use-case A](#use-case-a) to make the necessary changes to any existing `kubernetes_manifest` resources.

@@ -1,8 +1,5 @@
-provider "kubernetes-alpha" {
-}
 
 resource "kubernetes_manifest" "test" {
-  provider = kubernetes-alpha
 
   manifest = {
     apiVersion = "batch/v1"
@@ -21,7 +18,7 @@ resource "kubernetes_manifest" "test" {
               image = "busybox"
               name  = "busybox"
               command = [
-                "sleep", 
+                "sleep",
                 "30"
               ]
             }

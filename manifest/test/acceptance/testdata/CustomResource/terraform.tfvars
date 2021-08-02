@@ -1,4 +1,4 @@
-name = "testcr"
-namespace = "default"
+name          = "testcr"
+namespace     = "default"
 group_version = "terraform.io/v1"
-kind = "Jqgmbnpb"
+kind          = "Jqgmbnpb"

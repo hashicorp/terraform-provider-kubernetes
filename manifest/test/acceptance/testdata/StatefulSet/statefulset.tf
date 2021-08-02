@@ -1,25 +1,24 @@
-provider kubernetes-alpha {
+provider "kubernetes-alpha" {
 }
-
-resource kubernetes_manifest test_svc {
+resource "kubernetes_manifest" "test_svc" {
   provider = kubernetes-alpha
 
   manifest = {
     "apiVersion" = "v1"
-    "kind" = "Service"
+    "kind"       = "Service"
     "metadata" = {
       "labels" = {
         "app" = "nginx"
       }
-      "name" = var.name
+      "name"      = var.name
       "namespace" = var.namespace
     }
     "spec" = {
       "clusterIP" = "None"
       "ports" = [
         {
-          "name" = "web"
-          "port" = 80
+          "name"     = "web"
+          "port"     = 80
           "protocol" = "TCP"
         },
       ]
@@ -29,15 +28,14 @@ resource kubernetes_manifest test_svc {
     }
   }
 }
-
-resource kubernetes_manifest test {
+resource "kubernetes_manifest" "test" {
   provider = kubernetes-alpha
 
   manifest = {
     "apiVersion" = "apps/v1"
-    "kind" = "StatefulSet"
+    "kind"       = "StatefulSet"
     "metadata" = {
-      "name" = var.name
+      "name"      = var.name
       "namespace" = var.namespace
     }
     "spec" = {
@@ -58,18 +56,18 @@ resource kubernetes_manifest test {
           "containers" = [
             {
               "image" = "nginx:1"
-              "name" = "nginx"
+              "name"  = "nginx"
               "ports" = [
                 {
                   "containerPort" = 80
-                  "name" = "web"
-                  "protocol" = "TCP"
+                  "name"          = "web"
+                  "protocol"      = "TCP"
                 },
               ]
               "volumeMounts" = [
                 {
                   "mountPath" = "/usr/share/nginx/html"
-                  "name" = "www"
+                  "name"      = "www"
                 },
               ]
             },

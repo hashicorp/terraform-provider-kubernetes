@@ -34,6 +34,7 @@ github.com/PuerkitoBio/purell
 # github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578
 github.com/PuerkitoBio/urlesc
 # github.com/agext/levenshtein v1.2.3
+## explicit
 github.com/agext/levenshtein
 # github.com/apparentlymart/go-cidr v1.0.1
 github.com/apparentlymart/go-cidr/cidr
@@ -102,6 +103,7 @@ github.com/exponent-io/jsonpath
 # github.com/fatih/camelcase v1.0.0
 github.com/fatih/camelcase
 # github.com/fatih/color v1.10.0
+## explicit
 github.com/fatih/color
 # github.com/form3tech-oss/jwt-go v3.2.2+incompatible
 github.com/form3tech-oss/jwt-go
@@ -269,12 +271,6 @@ github.com/hashicorp/terraform-plugin-sdk/v2/terraform
 # github.com/hashicorp/terraform-plugin-test/v2 v2.2.1
 ## explicit
 github.com/hashicorp/terraform-plugin-test/v2
-# github.com/hashicorp/terraform-provider-kubernetes-alpha v0.5.0
-## explicit
-github.com/hashicorp/terraform-provider-kubernetes-alpha/morph
-github.com/hashicorp/terraform-provider-kubernetes-alpha/openapi
-github.com/hashicorp/terraform-provider-kubernetes-alpha/payload
-github.com/hashicorp/terraform-provider-kubernetes-alpha/provider
 # github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864
 ## explicit
 github.com/hashicorp/yamux
@@ -318,8 +314,10 @@ github.com/mitchellh/copystructure
 ## explicit
 github.com/mitchellh/go-homedir
 # github.com/mitchellh/go-testing-interface v1.14.1
+## explicit
 github.com/mitchellh/go-testing-interface
 # github.com/mitchellh/go-wordwrap v1.0.1
+## explicit
 github.com/mitchellh/go-wordwrap
 # github.com/mitchellh/hashstructure v1.1.0
 ## explicit
@@ -342,6 +340,7 @@ github.com/modern-go/reflect2
 # github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00
 github.com/monochromegane/go-gitignore
 # github.com/oklog/run v1.1.0
+## explicit
 github.com/oklog/run
 # github.com/peterbourgon/diskv v2.0.1+incompatible
 github.com/peterbourgon/diskv

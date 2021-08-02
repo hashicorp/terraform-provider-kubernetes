@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
-	"github.com/hashicorp/terraform-provider-kubernetes-alpha/payload"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/payload"
 	"github.com/zclconf/go-cty/cty"
 
 	hcl "github.com/hashicorp/hcl/v2"

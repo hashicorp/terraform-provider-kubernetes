@@ -1,3 +1,9 @@
+## 2.4.0 (Unreleased)
+
+IMPROVEMENTS:
+* Add `kubernetes_manifest` resource as experimental feature 
+* Upgrade Terraform SDK to v2.7.0
+
 ## 2.3.2 (June 10, 2021)
 
 BUG FIXES:

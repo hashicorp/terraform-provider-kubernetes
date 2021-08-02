@@ -1,8 +1,4 @@
-provider "kubernetes-alpha" {
-}
 resource "kubernetes_manifest" "test_svc" {
-  provider = kubernetes-alpha
-
   manifest = {
     "apiVersion" = "v1"
     "kind"       = "Service"
@@ -29,8 +25,6 @@ resource "kubernetes_manifest" "test_svc" {
   }
 }
 resource "kubernetes_manifest" "test" {
-  provider = kubernetes-alpha
-
   manifest = {
     "apiVersion" = "apps/v1"
     "kind"       = "StatefulSet"

@@ -14,7 +14,7 @@ import (
 	tf5server "github.com/hashicorp/terraform-plugin-go/tfprotov5/server"
 )
 
-var providerName = "registry.terraform.io/hashicorp/kubernetes-alpha"
+var providerName = "registry.terraform.io/hashicorp/kubernetes"
 
 // Serve is the default entrypoint for the provider.
 func Serve(ctx context.Context, logger hclog.Logger) error {

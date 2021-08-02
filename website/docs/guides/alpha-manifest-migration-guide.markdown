@@ -21,8 +21,6 @@ If you've already been using the experimental `kubernetes-alpha` provider, you a
 
 In case your configuration only uses `kubrenetes_manifest`, but no other resources of the Kubernetes provider (e.g. `kubernetes_*` resources) follow these steps to migrate.
 
-**Make sure you don't have any existing state generated with the `kubernetes-alpha` provider!**
-
 ### Step 1: Provider configuration blocks
 
 The provider configuration blocks for the `kubernetes-alpha` provider are no longer supported. To carry over the configuration, simply rename the provider block to "kubernetes".
@@ -93,6 +91,17 @@ terraform {
 ```
 
 If you made any changes to existing entries in the `required_providers` section, make sure to run `terraform init -upgrade` to let Terraform retrieve any required new provider versions.
+
+### Step 4: Replace providers in existing state
+
+If your configuration was already in use with the `kubernetes_alpha` provider, you likely also have Terraform state generated from it.
+It is recommended to start fresh and re-apply configurations using the kubernetes provider from a clean slate.
+However, in case you find it necessary to preserve state, you can rename the provider associated with any `kubernetes_manifest` resources using the dedicated `replace-provider` command in Terraform.
+
+Run the following command in the directory where the `terraform.tfstate` file is:
+```
+terraform state replace-provider hashicorp/kubernetes-alpha hashicorp/kubernetes
+```
 
 # Use Case B
 ## Mixing `kubrenetes_manifest` and other `kubernetes_*` resources

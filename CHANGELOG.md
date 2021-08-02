@@ -1,4 +1,4 @@
-## 2.4.0 (Unreleased)
+## 2.4.0 (August 02, 2021)
 
 IMPROVEMENTS:
 * Add `kubernetes_manifest` resource as experimental feature 

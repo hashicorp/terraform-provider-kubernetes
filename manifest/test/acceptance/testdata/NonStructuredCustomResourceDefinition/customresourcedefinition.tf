@@ -1,8 +1,5 @@
-provider "kubernetes-alpha" {
-}
 
 resource "kubernetes_manifest" "test" {
-  provider = kubernetes-alpha
 
   manifest = {
     apiVersion = "apiextensions.k8s.io/v1beta1"
@@ -12,7 +9,7 @@ resource "kubernetes_manifest" "test" {
     }
     spec = {
       preserveUnknownFields = true
-      group = var.group
+      group                 = var.group
       names = {
         kind   = var.kind
         plural = var.plural

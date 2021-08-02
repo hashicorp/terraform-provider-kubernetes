@@ -1,8 +1,5 @@
-provider "kubernetes-alpha" {
-}
 
 resource "kubernetes_manifest" "test" {
-  provider = kubernetes-alpha
 
   manifest = {
     apiVersion = "apiextensions.k8s.io/v1"

@@ -1,5 +1,4 @@
 resource "kubernetes_manifest" "test_cr" {
-  provider = kubernetes-alpha
 
   manifest = {
     apiVersion = "${var.group}/${var.cr_version}"

@@ -1,5 +1,4 @@
 resource "kubernetes_manifest" "test_crd" {
-  provider = kubernetes-alpha
 
   manifest = {
     "apiVersion" = "apiextensions.k8s.io/v1"

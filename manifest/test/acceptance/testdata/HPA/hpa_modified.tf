@@ -1,8 +1,5 @@
-provider "kubernetes-alpha" {
-}
 
 resource "kubernetes_manifest" "test" {
-  provider = kubernetes-alpha
 
   manifest = {
     apiVersion = "autoscaling/v2beta2"
@@ -17,13 +14,13 @@ resource "kubernetes_manifest" "test" {
         kind       = "Deployment"
         name       = "nginx"
       }
-      
+
       maxReplicas = 20
       minReplicas = 1
 
       metrics = [
         {
-          type     = "Resource"
+          type = "Resource"
           resource = {
             name = "cpu"
             target = {

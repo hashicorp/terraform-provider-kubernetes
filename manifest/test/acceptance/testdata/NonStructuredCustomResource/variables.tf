@@ -24,5 +24,5 @@ variable "kind" {
 }
 
 variable "testdata" {
-  type = "string"
+  type = string
 }

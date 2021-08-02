@@ -1,8 +1,5 @@
-provider "kubernetes-alpha" {
-}
 
 resource "kubernetes_manifest" "test" {
-  provider = kubernetes-alpha
 
   manifest = {
     apiVersion = "apps/v1"

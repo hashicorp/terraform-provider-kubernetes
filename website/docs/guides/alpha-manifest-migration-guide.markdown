@@ -21,12 +21,15 @@ The provider configuration blocks for the `kubernetes-alpha` provider are no lon
 To enable it, add a `manifest_resource = true` entry in the `experiments` block in the provider configuration.**
 
 For example:
+
 ```
 provider "kubernetes-alpha" {
     config_path = "/my/kube/config"
 }
 ```
+
 becomes
+
 ```
 provider "kubernetes" {
     config_path = "/my/kube/config"
@@ -41,23 +44,28 @@ provider "kubernetes" {
 The provider references to `kubernetes-alpha` are no longer required. Simply remove the `provider = kubernetes-alpha` text from all `kubernetes_manifest` resources in your configuration.
 
 For example:
+
 ```
 resource "kubernetes_manifest" "my-resource" {
   provider = kubernetes-alpha
   manifest = {....}
 }
 ```
+
 becomes
+
 ```
 resource "kubernetes_manifest" "my-resource" {
   manifest = {....}
 }
 ```
+
 ## Step 3: Provider version constraints
 
 If your configuration includes a `terraform` block which specifies required provider versions, you should remove any references to provider `kubernetes-alpha` from that block. At the same time, you should add a requirement for provider `kubernetes` version 2.4.0 and above.
 
 For example:
+
 ```
 terraform {
   required_providers {
@@ -69,7 +77,9 @@ terraform {
   }
 }
 ```
+
 becomes:
+
 ```
 terraform {
   required_providers {
@@ -91,6 +101,7 @@ It is recommended to start fresh and re-apply configurations using the kubernete
 However, in case you find it necessary to preserve state, you can rename the provider associated with any `kubernetes_manifest` resources using the dedicated `replace-provider` command in Terraform.
 
 Run the following command in the directory where the `terraform.tfstate` file is:
+
 ```
 terraform state replace-provider hashicorp/kubernetes-alpha hashicorp/kubernetes
 ```
@@ -102,6 +113,7 @@ In case you plan on adding `kubrenetes_manifest` resources to your existing conf
 If your present configuration for the Kubernetes provider also creates the Kubernetes cluster using Terraform resources in the same `apply` operation (against best-practice recommendations), this will no longer work when adding `kubrenetes_manifest` resources. The reason behind this is that `kubrenetes_manifest` require access to the API during planning, at which point the cluster resource would not have yet been created.
 
 As a solution, choose one of the following options:
+
 * separate the cluster creation in the a different `apply` operation.
 * add a new `apply` operation only for the `kubernetes_manifest` resources.
 

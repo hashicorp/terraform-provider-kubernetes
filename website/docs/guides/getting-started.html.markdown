@@ -100,7 +100,7 @@ provider "kubernetes" {
 }
 ```
 
-For short-lived authentication tokens, like those found in EKS, which [expire in 15 minutes](https://aws.github.io/aws-eks-best-practices/security/docs/iam/#controlling-access-to-eks-clusters), an exec-based credential plugin can be used to ensure the token is always up to date:
+For short-lived authentication tokens, like those found in EKS, which [expire in 15 minutes](https://aws.github.io/aws-eks-best-practices/security/docs/iam#controlling-access-to-eks-clusters), an exec-based credential plugin can be used to ensure the token is always up to date:
 
 ```hcl
 data "aws_eks_cluster" "example" {

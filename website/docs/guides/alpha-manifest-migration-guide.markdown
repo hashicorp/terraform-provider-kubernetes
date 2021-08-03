@@ -106,11 +106,11 @@ Run the following command in the directory where the `terraform.tfstate` file is
 terraform state replace-provider hashicorp/kubernetes-alpha hashicorp/kubernetes
 ```
 
-## Mixing 'kubrenetes_manifest' with other 'kubernetes_*' resources
+## Mixing 'kubernetes_manifest' with other 'kubernetes_*' resources
 
-In case you plan on adding `kubrenetes_manifest` resources to your existing configuration which contains other resources of the Kubernetes provider there are some important aspects to be aware of.
+In case you plan on adding `kubernetes_manifest` resources to your existing configuration which contains other resources of the Kubernetes provider there are some important aspects to be aware of.
 
-If your present configuration for the Kubernetes provider also creates the Kubernetes cluster using Terraform resources in the same `apply` operation (against best-practice recommendations), this will no longer work when adding `kubrenetes_manifest` resources. The reason behind this is that `kubrenetes_manifest` require access to the API during planning, at which point the cluster resource would not have yet been created.
+If your present configuration for the Kubernetes provider also creates the Kubernetes cluster using Terraform resources in the same `apply` operation (against best-practice recommendations), this will no longer work when adding `kubernetes_manifest` resources. The reason behind this is that `kubernetes_manifest` require access to the API during planning, at which point the cluster resource would not have yet been created.
 
 As a solution, choose one of the following options:
 

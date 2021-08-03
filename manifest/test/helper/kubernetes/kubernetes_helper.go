@@ -74,25 +74,56 @@ func (k *Helper) CreateNamespace(t *testing.T, name string) {
 			},
 		},
 	}
-	gvr := createGroupVersionResource("v1", "namespaces")
+	gvr := NewGroupVersionResource("v1", "namespaces")
 	_, err := k.client.Resource(gvr).Create(context.TODO(), namespace, metav1.CreateOptions{})
 	if err != nil {
 		t.Fatalf("Failed to create namespace %q: %v", name, err)
 	}
 }
 
-// DeleteNamespace deletes a namespace
-func (k *Helper) DeleteNamespace(t *testing.T, name string) {
+// CreateNamespace creates a new namespace
+func (k *Helper) CreateConfigMap(t *testing.T, name string, namespace string, data map[string]interface{}) {
 	t.Helper()
 
-	gvr := createGroupVersionResource("v1", "namespaces")
-	err := k.client.Resource(gvr).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	cfgmap := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "ConfigMap",
+			"metadata": map[string]interface{}{
+				"name":      name,
+				"namespace": namespace,
+			},
+			"data": data,
+		},
+	}
+	gvr := NewGroupVersionResource("v1", "configmaps")
+	_, err := k.client.Resource(gvr).Namespace(namespace).Create(context.TODO(), cfgmap, metav1.CreateOptions{})
 	if err != nil {
-		t.Fatalf("Failed to delete namespace %q: %v", name, err)
+		t.Fatalf("Failed to create configmap %q/%q: %v", namespace, name, err)
 	}
 }
 
-func createGroupVersionResource(gv, resource string) schema.GroupVersionResource {
+// DeleteResource deletes a namespace
+func (k *Helper) DeleteResource(t *testing.T, name string, gvr schema.GroupVersionResource) {
+	t.Helper()
+
+	err := k.client.Resource(gvr).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	if err != nil {
+		t.Fatalf("Failed to delete resource %q: %v", name, err)
+	}
+}
+
+// DeleteResource deletes a namespace
+func (k *Helper) DeleteNamespacedResource(t *testing.T, name string, namespace string, gvr schema.GroupVersionResource) {
+	t.Helper()
+
+	err := k.client.Resource(gvr).Namespace(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	if err != nil {
+		t.Fatalf("Failed to delete resource \"%s/%s\": %v", namespace, name, err)
+	}
+}
+
+func NewGroupVersionResource(gv, resource string) schema.GroupVersionResource {
 	gvr, _ := schema.ParseGroupVersion(gv)
 	return gvr.WithResource(resource)
 }
@@ -102,7 +133,7 @@ func createGroupVersionResource(gv, resource string) schema.GroupVersionResource
 func (k *Helper) AssertNamespacedResourceExists(t *testing.T, gv, resource, namespace, name string) {
 	t.Helper()
 
-	gvr := createGroupVersionResource(gv, resource)
+	gvr := NewGroupVersionResource(gv, resource)
 
 	op := func() error {
 		_, operr := k.client.Resource(gvr).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
@@ -126,7 +157,7 @@ func (k *Helper) AssertNamespacedResourceExists(t *testing.T, gv, resource, name
 func (k *Helper) AssertResourceExists(t *testing.T, gv, resource, name string) {
 	t.Helper()
 
-	gvr := createGroupVersionResource(gv, resource)
+	gvr := NewGroupVersionResource(gv, resource)
 
 	op := func() error {
 		_, operr := k.client.Resource(gvr).Get(context.TODO(), name, metav1.GetOptions{})
@@ -148,7 +179,7 @@ func (k *Helper) AssertResourceExists(t *testing.T, gv, resource, name string) {
 func (k *Helper) AssertResourceGeneration(t *testing.T, gv, resource, namespace, name string, generation int64) {
 	t.Helper()
 
-	gvr := createGroupVersionResource(gv, resource)
+	gvr := NewGroupVersionResource(gv, resource)
 
 	op := func() error {
 		var res *unstructured.Unstructured
@@ -188,7 +219,7 @@ func (k *Helper) AssertResourceGeneration(t *testing.T, gv, resource, namespace,
 func (k *Helper) AssertNamespacedResourceDoesNotExist(t *testing.T, gv, resource, namespace, name string) {
 	t.Helper()
 
-	gvr := createGroupVersionResource(gv, resource)
+	gvr := NewGroupVersionResource(gv, resource)
 
 	op := func() error {
 		_, operr := k.client.Resource(gvr).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
@@ -214,7 +245,7 @@ func (k *Helper) AssertNamespacedResourceDoesNotExist(t *testing.T, gv, resource
 func (k *Helper) AssertResourceDoesNotExist(t *testing.T, gv, resource, name string) {
 	t.Helper()
 
-	gvr := createGroupVersionResource(gv, resource)
+	gvr := NewGroupVersionResource(gv, resource)
 
 	op := func() error {
 		_, operr := k.client.Resource(gvr).Get(context.TODO(), name, metav1.GetOptions{})

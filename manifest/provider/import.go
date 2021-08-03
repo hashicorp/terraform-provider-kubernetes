@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
@@ -94,12 +93,12 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  fmt.Sprintf("Failed to get resource %s from API", spew.Sdump(io)),
+			Summary:  fmt.Sprintf("Failed to get resource %+v from API", io),
 			Detail:   err.Error(),
 		})
 		return resp, nil
 	}
-	s.logger.Trace("[ImportResourceState]", "[API Resource]", spew.Sdump(ro))
+	s.logger.Trace("[ImportResourceState]", "[API Resource]", ro)
 
 	objectType, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
 	if err != nil {
@@ -130,7 +129,7 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 		})
 		return resp, nil
 	}
-	s.logger.Trace("[ImportResourceState]", "[tftypes.Value]", spew.Sdump(nobj))
+	s.logger.Trace("[ImportResourceState]", "[tftypes.Value]", nobj)
 
 	newState := make(map[string]tftypes.Value)
 	wftype := rt.(tftypes.Object).AttributeTypes["wait_for"]

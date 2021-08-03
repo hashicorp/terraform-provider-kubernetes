@@ -33,14 +33,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	var providerConfig map[string]tftypes.Value
 	var err error
 
-	if semver.IsValid("v"+req.TerraformVersion) && semver.Compare("v"+req.TerraformVersion, minTFVersion) < 0 {
-		response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Incompatible terraform version",
-			Detail:   fmt.Sprintf("This provider requires Terraform %s or above", minTFVersion),
-		})
-		return response, nil
-	}
+	s.hostTFVersion = "v" + req.TerraformVersion
 
 	// transform provider config schema into tftype.Type and unmarshal the given config into a tftypes.Value
 	cfgType := GetObjectTypeFromSchema(GetProviderConfigSchema())
@@ -635,4 +628,22 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	s.clientConfig = clientConfig
 
 	return response, nil
+}
+
+func (s *RawProviderServer) canExecute() (resp []*tfprotov5.Diagnostic) {
+	if !s.providerEnabled {
+		resp = append(resp, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Experimental feature not enabled.",
+			Detail:   "The `kubernetes_manifest` resource is an experimental feature and must be explicitly enabled in the provider configuration block.",
+		})
+	}
+	if semver.IsValid(s.hostTFVersion) && semver.Compare(s.hostTFVersion, minTFVersion) < 0 {
+		resp = append(resp, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Incompatible terraform version",
+			Detail:   fmt.Sprintf("This provider requires Terraform %s or above", minTFVersion),
+		})
+	}
+	return
 }

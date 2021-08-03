@@ -17,7 +17,7 @@ Once applied, the `object` attribute contains the state of the resource as retur
 
 * This resource uses [Server-side Apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) to carry out apply operations. A minimum Kubernetes version of 1.16.x is required, but versions 1.17+ are strongly recommended as the SSA implementation in Kubernetes 1.16.x is incomplete and unstable.
 
-* A minimum Terraform version of 1.14.8 is required to use this resource.
+* A minimum Terraform version of 0.14.8 is required to use this resource.
 
 ### Example: Create a Kubernetes ConfigMap
 

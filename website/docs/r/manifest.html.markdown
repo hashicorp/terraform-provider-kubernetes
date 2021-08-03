@@ -97,6 +97,22 @@ resource "kubernetes_manifest" "test-crd" {
   }
 }
 ```
+## Importing existing Kubernetes resources as `kubernetes_manifest`
+
+Objects already present in a Kubernetes cluster can be imported into Terraform to be managed as `kubernetes_manifest` resources. Follow these steps to import a resource:
+
+### Extract the resource from Kubernetes and transform it into Terraform configuration.
+```
+kubectl get secrets sample -o yaml | tfk8s --strip -o sample.tf
+```
+### Import the resource state from the cluster.
+
+```
+terraform import kubernetes_manifest.secret_sample "v1#Secret#default#sample"
+```
+
+Note the import ID as the last argument to the import command. This ID points Terraform at which Kubernetes object to read when importing.
+It should be constructed with the following syntax: `"<apiVersion>#<Kind>#<metadata.namespace>#<metadata.name>"`
 
 ## Using `wait_for` to block create and update calls
 

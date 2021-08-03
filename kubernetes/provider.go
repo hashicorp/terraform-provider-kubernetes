@@ -146,7 +146,7 @@ func Provider() *schema.Provider {
 							Type:     schema.TypeBool,
 							Optional: true,
 							DefaultFunc: func() (interface{}, error) {
-								if v := os.Getenv("TF_X_KUBERNETES_MANIFEST"); v != "" {
+								if v := os.Getenv("TF_X_KUBERNETES_MANIFEST_RESOURCE"); v != "" {
 									vv, err := strconv.ParseBool(v)
 									if err != nil {
 										return false, err

@@ -1,4 +1,4 @@
-## 2.4.1 (Unreleased)
+## 2.4.1 (August 03, 2021)
 
 HOTFIX:
 * Fix kubernetes_manifest Terraform version constraint causing error on 0.12/0.13  ([#1345](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1345))

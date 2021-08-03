@@ -34,6 +34,7 @@ type RawProviderServer struct {
 	OAPIFoundry     openapi.Foundry
 
 	providerEnabled bool
+	hostTFVersion   string
 }
 
 func dump(v interface{}) hclog.Format {

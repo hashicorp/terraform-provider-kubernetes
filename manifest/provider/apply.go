@@ -19,6 +19,13 @@ import (
 // ApplyResourceChange function
 func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprotov5.ApplyResourceChangeRequest) (*tfprotov5.ApplyResourceChangeResponse, error) {
 	resp := &tfprotov5.ApplyResourceChangeResponse{}
+
+	execDiag := s.canExecute()
+	if len(execDiag) > 0 {
+		resp.Diagnostics = append(resp.Diagnostics, execDiag...)
+		return resp, nil
+	}
+
 	rt, err := GetResourceType(req.TypeName)
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{

@@ -16,6 +16,13 @@ import (
 // ReadResource function
 func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.ReadResourceRequest) (*tfprotov5.ReadResourceResponse, error) {
 	resp := &tfprotov5.ReadResourceResponse{}
+
+	execDiag := s.canExecute()
+	if len(execDiag) > 0 {
+		resp.Diagnostics = append(resp.Diagnostics, execDiag...)
+		return resp, nil
+	}
+
 	var resState map[string]tftypes.Value
 	var err error
 	rt, err := GetResourceType(req.TypeName)

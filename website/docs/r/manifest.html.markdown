@@ -11,8 +11,13 @@ Represents one Kubernetes resource by supplying a `manifest` attribute. The mani
 
 Once applied, the `object` attribute contains the state of the resource as returned by the Kubernetes API, including all default values.
 
-~> **NOTE:** This resource uses [Server-side Apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) to carry out plan and apply operations. This means the cluster has to be accessible at plan time. We recommend only using this resource for custom resources or resources not yet fully supported by the provider. 
+~> **Prerequisites:** 
 
+* This resource requires API access during planning time. This means the cluster has to be accessible at plan time and thus cannot be created in the same apply operation. We recommend only using this resource for custom resources or resources not yet fully supported by the provider.
+
+* This resource uses [Server-side Apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) to carry out apply operations. A minimum Kubernetes version of 1.16.x is required, but versions 1.17+ are strongly recommended as the SSA implementation in Kubernetes 1.16.x is incomplete and unstable.
+
+* A minimum Terraform version of 1.14.8 is required to use this resource.
 
 ### Example: Create a Kubernetes ConfigMap
 

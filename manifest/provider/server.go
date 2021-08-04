@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/openapi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -32,6 +33,8 @@ type RawProviderServer struct {
 	restMapper      meta.RESTMapper
 	restClient      rest.Interface
 	OAPIFoundry     openapi.Foundry
+
+	ComputedAttributes map[string]*tftypes.AttributePath
 
 	providerEnabled bool
 	hostTFVersion   string

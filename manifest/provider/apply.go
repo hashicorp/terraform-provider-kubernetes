@@ -117,6 +117,43 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
 		}
 
+		// "Computed" attributes would have been replaced with Unknown values during
+		// planning in order to allow the response from apply to return potentially
+		// different values to the ones the user configured.
+		//
+		// Here we replace "computed" attributes (showing as Unknown) with their actual
+		// user-supplied values from "manifest" (if present).
+		obj, err = tftypes.Transform(obj, func(ap *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
+			_, isComputed := s.ComputedAttributes[ap.String()]
+			if !isComputed {
+				return v, nil
+			}
+			if v.IsKnown() {
+				return v, nil
+			}
+			ppMan, restPath, err := tftypes.WalkAttributePath(plannedStateVal["manifest"], ap)
+			if err != nil {
+				if len(restPath.Steps()) > 0 {
+					// attribute not in manifest
+					return v, nil
+				}
+				return v, ap.NewError(err)
+			}
+			nv, err := morph.ValueToType(ppMan.(tftypes.Value), v.Type(), tftypes.NewAttributePath())
+			if err != nil {
+				return v, ap.NewError(err)
+			}
+			return nv, nil
+		})
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Failed to backfill computed values in proposed object",
+				Detail:   err.Error(),
+			})
+			return resp, nil
+		}
+
 		minObj := morph.UnknownToNull(obj)
 		s.logger.Trace("[ApplyResourceChange][Apply]", "[UnknownToNull]", dump(minObj))
 

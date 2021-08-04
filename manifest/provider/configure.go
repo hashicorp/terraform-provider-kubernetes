@@ -627,6 +627,16 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	s.logger.Trace("[Configure]", "[ClientConfig]", dump(*clientConfig))
 	s.clientConfig = clientConfig
 
+	s.ComputedAttributes = make(map[string]*tftypes.AttributePath)
+
+	var atp *tftypes.AttributePath
+
+	atp = tftypes.NewAttributePath().WithAttributeName("metadata").WithAttributeName("annotations")
+	s.ComputedAttributes[atp.String()] = atp
+
+	atp = tftypes.NewAttributePath().WithAttributeName("metadata").WithAttributeName("labels")
+	s.ComputedAttributes[atp.String()] = atp
+
 	return response, nil
 }
 

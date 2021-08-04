@@ -278,7 +278,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	s.logger.Debug("[PlanUpdateResource]", "OAPI type", dump(so))
 
 	// Transform the input manifest to adhere to the type model from the OpenAPI spec
-	mobj, err := morph.ValueToType(ppMan, objectType, tftypes.NewAttributePath())
+	morphedManifest, err := morph.ValueToType(ppMan, objectType, tftypes.NewAttributePath())
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -287,9 +287,9 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		})
 		return resp, nil
 	}
-	s.logger.Debug("[PlanResourceChange]", "morphed manifest", dump(mobj))
+	s.logger.Debug("[PlanResourceChange]", "morphed manifest", dump(morphedManifest))
 
-	completeObj, err := morph.DeepUnknown(objectType, mobj, tftypes.NewAttributePath())
+	completePropMan, err := morph.DeepUnknown(objectType, morphedManifest, tftypes.NewAttributePath())
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -298,12 +298,32 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		})
 		return resp, nil
 	}
-	s.logger.Debug("[PlanResourceChange]", "backfilled manifest", dump(completeObj))
+	s.logger.Debug("[PlanResourceChange]", "backfilled manifest", dump(completePropMan))
 
-	if proposedVal["object"].IsNull() { // plan for Create
-		s.logger.Debug("[PlanResourceChange]", "creating object", dump(completeObj))
-		proposedVal["object"] = completeObj
-	} else { // plan for Update
+	if proposedVal["object"].IsNull() {
+		// plan for Create
+		s.logger.Debug("[PlanResourceChange]", "creating object", dump(completePropMan))
+		newObj, err := tftypes.Transform(completePropMan, func(ap *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
+			_, ok := s.ComputedAttributes[ap.String()]
+			if ok {
+				return tftypes.NewValue(v.Type(), tftypes.UnknownValue), nil
+			}
+			return v, nil
+		})
+		if err != nil {
+			oatp := tftypes.NewAttributePath()
+			oatp = oatp.WithAttributeName("object")
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity:  tfprotov5.DiagnosticSeverityError,
+				Summary:   "Failed to set computed attributes in new resource state",
+				Detail:    err.Error(),
+				Attribute: oatp,
+			})
+			return resp, nil
+		}
+		proposedVal["object"] = newObj
+	} else {
+		// plan for Update
 		priorObj, ok := priorVal["object"]
 		if !ok {
 			oatp := tftypes.NewAttributePath()
@@ -316,12 +336,41 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 			})
 			return resp, nil
 		}
-		updatedObj, err := tftypes.Transform(completeObj, func(ap *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
+		priorMan, ok := priorVal["manifest"]
+		if !ok {
+			oatp := tftypes.NewAttributePath()
+			oatp = oatp.WithAttributeName("manifest")
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity:  tfprotov5.DiagnosticSeverityError,
+				Summary:   "Invalid prior state during planning",
+				Detail:    "Missing 'manifest' attribute",
+				Attribute: oatp,
+			})
+			return resp, nil
+		}
+		updatedObj, err := tftypes.Transform(completePropMan, func(ap *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
+			_, isComputed := s.ComputedAttributes[ap.String()]
 			if v.IsKnown() { // this is a value from current configuration - include it in the plan
+				hasChanged := false
+				wasCfg, restPath, err := tftypes.WalkAttributePath(priorMan, ap)
+				if err != nil && len(restPath.Steps()) != 0 {
+					hasChanged = true
+				}
+				nowCfg, restPath, err := tftypes.WalkAttributePath(ppMan, ap)
+				hasChanged = err == nil && len(restPath.Steps()) == 0 && wasCfg.(tftypes.Value).IsKnown() && !wasCfg.(tftypes.Value).Equal(nowCfg.(tftypes.Value))
+				if isComputed {
+					if hasChanged {
+						return tftypes.NewValue(v.Type(), tftypes.UnknownValue), nil
+					}
+					nowVal, restPath, err := tftypes.WalkAttributePath(proposedVal["object"], ap)
+					if err == nil && len(restPath.Steps()) == 0 {
+						return nowVal.(tftypes.Value), nil
+					}
+				}
 				return v, nil
 			}
 			// check if value was present in the previous configuration
-			wasVal, restPath, err := tftypes.WalkAttributePath(priorVal["manifest"], ap)
+			wasVal, restPath, err := tftypes.WalkAttributePath(priorMan, ap)
 			if err == nil && len(restPath.Steps()) == 0 && wasVal.(tftypes.Value).IsKnown() {
 				// attribute was previously set in config and has now been removed
 				// return the new unknown value to give the API a chance to set a default

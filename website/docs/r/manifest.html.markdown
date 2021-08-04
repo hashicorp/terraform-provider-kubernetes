@@ -28,7 +28,7 @@ provider "kubernetes" {
 ```
 
 
-# Before you use this resource
+### Before you use this resource
 
 * This resource requires API access during planning time. This means the cluster has to be accessible at plan time and thus cannot be created in the same apply operation. We recommend only using this resource for custom resources or resources not yet fully supported by the provider.
 

@@ -19,6 +19,18 @@ Once applied, the `object` attribute contains the state of the resource as retur
 
 * A minimum Terraform version of 0.14.8 is required to use this resource.
 
+* This resource is currently in beta, and should not be used in production. To use it, you must enable it in the provider block.
+
+```hcl
+provider "kubernetes" {
+  experiments {
+    manifest_resource = true
+  }
+
+  config_path = "~/.kube/config"
+}
+```
+
 ### Example: Create a Kubernetes ConfigMap
 
 ```hcl

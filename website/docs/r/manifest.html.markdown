@@ -102,7 +102,6 @@ The `kubernetes_manifest` resource supports the ability to block create and upda
 
 ```hcl
 resource "kubernetes_manifest" "test" {
-  provider = kubernetes-alpha
 
   manifest = {
     // ...

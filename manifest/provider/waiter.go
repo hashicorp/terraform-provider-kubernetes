@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"regexp"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -109,6 +110,12 @@ type FieldWaiter struct {
 func (w *FieldWaiter) Wait(ctx context.Context) error {
 	w.logger.Info("[ApplyResourceChange][Wait] Waiting until ready...\n")
 	for {
+		if deadline, ok := ctx.Deadline(); ok {
+			if time.Now().After(deadline) {
+				return context.DeadlineExceeded
+			}
+		}
+
 		// NOTE The typed API resource is actually returned in the
 		// event object but I haven't yet figured out how to convert it
 		// to a cty.Value.
@@ -174,6 +181,8 @@ func (w *FieldWaiter) Wait(ctx context.Context) error {
 		if done {
 			return err
 		}
+
+		time.Sleep(1 * time.Second) // lintignore:R018
 	}
 }
 

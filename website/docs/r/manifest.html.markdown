@@ -127,8 +127,23 @@ resource "kubernetes_manifest" "test" {
     }
   }
 }
-
 ```
+
+## Configuring timeouts
+
+resource "kubernetes_manifest" "test" {
+  provider = kubernetes-alpha
+
+  manifest = {
+    // ...
+  }
+
+  timeouts {
+    create = "10m"
+    update = "10m"
+    delete = "30s"
+  }
+}
 
 ## Argument Reference
 
@@ -143,3 +158,7 @@ The following arguments are supported:
 #### Arguments
 
 - **fields** (Required) A map of fields and a corresponding regular expression with a pattern to wait for. The provider will wait until the field matches the regular expression. Use `*` for any value. 
+
+### `timeouts`
+
+See [Operation Timeouts](https://www.terraform.io/docs/language/resources/syntax.html#operation-timeouts)

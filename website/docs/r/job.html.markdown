@@ -34,6 +34,7 @@ resource "kubernetes_job" "demo" {
     }
     backoff_limit = 4
   }
+  wait_for_completion = false
 }
 ```
 

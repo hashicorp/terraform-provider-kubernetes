@@ -114,6 +114,6 @@ If your present configuration for the Kubernetes provider also creates the Kuber
 
 As a solution, choose one of the following options:
 
-* separate the cluster creation in the a different `apply` operation.
+* separate the cluster creation in a different `apply` operation.
 * add a new `apply` operation only for the `kubernetes_manifest` resources.
 

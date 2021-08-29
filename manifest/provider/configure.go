@@ -631,11 +631,36 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 
 	var atp *tftypes.AttributePath
 
-	atp = tftypes.NewAttributePath().WithAttributeName("metadata").WithAttributeName("annotations")
-	s.ComputedAttributes[atp.String()] = atp
+	if !providerConfig["computed_attributes"].IsNull() && providerConfig["computed_attributes"].IsKnown() {
+		var cattr []tftypes.Value
+		providerConfig["computed_attributes"].As(&cattr)
+		for _, v := range cattr {
+			var vs string
+			err := v.As(&vs)
+			if err != nil {
+				s.logger.Error("[computed_attributes] cannot extract element from list")
+				continue
+			}
+			atp, err := FieldPathToTftypesPath(vs)
+			if err != nil {
+				s.logger.Error("[Configure]", "[computed_attributes] cannot parse attribute path element", err)
+				response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityError,
+					Summary:  "[computed_attributes] cannot parse attribute path element: " + vs,
+					Detail:   err.Error(),
+				})
+				continue
+			}
+			s.ComputedAttributes[atp.String()] = atp
+		}
+	} else {
+		// When not specified by the user, 'metadata.annotations' and 'metadata.labels' are configured as default
+		atp = tftypes.NewAttributePath().WithAttributeName("metadata").WithAttributeName("annotations")
+		s.ComputedAttributes[atp.String()] = atp
 
-	atp = tftypes.NewAttributePath().WithAttributeName("metadata").WithAttributeName("labels")
-	s.ComputedAttributes[atp.String()] = atp
+		atp = tftypes.NewAttributePath().WithAttributeName("metadata").WithAttributeName("labels")
+		s.ComputedAttributes[atp.String()] = atp
+	}
 
 	return response, nil
 }

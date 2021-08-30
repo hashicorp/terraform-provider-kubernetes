@@ -151,6 +151,29 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		} else {
 			rs = c.Resource(gvr)
 		}
+
+		// Check the resource does not exist if this is a create operation
+		if applyPriorState.IsNull() {
+			_, err := rs.Get(ctx, rname, metav1.GetOptions{})
+			if err == nil {
+				resp.Diagnostics = append(resp.Diagnostics,
+					&tfprotov5.Diagnostic{
+						Severity: tfprotov5.DiagnosticSeverityError,
+						Summary:  "Cannot create resource that already exists",
+						Detail:   fmt.Sprintf("resource %q already exists", rnn),
+					})
+				return resp, nil
+			} else if !apierrors.IsNotFound(err) {
+				resp.Diagnostics = append(resp.Diagnostics,
+					&tfprotov5.Diagnostic{
+						Severity: tfprotov5.DiagnosticSeverityError,
+						Summary:  fmt.Sprintf("Failed to determine if resource %q exists", rnn),
+						Detail:   err.Error(),
+					})
+				return resp, nil
+			}
+		}
+
 		jsonManifest, err := uo.MarshalJSON()
 		if err != nil {
 			resp.Diagnostics = append(resp.Diagnostics,

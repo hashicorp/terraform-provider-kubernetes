@@ -158,6 +158,11 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 		TypeName: req.TypeName,
 		State:    &impState,
 	})
+	resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+		Severity: tfprotov5.DiagnosticSeverityWarning,
+		Summary:  "Apply needed after 'import'",
+		Detail:   "Please run apply after a successful import to realign the resource state to the configuration in Terraform.",
+	})
 	return resp, nil
 }
 
@@ -167,26 +172,40 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 //
 // The expected format for the import resource ID is:
 //
-// "<apiGroup/><apiVersion>#<Kind>#<namespace>#<name>"
+// "apiVersion=<value>,kind=<value>,name=<value>[,namespace=<value>"]
 //
 // where 'namespace' is only required for resources that expect a namespace.
 //
-// Note the '#' separator between the elements of the ID string.
-//
-// Example: "v1#Secret#default#default-token-qgm6s"
+// Example: "apiVersion=v1,kind=Secret,namespace=default,name=default-token-qgm6s"
 //
 func parseImportID(id string) (gvk schema.GroupVersionKind, name string, namespace string, err error) {
-	parts := strings.Split(id, "#")
+	tokens := map[string]string{"apiVersion": "", "kind": "", "name": "", "namespace": "default"}
+	var invalidFormat bool = false
+
+	parts := strings.Split(id, ",")
 	if len(parts) < 3 || len(parts) > 4 {
-		err = fmt.Errorf("invalid format for import ID [%s]", id)
+		invalidFormat = true
+	}
+	for _, p := range parts {
+		t := strings.Split(p, "=")
+		if len(t) != 2 {
+			invalidFormat = true
+			continue
+		}
+		_, ok := tokens[t[0]]
+		if !ok {
+			invalidFormat = true
+			continue
+		}
+		tokens[t[0]] = t[1]
+	}
+	if invalidFormat {
+		err = fmt.Errorf("invalid format for import ID [%s]\nExpected format is: apiVersion=<value>,kind=<value>,name=<value>[,namespace=<value>]", id)
 		return
 	}
-	gvk = schema.FromAPIVersionAndKind(parts[0], parts[1])
-	if len(parts) == 4 {
-		namespace = parts[2]
-		name = parts[3]
-	} else {
-		name = parts[2]
-	}
+	gvk = schema.FromAPIVersionAndKind(tokens["apiVersion"], tokens["kind"])
+	namespace = tokens["namespace"]
+	name = tokens["name"]
+
 	return
 }

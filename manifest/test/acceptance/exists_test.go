@@ -1,3 +1,4 @@
+//go:build acceptance
 // +build acceptance
 
 package acceptance
@@ -5,6 +6,8 @@ package acceptance
 import (
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
 )
 
 func TestKubernetesManifest_alreadyExists(t *testing.T) {
@@ -21,7 +24,7 @@ func TestKubernetesManifest_alreadyExists(t *testing.T) {
 	}()
 
 	k8shelper.CreateNamespace(t, namespace)
-	defer k8shelper.DeleteNamespace(t, namespace)
+	defer k8shelper.DeleteResource(t, namespace, kubernetes.NewGroupVersionResource("v1", "namespaces"))
 
 	tfvars := TFVARS{
 		"namespace": namespace,

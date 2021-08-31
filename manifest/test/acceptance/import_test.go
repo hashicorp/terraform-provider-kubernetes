@@ -1,9 +1,10 @@
+//go:build acceptance
 // +build acceptance
 
 package acceptance
 
 import (
-	"strings"
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
@@ -40,7 +41,7 @@ func TestKubernetesManifest_Import(t *testing.T) {
 	tf.RequireSetConfig(t, tfconfig)
 	tf.RequireInit(t)
 
-	importId := strings.Join([]string{"v1", "ConfigMap", namespace, name}, "#")
+	importId := fmt.Sprintf("apiVersion=%s,kind=%s,namespace=%s,name=%s", "v1", "ConfigMap", namespace, name)
 
 	tf.RequireImport(t, "kubernetes_manifest.test", importId)
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "configmaps", namespace, name)

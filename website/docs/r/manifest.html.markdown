@@ -158,7 +158,25 @@ resource "kubernetes_manifest" "test" {
   }
 }
 
-```
+## Computed attributes
+
+When setting the value of an attribute in configuration, Terraform will check that the same value is returned after the apply operation. This ensures that the actual configuration requested by the user is successfully applied. In some cases, with the Kubernetes API this is not the desired behavior. Particularly when using mutating admission controllers, there is a chance that the values configured by the user will be modified by the API. 
+
+To accommodate this, the `kubernetes_manifest` resources allows defining so-called "computed" attributes. When an attribute is defined as "computed" Terraform will allow the final value stored in state after `apply` as returned by the API to be different than what the user requested. 
+
+The most common example of this is  `metadata.annotations`. In some cases, the API will add extra annotations on top of the ones configured by the user. Unless the attribute is declared as "computed" Terraform will throw an error signaling that the state returned by the 'apply' operation is inconsistent with the value defined in the 'plan'.
+
+ To declare an attribute as "computed" add its full attribute path to the `computed_attributes` list under the `provider` block. For example, to declare the "metadata.labels" attribute as "computed", add the following:
+ ```
+ provider "kubernetes" {
+   ...
+
+   computed_attributes = ["metadata.labels"]
+ }
+ ```
+**IMPORTANT**: By default, `metadata.labels` and `metadata.annotations` are already included in the list. You don't have to set them explicitly in the provider block.
+
+The syntax for the attribute paths is the same as the one used in the `wait_for` block.
 
 ## Argument Reference
 

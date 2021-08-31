@@ -16,21 +16,21 @@ func TestParseImportID(t *testing.T) {
 		Err       error
 	}{
 		{
-			ID:        "v1#ConfigMap#default#test",
+			ID:        "apiVersion=v1,kind=ConfigMap,namespace=default,name=test",
 			GVK:       schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
 			Name:      "test",
 			Namespace: "default",
 			Err:       nil,
 		},
 		{
-			ID:        "rbac.authorization.k8s.io/v1#ClusterRole#test",
+			ID:        "apiVersion=rbac.authorization.k8s.io/v1,kind=ClusterRole,name=test",
 			GVK:       schema.GroupVersionKind{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"},
 			Name:      "test",
 			Namespace: "",
 			Err:       nil,
 		},
 		{
-			ID:        "apps/v1#Deployment#foo#bar",
+			ID:        "apiVersion=apps/v1,kind=Deployment,namespace=foo,name=bar",
 			GVK:       schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"},
 			Name:      "bar",
 			Namespace: "foo",
@@ -38,7 +38,7 @@ func TestParseImportID(t *testing.T) {
 		},
 		{
 			ID:  "foobar",
-			Err: fmt.Errorf("invalid format for import ID [%s]", "foobar"),
+			Err: fmt.Errorf("invalid format for import ID [%s]\nExpected format is: apiVersion=<value>,kind=<value>,name=<value>[,namespace=<value>]", "foobar"),
 		},
 	}
 	for _, s := range samples {

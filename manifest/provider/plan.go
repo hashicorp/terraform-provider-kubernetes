@@ -285,6 +285,13 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 			// at this point, check if there is a default value in the previous state
 			priorAtrVal, restPath, err := tftypes.WalkAttributePath(priorObj, ap)
 			if err != nil {
+				if len(restPath.Steps()) > 0 {
+					// attribute wasn't present, but part of its parent path is.
+					// just stay on course and use the proposed value.
+					return v, nil
+				}
+				// the entire attribute path is was not found - this should not happen
+				// unless the path is totally foreign to the resource type. Return error.
 				return v, ap.NewError(err)
 			}
 			if len(restPath.Steps()) > 0 {

@@ -136,6 +136,12 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 						Optional:    true,
 						Description: "A map of attribute paths and desired patterns to be matched. After each apply the provider will wait for all attributes listed here to reach a value that matches the desired pattern.",
 					},
+					{
+						Name:        "computed_attributes",
+						Type:        tftypes.List{ElementType: tftypes.String},
+						Description: "List of manifest attributes whose values can be altered by the API server during 'apply'. Defaults to: [\"metadata.annotations\", \"metadata.labels\"]",
+						Optional:    true,
+					},
 				},
 			},
 		},

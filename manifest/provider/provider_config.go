@@ -153,16 +153,6 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 				DescriptionKind: 0,
 				Deprecated:      false,
 			},
-			{
-				Name:            "computed_attributes",
-				Type:            tftypes.List{ElementType: tftypes.String},
-				DescriptionKind: tfprotov5.StringKindPlain,
-				Description:     "List of manifest attributes whose values can be altered by the API server during 'apply'. Defaults to: [\"metadata.annotations\", \"metadata.labels\"]",
-				Optional:        true,
-				Required:        false,
-				Computed:        false,
-				Sensitive:       false,
-			},
 		},
 		BlockTypes: []*tfprotov5.SchemaNestedBlock{
 			{

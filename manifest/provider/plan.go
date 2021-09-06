@@ -156,6 +156,40 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		return resp, nil
 	}
 
+	computedAttributes := make(map[string]*tftypes.AttributePath)
+	var atp *tftypes.AttributePath
+	cattrVal, ok := proposedVal["computed_attributes"]
+	if ok && !cattrVal.IsNull() && cattrVal.IsKnown() {
+		var cattr []tftypes.Value
+		cattrVal.As(&cattr)
+		for _, v := range cattr {
+			var vs string
+			err := v.As(&vs)
+			if err != nil {
+				s.logger.Error("[computed_attributes] cannot extract element from list")
+				continue
+			}
+			atp, err := FieldPathToTftypesPath(vs)
+			if err != nil {
+				s.logger.Error("[Configure]", "[computed_attributes] cannot parse attribute path element", err)
+				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityError,
+					Summary:  "[computed_attributes] cannot parse attribute path element: " + vs,
+					Detail:   err.Error(),
+				})
+				continue
+			}
+			computedAttributes[atp.String()] = atp
+		}
+	} else {
+		// When not specified by the user, 'metadata.annotations' and 'metadata.labels' are configured as default
+		atp = tftypes.NewAttributePath().WithAttributeName("metadata").WithAttributeName("annotations")
+		computedAttributes[atp.String()] = atp
+
+		atp = tftypes.NewAttributePath().WithAttributeName("metadata").WithAttributeName("labels")
+		computedAttributes[atp.String()] = atp
+	}
+
 	// Decode prior resource state
 	priorState, err := req.PriorState.Unmarshal(rt)
 	if err != nil {
@@ -304,7 +338,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		// plan for Create
 		s.logger.Debug("[PlanResourceChange]", "creating object", dump(completePropMan))
 		newObj, err := tftypes.Transform(completePropMan, func(ap *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
-			_, ok := s.ComputedAttributes[ap.String()]
+			_, ok := computedAttributes[ap.String()]
 			if ok {
 				return tftypes.NewValue(v.Type(), tftypes.UnknownValue), nil
 			}
@@ -349,7 +383,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 			return resp, nil
 		}
 		updatedObj, err := tftypes.Transform(completePropMan, func(ap *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
-			_, isComputed := s.ComputedAttributes[ap.String()]
+			_, isComputed := computedAttributes[ap.String()]
 			if v.IsKnown() { // this is a value from current configuration - include it in the plan
 				hasChanged := false
 				wasCfg, restPath, err := tftypes.WalkAttributePath(priorMan, ap)

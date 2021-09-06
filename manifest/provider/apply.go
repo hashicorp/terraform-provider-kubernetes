@@ -63,6 +63,52 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 	}
 	s.logger.Trace("[ApplyResourceChange]", "[PriorState]", dump(applyPriorState))
 
+	var plannedStateVal map[string]tftypes.Value = make(map[string]tftypes.Value)
+	err = applyPlannedState.As(&plannedStateVal)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to extract planned resource state values",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+
+	// Extract computed attributes configuration
+	computedAttributes := make(map[string]*tftypes.AttributePath)
+	var atp *tftypes.AttributePath
+	cattrVal, ok := plannedStateVal["computed_attributes"]
+	if ok && !cattrVal.IsNull() && cattrVal.IsKnown() {
+		var cattr []tftypes.Value
+		cattrVal.As(&cattr)
+		for _, v := range cattr {
+			var vs string
+			err := v.As(&vs)
+			if err != nil {
+				s.logger.Error("[computed_attributes] cannot extract element from list")
+				continue
+			}
+			atp, err := FieldPathToTftypesPath(vs)
+			if err != nil {
+				s.logger.Error("[Configure]", "[computed_attributes] cannot parse attribute path element", err)
+				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityError,
+					Summary:  "[computed_attributes] cannot parse attribute path element: " + vs,
+					Detail:   err.Error(),
+				})
+				continue
+			}
+			computedAttributes[atp.String()] = atp
+		}
+	} else {
+		// When not specified by the user, 'metadata.annotations' and 'metadata.labels' are configured as default
+		atp = tftypes.NewAttributePath().WithAttributeName("metadata").WithAttributeName("annotations")
+		computedAttributes[atp.String()] = atp
+
+		atp = tftypes.NewAttributePath().WithAttributeName("metadata").WithAttributeName("labels")
+		computedAttributes[atp.String()] = atp
+	}
+
 	c, err := s.getDynamicClient()
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics,
@@ -88,16 +134,6 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 	switch {
 	case applyPriorState.IsNull() || (!applyPlannedState.IsNull() && !applyPriorState.IsNull()):
 		// Apply resource
-		var plannedStateVal map[string]tftypes.Value = make(map[string]tftypes.Value)
-		err = applyPlannedState.As(&plannedStateVal)
-		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
-				Summary:  "Failed to extract planned resource state values",
-				Detail:   err.Error(),
-			})
-			return resp, nil
-		}
 		obj, ok := plannedStateVal["object"]
 		if !ok {
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
@@ -124,7 +160,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		// Here we replace "computed" attributes (showing as Unknown) with their actual
 		// user-supplied values from "manifest" (if present).
 		obj, err = tftypes.Transform(obj, func(ap *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
-			_, isComputed := s.ComputedAttributes[ap.String()]
+			_, isComputed := computedAttributes[ap.String()]
 			if !isComputed {
 				return v, nil
 			}

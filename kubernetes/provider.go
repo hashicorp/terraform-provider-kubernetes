@@ -160,13 +160,6 @@ func Provider() *schema.Provider {
 					},
 				},
 			},
-			"computed_attributes": {
-				Type:        schema.TypeList,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-				Optional:    true,
-				Required:    false,
-				Description: "List of manifest attributes whose values can be altered by the API server during 'apply'. Defaults to: [\"metadata.annotations\", \"metadata.labels\"]",
-			},
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{

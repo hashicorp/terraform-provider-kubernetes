@@ -166,17 +166,19 @@ To accommodate this, the `kubernetes_manifest` resources allows defining so-call
 
 The most common example of this is  `metadata.annotations`. In some cases, the API will add extra annotations on top of the ones configured by the user. Unless the attribute is declared as "computed" Terraform will throw an error signaling that the state returned by the 'apply' operation is inconsistent with the value defined in the 'plan'.
 
- To declare an attribute as "computed" add its full attribute path to the `computed_attributes` list under the `provider` block. For example, to declare the "metadata.labels" attribute as "computed", add the following:
+ To declare an attribute as "computed" add its full attribute path to the `computed_attributes` attribute under the respective `kubernetes_manifest` resource. For example, to declare the "metadata.labels" attribute as "computed", add the following:
  
  ```
- provider "kubernetes" {
-   ...
+resource "kubernetes_manifest" "test-ns" {
+  manifest = {
+    ...
+  }
 
-   computed_attributes = ["metadata.labels"]
+  computed_attributes = ["metadata.labels"]
  }
  ```
 
-**IMPORTANT**: By default, `metadata.labels` and `metadata.annotations` are already included in the list. You don't have to set them explicitly in the provider block.
+**IMPORTANT**: By default, `metadata.labels` and `metadata.annotations` are already included in the list. You don't have to set them explicitly in the `computed_attributes` list. To turn off these defaults, set the value of `computed_attributes` to an empty list or a concrete list of other attributes. For example `computed_attributes = []`.
 
 The syntax for the attribute paths is the same as the one used in the `wait_for` block.
 

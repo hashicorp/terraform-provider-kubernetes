@@ -182,7 +182,7 @@ func (w *FieldWaiter) Wait(ctx context.Context) error {
 			return err
 		}
 
-              // TODO: implement with exponential back-off.
+		// TODO: implement with exponential back-off.
 		time.Sleep(1 * time.Second) // lintignore:R018
 	}
 }

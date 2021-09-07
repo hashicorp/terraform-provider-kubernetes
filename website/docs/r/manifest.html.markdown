@@ -158,15 +158,15 @@ resource "kubernetes_manifest" "test" {
   }
 }
 
-## Computed attributes
+## Computed fields
 
-When setting the value of an attribute in configuration, Terraform will check that the same value is returned after the apply operation. This ensures that the actual configuration requested by the user is successfully applied. In some cases, with the Kubernetes API this is not the desired behavior. Particularly when using mutating admission controllers, there is a chance that the values configured by the user will be modified by the API. 
+When setting the value of an field in configuration, Terraform will check that the same value is returned after the apply operation. This ensures that the actual configuration requested by the user is successfully applied. In some cases, with the Kubernetes API this is not the desired behavior. Particularly when using mutating admission controllers, there is a chance that the values configured by the user will be modified by the API. 
 
-To accommodate this, the `kubernetes_manifest` resources allows defining so-called "computed" attributes. When an attribute is defined as "computed" Terraform will allow the final value stored in state after `apply` as returned by the API to be different than what the user requested. 
+To accommodate this, the `kubernetes_manifest` resources allows defining so-called "computed" fields. When an field is defined as "computed" Terraform will allow the final value stored in state after `apply` as returned by the API to be different than what the user requested. 
 
-The most common example of this is  `metadata.annotations`. In some cases, the API will add extra annotations on top of the ones configured by the user. Unless the attribute is declared as "computed" Terraform will throw an error signaling that the state returned by the 'apply' operation is inconsistent with the value defined in the 'plan'.
+The most common example of this is  `metadata.annotations`. In some cases, the API will add extra annotations on top of the ones configured by the user. Unless the field is declared as "computed" Terraform will throw an error signaling that the state returned by the 'apply' operation is inconsistent with the value defined in the 'plan'.
 
- To declare an attribute as "computed" add its full attribute path to the `computed_attributes` attribute under the respective `kubernetes_manifest` resource. For example, to declare the "metadata.labels" attribute as "computed", add the following:
+ To declare an field as "computed" add its full field path to the `computed_fields` field under the respective `kubernetes_manifest` resource. For example, to declare the "metadata.labels" field as "computed", add the following:
  
  ```
 resource "kubernetes_manifest" "test-ns" {
@@ -174,18 +174,18 @@ resource "kubernetes_manifest" "test-ns" {
     ...
   }
 
-  computed_attributes = ["metadata.labels"]
+  computed_fields = ["metadata.labels"]
  }
  ```
 
-**IMPORTANT**: By default, `metadata.labels` and `metadata.annotations` are already included in the list. You don't have to set them explicitly in the `computed_attributes` list. To turn off these defaults, set the value of `computed_attributes` to an empty list or a concrete list of other attributes. For example `computed_attributes = []`.
+**IMPORTANT**: By default, `metadata.labels` and `metadata.annotations` are already included in the list. You don't have to set them explicitly in the `computed_fields` list. To turn off these defaults, set the value of `computed_fields` to an empty list or a concrete list of other fields. For example `computed_fields = []`.
 
-The syntax for the attribute paths is the same as the one used in the `wait_for` block.
-
+The syntax for the field paths is the same as the one used in the `wait_for` block.
 ## Argument Reference
 
 The following arguments are supported:
 
+- `computed_fields` - (Optional) List of paths of fields to be handled as "computed". The user-configured value for the field will be overridden by any different value returned by the API after apply.
 - `manifest` (Required) An object Kubernetes manifest describing the desired state of the resource in HCL format.
 - `object` (Optional) The resulting resource state, as returned by the API server after applying the desired state from `manifest`.
 - `wait_for` (Optional) An object which allows you configure the provider to wait for certain conditions to be met. See below for schema. 

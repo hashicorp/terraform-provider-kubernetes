@@ -142,7 +142,6 @@ The following arguments are supported:
 * `client_certificate` - (Optional) PEM-encoded client certificate for TLS authentication. Can be sourced from `KUBE_CLIENT_CERT_DATA`.
 * `client_key` - (Optional) PEM-encoded client certificate key for TLS authentication. Can be sourced from `KUBE_CLIENT_KEY_DATA`.
 * `cluster_ca_certificate` - (Optional) PEM-encoded root certificates bundle for TLS authentication. Can be sourced from `KUBE_CLUSTER_CA_CERT_DATA`.
-* `computed_attributes` - (Optional) List of paths of attributes to be handled as "computed" (the user-configured value will be overridden by any different value returned by the API after apply)
 * `config_path` - (Optional) A path to a kube config file. Can be sourced from `KUBE_CONFIG_PATH`.
 * `config_paths` - (Optional) A list of paths to the kube config files. Can be sourced from `KUBE_CONFIG_PATHS`.
 * `config_context` - (Optional) Context to choose from the config file. Can be sourced from `KUBE_CTX`.

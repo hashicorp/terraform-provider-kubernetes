@@ -35,7 +35,7 @@ jobs:
           version: "v0.11.1"
       - name: Build annotations webhook
         run: |
-          docker build --rm -t tf-k8s-acc-webhook ./manifest/test/acceptance/testdata/ComputedAttributes/webhook/
+          docker build --rm -t tf-k8s-acc-webhook ./manifest/test/acceptance/testdata/ComputedFields/webhook/
           kind load docker-image tf-k8s-acc-webhook
       - name: Run tests
         env:

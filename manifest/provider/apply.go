@@ -74,39 +74,39 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		return resp, nil
 	}
 
-	// Extract computed attributes configuration
-	computedAttributes := make(map[string]*tftypes.AttributePath)
+	// Extract computed fields configuration
+	computedFields := make(map[string]*tftypes.AttributePath)
 	var atp *tftypes.AttributePath
-	cattrVal, ok := plannedStateVal["computed_attributes"]
-	if ok && !cattrVal.IsNull() && cattrVal.IsKnown() {
-		var cattr []tftypes.Value
-		cattrVal.As(&cattr)
-		for _, v := range cattr {
+	cfVal, ok := plannedStateVal["computed_fields"]
+	if ok && !cfVal.IsNull() && cfVal.IsKnown() {
+		var cf []tftypes.Value
+		cfVal.As(&cf)
+		for _, v := range cf {
 			var vs string
 			err := v.As(&vs)
 			if err != nil {
-				s.logger.Error("[computed_attributes] cannot extract element from list")
+				s.logger.Error("[computed_fields] cannot extract element from list")
 				continue
 			}
 			atp, err := FieldPathToTftypesPath(vs)
 			if err != nil {
-				s.logger.Error("[Configure]", "[computed_attributes] cannot parse attribute path element", err)
+				s.logger.Error("[Configure]", "[computed_fields] cannot parse field path element", err)
 				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 					Severity: tfprotov5.DiagnosticSeverityError,
-					Summary:  "[computed_attributes] cannot parse attribute path element: " + vs,
+					Summary:  "[computed_fields] cannot parse filed path element: " + vs,
 					Detail:   err.Error(),
 				})
 				continue
 			}
-			computedAttributes[atp.String()] = atp
+			computedFields[atp.String()] = atp
 		}
 	} else {
 		// When not specified by the user, 'metadata.annotations' and 'metadata.labels' are configured as default
 		atp = tftypes.NewAttributePath().WithAttributeName("metadata").WithAttributeName("annotations")
-		computedAttributes[atp.String()] = atp
+		computedFields[atp.String()] = atp
 
 		atp = tftypes.NewAttributePath().WithAttributeName("metadata").WithAttributeName("labels")
-		computedAttributes[atp.String()] = atp
+		computedFields[atp.String()] = atp
 	}
 
 	c, err := s.getDynamicClient()
@@ -160,7 +160,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		// Here we replace "computed" attributes (showing as Unknown) with their actual
 		// user-supplied values from "manifest" (if present).
 		obj, err = tftypes.Transform(obj, func(ap *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
-			_, isComputed := computedAttributes[ap.String()]
+			_, isComputed := computedFields[ap.String()]
 			if !isComputed {
 				return v, nil
 			}

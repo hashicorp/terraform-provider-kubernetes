@@ -11,7 +11,7 @@ import (
 	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
 )
 
-func TestKubernetesManifest_ComputedAttributes(t *testing.T) {
+func TestKubernetesManifest_ComputedFields(t *testing.T) {
 	name := strings.ToLower(randName())
 	namespace := strings.ToLower(randName())
 	webhook_image := "tf-k8s-acc-webhook"
@@ -35,7 +35,7 @@ func TestKubernetesManifest_ComputedAttributes(t *testing.T) {
 		k8shelper.AssertResourceDoesNotExist(t, "admissionregistration.k8s.io", "mutatingwebhookconfigurations", name)
 	}()
 
-	tfconfig := loadTerraformConfig(t, "ComputedAttributes/webhook/deploy/webhook.tf", tfvars)
+	tfconfig := loadTerraformConfig(t, "ComputedFields/webhook/deploy/webhook.tf", tfvars)
 	step1.RequireSetConfig(t, string(tfconfig))
 	step1.RequireInit(t)
 	step1.RequireApply(t)
@@ -56,7 +56,7 @@ func TestKubernetesManifest_ComputedAttributes(t *testing.T) {
 		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "configmaps", namespace, name)
 	}()
 
-	tfconfig = loadTerraformConfig(t, "ComputedAttributes/computed.tf", tfvars)
+	tfconfig = loadTerraformConfig(t, "ComputedFields/computed.tf", tfvars)
 	step2.RequireSetConfig(t, string(tfconfig))
 	step2.RequireInit(t)
 	step2.RequireApply(t)

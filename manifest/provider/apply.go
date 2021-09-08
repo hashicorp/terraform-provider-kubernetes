@@ -190,6 +190,17 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, nil
 		}
 
+		// get fieldManager config
+		fieldManagerName, forceConflicts, err := s.getFieldManagerConfig(plannedStateVal)
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Could not extract field_manager config",
+				Detail:   err.Error(),
+			})
+			return resp, nil
+		}
+
 		// figure out the timeout deadline
 		timeouts := s.getTimeouts(plannedStateVal)
 		var timeout time.Duration
@@ -203,10 +214,27 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		defer cancel()
 
 		// Call the Kubernetes API to create the new resource
-		result, err := rs.Patch(ctxDeadline, rname, types.ApplyPatchType, jsonManifest, metav1.PatchOptions{FieldManager: "Terraform"})
+		result, err := rs.Patch(ctxDeadline, rname, types.ApplyPatchType, jsonManifest,
+			metav1.PatchOptions{
+				FieldManager: fieldManagerName,
+				Force:        &forceConflicts,
+			},
+		)
 		if err != nil {
 			s.logger.Error("[ApplyResourceChange][Apply]", "API error", dump(err), "API response", dump(result))
-			if status := apierrors.APIStatus(nil); errors.As(err, &status) {
+			if apierrors.IsConflict(err) {
+				resp.Diagnostics = append(resp.Diagnostics,
+					&tfprotov5.Diagnostic{
+						Severity: tfprotov5.DiagnosticSeverityError,
+						Summary:  fmt.Sprintf(`There was a field manager conflict when trying to apply the manifest for %q`, rnn),
+						Detail: fmt.Sprintf(
+							"The API returned the following conflict: %q\n\n"+
+								"You can override this conflict by setting \"force_conflicts\" to true in the \"field_manager\" block.",
+							err.Error(),
+						),
+					},
+				)
+			} else if status := apierrors.APIStatus(nil); errors.As(err, &status) {
 				resp.Diagnostics = append(resp.Diagnostics, APIStatusErrorToDiagnostics(status.Status())...)
 			} else {
 				resp.Diagnostics = append(resp.Diagnostics,

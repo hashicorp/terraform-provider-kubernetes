@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-func (s *RawProviderServer) dryRun(ctx context.Context, obj tftypes.Value) error {
+func (s *RawProviderServer) dryRun(ctx context.Context, obj tftypes.Value, fieldManager string, forceConflicts bool) error {
 	c, err := s.getDynamicClient()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve Kubernetes dynamic client during apply: %v", err)
@@ -65,12 +65,47 @@ func (s *RawProviderServer) dryRun(ctx context.Context, obj tftypes.Value) error
 	}
 	_, err = rs.Patch(ctx, rname, types.ApplyPatchType, jsonManifest,
 		metav1.PatchOptions{
-			FieldManager: "Terraform",
+			FieldManager: fieldManager,
+			Force:        &forceConflicts,
 			DryRun:       []string{"All"},
 		},
 	)
 
 	return err
+}
+
+const defaultFieldManagerName = "Terraform"
+
+func (s *RawProviderServer) getFieldManagerConfig(v map[string]tftypes.Value) (string, bool, error) {
+	fieldManagerName := defaultFieldManagerName
+	forceConflicts := false
+	if !v["field_manager"].IsNull() && v["field_manager"].IsKnown() {
+		var fieldManagerBlock []tftypes.Value
+		err := v["field_manager"].As(&fieldManagerBlock)
+		if err != nil {
+			return "", false, err
+		}
+		if len(fieldManagerBlock) > 0 {
+			var fieldManagerObj map[string]tftypes.Value
+			err := fieldManagerBlock[0].As(&fieldManagerObj)
+			if err != nil {
+				return "", false, err
+			}
+			if !fieldManagerObj["name"].IsNull() && fieldManagerObj["name"].IsKnown() {
+				err = fieldManagerObj["name"].As(&fieldManagerName)
+				if err != nil {
+					return "", false, err
+				}
+			}
+			if !fieldManagerObj["force_conflicts"].IsNull() && fieldManagerObj["force_conflicts"].IsKnown() {
+				err = fieldManagerObj["force_conflicts"].As(&forceConflicts)
+				if err != nil {
+					return "", false, err
+				}
+			}
+		}
+	}
+	return fieldManagerName, forceConflicts, nil
 }
 
 // PlanResourceChange function
@@ -213,7 +248,17 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 			Detail:   "We could not find an OpenAPI schema for this custom resource. Updates to this resource will cause a forced replacement.",
 		})
 
-		err := s.dryRun(ctx, ppMan)
+		fieldManagerName, forceConflicts, err := s.getFieldManagerConfig(proposedVal)
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Could not extract field_manager config",
+				Detail:   err.Error(),
+			})
+			return resp, nil
+		}
+
+		err = s.dryRun(ctx, ppMan, fieldManagerName, forceConflicts)
 		if err != nil {
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 				Severity: tfprotov5.DiagnosticSeverityError,

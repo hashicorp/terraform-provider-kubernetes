@@ -41,24 +41,24 @@ func TestParseImportID(t *testing.T) {
 			Err: fmt.Errorf("invalid format for import ID [%s]\nExpected format is: apiVersion=<value>,kind=<value>,name=<value>[,namespace=<value>]", "foobar"),
 		},
 	}
-	for _, s := range samples {
-		gotGvk, gotName, gotNamespace, gotErr := parseImportID(s.ID)
-		if gotErr != nil {
-			if gotErr.Error() == s.Err.Error() {
+	for _, expected := range samples {
+		actualGvk, actualName, actualNamespace, actualErr := parseImportID(expected.ID)
+		if actualErr != nil {
+			if actualErr.Error() == expected.Err.Error() {
 				continue
 			}
-			t.Fatal(gotErr.Error())
+			t.Fatal(actualErr.Error())
 		}
-		if s.GVK != gotGvk {
-			t.Log("GVK (got / wanted):", gotGvk, s.GVK)
+		if expected.GVK != actualGvk {
+			t.Log("GVK (actual / wanted):", actualGvk, expected.GVK)
 			t.Fail()
 		}
-		if s.Name != gotName {
-			t.Log("Name (got / wanted):", gotName, s.Name)
+		if expected.Name != actualName {
+			t.Log("Name (actual / wanted):", actualName, expected.Name)
 			t.Fail()
 		}
-		if s.Namespace != gotNamespace {
-			t.Log("Namespace (got / wanted):", gotNamespace, s.Namespace)
+		if expected.Namespace != actualNamespace {
+			t.Log("Namespace (actual / wanted):", actualNamespace, expected.Namespace)
 			t.Fail()
 		}
 	}

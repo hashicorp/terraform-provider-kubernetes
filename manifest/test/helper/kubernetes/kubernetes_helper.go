@@ -1,3 +1,4 @@
+//go:build acceptance
 // +build acceptance
 
 package kubernetes
@@ -81,7 +82,7 @@ func (k *Helper) CreateNamespace(t *testing.T, name string) {
 	}
 }
 
-// CreateNamespace creates a new namespace
+// CreateConfigMap creates a new ConfigMap
 func (k *Helper) CreateConfigMap(t *testing.T, name string, namespace string, data map[string]interface{}) {
 	t.Helper()
 
@@ -103,7 +104,7 @@ func (k *Helper) CreateConfigMap(t *testing.T, name string, namespace string, da
 	}
 }
 
-// DeleteResource deletes a namespace
+// DeleteResource deletes a resource referred to by the name and GVK
 func (k *Helper) DeleteResource(t *testing.T, name string, gvr schema.GroupVersionResource) {
 	t.Helper()
 
@@ -113,7 +114,7 @@ func (k *Helper) DeleteResource(t *testing.T, name string, gvr schema.GroupVersi
 	}
 }
 
-// DeleteResource deletes a namespace
+// DeleteResource deletes a namespaced resource referred to by the name and GVK
 func (k *Helper) DeleteNamespacedResource(t *testing.T, name string, namespace string, gvr schema.GroupVersionResource) {
 	t.Helper()
 

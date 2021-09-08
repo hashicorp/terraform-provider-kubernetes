@@ -111,7 +111,7 @@ kubectl get secrets sample -o yaml | tfk8s --strip -o sample.tf
 ### Import the resource state from the cluster
 
 ```
-terraform import kubernetes_manifest.secret_sample "v1#Secret#default#sample"
+terraform import kubernetes_manifest.secret_sample "apiVersion=v1,kind=Secret,namespace=default,name=sample"
 ```
 
 Note the import ID as the last argument to the import command. This ID points Terraform at which Kubernetes object to read when importing.

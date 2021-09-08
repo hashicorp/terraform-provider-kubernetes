@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -97,6 +98,21 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 				Summary:   `Forbidden attribute key in "manifest" value`,
 				Detail:    fmt.Sprintf("'%s' attribute key is not allowed in manifest configuration", key),
 				Attribute: kp,
+			})
+		}
+	}
+
+	// validate timeouts block
+	timeouts := s.getTimeouts(configVal)
+	path := tftypes.NewAttributePath().WithAttributeName("timeouts")
+	for k, v := range timeouts {
+		_, err := time.ParseDuration(v)
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity:  tfprotov5.DiagnosticSeverityError,
+				Summary:   fmt.Sprintf("Error parsing timeout for %q", k),
+				Detail:    err.Error(),
+				Attribute: path.WithAttributeName(k),
 			})
 		}
 	}

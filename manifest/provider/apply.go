@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -15,6 +16,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 )
+
+var defaultCreateTimeout = "10m"
+var defaultUpdateTimeout = "10m"
+var defaultDeleteTimeout = "10m"
 
 // ApplyResourceChange function
 func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprotov5.ApplyResourceChangeRequest) (*tfprotov5.ApplyResourceChangeResponse, error) {
@@ -185,8 +190,20 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, nil
 		}
 
+		// figure out the timeout deadline
+		timeouts := s.getTimeouts(plannedStateVal)
+		var timeout time.Duration
+		if applyPriorState.IsNull() {
+			timeout, _ = time.ParseDuration(timeouts["create"])
+		} else {
+			timeout, _ = time.ParseDuration(timeouts["update"])
+		}
+		deadline := time.Now().Add(timeout)
+		ctxDeadline, cancel := context.WithDeadline(ctx, deadline)
+		defer cancel()
+
 		// Call the Kubernetes API to create the new resource
-		result, err := rs.Patch(ctx, rname, types.ApplyPatchType, jsonManifest, metav1.PatchOptions{FieldManager: "Terraform"})
+		result, err := rs.Patch(ctxDeadline, rname, types.ApplyPatchType, jsonManifest, metav1.PatchOptions{FieldManager: "Terraform"})
 		if err != nil {
 			s.logger.Error("[ApplyResourceChange][Apply]", "API error", dump(err), "API response", dump(result))
 			if status := apierrors.APIStatus(nil); errors.As(err, &status) {
@@ -215,9 +232,24 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 
 		wf, ok := plannedStateVal["wait_for"]
 		if ok {
-			err = s.waitForCompletion(ctx, wf, rs, rname, wt)
+			err = s.waitForCompletion(ctxDeadline, wf, rs, rname, wt)
 			if err != nil {
-				return resp, err
+				if err == context.DeadlineExceeded {
+					resp.Diagnostics = append(resp.Diagnostics,
+						&tfprotov5.Diagnostic{
+							Severity: tfprotov5.DiagnosticSeverityError,
+							Summary:  "Operation timed out",
+							Detail:   "Terraform timed out waiting on the operation to complete",
+						})
+				} else {
+					resp.Diagnostics = append(resp.Diagnostics,
+						&tfprotov5.Diagnostic{
+							Severity: tfprotov5.DiagnosticSeverityError,
+							Summary:  "Error waiting for operation to complete",
+							Detail:   err.Error(),
+						})
+				}
+				return resp, nil
 			}
 		}
 
@@ -276,25 +308,59 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		if err != nil {
 			return resp, err
 		}
-
 		rnamespace := uo.GetNamespace()
 		rname := uo.GetName()
-
 		if ns {
 			rs = c.Resource(gvr).Namespace(rnamespace)
 		} else {
 			rs = c.Resource(gvr)
 		}
-		err = rs.Delete(ctx, rname, metav1.DeleteOptions{})
+
+		// figure out the timeout deadline
+		timeouts := s.getTimeouts(priorStateVal)
+		timeout, _ := time.ParseDuration(timeouts["delete"])
+		deadline := time.Now().Add(timeout)
+		ctxDeadline, cancel := context.WithDeadline(ctx, deadline)
+		defer cancel()
+
+		err = rs.Delete(ctxDeadline, rname, metav1.DeleteOptions{})
 		if err != nil {
 			rn := types.NamespacedName{Namespace: rnamespace, Name: rname}.String()
 			resp.Diagnostics = append(resp.Diagnostics,
 				&tfprotov5.Diagnostic{
 					Severity: tfprotov5.DiagnosticSeverityError,
+					Summary:  fmt.Sprintf("Error deleting resource %s: %s", rn, err),
 					Detail:   err.Error(),
-					Summary:  fmt.Sprintf("DELETE resource %s failed: %s", rn, err),
 				})
 			return resp, nil
+		}
+
+		// wait for delete
+		for {
+			if time.Now().After(deadline) {
+				resp.Diagnostics = append(resp.Diagnostics,
+					&tfprotov5.Diagnostic{
+						Severity: tfprotov5.DiagnosticSeverityError,
+						Summary:  fmt.Sprintf("Timed out when waiting for resource %q to be deleted", rname),
+						Detail:   "Deletion timed out. This can happen when there is a finalizer on a resource. You may need to delete this resource manually with kubectl.",
+					})
+				return resp, nil
+			}
+			_, err := rs.Get(ctxDeadline, rname, metav1.GetOptions{})
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					s.logger.Trace("[ApplyResourceChange][Delete]", "Resource is deleted")
+					break
+				}
+				resp.Diagnostics = append(resp.Diagnostics,
+					&tfprotov5.Diagnostic{
+						Severity: tfprotov5.DiagnosticSeverityError,
+						Summary:  "Error waiting for deletion.",
+						Detail:   fmt.Sprintf("Error when waiting for resource %q to be deleted: %v", rname, err),
+					})
+				return resp, nil
+			}
+			time.Sleep(1 * time.Second) // lintignore:R018
 		}
 
 		resp.NewState = req.PlannedState
@@ -304,4 +370,30 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 	s.OAPIFoundry = nil // this needs to be optimized to refresh only when CRDs are applied (or maybe other schema altering resources too?)
 
 	return resp, nil
+}
+
+func (s *RawProviderServer) getTimeouts(v map[string]tftypes.Value) map[string]string {
+	timeouts := map[string]string{
+		"create": defaultCreateTimeout,
+		"update": defaultUpdateTimeout,
+		"delete": defaultDeleteTimeout,
+	}
+	if !v["timeouts"].IsNull() && v["timeouts"].IsKnown() {
+		var timeoutsBlock []tftypes.Value
+		v["timeouts"].As(&timeoutsBlock)
+		if len(timeoutsBlock) > 0 {
+			var t map[string]tftypes.Value
+			timeoutsBlock[0].As(&t)
+			var s string
+			for _, k := range []string{"create", "update", "delete"} {
+				if vv, ok := t[k]; ok && !vv.IsNull() {
+					vv.As(&s)
+					if s != "" {
+						timeouts[k] = s
+					}
+				}
+			}
+		}
+	}
+	return timeouts
 }

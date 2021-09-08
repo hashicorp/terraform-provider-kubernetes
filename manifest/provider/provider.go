@@ -53,6 +53,36 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 		"kubernetes_manifest": {
 			Version: 1,
 			Block: &tfprotov5.SchemaBlock{
+				BlockTypes: []*tfprotov5.SchemaNestedBlock{
+					{
+						TypeName: "timeouts",
+						Nesting:  tfprotov5.SchemaNestedBlockNestingModeList,
+						MinItems: 0,
+						MaxItems: 1,
+						Block: &tfprotov5.SchemaBlock{
+							Attributes: []*tfprotov5.SchemaAttribute{
+								{
+									Name:        "create",
+									Type:        tftypes.String,
+									Description: "Timeout for the create operation.",
+									Optional:    true,
+								},
+								{
+									Name:        "update",
+									Type:        tftypes.String,
+									Description: "Timeout for the update operation.",
+									Optional:    true,
+								},
+								{
+									Name:        "delete",
+									Type:        tftypes.String,
+									Description: "Timeout for the delete operation.",
+									Optional:    true,
+								},
+							},
+						},
+					},
+				},
 				Attributes: []*tfprotov5.SchemaAttribute{
 					{
 						Name:        "manifest",

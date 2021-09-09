@@ -157,6 +157,7 @@ resource "kubernetes_manifest" "test" {
     }
   }
 }
+```
 
 ## Computed fields
 
@@ -167,8 +168,8 @@ To accommodate this, the `kubernetes_manifest` resources allows defining so-call
 The most common example of this is  `metadata.annotations`. In some cases, the API will add extra annotations on top of the ones configured by the user. Unless the field is declared as "computed" Terraform will throw an error signaling that the state returned by the 'apply' operation is inconsistent with the value defined in the 'plan'.
 
  To declare an field as "computed" add its full field path to the `computed_fields` field under the respective `kubernetes_manifest` resource. For example, to declare the "metadata.labels" field as "computed", add the following:
- 
- ```
+
+```
 resource "kubernetes_manifest" "test-ns" {
   manifest = {
     ...
@@ -176,7 +177,7 @@ resource "kubernetes_manifest" "test-ns" {
 
   computed_fields = ["metadata.labels"]
  }
- ```
+```
 
 **IMPORTANT**: By default, `metadata.labels` and `metadata.annotations` are already included in the list. You don't have to set them explicitly in the `computed_fields` list. To turn off these defaults, set the value of `computed_fields` to an empty list or a concrete list of other fields. For example `computed_fields = []`.
 

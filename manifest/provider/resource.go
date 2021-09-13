@@ -204,11 +204,19 @@ func (ps *RawProviderServer) lookUpGVKinCRDs(ctx context.Context, gvk schema.Gro
 	if err != nil {
 		return nil, err
 	}
-	crd := schema.GroupResource{Group: "apiextensions.k8s.io", Resource: "customresourcedefinitions"}
+	m, err := ps.getRestMapper()
+	if err != nil {
+		return nil, err
+	}
 
+	crd := schema.GroupKind{Group: "apiextensions.k8s.io", Kind: "CustomResourceDefinition"}
+	crms, err := m.RESTMappings(crd)
+	if err != nil {
+		return nil, fmt.Errorf("could not extract resource version mappings for apiextensions.k8s.io.CustomResourceDefinition: %s", err)
+	}
 	// check  CRD versions
-	for _, crdv := range []string{"v1", "v1beta1"} {
-		crdRes, err := c.Resource(crd.WithVersion(crdv)).List(ctx, v1.ListOptions{})
+	for _, crm := range crms {
+		crdRes, err := c.Resource(crm.Resource).List(ctx, v1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}

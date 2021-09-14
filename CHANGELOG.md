@@ -1,4 +1,4 @@
-## Unreleased
+## 2.5.0 (Unreleased)
 
 IMPROVEMENTS:
 * Timeouts block on `kubernetes_manifest`

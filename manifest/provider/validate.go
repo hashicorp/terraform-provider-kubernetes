@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
@@ -36,8 +37,8 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 		return resp, nil
 	}
 
-	att := tftypes.NewAttributePath()
-	att = att.WithAttributeName("manifest")
+	manifestPath := tftypes.NewAttributePath()
+	manifestPath = manifestPath.WithAttributeName("manifest")
 
 	configVal := make(map[string]tftypes.Value)
 	err = config.As(&configVal)
@@ -56,7 +57,7 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 			Severity:  tfprotov5.DiagnosticSeverityError,
 			Summary:   "Manifest missing from resource configuration",
 			Detail:    "A manifest attribute containing a valid Kubernetes resource configuration is required.",
-			Attribute: att,
+			Attribute: manifestPath,
 		})
 		return resp, nil
 	}
@@ -73,14 +74,14 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 			Severity:  tfprotov5.DiagnosticSeverityError,
 			Summary:   `Failed to extract "manifest" attribute value from resource configuration`,
 			Detail:    err.Error(),
-			Attribute: att,
+			Attribute: manifestPath,
 		})
 		return resp, nil
 	}
 
 	for _, key := range requiredKeys {
 		if _, present := rawManifest[key]; !present {
-			kp := att.WithAttributeName(key)
+			kp := manifestPath.WithAttributeName(key)
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 				Severity:  tfprotov5.DiagnosticSeverityError,
 				Summary:   `Attribute key missing from "manifest" value`,
@@ -92,7 +93,7 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 
 	for _, key := range forbiddenKeys {
 		if _, present := rawManifest[key]; present {
-			kp := att.WithAttributeName(key)
+			kp := manifestPath.WithAttributeName(key)
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 				Severity:  tfprotov5.DiagnosticSeverityError,
 				Summary:   `Forbidden attribute key in "manifest" value`,
@@ -101,6 +102,42 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 			})
 		}
 	}
+
+	// check for lists with inconsistent types
+	tftypes.Walk(manifest, func(ap *tftypes.AttributePath, v tftypes.Value) (bool, error) {
+		var elems []tftypes.Value
+		if err := v.As(&elems); err != nil {
+			return true, nil
+		}
+		first := elems[0]
+		for _, e := range elems[1:] {
+			// FIXME I had to do this so I could actually tell the user
+			// where in the manifest the problem is.
+			//
+			// 1. Using the AttributePath from the tftypes.Walk does not work here
+			// 2. Appending it to the AttributePath for "manifest" does not work
+			// 3. AttributePathStep does not expose any methods to let you break it down
+			// 4. Using the WithElementKey* functions on the "manifest" path does
+			//    not seem to work
+			steps := []string{}
+			for _, s := range ap.Steps() {
+				steps = append(steps, fmt.Sprintf("%v", s)) // HACK
+			}
+
+			if !e.Type().Is(first.Type()) {
+				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityError,
+					Summary:  "Manifest contains a list of values with inconsistent types",
+					Detail: fmt.Sprintf("Your manifest contains a list of values with inconsistent types at %q.\n\n"+
+						"This can happen when you have lists of objects that contain a mixture of fields that can be integers or strings.\n"+
+						"Terraform relies each element of a list being the same type. ", strings.Join(steps, ".")),
+					Attribute: manifestPath,
+				})
+				return false, nil
+			}
+		}
+		return true, nil
+	})
 
 	// validate timeouts block
 	timeouts := s.getTimeouts(configVal)

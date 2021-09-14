@@ -1,3 +1,17 @@
+## Unreleased
+
+IMPROVEMENTS:
+* Timeouts block on `kubernetes_manifest`
+* `kubernetes_manifest` supports setting field_manager name and "force" mode
+* `kubernetes_manifest` checks that resource exists before trying to create
+* `kubernetes_manifest` supports "computed" attributtes
+* `kubernetes_manifest` supports import operations
+
+BUG FIXES:
+* Fix typo in kubernetes_manifest documentation
+* Document that kubernetes_manifest must be enabled in the provider block.
+* Docs for ingress_class_name in kubernetes_ingress
+
 ## 2.4.1 (August 03, 2021)
 
 HOTFIX:

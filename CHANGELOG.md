@@ -1,4 +1,4 @@
-## 2.5.0 (Unreleased)
+## 2.5.0 (September 14, 2021)
 
 IMPROVEMENTS:
 * Timeouts block on `kubernetes_manifest`

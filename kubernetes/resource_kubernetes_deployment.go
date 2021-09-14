@@ -444,11 +444,14 @@ func waitForDeploymentReplicasFunc(ctx context.Context, conn *kubernetes.Clients
 			specReplicas = *dply.Spec.Replicas
 		}
 
-		if dply.Generation <= dply.Status.ObservedGeneration {
+		if dply.Generation > dply.Status.ObservedGeneration {
+			return resource.RetryableError(fmt.Errorf("Waiting for rollout to start"))
+		}
+
+		if dply.Generation == dply.Status.ObservedGeneration {
 			cond := GetDeploymentCondition(dply.Status, appsv1.DeploymentProgressing)
 			if cond != nil && cond.Reason == TimedOutReason {
-				err := fmt.Errorf("Deployment exceeded its progress deadline")
-				return resource.NonRetryableError(err)
+				return resource.NonRetryableError(fmt.Errorf("Deployment exceeded its progress deadline"))
 			}
 
 			if dply.Status.UpdatedReplicas < specReplicas {
@@ -466,9 +469,9 @@ func waitForDeploymentReplicasFunc(ctx context.Context, conn *kubernetes.Clients
 			if dply.Status.AvailableReplicas < dply.Status.UpdatedReplicas {
 				return resource.RetryableError(fmt.Errorf("Waiting for rollout to finish: %d of %d updated replicas are available...", dply.Status.AvailableReplicas, dply.Status.UpdatedReplicas))
 			}
-		} else if dply.Status.ObservedGeneration == 0 {
-			return resource.RetryableError(fmt.Errorf("Waiting for rollout to start"))
+			return nil
 		}
-		return nil
+
+		return resource.NonRetryableError(fmt.Errorf("Observed generation %d is not expected to be greater than generation %d", dply.Status.ObservedGeneration, dply.Generation))
 	}
 }

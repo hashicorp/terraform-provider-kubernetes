@@ -24,15 +24,15 @@ func TestAccKubernetesDataSourceIngress_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_name", "app1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_port", "443"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service.0.name", "app1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service.0.port.0.number", "443"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.host", "server.domain.com"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.path", "/.*"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service_name", "app2"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service_port", "80"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.name", "app2"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.port.0.number", "80"),
 				),
 			},
 			{
@@ -45,15 +45,15 @@ func TestAccKubernetesDataSourceIngress_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.kubernetes_ingress.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.backend.0.service_name", "app1"),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.backend.0.service_port", "443"),
+					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.backend.0.service.0.name", "app1"),
+					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.backend.0.service.0.port.0.number", "443"),
 					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.#", "1"),
 					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.0.host", "server.domain.com"),
 					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.0.http.#", "1"),
 					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.path", "/.*"),
 					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service_name", "app2"),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service_port", "80"),
+					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.name", "app2"),
+					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.port.0.number", "80"),
 				),
 			},
 		},
@@ -96,18 +96,27 @@ func testAccKubernetesDataSourceIngressConfig_basic(name string) string {
   }
   spec {
     backend {
-      service_name = "app1"
-      service_port = 443
+      service {
+        name = "app1"
+        port {
+          number = 443
+        }      
+      }
     }
     rule {
       host = "server.domain.com"
       http {
         path {
           backend {
-            service_name = "app2"
-            service_port = 80
+            service {
+              name = "app2"
+              port {
+                number = 80
+              }            
+            }
           }
           path = "/.*"
+          path_type = "ImplementationSpecific"
         }
       }
     }
@@ -178,9 +187,14 @@ resource "kubernetes_ingress" "test" {
         path {
           path = "/*"
           backend {
-            service_name = kubernetes_service.test.metadata.0.name
-            service_port = 80
+            service {
+              name = kubernetes_service.test.metadata.0.name
+              port {
+                number = 80
+              }            
+            }
           }
+          path_type = "ImplementationSpecific"
         }
       }
     }

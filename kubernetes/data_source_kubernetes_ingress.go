@@ -57,6 +57,11 @@ func dataSourceKubernetesIngress() *schema.Resource {
 																Computed:    true,
 															},
 															"backend": backendSpecFields(ruleBackedDescription),
+															"path_type": {
+																Type:        schema.TypeString,
+																Description: docHTTPIngressPath["pathType"],
+																Computed:    true,
+															},
 														},
 													},
 												},

@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	api "k8s.io/api/extensions/v1beta1"
+	api "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -33,15 +33,15 @@ func TestAccKubernetesIngress_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.ingress_class_name", "ingress-class"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_name", "app1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_port", "443"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service.0.name", "app1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service.0.port.0.number", "443"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.host", "server.domain.com"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.path", "/.*"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service_name", "app2"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service_port", "80"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.name", "app2"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.port.0.number", "80"),
 				),
 			},
 			{
@@ -55,8 +55,8 @@ func TestAccKubernetesIngress_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.ingress_class_name", "other-ingress-class"),
 					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_name", "svc"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_port", "8443"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service.0.name", "svc"),
+					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service.0.port.0.number", "8443"),
 				),
 			},
 		},
@@ -229,7 +229,7 @@ func testAccCheckKubernetesIngressDestroy(s *terraform.State) error {
 			return err
 		}
 
-		resp, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
+		resp, err := conn.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
 				return fmt.Errorf("Ingress still exists: %s", rs.Primary.ID)
@@ -258,7 +258,7 @@ func testAccCheckKubernetesIngressExists(n string, obj *api.Ingress) resource.Te
 			return err
 		}
 
-		out, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
+		out, err := conn.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -276,18 +276,27 @@ func testAccKubernetesIngressConfig_basic(name string) string {
   spec {
 	ingress_class_name = "ingress-class"
     backend {
-      service_name = "app1"
-      service_port = 443
+      service {
+		name = "app1"
+      	port {
+          number = 443
+        }
+      }
     }
     rule {
       host = "server.domain.com"
       http {
         path {
           backend {
-            service_name = "app2"
-            service_port = 80
+            service {
+              name = "app2"
+              port {
+                number = 80
+              }
+            }
           }
           path = "/.*"
+          path_type = "ImplementationSpecific"
         }
       }
     }
@@ -303,22 +312,31 @@ func testAccKubernetesIngressConfig_modified(name string) string {
   spec {
 	ingress_class_name = "other-ingress-class"
     backend {
-      service_name = "svc"
-      service_port = 8443
+      service {
+        name = "svc"
+        port {
+          number = 8443
+        }
+      }
     }
   }
 }`, name)
 }
 
 func testAccKubernetesIngressConfig_TLS(name string) string {
+
 	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
   metadata {
     name = "%s"
   }
   spec {
     backend {
-      service_name = "app1"
-      service_port = 443
+      service {
+        name = "app1"
+        port {
+          number = 443
+        }
+      }
     }
     tls {
       hosts       = ["host1"]
@@ -335,8 +353,12 @@ func testAccKubernetesIngressConfig_TLS_modified(name string) string {
   }
   spec {
     backend {
-      service_name = "app1"
-      service_port = 443
+      service {
+        name = "app1"
+  	    port {
+		  number = 443
+		}
+      }
     }
     tls {
       hosts       = ["host1", "host2"]
@@ -362,8 +384,12 @@ func testAccKubernetesIngressConfig_internalKey(name string) string {
   }
   spec {
     backend {
-      service_name = "app1"
-      service_port = 443
+      service {
+        name = "app1"
+        port {
+          number = 443
+        }
+      }
     }
     tls {
       hosts       = ["host1", "host2"]
@@ -387,8 +413,12 @@ func testAccKubernetesIngressConfig_internalKey_removed(name string) string {
   }
   spec {
     backend {
-      service_name = "app1"
-      service_port = 443
+      service {
+        name = "app1"
+        port {
+          number = 443
+        }
+      }
     }
     tls {
       hosts       = ["host1", "host2"]
@@ -456,8 +486,12 @@ resource "kubernetes_ingress" "test" {
   }
   spec {
     backend {
-      service_name = %q
-      service_port = 8000
+      service {
+        name = %q
+        port {
+          number = 8000
+        }
+      }
     }
   }
   wait_for_load_balancer = true
@@ -497,9 +531,14 @@ resource "kubernetes_ingress" "test" {
         path {
           path = "/*"
           backend {
-            service_name = kubernetes_service.test.metadata.0.name
-            service_port = 80
+            service {
+              name = kubernetes_service.test.metadata.0.name
+              port {
+                number = 80
+              }
+            }
           }
+          path_type = "ImplementationSpecific"
         }
       }
     }

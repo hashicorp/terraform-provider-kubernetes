@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"k8s.io/api/extensions/v1beta1"
+	"k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -90,6 +90,11 @@ func resourceKubernetesIngressSchemaV1() map[string]*schema.Schema {
 															Optional:    true,
 														},
 														"backend": backendSpecFields(ruleBackedDescription),
+														"path_type": {
+															Type:        schema.TypeString,
+															Description: docHTTPIngressPath["pathType"],
+															Required:    true,
+														},
 													},
 												},
 											},
@@ -169,12 +174,12 @@ func resourceKubernetesIngressCreate(ctx context.Context, d *schema.ResourceData
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	ing := &v1beta1.Ingress{
+	ing := &v1.Ingress{
 		Spec: expandIngressSpec(d.Get("spec").([]interface{})),
 	}
 	ing.ObjectMeta = metadata
 	log.Printf("[INFO] Creating new ingress: %#v", ing)
-	out, err := conn.ExtensionsV1beta1().Ingresses(metadata.Namespace).Create(ctx, ing, metav1.CreateOptions{})
+	out, err := conn.NetworkingV1().Ingresses(metadata.Namespace).Create(ctx, ing, metav1.CreateOptions{})
 	if err != nil {
 		return diag.Errorf("Failed to create Ingress '%s' because: %s", buildId(ing.ObjectMeta), err)
 	}
@@ -187,7 +192,7 @@ func resourceKubernetesIngressCreate(ctx context.Context, d *schema.ResourceData
 
 	log.Printf("[INFO] Waiting for load balancer to become ready: %#v", out)
 	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
-		res, err := conn.ExtensionsV1beta1().Ingresses(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
+		res, err := conn.NetworkingV1().Ingresses(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 		if err != nil {
 			// NOTE it is possible in some HA apiserver setups that are eventually consistent
 			// that we could get a 404 when doing a Get immediately after a Create
@@ -235,7 +240,7 @@ func resourceKubernetesIngressRead(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	log.Printf("[INFO] Reading ingress %s", name)
-	ing, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
+	ing, err := conn.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.Errorf("Failed to read Ingress '%s' because: %s", buildId(ing.ObjectMeta), err)
@@ -283,12 +288,12 @@ func resourceKubernetesIngressUpdate(ctx context.Context, d *schema.ResourceData
 		metadata.Namespace = "default"
 	}
 
-	ingress := &v1beta1.Ingress{
+	ingress := &v1.Ingress{
 		ObjectMeta: metadata,
 		Spec:       spec,
 	}
 
-	out, err := conn.ExtensionsV1beta1().Ingresses(namespace).Update(ctx, ingress, metav1.UpdateOptions{})
+	out, err := conn.NetworkingV1().Ingresses(namespace).Update(ctx, ingress, metav1.UpdateOptions{})
 	if err != nil {
 		return diag.Errorf("Failed to update Ingress %s because: %s", buildId(ingress.ObjectMeta), err)
 	}
@@ -309,13 +314,13 @@ func resourceKubernetesIngressDelete(ctx context.Context, d *schema.ResourceData
 	}
 
 	log.Printf("[INFO] Deleting ingress: %#v", name)
-	err = conn.ExtensionsV1beta1().Ingresses(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	err = conn.NetworkingV1().Ingresses(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		return diag.Errorf("Failed to delete Ingress %s because: %s", d.Id(), err)
 	}
 
 	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
-		_, err := conn.ExtensionsV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
+		_, err := conn.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
@@ -348,7 +353,7 @@ func resourceKubernetesIngressExists(ctx context.Context, d *schema.ResourceData
 	}
 
 	log.Printf("[INFO] Checking ingress %s", name)
-	_, err = conn.ExtensionsV1beta1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
+	_, err = conn.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil

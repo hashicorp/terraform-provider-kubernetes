@@ -13,16 +13,39 @@ func backendSpecFields(description string) *schema.Schema {
 		Optional:    true,
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
-				"service_name": {
-					Type:        schema.TypeString,
-					Description: "Specifies the name of the referenced service.",
-					Optional:    true,
-				},
-				"service_port": {
-					Type:        schema.TypeString,
-					Description: "Specifies the port of the referenced service.",
-					Computed:    true,
-					Optional:    true,
+				"service": {
+					Type:     schema.TypeList,
+					MaxItems: 1,
+					Optional: true,
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"name": {
+								Type:        schema.TypeString,
+								Description: "Specifies the name of the referenced service.",
+								Required:    true,
+							},
+							"port": {
+								Type:        schema.TypeList,
+								Description: "Specifies the port of the referenced service.",
+								MaxItems:    1,
+								Required:    true,
+								Elem: &schema.Resource{
+									Schema: map[string]*schema.Schema{
+										"number": {
+											Type:        schema.TypeInt,
+											Description: "Specifies the numerical port of the referenced service.",
+											Optional:    true,
+										},
+										"name": {
+											Type:        schema.TypeInt,
+											Description: "Specifies the name of the port of the referenced service.",
+											Optional:    true,
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},

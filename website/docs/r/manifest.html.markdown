@@ -167,13 +167,11 @@ resource "kubernetes_manifest" "test" {
   }
 
   field_manager {
-    fields = {
-      # set the name of the field manager
-      name = "myteam"
+    # set the name of the field manager
+    name = "myteam"
 
-      # force field manager conflicts to be overridden
-      force_conflicts = true
-    }
+    # force field manager conflicts to be overridden
+    force_conflicts = true
   }
 }
 ```

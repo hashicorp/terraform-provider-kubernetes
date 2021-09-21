@@ -4,35 +4,40 @@ import (
 	"reflect"
 	"testing"
 
-	"k8s.io/api/extensions/v1beta1"
-	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/api/networking/v1"
 )
 
 // Test Flatteners
 func TestFlattenIngressRule(t *testing.T) {
-	r := v1beta1.HTTPIngressRuleValue{
-		Paths: []v1beta1.HTTPIngressPath{
+	pathType := v1.PathTypeExact
+	r := v1.HTTPIngressRuleValue{
+		Paths: []v1.HTTPIngressPath{
 			{
-				Path: "/foo/bar",
-				Backend: v1beta1.IngressBackend{
-					ServiceName: "foo",
-					ServicePort: intstr.FromInt(1234),
+				Path:     "/foo/bar",
+				PathType: &pathType,
+				Backend: v1.IngressBackend{
+					Service: &v1.IngressServiceBackend{
+						Name: "foo",
+						Port: v1.ServiceBackendPort{
+							Number: 1234,
+						},
+					},
 				},
 			},
 		},
 	}
 
-	in := []v1beta1.IngressRule{
+	in := []v1.IngressRule{
 		{
 			Host: "the-app-name.staging.live.domain-replaced.tld",
-			IngressRuleValue: v1beta1.IngressRuleValue{
-				HTTP: (*v1beta1.HTTPIngressRuleValue)(nil),
+			IngressRuleValue: v1.IngressRuleValue{
+				HTTP: (*v1.HTTPIngressRuleValue)(nil),
 			},
 		},
 		{
 			Host: "",
-			IngressRuleValue: v1beta1.IngressRuleValue{
-				HTTP: (*v1beta1.HTTPIngressRuleValue)(&r),
+			IngressRuleValue: v1.IngressRuleValue{
+				HTTP: (*v1.HTTPIngressRuleValue)(&r),
 			},
 		},
 	}
@@ -47,11 +52,20 @@ func TestFlattenIngressRule(t *testing.T) {
 				map[string]interface{}{
 					"path": []interface{}{
 						map[string]interface{}{
-							"path": "/foo/bar",
+							"path":      "/foo/bar",
+							"path_type": "Exact",
 							"backend": []interface{}{
 								map[string]interface{}{
-									"service_name": "foo",
-									"service_port": "1234",
+									"service": []interface{}{
+										map[string]interface{}{
+											"name": "foo",
+											"port": []interface{}{
+												map[string]interface{}{
+													"port_number": "1234",
+												},
+											},
+										},
+									},
 								},
 							},
 						},

@@ -1,14 +1,15 @@
 package kubernetes
 
 import (
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"k8s.io/api/extensions/v1beta1"
-	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/api/networking/v1"
+	"strconv"
 )
 
 // Flatteners
 
-func flattenIngressRule(in []v1beta1.IngressRule) []interface{} {
+func flattenIngressRule(in []v1.IngressRule) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, r := range in {
 		m := make(map[string]interface{})
@@ -20,15 +21,24 @@ func flattenIngressRule(in []v1beta1.IngressRule) []interface{} {
 	return att
 }
 
-func flattenIngressRuleHttp(in *v1beta1.HTTPIngressRuleValue) []interface{} {
+func flattenIngressRuleHttp(in *v1.HTTPIngressRuleValue) []interface{} {
 	if in == nil {
 		return []interface{}{}
 	}
 	pathAtts := make([]interface{}, len(in.Paths), len(in.Paths))
 	for i, p := range in.Paths {
+		pathType := ""
+		if *p.PathType == v1.PathTypeExact {
+			pathType = "Exact"
+		} else if *p.PathType == v1.PathTypePrefix {
+			pathType = "Prefix"
+		} else if *p.PathType == v1.PathTypeImplementationSpecific {
+			pathType = "ImplementationSpecific"
+		}
 		path := map[string]interface{}{
-			"path":    p.Path,
-			"backend": flattenIngressBackend(&p.Backend),
+			"path":      p.Path,
+			"path_type": pathType,
+			"backend":   flattenIngressBackend(&p.Backend),
 		}
 		pathAtts[i] = path
 	}
@@ -40,27 +50,40 @@ func flattenIngressRuleHttp(in *v1beta1.HTTPIngressRuleValue) []interface{} {
 	return []interface{}{httpAtt}
 }
 
-func flattenIngressBackend(in *v1beta1.IngressBackend) []interface{} {
+func flattenIngressBackend(in *v1.IngressBackend) []interface{} {
 	att := make([]interface{}, 1, 1)
+	srv := make(map[string]interface{})
+	mAttrs := make([]interface{}, 1, 1)
 
 	m := make(map[string]interface{})
-	m["service_name"] = in.ServiceName
-	m["service_port"] = in.ServicePort.String()
+	m["name"] = in.Service.Name
+	portAtts := make([]interface{}, 1, 1)
+	port := make(map[string]interface{})
+	if in.Service.Port.Name != "" {
+		port["name"] = in.Service.Port.Name
+	}
+	if in.Service.Port.Number != 0 {
+		port["port_number"] = fmt.Sprint(in.Service.Port.Number)
+	}
 
-	att[0] = m
+	portAtts[0] = port
+	m["port"] = portAtts
+	mAttrs[0] = m
+	srv["service"] = mAttrs
+	att[0] = srv
 
 	return att
 }
 
-func flattenIngressSpec(in v1beta1.IngressSpec) []interface{} {
+func flattenIngressSpec(in v1.IngressSpec) []interface{} {
 	att := make(map[string]interface{})
 
 	if in.IngressClassName != nil {
 		att["ingress_class_name"] = in.IngressClassName
 	}
 
-	if in.Backend != nil {
-		att["backend"] = flattenIngressBackend(in.Backend)
+	if in.DefaultBackend != nil {
+		att["backend"] = flattenIngressBackend(in.DefaultBackend)
 	}
 
 	if len(in.Rules) > 0 {
@@ -74,7 +97,7 @@ func flattenIngressSpec(in v1beta1.IngressSpec) []interface{} {
 	return []interface{}{att}
 }
 
-func flattenIngressTLS(in []v1beta1.IngressTLS) []interface{} {
+func flattenIngressTLS(in []v1.IngressTLS) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 
 	for i, v := range in {
@@ -90,15 +113,15 @@ func flattenIngressTLS(in []v1beta1.IngressTLS) []interface{} {
 
 // Expanders
 
-func expandIngressRule(l []interface{}) []v1beta1.IngressRule {
+func expandIngressRule(l []interface{}) []v1.IngressRule {
 	if len(l) == 0 || l[0] == nil {
-		return []v1beta1.IngressRule{}
+		return []v1.IngressRule{}
 	}
-	obj := make([]v1beta1.IngressRule, len(l), len(l))
+	obj := make([]v1.IngressRule, len(l), len(l))
 	for i, n := range l {
 		cfg := n.(map[string]interface{})
 
-		var paths []v1beta1.HTTPIngressPath
+		var paths []v1.HTTPIngressPath
 
 		if httpCfg, ok := cfg["http"]; ok {
 			httpList := httpCfg.([]interface{})
@@ -106,12 +129,14 @@ func expandIngressRule(l []interface{}) []v1beta1.IngressRule {
 				http := h.(map[string]interface{})
 				if v, ok := http["path"]; ok {
 					pathList := v.([]interface{})
-					paths = make([]v1beta1.HTTPIngressPath, len(pathList), len(pathList))
+					paths = make([]v1.HTTPIngressPath, len(pathList), len(pathList))
 					for i, path := range pathList {
 						p := path.(map[string]interface{})
-						hip := v1beta1.HTTPIngressPath{
-							Path:    p["path"].(string),
-							Backend: *expandIngressBackend(p["backend"].([]interface{})),
+						pathType := v1.PathType(p["path_type"].(string))
+						hip := v1.HTTPIngressPath{
+							Path:     p["path"].(string),
+							PathType: &pathType,
+							Backend:  *expandIngressBackend(p["backend"].([]interface{})),
 						}
 						paths[i] = hip
 					}
@@ -119,10 +144,10 @@ func expandIngressRule(l []interface{}) []v1beta1.IngressRule {
 			}
 		}
 
-		obj[i] = v1beta1.IngressRule{
+		obj[i] = v1.IngressRule{
 			Host: cfg["host"].(string),
-			IngressRuleValue: v1beta1.IngressRuleValue{
-				HTTP: &v1beta1.HTTPIngressRuleValue{
+			IngressRuleValue: v1.IngressRuleValue{
+				HTTP: &v1.HTTPIngressRuleValue{
 					Paths: paths,
 				},
 			},
@@ -131,19 +156,19 @@ func expandIngressRule(l []interface{}) []v1beta1.IngressRule {
 	return obj
 }
 
-func expandIngressSpec(l []interface{}) v1beta1.IngressSpec {
+func expandIngressSpec(l []interface{}) v1.IngressSpec {
 	if len(l) == 0 || l[0] == nil {
-		return v1beta1.IngressSpec{}
+		return v1.IngressSpec{}
 	}
 	in := l[0].(map[string]interface{})
-	obj := v1beta1.IngressSpec{}
+	obj := v1.IngressSpec{}
 
 	if v, ok := in["ingress_class_name"].(string); ok && len(v) > 0 {
 		obj.IngressClassName = &v
 	}
 
 	if v, ok := in["backend"].([]interface{}); ok && len(v) > 0 {
-		obj.Backend = expandIngressBackend(v)
+		obj.DefaultBackend = expandIngressBackend(v)
 	}
 
 	if v, ok := in["rule"].([]interface{}); ok && len(v) > 0 {
@@ -157,33 +182,50 @@ func expandIngressSpec(l []interface{}) v1beta1.IngressSpec {
 	return obj
 }
 
-func expandIngressBackend(l []interface{}) *v1beta1.IngressBackend {
+func expandIngressBackend(l []interface{}) *v1.IngressBackend {
 	if len(l) == 0 || l[0] == nil {
-		return &v1beta1.IngressBackend{}
+		return &v1.IngressBackend{}
 	}
 	in := l[0].(map[string]interface{})
-	obj := &v1beta1.IngressBackend{}
-
-	if v, ok := in["service_name"].(string); ok {
-		obj.ServiceName = v
+	obj := &v1.IngressBackend{
+		Service: &v1.IngressServiceBackend{
+			Port: v1.ServiceBackendPort{},
+		},
 	}
+	services := in["service"].([]interface{})
+	for _, t := range services {
+		service := t.(map[string]interface{})
+		if v, ok := service["name"].(string); ok {
+			obj.Service.Name = v
+		}
 
-	if v, ok := in["service_port"].(string); ok {
-		obj.ServicePort = intstr.Parse(v)
+		ports := service["port"].([]interface{})
+		for _, p := range ports {
+			port := p.(map[string]interface{})
+			if v, ok := port["port_number"].(string); ok {
+				port, _ := strconv.ParseInt(v, 10, 8)
+				obj.Service.Port.Number = int32(port)
+			}
+
+			if v, ok := port["name"].(string); ok {
+				obj.Service.Port.Name = v
+			}
+		}
+
 	}
 
 	return obj
 }
 
-func expandIngressTLS(l []interface{}) []v1beta1.IngressTLS {
+func expandIngressTLS(l []interface{}) []v1.IngressTLS {
 	if len(l) == 0 || l[0] == nil {
 		return nil
 	}
 
-	tlsList := make([]v1beta1.IngressTLS, len(l), len(l))
+	tlsList := make([]v1.IngressTLS, len(l), len(l))
 	for i, t := range l {
 		in := t.(map[string]interface{})
-		obj := v1beta1.IngressTLS{}
+		obj := v1.IngressTLS{}
 
 		if v, ok := in["hosts"]; ok {
 			obj.Hosts = expandStringSlice(v.([]interface{}))

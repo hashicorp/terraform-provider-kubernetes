@@ -203,7 +203,7 @@ func expandIngressBackend(l []interface{}) *v1.IngressBackend {
 		for _, p := range ports {
 			port := p.(map[string]interface{})
 			if v, ok := port["port_number"].(string); ok {
-				port, _ := strconv.ParseInt(v, 10, 8)
+				port, _ := strconv.ParseInt(v, 10, 32)
 				obj.Service.Port.Number = int32(port)
 			}
 

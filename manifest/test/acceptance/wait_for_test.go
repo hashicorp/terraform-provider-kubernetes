@@ -3,7 +3,6 @@
 package acceptance
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -12,10 +11,6 @@ import (
 )
 
 func TestKubernetesManifest_WaitForFields_Pod(t *testing.T) {
-	if os.Getenv("GITHUB_ACTIONS") == "true" {
-		t.Skip("skipping this test for now as it is broken inside GitHub actions") // FIXME
-	}
-
 	name := randName()
 	namespace := randName()
 

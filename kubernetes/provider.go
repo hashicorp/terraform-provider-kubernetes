@@ -194,6 +194,10 @@ func Provider() *schema.Provider {
 			// storage
 			"kubernetes_storage_class":    dataSourceKubernetesStorageClass(),
 			"kubernetes_storage_class_v1": dataSourceKubernetesStorageClass(),
+
+			// admission control
+			"kubernetes_mutating_webhook_configuration":    dataSourceKubernetesMutatingWebhookConfiguration(),
+			"kubernetes_mutating_webhook_configuration_v1": dataSourceKubernetesMutatingWebhookConfiguration(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{

@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
@@ -20,21 +19,20 @@ func dataSourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 			"webhook": {
 				Type:        schema.TypeList,
 				Description: apiDoc["webhooks"],
-				Required:    true,
-				MinItems:    1,
+				Computed:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"admission_review_versions": {
 							Type:        schema.TypeList,
 							Description: webhookDoc["admissionReviewVersions"],
+							Computed:    true,
 							Optional:    true,
 							Elem:        &schema.Schema{Type: schema.TypeString},
 						},
 						"client_config": {
 							Type:        schema.TypeList,
 							Description: webhookDoc["clientConfig"],
-							Required:    true,
-							MaxItems:    1,
+							Computed:    true,
 							Elem: &schema.Resource{
 								Schema: webhookClientConfigFields(),
 							},
@@ -42,22 +40,12 @@ func dataSourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 						"failure_policy": {
 							Type:        schema.TypeString,
 							Description: webhookDoc["failurePolicy"],
-							Optional:    true,
-							Default:     string(admissionregistrationv1.Fail),
-							ValidateFunc: validation.StringInSlice([]string{
-								string(admissionregistrationv1.Fail),
-								string(admissionregistrationv1.Ignore),
-							}, false),
+							Computed:    true,
 						},
 						"match_policy": {
 							Type:        schema.TypeString,
 							Description: webhookDoc["matchPolicy"],
-							Optional:    true,
-							Default:     string(admissionregistrationv1.Equivalent),
-							ValidateFunc: validation.StringInSlice([]string{
-								string(admissionregistrationv1.Equivalent),
-								string(admissionregistrationv1.Exact),
-							}, false),
+							Computed:    true,
 						},
 						"name": {
 							Type:        schema.TypeString,
@@ -67,8 +55,8 @@ func dataSourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 						"namespace_selector": {
 							Type:        schema.TypeList,
 							Description: webhookDoc["namespaceSelector"],
+							Computed:    true,
 							Optional:    true,
-							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: labelSelectorFields(true),
 							},
@@ -76,8 +64,8 @@ func dataSourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 						"object_selector": {
 							Type:        schema.TypeList,
 							Description: webhookDoc["objectSelector"],
+							Computed:    true,
 							Optional:    true,
-							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: labelSelectorFields(true),
 							},
@@ -85,18 +73,12 @@ func dataSourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 						"reinvocation_policy": {
 							Type:        schema.TypeString,
 							Description: webhookDoc["reinvocationPolicy"],
-							Optional:    true,
-							Default:     string(admissionregistrationv1.NeverReinvocationPolicy),
-							ValidateFunc: validation.StringInSlice([]string{
-								string(admissionregistrationv1.NeverReinvocationPolicy),
-								string(admissionregistrationv1.IfNeededReinvocationPolicy),
-							}, false),
+							Computed:    true,
 						},
 						"rule": {
 							Type:        schema.TypeList,
 							Description: webhookDoc["rules"],
-							Required:    true,
-							MinItems:    1,
+							Computed:    true,
 							Elem: &schema.Resource{
 								Schema: ruleWithOperationsFields(),
 							},
@@ -104,6 +86,7 @@ func dataSourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 						"side_effects": {
 							Type:        schema.TypeString,
 							Description: webhookDoc["sideEffects"],
+							Computed:    true,
 							Optional:    true,
 							ValidateFunc: validation.StringInSlice([]string{
 								string(admissionregistrationv1.SideEffectClassUnknown),
@@ -113,11 +96,9 @@ func dataSourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 							}, false),
 						},
 						"timeout_seconds": {
-							Type:         schema.TypeInt,
-							Description:  webhookDoc["timeoutSeconds"],
-							Default:      10,
-							Optional:     true,
-							ValidateFunc: validation.IntBetween(1, 30),
+							Type:        schema.TypeInt,
+							Description: webhookDoc["timeoutSeconds"],
+							Computed:    true,
 						},
 					},
 				},
@@ -127,11 +108,8 @@ func dataSourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 }
 
 func dataSourceKubernetesMutatingWebhookConfigurationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	om := meta_v1.ObjectMeta{
-		Namespace: d.Get("metadata.0.namespace").(string),
-		Name:      d.Get("metadata.0.name").(string),
-	}
-	d.SetId(buildId(om))
+	name := d.Get("metadata.0.name").(string)
+	d.SetId(name)
 
 	return resourceKubernetesMutatingWebhookConfigurationRead(ctx, d, meta)
 }

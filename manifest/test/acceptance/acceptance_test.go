@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	tftest "github.com/hashicorp/terraform-plugin-test/v2"
+	"k8s.io/client-go/rest"
 
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	kuberneteshelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
@@ -39,6 +40,9 @@ func TestMain(m *testing.M) {
 	}
 
 	os.Setenv("TF_X_KUBERNETES_MANIFEST_RESOURCE", "true")
+
+	// disables client-go resource deprecation warnings - they polute the test log
+	rest.SetDefaultWarningHandler(rest.NoWarnings{})
 
 	tfhelper = tftest.AutoInitProviderHelper(sourceDir)
 	defer tfhelper.Close()

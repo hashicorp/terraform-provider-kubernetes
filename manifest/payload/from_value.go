@@ -69,9 +69,6 @@ func FromTFValue(in tftypes.Value, ap *tftypes.AttributePath) (interface{}, erro
 				lv = append(lv, ne)
 			}
 		}
-		if len(lv) == 0 {
-			return nil, nil
-		}
 		return lv, nil
 	case in.Type().Is(tftypes.Map{}) || in.Type().Is(tftypes.Object{}):
 		m := make(map[string]tftypes.Value)
@@ -95,12 +92,7 @@ func FromTFValue(in tftypes.Value, ap *tftypes.AttributePath) (interface{}, erro
 			if err != nil {
 				return nil, nextAp.NewErrorf("[%s]: cannot convert map element to Unstructured: %s", nextAp.String(), err.Error())
 			}
-			if ne != nil {
-				mv[k] = ne
-			}
-		}
-		if len(mv) == 0 {
-			return nil, nil
+			mv[k] = ne
 		}
 		return mv, nil
 	default:

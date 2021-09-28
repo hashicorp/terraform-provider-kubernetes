@@ -26,7 +26,7 @@ func TestParseImportID(t *testing.T) {
 			ID:        "apiVersion=rbac.authorization.k8s.io/v1,kind=ClusterRole,name=test",
 			GVK:       schema.GroupVersionKind{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"},
 			Name:      "test",
-			Namespace: "",
+			Namespace: "default",
 			Err:       nil,
 		},
 		{
@@ -50,15 +50,15 @@ func TestParseImportID(t *testing.T) {
 			t.Fatal(actualErr.Error())
 		}
 		if expected.GVK != actualGvk {
-			t.Log("GVK (actual / wanted):", actualGvk, expected.GVK)
+			t.Logf("GVK did not match. actual: %q  expected: %q.", actualGvk, expected.GVK)
 			t.Fail()
 		}
 		if expected.Name != actualName {
-			t.Log("Name (actual / wanted):", actualName, expected.Name)
+			t.Logf("Name did not match. actual: %q  expected: %q.", actualName, expected.Name)
 			t.Fail()
 		}
 		if expected.Namespace != actualNamespace {
-			t.Log("Namespace (actual / wanted):", actualNamespace, expected.Namespace)
+			t.Logf("Namespace did not match. actual: %q  expected: %q.", actualNamespace, expected.Namespace)
 			t.Fail()
 		}
 	}

@@ -187,7 +187,12 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 // Example: "apiVersion=v1,kind=Secret,namespace=default,name=default-token-qgm6s"
 //
 func parseImportID(id string) (gvk schema.GroupVersionKind, name string, namespace string, err error) {
-	tokens := map[string]string{"apiVersion": "", "kind": "", "name": "", "namespace": "default"}
+	tokens := map[string]string{
+		"apiVersion": "",
+		"kind":       "",
+		"name":       "",
+		"namespace":  "default", // FIXME we should check if the kind is namespaced or not
+	}
 	var invalidFormat bool = false
 
 	parts := strings.Split(id, ",")

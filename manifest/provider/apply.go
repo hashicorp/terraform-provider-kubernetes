@@ -63,6 +63,15 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 	}
 	s.logger.Trace("[ApplyResourceChange]", "[PriorState]", dump(applyPriorState))
 
+	manifestConf, err := req.Config.Unmarshal(rt)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to unmarshal manifest configuration",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
 	var plannedStateVal map[string]tftypes.Value = make(map[string]tftypes.Value)
 	err = applyPlannedState.As(&plannedStateVal)
 	if err != nil {
@@ -184,7 +193,44 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		if err != nil {
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 				Severity: tfprotov5.DiagnosticSeverityError,
-				Summary:  "Failed to backfill computed values in proposed object",
+				Summary:  "Failed to backfill computed values in proposed value",
+				Detail:   err.Error(),
+			})
+			return resp, nil
+		}
+
+		// Transform empty objects not set in config to nil - they only serve a structural
+		// purpose in the planning phase and should not be included in the API payload.
+		obj, err = tftypes.Transform(obj, func(ap *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
+			if !v.Type().Is(tftypes.Object{}) {
+				return v, nil
+			}
+			// check if attribute path is present in user configuration
+			// (this means the value is intentional, not structural)
+			_, restPath, err := tftypes.WalkAttributePath(manifestConf, ap)
+			if err == nil && len(restPath.Steps()) == 0 {
+				return v, nil
+			}
+			var isEmpty bool = true
+			vals := make(map[string]tftypes.Value)
+			err = v.As(&vals)
+			if err != nil {
+				return v, err
+			}
+			for _, v := range vals {
+				if !v.IsNull() {
+					isEmpty = false
+				}
+			}
+			if isEmpty {
+				return tftypes.NewValue(v.Type(), nil), nil
+			}
+			return v, nil
+		})
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Failed to remove structural empty objects from proposed value",
 				Detail:   err.Error(),
 			})
 			return resp, nil
@@ -287,6 +333,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		defer cancel()
 
 		// Call the Kubernetes API to create the new resource
+		s.logger.Trace("[ApplyResourceChange][API Payload]: %s", jsonManifest)
 		result, err := rs.Patch(ctxDeadline, rname, types.ApplyPatchType, jsonManifest,
 			metav1.PatchOptions{
 				FieldManager: fieldManagerName,

@@ -20,8 +20,8 @@ resource "kubernetes_ingress_class" "example" {
 
   spec {
     controller = "example.com/ingress-controller"
-    parameters = {
-      api_group = "k8s.example.com/v1alpha"
+    parameters {
+      api_group = "k8s.example.com"
       kind      = "IngressParameters"
       name      = "external-lb"
     }
@@ -82,14 +82,8 @@ The following arguments are supported:
 
 ## Import
 
-Ingress Classes can be imported using its name:
+Ingress Classes can be imported using its name, e.g:
 
 ```
-terraform import kubernetes_ingress_class.<TERRAFORM_RESOURCE_NAME> <KUBE_INGRESS_CLASS_NAME>
-```
-
-e.g.
-
-```
-$ terraform import kubernetes_ingress_class.example terraform-name
+$ terraform import kubernetes_ingress_class.example example
 ```

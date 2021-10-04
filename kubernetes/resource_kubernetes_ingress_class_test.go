@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+
 	networking "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -141,22 +142,17 @@ func TestAccKubernetesIngressClass_parameters_apiGroup(t *testing.T) {
 
 func testAccCheckKubernetesIngressClassDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}
-	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "kubernetes_ingress_class" {
 			continue
 		}
 
-		_, name, err := idParts(rs.Primary.ID)
-		if err != nil {
-			return err
-		}
-
+		ctx := context.Background()
+		name := rs.Primary.ID
 		resp, err := conn.NetworkingV1().IngressClasses().Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
@@ -179,13 +175,9 @@ func testAccCheckKubernetesIngressClassExists(n string, obj *networking.IngressC
 		if err != nil {
 			return err
 		}
-		ctx := context.TODO()
 
-		_, name, err := idParts(rs.Primary.ID)
-		if err != nil {
-			return err
-		}
-
+		ctx := context.Background()
+		name := rs.Primary.ID
 		out, err := conn.NetworkingV1().IngressClasses().Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err

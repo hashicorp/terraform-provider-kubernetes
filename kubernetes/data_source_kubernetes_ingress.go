@@ -27,6 +27,11 @@ func dataSourceKubernetesIngress() *schema.Resource {
 				Computed:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"ingress_class_name": {
+							Type:        schema.TypeString,
+							Description: docIngressSpec["ingressClassName"],
+							Computed:    true,
+						},
 						"backend": backendSpecFields(defaultBackendDescription),
 						"rule": {
 							Type:        schema.TypeList,

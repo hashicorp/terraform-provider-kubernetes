@@ -189,6 +189,7 @@ func Provider() *schema.Provider {
 			"kubernetes_endpoints":                        resourceKubernetesEndpoints(),
 			"kubernetes_horizontal_pod_autoscaler":        resourceKubernetesHorizontalPodAutoscaler(),
 			"kubernetes_ingress":                          resourceKubernetesIngress(),
+			"kubernetes_ingress_class":                    resourceKubernetesIngressClass(),
 			"kubernetes_job":                              resourceKubernetesJob(),
 			"kubernetes_limit_range":                      resourceKubernetesLimitRange(),
 			"kubernetes_namespace":                        resourceKubernetesNamespace(),

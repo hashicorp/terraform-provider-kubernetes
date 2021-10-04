@@ -106,7 +106,7 @@ func resourceKubernetesIngressClassCreate(ctx context.Context, d *schema.Resourc
 		return diag.Errorf("Failed to create Ingress Class '%s' because: %s", buildId(ing.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Submitted new IngressClass: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(out.ObjectMeta.GetName())
 
 	return diag.Diagnostics{}
 }
@@ -125,10 +125,7 @@ func resourceKubernetesIngressClassRead(ctx context.Context, d *schema.ResourceD
 		return diag.FromErr(err)
 	}
 
-	_, name, err := idParts(d.Id())
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	name := d.Id()
 
 	log.Printf("[INFO] Reading Ingress Class %s", name)
 	ing, err := conn.NetworkingV1().IngressClasses().Get(ctx, name, metav1.GetOptions{})
@@ -185,10 +182,7 @@ func resourceKubernetesIngressClassDelete(ctx context.Context, d *schema.Resourc
 		return diag.FromErr(err)
 	}
 
-	_, name, err := idParts(d.Id())
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	name := d.Id()
 
 	log.Printf("[INFO] Deleting Ingress Class: %#v", name)
 	err = conn.NetworkingV1().IngressClasses().Delete(ctx, name, metav1.DeleteOptions{})
@@ -224,10 +218,7 @@ func resourceKubernetesIngressClassExists(ctx context.Context, d *schema.Resourc
 		return false, err
 	}
 
-	_, name, err := idParts(d.Id())
-	if err != nil {
-		return false, err
-	}
+	name := d.Id()
 
 	log.Printf("[INFO] Checking Ingress Class %s", name)
 	_, err = conn.NetworkingV1().IngressClasses().Get(ctx, name, metav1.GetOptions{})

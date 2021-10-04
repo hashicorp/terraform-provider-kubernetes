@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -69,9 +70,10 @@ func resourceKubernetesIngressClassSchema() map[string]*schema.Schema {
 									Required:    true,
 								},
 								"scope": {
-									Type:        schema.TypeString,
-									Description: docIngressClassSpecParametes["scope"],
-									Optional:    true,
+									Type:         schema.TypeString,
+									Description:  docIngressClassSpecParametes["scope"],
+									Optional:     true,
+									ValidateFunc: validation.StringInSlice([]string{"Cluster", "Namespace"}, false),
 								},
 								"namespace": {
 									Type:        schema.TypeString,

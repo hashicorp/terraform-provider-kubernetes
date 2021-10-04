@@ -149,11 +149,11 @@ func Provider() *schema.Provider {
 								if v := os.Getenv("TF_X_KUBERNETES_MANIFEST_RESOURCE"); v != "" {
 									vv, err := strconv.ParseBool(v)
 									if err != nil {
-										return false, err
+										return true, err
 									}
 									return vv, nil
 								}
-								return false, nil
+								return true, nil
 							},
 							Description: "Enable the `kubernetes_manifest` resource.",
 						},

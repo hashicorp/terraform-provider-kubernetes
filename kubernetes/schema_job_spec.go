@@ -70,7 +70,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			Optional:     true,
 			ForceNew:     false,
 			Default:      1,
-			ValidateFunc: validatePositiveInteger,
+			ValidateFunc: validateNonNegativeInteger,
 			Description:  "Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
 		},
 		// This field is immutable in Jobs.

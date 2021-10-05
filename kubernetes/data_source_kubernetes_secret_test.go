@@ -10,6 +10,8 @@ import (
 
 func TestAccKubernetesDataSourceSecret_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_secret.test"
+	datasourceName := "data.kubernetes_secret.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -17,43 +19,27 @@ func TestAccKubernetesDataSourceSecret_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDataSourceSecretConfig_basic(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_secret.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.annotations.%", "2"),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.labels.TestLabelOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.labels.TestLabelTwo", "two"),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "metadata.0.labels.TestLabelThree", "three"),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.%", "2"),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.one", "first"),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "data.two", "second"),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "type", "Opaque"),
-					resource.TestCheckResourceAttr("kubernetes_secret.test", "binary_data.raw", "UmF3IGRhdGEgc2hvdWxkIGNvbWUgYmFjayBhcyBpcyBpbiB0aGUgcG9k"),
-				),
 			},
 			{
 				Config: testAccKubernetesDataSourceSecretConfig_basic(name) +
 					testAccKubernetesDataSourceSecretConfig_read(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("data.kubernetes_secret.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("data.kubernetes_secret.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("data.kubernetes_secret.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "metadata.0.annotations.%", "2"),
-					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
-					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "metadata.0.labels.TestLabelOne", "one"),
-					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "metadata.0.labels.TestLabelTwo", "two"),
-					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "metadata.0.labels.TestLabelThree", "three"),
-					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "data.%", "2"),
-					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "data.one", "first"),
-					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "data.two", "second"),
-					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "type", "Opaque"),
-					resource.TestCheckResourceAttr("data.kubernetes_secret.test", "binary_data.raw", "UmF3IGRhdGEgc2hvdWxkIGNvbWUgYmFjayBhcyBpcyBpbiB0aGUgcG9k"),
+					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.name", resourceName, "metadata.0.name"),
+					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.generation", resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.resource_version", resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.uid", resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.annotations.%", resourceName, "metadata.0.annotations.%"),
+					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.annotations.TestAnnotationOne", resourceName, "metadata.0.annotations.TestAnnotationOne"),
+					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.annotations.TestAnnotationTwo", resourceName, "metadata.0.annotations.TestAnnotationTwo"),
+					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.labels.TestLabelOne", resourceName, "metadata.0.labels.TestLabelOne"),
+					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.labels.TestLabelTwo", resourceName, "metadata.0.labels.TestLabelTwo"),
+					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.labels.TestLabelThree", resourceName, "metadata.0.labels.TestLabelThree"),
+					resource.TestCheckResourceAttrPair(datasourceName, "data.%", resourceName, "data.%"),
+					resource.TestCheckResourceAttrPair(datasourceName, "data.one", resourceName, "data.one"),
+					resource.TestCheckResourceAttrPair(datasourceName, "data.two", resourceName, "data.two"),
+					resource.TestCheckResourceAttrPair(datasourceName, "type", resourceName, "type"),
+					resource.TestCheckResourceAttrPair(datasourceName, "immutable", resourceName, "immutable"),
+					resource.TestCheckResourceAttrPair(datasourceName, "binary_data.raw", resourceName, "binary_data.raw"),
 				),
 			},
 		},
@@ -92,7 +78,7 @@ func testAccKubernetesDataSourceSecretConfig_basic(name string) string {
 func testAccKubernetesDataSourceSecretConfig_read() string {
 	return fmt.Sprintf(`data "kubernetes_secret" "test" {
   metadata {
-    name = "${kubernetes_secret.test.metadata.0.name}"
+    name = kubernetes_secret.test.metadata.0.name
   }
 
   binary_data = {

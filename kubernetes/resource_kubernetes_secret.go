@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,17 +27,22 @@ func resourceKubernetesSecret() *schema.Resource {
 				return nil
 			}
 
-			if diff.HasChange("immutable") {
-				o, _ := diff.GetChange("immutable")
-				// Cannot change immutable when immutable already set to true, this requires to force a new resource
-				if o.(bool) == true {
-					log.Printf("lol")
-					err := diff.ForceNew("immutable")
-					if err != nil {
-						return err
+			// ForceNew if immutable has been set to true
+			// and there are any changes to data, binary_data, or immutable
+			immutable, _ := diff.GetChange("immutable")
+			if immutable.(bool) {
+				immutableFields := []string{
+					"data",
+					"binary_data",
+					"immutable",
+				}
+				for _, f := range immutableFields {
+					if diff.HasChange(f) {
+						diff.ForceNew(f)
 					}
 				}
 			}
+
 			return nil
 		},
 
@@ -68,16 +72,6 @@ func resourceKubernetesSecret() *schema.Resource {
 				Default:     string(api.SecretTypeOpaque),
 				Optional:    true,
 				ForceNew:    true,
-				ValidateFunc: validation.StringInSlice([]string{
-					string(api.SecretTypeServiceAccountToken),
-					string(api.SecretTypeOpaque),
-					string(api.SecretTypeDockercfg),
-					string(api.SecretTypeDockerConfigJson),
-					string(api.SecretTypeBasicAuth),
-					string(api.SecretTypeSSHAuth),
-					string(api.SecretTypeTLS),
-					string(api.SecretTypeBootstrapToken),
-				}, false),
 			},
 		},
 	}

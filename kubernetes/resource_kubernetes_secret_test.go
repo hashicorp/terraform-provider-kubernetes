@@ -142,9 +142,7 @@ func TestAccKubernetesSecret_basic(t *testing.T) {
 }
 
 func TestAccKubernetesSecret_immutable(t *testing.T) {
-	var conf1 api.Secret
-	var conf2 api.Secret
-	var conf3 api.Secret
+	var conf1, conf2, conf3, conf4 api.Secret
 
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_secret.test"
@@ -155,36 +153,50 @@ func TestAccKubernetesSecret_immutable(t *testing.T) {
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesSecretDestroy,
 		Steps: []resource.TestStep{
+			// create an immutable secret
 			{
-				Config: testAccKubernetesSecretConfig_immutable(name, true),
+				Config: testAccKubernetesSecretConfig_immutable(name, true, "password"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesSecretExists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "immutable", "true"),
 				),
 			},
+			// import the secret
 			{
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
+			// changing the data for the immutable secret will force recreate
 			{
-				Config: testAccKubernetesSecretConfig_immutable(name, false),
+				Config: testAccKubernetesSecretConfig_immutable(name, true, "newpassword"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesSecretExists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "immutable", "false"),
+					resource.TestCheckResourceAttr(resourceName, "immutable", "true"),
 					testAccCheckSecretRecreated(&conf1, &conf2, true),
 				),
 			},
+			// change immutable back to false will force recreate
 			{
-				Config: testAccKubernetesSecretConfig_immutable(name, true),
+				Config: testAccKubernetesSecretConfig_immutable(name, false, "password"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesSecretExists(resourceName, &conf3),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "immutable", "false"),
+					testAccCheckSecretRecreated(&conf2, &conf3, true),
+				),
+			},
+			// change immutable from false to true wont force recreate
+			{
+				Config: testAccKubernetesSecretConfig_immutable(name, true, "password"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretExists(resourceName, &conf4),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "immutable", "true"),
-					testAccCheckSecretRecreated(&conf2, &conf3, false),
+					testAccCheckSecretRecreated(&conf3, &conf4, false),
 				),
 			},
 		},
@@ -538,7 +550,7 @@ func testAccKubernetesSecretConfig_binaryDataCombined(prefix string) string {
 `, prefix)
 }
 
-func testAccKubernetesSecretConfig_immutable(name string, immutable bool) string {
+func testAccKubernetesSecretConfig_immutable(name string, immutable bool, data string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     annotations = {
@@ -556,7 +568,10 @@ func testAccKubernetesSecretConfig_immutable(name string, immutable bool) string
   }
 
   immutable = %t
-  data      = {}
+  
+  data = {
+    SECRET = %q
+  }
 }
-`, name, immutable)
+`, name, immutable, data)
 }

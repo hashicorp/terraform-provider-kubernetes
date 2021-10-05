@@ -350,7 +350,9 @@ github.com/pkg/errors
 github.com/pmezard/go-difflib/difflib
 # github.com/robfig/cron v1.2.0
 ## explicit
-github.com/robfig/cron
+# github.com/robfig/cron/v3 v3.0.0
+## explicit
+github.com/robfig/cron/v3
 # github.com/russross/blackfriday v1.6.0
 ## explicit
 github.com/russross/blackfriday

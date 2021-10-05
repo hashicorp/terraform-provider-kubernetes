@@ -75,7 +75,7 @@ func TestAccKubernetesSecret_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "data.two", "second"),
 					resource.TestCheckResourceAttr(resourceName, "type", "Opaque"),
 					testAccCheckSecretData(&conf2, map[string]string{"one": "first", "two": "second"}),
-					testAccCheckSecretRecreated(&conf1, &conf2, false),
+					testAccCheckSecretNotRecreated(&conf1, &conf2),
 				),
 			},
 			{
@@ -176,7 +176,7 @@ func TestAccKubernetesSecret_immutable(t *testing.T) {
 					testAccCheckKubernetesSecretExists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "immutable", "true"),
-					testAccCheckSecretRecreated(&conf1, &conf2, true),
+					testAccCheckSecretRecreated(&conf1, &conf2),
 				),
 			},
 			// change immutable back to false will force recreate
@@ -186,7 +186,7 @@ func TestAccKubernetesSecret_immutable(t *testing.T) {
 					testAccCheckKubernetesSecretExists(resourceName, &conf3),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "immutable", "false"),
-					testAccCheckSecretRecreated(&conf2, &conf3, true),
+					testAccCheckSecretRecreated(&conf2, &conf3),
 				),
 			},
 			// change immutable from false to true wont force recreate
@@ -196,7 +196,7 @@ func TestAccKubernetesSecret_immutable(t *testing.T) {
 					testAccCheckKubernetesSecretExists(resourceName, &conf4),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "immutable", "true"),
-					testAccCheckSecretRecreated(&conf3, &conf4, false),
+					testAccCheckSecretNotRecreated(&conf3, &conf4),
 				),
 			},
 		},
@@ -315,13 +315,22 @@ func testAccCheckSecretData(m *api.Secret, expected map[string]string) resource.
 	}
 }
 
-func testAccCheckSecretRecreated(sec1, sec2 *api.Secret, recreated bool) resource.TestCheckFunc {
+func testAccCheckSecretRecreated(sec1, sec2 *api.Secret) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		wasRecreated := sec2.CreationTimestamp.After(sec1.CreationTimestamp.Time)
-		if wasRecreated != recreated {
-			return fmt.Errorf("secret should have been recreated: %t, was it recreated: %t", recreated, wasRecreated)
+		recreated := sec1.GetUID() != sec2.GetUID()
+		if !recreated {
+			return fmt.Errorf("secret %q should have been recreated", sec1.GetName())
 		}
+		return nil
+	}
+}
 
+func testAccCheckSecretNotRecreated(sec1, sec2 *api.Secret) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		recreated := sec1.GetUID() != sec2.GetUID()
+		if recreated {
+			return fmt.Errorf("secret %q should not have been recreated", sec1.GetName())
+		}
 		return nil
 	}
 }

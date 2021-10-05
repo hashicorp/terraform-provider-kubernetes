@@ -108,18 +108,21 @@ func TestValidateBase64EncodedMap(t *testing.T) {
 }
 
 func TestValidateCronJobFormatting(t *testing.T) {
+	testCases := []string{
+		"* * * * *",
+		"30 04 * * *",
+		"TZ=UTC 30 04 * * *",
+		"CRON_TZ=UTC 30 04 * * *",
+		"CRON_TZ=UTC 30 04/10 * * *",
+	}
 	validator := validateCronExpression()
-	_, es := validator("CRON_TZ=UTC 30 04 * * *", "Should parse out UTC")
-	if len(es) != 0 {
-		t.Errorf("Failed to parse CRON_TZ spec. #{err}")
-	}
-	_, es = validator("TZ=UTC 30 04 * * *", "Should parse out UTC")
-	if len(es) != 0 {
-		t.Errorf("Failed to parse TZ spec. #{err}")
-	}
-	_, es = validator("30 04 * * *", "Should accurately parse out a traditional cron format")
-	if len(es) != 0 {
-		t.Errorf("Failed to parse normal spec. #{err}")
+	for _, tc := range testCases {
+		t.Run(tc, func(t *testing.T) {
+			_, err := validator(tc, "spec.0.schedule")
+			if len(err) != 0 {
+				t.Errorf("Failed to parse cron expression %q: %v", tc, err)
+			}
+		})
 	}
 }
 

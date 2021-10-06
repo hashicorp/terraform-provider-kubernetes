@@ -33,6 +33,10 @@ func expandHorizontalPodAutoscalerV2Spec(in []interface{}) (*autoscalingv2beta2.
 		spec.Metrics = expandV2Metrics(v)
 	}
 
+	if v, ok := m["behavior"].([]interface{}); ok {
+		spec.Behavior = expandV2Behavior(v)
+	}
+
 	return spec, nil
 }
 
@@ -170,6 +174,76 @@ func expandV2MetricSpec(m map[string]interface{}) autoscalingv2beta2.MetricSpec 
 	return spec
 }
 
+func expandV2Behavior(in []interface{}) *autoscalingv2beta2.HorizontalPodAutoscalerBehavior {
+	spec := &autoscalingv2beta2.HorizontalPodAutoscalerBehavior{}
+
+	if len(in) == 0 || in[0] == nil {
+		return spec
+	}
+
+	b := in[0].(map[string]interface{})
+
+	if v, ok := b["scale_up"].([]interface{}); ok {
+		spec.ScaleUp = expandV2ScalingRules(v)
+	}
+
+	if v, ok := b["scale_down"].([]interface{}); ok {
+		spec.ScaleDown = expandV2ScalingRules(v)
+	}
+
+	return spec
+}
+
+func expandV2ScalingRules(in []interface{}) *autoscalingv2beta2.HPAScalingRules {
+	spec := &autoscalingv2beta2.HPAScalingRules{}
+
+	if len(in) == 0 || in[0] == nil {
+		return spec
+	}
+
+	r := in[0].(map[string]interface{})
+
+	spec.Policies = expandV2ScalingPolicies(r["policy"].([]interface{}))
+
+	if v, ok := r["select_policy"].(string); ok {
+		spec.SelectPolicy = (*autoscalingv2beta2.ScalingPolicySelect)(&v)
+	}
+
+	if v, ok := r["stabilization_window_seconds"].(int); ok {
+		spec.StabilizationWindowSeconds = ptrToInt32(int32(v))
+	}
+
+	return spec
+}
+
+func expandV2ScalingPolicies(in []interface{}) []autoscalingv2beta2.HPAScalingPolicy {
+	policies := []autoscalingv2beta2.HPAScalingPolicy{}
+
+	for _, m := range in {
+		policies = append(policies, expandV2ScalingPolicy(m.(map[string]interface{})))
+	}
+
+	return policies
+}
+
+func expandV2ScalingPolicy(in map[string]interface{}) autoscalingv2beta2.HPAScalingPolicy {
+	spec := autoscalingv2beta2.HPAScalingPolicy{}
+
+	if v, ok := in["period_seconds"].(int); ok {
+		spec.PeriodSeconds = int32(v)
+	}
+
+	if v, ok := in["type"].(string); ok {
+		spec.Type = autoscalingv2beta2.HPAScalingPolicyType(v)
+	}
+
+	if v, ok := in["value"].(int); ok {
+		spec.Value = int32(v)
+	}
+
+	return spec
+}
+
 func expandV2CrossVersionObjectReference(in []interface{}) autoscalingv2beta2.CrossVersionObjectReference {
 	ref := autoscalingv2beta2.CrossVersionObjectReference{}
 
@@ -296,6 +370,10 @@ func flattenHorizontalPodAutoscalerV2Spec(spec autoscalingv2beta2.HorizontalPodA
 	}
 	m["metric"] = metrics
 
+	if spec.Behavior != nil {
+		m["behavior"] = flattenV2Behavior(*spec.Behavior)
+	}
+
 	return []interface{}{m}
 }
 
@@ -315,6 +393,51 @@ func flattenV2CrossVersionObjectReference(ref autoscalingv2beta2.CrossVersionObj
 	}
 
 	return []interface{}{m}
+}
+
+func flattenV2Behavior(spec autoscalingv2beta2.HorizontalPodAutoscalerBehavior) []interface{} {
+	b := map[string]interface{}{}
+
+	if spec.ScaleUp != nil {
+		b["scale_up"] = flattenV2ScalingRules(*spec.ScaleUp)
+	}
+
+	if spec.ScaleDown != nil {
+		b["scale_down"] = flattenV2ScalingRules(*spec.ScaleDown)
+	}
+
+	return []interface{}{b}
+}
+
+func flattenV2ScalingRules(spec autoscalingv2beta2.HPAScalingRules) []interface{} {
+	r := map[string]interface{}{}
+
+	if spec.Policies != nil {
+		policies := []interface{}{}
+		for _, m := range spec.Policies {
+			policies = append(policies, flattenV2ScalingPolicy(m))
+		}
+
+		r["policy"] = policies
+	}
+
+	if spec.SelectPolicy != nil {
+		r["select_policy"] = string(*spec.SelectPolicy)
+	}
+
+	if spec.StabilizationWindowSeconds != nil {
+		r["stabilization_window_seconds"] = int(*spec.StabilizationWindowSeconds)
+	}
+
+	return []interface{}{r}
+}
+
+func flattenV2ScalingPolicy(spec autoscalingv2beta2.HPAScalingPolicy) map[string]interface{} {
+	return map[string]interface{}{
+		"type":           string(spec.Type),
+		"value":          int(spec.Value),
+		"period_seconds": int(spec.PeriodSeconds),
+	}
 }
 
 func patchHorizontalPodAutoscalerV2Spec(prefix string, pathPrefix string, d *schema.ResourceData) []PatchOperation {
@@ -345,6 +468,13 @@ func patchHorizontalPodAutoscalerV2Spec(prefix string, pathPrefix string, d *sch
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/metrics",
 			Value: expandV2Metrics(d.Get(prefix + "metric").([]interface{})),
+		})
+	}
+
+	if d.HasChange(prefix + "behavior") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "/behavior",
+			Value: expandV2Behavior(d.Get(prefix + "behavior").([]interface{})),
 		})
 	}
 

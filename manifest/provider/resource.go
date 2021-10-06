@@ -129,13 +129,11 @@ func (ps *RawProviderServer) TFTypeFromOpenAPI(ctx context.Context, gvk schema.G
 		if _, ok := atts["kind"]; !ok {
 			atts["kind"] = tftypes.String
 		}
-		if _, ok := atts["metadata"]; !ok {
-			metaType, err := oapi.GetTypeByGVK(openapi.ObjectMetaGVK)
-			if err != nil {
-				return nil, fmt.Errorf("failed to generate tftypes for v1.ObjectMeta: %s", err)
-			}
-			atts["metadata"] = metaType.(tftypes.Object)
+		metaType, err := oapi.GetTypeByGVK(openapi.ObjectMetaGVK)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate tftypes for v1.ObjectMeta: %s", err)
 		}
+		atts["metadata"] = metaType.(tftypes.Object)
 
 		tsch = tftypes.Object{AttributeTypes: atts}
 	}

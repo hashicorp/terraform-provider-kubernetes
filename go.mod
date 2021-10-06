@@ -42,7 +42,6 @@ require (
 	github.com/mitchellh/hashstructure v1.1.0
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/oklog/run v1.1.0 // indirect
-	github.com/robfig/cron v1.2.0 // indirect
 	github.com/robfig/cron/v3 v3.0.0
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/stretchr/objx v0.3.0 // indirect

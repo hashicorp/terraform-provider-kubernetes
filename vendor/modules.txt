@@ -29,6 +29,9 @@ github.com/Azure/go-autorest/tracing
 # github.com/MakeNowJust/heredoc v1.0.0
 ## explicit
 github.com/MakeNowJust/heredoc
+# github.com/Masterminds/semver v1.5.0
+## explicit
+github.com/Masterminds/semver
 # github.com/PuerkitoBio/purell v1.1.1
 github.com/PuerkitoBio/purell
 # github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578

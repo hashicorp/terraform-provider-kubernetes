@@ -9,12 +9,24 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
 )
 
 func TestKubernetesManifest_NonStructuredCustomResource(t *testing.T) {
+	cv, err := semver.NewVersion(k8shelper.ClusterVersion().String())
+	if err != nil {
+		t.Skip("cannot determine cluster version")
+	}
+	mv, err := semver.NewConstraint(">= 1.22.0")
+	if err != nil {
+		t.Skip("cannot establish cluster version constraint")
+	}
+	if mv.Check(cv) {
+		t.Skip("only applicable to cluster versions < 1.22")
+	}
 	kind := randName()
 	plural := strings.ToLower(kind) + "s"
 	group := "k8s.terraform.io"

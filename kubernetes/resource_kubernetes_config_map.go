@@ -23,6 +23,15 @@ func resourceKubernetesConfigMap() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 
+		CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+			// The generation and resource_version fields are expected to change if anything changed
+			if len(diff.UpdatedKeys()) > 0 {
+				diff.SetNewComputed("metadata.0.generation")
+				diff.SetNewComputed("metadata.0.resource_version")
+			}
+			return nil
+		},
+
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("config map", true),
 			"binary_data": {

@@ -330,6 +330,39 @@ func TestAccKubernetesPod_with_pod_security_context_run_as_group(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPod_with_pod_security_context_fs_group_change_policy(t *testing.T) {
+	var conf api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	imageName := nginxImageVersion
+	resourceName := "kubernetes_pod.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodConfigWithSecurityContextFSChangePolicy(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.fs_group", "100"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.run_as_group", "100"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.run_as_non_root", "true"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.run_as_user", "101"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.fs_group_change_policy", "OnRootMismatch"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
 func TestAccKubernetesPod_with_container_liveness_probe_using_exec(t *testing.T) {
 	var conf api.Pod
 
@@ -1497,6 +1530,34 @@ func testAccKubernetesPodConfigWithSecurityContextRunAsGroup(podName, imageName 
       run_as_non_root     = true
       run_as_user         = 101
       supplemental_groups = [101]
+    }
+
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+}
+`, podName, imageName)
+}
+
+func testAccKubernetesPodConfigWithSecurityContextFSChangePolicy(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    security_context {
+      fs_group            = 100
+      run_as_group        = 100
+      run_as_non_root     = true
+      run_as_user         = 101
+	  fs_group_change_policy = "OnRootMismatch"
     }
 
     container {

@@ -301,6 +301,16 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 							Schema: seLinuxOptionsField(isUpdatable),
 						},
 					},
+					"fs_group_change_policy": {
+						Type:        schema.TypeString,
+						Description: "fsGroupChangePolicy defines behavior of changing ownership and permission of the volume before being exposed inside Pod. This field will only apply to volume types which support fsGroup based ownership(and permissions). It will have no effect on ephemeral volume types such as: secret, configmaps and emptydir.",
+						Optional:    true,
+						ValidateFunc: validation.StringInSlice([]string{
+							string(api.FSGroupChangeAlways),
+							string(api.FSGroupChangeOnRootMismatch),
+						}, false),
+						ForceNew: !isUpdatable,
+					},
 					"supplemental_groups": {
 						Type:        schema.TypeSet,
 						Description: "A list of groups applied to the first process run in each container, in addition to the container's primary GID. If unspecified, no groups will be added to any container.",

@@ -1,13 +1,11 @@
 ---
 layout: "kubernetes"
-page_title: "Kubernetes: kubernetes_csi_driver"
+page_title: "Kubernetes: kubernetes_csi_driver_v1"
 description: |-
   The Container Storage Interface (CSI) is a standard for exposing arbitrary block and file storage systems to containerized workloads on Container Orchestration Systems (COs) like Kubernetes.
 ---
 
-# kubernetes_csi_driver
-
-~> DEPRECATED: This resource uses Storage API v1beta1 and will only work on Kubernetes clusters using version v1.21 and below. Please see [kubernetes_csi_driver_v1](/docs/providers/kubernetes/r/csi_driver_v1.html) for newer clusters. 
+# kubernetes_csi_driver_v1
 
 The [Container Storage Interface](https://kubernetes-csi.github.io/docs/introduction.html)
 (CSI) is a standard for exposing arbitrary block and file storage systems to containerized workloads on Container 
@@ -16,7 +14,7 @@ Orchestration Systems (COs) like Kubernetes.
 ## Example Usage
 
 ```hcl
-resource "kubernetes_csi_driver" "example" {
+resource "kubernetes_csi_driver_v1" "example" {
   metadata {
     name = "terraform-example"
   }
@@ -67,8 +65,8 @@ The following arguments are supported:
 
 ## Import
 
-kubernetes_csi_driver can be imported using its name, e.g.
+kubernetes_csi_driver_v1 can be imported using its name, e.g.
 
 ```
-$ terraform import kubernetes_csi_driver.example terraform-example
+$ terraform import kubernetes_csi_driver_v1.example terraform-example
 ```

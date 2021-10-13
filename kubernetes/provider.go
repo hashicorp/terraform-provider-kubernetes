@@ -243,6 +243,7 @@ func Provider() *schema.Provider {
 			// storage
 			"kubernetes_storage_class": resourceKubernetesStorageClass(),
 			"kubernetes_csi_driver":    resourceKubernetesCSIDriver(),
+			"kubernetes_csi_driver_v1": resourceKubernetesCSIDriverV1(),
 		},
 	}
 

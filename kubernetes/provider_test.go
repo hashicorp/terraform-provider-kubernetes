@@ -224,7 +224,13 @@ func getClusterVersion() (*gversion.Version, error) {
 
 func skipIfClusterVersionLessThan(t *testing.T, vs string) {
 	if clusterVersionLessThan(vs) {
-		t.Skip(fmt.Sprintf("This test will only run on cluster versions %v and above", vs))
+		t.Skip(fmt.Sprintf("This test does not run on cluster versions below %v", vs))
+	}
+}
+
+func skipIfClusterVersionGreaterThanOrEqual(t *testing.T, vs string) {
+	if clusterVersionGreaterThanOrEqual(vs) {
+		t.Skip(fmt.Sprintf("This test does not run on cluster versions %v and above", vs))
 	}
 }
 
@@ -391,18 +397,28 @@ func getFirstNode() (api.Node, error) {
 
 func clusterVersionLessThan(vs string) bool {
 	cv, err := getClusterVersion()
-
 	if err != nil {
 		return false
 	}
 
 	v, err := gversion.NewVersion(vs)
+	if err != nil {
+		return false
+	}
+	return cv.LessThan(v)
+}
 
+func clusterVersionGreaterThanOrEqual(vs string) bool {
+	cv, err := getClusterVersion()
 	if err != nil {
 		return false
 	}
 
-	return cv.LessThan(v)
+	v, err := gversion.NewVersion(vs)
+	if err != nil {
+		return false
+	}
+	return cv.GreaterThanOrEqual(v)
 }
 
 type currentEnv struct {

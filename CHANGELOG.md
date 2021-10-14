@@ -1,3 +1,19 @@
+## 2.5.1 (Unreleased)
+
+IMPROVEMENTS:
+* Allow setting kubernetes_job parallelism to zero (#1334)
+* Add kubernetes_ingress_class resource (#1236)
+* Add immutable field to kubernetes_secret (#1280)
+* Add behavior field to horizontal_pod_autoscaler (#1030)
+* Add proxy_url attribute to provider configuration block (#1441)
+
+BUG FIXES:
+* Always generate standard ObjectMeta for CRD types (#1418)
+* Fix importing kubernetes_manifest resources (#1440)
+* Fix documentation example for field_manager block (#1410)
+* Fix kubernetes_job "No waiting" documentation example (#1383)
+* Fix docs formatting for kubernetes_secret (#1434)
+
 ## 2.5.0 (September 14, 2021)
 
 IMPROVEMENTS:

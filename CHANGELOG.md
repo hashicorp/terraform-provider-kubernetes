@@ -1,4 +1,4 @@
-## 2.5.1 (Unreleased)
+## 2.5.1 (October 14, 2021)
 
 IMPROVEMENTS:
 * Allow setting kubernetes_job parallelism to zero (#1334)

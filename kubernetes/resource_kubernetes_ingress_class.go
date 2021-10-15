@@ -73,6 +73,7 @@ func resourceKubernetesIngressClassSchema() map[string]*schema.Schema {
 									Type:         schema.TypeString,
 									Description:  docIngressClassSpecParametes["scope"],
 									Optional:     true,
+									Computed:     true,
 									ValidateFunc: validation.StringInSlice([]string{"Cluster", "Namespace"}, false),
 								},
 								"namespace": {
@@ -268,11 +269,11 @@ func expandIngressClassParameters(l []interface{}) *networking.IngressClassParam
 		obj.Name = v
 	}
 
-	if v, ok := in["scope"].(string); ok {
+	if v, ok := in["scope"].(string); ok && v != "" {
 		obj.Scope = &v
 	}
 
-	if v, ok := in["namespace"].(string); ok {
+	if v, ok := in["namespace"].(string); ok && v != "" {
 		obj.Namespace = &v
 	}
 

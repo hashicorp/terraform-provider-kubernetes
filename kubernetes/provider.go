@@ -10,18 +10,19 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/mitchellh/go-homedir"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mitchellh/go-homedir"
-	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
+
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+
+	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	restclient "k8s.io/client-go/rest"
-
-	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	aggregator "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
@@ -180,7 +181,8 @@ func Provider() *schema.Provider {
 			"kubernetes_persistent_volume_claim": dataSourceKubernetesPersistentVolumeClaim(),
 
 			// networking
-			"kubernetes_ingress": dataSourceKubernetesIngress(),
+			"kubernetes_ingress":    dataSourceKubernetesIngress(),
+			"kubernetes_ingress_v1": dataSourceKubernetesIngressV1(),
 
 			// storage
 			"kubernetes_storage_class": dataSourceKubernetesStorageClass(),
@@ -226,6 +228,7 @@ func Provider() *schema.Provider {
 
 			// networking
 			"kubernetes_ingress":       resourceKubernetesIngress(),
+			"kubernetes_ingress_v1":    resourceKubernetesIngressV1(),
 			"kubernetes_ingress_class": resourceKubernetesIngressClass(),
 
 			// policy

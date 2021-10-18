@@ -45,26 +45,6 @@ func resolveSchemaRef(ref *openapi3.SchemaRef, defs map[string]*openapi3.SchemaR
 			Type: "",
 		}
 		return &t, nil
-	case "io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1beta1.CustomResourceSubresourceStatus":
-		t := openapi3.Schema{
-			Type: "object",
-			AdditionalProperties: &openapi3.SchemaRef{
-				Value: &openapi3.Schema{
-					Type: "string",
-				},
-			},
-		}
-		return &t, nil
-	case "io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceSubresourceStatus":
-		t := openapi3.Schema{
-			Type: "object",
-			AdditionalProperties: &openapi3.SchemaRef{
-				Value: &openapi3.Schema{
-					Type: "string",
-				},
-			},
-		}
-		return &t, nil
 	case "io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinitionSpec":
 		t, err := resolveSchemaRef(nref, defs)
 		if err != nil {

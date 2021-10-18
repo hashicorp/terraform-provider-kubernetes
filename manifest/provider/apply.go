@@ -221,7 +221,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			}
 			switch {
 			case v.Type().Is(tftypes.Object{}) || v.Type().Is(tftypes.Map{}):
-				atts := make(map[string]tftypes.Value, len(v.Type().(tftypes.Object).AttributeTypes))
+				atts := make(map[string]tftypes.Value)
 				err := v.As(&atts)
 				if err != nil {
 					return v, err

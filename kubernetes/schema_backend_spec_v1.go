@@ -13,6 +13,31 @@ func backendSpecFieldsV1(description string) *schema.Schema {
 		Optional:    true,
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
+				"resource": {
+					Type:     schema.TypeList,
+					Optional: true,
+					MaxItems: 1,
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"api_group": {
+								Type:        schema.TypeString,
+								Description: "APIGroup is the group for the resource being referenced. If APIGroup is not specified, the specified Kind must be in the core API group. For any other third-party types, APIGroup is required.",
+								Required:    true,
+							},
+							"kind": {
+								Type:        schema.TypeString,
+								Description: "The kind of resource.",
+								Required:    true,
+							},
+							"name": {
+								Type:        schema.TypeString,
+								Description: "The name of the User to bind to.",
+								Required:    true,
+							},
+						},
+					},
+					Description: "Resource is an ObjectRef to another Kubernetes resource in the namespace of the Ingress object. If resource is specified, a service.Name and service.Port must not be specified.",
+				},
 				"service": {
 					Type:     schema.TypeList,
 					MaxItems: 1,

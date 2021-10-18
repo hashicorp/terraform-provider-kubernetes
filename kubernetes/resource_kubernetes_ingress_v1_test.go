@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesIngressV1_basic(t *testing.T) {
+func TestAccKubernetesIngressV1_serviceBackend(t *testing.T) {
 	var conf networking.Ingress
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
@@ -24,7 +24,7 @@ func TestAccKubernetesIngressV1_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesIngressV1Config_basic(name),
+				Config: testAccKubernetesIngressV1Config_serviceBackend(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesIngressV1Exists("kubernetes_ingress_v1.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "metadata.0.name", name),
@@ -46,7 +46,7 @@ func TestAccKubernetesIngressV1_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesIngressV1Config_modified(name),
+				Config: testAccKubernetesIngressV1Config_serviceBackend_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesIngressV1Exists("kubernetes_ingress_v1.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "metadata.0.name", name),
@@ -58,6 +58,45 @@ func TestAccKubernetesIngressV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.default_backend.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.default_backend.0.service.0.name", "svc"),
 					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.default_backend.0.service.0.port.0.number", "8443"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesIngressV1_resourceBackend(t *testing.T) {
+	var conf networking.Ingress
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_ingress_v1.test",
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressV1Config_resourceBackend(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressV1Exists("kubernetes_ingress_v1.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress_v1.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress_v1.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress_v1.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.ingress_class_name", "ingress-class"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.default_backend.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.default_backend.0.resource.0.api_group", "k8s.example.com"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.default_backend.0.resource.0.kind", "StorageBucket"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.default_backend.0.resource.0.name", "static-assets"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.host", "server.domain.com"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.path", "/icons"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.path_type", "ImplementationSpecific"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.0.resource.0.api_group", "k8s.example.com"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.0.resource.0.kind", "StorageBucket"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.0.resource.0.name", "icon-assets"),
 				),
 			},
 		},
@@ -242,20 +281,20 @@ func testAccCheckKubernetesIngressV1Exists(n string, obj *networking.Ingress) re
 	}
 }
 
-func testAccKubernetesIngressV1Config_basic(name string) string {
+func testAccKubernetesIngressV1Config_serviceBackend(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }
   spec {
-	ingress_class_name = "ingress-class"
+    ingress_class_name = "ingress-class"
     default_backend {
-	  service {
-		name = "app1"
-		port {
-		  number = 443
-		}
-	  }
+      service {
+        name = "app1"
+        port {
+          number = 443
+        }
+      }
     }
     rule {
       host = "server.domain.com"
@@ -263,11 +302,11 @@ func testAccKubernetesIngressV1Config_basic(name string) string {
         path {
           backend {
             service {
-			  name = "app2"
+              name = "app2"
               port {
-				number = 80
-			  }
-			}
+                number = 80
+              }
+            }
           }
           path = "/.*"
         }
@@ -277,20 +316,54 @@ func testAccKubernetesIngressV1Config_basic(name string) string {
 }`, name)
 }
 
-func testAccKubernetesIngressV1Config_modified(name string) string {
+func testAccKubernetesIngressV1Config_resourceBackend(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }
   spec {
-	ingress_class_name = "other-ingress-class"
+    ingress_class_name = "ingress-class"
+    default_backend {
+      resource {
+        api_group = "k8s.example.com"
+        kind = "StorageBucket"
+        name = "static-assets"
+      }
+    }
+    rule {
+      host = "server.domain.com"
+      http {
+        path {
+          path = "/icons"
+          path_type = "ImplementationSpecific"
+          backend {
+            resource {
+              api_group = "k8s.example.com"
+              kind = "StorageBucket"
+              name = "icon-assets"
+            }
+          }
+        }
+      }
+    }
+  }
+}`, name)
+}
+
+func testAccKubernetesIngressV1Config_serviceBackend_modified(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    ingress_class_name = "other-ingress-class"
     default_backend {
       service {
-		name = "svc"
+        name = "svc"
         port {
-		  number = 8443
-		}
-	  }
+          number = 8443
+        }
+      }
     }
   }
 }`, name)
@@ -304,11 +377,11 @@ func testAccKubernetesIngressV1Config_TLS(name string) string {
   spec {
     default_backend {
       service {
-		name = "app1"
-		port {
-		  number = 443
-		}
-	  }
+        name = "app1"
+        port {
+          number = 443
+        }
+      }
     }
     tls {
       hosts       = ["host1"]
@@ -326,11 +399,11 @@ func testAccKubernetesIngressV1Config_TLS_modified(name string) string {
   spec {
     default_backend {
       service {
-		name = "app1"
-		port {
-		  number = 443
-		}
-	  }
+        name = "app1"
+        port {
+          number = 443
+        }
+      }
     }
     tls {
       hosts       = ["host1", "host2"]
@@ -357,11 +430,11 @@ func testAccKubernetesIngressV1Config_internalKey(name string) string {
   spec {
     default_backend {
       service {
-		name = "app1"
-		port {
-		  number = 443
-		}
-	  }
+        name = "app1"
+        port {
+          number = 443
+        }
+      }
     }
     tls {
       hosts       = ["host1", "host2"]
@@ -386,11 +459,11 @@ func testAccKubernetesIngressV1Config_internalKey_removed(name string) string {
   spec {
     default_backend {
       service {
-		name = "app1"
-		port {
-		  number = 443
-		}
-	  }
+        name = "app1"
+        port {
+          number = 443
+        }
+      }
     }
     tls {
       hosts       = ["host1", "host2"]
@@ -458,12 +531,12 @@ resource "kubernetes_ingress_v1" "test" {
   }
   spec {
     default_backend {
-	  service {
-		name = %q
-		port {
-		  number = 8000
-		}
-	  }
+      service {
+        name = %q
+        port {
+          number = 8000
+        }
+      }
     }
   }
   wait_for_load_balancer = true

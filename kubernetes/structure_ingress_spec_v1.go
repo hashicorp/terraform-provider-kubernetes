@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 )
 
@@ -27,9 +28,11 @@ func flattenIngressV1RuleHttp(in *networking.HTTPIngressRuleValue) []interface{}
 	pathAtts := make([]interface{}, len(in.Paths), len(in.Paths))
 	for i, p := range in.Paths {
 		path := map[string]interface{}{
-			"path":      p.Path,
-			"path_type": p.PathType,
-			"backend":   flattenIngressV1Backend(&p.Backend),
+			"path":    p.Path,
+			"backend": flattenIngressV1Backend(&p.Backend),
+		}
+		if p.PathType != nil {
+			path["path_type"] = string(*p.PathType)
 		}
 		pathAtts[i] = path
 	}
@@ -43,21 +46,35 @@ func flattenIngressV1RuleHttp(in *networking.HTTPIngressRuleValue) []interface{}
 
 func flattenIngressV1Backend(in *networking.IngressBackend) []interface{} {
 	p := make(map[string]interface{})
+	m := map[string]interface{}{}
 
-	if in.Service.Port.Number != 0 {
-		p["number"] = in.Service.Port.Number
+	if in.Resource != nil {
+		r := map[string]interface{}{
+			"kind": in.Resource.Kind,
+			"name": in.Resource.Name,
+		}
+		if in.Resource.APIGroup != nil {
+			r["api_group"] = *in.Resource.APIGroup
+		}
+
+		m["resource"] = []interface{}{r}
 	}
 
-	if in.Service.Port.Name != "" {
-		p["name"] = in.Service.Port.Name
+	if in.Service != nil {
+		if in.Service.Port.Number != 0 {
+			p["number"] = in.Service.Port.Number
+		}
+
+		if in.Service.Port.Name != "" {
+			p["name"] = in.Service.Port.Name
+		}
+
+		s := make(map[string]interface{})
+		s["port"] = []interface{}{p}
+		s["name"] = in.Service.Name
+
+		m["service"] = []interface{}{s}
 	}
-
-	s := make(map[string]interface{})
-	s["port"] = []interface{}{p}
-	s["name"] = in.Service.Name
-
-	m := make(map[string]interface{})
-	m["service"] = []interface{}{s}
 
 	return []interface{}{m}
 }
@@ -175,31 +192,45 @@ func expandIngressV1Backend(l []interface{}) *networking.IngressBackend {
 	}
 
 	in := l[0].(map[string]interface{})
-	l, ok := in["service"].([]interface{})
-	if !ok || len(l) == 0 || l[0] == nil {
-		return &networking.IngressBackend{}
-	}
-
 	obj := &networking.IngressBackend{}
-	obj.Service = &networking.IngressServiceBackend{}
-	service := l[0].(map[string]interface{})
-	if v, ok := service["name"].(string); ok {
-		obj.Service.Name = v
+
+	r, ok := in["resource"].([]interface{})
+	if ok && len(r) != 0 && r[0] != nil {
+		obj.Resource = &v1.TypedLocalObjectReference{}
+		resource := r[0].(map[string]interface{})
+		if v, ok := resource["api_group"].(string); ok {
+			obj.Resource.APIGroup = &v
+		}
+		if v, ok := resource["kind"].(string); ok {
+			obj.Resource.Kind = v
+		}
+		if v, ok := resource["name"].(string); ok {
+			obj.Resource.Name = v
+		}
 	}
 
-	l, ok = service["port"].([]interface{})
-	if !ok || len(l) == 0 || l[0] == nil {
-		return obj
+	l, ok = in["service"].([]interface{})
+	if ok && len(l) != 0 && l[0] != nil {
+		obj.Service = &networking.IngressServiceBackend{}
+		service := l[0].(map[string]interface{})
+		if v, ok := service["name"].(string); ok {
+			obj.Service.Name = v
+		}
+
+		l, ok := service["port"].([]interface{})
+		if !ok || len(l) == 0 || l[0] == nil {
+			return obj
+		}
+
+		servicePort := l[0].(map[string]interface{})
+		if v, ok := servicePort["number"].(int); ok {
+			obj.Service.Port.Number = int32(v)
+		}
+		if v, ok := servicePort["name"].(string); ok {
+			obj.Service.Port.Name = v
+		}
 	}
 
-	servicePort := l[0].(map[string]interface{})
-	if v, ok := servicePort["number"].(int); ok {
-		obj.Service.Port.Number = int32(v)
-	}
-
-	if v, ok := servicePort["name"].(string); ok {
-		obj.Service.Port.Name = v
-	}
 	return obj
 }
 

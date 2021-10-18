@@ -53,8 +53,16 @@ func TestFlattenIngressV1Rule(t *testing.T) {
 							"path": "/foo/bar",
 							"backend": []interface{}{
 								map[string]interface{}{
-									"service_name": "foo",
-									"service_port": "1234",
+									"service": []interface{}{
+										map[string]interface{}{
+											"name": "foo",
+											"port": []interface{}{
+												map[string]interface{}{
+													"number": int32(1234),
+												},
+											},
+										},
+									},
 								},
 							},
 						},
@@ -71,11 +79,10 @@ func TestFlattenIngressV1Rule(t *testing.T) {
 	}
 
 	for i, v := range flatRules {
-		control := v.(map[string]interface{})
-		sample := out[i]
-
-		if !reflect.DeepEqual(control, sample) {
-			t.Errorf("Unexpected result:\n\tWant:%s\n\tGot:%s\n", control, sample)
+		expected := v.(map[string]interface{})
+		actual := out[i]
+		if !reflect.DeepEqual(expected, actual) {
+			t.Errorf("Unexpected result:\n\texpected:%s\n\tactual:%s\n", expected, actual)
 		}
 	}
 }

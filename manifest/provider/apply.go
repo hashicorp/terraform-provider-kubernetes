@@ -63,7 +63,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 	}
 	s.logger.Trace("[ApplyResourceChange]", "[PriorState]", dump(applyPriorState))
 
-	manifestConf, err := req.Config.Unmarshal(rt)
+	config, err := req.Config.Unmarshal(rt)
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -72,6 +72,17 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		})
 		return resp, nil
 	}
+	confVals := make(map[string]tftypes.Value)
+	err = config.As(&confVals)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to extract attributes from resource configuration",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+
 	var plannedStateVal map[string]tftypes.Value = make(map[string]tftypes.Value)
 	err = applyPlannedState.As(&plannedStateVal)
 	if err != nil {
@@ -199,45 +210,57 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, nil
 		}
 
-		// Transform empty objects not set in config to nil - they only serve a structural
-		// purpose in the planning phase and should not be included in the API payload.
-		obj, err = tftypes.Transform(obj, func(ap *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
-			if !v.Type().Is(tftypes.Object{}) {
-				return v, nil
-			}
-			// check if attribute path is present in user configuration
-			// (this means the value is intentional, not structural)
-			_, restPath, err := tftypes.WalkAttributePath(manifestConf, ap)
-			if err == nil && len(restPath.Steps()) == 0 {
-				return v, nil
-			}
-			var isEmpty bool = true
-			vals := make(map[string]tftypes.Value)
-			err = v.As(&vals)
-			if err != nil {
-				return v, err
-			}
-			for _, v := range vals {
-				if !v.IsNull() {
-					isEmpty = false
-				}
-			}
-			if isEmpty {
+		nullObj := morph.UnknownToNull(obj)
+		s.logger.Trace("[ApplyResourceChange][Apply]", "[UnknownToNull]", dump(nullObj))
+
+		// Remove empty objects unless explicitly set by the user in manifest.
+		// They only serve a structural purpose in the planning phase and should not be included in the API payload.
+		minObj, err := tftypes.Transform(nullObj, func(ap *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
+			if v.IsNull() {
 				return tftypes.NewValue(v.Type(), nil), nil
 			}
-			return v, nil
+			switch {
+			case v.Type().Is(tftypes.Object{}) || v.Type().Is(tftypes.Map{}):
+				atts := make(map[string]tftypes.Value, len(v.Type().(tftypes.Object).AttributeTypes))
+				err := v.As(&atts)
+				if err != nil {
+					return v, err
+				}
+				var isEmpty bool = true
+				for _, atv := range atts {
+					if !atv.IsNull() {
+						isEmpty = false
+						break
+					}
+				}
+				// check if attribute path is present in user-supplied manifest
+				// (this means the value is intentional, not structural)
+				_, restPath, err := tftypes.WalkAttributePath(confVals["manifest"], ap)
+				if (err == nil && len(restPath.Steps()) == 0) || !isEmpty {
+					// attribute is not empty and/or was set by the user -> retain
+					return tftypes.NewValue(v.Type(), atts), nil
+				}
+				return tftypes.NewValue(v.Type(), nil), nil
+			case v.Type().Is(tftypes.List{}) || v.Type().Is(tftypes.Set{}) || v.Type().Is(tftypes.Tuple{}):
+				atts := make([]tftypes.Value, 0)
+				err := v.As(&atts)
+				if err != nil {
+					return v, err
+				}
+				return tftypes.NewValue(v.Type(), atts), nil
+			default:
+				return v, nil
+			}
 		})
 		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
-				Summary:  "Failed to remove structural empty objects from proposed value",
-				Detail:   err.Error(),
-			})
+			resp.Diagnostics = append(resp.Diagnostics,
+				&tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityError,
+					Detail:   err.Error(),
+					Summary:  "Failed to sanitize empty block ahead of payload preparation",
+				})
 			return resp, nil
 		}
-
-		minObj := morph.UnknownToNull(obj)
-		s.logger.Trace("[ApplyResourceChange][Apply]", "[UnknownToNull]", dump(minObj))
 
 		pu, err := payload.FromTFValue(minObj, tftypes.NewAttributePath())
 		if err != nil {

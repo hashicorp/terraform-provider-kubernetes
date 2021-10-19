@@ -1,3 +1,12 @@
+## 2.6.0 (Unreleased)
+
+IMPROVEMENTS:
+* kubernetes_manifest is now GA and enabled by default
+
+BUG FIXES:
+* kubernetes_manifest now correctly handles empty blocks as attribute values (#1352)
+* kubernetes_manifest now correctly handles multiple CRDs with different number of schema versions (#1460)
+
 ## 2.5.1 (October 14, 2021)
 
 IMPROVEMENTS:

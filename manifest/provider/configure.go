@@ -57,7 +57,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		return response, nil
 	}
 
-	var providerEnabled bool
+	providerEnabled := true
 	if !providerConfig["experiments"].IsNull() && providerConfig["experiments"].IsKnown() {
 		var experimentsBlock []tftypes.Value
 		err = providerConfig["experiments"].As(&experimentsBlock)

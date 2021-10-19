@@ -1,4 +1,4 @@
-## 2.6.0 (Unreleased)
+## 2.6.0 (October 19, 2021)
 
 IMPROVEMENTS:
 * kubernetes_manifest is now GA and enabled by default

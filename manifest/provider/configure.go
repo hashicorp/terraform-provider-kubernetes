@@ -556,7 +556,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 				}
 				execCfg.Command = cmd
 			}
-			if !execObj["args"].IsNull() && execObj["args"].IsKnown() {
+			if !execObj["args"].IsNull() && execObj["args"].IsFullyKnown() {
 				var xcmdArgs []tftypes.Value
 				err = execObj["args"].As(&xcmdArgs)
 				if err != nil {
@@ -584,7 +584,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 					execCfg.Args = append(execCfg.Args, v)
 				}
 			}
-			if !execObj["env"].IsNull() && execObj["env"].IsKnown() {
+			if !execObj["env"].IsNull() && execObj["env"].IsFullyKnown() {
 				var xcmdEnvs map[string]tftypes.Value
 				err = execObj["env"].As(&xcmdEnvs)
 				if err != nil {

@@ -45,17 +45,6 @@ func resolveSchemaRef(ref *openapi3.SchemaRef, defs map[string]*openapi3.SchemaR
 			Type: "",
 		}
 		return &t, nil
-	case "io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinitionSpec":
-		t, err := resolveSchemaRef(nref, defs)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve schema: %s", err)
-		}
-		vs := t.Properties["versions"]
-		if vs.Value.AdditionalProperties == nil && vs.Value.Items != nil {
-			vs.Value.AdditionalProperties = vs.Value.Items
-			vs.Value.Items = nil
-		}
-		return t, nil
 	}
 
 	return resolveSchemaRef(nref, defs)
@@ -109,7 +98,11 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 			if err != nil {
 				return nil, err
 			}
-			t = tftypes.List{ElementType: et}
+			if !isTypeFullyKnown(et) {
+				t = tftypes.Tuple{ElementTypes: []tftypes.Type{et}}
+			} else {
+				t = tftypes.List{ElementType: et}
+			}
 			if herr == nil {
 				typeCache.Store(h, t)
 			}
@@ -178,4 +171,31 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 	}
 
 	return nil, fmt.Errorf("unknown type: %s", elem.Type)
+}
+
+func isTypeFullyKnown(t tftypes.Type) bool {
+	if t.Is(tftypes.DynamicPseudoType) {
+		return false
+	}
+	switch {
+	case t.Is(tftypes.Object{}):
+		for _, att := range t.(tftypes.Object).AttributeTypes {
+			if !isTypeFullyKnown(att) {
+				return false
+			}
+		}
+	case t.Is(tftypes.Tuple{}):
+		for _, ett := range t.(tftypes.Tuple).ElementTypes {
+			if !isTypeFullyKnown(ett) {
+				return false
+			}
+		}
+	case t.Is(tftypes.List{}):
+		return isTypeFullyKnown(t.(tftypes.List).ElementType)
+	case t.Is(tftypes.Set{}):
+		return isTypeFullyKnown(t.(tftypes.Set).ElementType)
+	case t.Is(tftypes.Map{}):
+		return isTypeFullyKnown(t.(tftypes.Map).AttributeType)
+	}
+	return true
 }

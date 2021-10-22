@@ -29,8 +29,8 @@ var objectMetaType = tftypes.Object{
 		"generateName":               tftypes.String,
 		"generation":                 tftypes.Number,
 		"labels":                     tftypes.Map{AttributeType: tftypes.String},
-		"managedFields": tftypes.List{
-			ElementType: tftypes.Object{
+		"managedFields": tftypes.Tuple{
+			ElementTypes: []tftypes.Type{tftypes.Object{
 				AttributeTypes: map[string]tftypes.Type{
 					"apiVersion": tftypes.String,
 					"fieldsType": tftypes.String,
@@ -39,7 +39,7 @@ var objectMetaType = tftypes.Object{
 					"operation":  tftypes.String,
 					"time":       tftypes.String,
 				},
-			},
+			}},
 		},
 		"name":      tftypes.String,
 		"namespace": tftypes.String,
@@ -92,8 +92,8 @@ var samples = testSamples{
 						"ipFamily":                 tftypes.String,
 						"loadBalancerIP":           tftypes.String,
 						"loadBalancerSourceRanges": tftypes.List{ElementType: tftypes.String},
-						"ports": tftypes.List{
-							ElementType: tftypes.Object{
+						"ports": tftypes.Tuple{
+							ElementTypes: []tftypes.Type{tftypes.Object{
 								AttributeTypes: map[string]tftypes.Type{
 									"appProtocol": tftypes.String,
 									"name":        tftypes.String,
@@ -102,7 +102,7 @@ var samples = testSamples{
 									"protocol":    tftypes.String,
 									"targetPort":  tftypes.DynamicPseudoType,
 								},
-							},
+							}},
 						},
 						"publishNotReadyAddresses": tftypes.Bool,
 						"selector":                 tftypes.Map{AttributeType: tftypes.String},

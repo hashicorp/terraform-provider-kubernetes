@@ -267,7 +267,7 @@ func TestToTFValue(t *testing.T) {
 
 	for name, s := range samples {
 		t.Run(name, func(t *testing.T) {
-			r, err := ToTFValue(s.In.v, s.In.t, tftypes.NewAttributePath())
+			r, err := ToTFValue(s.In.v, s.In.t, map[string]string{}, tftypes.NewAttributePath())
 			if err != nil {
 				if s.Err == nil {
 					t.Logf("Unexpected error received for sample '%s': %s", name, err)
@@ -292,15 +292,17 @@ func TestToTFValue(t *testing.T) {
 
 func TestSliceToTFDynamicValue(t *testing.T) {
 	samples := map[string]struct {
-		In  sampleInType
-		Out tftypes.Value
-		Err error
+		In    sampleInType
+		Hints map[string]string
+		Out   tftypes.Value
+		Err   error
 	}{
 		"list-of-strings": {
 			In: sampleInType{
 				[]interface{}{"test1", "test2"},
 				tftypes.DynamicPseudoType,
 			},
+			Hints: map[string]string{},
 			Out: tftypes.NewValue(tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String, tftypes.String}}, []tftypes.Value{
 				tftypes.NewValue(tftypes.String, "test1"),
 				tftypes.NewValue(tftypes.String, "test2"),
@@ -311,7 +313,7 @@ func TestSliceToTFDynamicValue(t *testing.T) {
 
 	for name, s := range samples {
 		t.Run(name, func(t *testing.T) {
-			r, err := sliceToTFDynamicValue(s.In.v.([]interface{}), s.In.t, tftypes.NewAttributePath())
+			r, err := sliceToTFDynamicValue(s.In.v.([]interface{}), s.In.t, s.Hints, tftypes.NewAttributePath())
 			if err != nil {
 				if s.Err == nil {
 					t.Logf("Unexpected error received for sample '%s': %s", name, err)
@@ -336,15 +338,17 @@ func TestSliceToTFDynamicValue(t *testing.T) {
 
 func TestSliceToTFTupleValue(t *testing.T) {
 	samples := map[string]struct {
-		In  sampleInType
-		Out tftypes.Value
-		Err error
+		In    sampleInType
+		Hints map[string]string
+		Out   tftypes.Value
+		Err   error
 	}{
 		"list-of-strings": {
 			In: sampleInType{
 				[]interface{}{"test1", "test2"},
 				tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String, tftypes.String}},
 			},
+			Hints: map[string]string{},
 			Out: tftypes.NewValue(tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String, tftypes.String}}, []tftypes.Value{
 				tftypes.NewValue(tftypes.String, "test1"),
 				tftypes.NewValue(tftypes.String, "test2"),
@@ -355,7 +359,7 @@ func TestSliceToTFTupleValue(t *testing.T) {
 
 	for name, s := range samples {
 		t.Run(name, func(t *testing.T) {
-			r, err := sliceToTFTupleValue(s.In.v.([]interface{}), s.In.t, tftypes.NewAttributePath())
+			r, err := sliceToTFTupleValue(s.In.v.([]interface{}), s.In.t, s.Hints, tftypes.NewAttributePath())
 			if err != nil {
 				if s.Err == nil {
 					t.Logf("Unexpected error received for sample '%s': %s", name, err)
@@ -380,15 +384,17 @@ func TestSliceToTFTupleValue(t *testing.T) {
 
 func TestSliceToTFSetValue(t *testing.T) {
 	samples := map[string]struct {
-		In  sampleInType
-		Out tftypes.Value
-		Err error
+		In    sampleInType
+		Hints map[string]string
+		Out   tftypes.Value
+		Err   error
 	}{
 		"list-of-strings": {
 			In: sampleInType{
 				[]interface{}{"test1", "test2"},
 				tftypes.Set{ElementType: tftypes.String},
 			},
+			Hints: map[string]string{},
 			Out: tftypes.NewValue(tftypes.Set{ElementType: tftypes.String}, []tftypes.Value{
 				tftypes.NewValue(tftypes.String, "test1"),
 				tftypes.NewValue(tftypes.String, "test2"),
@@ -399,7 +405,7 @@ func TestSliceToTFSetValue(t *testing.T) {
 
 	for name, s := range samples {
 		t.Run(name, func(t *testing.T) {
-			r, err := sliceToTFSetValue(s.In.v.([]interface{}), s.In.t, tftypes.NewAttributePath())
+			r, err := sliceToTFSetValue(s.In.v.([]interface{}), s.In.t, s.Hints, tftypes.NewAttributePath())
 			if err != nil {
 				if s.Err == nil {
 					t.Logf("Unexpected error received for sample '%s': %s", name, err)
@@ -424,15 +430,17 @@ func TestSliceToTFSetValue(t *testing.T) {
 
 func TestSliceToTFListValue(t *testing.T) {
 	samples := map[string]struct {
-		In  sampleInType
-		Out tftypes.Value
-		Err error
+		In    sampleInType
+		Hints map[string]string
+		Out   tftypes.Value
+		Err   error
 	}{
 		"list-of-strings": {
 			In: sampleInType{
 				[]interface{}{"test1", "test2"},
 				tftypes.List{ElementType: tftypes.String},
 			},
+			Hints: map[string]string{},
 			Out: tftypes.NewValue(tftypes.List{ElementType: tftypes.String}, []tftypes.Value{
 				tftypes.NewValue(tftypes.String, "test1"),
 				tftypes.NewValue(tftypes.String, "test2"),
@@ -443,7 +451,7 @@ func TestSliceToTFListValue(t *testing.T) {
 
 	for name, s := range samples {
 		t.Run(name, func(t *testing.T) {
-			r, err := sliceToTFListValue(s.In.v.([]interface{}), s.In.t, tftypes.NewAttributePath())
+			r, err := sliceToTFListValue(s.In.v.([]interface{}), s.In.t, s.Hints, tftypes.NewAttributePath())
 			if err != nil {
 				if s.Err == nil {
 					t.Logf("Unexpected error received for sample '%s': %s", name, err)
@@ -468,9 +476,10 @@ func TestSliceToTFListValue(t *testing.T) {
 
 func TestMapToTFMapValue(t *testing.T) {
 	samples := map[string]struct {
-		In  sampleInType
-		Out tftypes.Value
-		Err error
+		In    sampleInType
+		Hints map[string]string
+		Out   tftypes.Value
+		Err   error
 	}{
 		"simple": {
 			In: sampleInType{
@@ -480,6 +489,7 @@ func TestMapToTFMapValue(t *testing.T) {
 				},
 				t: tftypes.Map{ElementType: tftypes.String},
 			},
+			Hints: map[string]string{},
 			Out: tftypes.NewValue(
 				tftypes.Map{ElementType: tftypes.String},
 				map[string]tftypes.Value{
@@ -492,7 +502,7 @@ func TestMapToTFMapValue(t *testing.T) {
 
 	for name, s := range samples {
 		t.Run(name, func(t *testing.T) {
-			r, err := mapToTFMapValue(s.In.v.(map[string]interface{}), s.In.t, tftypes.NewAttributePath())
+			r, err := mapToTFMapValue(s.In.v.(map[string]interface{}), s.In.t, s.Hints, tftypes.NewAttributePath())
 			if err != nil {
 				if s.Err == nil {
 					t.Logf("Unexpected error received for sample '%s': %s", name, err)
@@ -517,9 +527,10 @@ func TestMapToTFMapValue(t *testing.T) {
 
 func TestMapToTFObjectValue(t *testing.T) {
 	samples := map[string]struct {
-		In  sampleInType
-		Out tftypes.Value
-		Err error
+		In    sampleInType
+		Hints map[string]string
+		Out   tftypes.Value
+		Err   error
 	}{
 		"simple": {
 			In: sampleInType{
@@ -533,6 +544,7 @@ func TestMapToTFObjectValue(t *testing.T) {
 				},
 				},
 			},
+			Hints: map[string]string{},
 			Out: tftypes.NewValue(
 				tftypes.Object{AttributeTypes: map[string]tftypes.Type{
 					"count": tftypes.Number,
@@ -548,7 +560,7 @@ func TestMapToTFObjectValue(t *testing.T) {
 
 	for name, s := range samples {
 		t.Run(name, func(t *testing.T) {
-			r, err := mapToTFObjectValue(s.In.v.(map[string]interface{}), s.In.t, tftypes.NewAttributePath())
+			r, err := mapToTFObjectValue(s.In.v.(map[string]interface{}), s.In.t, s.Hints, tftypes.NewAttributePath())
 			if err != nil {
 				if s.Err == nil {
 					t.Logf("Unexpected error received for sample '%s': %s", name, err)
@@ -573,14 +585,15 @@ func TestMapToTFObjectValue(t *testing.T) {
 
 func TestMapToTFDynamicValue(t *testing.T) {
 	samples := map[string]struct {
-		In  sampleInType
-		Out tftypes.Value
-		Err error
+		In    sampleInType
+		Hints map[string]string
+		Out   tftypes.Value
+		Err   error
 	}{}
 
 	for name, s := range samples {
 		t.Run(name, func(t *testing.T) {
-			r, err := mapToTFDynamicValue(s.In.v.(map[string]interface{}), s.In.t, tftypes.NewAttributePath())
+			r, err := mapToTFDynamicValue(s.In.v.(map[string]interface{}), s.In.t, s.Hints, tftypes.NewAttributePath())
 			if err != nil {
 				if s.Err == nil {
 					t.Logf("Unexpected error received for sample '%s': %s", name, err)

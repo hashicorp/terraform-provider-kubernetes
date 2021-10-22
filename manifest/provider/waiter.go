@@ -132,7 +132,7 @@ func (w *FieldWaiter) Wait(ctx context.Context) error {
 
 		w.logger.Trace("[ApplyResourceChange][Wait]", "API Response", resObj)
 
-		obj, err := payload.ToTFValue(resObj, w.resourceType, tftypes.NewAttributePath())
+		obj, err := payload.ToTFValue(resObj, w.resourceType, map[string]string{}, tftypes.NewAttributePath())
 		if err != nil {
 			return err
 		}

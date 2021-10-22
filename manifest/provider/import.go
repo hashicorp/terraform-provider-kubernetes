@@ -107,7 +107,7 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 	}
 	s.logger.Trace("[ImportResourceState]", "[API Resource]", ro)
 
-	objectType, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
+	objectType, th, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -118,7 +118,7 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 	}
 
 	fo := RemoveServerSideFields(ro.UnstructuredContent())
-	nobj, err := payload.ToTFValue(fo, objectType, tftypes.NewAttributePath())
+	nobj, err := payload.ToTFValue(fo, objectType, th, tftypes.NewAttributePath())
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,

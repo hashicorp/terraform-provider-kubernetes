@@ -69,7 +69,8 @@ func TestFromTFValue(t *testing.T) {
 	}
 	for n, s := range samples {
 		t.Run(n, func(t *testing.T) {
-			r, err := FromTFValue(s.In, tftypes.NewAttributePath())
+			th := make(map[string]string)
+			r, err := FromTFValue(s.In, th, tftypes.NewAttributePath())
 			if err != nil {
 				t.Logf("Conversion failed for sample '%s': %s", n, err)
 				t.FailNow()
@@ -79,6 +80,63 @@ func TestFromTFValue(t *testing.T) {
 				t.Logf("\t Sample:\t%#v", s.In)
 				t.Logf("\t Expected:\t%#v", s.Out)
 				t.Logf("\t Received:\t%#v", r)
+				t.Fail()
+			}
+		})
+	}
+}
+
+func TestValueToTypePath(t *testing.T) {
+	samples := map[string]struct {
+		In  *tftypes.AttributePath
+		Out *tftypes.AttributePath
+	}{
+		"nil": {
+			In:  nil,
+			Out: nil,
+		},
+		"list": {
+			In:  tftypes.NewAttributePath().WithElementKeyInt(6),
+			Out: tftypes.NewAttributePath().WithElementKeyInt(-1),
+		},
+		"map": {
+			In:  tftypes.NewAttributePath().WithElementKeyString("foo"),
+			Out: tftypes.NewAttributePath().WithElementKeyString("#"),
+		},
+		"object": {
+			In:  tftypes.NewAttributePath().WithAttributeName("bar"),
+			Out: tftypes.NewAttributePath().WithAttributeName("bar"),
+		},
+		"object-map": {
+			In:  tftypes.NewAttributePath().WithAttributeName("foo").WithElementKeyString("bar"),
+			Out: tftypes.NewAttributePath().WithAttributeName("foo").WithElementKeyString("#"),
+		},
+		"object-list": {
+			In:  tftypes.NewAttributePath().WithAttributeName("foo").WithElementKeyInt(42),
+			Out: tftypes.NewAttributePath().WithAttributeName("foo").WithElementKeyInt(-1),
+		},
+		"object-list-map": {
+			In:  tftypes.NewAttributePath().WithAttributeName("foo").WithElementKeyInt(42).WithElementKeyString("bar"),
+			Out: tftypes.NewAttributePath().WithAttributeName("foo").WithElementKeyInt(-1).WithElementKeyString("#"),
+		},
+		"object-map-list": {
+			In:  tftypes.NewAttributePath().WithAttributeName("foo").WithElementKeyString("bar").WithElementKeyInt(42),
+			Out: tftypes.NewAttributePath().WithAttributeName("foo").WithElementKeyString("#").WithElementKeyInt(-1),
+		},
+		"list-object": {
+			In:  tftypes.NewAttributePath().WithElementKeyInt(42).WithAttributeName("foo"),
+			Out: tftypes.NewAttributePath().WithElementKeyInt(-1).WithAttributeName("foo"),
+		},
+		"list-map": {
+			In:  tftypes.NewAttributePath().WithElementKeyInt(42).WithElementKeyString("bar"),
+			Out: tftypes.NewAttributePath().WithElementKeyInt(-1).WithElementKeyString("#"),
+		},
+	}
+	for n, s := range samples {
+		t.Run(n, func(t *testing.T) {
+			p := valueToTypePath(s.In)
+			if !p.Equal(s.Out) {
+				t.Logf("Expected %#v, received: %#v", s.Out, p)
 				t.Fail()
 			}
 		})

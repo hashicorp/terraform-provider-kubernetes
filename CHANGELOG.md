@@ -1,4 +1,4 @@
-## 2.6.1 (Unreleased)
+## 2.6.1 (October 22, 2021)
 
 BUG FIXES:
   * Fix import ID syntax in manifest import docs

@@ -1,3 +1,10 @@
+## 2.6.1 (Unreleased)
+
+BUG FIXES:
+  * Fix import ID syntax in manifest import docs
+  * Tolerate unknown values in "env" and "exec" provider attributes
+  * Remove "beta" designation of the kubernetes_manifest from documentation
+
 ## 2.6.0 (October 19, 2021)
 
 IMPROVEMENTS:

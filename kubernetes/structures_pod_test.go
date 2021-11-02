@@ -16,7 +16,7 @@ func TestFlattenTolerations(t *testing.T) {
 	}{
 		{
 			[]v1.Toleration{
-				v1.Toleration{
+				{
 					Key:   "node-role.kubernetes.io/spot-worker",
 					Value: "true",
 				},
@@ -30,11 +30,11 @@ func TestFlattenTolerations(t *testing.T) {
 		},
 		{
 			[]v1.Toleration{
-				v1.Toleration{
+				{
 					Key:      "node-role.kubernetes.io/other-worker",
 					Operator: "Exists",
 				},
-				v1.Toleration{
+				{
 					Key:   "node-role.kubernetes.io/spot-worker",
 					Value: "true",
 				},
@@ -52,7 +52,7 @@ func TestFlattenTolerations(t *testing.T) {
 		},
 		{
 			[]v1.Toleration{
-				v1.Toleration{
+				{
 					Effect:            "NoExecute",
 					TolerationSeconds: ptrToInt64(120),
 				},
@@ -92,7 +92,7 @@ func TestExpandTolerations(t *testing.T) {
 				},
 			},
 			[]*v1.Toleration{
-				&v1.Toleration{
+				{
 					Key:   "node-role.kubernetes.io/spot-worker",
 					Value: "true",
 				},
@@ -110,11 +110,11 @@ func TestExpandTolerations(t *testing.T) {
 				},
 			},
 			[]*v1.Toleration{
-				&v1.Toleration{
+				{
 					Key:   "node-role.kubernetes.io/spot-worker",
 					Value: "true",
 				},
-				&v1.Toleration{
+				{
 					Key:      "node-role.kubernetes.io/other-worker",
 					Operator: "Exists",
 				},
@@ -128,7 +128,7 @@ func TestExpandTolerations(t *testing.T) {
 				},
 			},
 			[]*v1.Toleration{
-				&v1.Toleration{
+				{
 					Effect:            "NoExecute",
 					TolerationSeconds: ptrToInt64(120),
 				},

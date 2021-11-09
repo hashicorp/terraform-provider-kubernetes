@@ -218,7 +218,8 @@ func Provider() *schema.Provider {
 			"kubernetes_horizontal_pod_autoscaler": resourceKubernetesHorizontalPodAutoscaler(),
 
 			// certificates
-			"kubernetes_certificate_signing_request": resourceKubernetesCertificateSigningRequest(),
+			"kubernetes_certificate_signing_request":    resourceKubernetesCertificateSigningRequest(),
+			"kubernetes_certificate_signing_request_v1": resourceKubernetesCertificateSigningRequestV1(),
 
 			// rbac
 			"kubernetes_role":                 resourceKubernetesRole(),

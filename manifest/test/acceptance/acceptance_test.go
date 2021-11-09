@@ -27,7 +27,15 @@ var reattachInfo tfexec.ReattachInfo
 
 func TestMain(m *testing.M) {
 	var err error
-	reattachInfo, err = provider.ServeTest(context.TODO(), hclog.Default())
+	logLevel, ok := os.LookupEnv("TF_LOG")
+	if !ok {
+		logLevel = "info"
+	}
+
+	reattachInfo, err = provider.ServeTest(context.TODO(), hclog.New(&hclog.LoggerOptions{
+		Level:  hclog.LevelFromString(logLevel),
+		Output: os.Stderr,
+	}))
 	if err != nil {
 		//lintignore:R009
 		panic(err)

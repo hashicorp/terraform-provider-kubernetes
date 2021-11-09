@@ -636,7 +636,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	}
 
 	if s.logger.IsTrace() {
-		clientConfig.WrapTransport = loggingTransport
+		clientConfig.Wrap(loggingTransport)
 	}
 
 	codec := runtime.NoopEncoder{Decoder: scheme.Codecs.UniversalDecoder()}

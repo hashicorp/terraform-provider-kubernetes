@@ -119,18 +119,18 @@ func (ps *RawProviderServer) getOAPIv2Foundry() (openapi.Foundry, error) {
 }
 
 func loggingTransport(rt http.RoundTripper) http.RoundTripper {
-	return &loggingRountTripper{
+	return &loggingRoundTripper{
 		ot: rt,
 		lt: logging.NewTransport("Kubernetes API", rt),
 	}
 }
 
-type loggingRountTripper struct {
+type loggingRoundTripper struct {
 	ot http.RoundTripper
 	lt http.RoundTripper
 }
 
-func (t *loggingRountTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+func (t *loggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	if req.URL.Path == "/openapi/v2" {
 		// don't trace-log the OpenAPI spec document, it's really big
 		return t.ot.RoundTrip(req)
@@ -156,7 +156,8 @@ func (ps *RawProviderServer) checkValidCredentials(ctx context.Context) (diags [
 			diags = append(diags, &tfprotov5.Diagnostic{
 				Severity: tfprotov5.DiagnosticSeverityError,
 				Summary:  "Invalid credentials",
-				Detail:   fmt.Sprintf("The credentials configured in the provider block are not accepted by the API server. Error: %s\n\nSet TF_LOG=debug and look for '[InvalidClientConfiguration]' in the log to see actual configuration.", rs.Error().Error()),
+				Detail: fmt.Sprintf("The credentials configured in the provider block are not accepted by the API server. Error: %s\n\nSet TF_LOG=debug and look for '[InvalidClientConfiguration]' in the log to see actual configuration.",
+					rs.Error().Error()),
 			})
 		default:
 			diags = append(diags, &tfprotov5.Diagnostic{

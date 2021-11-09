@@ -1,3 +1,4 @@
+//go:build acceptance
 // +build acceptance
 
 package acceptance
@@ -5,7 +6,8 @@ package acceptance
 import (
 	"testing"
 
-	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes-alpha/test/helper/state"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
+	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
 )
 
 // This test case tests a Service but also is a demonstration of some the assert functions
@@ -23,7 +25,7 @@ func TestKubernetesManifest_Service_ExternalName(t *testing.T) {
 	}()
 
 	k8shelper.CreateNamespace(t, namespace)
-	defer k8shelper.DeleteNamespace(t, namespace)
+	defer k8shelper.DeleteResource(t, namespace, kubernetes.NewGroupVersionResource("v1", "namespaces"))
 
 	tfvars := TFVARS{
 		"namespace": namespace,

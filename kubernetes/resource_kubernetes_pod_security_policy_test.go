@@ -137,6 +137,9 @@ func TestAccKubernetesPodSecurityPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.default_allow_privilege_escalation", "true"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.host_ipc", "true"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.host_network", "true"),
+					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.allowed_host_paths.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.allowed_host_paths.0.path_prefix", "/"),
+					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.allowed_host_paths.0.read_only", "true"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.allowed_unsafe_sysctls.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.allowed_unsafe_sysctls.0", "kernel.msg*"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.forbidden_sysctls.#", "1"),
@@ -354,6 +357,11 @@ func testAccKubernetesPodSecurityPolicyConfig_specModified(name string) string {
       "downwardAPI",
       "persistentVolumeClaim",
     ]
+
+	allowed_host_paths {
+		path_prefix = "/"
+		read_only   = true
+	}
 
     allowed_unsafe_sysctls = [
       "kernel.msg*"

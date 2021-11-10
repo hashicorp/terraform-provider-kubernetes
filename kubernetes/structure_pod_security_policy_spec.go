@@ -518,9 +518,11 @@ func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.R
 	}
 
 	if d.HasChange(keyPrefix + "allowed_host_paths") {
+		n := d.Get(keyPrefix + "allowed_host_paths").([]interface{})
+		allowedHostPaths := expandAllowedHostPathSlice(n)
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/allowedHostPaths",
-			Value: d.Get(keyPrefix + "allowed_host_paths").([]interface{}),
+			Value: allowedHostPaths,
 		})
 	}
 

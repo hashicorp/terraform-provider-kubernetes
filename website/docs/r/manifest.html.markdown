@@ -17,7 +17,11 @@ How to enable the experiment:
 
 ```hcl
 provider "kubernetes" {
-  config_path = "~/.kube/config"
+  experiments {
+    manifest_resource = true
+  }
+
+  // provider config...
 }
 ```
 

@@ -3,10 +3,11 @@ package kubernetes
 import (
 	"strconv"
 
+	"regexp"
+
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"regexp"
 )
 
 func flattenCapability(in []v1.Capability) []string {
@@ -782,22 +783,28 @@ func expandContainerEnv(in []interface{}) ([]v1.EnvVar, error) {
 	if len(in) == 0 {
 		return []v1.EnvVar{}, nil
 	}
-	envs := make([]v1.EnvVar, len(in))
-	for i, c := range in {
-		p := c.(map[string]interface{})
+	envs := []v1.EnvVar{}
+	for _, c := range in {
+		p, ok := c.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		env := v1.EnvVar{}
 		if name, ok := p["name"]; ok {
-			envs[i].Name = name.(string)
+			env.Name = name.(string)
 		}
 		if value, ok := p["value"]; ok {
-			envs[i].Value = value.(string)
+			env.Value = value.(string)
 		}
 		if v, ok := p["value_from"].([]interface{}); ok && len(v) > 0 {
 			var err error
-			envs[i].ValueFrom, err = expandEnvValueFrom(v)
+			env.ValueFrom, err = expandEnvValueFrom(v)
 			if err != nil {
 				return envs, err
 			}
 		}
+		envs = append(envs, env)
 	}
 	return envs, nil
 }

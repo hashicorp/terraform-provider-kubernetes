@@ -212,3 +212,48 @@ func TestExpandConfigMapKeyRef(t *testing.T) {
 		}
 	}
 }
+
+func TestExpandContainerEnv(t *testing.T) {
+	cases := []struct {
+		Input          []interface{}
+		ExpectedOutput []v1.EnvVar
+	}{
+		{
+			[]interface{}{
+				map[string]interface{}{
+					"name":  "PGUSER",
+					"value": "postgres",
+				},
+				map[string]interface{}{
+					"name":  "PGHOST",
+					"value": "localhost",
+				},
+			},
+			[]v1.EnvVar{
+				{
+					Name:  "PGUSER",
+					Value: "postgres",
+				},
+				{
+					Name:  "PGHOST",
+					Value: "localhost",
+				},
+			},
+		},
+		{
+			[]interface{}{nil},
+			[]v1.EnvVar{},
+		},
+	}
+
+	for _, tc := range cases {
+		output, err := expandContainerEnv(tc.Input)
+		if err != nil {
+			t.Fatalf("Unexpected failure in expander.\nInput: %#v, error: %#v", tc.Input, err)
+		}
+		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
+			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
+				tc.ExpectedOutput, output)
+		}
+	}
+}

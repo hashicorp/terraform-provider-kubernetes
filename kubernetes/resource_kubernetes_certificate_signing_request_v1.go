@@ -22,8 +22,6 @@ func resourceKubernetesCertificateSigningRequestV1() *schema.Resource {
 	apiDocStatus := certificates.CertificateSigningRequestStatus{}.SwaggerDoc()
 
 	return &schema.Resource{
-		DeprecationMessage: "This resource is deprecated and will not work on clusters using Kubernetes version 1.22 and above.\n" +
-			"Please switch to the `kubernetes_certificate_signing_request_v1` resource on clusters using v1.22 and above.",
 		CreateContext: resourceKubernetesCertificateSigningRequestV1Create,
 		ReadContext:   resourceKubernetesCertificateSigningRequestV1Read,
 		DeleteContext: resourceKubernetesCertificateSigningRequestV1Delete,

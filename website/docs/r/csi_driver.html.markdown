@@ -7,8 +7,6 @@ description: |-
 
 # kubernetes_csi_driver
 
-~> DEPRECATED: This resource uses Storage API v1beta1 and will only work on Kubernetes clusters using version v1.21 and below. Please see [kubernetes_csi_driver_v1](/docs/providers/kubernetes/r/csi_driver_v1.html) for newer clusters. 
-
 The [Container Storage Interface](https://kubernetes-csi.github.io/docs/introduction.html)
 (CSI) is a standard for exposing arbitrary block and file storage systems to containerized workloads on Container 
 Orchestration Systems (COs) like Kubernetes.

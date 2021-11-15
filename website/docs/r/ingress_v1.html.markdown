@@ -32,8 +32,12 @@ resource "kubernetes_ingress_v1" "example_ingress" {
       http {
         path {
           backend {
-            service_name = "MyApp1"
-            service_port = 8080
+            service {
+              name = "MyApp1"
+              port {
+                number = 8080
+              }
+            }
           }
 
           path = "/app1/*"
@@ -41,8 +45,12 @@ resource "kubernetes_ingress_v1" "example_ingress" {
 
         path {
           backend {
-            service_name = "MyApp2"
-            service_port = 8080
+            service {
+              name = "MyApp2"
+              port {
+                number = 8080
+              }
+            }
           }
 
           path = "/app2/*"
@@ -56,7 +64,7 @@ resource "kubernetes_ingress_v1" "example_ingress" {
   }
 }
 
-resource "kubernetes_pod" "example" {
+resource "kubernetes_pod_v1" "example" {
   metadata {
     name = "terraform-example"
     labels = {
@@ -76,7 +84,7 @@ resource "kubernetes_pod" "example" {
   }
 }
 
-resource "kubernetes_pod" "example2" {
+resource "kubernetes_pod_v1" "example2" {
   metadata {
     name = "terraform-example2"
     labels = {
@@ -100,7 +108,7 @@ resource "kubernetes_pod" "example2" {
 ## Example using Nginx ingress controller
 
 ```
-resource "kubernetes_service" "example" {
+resource "kubernetes_service_v1" "example" {
   metadata {
     name = "ingress-service"
   }
@@ -128,8 +136,12 @@ resource "kubernetes_ingress_v1" "example" {
         path {
           path = "/*"
           backend {
-            service_name = kubernetes_service.example.metadata.0.name
-            service_port = 80
+            service {
+              name = kubernetes_service.example.metadata.0.name
+              port {
+                number = 80
+              }
+            }
           }
         }
       }

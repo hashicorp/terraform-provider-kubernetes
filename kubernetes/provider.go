@@ -233,7 +233,6 @@ func Provider() *schema.Provider {
 			"kubernetes_deployment":      resourceKubernetesDeployment(),
 			"kubernetes_deployment_v1":   resourceKubernetesDeployment(),
 			"kubernetes_daemonset":       resourceKubernetesDaemonSet(),
-			"kubernetes_daemon_set":      resourceKubernetesDaemonSet(),
 			"kubernetes_daemon_set_v1":   resourceKubernetesDaemonSet(),
 			"kubernetes_stateful_set":    resourceKubernetesStatefulSet(),
 			"kubernetes_stateful_set_v1": resourceKubernetesStatefulSet(),
@@ -272,10 +271,10 @@ func Provider() *schema.Provider {
 			"kubernetes_network_policy_v1": resourceKubernetesNetworkPolicy(),
 
 			// policy
-			"kubernetes_pod_disruption_budget":         resourceKubernetesPodDisruptionBudget(),
-			"kubernetes_pod_disruption_budget_v1beta1": resourceKubernetesPodDisruptionBudget(),
-			"kubernetes_pod_security_policy":           resourceKubernetesPodSecurityPolicy(),
-			"kubernetes_pod_security_policy_v1beta1":   resourceKubernetesPodSecurityPolicy(),
+			"kubernetes_pod_disruption_budget":       resourceKubernetesPodDisruptionBudget(),
+			"kubernetes_pod_disruption_budget_v1":    resourceKubernetesPodDisruptionBudgetV1(),
+			"kubernetes_pod_security_policy":         resourceKubernetesPodSecurityPolicy(),
+			"kubernetes_pod_security_policy_v1beta1": resourceKubernetesPodSecurityPolicy(),
 
 			// scheduling
 			"kubernetes_priority_class":    resourceKubernetesPriorityClass(),

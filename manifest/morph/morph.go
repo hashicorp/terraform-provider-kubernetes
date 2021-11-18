@@ -13,7 +13,7 @@ func ValueToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tft
 		return tftypes.Value{}, p.NewErrorf("type is nil")
 	}
 	if v.IsNull() {
-		return v, nil
+		return tftypes.NewValue(t, nil), nil
 	}
 	switch {
 	case v.Type().Is(tftypes.String):

@@ -29,6 +29,17 @@ resource "kubernetes_manifest" "test" {
                 refs = {
                   type = "number"
                 }
+                stuff = {
+                  type = "array"
+                  items = {
+                    type = "object"
+                    properties = {
+                      foo = {
+                        type = "string"
+                      }
+                    }
+                  }
+                }
               }
             }
           }

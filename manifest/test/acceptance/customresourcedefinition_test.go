@@ -1,3 +1,4 @@
+//go:build acceptance
 // +build acceptance
 
 package acceptance
@@ -57,6 +58,17 @@ func TestKubernetesManifest_CustomResourceDefinition(t *testing.T) {
 					},
 					"refs": map[string]interface{}{
 						"type": "number",
+					},
+					"stuff": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type": "object",
+							"properties": map[string]interface{}{
+								"foo": map[string]interface{}{
+									"type": "string",
+								},
+							},
+						},
 					},
 				},
 			},

@@ -9,5 +9,10 @@ resource "kubernetes_manifest" "test" {
       name      = var.name
     }
     data = "this is a test"
+    stuff = [
+      {
+        foo = null
+      }
+    ]
   }
 }

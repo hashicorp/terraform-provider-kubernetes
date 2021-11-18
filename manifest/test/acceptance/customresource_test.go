@@ -1,3 +1,4 @@
+//go:build acceptance
 // +build acceptance
 
 package acceptance
@@ -74,5 +75,6 @@ func TestKubernetesManifest_CustomResource(t *testing.T) {
 		"kubernetes_manifest.test.object.metadata.name":      name,
 		"kubernetes_manifest.test.object.metadata.namespace": namespace,
 		"kubernetes_manifest.test.object.data":               "this is a test",
+		"kubernetes_manifest.test.object.stuff.0":            map[string]interface{}{"foo": interface{}(nil)},
 	})
 }

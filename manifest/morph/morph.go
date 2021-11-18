@@ -108,15 +108,23 @@ func morphStringToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 }
 
 func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tftypes.Value, error) {
-	if t.Is(tftypes.List{}) {
-		return v, nil
-	}
 	var lvals []tftypes.Value
 	err := v.As(&lvals)
 	if err != nil {
 		return tftypes.Value{}, p.NewErrorf("[%s] failed to morph list value: %s", p.String(), err)
 	}
 	switch {
+	case t.Is(tftypes.List{}):
+		var nlvals []tftypes.Value = make([]tftypes.Value, len(lvals))
+		for i, v := range lvals {
+			elp := p.WithElementKeyInt(int64(i))
+			nv, err := ValueToType(v, t.(tftypes.List).ElementType, elp)
+			if err != nil {
+				return tftypes.Value{}, elp.NewErrorf("[%s] failed to morph list element into list element: %v", elp.String(), err)
+			}
+			nlvals[i] = nv
+		}
+		return tftypes.NewValue(t, nlvals), nil
 	case t.Is(tftypes.Tuple{}):
 		if len(t.(tftypes.Tuple).ElementTypes) != len(lvals) {
 			return tftypes.Value{}, p.NewErrorf("[%s] failed to morph list into tuple (length mismatch)", p.String())
@@ -209,15 +217,23 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 }
 
 func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tftypes.Value, error) {
-	if t.Is(tftypes.Set{}) {
-		return v, nil
-	}
 	var svals []tftypes.Value
 	err := v.As(&svals)
 	if err != nil {
 		return tftypes.Value{}, p.NewErrorf("[%s] failed to morph set value: %v", p.String(), err)
 	}
 	switch {
+	case t.Is(tftypes.Set{}):
+		var svals []tftypes.Value = make([]tftypes.Value, len(svals))
+		for i, v := range svals {
+			elp := p.WithElementKeyInt(int64(i))
+			nv, err := ValueToType(v, t.(tftypes.Set).ElementType, elp)
+			if err != nil {
+				return tftypes.Value{}, elp.NewErrorf("[%s] failed to morph set element into set element : %v", elp.String(), err)
+			}
+			svals[i] = nv
+		}
+		return tftypes.NewValue(t, svals), nil
 	case t.Is(tftypes.List{}):
 		var lvals []tftypes.Value = make([]tftypes.Value, len(svals))
 		for i, v := range svals {
@@ -250,9 +266,6 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 }
 
 func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tftypes.Value, error) {
-	if t.Is(tftypes.Map{}) {
-		return v, nil
-	}
 	var mvals map[string]tftypes.Value
 	err := v.As(&mvals)
 	if err != nil {

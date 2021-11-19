@@ -175,6 +175,32 @@ func TestMorphValueToType(t *testing.T) {
 				tftypes.NewValue(tftypes.String, "baz"),
 			}),
 		},
+		"tuple(object)->list(object)": {
+			In: sampleInType{
+				V: tftypes.NewValue(tftypes.Tuple{ElementTypes: []tftypes.Type{
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.DynamicPseudoType}},
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+				}},
+					[]tftypes.Value{
+						tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+							map[string]tftypes.Value{"foo": tftypes.NewValue(tftypes.String, "foo")}),
+						tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.DynamicPseudoType}},
+							map[string]tftypes.Value{"foo": tftypes.NewValue(tftypes.DynamicPseudoType, nil)}),
+						tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+							map[string]tftypes.Value{"foo": tftypes.NewValue(tftypes.String, "baz")}),
+					}),
+				T: tftypes.List{ElementType: tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}}},
+			},
+			Out: tftypes.NewValue(tftypes.List{ElementType: tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}}}, []tftypes.Value{
+				tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+					map[string]tftypes.Value{"foo": tftypes.NewValue(tftypes.String, "foo")}),
+				tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+					map[string]tftypes.Value{"foo": tftypes.NewValue(tftypes.String, nil)}),
+				tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+					map[string]tftypes.Value{"foo": tftypes.NewValue(tftypes.String, "baz")}),
+			}),
+		},
 		"set->tuple": {
 			In: sampleInType{
 				V: tftypes.NewValue(tftypes.Set{ElementType: tftypes.String}, []tftypes.Value{

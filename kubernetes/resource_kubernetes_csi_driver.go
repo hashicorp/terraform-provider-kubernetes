@@ -18,8 +18,6 @@ import (
 
 func resourceKubernetesCSIDriver() *schema.Resource {
 	return &schema.Resource{
-		DeprecationMessage: "This resource is deprecated and will not work on clusters using Kubernetes version 1.22 and above.\n" +
-			"Please switch to the `kubernetes_csi_driver_v1` resource on clusters using v1.22 and above.",
 		CreateContext: resourceKubernetesCSIDriverCreate,
 		ReadContext:   resourceKubernetesCSIDriverRead,
 		UpdateContext: resourceKubernetesCSIDriverUpdate,

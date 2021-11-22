@@ -171,83 +171,126 @@ func Provider() *schema.Provider {
 
 		DataSourcesMap: map[string]*schema.Resource{
 			// core
-			"kubernetes_config_map":              dataSourceKubernetesConfigMap(),
-			"kubernetes_namespace":               dataSourceKubernetesNamespace(),
-			"kubernetes_all_namespaces":          dataSourceKubernetesAllNamespaces(),
-			"kubernetes_secret":                  dataSourceKubernetesSecret(),
-			"kubernetes_service":                 dataSourceKubernetesService(),
-			"kubernetes_pod":                     dataSourceKubernetesPod(),
-			"kubernetes_service_account":         dataSourceKubernetesServiceAccount(),
-			"kubernetes_persistent_volume_claim": dataSourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_config_map":                 dataSourceKubernetesConfigMap(),
+			"kubernetes_config_map_v1":              dataSourceKubernetesConfigMap(),
+			"kubernetes_namespace":                  dataSourceKubernetesNamespace(),
+			"kubernetes_namespace_v1":               dataSourceKubernetesNamespace(),
+			"kubernetes_all_namespaces":             dataSourceKubernetesAllNamespaces(),
+			"kubernetes_secret":                     dataSourceKubernetesSecret(),
+			"kubernetes_secret_v1":                  dataSourceKubernetesSecret(),
+			"kubernetes_service":                    dataSourceKubernetesService(),
+			"kubernetes_service_v1":                 dataSourceKubernetesService(),
+			"kubernetes_pod":                        dataSourceKubernetesPod(),
+			"kubernetes_pod_v1":                     dataSourceKubernetesPod(),
+			"kubernetes_service_account":            dataSourceKubernetesServiceAccount(),
+			"kubernetes_service_account_v1":         dataSourceKubernetesServiceAccount(),
+			"kubernetes_persistent_volume_claim":    dataSourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_persistent_volume_claim_v1": dataSourceKubernetesPersistentVolumeClaim(),
 
 			// networking
 			"kubernetes_ingress":    dataSourceKubernetesIngress(),
 			"kubernetes_ingress_v1": dataSourceKubernetesIngressV1(),
 
 			// storage
-			"kubernetes_storage_class": dataSourceKubernetesStorageClass(),
+			"kubernetes_storage_class":    dataSourceKubernetesStorageClass(),
+			"kubernetes_storage_class_v1": dataSourceKubernetesStorageClass(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
 			// core
-			"kubernetes_namespace":               resourceKubernetesNamespace(),
-			"kubernetes_service":                 resourceKubernetesService(),
-			"kubernetes_service_account":         resourceKubernetesServiceAccount(),
-			"kubernetes_default_service_account": resourceKubernetesDefaultServiceAccount(),
-			"kubernetes_config_map":              resourceKubernetesConfigMap(),
-			"kubernetes_secret":                  resourceKubernetesSecret(),
-			"kubernetes_pod":                     resourceKubernetesPod(),
-			"kubernetes_api_service":             resourceKubernetesAPIService(),
-			"kubernetes_endpoints":               resourceKubernetesEndpoints(),
-			"kubernetes_limit_range":             resourceKubernetesLimitRange(),
-			"kubernetes_persistent_volume":       resourceKubernetesPersistentVolume(),
-			"kubernetes_persistent_volume_claim": resourceKubernetesPersistentVolumeClaim(),
-			"kubernetes_replication_controller":  resourceKubernetesReplicationController(),
-			"kubernetes_resource_quota":          resourceKubernetesResourceQuota(),
+			"kubernetes_namespace":                  resourceKubernetesNamespace(),
+			"kubernetes_namespace_v1":               resourceKubernetesNamespace(),
+			"kubernetes_service":                    resourceKubernetesService(),
+			"kubernetes_service_v1":                 resourceKubernetesService(),
+			"kubernetes_service_account":            resourceKubernetesServiceAccount(),
+			"kubernetes_service_account_v1":         resourceKubernetesServiceAccount(),
+			"kubernetes_default_service_account":    resourceKubernetesDefaultServiceAccount(),
+			"kubernetes_default_service_account_v1": resourceKubernetesDefaultServiceAccount(),
+			"kubernetes_config_map":                 resourceKubernetesConfigMap(),
+			"kubernetes_config_map_v1":              resourceKubernetesConfigMap(),
+			"kubernetes_secret":                     resourceKubernetesSecret(),
+			"kubernetes_secret_v1":                  resourceKubernetesSecret(),
+			"kubernetes_pod":                        resourceKubernetesPod(),
+			"kubernetes_pod_v1":                     resourceKubernetesPod(),
+			"kubernetes_endpoints":                  resourceKubernetesEndpoints(),
+			"kubernetes_endpoints_v1":               resourceKubernetesEndpoints(),
+			"kubernetes_limit_range":                resourceKubernetesLimitRange(),
+			"kubernetes_limit_range_v1":             resourceKubernetesLimitRange(),
+			"kubernetes_persistent_volume":          resourceKubernetesPersistentVolume(),
+			"kubernetes_persistent_volume_v1":       resourceKubernetesPersistentVolume(),
+			"kubernetes_persistent_volume_claim":    resourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_persistent_volume_claim_v1": resourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_replication_controller":     resourceKubernetesReplicationController(),
+			"kubernetes_replication_controller_v1":  resourceKubernetesReplicationController(),
+			"kubernetes_resource_quota":             resourceKubernetesResourceQuota(),
+			"kubernetes_resource_quota_v1":          resourceKubernetesResourceQuota(),
+
+			// api registration
+			"kubernetes_api_service":    resourceKubernetesAPIService(),
+			"kubernetes_api_service_v1": resourceKubernetesAPIService(),
 
 			// apps
-			"kubernetes_deployment":   resourceKubernetesDeployment(),
-			"kubernetes_daemonset":    resourceKubernetesDaemonSet(),
-			"kubernetes_stateful_set": resourceKubernetesStatefulSet(),
+			"kubernetes_deployment":      resourceKubernetesDeployment(),
+			"kubernetes_deployment_v1":   resourceKubernetesDeployment(),
+			"kubernetes_daemonset":       resourceKubernetesDaemonSet(),
+			"kubernetes_daemon_set_v1":   resourceKubernetesDaemonSet(),
+			"kubernetes_stateful_set":    resourceKubernetesStatefulSet(),
+			"kubernetes_stateful_set_v1": resourceKubernetesStatefulSet(),
 
 			// batch
-			"kubernetes_job":      resourceKubernetesJob(),
-			"kubernetes_cron_job": resourceKubernetesCronJob(),
+			"kubernetes_job":         resourceKubernetesJob(),
+			"kubernetes_job_v1":      resourceKubernetesJob(),
+			"kubernetes_cron_job":    resourceKubernetesCronJob(),
+			"kubernetes_cron_job_v1": resourceKubernetesCronJobV1(),
 
 			// autoscaling
-			"kubernetes_horizontal_pod_autoscaler": resourceKubernetesHorizontalPodAutoscaler(),
+			"kubernetes_horizontal_pod_autoscaler":         resourceKubernetesHorizontalPodAutoscaler(),
+			"kubernetes_horizontal_pod_autoscaler_v1":      resourceKubernetesHorizontalPodAutoscalerV1(),
+			"kubernetes_horizontal_pod_autoscaler_v2beta2": resourceKubernetesHorizontalPodAutoscalerV2Beta2(),
 
 			// certificates
 			"kubernetes_certificate_signing_request":    resourceKubernetesCertificateSigningRequest(),
 			"kubernetes_certificate_signing_request_v1": resourceKubernetesCertificateSigningRequestV1(),
 
 			// rbac
-			"kubernetes_role":                 resourceKubernetesRole(),
-			"kubernetes_role_binding":         resourceKubernetesRoleBinding(),
-			"kubernetes_cluster_role":         resourceKubernetesClusterRole(),
-			"kubernetes_cluster_role_binding": resourceKubernetesClusterRoleBinding(),
+			"kubernetes_role":                    resourceKubernetesRole(),
+			"kubernetes_role_v1":                 resourceKubernetesRole(),
+			"kubernetes_role_binding":            resourceKubernetesRoleBinding(),
+			"kubernetes_role_binding_v1":         resourceKubernetesRoleBinding(),
+			"kubernetes_cluster_role":            resourceKubernetesClusterRole(),
+			"kubernetes_cluster_role_v1":         resourceKubernetesClusterRole(),
+			"kubernetes_cluster_role_binding":    resourceKubernetesClusterRoleBinding(),
+			"kubernetes_cluster_role_binding_v1": resourceKubernetesClusterRoleBinding(),
 
 			// networking
-			"kubernetes_ingress":       resourceKubernetesIngress(),
-			"kubernetes_ingress_v1":    resourceKubernetesIngressV1(),
-			"kubernetes_ingress_class": resourceKubernetesIngressClass(),
+			"kubernetes_ingress":           resourceKubernetesIngress(),
+			"kubernetes_ingress_v1":        resourceKubernetesIngressV1(),
+			"kubernetes_ingress_class":     resourceKubernetesIngressClass(),
+			"kubernetes_ingress_class_v1":  resourceKubernetesIngressClass(),
+			"kubernetes_network_policy":    resourceKubernetesNetworkPolicy(),
+			"kubernetes_network_policy_v1": resourceKubernetesNetworkPolicy(),
 
 			// policy
-			"kubernetes_pod_disruption_budget": resourceKubernetesPodDisruptionBudget(),
-			"kubernetes_network_policy":        resourceKubernetesNetworkPolicy(),
-			"kubernetes_pod_security_policy":   resourceKubernetesPodSecurityPolicy(),
+			"kubernetes_pod_disruption_budget":       resourceKubernetesPodDisruptionBudget(),
+			"kubernetes_pod_disruption_budget_v1":    resourceKubernetesPodDisruptionBudgetV1(),
+			"kubernetes_pod_security_policy":         resourceKubernetesPodSecurityPolicy(),
+			"kubernetes_pod_security_policy_v1beta1": resourceKubernetesPodSecurityPolicy(),
 
 			// scheduling
-			"kubernetes_priority_class": resourceKubernetesPriorityClass(),
+			"kubernetes_priority_class":    resourceKubernetesPriorityClass(),
+			"kubernetes_priority_class_v1": resourceKubernetesPriorityClass(),
 
 			// admission control
-			"kubernetes_validating_webhook_configuration": resourceKubernetesValidatingWebhookConfiguration(),
-			"kubernetes_mutating_webhook_configuration":   resourceKubernetesMutatingWebhookConfiguration(),
+			"kubernetes_validating_webhook_configuration":    resourceKubernetesValidatingWebhookConfiguration(),
+			"kubernetes_validating_webhook_configuration_v1": resourceKubernetesValidatingWebhookConfigurationV1(),
+			"kubernetes_mutating_webhook_configuration":      resourceKubernetesMutatingWebhookConfiguration(),
+			"kubernetes_mutating_webhook_configuration_v1":   resourceKubernetesMutatingWebhookConfigurationV1(),
 
 			// storage
-			"kubernetes_storage_class": resourceKubernetesStorageClass(),
-			"kubernetes_csi_driver":    resourceKubernetesCSIDriver(),
-			"kubernetes_csi_driver_v1": resourceKubernetesCSIDriverV1(),
+			"kubernetes_storage_class":    resourceKubernetesStorageClass(),
+			"kubernetes_storage_class_v1": resourceKubernetesStorageClass(),
+			"kubernetes_csi_driver":       resourceKubernetesCSIDriver(),
+			"kubernetes_csi_driver_v1":    resourceKubernetesCSIDriverV1(),
 		},
 	}
 

@@ -536,9 +536,6 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 
 		resp.NewState = req.PlannedState
 	}
-	// force a refresh of the OpenAPI foundry on next use
-	// we do this to capture any potentially new resource type that might have been added
-	s.OAPIFoundry = nil // this needs to be optimized to refresh only when CRDs are applied (or maybe other schema altering resources too?)
 
 	return resp, nil
 }

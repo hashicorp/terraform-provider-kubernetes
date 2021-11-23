@@ -28,7 +28,7 @@ Ultimately, we plan to completely automate the generation of Terraform resources
 
 ## What will happen to the resources without versions in the name?
 
-These resources will continue to be supported and maintained as is until the next major version of the provider, at which point they will be deprecated and then subsequently removed in the following major version. 
+These resources will continue to be supported and maintained as is through to v3.0.0 of the provider, at which point they will be marked as deprecated and then subsequently removed in v4.0.0.
 
 
 ## `v1` resources
@@ -48,7 +48,7 @@ We will continue to bring support for API resources which reach `beta` however i
 We will continue our policy of not building support for `alpha` versioned resources into the provider. Please use the [kubernetes_manifest](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/manifest) resource to manage those resources. 
 
 
-## How can I move an resource without a version to its versioned resource name?
+## How can I move a resource without a version to its versioned resource name?
 
 The simplest, non-destructive way to do this is to modify the name of the resource to include the version suffix. Then remove the old resource from state and import the resource under the versioned resource like so:
 
@@ -57,4 +57,6 @@ terraform state rm kubernetes_config_map.example
 terraform import kubernetes_config_map_v1.example default/example
 ```
 
-You can also skip this and just allow Terraform to destroy and recreate the resource, but this is not recommend for resources like `kubernetes_service` and `kubernetes_deployment`. 
+Then run `terraform plan` to confirm that the import was successful. **NOTE: Do not run the plan after renaming the resource in the configuration until after the above steps have been carried out.** 
+
+You can also skip this and just allow Terraform to destroy and recreate the resource, but this is not recommended for resources like `kubernetes_service` and `kubernetes_deployment`. 

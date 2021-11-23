@@ -7,8 +7,10 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/aws/aws-sdk-go v1.38.20 // indirect
+	github.com/evanphx/json-patch v4.11.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/fatih/color v1.10.0 // indirect
+	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect
 	github.com/getkin/kin-openapi v0.66.0
 	github.com/go-errors/errors v1.1.1 // indirect
 	github.com/go-openapi/jsonreference v0.19.5 // indirect
@@ -35,6 +37,7 @@ require (
 	github.com/hashicorp/terraform-plugin-test/v2 v2.2.1
 	github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864 // indirect
 	github.com/jinzhu/copier v0.2.9
+	github.com/json-iterator/go v1.1.11 // indirect
 	github.com/klauspost/compress v1.12.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
@@ -54,7 +57,9 @@ require (
 	golang.org/x/mod v0.4.2
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5 // indirect
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c // indirect
+	golang.org/x/sys v0.0.0-20210616094352-59db8d763f22 // indirect
 	golang.org/x/term v0.0.0-20210406210042-72f3dc4e9b72 // indirect
+	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	golang.org/x/tools v0.1.1-0.20210302220138-2ac05c832e1a // indirect
 	google.golang.org/api v0.44.0 // indirect
 	google.golang.org/genproto v0.0.0-20210415145412-64678f1ae2d5 // indirect
@@ -69,20 +74,12 @@ require (
 	k8s.io/utils v0.0.0-20210802155522-efc7438f0176 // indirect
 )
 
-require (
-	github.com/evanphx/json-patch v4.11.0+incompatible // indirect
-	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect
-	github.com/json-iterator/go v1.1.11 // indirect
-	golang.org/x/sys v0.0.0-20210616094352-59db8d763f22 // indirect
-	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
-)
-
 // kustomize needs to be kept in sync with the cli-runtime.
 // go-openapi needs to be locked at a version that is compatible with kustomize
 replace (
 	github.com/go-openapi/spec => github.com/go-openapi/spec v0.19.9
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.21.7
-	k8s.io/client-go => k8s.io/client-go v0.21.7 // /Users/alex/work/client-go
+	k8s.io/client-go => k8s.io/client-go v0.21.7
 	sigs.k8s.io/kustomize/pkg/transformers => ./vendor/k8s.io/cli-runtime/pkg/kustomize/k8sdeps/transformer
 	sigs.k8s.io/kustomize/pkg/transformers/config => ./vendor/k8s.io/cli-runtime/pkg/kustomize/k8sdeps/transformer/config
 )

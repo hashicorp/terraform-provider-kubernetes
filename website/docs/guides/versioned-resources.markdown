@@ -12,7 +12,7 @@ This guide explains the naming conventions for resources and data sources in the
 
 ## Version suffixes
 
-From provider version v2.7.0 onwards Terraform resources and data sources that cover the [core set of Kubernetes APIs](https://kubernetes.io/docs/reference/kubernetes-api/) will be suffixed with their corresponding Kubernetes API version (e.g `v1`, `v2`, `v2beta1`). The existing resources in the provider will continue to be maintained as is. 
+From provider version v2.7.0 onwards Terraform resources and data sources that cover the [standard set of Kubernetes APIs](https://kubernetes.io/docs/reference/kubernetes-api/) will be suffixed with their corresponding Kubernetes API version (e.g `v1`, `v2`, `v2beta1`). The existing resources in the provider will continue to be maintained as is. 
 
 
 ## Motivation 
@@ -31,7 +31,7 @@ Ultimately, we plan to completely automate the generation of Terraform resources
 These resources will continue to be supported and maintained as is through to v3.0.0 of the provider, at which point they will be marked as deprecated and then subsequently removed in v4.0.0.
 
 
-## `v1` resources
+## `v1` and above resources
 
 Resources suffixed with a major version number are considered to have stable APIs that will not change. These resources will be supported by the provider so long as the API version continues to be supported by the Kubernetes API, and likely for some time after it is deprecated and removed as there is often a long tail of migration as users of the provider continue to support legacy infrastructure. 
 

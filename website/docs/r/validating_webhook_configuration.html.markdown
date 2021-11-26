@@ -1,4 +1,5 @@
 ---
+subcategory: "admissionregistration/v1beta1"
 layout: "kubernetes"
 page_title: "Kubernetes: validating_webhook_configuration"
 description: |-

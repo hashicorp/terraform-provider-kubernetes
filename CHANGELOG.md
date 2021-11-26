@@ -1,3 +1,18 @@
+## 2.7.0 (Unreleased)
+
+IMPROVEMENTS:
+* Add support for storage/v1
+* Add support for certificates/v1
+* Add support for networking/v1
+* Add support for policy/v1
+* Add `completion_mode` to job spec 
+
+BUG FIXES:
+* Fix crash when container env block is empty 
+* Fix invalid allowedHostPaths PodSecurityPolicy patch 
+
+This release introduces version suffixes to the names of resources and datasources. See our [documentation page](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/guides/versioned-resources) for more details on this convention and the motivation behind it.   
+
 ## 2.6.1 (October 22, 2021)
 
 BUG FIXES:

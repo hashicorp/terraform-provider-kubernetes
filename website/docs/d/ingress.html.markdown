@@ -1,4 +1,5 @@
 ---
+subcategory: "extensions/v1beta1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_ingress"
 description: |-

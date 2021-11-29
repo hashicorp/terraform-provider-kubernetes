@@ -1,4 +1,5 @@
 ---
+subcategory: "apps/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_stateful_set"
 description: |-

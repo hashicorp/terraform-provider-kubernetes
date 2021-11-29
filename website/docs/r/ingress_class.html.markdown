@@ -1,4 +1,5 @@
 ---
+subcategory: "networking/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_ingress_class"
 description: |-

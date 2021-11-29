@@ -1,5 +1,6 @@
 ---
 layout: "kubernetes"
+subcategory: "rbac/v1"
 page_title: "Kubernetes: kubernetes_role"
 description: |-
   A role contains rules that represent a set of permissions. Permissions are purely additive (there are no “deny” rules).

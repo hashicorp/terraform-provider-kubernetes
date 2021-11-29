@@ -1,4 +1,5 @@
 ---
+subcategory: "apps/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_daemon_set_v1"
 description: |-

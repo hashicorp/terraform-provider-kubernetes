@@ -1,4 +1,5 @@
 ---
+subcategory: "autoscaling/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_horizontal_pod_autoscaler_v1"
 description: |-

@@ -6,10 +6,12 @@ IMPROVEMENTS:
 * Add support for networking/v1
 * Add support for policy/v1
 * Add `completion_mode` to job spec 
+* Improve performance of `kubernetes_manifest` by reducing amount of API calls
 
 BUG FIXES:
 * Fix crash when container env block is empty 
 * Fix invalid allowedHostPaths PodSecurityPolicy patch 
+* Fix handling of "null" values on fields of `kubernetes_manifest` (#1478)
 
 This release introduces version suffixes to the names of resources and datasources. See our [documentation page](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/guides/versioned-resources) for more details on this convention and the motivation behind it.   
 

@@ -85,6 +85,48 @@ func TestAccKubernetesStorageClass_minikube(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesStorageClass_volumeExpansion(t *testing.T) {
+	var conf api.StorageClass
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_storage_class.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesStorageClassDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStorageClassConfig_volumeExpansion(name, "k8s.io/minikube-hostpath"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStorageClassExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "storage_provisioner", "k8s.io/minikube-hostpath"),
+					resource.TestCheckResourceAttr(resourceName, "reclaim_policy", "Delete"),
+					resource.TestCheckResourceAttr(resourceName, "volume_binding_mode", "Immediate"),
+					resource.TestCheckResourceAttr(resourceName, "allow_volume_expansion", "true"),
+				),
+			},
+			{
+				Config: testAccKubernetesStorageClassConfig_volumeExpansionModified(name, "k8s.io/minikube-hostpath"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStorageClassExists(resourceName, &conf),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "storage_provisioner", "k8s.io/minikube-hostpath"),
+					resource.TestCheckResourceAttr(resourceName, "reclaim_policy", "Delete"),
+					resource.TestCheckResourceAttr(resourceName, "volume_binding_mode", "Immediate"),
+					resource.TestCheckResourceAttr(resourceName, "allow_volume_expansion", "false"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesStorageClass_basic(t *testing.T) {
 	var conf api.StorageClass
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -368,6 +410,30 @@ func testAccKubernetesStorageClassConfig_modified(name, provisioner string) stri
   }
 
 
+}
+`, name, provisioner)
+}
+
+func testAccKubernetesStorageClassConfig_volumeExpansion(name, provisioner string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  storage_provisioner    = "%s"
+  allow_volume_expansion = true
+}
+`, name, provisioner)
+}
+
+func testAccKubernetesStorageClassConfig_volumeExpansionModified(name, provisioner string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  storage_provisioner    = "%s"
+  allow_volume_expansion = false
 }
 `, name, provisioner)
 }

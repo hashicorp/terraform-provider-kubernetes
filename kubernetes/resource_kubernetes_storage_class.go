@@ -201,9 +201,7 @@ func resourceKubernetesStorageClassUpdate(ctx context.Context, d *schema.Resourc
 
 	name := d.Id()
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
-	if err != nil {
-		return diag.Errorf("Failed to marshal update operations: %s", err)
-	}
+
 	if d.HasChange("allow_volume_expansion") {
 		newVal := d.Get("allow_volume_expansion").(bool)
 		ops = append(ops, &ReplaceOperation{
@@ -212,6 +210,10 @@ func resourceKubernetesStorageClassUpdate(ctx context.Context, d *schema.Resourc
 		})
 	}
 	data, err := ops.MarshalJSON()
+	if err != nil {
+		return diag.Errorf("Failed to marshal update operations: %s", err)
+	}
+
 	log.Printf("[INFO] Updating storage class %q: %v", name, string(data))
 	out, err := conn.StorageV1().StorageClasses().Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {

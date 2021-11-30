@@ -111,5 +111,5 @@ func dataSourceKubernetesMutatingWebhookConfigurationRead(ctx context.Context, d
 	name := d.Get("metadata.0.name").(string)
 	d.SetId(name)
 
-	return resourceKubernetesMutatingWebhookConfigurationRead(ctx, d, meta)
+	return resourceKubernetesMutatingWebhookConfigurationV1Read(ctx, d, meta)
 }

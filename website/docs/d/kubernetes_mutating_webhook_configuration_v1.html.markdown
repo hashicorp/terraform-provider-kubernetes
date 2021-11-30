@@ -1,11 +1,12 @@
 ---
 layout: "kubernetes"
-page_title: "Kubernetes: kubernetes_mutating_webhook_configuration"
+category: "admissionregistration/v1"
+page_title: "Kubernetes: kubernetes_mutating_webhook_configuration_v1"
 description: |-
   Mutating Webhook Configuration configures a mutating admission webhook
 ---
 
-# kubernetes_mutating_webhook_configuration
+# kubernetes_mutating_webhook_configuration_v1
 
 A Mutating Webhook Configuration configures a [mutating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks).
 This data source allows you to pull data about a given mutating webhook configuration based on its name.
@@ -13,7 +14,7 @@ This data source allows you to pull data about a given mutating webhook configur
 ## Example Usage
 
 ```hcl
-data "kubernetes_mutating_webhook_configuration" "example" {
+data "kubernetes_mutating_webhook_configuration_v1" "example" {
   metadata {
     name = "terraform-example"
   }

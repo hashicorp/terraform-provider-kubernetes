@@ -1,4 +1,4 @@
-## 2.7.0 (Unreleased)
+## 2.7.0 (November 30, 2021)
 
 IMPROVEMENTS:
 * Add support for storage/v1

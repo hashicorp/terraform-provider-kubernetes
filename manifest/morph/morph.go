@@ -284,16 +284,16 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 		}
 		return tftypes.NewValue(t, ovals), nil
 	case t.Is(tftypes.Map{}):
-		var mvals map[string]tftypes.Value = make(map[string]tftypes.Value, len(mvals))
+		var nmvals map[string]tftypes.Value = make(map[string]tftypes.Value, len(mvals))
 		for k, v := range mvals {
 			elp := p.WithElementKeyString(k)
 			nv, err := ValueToType(v, t.(tftypes.Map).AttributeType, elp)
 			if err != nil {
 				return tftypes.Value{}, elp.NewErrorf("[%s] failed to morph object element into map element: %v", elp.String(), err)
 			}
-			mvals[k] = nv
+			nmvals[k] = nv
 		}
-		return tftypes.NewValue(t, mvals), nil
+		return tftypes.NewValue(t, nmvals), nil
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, nil
 	}

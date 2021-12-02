@@ -288,6 +288,33 @@ func TestMorphValueToType(t *testing.T) {
 				"three": tftypes.NewValue(tftypes.String, "baz"),
 			}),
 		},
+		"object->object": {
+			In: sampleInType{
+				V: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"one":   tftypes.String,
+					"two":   tftypes.String,
+					"three": tftypes.String,
+				}}, map[string]tftypes.Value{
+					"one":   tftypes.NewValue(tftypes.String, "foo"),
+					"two":   tftypes.NewValue(tftypes.String, "bar"),
+					"three": tftypes.NewValue(tftypes.String, "baz"),
+				}),
+				T: tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"one":   tftypes.String,
+					"two":   tftypes.String,
+					"three": tftypes.String,
+				}},
+			},
+			Out: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+				"one":   tftypes.String,
+				"two":   tftypes.String,
+				"three": tftypes.String,
+			}}, map[string]tftypes.Value{
+				"one":   tftypes.NewValue(tftypes.String, "foo"),
+				"two":   tftypes.NewValue(tftypes.String, "bar"),
+				"three": tftypes.NewValue(tftypes.String, "baz"),
+			}),
+		},
 
 		// Testcases to demonstrate https://github.com/hashicorp/terraform-provider-kubernetes-alpha/issues/190
 		"string(unknown value)->string": {

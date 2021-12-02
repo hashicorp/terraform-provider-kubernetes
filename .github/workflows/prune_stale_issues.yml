@@ -10,6 +10,6 @@ jobs:
     - uses: actions/stale@v4.0.0
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
-        stale-issue-message: 'Marking this issue as stale due to inactivity. This helps our maintainers find and focus on the active issues. If this issue receives no comments in the next 30 days it will automatically be closed. Maintainers can also remove the stale label. If this issue was automatically closed and you feel this issue should be reopened, we encourage creating a new issue linking back to this one for added context. Thank you!'
+        stale-issue-message: 'Marking this issue as stale due to inactivity. If this issue receives no comments in the next 30 days it will automatically be closed. If this issue was automatically closed and you feel this issue should be reopened, we encourage creating a new issue linking back to this one for added context. This helps our maintainers find and focus on the active issues. Maintainers may also remove the stale label at their discretion. Thank you!'
         days-before-stale: 365
         days-before-close: 30

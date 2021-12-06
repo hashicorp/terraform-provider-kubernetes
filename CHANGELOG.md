@@ -1,3 +1,8 @@
+## 2.7.1 (Unreleased)
+
+BUG FIXES:
+* Fix type-morphing of Map into Map (#1521)
+
 ## 2.7.0 (November 30, 2021)
 
 IMPROVEMENTS:

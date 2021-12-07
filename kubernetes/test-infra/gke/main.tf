@@ -85,7 +85,7 @@ locals {
           auth-provider = {
             name = "gcp"
             config = {
-              cmd-args = "config config-helper --format=json --access-token-file=gcptoken"
+              cmd-args = "config config-helper --format=json --access-token-file=$${GCPTOKEN}/gcptoken"
               cmd-path = "gcloud"
               expiry-key = "{.credential.token_expiry}"
               token-key = "{.credential.access_token}"

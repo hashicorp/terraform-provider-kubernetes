@@ -22,8 +22,8 @@ resource "random_id" "cluster_name" {
 }
 
 resource "google_service_account" "default" {
-  account_id   = "terraform-k8s"
-  display_name = "Service Account"
+  account_id   = "tf-k8s-${random_id.cluster_name.hex}"
+  display_name = "Kubernetes provider SA"
 }
 
 resource "google_container_cluster" "primary" {

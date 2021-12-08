@@ -9,6 +9,9 @@ variable "workers_count" {
 data "google_compute_zones" "available" {
 }
 
+data "google_client_config" "default" {
+}
+
 data "google_container_engine_versions" "supported" {
   location       = data.google_compute_zones.available.names[0]
   version_prefix = var.kubernetes_version
@@ -19,8 +22,8 @@ resource "random_id" "cluster_name" {
 }
 
 resource "google_service_account" "default" {
-  account_id   = "terraform-k8s"
-  display_name = "Service Account"
+  account_id   = "tf-k8s-${random_id.cluster_name.hex}"
+  display_name = "Kubernetes provider SA"
 }
 
 resource "google_container_cluster" "primary" {
@@ -81,6 +84,12 @@ locals {
         user = {
           auth-provider = {
             name = "gcp"
+            config = {
+              cmd-args = "config config-helper --format=json --access-token-file=${path.cwd}/gcptoken"
+              cmd-path = "gcloud"
+              expiry-key = "{.credential.token_expiry}"
+              token-key = "{.credential.access_token}"
+            }
           }
         }
       }
@@ -91,6 +100,11 @@ locals {
 resource "local_file" "kubeconfig" {
   content  = yamlencode(local.kubeconfig)
   filename = "${path.module}/kubeconfig"
+}
+
+resource "local_file" "gcptoken" {
+  content  = data.google_client_config.default.access_token
+  filename = "${path.module}/gcptoken"
 }
 
 output "google_zone" {

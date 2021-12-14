@@ -140,6 +140,7 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 
 	newState := make(map[string]tftypes.Value)
 	wftype := rt.(tftypes.Object).AttributeTypes["wait_for"]
+	wtype := rt.(tftypes.Object).AttributeTypes["wait"]
 	timeoutsType := rt.(tftypes.Object).AttributeTypes["timeouts"]
 	fmType := rt.(tftypes.Object).AttributeTypes["field_manager"]
 	cmpType := rt.(tftypes.Object).AttributeTypes["computed_fields"]
@@ -147,6 +148,7 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 	newState["manifest"] = tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{}}, nil)
 	newState["object"] = morph.UnknownToNull(nobj)
 	newState["wait_for"] = tftypes.NewValue(wftype, nil)
+	newState["wait"] = tftypes.NewValue(wtype, nil)
 	newState["timeouts"] = tftypes.NewValue(timeoutsType, nil)
 	newState["field_manager"] = tftypes.NewValue(fmType, nil)
 	newState["computed_fields"] = tftypes.NewValue(cmpType, nil)

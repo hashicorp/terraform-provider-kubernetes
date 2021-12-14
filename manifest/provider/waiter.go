@@ -17,7 +17,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/kubectl/pkg/polymorphichelpers"
 )
+
+const waiterSleepTime = 1 * time.Second
 
 func (s *RawProviderServer) waitForCompletion(ctx context.Context, waitForBlock tftypes.Value, rs dynamic.ResourceInterface, rname string, rtype tftypes.Type, th map[string]string) error {
 	if waitForBlock.IsNull() || !waitForBlock.IsKnown() {
@@ -42,6 +45,18 @@ func NewResourceWaiter(resource dynamic.ResourceInterface, resourceName string, 
 	err := waitForBlock.As(&waitForBlockVal)
 	if err != nil {
 		return nil, err
+	}
+
+	if v, ok := waitForBlockVal["rollout"]; ok {
+		var rollout bool
+		v.As(&rollout)
+		if rollout {
+			return &RolloutWaiter{
+				resource,
+				resourceName,
+				hl,
+			}, nil
+		}
 	}
 
 	fields, ok := waitForBlockVal["fields"]
@@ -181,11 +196,12 @@ func (w *FieldWaiter) Wait(ctx context.Context) error {
 		}(obj)
 
 		if done {
+			w.logger.Info("[ApplyResourceChange][Wait] Done waiting.\n")
 			return err
 		}
 
 		// TODO: implement with exponential back-off.
-		time.Sleep(1 * time.Second) // lintignore:R018
+		time.Sleep(waiterSleepTime) // lintignore:R018
 	}
 }
 
@@ -235,4 +251,52 @@ func FieldPathToTftypesPath(fieldPath string) (*tftypes.AttributePath, error) {
 	}
 
 	return path, nil
+}
+
+// RolloutWaiter will wait for a resource that has a StatusViewer to
+// finish rolling out
+type RolloutWaiter struct {
+	resource     dynamic.ResourceInterface
+	resourceName string
+	logger       hclog.Logger
+}
+
+// Wait uses StatusViewer to determine if the rollout is done
+func (w *RolloutWaiter) Wait(ctx context.Context) error {
+	w.logger.Info("[ApplyResourceChange][Wait] Waiting until rollout complete...\n")
+	for {
+		if deadline, ok := ctx.Deadline(); ok {
+			if time.Now().After(deadline) {
+				return context.DeadlineExceeded
+			}
+		}
+
+		res, err := w.resource.Get(ctx, w.resourceName, v1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if errors.IsGone(err) {
+			return fmt.Errorf("resource was deleted")
+		}
+
+		gk := res.GetObjectKind().GroupVersionKind().GroupKind()
+		statusViewer, err := polymorphichelpers.StatusViewerFor(gk)
+		if err != nil {
+			return fmt.Errorf("error getting resource status: %v", err)
+		}
+
+		_, done, err := statusViewer.Status(res, 0)
+		if err != nil {
+			return fmt.Errorf("error getting resource status: %v", err)
+		}
+
+		if done {
+			break
+		}
+
+		time.Sleep(waiterSleepTime) // lintignore:R018
+	}
+
+	w.logger.Info("[ApplyResourceChange][Wait] Rollout complete\n")
+	return nil
 }

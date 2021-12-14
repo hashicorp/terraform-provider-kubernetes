@@ -51,14 +51,6 @@ func GetDataSourceType(name string) (tftypes.Type, error) {
 
 // GetProviderResourceSchema contains the definitions of all supported resources
 func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
-	waitForType := tftypes.Object{
-		AttributeTypes: map[string]tftypes.Type{
-			"fields": tftypes.Map{
-				ElementType: tftypes.String,
-			},
-		},
-	}
-
 	return map[string]*tfprotov5.Schema{
 		"kubernetes_manifest": {
 			Version: 1,
@@ -125,6 +117,29 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 							},
 						},
 					},
+					{
+						TypeName: "wait",
+						Nesting:  tfprotov5.SchemaNestedBlockNestingModeList,
+						MinItems: 0,
+						MaxItems: 1,
+						Block: &tfprotov5.SchemaBlock{
+							Description: "Configure waiter options.",
+							Attributes: []*tfprotov5.SchemaAttribute{
+								{
+									Name:        "rollout",
+									Type:        tftypes.Bool,
+									Optional:    true,
+									Description: "Wait for rollout to complete on resources that support `kubectl rollout status`.",
+								},
+								{
+									Name:        "fields",
+									Type:        tftypes.Map{ElementType: tftypes.String},
+									Optional:    true,
+									Description: "A map of paths to fields to wait for a specific field value.",
+								},
+							},
+						},
+					},
 				},
 				Attributes: []*tfprotov5.SchemaAttribute{
 					{
@@ -141,9 +156,16 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 						Description: "The resulting resource state, as returned by the API server after applying the desired state from `manifest`.",
 					},
 					{
-						Name:        "wait_for",
-						Type:        waitForType,
+						Name: "wait_for",
+						Type: tftypes.Object{
+							AttributeTypes: map[string]tftypes.Type{
+								"fields": tftypes.Map{
+									ElementType: tftypes.String,
+								},
+							},
+						},
 						Optional:    true,
+						Deprecated:  true,
 						Description: "A map of attribute paths and desired patterns to be matched. After each apply the provider will wait for all attributes listed here to reach a value that matches the desired pattern.",
 					},
 					{

@@ -233,7 +233,7 @@ func TestMorphValueToType(t *testing.T) {
 		},
 		"map->object": {
 			In: sampleInType{
-				V: tftypes.NewValue(tftypes.Map{AttributeType: tftypes.String}, map[string]tftypes.Value{
+				V: tftypes.NewValue(tftypes.Map{ElementType: tftypes.String}, map[string]tftypes.Value{
 					"one":   tftypes.NewValue(tftypes.String, "foo"),
 					"two":   tftypes.NewValue(tftypes.String, "bar"),
 					"three": tftypes.NewValue(tftypes.String, "baz"),
@@ -256,14 +256,14 @@ func TestMorphValueToType(t *testing.T) {
 		},
 		"map->map": {
 			In: sampleInType{
-				V: tftypes.NewValue(tftypes.Map{AttributeType: tftypes.String}, map[string]tftypes.Value{
+				V: tftypes.NewValue(tftypes.Map{ElementType: tftypes.String}, map[string]tftypes.Value{
 					"one":   tftypes.NewValue(tftypes.String, "foo"),
 					"two":   tftypes.NewValue(tftypes.String, "bar"),
 					"three": tftypes.NewValue(tftypes.String, "baz"),
 				}),
-				T: tftypes.Map{AttributeType: tftypes.String},
+				T: tftypes.Map{ElementType: tftypes.String},
 			},
-			Out: tftypes.NewValue(tftypes.Map{AttributeType: tftypes.String}, map[string]tftypes.Value{
+			Out: tftypes.NewValue(tftypes.Map{ElementType: tftypes.String}, map[string]tftypes.Value{
 				"one":   tftypes.NewValue(tftypes.String, "foo"),
 				"two":   tftypes.NewValue(tftypes.String, "bar"),
 				"three": tftypes.NewValue(tftypes.String, "baz"),
@@ -280,9 +280,9 @@ func TestMorphValueToType(t *testing.T) {
 					"two":   tftypes.NewValue(tftypes.String, "bar"),
 					"three": tftypes.NewValue(tftypes.String, "baz"),
 				}),
-				T: tftypes.Map{AttributeType: tftypes.String},
+				T: tftypes.Map{ElementType: tftypes.String},
 			},
-			Out: tftypes.NewValue(tftypes.Map{AttributeType: tftypes.String}, map[string]tftypes.Value{
+			Out: tftypes.NewValue(tftypes.Map{ElementType: tftypes.String}, map[string]tftypes.Value{
 				"one":   tftypes.NewValue(tftypes.String, "foo"),
 				"two":   tftypes.NewValue(tftypes.String, "bar"),
 				"three": tftypes.NewValue(tftypes.String, "baz"),

@@ -47,7 +47,7 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 		}
 		for name, el := range vals {
 			np := p.WithElementKeyString(name)
-			nv, err := DeepUnknown(t.(tftypes.Map).AttributeType, el, np)
+			nv, err := DeepUnknown(t.(tftypes.Map).ElementType, el, np)
 			if err != nil {
 				return tftypes.Value{}, np.NewError(err)
 			}
@@ -74,7 +74,7 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 			return tftypes.Value{}, p.NewError(err)
 		}
 		for i, et := range atts {
-			np := p.WithElementKeyInt(int64(i))
+			np := p.WithElementKeyInt(i)
 			nv, err := DeepUnknown(et, vals[i], np)
 			if err != nil {
 				return tftypes.Value{}, np.NewError(err)
@@ -99,7 +99,7 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 			elt = t.(tftypes.Set).ElementType
 		}
 		for i, el := range vals {
-			np := p.WithElementKeyInt(int64(i))
+			np := p.WithElementKeyInt(i)
 			nv, err := DeepUnknown(elt, el, np)
 			if err != nil {
 				return tftypes.Value{}, np.NewError(err)

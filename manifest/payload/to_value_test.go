@@ -143,9 +143,9 @@ func TestToTFValue(t *testing.T) {
 					"foo": "18",
 					"bar": "crawl",
 				},
-				t: tftypes.Map{AttributeType: tftypes.String},
+				t: tftypes.Map{ElementType: tftypes.String},
 			},
-			Out: tftypes.NewValue(tftypes.Map{AttributeType: tftypes.String}, map[string]tftypes.Value{
+			Out: tftypes.NewValue(tftypes.Map{ElementType: tftypes.String}, map[string]tftypes.Value{
 				"foo": tftypes.NewValue(tftypes.String, "18"),
 				"bar": tftypes.NewValue(tftypes.String, "crawl"),
 			}),
@@ -478,10 +478,10 @@ func TestMapToTFMapValue(t *testing.T) {
 					"count": "42",
 					"image": "nginx/latest",
 				},
-				t: tftypes.Map{AttributeType: tftypes.String},
+				t: tftypes.Map{ElementType: tftypes.String},
 			},
 			Out: tftypes.NewValue(
-				tftypes.Map{AttributeType: tftypes.String},
+				tftypes.Map{ElementType: tftypes.String},
 				map[string]tftypes.Value{
 					"count": tftypes.NewValue(tftypes.String, "42"),
 					"image": tftypes.NewValue(tftypes.String, "nginx/latest"),

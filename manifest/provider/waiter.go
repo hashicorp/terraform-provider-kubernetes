@@ -218,7 +218,7 @@ func FieldPathToTftypesPath(fieldPath string) (*tftypes.AttributePath, error) {
 				f := indexKey.AsBigFloat()
 				if f.IsInt() {
 					i, _ := f.Int64()
-					path = path.WithElementKeyInt(int64(i))
+					path = path.WithElementKeyInt(int(i))
 				} else {
 					return tftypes.NewAttributePath(), fmt.Errorf("index in field path must be an integer")
 				}

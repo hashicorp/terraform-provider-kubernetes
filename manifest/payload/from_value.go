@@ -60,7 +60,7 @@ func FromTFValue(in tftypes.Value, ap *tftypes.AttributePath) (interface{}, erro
 			return lv, nil
 		}
 		for k, le := range l {
-			nextAp := ap.WithElementKeyInt(int64(k))
+			nextAp := ap.WithElementKeyInt(k)
 			ne, err := FromTFValue(le, nextAp)
 			if err != nil {
 				return nil, nextAp.NewErrorf("[%s] cannot convert list element to Unstructured: %s", nextAp.String(), err)

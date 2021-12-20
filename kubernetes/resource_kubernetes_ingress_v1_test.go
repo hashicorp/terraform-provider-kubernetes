@@ -45,7 +45,7 @@ func TestAccKubernetesIngressV1_serviceBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.path", "/.*"),
 					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.name", "app2"),
-					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.port.0.number", "80"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.port.0.name", "http"),
 				),
 			},
 			{
@@ -320,7 +320,7 @@ func testAccKubernetesIngressV1Config_serviceBackend(name string) string {
             service {
               name = "app2"
               port {
-                number = 80
+                name = "http"
               }
             }
           }

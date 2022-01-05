@@ -219,6 +219,8 @@ func Provider() *schema.Provider {
 			"kubernetes_endpoints_v1":               resourceKubernetesEndpoints(),
 			"kubernetes_limit_range":                resourceKubernetesLimitRange(),
 			"kubernetes_limit_range_v1":             resourceKubernetesLimitRange(),
+			"kubernetes_label":                      resourceKubernetesLabel(),
+			"kubernetes_label_v1":                   resourceKubernetesLabel(),
 			"kubernetes_persistent_volume":          resourceKubernetesPersistentVolume(),
 			"kubernetes_persistent_volume_v1":       resourceKubernetesPersistentVolume(),
 			"kubernetes_persistent_volume_claim":    resourceKubernetesPersistentVolumeClaim(),

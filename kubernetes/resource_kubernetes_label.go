@@ -100,38 +100,38 @@ type labelClient struct {
 	patchBytes []byte
 }
 
-func newLabelClient(d *schema.ResourceData, action labelClientAction) (*labelClient, error) {
-	apiVersion, ok := d.Get("api_version").(string)
+func newLabelClient(getFn func(key string) interface{}, action labelClientAction) (*labelClient, error) {
+	apiVersion, ok := getFn("api_version").(string)
 	if !ok || apiVersion == "" {
 		return nil, fmt.Errorf("unable to extract api_version")
 	}
 
-	kind, ok := d.Get("kind").(string)
+	kind, ok := getFn("kind").(string)
 	if !ok || kind == "" {
 		return nil, fmt.Errorf("unable to extract kind")
 	}
 
-	namespaceScoped, ok := d.Get("namespace_scoped").(bool)
+	namespaceScoped, ok := getFn("namespace_scoped").(bool)
 	if !ok {
 		return nil, fmt.Errorf("unable to extract namespace_scoped")
 	}
 
-	namespace, ok := d.Get("namespace").(string)
+	namespace, ok := getFn("namespace").(string)
 	if !ok {
 		return nil, fmt.Errorf("unable to extract namespace")
 	}
 
-	name, ok := d.Get("name").(string)
+	name, ok := getFn("name").(string)
 	if !ok || name == "" {
 		return nil, fmt.Errorf("unable to extract name")
 	}
 
-	key, ok := d.Get("label_key").(string)
+	key, ok := getFn("label_key").(string)
 	if !ok || key == "" {
 		return nil, fmt.Errorf("unable to extract label_key")
 	}
 
-	value, ok := d.Get("label_value").(string)
+	value, ok := getFn("label_value").(string)
 	if !ok || value == "" {
 		return nil, fmt.Errorf("unable to extract label_value")
 	}
@@ -235,12 +235,12 @@ func resourceKubernetesLabelCreate(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	lc, err := newLabelClient(d, createLabelClientAction)
+	lc, err := newLabelClient(d.Get, createLabelClientAction)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	log.Print("[INFO] Creating new label %s", lc.key)
+	log.Printf("[INFO] Creating new label %s", lc.key)
 
 	_, err = lc.doRequest(ctx, conn)
 	if err != nil {
@@ -268,7 +268,7 @@ func resourceKubernetesLabelRead(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 
-	lc, err := newLabelClient(d, readLabelClientAction)
+	lc, err := newLabelClient(d.Get, readLabelClientAction)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -295,7 +295,7 @@ func resourceKubernetesLabelUpdate(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	lc, err := newLabelClient(d, updateLabelClientAction)
+	lc, err := newLabelClient(d.Get, updateLabelClientAction)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -319,7 +319,7 @@ func resourceKubernetesLabelDelete(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	lc, err := newLabelClient(d, deleteLabelClientAction)
+	lc, err := newLabelClient(d.Get, deleteLabelClientAction)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -343,7 +343,7 @@ func resourceKubernetesLabelExists(ctx context.Context, d *schema.ResourceData, 
 		return false, err
 	}
 
-	lc, err := newLabelClient(d, readLabelClientAction)
+	lc, err := newLabelClient(d.Get, readLabelClientAction)
 	if err != nil {
 		return false, err
 	}

@@ -13,15 +13,6 @@ Once applied, the `object` attribute contains the state of the resource as retur
 
 ~> A minimum Terraform version of 0.14.8 is required to use this resource.
 
-How to enable the experiment:
-
-```hcl
-provider "kubernetes" {
-  config_path = "~/.kube/config"
-}
-```
-
-
 ### Before you use this resource
 
 * This resource requires API access during planning time. This means the cluster has to be accessible at plan time and thus cannot be created in the same apply operation. We recommend only using this resource for custom resources or resources not yet fully supported by the provider.

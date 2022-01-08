@@ -2,17 +2,11 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pkgApi "k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 func resourceKubernetesLabel() *schema.Resource {
@@ -82,173 +76,26 @@ func resourceKubernetesLabel() *schema.Resource {
 	}
 }
 
-type labelClientAction int
-
-const (
-	createLabelClientAction labelClientAction = iota + 1
-	updateLabelClientAction
-	deleteLabelClientAction
-	readLabelClientAction
-)
-
-type labelClient struct {
-	action     labelClientAction
-	path       string
-	id         string
-	key        string
-	value      string
-	patchBytes []byte
-}
-
-func newLabelClient(getFn func(key string) interface{}, action labelClientAction) (*labelClient, error) {
-	apiVersion, ok := getFn("api_version").(string)
-	if !ok || apiVersion == "" {
-		return nil, fmt.Errorf("unable to extract api_version")
-	}
-
-	kind, ok := getFn("kind").(string)
-	if !ok || kind == "" {
-		return nil, fmt.Errorf("unable to extract kind")
-	}
-
-	namespaceScoped, ok := getFn("namespace_scoped").(bool)
-	if !ok {
-		return nil, fmt.Errorf("unable to extract namespace_scoped")
-	}
-
-	namespace, ok := getFn("namespace").(string)
-	if !ok {
-		return nil, fmt.Errorf("unable to extract namespace")
-	}
-
-	name, ok := getFn("name").(string)
-	if !ok || name == "" {
-		return nil, fmt.Errorf("unable to extract name")
-	}
-
-	key, ok := getFn("label_key").(string)
-	if !ok || key == "" {
-		return nil, fmt.Errorf("unable to extract label_key")
-	}
-
-	value, ok := getFn("label_value").(string)
-	if !ok || value == "" {
-		return nil, fmt.Errorf("unable to extract label_value")
-	}
-
-	apiPrefix := "apis"
-	if apiVersion == "v1" {
-		apiPrefix = "api"
-	}
-
-	path := fmt.Sprintf("/%s/%s/%s/%s", apiPrefix, apiVersion, kind, name)
-	if namespaceScoped {
-		path = fmt.Sprintf("/%s/%s/namespaces/%s/%s/%s", apiPrefix, apiVersion, namespace, kind, name)
-	}
-	path = strings.ToLower(path)
-
-	patchPath := fmt.Sprintf("/metadata/labels/%s", key)
-
-	var op PatchOperation
-	switch action {
-	case createLabelClientAction:
-		op = &AddOperation{
-			Path:  patchPath,
-			Value: value,
-		}
-	case updateLabelClientAction:
-		op = &ReplaceOperation{
-			Path:  patchPath,
-			Value: value,
-		}
-	case deleteLabelClientAction:
-		op = &RemoveOperation{
-			Path: patchPath,
-		}
-	case readLabelClientAction:
-		op = nil
-	default:
-		return nil, fmt.Errorf("invalid operation")
-	}
-
-	ops := PatchOperations{op}
-	patchBytes, err := ops.MarshalJSON()
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal operations: %w", err)
-	}
-
-	return &labelClient{
-		action:     action,
-		path:       path,
-		id:         path,
-		key:        key,
-		value:      value,
-		patchBytes: patchBytes,
-	}, nil
-}
-
-func (lc *labelClient) getRequest(conn *kubernetes.Clientset) *rest.Request {
-	if lc.action == readLabelClientAction {
-		return conn.RESTClient().Get().AbsPath(lc.path)
-	}
-
-	return conn.RESTClient().Patch(pkgApi.JSONPatchType).Body(lc.patchBytes).AbsPath(lc.path)
-}
-
-func (lc *labelClient) doRequest(ctx context.Context, conn *kubernetes.Clientset) (rest.Result, error) {
-	req := lc.getRequest(conn)
-	res := req.Do(ctx)
-	if res.Error() != nil {
-		return rest.Result{}, res.Error()
-	}
-
-	return res, nil
-}
-
-func (lc *labelClient) getLabelsFromResponse(res rest.Result) (map[string]string, error) {
-	obj := metav1.PartialObjectMetadata{}
-	err := res.Into(&obj)
-	if err != nil {
-		return nil, err
-	}
-
-	return obj.Labels, nil
-}
-
-func (lc *labelClient) getvalueFromResponse(res rest.Result) (string, error) {
-	labels, err := lc.getLabelsFromResponse(res)
-	if err != nil {
-		return "", err
-	}
-
-	value, ok := labels[lc.key]
-	if !ok {
-		return "", fmt.Errorf("label not found with key: %s", lc.key)
-	}
-
-	return value, nil
-}
-
 func resourceKubernetesLabelCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	lc, err := newLabelClient(d.Get, createLabelClientAction)
+	l, err := newLabelClient(d.Get, conn)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Creating new label %s", lc.key)
+	log.Printf("[INFO] Creating new label %s", l.Key())
 
-	_, err = lc.doRequest(ctx, conn)
+	err = l.Create(ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Submitted new label: %#v", lc)
-	d.SetId(lc.id)
+	log.Printf("[INFO] Submitted new label: %s", l.Id())
+	d.SetId(l.Id())
 
 	return resourceKubernetesLabelRead(ctx, d, meta)
 }
@@ -268,24 +115,23 @@ func resourceKubernetesLabelRead(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 
-	lc, err := newLabelClient(d.Get, readLabelClientAction)
+	l, err := newLabelClient(d.Get, conn)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Reading label %s", lc.key)
+	log.Printf("[INFO] Reading label %s", l.Key())
 
-	res, err := lc.doRequest(ctx, conn)
+	value, err := l.Read(ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	resValue, err := lc.getvalueFromResponse(res)
-	if err != nil {
-		return diag.FromErr(err)
+	if value != l.Value() {
+		return diag.Errorf("expected value to be %s but received %s", l.Value(), value)
 	}
 
-	log.Printf("[INFO] Received label %s=%s", lc.key, resValue)
+	log.Printf("[INFO] Received label %s=%s", l.Key(), value)
 	return nil
 }
 
@@ -295,20 +141,20 @@ func resourceKubernetesLabelUpdate(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	lc, err := newLabelClient(d.Get, updateLabelClientAction)
+	l, err := newLabelClient(d.Get, conn)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Updating label %s", lc.key)
+	log.Printf("[INFO] Updating label %s", l.Key())
 
-	_, err = lc.doRequest(ctx, conn)
+	err = l.Update(ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Submitted updated label: %s=%s", lc.key, lc.value)
-	d.SetId(lc.id)
+	log.Printf("[INFO] Submitted updated label: %s=%s", l.Key(), l.Value())
+	d.SetId(l.Id())
 
 	return resourceKubernetesLabelRead(ctx, d, meta)
 }
@@ -319,19 +165,19 @@ func resourceKubernetesLabelDelete(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	lc, err := newLabelClient(d.Get, deleteLabelClientAction)
+	l, err := newLabelClient(d.Get, conn)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Deleting label %s", lc.key)
+	log.Printf("[INFO] Deleting label %s", l.Key())
 
-	_, err = lc.doRequest(ctx, conn)
+	err = l.Delete(ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Label %s deleted", lc.id)
+	log.Printf("[INFO] Label %s deleted", l.Id())
 
 	d.SetId("")
 	return nil
@@ -343,24 +189,24 @@ func resourceKubernetesLabelExists(ctx context.Context, d *schema.ResourceData, 
 		return false, err
 	}
 
-	lc, err := newLabelClient(d.Get, readLabelClientAction)
+	l, err := newLabelClient(d.Get, conn)
 	if err != nil {
 		return false, err
 	}
 
-	log.Printf("[INFO] Checking label %s", lc.key)
+	log.Printf("[INFO] Checking label %s", l.Key())
 
-	res, err := lc.doRequest(ctx, conn)
+	res, err := l.ReadResource(ctx)
 	if err != nil {
 		// requested resource does not exist
 		return false, err
 	}
 
-	labels, err := lc.getLabelsFromResponse(res)
+	labels, err := l.getLabelsFromResponse(res)
 	if err != nil {
 		return false, err
 	}
 
-	_, ok := labels[lc.key]
+	_, ok := labels[l.Key()]
 	return ok, nil
 }

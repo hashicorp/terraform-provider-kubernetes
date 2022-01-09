@@ -58,16 +58,11 @@ func newPatchClient(getFn func(key string) interface{}, client dynamic.Interface
 		return nil, fmt.Errorf("unable to extract name")
 	}
 
-	apiPrefix := "apis"
-	if apiVersion == "v1" {
-		apiPrefix = "api"
-	}
-
-	apiPath := fmt.Sprintf("/%s/%s/%s/%s", apiPrefix, apiVersion, kind, name)
+	id := fmt.Sprintf("%s/%s/%s", apiVersion, kind, name)
 	if namespaceScoped {
-		apiPath = fmt.Sprintf("/%s/%s/namespaces/%s/%s/%s", apiPrefix, apiVersion, namespace, kind, name)
+		id = fmt.Sprintf("%s/%s/%s/%s", apiVersion, namespace, kind, name)
 	}
-	apiPath = strings.ToLower(apiPath)
+	id = strings.ToLower(id)
 
 	gvk := schema.FromAPIVersionAndKind(apiVersion, kind)
 	gvr := schema.GroupVersionResource{
@@ -84,9 +79,8 @@ func newPatchClient(getFn func(key string) interface{}, client dynamic.Interface
 	return &patchClient{
 		client:    resourceClient,
 		name:      name,
-		apiPath:   apiPath,
 		patchPath: patchPath,
-		id:        apiPath,
+		id:        id,
 		key:       key,
 		value:     value,
 	}, nil

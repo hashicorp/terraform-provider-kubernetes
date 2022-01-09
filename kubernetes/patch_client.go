@@ -23,7 +23,7 @@ type patchClient struct {
 	patchBytes []byte
 }
 
-func newDynamicInterfaceFromMeta(meta interface{}) (dynamic.Interface, error) {
+func newDynamicClientFromMeta(meta interface{}) (dynamic.Interface, error) {
 	kc, ok := meta.(kubeClientsets)
 	if !ok {
 		return nil, fmt.Errorf("unable to typecast meta to kubeClientsets")

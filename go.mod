@@ -80,6 +80,9 @@ replace (
 	github.com/go-openapi/spec => github.com/go-openapi/spec v0.19.9
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.21.7
 	k8s.io/client-go => k8s.io/client-go v0.21.7
+	k8s.io/client-go/dynamic => k8s.io/client-go/dynamic v0.21.7
+	k8s.io/client-go/dynamic/fake => k8s.io/client-go/dynamic/fake v0.21.7
+	k8s.io/client-go/testing => k8s.io/client-go/testing v0.21.7
 	sigs.k8s.io/kustomize/pkg/transformers => ./vendor/k8s.io/cli-runtime/pkg/kustomize/k8sdeps/transformer
 	sigs.k8s.io/kustomize/pkg/transformers/config => ./vendor/k8s.io/cli-runtime/pkg/kustomize/k8sdeps/transformer/config
 )

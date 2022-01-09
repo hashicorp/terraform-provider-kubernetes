@@ -6,13 +6,15 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	pkgApi "k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	"k8s.io/client-go/dynamic"
 )
 
 type patchClient struct {
-	kubeClient *kubernetes.Clientset
+	client     dynamic.ResourceInterface
+	name       string
 	apiPath    string
 	patchPath  string
 	id         string
@@ -21,7 +23,16 @@ type patchClient struct {
 	patchBytes []byte
 }
 
-func newPatchClient(getFn func(key string) interface{}, kubeClient *kubernetes.Clientset, patchPath, key, value string) (*patchClient, error) {
+func newDynamicInterfaceFromMeta(meta interface{}) (dynamic.Interface, error) {
+	kc, ok := meta.(kubeClientsets)
+	if !ok {
+		return nil, fmt.Errorf("unable to typecast meta to kubeClientsets")
+	}
+
+	return dynamic.NewForConfig(kc.config)
+}
+
+func newPatchClient(getFn func(key string) interface{}, client dynamic.Interface, patchPath, key, value string) (*patchClient, error) {
 	apiVersion, ok := getFn("api_version").(string)
 	if !ok || apiVersion == "" {
 		return nil, fmt.Errorf("unable to extract api_version")
@@ -58,13 +69,26 @@ func newPatchClient(getFn func(key string) interface{}, kubeClient *kubernetes.C
 	}
 	apiPath = strings.ToLower(apiPath)
 
+	gvk := schema.FromAPIVersionAndKind(apiVersion, kind)
+	gvr := schema.GroupVersionResource{
+		Group:    strings.ToLower(gvk.Group),
+		Version:  strings.ToLower(gvk.Version),
+		Resource: strings.ToLower(gvk.Kind),
+	}
+
+	resourceClient := client.Resource(gvr).Namespace(namespace)
+	if !namespaceScoped {
+		resourceClient = client.Resource(gvr)
+	}
+
 	return &patchClient{
-		kubeClient: kubeClient,
-		apiPath:    apiPath,
-		patchPath:  patchPath,
-		id:         apiPath,
-		key:        key,
-		value:      value,
+		client:    resourceClient,
+		name:      name,
+		apiPath:   apiPath,
+		patchPath: patchPath,
+		id:        apiPath,
+		key:       key,
+		value:     value,
 	}, nil
 }
 
@@ -78,64 +102,52 @@ func (p *patchClient) newPatch(op PatchOperation) ([]byte, error) {
 	return patchBytes, nil
 }
 
-func (p *patchClient) Create(ctx context.Context) (rest.Result, error) {
-	patch := &AddOperation{
-		Path:  p.patchPath,
-		Value: p.value,
-	}
-	body, err := p.newPatch(patch)
+func (p *patchClient) Create(ctx context.Context) (*unstructured.Unstructured, error) {
+	body, err := p.newPatch(&AddOperation{Path: p.patchPath, Value: p.value})
 	if err != nil {
-		return rest.Result{}, err
+		return nil, err
 	}
-	req := p.kubeClient.RESTClient().Patch(pkgApi.JSONPatchType).Body(body).AbsPath(p.apiPath)
-	res := req.Do(ctx)
-	if res.Error() != nil {
-		return rest.Result{}, res.Error()
+
+	res, err := p.client.Patch(ctx, p.name, pkgApi.JSONPatchType, body, metav1.PatchOptions{})
+	if err != nil {
+		return nil, err
 	}
 
 	return res, nil
 }
 
-func (p *patchClient) Update(ctx context.Context) (rest.Result, error) {
-	patch := &ReplaceOperation{
-		Path:  p.patchPath,
-		Value: p.value,
-	}
-	body, err := p.newPatch(patch)
+func (p *patchClient) Update(ctx context.Context) (*unstructured.Unstructured, error) {
+	body, err := p.newPatch(&ReplaceOperation{Path: p.patchPath, Value: p.value})
 	if err != nil {
-		return rest.Result{}, err
+		return nil, err
 	}
-	req := p.kubeClient.RESTClient().Patch(pkgApi.JSONPatchType).Body(body).AbsPath(p.apiPath)
-	res := req.Do(ctx)
-	if res.Error() != nil {
-		return rest.Result{}, res.Error()
+
+	res, err := p.client.Patch(ctx, p.name, pkgApi.JSONPatchType, body, metav1.PatchOptions{})
+	if err != nil {
+		return nil, err
 	}
 
 	return res, nil
 }
 
-func (p *patchClient) Delete(ctx context.Context) (rest.Result, error) {
-	patch := &RemoveOperation{
-		Path: p.patchPath,
-	}
-	body, err := p.newPatch(patch)
+func (p *patchClient) Delete(ctx context.Context) (*unstructured.Unstructured, error) {
+	body, err := p.newPatch(&RemoveOperation{Path: p.patchPath})
 	if err != nil {
-		return rest.Result{}, err
+		return nil, err
 	}
-	req := p.kubeClient.RESTClient().Patch(pkgApi.JSONPatchType).Body(body).AbsPath(p.apiPath)
-	res := req.Do(ctx)
-	if res.Error() != nil {
-		return rest.Result{}, res.Error()
+
+	res, err := p.client.Patch(ctx, p.name, pkgApi.JSONPatchType, body, metav1.PatchOptions{})
+	if err != nil {
+		return nil, err
 	}
 
 	return res, nil
 }
 
-func (p *patchClient) ReadResource(ctx context.Context) (rest.Result, error) {
-	req := p.kubeClient.RESTClient().Get().AbsPath(p.apiPath)
-	res := req.Do(ctx)
-	if res.Error() != nil {
-		return rest.Result{}, res.Error()
+func (p *patchClient) ReadResource(ctx context.Context) (*unstructured.Unstructured, error) {
+	res, err := p.client.Get(ctx, p.name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
 	}
 
 	return res, nil
@@ -145,7 +157,7 @@ type labelClient struct {
 	patchClient *patchClient
 }
 
-func newLabelClient(getFn func(key string) interface{}, kubeClient *kubernetes.Clientset) (*labelClient, error) {
+func newLabelClient(getFn func(key string) interface{}, client dynamic.Interface) (*labelClient, error) {
 	key, ok := getFn("label_key").(string)
 	if !ok || key == "" {
 		return nil, fmt.Errorf("unable to extract label_key")
@@ -158,7 +170,7 @@ func newLabelClient(getFn func(key string) interface{}, kubeClient *kubernetes.C
 
 	patchPath := fmt.Sprintf("/metadata/labels/%s", key)
 
-	patchClient, err := newPatchClient(getFn, kubeClient, patchPath, key, value)
+	patchClient, err := newPatchClient(getFn, client, patchPath, key, value)
 	if err != nil {
 		return nil, err
 	}
@@ -168,21 +180,8 @@ func newLabelClient(getFn func(key string) interface{}, kubeClient *kubernetes.C
 	}, nil
 }
 
-func (l *labelClient) getLabelsFromResponse(res rest.Result) (map[string]string, error) {
-	obj := metav1.PartialObjectMetadata{}
-	err := res.Into(&obj)
-	if err != nil {
-		return nil, err
-	}
-
-	return obj.Labels, nil
-}
-
-func (l *labelClient) getLabelValueFromResponse(res rest.Result) (string, error) {
-	labels, err := l.getLabelsFromResponse(res)
-	if err != nil {
-		return "", err
-	}
+func (l *labelClient) getLabelValueFromResponse(res *unstructured.Unstructured) (string, error) {
+	labels := res.GetLabels()
 
 	value, ok := labels[l.patchClient.key]
 	if !ok {
@@ -207,7 +206,7 @@ func (l *labelClient) Delete(ctx context.Context) error {
 	return err
 }
 
-func (l *labelClient) ReadResource(ctx context.Context) (rest.Result, error) {
+func (l *labelClient) ReadResource(ctx context.Context) (*unstructured.Unstructured, error) {
 	return l.patchClient.ReadResource(ctx)
 }
 

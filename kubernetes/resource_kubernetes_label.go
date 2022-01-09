@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -77,12 +78,12 @@ func resourceKubernetesLabel() *schema.Resource {
 }
 
 func resourceKubernetesLabelCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return diag.FromErr(err)
+	kc, ok := meta.(kubeClientsets)
+	if !ok {
+		return diag.Errorf("unable to typecast meta to kubeClientsets")
 	}
 
-	l, err := newLabelClient(d.Get, conn)
+	l, err := newLabelClient(d.Get, kc.config)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -110,12 +111,12 @@ func resourceKubernetesLabelRead(ctx context.Context, d *schema.ResourceData, me
 		return diag.Diagnostics{}
 	}
 
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return diag.FromErr(err)
+	kc, ok := meta.(kubeClientsets)
+	if !ok {
+		return diag.Errorf("unable to typecast meta to kubeClientsets")
 	}
 
-	l, err := newLabelClient(d.Get, conn)
+	l, err := newLabelClient(d.Get, kc.config)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -136,12 +137,12 @@ func resourceKubernetesLabelRead(ctx context.Context, d *schema.ResourceData, me
 }
 
 func resourceKubernetesLabelUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return diag.FromErr(err)
+	kc, ok := meta.(kubeClientsets)
+	if !ok {
+		return diag.Errorf("unable to typecast meta to kubeClientsets")
 	}
 
-	l, err := newLabelClient(d.Get, conn)
+	l, err := newLabelClient(d.Get, kc.config)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -160,12 +161,12 @@ func resourceKubernetesLabelUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceKubernetesLabelDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return diag.FromErr(err)
+	kc, ok := meta.(kubeClientsets)
+	if !ok {
+		return diag.Errorf("unable to typecast meta to kubeClientsets")
 	}
 
-	l, err := newLabelClient(d.Get, conn)
+	l, err := newLabelClient(d.Get, kc.config)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -184,12 +185,12 @@ func resourceKubernetesLabelDelete(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceKubernetesLabelExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
+	kc, ok := meta.(kubeClientsets)
+	if !ok {
+		return false, fmt.Errorf("unable to typecast meta to kubeClientsets")
 	}
 
-	l, err := newLabelClient(d.Get, conn)
+	l, err := newLabelClient(d.Get, kc.config)
 	if err != nil {
 		return false, err
 	}
@@ -202,11 +203,7 @@ func resourceKubernetesLabelExists(ctx context.Context, d *schema.ResourceData, 
 		return false, err
 	}
 
-	labels, err := l.getLabelsFromResponse(res)
-	if err != nil {
-		return false, err
-	}
-
-	_, ok := labels[l.Key()]
+	labels := res.GetLabels()
+	_, ok = labels[l.Key()]
 	return ok, nil
 }

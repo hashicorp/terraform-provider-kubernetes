@@ -43,9 +43,31 @@ func newPatchClient(getFn func(key string) interface{}, client dynamic.Interface
 		return nil, fmt.Errorf("unable to extract kind")
 	}
 
-	namespaceScoped, ok := getFn("namespace_scoped").(bool)
-	if !ok {
-		return nil, fmt.Errorf("unable to extract namespace_scoped")
+	getBool := func(input interface{}) (bool, error) {
+		vb, ok := input.(bool)
+		if ok {
+			return vb, nil
+		}
+
+		vs, ok := input.(string)
+		if !ok {
+			return false, fmt.Errorf("input is neither bool nor string")
+		}
+
+		if strings.ToLower(vs) == "true" {
+			return true, nil
+		}
+
+		if strings.ToLower(vs) == "false" {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("input not 'true' or 'false'")
+	}
+
+	namespaceScoped, err := getBool(getFn("namespace_scoped"))
+	if err != nil {
+		return nil, fmt.Errorf("unable to get bool from namespace_scoped: %w", err)
 	}
 
 	namespace, ok := getFn("namespace").(string)

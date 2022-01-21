@@ -42,6 +42,11 @@ func NewSubsystem(ctx context.Context, subsystem string, options ...logging.Opti
 func SubsystemWith(ctx context.Context, subsystem, key string, value interface{}) context.Context {
 	logger := logging.GetSDKSubsystemLogger(ctx, subsystem)
 	if logger == nil {
+		if logging.GetSDKRootLogger(ctx) == nil {
+			// logging isn't set up, nothing we can do, just silently fail
+			// this should basically never happen in production
+			return ctx
+		}
 		// create a new logger if one doesn't exist
 		logger = logging.GetSDKSubsystemLogger(NewSubsystem(ctx, subsystem), subsystem).With("new_logger_warning", logging.NewSDKSubsystemLoggerWarning)
 	}
@@ -54,6 +59,11 @@ func SubsystemWith(ctx context.Context, subsystem, key string, value interface{}
 func SubsystemTrace(ctx context.Context, subsystem, msg string, args ...interface{}) {
 	logger := logging.GetSDKSubsystemLogger(ctx, subsystem)
 	if logger == nil {
+		if logging.GetSDKRootLogger(ctx) == nil {
+			// logging isn't set up, nothing we can do, just silently fail
+			// this should basically never happen in production
+			return
+		}
 		// create a new logger if one doesn't exist
 		logger = logging.GetSDKSubsystemLogger(NewSubsystem(ctx, subsystem), subsystem).With("new_logger_warning", logging.NewSDKSubsystemLoggerWarning)
 	}
@@ -66,6 +76,11 @@ func SubsystemTrace(ctx context.Context, subsystem, msg string, args ...interfac
 func SubsystemDebug(ctx context.Context, subsystem, msg string, args ...interface{}) {
 	logger := logging.GetSDKSubsystemLogger(ctx, subsystem)
 	if logger == nil {
+		if logging.GetSDKRootLogger(ctx) == nil {
+			// logging isn't set up, nothing we can do, just silently fail
+			// this should basically never happen in production
+			return
+		}
 		// create a new logger if one doesn't exist
 		logger = logging.GetSDKSubsystemLogger(NewSubsystem(ctx, subsystem), subsystem).With("new_logger_warning", logging.NewSDKSubsystemLoggerWarning)
 	}
@@ -78,6 +93,11 @@ func SubsystemDebug(ctx context.Context, subsystem, msg string, args ...interfac
 func SubsystemInfo(ctx context.Context, subsystem, msg string, args ...interface{}) {
 	logger := logging.GetSDKSubsystemLogger(ctx, subsystem)
 	if logger == nil {
+		if logging.GetSDKRootLogger(ctx) == nil {
+			// logging isn't set up, nothing we can do, just silently fail
+			// this should basically never happen in production
+			return
+		}
 		// create a new logger if one doesn't exist
 		logger = logging.GetSDKSubsystemLogger(NewSubsystem(ctx, subsystem), subsystem).With("new_logger_warning", logging.NewSDKSubsystemLoggerWarning)
 	}
@@ -90,6 +110,11 @@ func SubsystemInfo(ctx context.Context, subsystem, msg string, args ...interface
 func SubsystemWarn(ctx context.Context, subsystem, msg string, args ...interface{}) {
 	logger := logging.GetSDKSubsystemLogger(ctx, subsystem)
 	if logger == nil {
+		if logging.GetSDKRootLogger(ctx) == nil {
+			// logging isn't set up, nothing we can do, just silently fail
+			// this should basically never happen in production
+			return
+		}
 		// create a new logger if one doesn't exist
 		logger = logging.GetSDKSubsystemLogger(NewSubsystem(ctx, subsystem), subsystem).With("new_logger_warning", logging.NewSDKSubsystemLoggerWarning)
 	}
@@ -102,6 +127,11 @@ func SubsystemWarn(ctx context.Context, subsystem, msg string, args ...interface
 func SubsystemError(ctx context.Context, subsystem, msg string, args ...interface{}) {
 	logger := logging.GetSDKSubsystemLogger(ctx, subsystem)
 	if logger == nil {
+		if logging.GetSDKRootLogger(ctx) == nil {
+			// logging isn't set up, nothing we can do, just silently fail
+			// this should basically never happen in production
+			return
+		}
 		// create a new logger if one doesn't exist
 		logger = logging.GetSDKSubsystemLogger(NewSubsystem(ctx, subsystem), subsystem).With("new_logger_warning", logging.NewSDKSubsystemLoggerWarning)
 	}

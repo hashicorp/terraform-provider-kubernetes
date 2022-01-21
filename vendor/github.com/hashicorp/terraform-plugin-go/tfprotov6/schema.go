@@ -260,14 +260,6 @@ type SchemaObject struct {
 	Attributes []*SchemaAttribute
 
 	Nesting SchemaObjectNestingMode
-
-	// MinItems is the minimum number of instances of this type that a
-	// user must specify or Terraform will return an error.
-	MinItems int64
-
-	// MaxItems is the maximum number of instances of this type that a
-	// user may specify before Terraform returns an error.
-	MaxItems int64
 }
 
 // SchemaObjectNestingMode indicates the nesting mode for

@@ -160,7 +160,7 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 			if err != nil {
 				return nil, err
 			}
-			t = tftypes.Map{AttributeType: pt}
+			t = tftypes.Map{ElementType: pt}
 			if herr == nil {
 				typeCache.Store(h, t)
 			}

@@ -15,24 +15,21 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-hclog v0.16.0
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/hashicorp/go-plugin v1.4.1
-	github.com/hashicorp/go-uuid v1.0.2 // indirect
+	github.com/hashicorp/go-hclog v1.1.0
+	github.com/hashicorp/go-plugin v1.4.3
 	github.com/hashicorp/go-version v1.3.0
 	github.com/hashicorp/hcl/v2 v2.9.1
-	github.com/hashicorp/terraform-exec v0.14.0
-	github.com/hashicorp/terraform-json v0.12.0
-	github.com/hashicorp/terraform-plugin-go v0.3.1
+	github.com/hashicorp/terraform-exec v0.15.0
+	github.com/hashicorp/terraform-json v0.13.0
+	github.com/hashicorp/terraform-plugin-go v0.7.0
 	github.com/hashicorp/terraform-plugin-mux v0.2.0
-	github.com/hashicorp/terraform-plugin-sdk/v2 v2.7.0
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.10.0
 	github.com/hashicorp/terraform-plugin-test/v2 v2.2.1
 	github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864 // indirect
 	github.com/jinzhu/copier v0.2.9
 	github.com/klauspost/compress v1.12.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/hashstructure v1.1.0
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
@@ -43,14 +40,14 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/xlab/treeprint v1.1.0 // indirect
-	github.com/zclconf/go-cty v1.8.4
+	github.com/zclconf/go-cty v1.9.1
 	go.starlark.net v0.0.0-20210406145628-7a1108eaa012 // indirect
 	golang.org/x/mod v0.4.2
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5 // indirect
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c // indirect
 	golang.org/x/term v0.0.0-20210406210042-72f3dc4e9b72 // indirect
 	google.golang.org/api v0.44.0 // indirect
-	google.golang.org/grpc v1.38.0
+	google.golang.org/grpc v1.43.0
 	k8s.io/api v0.22.4
 	k8s.io/apiextensions-apiserver v0.22.4
 	k8s.io/apimachinery v0.22.4

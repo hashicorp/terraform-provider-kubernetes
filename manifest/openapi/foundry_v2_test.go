@@ -20,7 +20,7 @@ type testSamples map[string]testSample
 
 var objectMetaType = tftypes.Object{
 	AttributeTypes: map[string]tftypes.Type{
-		"annotations":                tftypes.Map{AttributeType: tftypes.String},
+		"annotations":                tftypes.Map{ElementType: tftypes.String},
 		"clusterName":                tftypes.String,
 		"creationTimestamp":          tftypes.String,
 		"deletionGracePeriodSeconds": tftypes.Number,
@@ -28,7 +28,7 @@ var objectMetaType = tftypes.Object{
 		"finalizers":                 tftypes.List{ElementType: tftypes.String},
 		"generateName":               tftypes.String,
 		"generation":                 tftypes.Number,
-		"labels":                     tftypes.Map{AttributeType: tftypes.String},
+		"labels":                     tftypes.Map{ElementType: tftypes.String},
 		"managedFields": tftypes.List{
 			ElementType: tftypes.Object{
 				AttributeTypes: map[string]tftypes.Type{
@@ -70,8 +70,8 @@ var samples = testSamples{
 				"kind":       tftypes.String,
 				"metadata":   objectMetaType,
 				"immutable":  tftypes.Bool,
-				"data":       tftypes.Map{AttributeType: tftypes.String},
-				"binaryData": tftypes.Map{AttributeType: tftypes.String},
+				"data":       tftypes.Map{ElementType: tftypes.String},
+				"binaryData": tftypes.Map{ElementType: tftypes.String},
 			},
 		},
 	},
@@ -105,7 +105,7 @@ var samples = testSamples{
 							},
 						},
 						"publishNotReadyAddresses": tftypes.Bool,
-						"selector":                 tftypes.Map{AttributeType: tftypes.String},
+						"selector":                 tftypes.Map{ElementType: tftypes.String},
 						"sessionAffinity":          tftypes.String,
 						"sessionAffinityConfig": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
 							"clientIP": tftypes.Object{

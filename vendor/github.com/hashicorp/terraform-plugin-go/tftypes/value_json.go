@@ -53,7 +53,7 @@ func jsonUnmarshal(buf []byte, typ Type, p *AttributePath) (Value, error) {
 		return jsonUnmarshalSet(buf, typ.(Set).ElementType, p)
 
 	case typ.Is(Map{}):
-		return jsonUnmarshalMap(buf, typ.(Map).AttributeType, p)
+		return jsonUnmarshalMap(buf, typ.(Map).ElementType, p)
 	case typ.Is(Tuple{}):
 		return jsonUnmarshalTuple(buf, typ.(Tuple).ElementTypes, p)
 	case typ.Is(Object{}):
@@ -216,7 +216,7 @@ func jsonUnmarshalList(buf []byte, elementType Type, p *AttributePath) (Value, e
 	// distinction, so we'll allow it.
 	vals := []Value{}
 
-	var idx int64
+	var idx int
 	for dec.More() {
 		innerPath := p.WithElementKeyInt(idx)
 		// update the index
@@ -356,7 +356,7 @@ func jsonUnmarshalMap(buf []byte, attrType Type, p *AttributePath) (Value, error
 	}
 
 	return NewValue(Map{
-		AttributeType: attrType,
+		ElementType: attrType,
 	}, vals), nil
 }
 
@@ -383,9 +383,9 @@ func jsonUnmarshalTuple(buf []byte, elementTypes []Type, p *AttributePath) (Valu
 	// distinction, so we'll allow it.
 	vals := []Value{}
 
-	var idx int64
+	var idx int
 	for dec.More() {
-		if idx >= int64(len(elementTypes)) {
+		if idx >= len(elementTypes) {
 			return Value{}, p.NewErrorf("too many tuple elements (only have types for %d)", len(elementTypes))
 		}
 

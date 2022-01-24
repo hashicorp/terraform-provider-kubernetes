@@ -44,7 +44,7 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 	waitForType := tftypes.Object{
 		AttributeTypes: map[string]tftypes.Type{
 			"fields": tftypes.Map{
-				AttributeType: tftypes.String,
+				ElementType: tftypes.String,
 			},
 		},
 	}

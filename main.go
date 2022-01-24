@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
-	tf5server "github.com/hashicorp/terraform-plugin-go/tfprotov5/server"
+	tf5server "github.com/hashicorp/terraform-plugin-go/tfprotov5/tf5server"
 	tfmux "github.com/hashicorp/terraform-plugin-mux"
 
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"

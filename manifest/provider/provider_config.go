@@ -195,7 +195,7 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 						},
 						{
 							Name:            "env",
-							Type:            tftypes.Map{AttributeType: tftypes.String},
+							Type:            tftypes.Map{ElementType: tftypes.String},
 							Required:        false,
 							Optional:        true,
 							Computed:        false,

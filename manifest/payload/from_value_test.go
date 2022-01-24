@@ -33,7 +33,7 @@ func TestFromTFValue(t *testing.T) {
 			Out: []interface{}{"test1", "test2"},
 		},
 		"map-of-strings": {
-			In: tftypes.NewValue(tftypes.Map{AttributeType: tftypes.String}, map[string]tftypes.Value{
+			In: tftypes.NewValue(tftypes.Map{ElementType: tftypes.String}, map[string]tftypes.Value{
 				"foo": tftypes.NewValue(tftypes.String, "test1"),
 				"bar": tftypes.NewValue(tftypes.String, "test2"),
 			}),

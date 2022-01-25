@@ -87,10 +87,7 @@ func (ps *RawProviderServer) TFTypeFromOpenAPI(ctx context.Context, gvk schema.G
 		return nil, fmt.Errorf("cannot get OpenAPI foundry: %s", err)
 	}
 	// check if GVK is from a CRD
-	crdSchema, err := ps.lookUpGVKinCRDs(ctx, gvk)
-	if err != nil {
-		return nil, fmt.Errorf("failed to look up GVK [%s] among available CRDs: %s", gvk.String(), err)
-	}
+	crdSchema, err_lookup_crd := ps.lookUpGVKinCRDs(ctx, gvk)
 	if crdSchema != nil {
 		js, err := json.Marshal(openapi.SchemaToSpec("", crdSchema.(map[string]interface{})))
 		if err != nil {
@@ -108,6 +105,9 @@ func (ps *RawProviderServer) TFTypeFromOpenAPI(ctx context.Context, gvk schema.G
 	if tsch == nil {
 		// Not a CRD type - look GVK up in cluster OpenAPI spec
 		tsch, err = oapi.GetTypeByGVK(gvk)
+		if err != nil && err_lookup_crd != nil {
+			return nil, fmt.Errorf("failed to look up GVK [%s] among available CRDs...: <%s> ... and from OpenAPI: <%s>", gvk.String(), err_lookup_crd, err)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("cannot get resource type from OpenAPI (%s): %s", gvk.String(), err)
 		}

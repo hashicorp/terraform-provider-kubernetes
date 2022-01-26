@@ -11,6 +11,7 @@ import (
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
 func resourceKubernetesDefaultServiceAccount() *schema.Resource {
@@ -57,6 +58,25 @@ func resourceKubernetesDefaultServiceAccountCreate(ctx context.Context, d *schem
 
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	if v, ok := d.GetOkExists("automount_service_account_token"); ok {
+		ops := patchMetadata("metadata.0.", "/metadata/", d)
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/automountServiceAccountToken",
+			Value: v.(bool),
+		})
+
+		data, err := ops.MarshalJSON()
+		if err != nil {
+			return diag.Errorf("Failed to marshal update operations: %s", err)
+		}
+		log.Printf("[INFO] Updating default service account %q: %v", metadata.Name, string(data))
+		out, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Patch(ctx, metadata.Name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
+		if err != nil {
+			return diag.Errorf("Failed to update default service account: %s", err)
+		}
+		log.Printf("[INFO] Submitted updated default service account: %#v", out)
 	}
 
 	d.SetId(buildId(metadata))

@@ -24,9 +24,15 @@ func Serve(ctx context.Context, logger hclog.Logger) error {
 // Provider
 func Provider() func() tfprotov5.ProviderServer {
 	var logLevel string
-	logLevel, ok := os.LookupEnv("TF_LOG")
+	var ok bool = false
+	for _, ev := range []string{"TF_LOG_PROVIDER_KUBERNETES", "TF_LOG_PROVIDER", "TF_LOG"} {
+		logLevel, ok = os.LookupEnv(ev)
+		if ok {
+			break
+		}
+	}
 	if !ok {
-		logLevel = "info"
+		logLevel = "off"
 	}
 
 	return func() tfprotov5.ProviderServer {

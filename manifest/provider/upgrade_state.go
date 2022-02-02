@@ -27,6 +27,24 @@ func (s *RawProviderServer) UpgradeResourceState(ctx context.Context, req *tfpro
 		return resp, nil
 	}
 
+	// test if credentials are valid - we're going to need them further down
+	// if no credentials found, just loop the current state back in
+	// we do this to work around https://github.com/hashicorp/terraform/issues/30460
+	cd := s.checkValidCredentials(ctx)
+	if len(cd) > 0 {
+		us, err := tfprotov5.NewDynamicValue(rt, rv)
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Failed to encode new state during upgrade",
+				Detail:   err.Error(),
+			})
+		}
+		resp.UpgradedState = &us
+
+		return resp, nil
+	}
+
 	var cs map[string]tftypes.Value
 	err = rv.As(&cs)
 	if err != nil {

@@ -20,6 +20,7 @@ type sampleInType struct {
 func TestToTFValue(t *testing.T) {
 	samples := map[string]struct {
 		In  sampleInType
+		Th  map[string]string
 		Out tftypes.Value
 		Err error
 	}{
@@ -267,7 +268,7 @@ func TestToTFValue(t *testing.T) {
 
 	for name, s := range samples {
 		t.Run(name, func(t *testing.T) {
-			r, err := ToTFValue(s.In.v, s.In.t, map[string]string{}, tftypes.NewAttributePath())
+			r, err := ToTFValue(s.In.v, s.In.t, s.Th, tftypes.NewAttributePath())
 			if err != nil {
 				if s.Err == nil {
 					t.Logf("Unexpected error received for sample '%s': %s", name, err)

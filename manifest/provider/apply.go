@@ -409,7 +409,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 
 		wf, ok := plannedStateVal["wait_for"]
 		if ok {
-			err = s.waitForCompletion(ctxDeadline, wf, rs, rname, wt)
+			err = s.waitForCompletion(ctxDeadline, wf, rs, rname, wt, th)
 			if err != nil {
 				if err == context.DeadlineExceeded {
 					resp.Diagnostics = append(resp.Diagnostics,

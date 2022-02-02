@@ -19,12 +19,12 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-func (s *RawProviderServer) waitForCompletion(ctx context.Context, waitForBlock tftypes.Value, rs dynamic.ResourceInterface, rname string, rtype tftypes.Type) error {
+func (s *RawProviderServer) waitForCompletion(ctx context.Context, waitForBlock tftypes.Value, rs dynamic.ResourceInterface, rname string, rtype tftypes.Type, th map[string]string) error {
 	if waitForBlock.IsNull() || !waitForBlock.IsKnown() {
 		return nil
 	}
 
-	waiter, err := NewResourceWaiter(rs, rname, rtype, waitForBlock, s.logger)
+	waiter, err := NewResourceWaiter(rs, rname, rtype, th, waitForBlock, s.logger)
 	if err != nil {
 		return err
 	}
@@ -37,7 +37,7 @@ type Waiter interface {
 }
 
 // NewResourceWaiter constructs an appropriate Waiter using the supplied waitForBlock configuration
-func NewResourceWaiter(resource dynamic.ResourceInterface, resourceName string, resourceType tftypes.Type, waitForBlock tftypes.Value, hl hclog.Logger) (Waiter, error) {
+func NewResourceWaiter(resource dynamic.ResourceInterface, resourceName string, resourceType tftypes.Type, th map[string]string, waitForBlock tftypes.Value, hl hclog.Logger) (Waiter, error) {
 	var waitForBlockVal map[string]tftypes.Value
 	err := waitForBlock.As(&waitForBlockVal)
 	if err != nil {
@@ -84,6 +84,7 @@ func NewResourceWaiter(resource dynamic.ResourceInterface, resourceName string, 
 		resource,
 		resourceName,
 		resourceType,
+		th,
 		matchers,
 		hl,
 	}, nil
@@ -102,6 +103,7 @@ type FieldWaiter struct {
 	resource      dynamic.ResourceInterface
 	resourceName  string
 	resourceType  tftypes.Type
+	typeHints     map[string]string
 	fieldMatchers []FieldMatcher
 	logger        hclog.Logger
 }
@@ -132,7 +134,7 @@ func (w *FieldWaiter) Wait(ctx context.Context) error {
 
 		w.logger.Trace("[ApplyResourceChange][Wait]", "API Response", resObj)
 
-		obj, err := payload.ToTFValue(resObj, w.resourceType, map[string]string{}, tftypes.NewAttributePath())
+		obj, err := payload.ToTFValue(resObj, w.resourceType, w.typeHints, tftypes.NewAttributePath())
 		if err != nil {
 			return err
 		}

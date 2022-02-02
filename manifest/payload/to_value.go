@@ -224,7 +224,7 @@ func mapToTFMapValue(in map[string]interface{}, st tftypes.Type, th map[string]s
 	im := make(map[string]tftypes.Value)
 	var oType tftypes.Type
 	for k, v := range in {
-		eap := at.WithAttributeName(k)
+		eap := at.WithElementKeyString(k)
 		mv, err := ToTFValue(v, st.(tftypes.Map).ElementType, th, eap)
 		if err != nil {
 			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert map element '%s' to '%s': err", eap, st.(tftypes.Map).ElementType.String(), err)

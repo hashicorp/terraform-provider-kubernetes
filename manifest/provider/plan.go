@@ -112,6 +112,11 @@ func (s *RawProviderServer) getFieldManagerConfig(v map[string]tftypes.Value) (s
 func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfprotov5.PlanResourceChangeRequest) (*tfprotov5.PlanResourceChangeResponse, error) {
 	resp := &tfprotov5.PlanResourceChangeResponse{}
 
+	resp.RequiresReplace = append(resp.RequiresReplace,
+		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("apiVersion"),
+		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("kind"),
+	)
+
 	execDiag := s.canExecute()
 	if len(execDiag) > 0 {
 		resp.Diagnostics = append(resp.Diagnostics, execDiag...)

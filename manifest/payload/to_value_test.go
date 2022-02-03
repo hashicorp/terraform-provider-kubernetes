@@ -104,11 +104,32 @@ func TestToTFValue(t *testing.T) {
 			Out: tftypes.NewValue(tftypes.Number, new(big.Float).SetFloat64(100)),
 			Err: nil,
 		},
+		"int-or-string-to-int": {
+			In:  sampleInType{42, tftypes.String},
+			Out: tftypes.NewValue(tftypes.String, "42"),
+			Th:  map[string]string{tftypes.NewAttributePath().String(): "io.k8s.apimachinery.pkg.util.intstr.IntOrString"},
+			Err: nil,
+		},
+		"int-or-string-to-string": {
+			In:  sampleInType{"foobar", tftypes.String},
+			Out: tftypes.NewValue(tftypes.String, "foobar"),
+			Th:  map[string]string{tftypes.NewAttributePath().String(): "io.k8s.apimachinery.pkg.util.intstr.IntOrString"},
+			Err: nil,
+		},
 		"list": {
 			In: sampleInType{[]interface{}{"test1", "test2"}, tftypes.List{ElementType: tftypes.String}},
 			Out: tftypes.NewValue(tftypes.List{ElementType: tftypes.String}, []tftypes.Value{
 				tftypes.NewValue(tftypes.String, "test1"),
 				tftypes.NewValue(tftypes.String, "test2"),
+			}),
+			Err: nil,
+		},
+		"list-int-or-string": {
+			In: sampleInType{[]interface{}{"test1", 2}, tftypes.List{ElementType: tftypes.String}},
+			Th: map[string]string{tftypes.NewAttributePath().WithElementKeyInt(-1).String(): "io.k8s.apimachinery.pkg.util.intstr.IntOrString"},
+			Out: tftypes.NewValue(tftypes.List{ElementType: tftypes.String}, []tftypes.Value{
+				tftypes.NewValue(tftypes.String, "test1"),
+				tftypes.NewValue(tftypes.String, "2"),
 			}),
 			Err: nil,
 		},
@@ -170,6 +191,32 @@ func TestToTFValue(t *testing.T) {
 				}},
 				map[string]tftypes.Value{
 					"count": tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(42)),
+					"image": tftypes.NewValue(tftypes.String, "25%"),
+				}),
+			Err: nil,
+		},
+		"map-int-or-string": {
+			In: sampleInType{
+				v: map[string]interface{}{
+					"count": 42,
+					"image": "25%",
+				},
+				t: tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"count": tftypes.String,
+					"image": tftypes.String,
+				}},
+			},
+			Th: map[string]string{
+				tftypes.NewAttributePath().WithAttributeName("count").String(): "io.k8s.apimachinery.pkg.util.intstr.IntOrString",
+				tftypes.NewAttributePath().WithAttributeName("image").String(): "io.k8s.apimachinery.pkg.util.intstr.IntOrString",
+			},
+			Out: tftypes.NewValue(
+				tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"count": tftypes.String,
+					"image": tftypes.String,
+				}},
+				map[string]tftypes.Value{
+					"count": tftypes.NewValue(tftypes.String, "42"),
 					"image": tftypes.NewValue(tftypes.String, "25%"),
 				}),
 			Err: nil,

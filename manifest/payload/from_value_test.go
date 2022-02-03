@@ -11,6 +11,7 @@ import (
 func TestFromTFValue(t *testing.T) {
 	samples := map[string]struct {
 		In  tftypes.Value
+		Th  map[string]string
 		Out interface{}
 	}{
 		"string-primitive": {
@@ -24,6 +25,24 @@ func TestFromTFValue(t *testing.T) {
 		"boolean-primitive": {
 			In:  tftypes.NewValue(tftypes.Bool, true),
 			Out: true,
+		},
+		"int-or-string-into-int": {
+			In:  tftypes.NewValue(tftypes.String, "100"),
+			Th:  map[string]string{"": "io.k8s.apimachinery.pkg.util.intstr.IntOrString"},
+			Out: 100,
+		},
+		"int-or-string-into-string": {
+			In:  tftypes.NewValue(tftypes.String, "foobar"),
+			Th:  map[string]string{"": "io.k8s.apimachinery.pkg.util.intstr.IntOrString"},
+			Out: "foobar",
+		},
+		"list-of-int-string": {
+			In: tftypes.NewValue(tftypes.List{ElementType: tftypes.String}, []tftypes.Value{
+				tftypes.NewValue(tftypes.String, "foo"),
+				tftypes.NewValue(tftypes.String, "42"),
+			}),
+			Th:  map[string]string{tftypes.NewAttributePath().WithElementKeyInt(-1).String(): "io.k8s.apimachinery.pkg.util.intstr.IntOrString"},
+			Out: []interface{}{"foo", 42},
 		},
 		"list-of-strings": {
 			In: tftypes.NewValue(tftypes.List{ElementType: tftypes.String}, []tftypes.Value{
@@ -42,25 +61,40 @@ func TestFromTFValue(t *testing.T) {
 				"bar": "test2",
 			},
 		},
+		"map-of-int-or-strings": {
+			In: tftypes.NewValue(tftypes.Map{ElementType: tftypes.String}, map[string]tftypes.Value{
+				"foo": tftypes.NewValue(tftypes.String, "test1"),
+				"bar": tftypes.NewValue(tftypes.String, "42"),
+			}),
+			Th: map[string]string{tftypes.NewAttributePath().WithElementKeyString("#").String(): "io.k8s.apimachinery.pkg.util.intstr.IntOrString"},
+			Out: map[string]interface{}{
+				"foo": "test1",
+				"bar": 42,
+			},
+		},
 		"object": {
 			In: tftypes.NewValue(tftypes.Object{
 				AttributeTypes: map[string]tftypes.Type{
 					"foo":    tftypes.String,
+					"stuff":  tftypes.String,
 					"buzz":   tftypes.Number,
 					"fake":   tftypes.Bool,
 					"others": tftypes.List{ElementType: tftypes.String},
 				},
 			}, map[string]tftypes.Value{
-				"foo":  tftypes.NewValue(tftypes.String, "bar"),
-				"buzz": tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(42)),
-				"fake": tftypes.NewValue(tftypes.Bool, true),
+				"foo":   tftypes.NewValue(tftypes.String, "bar"),
+				"stuff": tftypes.NewValue(tftypes.String, "42"),
+				"buzz":  tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(42)),
+				"fake":  tftypes.NewValue(tftypes.Bool, true),
 				"others": tftypes.NewValue(tftypes.List{ElementType: tftypes.String}, []tftypes.Value{
 					tftypes.NewValue(tftypes.String, "this"),
 					tftypes.NewValue(tftypes.String, "that"),
 				}),
 			}),
+			Th: map[string]string{tftypes.NewAttributePath().WithAttributeName("stuff").String(): "io.k8s.apimachinery.pkg.util.intstr.IntOrString"},
 			Out: map[string]interface{}{
 				"foo":    "bar",
+				"stuff":  42,
 				"buzz":   int64(42),
 				"fake":   true,
 				"others": []interface{}{"this", "that"},
@@ -69,17 +103,16 @@ func TestFromTFValue(t *testing.T) {
 	}
 	for n, s := range samples {
 		t.Run(n, func(t *testing.T) {
-			th := make(map[string]string)
-			r, err := FromTFValue(s.In, th, tftypes.NewAttributePath())
+			r, err := FromTFValue(s.In, s.Th, tftypes.NewAttributePath())
 			if err != nil {
 				t.Logf("Conversion failed for sample '%s': %s", n, err)
 				t.FailNow()
 			}
 			if !reflect.DeepEqual(s.Out, r) {
 				t.Logf("Result doesn't match expectation for sample '%s'", n)
-				t.Logf("\t Sample:\t%#v", s.In)
-				t.Logf("\t Expected:\t%#v", s.Out)
-				t.Logf("\t Received:\t%#v", r)
+				t.Logf("\tSample:\t%#v", s.In)
+				t.Logf("\tExpected:\t%#v", s.Out)
+				t.Logf("\tReceived:\t%#v", r)
 				t.Fail()
 			}
 		})

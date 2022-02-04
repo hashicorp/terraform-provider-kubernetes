@@ -115,6 +115,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	resp.RequiresReplace = append(resp.RequiresReplace,
 		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("apiVersion"),
 		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("kind"),
+		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("metadata").WithAttributeName("name"),
+		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("metadata").WithAttributeName("namespace"),
 	)
 
 	execDiag := s.canExecute()

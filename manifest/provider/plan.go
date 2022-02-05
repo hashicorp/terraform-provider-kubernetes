@@ -116,7 +116,6 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("apiVersion"),
 		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("kind"),
 		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("metadata").WithAttributeName("name"),
-		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("metadata").WithAttributeName("namespace"),
 	)
 
 	execDiag := s.canExecute()
@@ -270,6 +269,21 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	if len(vdiags) > 0 {
 		resp.Diagnostics = append(resp.Diagnostics, vdiags...)
 		return resp, nil
+	}
+
+	ns, err := IsResourceNamespaced(gvk, rm)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to discover scope of resource",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+	if ns {
+		resp.RequiresReplace = append(resp.RequiresReplace,
+			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("metadata").WithAttributeName("namespace"),
+		)
 	}
 
 	// Request a complete type for the resource from the OpenAPI spec

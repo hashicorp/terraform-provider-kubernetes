@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-func (s *RawProviderServer) dryRun(ctx context.Context, obj tftypes.Value, fieldManager string, forceConflicts bool) error {
+func (s *RawProviderServer) dryRun(ctx context.Context, obj tftypes.Value, fieldManager string, forceConflicts bool, isNamespaced bool) error {
 	c, err := s.getDynamicClient()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve Kubernetes dynamic client during apply: %v", err)
@@ -22,11 +22,6 @@ func (s *RawProviderServer) dryRun(ctx context.Context, obj tftypes.Value, field
 	m, err := s.getRestMapper()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve Kubernetes RESTMapper client during apply: %v", err)
-	}
-
-	gvk, err := GVKFromTftypesObject(&obj, m)
-	if err != nil {
-		return fmt.Errorf("failed to determine resource GVK: %s", err)
 	}
 
 	minObj := morph.UnknownToNull(obj)
@@ -47,13 +42,8 @@ func (s *RawProviderServer) dryRun(ctx context.Context, obj tftypes.Value, field
 		return fmt.Errorf("failed to determine resource GVR: %s", err)
 	}
 
-	ns, err := IsResourceNamespaced(gvk, m)
-	if err != nil {
-		return fmt.Errorf("failed to discover scope of resource %q: %v", rnn, err)
-	}
-
 	var rs dynamic.ResourceInterface
-	if ns {
+	if isNamespaced {
 		rs = c.Resource(gvr).Namespace(rnamespace)
 	} else {
 		rs = c.Resource(gvr)
@@ -313,7 +303,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 			return resp, nil
 		}
 
-		err = s.dryRun(ctx, ppMan, fieldManagerName, forceConflicts)
+		err = s.dryRun(ctx, ppMan, fieldManagerName, forceConflicts, ns)
 		if err != nil {
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 				Severity: tfprotov5.DiagnosticSeverityError,

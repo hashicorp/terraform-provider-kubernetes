@@ -47,8 +47,6 @@ func NewFoundryFromSpecV2(spec []byte) (Foundry, error) {
 	return &f, nil
 }
 
-// type TypeHints map[string]string
-
 // Foundry is a mechanism to construct tftypes out of OpenAPI specifications
 type Foundry interface {
 	GetTypeByGVK(gvk schema.GroupVersionKind) (tftypes.Type, map[string]string, error)

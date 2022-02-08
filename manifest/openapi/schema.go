@@ -93,13 +93,14 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 	case "":
 		if xv, ok := elem.Extensions["x-kubernetes-int-or-string"]; ok {
 			xb, err := xv.(json.RawMessage).MarshalJSON()
-			if err == nil {
-				var x bool
-				err := json.Unmarshal(xb, &x)
-				if err == nil && x {
-					th[ap.String()] = "io.k8s.apimachinery.pkg.util.intstr.IntOrString"
-					return tftypes.String, nil
-				}
+			if err != nil {
+				return tftypes.DynamicPseudoType, nil
+			}
+			var x bool
+			err = json.Unmarshal(xb, &x)
+			if err == nil && x {
+				th[ap.String()] = "io.k8s.apimachinery.pkg.util.intstr.IntOrString"
+				return tftypes.String, nil
 			}
 		}
 		return tftypes.DynamicPseudoType, nil

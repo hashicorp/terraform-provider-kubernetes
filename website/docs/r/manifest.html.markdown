@@ -200,6 +200,7 @@ The following arguments are supported:
 #### Arguments
 
 - **rollout** (Optional) When set to `true` will wait for the resource to roll out, equivalent to `kubectl rollout status`. 
+- **conditions** (Optional) A set of conditions to wait for.
 - **fields** (Optional) A map of fields and a corresponding regular expression with a pattern to wait for. The provider will wait until the field matches the regular expression. Use `*` for any value. 
 
 ### `wait_for` (deprecated, use `wait`)

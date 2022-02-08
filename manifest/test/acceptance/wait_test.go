@@ -126,3 +126,55 @@ func TestKubernetesManifest_WaitRollout_Deployment(t *testing.T) {
 		"kubernetes_manifest.wait_for_rollout.wait.0.rollout": true,
 	})
 }
+
+func TestKubernetesManifest_WaitCondition_Pod(t *testing.T) {
+	ctx := context.Background()
+
+	name := randName()
+	namespace := randName()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
+	tf := tfhelper.RequireNewWorkingDir(t)
+	tf.SetReattachInfo(reattachInfo)
+	defer func() {
+		tf.RequireDestroy(t)
+		tf.Close()
+		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "pods", namespace, name)
+	}()
+
+	k8shelper.CreateNamespace(t, namespace)
+	defer k8shelper.DeleteResource(t, namespace, kubernetes.NewGroupVersionResource("v1", "namespaces"))
+
+	tfvars := TFVARS{
+		"namespace": namespace,
+		"name":      name,
+	}
+	tfconfig := loadTerraformConfig(t, "Wait/wait_for_conditions.tf", tfvars)
+	tf.RequireSetConfig(t, tfconfig)
+	tf.RequireInit(t)
+
+	startTime := time.Now()
+	tf.RequireApply(t)
+
+	k8shelper.AssertNamespacedResourceExists(t, "v1", "pods", namespace, name)
+
+	// NOTE We set a readinessProbe in the fixture with a delay of 10s
+	// so the apply should take at least 10 seconds to complete.
+	minDuration := time.Duration(5) * time.Second
+	applyDuration := time.Since(startTime)
+	if applyDuration < minDuration {
+		t.Fatalf("the apply should have taken at least %s", minDuration)
+	}
+
+	tfstate := tfstatehelper.NewHelper(tf.RequireState(t))
+	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
+		"kubernetes_manifest.test.wait.0.condition.0.type":   "Ready",
+		"kubernetes_manifest.test.wait.0.condition.0.status": "True",
+		"kubernetes_manifest.test.wait.0.condition.1.type":   "ContainersReady",
+		"kubernetes_manifest.test.wait.0.condition.1.status": "True",
+	})
+}

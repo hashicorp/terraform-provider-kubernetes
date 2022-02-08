@@ -76,5 +76,11 @@ func TestKubernetesManifest_CustomResource(t *testing.T) {
 		"kubernetes_manifest.test.object.metadata.namespace": namespace,
 		"kubernetes_manifest.test.object.data":               "this is a test",
 		"kubernetes_manifest.test.object.stuff.0":            map[string]interface{}{"foo": interface{}(nil)},
+		"kubernetes_manifest.test.object.limits": map[string]interface{}{
+			"foo": interface{}("bar"),
+			"baz": interface{}("42"),
+		},
+		"kubernetes_manifest.test.object.limits.foo": "bar",
+		"kubernetes_manifest.test.object.limits.baz": "42",
 	})
 }

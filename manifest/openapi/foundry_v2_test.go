@@ -12,8 +12,9 @@ import (
 )
 
 type testSample struct {
-	gvk  schema.GroupVersionKind
-	want tftypes.Type
+	gvk   schema.GroupVersionKind
+	hints map[string]string
+	want  tftypes.Type
 }
 
 type testSamples map[string]testSample
@@ -29,8 +30,8 @@ var objectMetaType = tftypes.Object{
 		"generateName":               tftypes.String,
 		"generation":                 tftypes.Number,
 		"labels":                     tftypes.Map{ElementType: tftypes.String},
-		"managedFields": tftypes.List{
-			ElementType: tftypes.Object{
+		"managedFields": tftypes.Tuple{
+			ElementTypes: []tftypes.Type{tftypes.Object{
 				AttributeTypes: map[string]tftypes.Type{
 					"apiVersion": tftypes.String,
 					"fieldsType": tftypes.String,
@@ -39,7 +40,7 @@ var objectMetaType = tftypes.Object{
 					"operation":  tftypes.String,
 					"time":       tftypes.String,
 				},
-			},
+			}},
 		},
 		"name":      tftypes.String,
 		"namespace": tftypes.String,
@@ -63,7 +64,8 @@ var objectMetaType = tftypes.Object{
 
 var samples = testSamples{
 	"core.v1/ConfigMap": {
-		gvk: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
+		gvk:   schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
+		hints: map[string]string{},
 		want: tftypes.Object{
 			AttributeTypes: map[string]tftypes.Type{
 				"apiVersion": tftypes.String,
@@ -77,6 +79,9 @@ var samples = testSamples{
 	},
 	"core.v1/Service": {
 		gvk: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"},
+		hints: map[string]string{
+			"AttributeName(\"spec\").AttributeName(\"ports\").ElementKeyInt(-1).AttributeName(\"targetPort\")": "io.k8s.apimachinery.pkg.util.intstr.IntOrString",
+		},
 		want: tftypes.Object{
 			AttributeTypes: map[string]tftypes.Type{
 				"apiVersion": tftypes.String,
@@ -92,17 +97,17 @@ var samples = testSamples{
 						"ipFamily":                 tftypes.String,
 						"loadBalancerIP":           tftypes.String,
 						"loadBalancerSourceRanges": tftypes.List{ElementType: tftypes.String},
-						"ports": tftypes.List{
-							ElementType: tftypes.Object{
+						"ports": tftypes.Tuple{
+							ElementTypes: []tftypes.Type{tftypes.Object{
 								AttributeTypes: map[string]tftypes.Type{
 									"appProtocol": tftypes.String,
 									"name":        tftypes.String,
 									"nodePort":    tftypes.Number,
 									"port":        tftypes.Number,
 									"protocol":    tftypes.String,
-									"targetPort":  tftypes.DynamicPseudoType,
+									"targetPort":  tftypes.String,
 								},
-							},
+							}},
 						},
 						"publishNotReadyAddresses": tftypes.Bool,
 						"selector":                 tftypes.Map{ElementType: tftypes.String},
@@ -141,12 +146,15 @@ func TestGetType(t *testing.T) {
 	for name, s := range samples {
 		t.Run(name,
 			func(t *testing.T) {
-				rt, err := tf.GetTypeByGVK(s.gvk)
+				rt, th, err := tf.GetTypeByGVK(s.gvk)
 				if err != nil {
 					t.Fatal(fmt.Errorf("GetTypeByID() failed: %s", err))
 				}
 				if !rt.Is(s.want) {
-					t.Fatalf("\nRETURNED %#v\nEXPECTED: %#v", rt, s.want)
+					t.Fatalf("\nRETURNED type: %#v\nEXPECTED type: %#v", rt, s.want)
+				}
+				if len(th) != len(s.hints) {
+					t.Fatalf("\nRETURNED hints: %#v\nEXPECTED hints: %#v", th, s.hints)
 				}
 			})
 	}

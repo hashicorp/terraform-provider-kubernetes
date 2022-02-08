@@ -11,8 +11,13 @@ resource "kubernetes_manifest" "test" {
         {
           name       = "http",
           port       = 80,
-          targetPort = "http",
-        }
+          targetPort = "http", # string value
+        },
+        {
+          name       = "https",
+          port       = 443,
+          targetPort = 8443, # int value
+        },
       ]
       selector = {
         app = "test"

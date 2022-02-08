@@ -8,9 +8,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
-// ToTFValue converts a Kubernetes dynamic client unstructured object
+// ToTFValue converts a Kubernetes dynamic client unstructured value
 // into a Terraform specific tftypes.Value type object
-func ToTFValue(in interface{}, st tftypes.Type, at *tftypes.AttributePath) (tftypes.Value, error) {
+// Arguments:
+//  * in : the actual raw unstructured value to be converted
+//  * st : the expected type of the converted value
+//  * th : type hints (optional, describes ambigous encodings such as
+//         IntOrString values in more detail).
+//         Pass in empty map when not using hints.
+//  * at : attribute path which recursively tracks the conversion.
+//         Pass in empty tftypes.AttributePath{}
+func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
 	if st == nil {
 		return tftypes.Value{}, at.NewErrorf("[%s] type cannot be nil", at.String())
 	}
@@ -42,6 +50,12 @@ func ToTFValue(in interface{}, st tftypes.Type, at *tftypes.AttributePath) (tfty
 		switch {
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
 			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(int64(in.(int)))), nil
+		case st.Is(tftypes.String):
+			ht, ok := th[valueToTypePath(at).String()]
+			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
+				return tftypes.NewValue(tftypes.String, strconv.FormatInt(int64(in.(int)), 10)), nil
+			}
+			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "int" to "tftypes.String"`, at.String())
 		default:
 			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "int" to "%s"`, at.String(), st.String())
 		}
@@ -49,13 +63,25 @@ func ToTFValue(in interface{}, st tftypes.Type, at *tftypes.AttributePath) (tfty
 		switch {
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
 			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(in.(int64))), nil
+		case st.Is(tftypes.String):
+			ht, ok := th[valueToTypePath(at).String()]
+			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
+				return tftypes.NewValue(tftypes.String, strconv.FormatInt(in.(int64), 10)), nil
+			}
+			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "in64" to "tftypes.String"`, at.String())
 		default:
-			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "in64" to "%s"`, at.String(), st.String())
+			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "int64" to "%s"`, at.String(), st.String())
 		}
 	case int32:
 		switch {
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
 			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(int64(in.(int32)))), nil
+		case st.Is(tftypes.String):
+			ht, ok := th[valueToTypePath(at).String()]
+			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
+				return tftypes.NewValue(tftypes.String, strconv.FormatInt(int64(in.(int32)), 10)), nil
+			}
+			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "int32" to "tftypes.String"`, at.String())
 		default:
 			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "int32" to "%s"`, at.String(), st.String())
 		}
@@ -63,6 +89,12 @@ func ToTFValue(in interface{}, st tftypes.Type, at *tftypes.AttributePath) (tfty
 		switch {
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
 			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(int64(in.(int16)))), nil
+		case st.Is(tftypes.String):
+			ht, ok := th[valueToTypePath(at).String()]
+			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
+				return tftypes.NewValue(tftypes.String, strconv.FormatInt(int64(in.(int16)), 10)), nil
+			}
+			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "int16" to "tftypes.String"`, at.String())
 		default:
 			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "int32" to "%s"`, at.String(), st.String())
 		}
@@ -76,24 +108,24 @@ func ToTFValue(in interface{}, st tftypes.Type, at *tftypes.AttributePath) (tfty
 	case []interface{}:
 		switch {
 		case st.Is(tftypes.List{}):
-			return sliceToTFListValue(in.([]interface{}), st, at)
+			return sliceToTFListValue(in.([]interface{}), st, th, at)
 		case st.Is(tftypes.Tuple{}):
-			return sliceToTFTupleValue(in.([]interface{}), st, at)
+			return sliceToTFTupleValue(in.([]interface{}), st, th, at)
 		case st.Is(tftypes.Set{}):
-			return sliceToTFSetValue(in.([]interface{}), st, at)
+			return sliceToTFSetValue(in.([]interface{}), st, th, at)
 		case st.Is(tftypes.DynamicPseudoType):
-			return sliceToTFDynamicValue(in.([]interface{}), st, at)
+			return sliceToTFDynamicValue(in.([]interface{}), st, th, at)
 		default:
 			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "[]interface{}" to "%s"`, at.String(), st.String())
 		}
 	case map[string]interface{}:
 		switch {
 		case st.Is(tftypes.Object{}):
-			return mapToTFObjectValue(in.(map[string]interface{}), st, at)
+			return mapToTFObjectValue(in.(map[string]interface{}), st, th, at)
 		case st.Is(tftypes.Map{}):
-			return mapToTFMapValue(in.(map[string]interface{}), st, at)
+			return mapToTFMapValue(in.(map[string]interface{}), st, th, at)
 		case st.Is(tftypes.DynamicPseudoType):
-			return mapToTFDynamicValue(in.(map[string]interface{}), st, at)
+			return mapToTFDynamicValue(in.(map[string]interface{}), st, th, at)
 		default:
 			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "map[string]interface{}" to "%s"`, at.String(), st.String())
 		}
@@ -101,13 +133,13 @@ func ToTFValue(in interface{}, st tftypes.Type, at *tftypes.AttributePath) (tfty
 	return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload of unknown type "%s"`, at.String(), reflect.TypeOf(in).String())
 }
 
-func sliceToTFDynamicValue(in []interface{}, st tftypes.Type, at *tftypes.AttributePath) (tftypes.Value, error) {
+func sliceToTFDynamicValue(in []interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
 	il := make([]tftypes.Value, len(in), len(in))
 	oTypes := make([]tftypes.Type, len(in), len(in))
 	for k, v := range in {
 		eap := at.WithElementKeyInt(k)
 		var iv tftypes.Value
-		iv, err := ToTFValue(v, tftypes.DynamicPseudoType, at.WithElementKeyInt(k))
+		iv, err := ToTFValue(v, tftypes.DynamicPseudoType, th, at.WithElementKeyInt(k))
 		if err != nil {
 			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert list element '%s' as DynamicPseudoType", eap, err)
 		}
@@ -117,12 +149,12 @@ func sliceToTFDynamicValue(in []interface{}, st tftypes.Type, at *tftypes.Attrib
 	return tftypes.NewValue(tftypes.Tuple{ElementTypes: oTypes}, il), nil
 }
 
-func sliceToTFListValue(in []interface{}, st tftypes.Type, at *tftypes.AttributePath) (tftypes.Value, error) {
+func sliceToTFListValue(in []interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
 	il := make([]tftypes.Value, 0, len(in))
 	var oType tftypes.Type = tftypes.Type(nil)
 	for k, v := range in {
 		eap := at.WithElementKeyInt(k)
-		iv, err := ToTFValue(v, st.(tftypes.List).ElementType, at.WithElementKeyInt(k))
+		iv, err := ToTFValue(v, st.(tftypes.List).ElementType, th, at.WithElementKeyInt(k))
 		if err != nil {
 			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert list element value: %s", eap, err)
 		}
@@ -141,7 +173,7 @@ func sliceToTFListValue(in []interface{}, st tftypes.Type, at *tftypes.Attribute
 	return tftypes.NewValue(tftypes.List{ElementType: oType}, il), nil
 }
 
-func sliceToTFTupleValue(in []interface{}, st tftypes.Type, at *tftypes.AttributePath) (tftypes.Value, error) {
+func sliceToTFTupleValue(in []interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
 	il := make([]tftypes.Value, len(in), len(in))
 	oTypes := make([]tftypes.Type, len(in), len(in))
 	ttypes := st.(tftypes.Tuple).ElementTypes
@@ -154,7 +186,7 @@ func sliceToTFTupleValue(in []interface{}, st tftypes.Type, at *tftypes.Attribut
 	for k, v := range in {
 		eap := at.WithElementKeyInt(k)
 		et := ttypes[k]
-		iv, err := ToTFValue(v, et, at.WithElementKeyInt(k))
+		iv, err := ToTFValue(v, et, th, at.WithElementKeyInt(k))
 		if err != nil {
 			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert list element [%d] to '%s': %s", eap.String(), k, et.String(), err)
 		}
@@ -164,12 +196,12 @@ func sliceToTFTupleValue(in []interface{}, st tftypes.Type, at *tftypes.Attribut
 	return tftypes.NewValue(tftypes.Tuple{ElementTypes: oTypes}, il), nil
 }
 
-func sliceToTFSetValue(in []interface{}, st tftypes.Type, at *tftypes.AttributePath) (tftypes.Value, error) {
+func sliceToTFSetValue(in []interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
 	il := make([]tftypes.Value, len(in), len(in))
 	var oType tftypes.Type = tftypes.Type(nil)
 	for k, v := range in {
 		eap := at.WithElementKeyInt(k)
-		iv, err := ToTFValue(v, st.(tftypes.Set).ElementType, at.WithElementKeyInt(k))
+		iv, err := ToTFValue(v, st.(tftypes.Set).ElementType, th, at.WithElementKeyInt(k))
 		if err != nil {
 			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert list element [%d] to '%s': %s", eap, k, st.(tftypes.Set).ElementType.String(), err)
 		}
@@ -188,12 +220,12 @@ func sliceToTFSetValue(in []interface{}, st tftypes.Type, at *tftypes.AttributeP
 	return tftypes.NewValue(tftypes.Set{ElementType: oType}, il), nil
 }
 
-func mapToTFMapValue(in map[string]interface{}, st tftypes.Type, at *tftypes.AttributePath) (tftypes.Value, error) {
+func mapToTFMapValue(in map[string]interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
 	im := make(map[string]tftypes.Value)
 	var oType tftypes.Type
 	for k, v := range in {
-		eap := at.WithAttributeName(k)
-		mv, err := ToTFValue(v, st.(tftypes.Map).ElementType, eap)
+		eap := at.WithElementKeyString(k)
+		mv, err := ToTFValue(v, st.(tftypes.Map).ElementType, th, eap)
 		if err != nil {
 			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert map element '%s' to '%s': err", eap, st.(tftypes.Map).ElementType.String(), err)
 		}
@@ -211,7 +243,7 @@ func mapToTFMapValue(in map[string]interface{}, st tftypes.Type, at *tftypes.Att
 	return tftypes.NewValue(tftypes.Map{ElementType: oType}, im), nil
 }
 
-func mapToTFObjectValue(in map[string]interface{}, st tftypes.Type, at *tftypes.AttributePath) (tftypes.Value, error) {
+func mapToTFObjectValue(in map[string]interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
 	im := make(map[string]tftypes.Value)
 	oTypes := make(map[string]tftypes.Type)
 	for k, kt := range st.(tftypes.Object).AttributeTypes {
@@ -220,7 +252,7 @@ func mapToTFObjectValue(in map[string]interface{}, st tftypes.Type, at *tftypes.
 		if !ok {
 			v = nil
 		}
-		nv, err := ToTFValue(v, kt, eap)
+		nv, err := ToTFValue(v, kt, th, eap)
 		if err != nil {
 			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert map element value: %s", eap, err)
 		}
@@ -230,12 +262,12 @@ func mapToTFObjectValue(in map[string]interface{}, st tftypes.Type, at *tftypes.
 	return tftypes.NewValue(tftypes.Object{AttributeTypes: oTypes}, im), nil
 }
 
-func mapToTFDynamicValue(in map[string]interface{}, st tftypes.Type, at *tftypes.AttributePath) (tftypes.Value, error) {
+func mapToTFDynamicValue(in map[string]interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
 	im := make(map[string]tftypes.Value)
 	oTypes := make(map[string]tftypes.Type)
 	for k, v := range in {
 		eap := at.WithAttributeName(k)
-		nv, err := ToTFValue(v, tftypes.DynamicPseudoType, eap)
+		nv, err := ToTFValue(v, tftypes.DynamicPseudoType, th, eap)
 		if err != nil {
 			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert map element value: %s", eap, err)
 		}

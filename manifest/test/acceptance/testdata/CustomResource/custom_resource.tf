@@ -14,5 +14,9 @@ resource "kubernetes_manifest" "test" {
         foo = null
       }
     ]
+    limits = {
+      "foo" = "bar"
+      "baz" = 42
+    }
   }
 }

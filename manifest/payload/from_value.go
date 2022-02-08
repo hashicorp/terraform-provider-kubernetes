@@ -2,13 +2,14 @@ package payload
 
 import (
 	"math/big"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
 // FromTFValue converts a Terraform specific tftypes.Value type object
 // into a Kubernetes dynamic client specific unstructured object
-func FromTFValue(in tftypes.Value, ap *tftypes.AttributePath) (interface{}, error) {
+func FromTFValue(in tftypes.Value, th map[string]string, ap *tftypes.AttributePath) (interface{}, error) {
 	var err error
 	if !in.IsKnown() {
 		return nil, ap.NewErrorf("[%s] cannot convert unknown value to Unstructured", ap.String())
@@ -48,6 +49,14 @@ func FromTFValue(in tftypes.Value, ap *tftypes.AttributePath) (interface{}, erro
 		if err != nil {
 			return nil, ap.NewErrorf("[%s] cannot extract contents of attribute: %s", ap.String(), err)
 		}
+		tp := valueToTypePath(ap)
+		ot, ok := th[tp.String()]
+		if ok && ot == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" {
+			n, err := strconv.Atoi(sv)
+			if err == nil {
+				return n, nil
+			}
+		}
 		return sv, nil
 	case in.Type().Is(tftypes.List{}) || in.Type().Is(tftypes.Tuple{}):
 		var l []tftypes.Value
@@ -61,7 +70,7 @@ func FromTFValue(in tftypes.Value, ap *tftypes.AttributePath) (interface{}, erro
 		}
 		for k, le := range l {
 			nextAp := ap.WithElementKeyInt(k)
-			ne, err := FromTFValue(le, nextAp)
+			ne, err := FromTFValue(le, th, nextAp)
 			if err != nil {
 				return nil, nextAp.NewErrorf("[%s] cannot convert list element to Unstructured: %s", nextAp.String(), err)
 			}
@@ -88,7 +97,7 @@ func FromTFValue(in tftypes.Value, ap *tftypes.AttributePath) (interface{}, erro
 			case in.Type().Is(tftypes.Object{}):
 				nextAp = ap.WithAttributeName(k)
 			}
-			ne, err := FromTFValue(me, nextAp)
+			ne, err := FromTFValue(me, th, nextAp)
 			if err != nil {
 				return nil, nextAp.NewErrorf("[%s]: cannot convert map element to Unstructured: %s", nextAp.String(), err.Error())
 			}
@@ -98,4 +107,26 @@ func FromTFValue(in tftypes.Value, ap *tftypes.AttributePath) (interface{}, erro
 	default:
 		return nil, ap.NewErrorf("[%s] cannot convert value of unknown type (%s)", ap.String(), in.Type().String())
 	}
+}
+
+// valueToTypePath "normalizes" AttributePaths of values into a form that only describes the type hyerarchy.
+// this is used when comparing value paths to type hints generated during the translation from OpenAPI into tftypes.
+func valueToTypePath(a *tftypes.AttributePath) *tftypes.AttributePath {
+	if a == nil {
+		return nil
+	}
+	ns := make([]tftypes.AttributePathStep, len(a.Steps()))
+	os := a.Steps()
+	for i := range os {
+		switch os[i].(type) {
+		case tftypes.AttributeName:
+			ns[i] = tftypes.AttributeName(os[i].(tftypes.AttributeName))
+		case tftypes.ElementKeyString:
+			ns[i] = tftypes.ElementKeyString("#")
+		case tftypes.ElementKeyInt:
+			ns[i] = tftypes.ElementKeyInt(-1)
+		}
+	}
+
+	return tftypes.NewAttributePathWithSteps(ns)
 }

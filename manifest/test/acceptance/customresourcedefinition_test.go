@@ -59,6 +59,9 @@ func TestKubernetesManifest_CustomResourceDefinition(t *testing.T) {
 					"refs": map[string]interface{}{
 						"type": "number",
 					},
+					"otherData": map[string]interface{}{
+						"type": "string",
+					},
 					"stuff": map[string]interface{}{
 						"type": "array",
 						"items": map[string]interface{}{
@@ -67,6 +70,16 @@ func TestKubernetesManifest_CustomResourceDefinition(t *testing.T) {
 								"foo": map[string]interface{}{
 									"type": "string",
 								},
+							},
+						},
+					},
+					"limits": map[string]interface{}{
+						"type": "object",
+						"additionalProperties": map[string]interface{}{
+							"x-kubernetes-int-or-string": true,
+							"anyOf": []interface{}{
+								map[string]interface{}{"type": "integer"},
+								map[string]interface{}{"type": "string"},
 							},
 						},
 					},

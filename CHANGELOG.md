@@ -1,4 +1,4 @@
-## 2.8.0 (Unreleased)
+## 2.8.0 (February 09, 2022)
 
 IMPROVEMENTS:
 

@@ -4,14 +4,24 @@
 package acceptance
 
 import (
+	"context"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
 	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
 )
 
 func TestKubernetesManifest_fieldManager(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
 	name := randName()
 	namespace := randName()
 
@@ -61,7 +71,7 @@ func TestKubernetesManifest_fieldManager(t *testing.T) {
 	tfconfig = loadTerraformConfig(t, "FieldManager/field_manager.tf", tfvars)
 	tf.RequireSetConfig(t, tfconfig)
 	tf.RequireInit(t)
-	err := tf.Apply() // this should fail
+	err = tf.Apply() // this should fail
 	if err == nil || !strings.Contains(err.Error(), "There was a field manager conflict when trying to apply the manifest") {
 		t.Log(err.Error())
 		t.Fatal("Expected terraform apply to cause a field manager conflict")

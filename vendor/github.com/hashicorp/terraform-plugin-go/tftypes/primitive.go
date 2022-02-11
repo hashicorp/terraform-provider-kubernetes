@@ -61,7 +61,7 @@ func (p primitive) UsableAs(t Type) bool {
 }
 
 func (p primitive) String() string {
-	return "tftypes." + string(p.name)
+	return "tftypes." + p.name
 }
 
 func (p primitive) private() {}

@@ -70,7 +70,7 @@ func ProtocolData(ctx context.Context, dataDir string, rpc string, message strin
 	ProtocolTrace(ctx, "Wrote protocol data file", KeyProtocolDataFile, filePath)
 }
 
-func protocolDataDynamicValue5(ctx context.Context, value *tfprotov5.DynamicValue) (string, []byte) {
+func protocolDataDynamicValue5(_ context.Context, value *tfprotov5.DynamicValue) (string, []byte) {
 	if value == nil {
 		return fileExtEmpty, nil
 	}
@@ -88,7 +88,7 @@ func protocolDataDynamicValue5(ctx context.Context, value *tfprotov5.DynamicValu
 	return fileExtEmpty, nil
 }
 
-func protocolDataDynamicValue6(ctx context.Context, value *tfprotov6.DynamicValue) (string, []byte) {
+func protocolDataDynamicValue6(_ context.Context, value *tfprotov6.DynamicValue) (string, []byte) {
 	if value == nil {
 		return fileExtEmpty, nil
 	}

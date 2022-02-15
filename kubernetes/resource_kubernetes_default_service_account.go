@@ -61,22 +61,19 @@ func resourceKubernetesDefaultServiceAccountCreate(ctx context.Context, d *schem
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
-	if d.HasChange("image_pull_secret") {
-		v := d.Get("image_pull_secret").(*schema.Set).List()
-		ops = append(ops, &ReplaceOperation{
-			Path:  "/imagePullSecrets",
-			Value: expandLocalObjectReferenceArray(v),
-		})
-	}
-	if d.HasChange("secret") {
-		v := d.Get("secret").(*schema.Set).List()
-		defaultSecretName := d.Get("default_secret_name").(string)
+	imagePullSecrets := d.Get("image_pull_secret").(*schema.Set).List()
+	ops = append(ops, &ReplaceOperation{
+		Path:  "/imagePullSecrets",
+		Value: expandLocalObjectReferenceArray(imagePullSecrets),
+	})
 
-		ops = append(ops, &ReplaceOperation{
-			Path:  "/secrets",
-			Value: expandServiceAccountSecrets(v, defaultSecretName),
-		})
-	}
+	secrets := d.Get("secret").(*schema.Set).List()
+	defaultSecretName := d.Get("default_secret_name").(string)
+
+	ops = append(ops, &ReplaceOperation{
+		Path:  "/secrets",
+		Value: expandServiceAccountSecrets(secrets, defaultSecretName),
+	})
 
 	automountServiceAccountToken := d.Get("automount_service_account_token").(bool)
 	ops = append(ops, &ReplaceOperation{

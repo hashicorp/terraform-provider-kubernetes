@@ -1,9 +1,9 @@
+//go:build acceptance
 // +build acceptance
 
 package acceptance
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -12,34 +12,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/terraform-exec/tfexec"
 	tftest "github.com/hashicorp/terraform-plugin-test/v2"
 	"k8s.io/client-go/rest"
 
-	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	kuberneteshelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
 )
 
 var tfhelper *tftest.Helper
 var k8shelper *kuberneteshelper.Helper
-var reattachInfo tfexec.ReattachInfo
 
 func TestMain(m *testing.M) {
 	var err error
-	reattachInfo, err = provider.ServeTest(context.TODO(), hclog.Default())
-	if err != nil {
-		//lintignore:R009
-		panic(err)
-	}
 
 	sourceDir, err := os.Getwd()
 	if err != nil {
 		//lintignore:R009
 		panic(err)
 	}
-
-	os.Setenv("TF_X_KUBERNETES_MANIFEST_RESOURCE", "true")
 
 	// disables client-go resource deprecation warnings - they polute the test log
 	rest.SetDefaultWarningHandler(rest.NoWarnings{})

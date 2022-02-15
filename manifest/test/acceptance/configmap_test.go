@@ -1,10 +1,14 @@
+//go:build acceptance
 // +build acceptance
 
 package acceptance
 
 import (
+	"context"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
 	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
 )
@@ -12,6 +16,13 @@ import (
 // This test case tests a ConfigMap but also is a demonstration of some the assert functions
 // available in the test helper
 func TestKubernetesManifest_ConfigMap(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
 	name := randName()
 	namespace := randName()
 

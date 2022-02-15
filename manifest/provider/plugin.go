@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -45,12 +46,13 @@ func Provider() func() tfprotov5.ProviderServer {
 
 // ServeTest is for serving the provider in-process when testing.
 // Returns a ReattachInfo or an error.
-func ServeTest(ctx context.Context, logger hclog.Logger) (tfexec.ReattachInfo, error) {
+func ServeTest(ctx context.Context, logger hclog.Logger, t *testing.T) (tfexec.ReattachInfo, error) {
 	reattachConfigCh := make(chan *plugin.ReattachConfig)
 
 	go tf5server.Serve(providerName,
 		func() tfprotov5.ProviderServer { return &(RawProviderServer{logger: logger}) },
 		tf5server.WithDebug(ctx, reattachConfigCh, nil),
+		tf5server.WithLoggingSink(t),
 		tf5server.WithGoPluginLogger(logger),
 	)
 

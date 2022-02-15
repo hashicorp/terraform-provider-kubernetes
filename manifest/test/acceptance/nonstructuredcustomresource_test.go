@@ -1,3 +1,4 @@
+//go:build acceptance
 // +build acceptance
 
 package acceptance
@@ -16,6 +17,13 @@ import (
 )
 
 func TestKubernetesManifest_NonStructuredCustomResource(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
 	cv, err := semver.NewVersion(k8shelper.ClusterVersion().String())
 	if err != nil {
 		t.Skip("cannot determine cluster version")
@@ -68,7 +76,7 @@ func TestKubernetesManifest_NonStructuredCustomResource(t *testing.T) {
 	// wait for API to finish ingesting the CRD
 	time.Sleep(5 * time.Second) //lintignore:R018
 
-	reattachInfo2, err := provider.ServeTest(context.TODO(), hclog.Default())
+	reattachInfo2, err := provider.ServeTest(ctx, hclog.Default(), t)
 	if err != nil {
 		t.Errorf("Failed to create additional provider instance: %q", err)
 	}

@@ -24,6 +24,12 @@ type Object struct {
 	// are considered part of the type signature, and their absence means a
 	// value is no longer of that type.
 	//
+	// OptionalAttributes is only valid when declaring a type constraint
+	// (e.g. Schema) and should not be used as part of a Type when creating
+	// a Value (e.g. NewValue()). When creating a Value, all OptionalAttributes
+	// must still be defined in the Object by setting each attribute to a null
+	// or known value for its attribute type.
+	//
 	// The key of OptionalAttributes should be the name of the attribute
 	// that is optional. The value should be an empty struct, used only to
 	// indicate presence.

@@ -1,3 +1,17 @@
+## 2.8.0 (February 09, 2022)
+
+IMPROVEMENTS:
+
+* Add mutating_webhook_configuration_v1 data source (#1423)
+* Remove enabling experiment section (#1564)
+* Update kubernetes dependencies (#1574)
+* Update terraform-plugin-go and terraform-plugin-sdk (#1551)
+
+BUG FIXES:
+
+* Fix `panic: lists must only contain one type of element` errors on `kubernetes_manifest`
+* Attribute `backend.service.port.name` in `kubernetes_ingress_v1` should be type String  (#1541)
+
 ## 2.7.1 (December 06, 2021)
 
 BUG FIXES:

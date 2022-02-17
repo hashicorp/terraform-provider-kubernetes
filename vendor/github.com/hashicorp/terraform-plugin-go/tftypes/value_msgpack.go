@@ -94,7 +94,7 @@ func msgpackUnmarshal(dec *msgpack.Decoder, typ Type, path *AttributePath) (Valu
 			if err != nil {
 				return Value{}, path.NewErrorf("couldn't decode number as float64: %w", err)
 			}
-			return NewValue(Number, big.NewFloat(float64(rv))), nil
+			return NewValue(Number, big.NewFloat(rv)), nil
 		default:
 			rv, err := dec.DecodeString()
 			if err != nil {
@@ -377,7 +377,7 @@ func marshalMsgPack(val Value, typ Type, p *AttributePath, enc *msgpack.Encoder)
 	return fmt.Errorf("unknown type %s", typ)
 }
 
-func marshalMsgPackDynamicPseudoType(val Value, typ Type, p *AttributePath, enc *msgpack.Encoder) error {
+func marshalMsgPackDynamicPseudoType(val Value, _ Type, p *AttributePath, enc *msgpack.Encoder) error {
 	typeJSON, err := val.Type().MarshalJSON()
 	if err != nil {
 		return p.NewErrorf("error generating JSON for type %s: %w", val.Type(), err)

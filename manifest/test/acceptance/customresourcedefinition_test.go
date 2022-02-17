@@ -4,14 +4,24 @@
 package acceptance
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
 )
 
 func TestKubernetesManifest_CustomResourceDefinition(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
 	kind := strings.Title(randString(8))
 	plural := strings.ToLower(kind) + "s"
 	group := "terraform.io"
@@ -59,6 +69,9 @@ func TestKubernetesManifest_CustomResourceDefinition(t *testing.T) {
 					"refs": map[string]interface{}{
 						"type": "number",
 					},
+					"otherData": map[string]interface{}{
+						"type": "string",
+					},
 					"stuff": map[string]interface{}{
 						"type": "array",
 						"items": map[string]interface{}{
@@ -67,6 +80,16 @@ func TestKubernetesManifest_CustomResourceDefinition(t *testing.T) {
 								"foo": map[string]interface{}{
 									"type": "string",
 								},
+							},
+						},
+					},
+					"limits": map[string]interface{}{
+						"type": "object",
+						"additionalProperties": map[string]interface{}{
+							"x-kubernetes-int-or-string": true,
+							"anyOf": []interface{}{
+								map[string]interface{}{"type": "integer"},
+								map[string]interface{}{"type": "string"},
 							},
 						},
 					},

@@ -168,7 +168,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, fmt.Errorf("failed to determine resource GVK: %s", err)
 		}
 
-		tsch, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
+		tsch, th, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
 		if err != nil {
 			return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
 		}
@@ -262,7 +262,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, nil
 		}
 
-		pu, err := payload.FromTFValue(minObj, tftypes.NewAttributePath())
+		pu, err := payload.FromTFValue(minObj, th, tftypes.NewAttributePath())
 		if err != nil {
 			return resp, err
 		}
@@ -390,20 +390,26 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, nil
 		}
 
-		newResObject, err := payload.ToTFValue(RemoveServerSideFields(result.Object), tsch, tftypes.NewAttributePath())
+		newResObject, err := payload.ToTFValue(RemoveServerSideFields(result.Object), tsch, th, tftypes.NewAttributePath())
 		if err != nil {
-			return resp, err
+			resp.Diagnostics = append(resp.Diagnostics,
+				&tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityError,
+					Summary:  "Conversion from Unstructured to tftypes.Value failed",
+					Detail:   err.Error(),
+				})
+			return resp, nil
 		}
 		s.logger.Trace("[ApplyResourceChange][Apply]", "[payload.ToTFValue]", dump(newResObject))
 
-		wt, err := s.TFTypeFromOpenAPI(ctx, gvk, true)
+		wt, _, err := s.TFTypeFromOpenAPI(ctx, gvk, true)
 		if err != nil {
 			return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
 		}
 
 		wf, ok := plannedStateVal["wait_for"]
 		if ok {
-			err = s.waitForCompletion(ctxDeadline, wf, rs, rname, wt)
+			err = s.waitForCompletion(ctxDeadline, wf, rs, rname, wt, th)
 			if err != nil {
 				if err == context.DeadlineExceeded {
 					resp.Diagnostics = append(resp.Diagnostics,
@@ -459,7 +465,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, nil
 		}
 
-		pu, err := payload.FromTFValue(pco, tftypes.NewAttributePath())
+		pu, err := payload.FromTFValue(pco, nil, tftypes.NewAttributePath())
 		if err != nil {
 			return resp, err
 		}

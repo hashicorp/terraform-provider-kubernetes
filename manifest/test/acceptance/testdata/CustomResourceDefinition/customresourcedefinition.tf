@@ -29,6 +29,9 @@ resource "kubernetes_manifest" "test" {
                 refs = {
                   type = "number"
                 }
+                otherData = {
+                  type = "string"
+                }
                 stuff = {
                   type = "array"
                   items = {
@@ -38,6 +41,16 @@ resource "kubernetes_manifest" "test" {
                         type = "string"
                       }
                     }
+                  }
+                }
+                limits = {
+                  type = "object"
+                  additionalProperties = {
+                    "x-kubernetes-int-or-string" = true
+                    anyOf = [
+                      { type = "integer" },
+                      { type = "string" },
+                    ]
                   }
                 }
               }

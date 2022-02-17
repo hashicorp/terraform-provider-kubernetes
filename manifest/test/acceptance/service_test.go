@@ -4,9 +4,12 @@
 package acceptance
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
 	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
 )
@@ -14,6 +17,13 @@ import (
 // This test case tests a Service but also is a demonstration of some the assert functions
 // available in the test helper
 func TestKubernetesManifest_Service(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
 	name := randName()
 	namespace := randName()
 
@@ -45,7 +55,7 @@ func TestKubernetesManifest_Service(t *testing.T) {
 		"kubernetes_manifest.test.object.metadata.name":           name,
 		"kubernetes_manifest.test.object.spec.ports.0.name":       "http",
 		"kubernetes_manifest.test.object.spec.ports.0.port":       json.Number("80"),
-		"kubernetes_manifest.test.object.spec.ports.0.targetPort": json.Number("8080"),
+		"kubernetes_manifest.test.object.spec.ports.0.targetPort": "http",
 		"kubernetes_manifest.test.object.spec.ports.0.protocol":   "TCP",
 		"kubernetes_manifest.test.object.spec.selector.app":       "test",
 		"kubernetes_manifest.test.object.spec.type":               "ClusterIP",
@@ -61,10 +71,14 @@ func TestKubernetesManifest_Service(t *testing.T) {
 		"kubernetes_manifest.test.object.metadata.name":             name,
 		"kubernetes_manifest.test.object.metadata.annotations.test": "1",
 		"kubernetes_manifest.test.object.metadata.labels.test":      "2",
-		"kubernetes_manifest.test.object.spec.ports.0.name":         "https",
-		"kubernetes_manifest.test.object.spec.ports.0.port":         json.Number("443"),
-		"kubernetes_manifest.test.object.spec.ports.0.targetPort":   json.Number("8443"),
+		"kubernetes_manifest.test.object.spec.ports.0.name":         "http",
+		"kubernetes_manifest.test.object.spec.ports.0.port":         json.Number("80"),
+		"kubernetes_manifest.test.object.spec.ports.0.targetPort":   "http",
 		"kubernetes_manifest.test.object.spec.ports.0.protocol":     "TCP",
+		"kubernetes_manifest.test.object.spec.ports.1.name":         "https",
+		"kubernetes_manifest.test.object.spec.ports.1.port":         json.Number("443"),
+		"kubernetes_manifest.test.object.spec.ports.1.targetPort":   json.Number("8443"),
+		"kubernetes_manifest.test.object.spec.ports.1.protocol":     "TCP",
 		"kubernetes_manifest.test.object.spec.selector.app":         "test",
 		"kubernetes_manifest.test.object.spec.type":                 "ClusterIP",
 	})

@@ -25,7 +25,7 @@ func (s *RawProviderServer) dryRun(ctx context.Context, obj tftypes.Value, field
 	}
 
 	minObj := morph.UnknownToNull(obj)
-	pu, err := payload.FromTFValue(minObj, tftypes.NewAttributePath())
+	pu, err := payload.FromTFValue(minObj, nil, tftypes.NewAttributePath())
 	if err != nil {
 		return err
 	}
@@ -277,7 +277,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	}
 
 	// Request a complete type for the resource from the OpenAPI spec
-	objectType, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
+	objectType, _, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
 	if err != nil {
 		return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
 	}

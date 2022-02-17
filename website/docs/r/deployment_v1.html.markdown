@@ -118,7 +118,7 @@ The following arguments are supported:
 * `revision_history_limit` - (Optional) The number of old ReplicaSets to retain to allow rollback. This is a pointer to distinguish between explicit zero and not specified. Defaults to 10.
 * `strategy` - (Optional) The deployment strategy to use to replace existing pods with new ones.
 * `selector` - (Optional) A label query over pods that should match the Replicas count. Label keys and values that must match in order to be controlled by this deployment. **Must match labels (`metadata.0.labels`)**. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels#label-selectors)
-* `template` - (Required) Describes the pod that will be created if insufficient replicas are detected. This takes precedence over a TemplateRef. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#pod-template)
+* `template` - (Required) Describes the pod that will be created if insufficient replicas are detected. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#pod-template)
 
 ### `strategy`
 

@@ -62,7 +62,7 @@ func jsonUnmarshal(buf []byte, typ Type, p *AttributePath) (Value, error) {
 	return Value{}, p.NewErrorf("unknown type %s", typ)
 }
 
-func jsonUnmarshalString(buf []byte, typ Type, p *AttributePath) (Value, error) {
+func jsonUnmarshalString(buf []byte, _ Type, p *AttributePath) (Value, error) {
 	dec := jsonByteDecoder(buf)
 
 	tok, err := dec.Token()
@@ -98,7 +98,7 @@ func jsonUnmarshalNumber(buf []byte, typ Type, p *AttributePath) (Value, error) 
 		}
 		return NewValue(typ, f), nil
 	case string:
-		f, _, err := big.ParseFloat(string(numTok), 10, 512, big.ToNearestEven)
+		f, _, err := big.ParseFloat(numTok, 10, 512, big.ToNearestEven)
 		if err != nil {
 			return Value{}, p.NewErrorf("error parsing number: %w", err)
 		}
@@ -107,7 +107,7 @@ func jsonUnmarshalNumber(buf []byte, typ Type, p *AttributePath) (Value, error) 
 	return Value{}, p.NewErrorf("unsupported type %T sent as %s", tok, Number)
 }
 
-func jsonUnmarshalBool(buf []byte, typ Type, p *AttributePath) (Value, error) {
+func jsonUnmarshalBool(buf []byte, _ Type, p *AttributePath) (Value, error) {
 	dec := jsonByteDecoder(buf)
 	tok, err := dec.Token()
 	if err != nil {
@@ -123,7 +123,7 @@ func jsonUnmarshalBool(buf []byte, typ Type, p *AttributePath) (Value, error) {
 		case "false", "0":
 			return NewValue(Bool, false), nil
 		}
-		switch strings.ToLower(string(v)) {
+		switch strings.ToLower(v) {
 		case "true":
 			return Value{}, p.NewErrorf("to convert from string, use lowercase \"true\"")
 		case "false":
@@ -140,7 +140,7 @@ func jsonUnmarshalBool(buf []byte, typ Type, p *AttributePath) (Value, error) {
 	return Value{}, p.NewErrorf("unsupported type %T sent as %s", tok, Bool)
 }
 
-func jsonUnmarshalDynamicPseudoType(buf []byte, typ Type, p *AttributePath) (Value, error) {
+func jsonUnmarshalDynamicPseudoType(buf []byte, _ Type, p *AttributePath) (Value, error) {
 	dec := jsonByteDecoder(buf)
 	tok, err := dec.Token()
 	if err != nil {

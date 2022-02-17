@@ -16,6 +16,13 @@ import (
 )
 
 func TestKubernetesManifest_EmptyBlocks(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
 	kind := strings.Title(randString(8))
 	plural := strings.ToLower(kind) + "s"
 	group := "terraform.io"
@@ -51,7 +58,7 @@ func TestKubernetesManifest_EmptyBlocks(t *testing.T) {
 	// wait for API to finish ingesting the CRD
 	time.Sleep(5 * time.Second) //lintignore:R018
 
-	reattachInfo2, err := provider.ServeTest(context.TODO(), hclog.Default())
+	reattachInfo2, err := provider.ServeTest(ctx, hclog.Default(), t)
 	if err != nil {
 		t.Errorf("Failed to create additional provider instance: %q", err)
 	}

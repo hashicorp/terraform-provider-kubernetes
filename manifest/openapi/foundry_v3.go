@@ -44,17 +44,20 @@ type foapiv3 struct {
 	typeCache sync.Map
 }
 
-func (f *foapiv3) GetTypeByGVK(_ schema.GroupVersionKind) (tftypes.Type, error) {
+func (f *foapiv3) GetTypeByGVK(_ schema.GroupVersionKind) (tftypes.Type, map[string]string, error) {
 	f.gate.Lock()
 	defer f.gate.Unlock()
+
+	var hints map[string]string = make(map[string]string)
+	ap := tftypes.AttributePath{}
 
 	sref := f.doc.Components.Schemas[""]
 
 	sch, err := resolveSchemaRef(sref, f.doc.Components.Schemas)
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve schema: %s", err)
+		return nil, hints, fmt.Errorf("failed to resolve schema: %s", err)
 	}
 
-	tftype, err := getTypeFromSchema(sch, 50, &(f.typeCache), f.doc.Components.Schemas)
-	return tftype, err
+	tftype, err := getTypeFromSchema(sch, 50, &(f.typeCache), f.doc.Components.Schemas, ap, hints)
+	return tftype, hints, err
 }

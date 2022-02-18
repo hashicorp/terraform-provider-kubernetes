@@ -40,7 +40,7 @@ resource "kubernetes_deployment" "example" {
 
       spec {
         container {
-          image = "nginx:1.7.8"
+          image = "nginx:1.21.6"
           name  = "example"
 
           resources {
@@ -56,7 +56,7 @@ resource "kubernetes_deployment" "example" {
 
           liveness_probe {
             http_get {
-              path = "/nginx_status"
+              path = "/"
               port = 80
 
               http_header {

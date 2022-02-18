@@ -22,7 +22,7 @@ resource "kubernetes_ingress_v1" "example_ingress" {
   spec {
     default_backend {
       service {
-        name = "MyApp1"
+        name = "myapp-1"
         port {
           number = 8080
         }
@@ -34,7 +34,7 @@ resource "kubernetes_ingress_v1" "example_ingress" {
         path {
           backend {
             service {
-              name = "MyApp1"
+              name = "myapp-1"
               port {
                 number = 8080
               }
@@ -47,7 +47,7 @@ resource "kubernetes_ingress_v1" "example_ingress" {
         path {
           backend {
             service {
-              name = "MyApp2"
+              name = "myapp-2"
               port {
                 number = 8080
               }
@@ -65,6 +65,42 @@ resource "kubernetes_ingress_v1" "example_ingress" {
   }
 }
 
+resource "kubernetes_service_v1" "example" {
+  metadata {
+    name = "myapp-1"
+  }
+  spec {
+    selector = {
+      app = kubernetes_pod_v1.example.metadata.0.labels.app
+    }
+    session_affinity = "ClientIP"
+    port {
+      port        = 8080
+      target_port = 80
+    }
+
+    type = "NodePort"
+  }
+}
+
+resource "kubernetes_service_v1" "example2" {
+  metadata {
+    name = "myapp-2"
+  }
+  spec {
+    selector = {
+      app = kubernetes_pod_v1.example2.metadata.0.labels.app
+    }
+    session_affinity = "ClientIP"
+    port {
+      port        = 8080
+      target_port = 80
+    }
+
+    type = "NodePort"
+  }
+}
+
 resource "kubernetes_pod_v1" "example" {
   metadata {
     name = "terraform-example"
@@ -75,11 +111,11 @@ resource "kubernetes_pod_v1" "example" {
 
   spec {
     container {
-      image = "nginx:1.7.9"
+      image = "nginx:1.21.6"
       name  = "example"
 
       port {
-        container_port = 8080
+        container_port = 80
       }
     }
   }
@@ -95,11 +131,11 @@ resource "kubernetes_pod_v1" "example2" {
 
   spec {
     container {
-      image = "nginx:1.7.9"
+      image = "nginx:1.21.6"
       name  = "example"
 
       port {
-        container_port = 8080
+        container_port = 80
       }
     }
   }
@@ -108,16 +144,16 @@ resource "kubernetes_pod_v1" "example2" {
 
 ## Example using Nginx ingress controller
 
-```
+```hcl
 resource "kubernetes_service_v1" "example" {
   metadata {
     name = "ingress-service"
   }
   spec {
     port {
-      port = 80
+      port        = 80
       target_port = 80
-      protocol = "TCP"
+      protocol    = "TCP"
     }
     type = "NodePort"
   }

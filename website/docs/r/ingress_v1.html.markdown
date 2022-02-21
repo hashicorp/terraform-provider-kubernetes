@@ -105,7 +105,7 @@ resource "kubernetes_pod_v1" "example" {
   metadata {
     name = "terraform-example"
     labels = {
-      app = "MyApp1"
+      app = "myapp-1"
     }
   }
 
@@ -125,7 +125,7 @@ resource "kubernetes_pod_v1" "example2" {
   metadata {
     name = "terraform-example2"
     labels = {
-      app = "MyApp2"
+      app = "myapp-2"
     }
   }
 

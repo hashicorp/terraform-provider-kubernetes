@@ -225,6 +225,85 @@ func TestAccKubernetesIngressV1_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesIngressV1_hostOnlyRule(t *testing.T) {
+	var conf networking.Ingress
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.22.0")
+		},
+		IDRefreshName:     "kubernetes_ingress_v1.test",
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressV1Config_ruleHostOnly(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressV1Exists("kubernetes_ingress_v1.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress_v1.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress_v1.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress_v1.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.ingress_class_name", "ingress-class"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.default_backend.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.host", "server.domain.com"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesIngressV1_multipleRulesDifferentHosts(t *testing.T) {
+	var conf networking.Ingress
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.22.0")
+		},
+		IDRefreshName:     "kubernetes_ingress_v1.test",
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressV1Config_multipleRulesDifferentHosts(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressV1Exists("kubernetes_ingress_v1.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress_v1.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress_v1.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress_v1.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.ingress_class_name", "ingress-class"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.default_backend.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.host", "server.domain.com"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.path", "/app1/*"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.name", "app1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.port.0.number", "8080"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.0.path.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.host", "server.example.com"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.0.path.0.path", "/app1/*"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.0.path.0.backend.0.service.0.name", "app1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.0.path.0.backend.0.service.0.port.0.number", "8080"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.host", "server.example.com"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.0.path.1.path", "/app2/*"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.0.path.1.backend.0.service.0.name", "app2"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.0.path.1.backend.0.service.0.port.0.number", "8080"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesIngressV1ForceNew(old, new *networking.Ingress, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {
@@ -557,4 +636,72 @@ resource "kubernetes_ingress_v1" "test" {
   }
   wait_for_load_balancer = true
 }`, name, name, name, name, name, name, name)
+}
+
+func testAccKubernetesIngressV1Config_ruleHostOnly(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    ingress_class_name = "ingress-class"
+    rule {
+      host = "server.domain.com"
+	}
+  }
+}`, name)
+}
+
+func testAccKubernetesIngressV1Config_multipleRulesDifferentHosts(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    ingress_class_name = "ingress-class"
+    rule {
+      host = "server.domain.com"
+	  http {
+        path {
+          backend {
+            service {
+              name = "app1"
+              port {
+                number = 8080
+              }
+            }
+          }
+          path = "/app1/*"
+        }
+      }
+	}
+    rule {
+		host = "server.example.com"
+		http {
+		  path {
+			backend {
+			  service {
+				name = "app1"
+				port {
+				  number = 8080
+				}
+			  }
+			}
+			path = "/app1/*"
+		  }
+		  path {
+			backend {
+			  service {
+				name = "app2"
+				port {
+				  number = 8080
+				}
+			  }
+			}
+			path = "/app2/*"
+		  }
+		}
+	  }
+  }
+}`, name)
 }

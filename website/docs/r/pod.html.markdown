@@ -22,7 +22,7 @@ resource "kubernetes_pod" "test" {
 
   spec {
     container {
-      image = "nginx:1.7.9"
+      image = "nginx:1.21.6"
       name  = "example"
 
       env {
@@ -31,12 +31,12 @@ resource "kubernetes_pod" "test" {
       }
 
       port {
-        container_port = 8080
+        container_port = 80
       }
 
       liveness_probe {
         http_get {
-          path = "/nginx_status"
+          path = "/"
           port = 80
 
           http_header {

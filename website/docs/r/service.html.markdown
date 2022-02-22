@@ -42,7 +42,7 @@ resource "kubernetes_pod" "example" {
 
   spec {
     container {
-      image = "nginx:1.7.9"
+      image = "nginx:1.21.6"
       name  = "example"
     }
   }
@@ -51,7 +51,7 @@ resource "kubernetes_pod" "example" {
 
 ## Example using AWS load balancer
 
-```
+```hcl
 variable "cluster_name" {
   type = string
 }
@@ -84,7 +84,7 @@ resource "kubernetes_service" "example" {
   }
   spec {
     port {
-      port = 8080
+      port        = 8080
       target_port = 80
     }
     type = "LoadBalancer"

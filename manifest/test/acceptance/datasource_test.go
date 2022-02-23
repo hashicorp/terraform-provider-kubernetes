@@ -14,6 +14,13 @@ import (
 )
 
 func TestDataSourceKubernetesResource_ConfigMap(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
 	name := randName()
 	name2 := randName()
 	namespace := randName()
@@ -43,7 +50,7 @@ func TestDataSourceKubernetesResource_ConfigMap(t *testing.T) {
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "configmaps", namespace, name)
 
 	// STEP 2: Create another ConfigMap using the ConfigMap from step 1 as a data source
-	reattachInfo2, err := provider.ServeTest(context.TODO(), hclog.Default())
+	reattachInfo2, err := provider.ServeTest(ctx, hclog.Default(), t)
 	if err != nil {
 		t.Errorf("Failed to create additional provider instance: %q", err)
 	}

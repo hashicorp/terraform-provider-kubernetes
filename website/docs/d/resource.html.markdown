@@ -14,7 +14,7 @@ This data source is a generic way to retrieve resources from the Kubernetes API.
 ```hcl
 data "kubernetes_resource" "example" {
   api_version = "v1"
-  kind       = "ConfigMap"
+  kind        = "ConfigMap"
 
   metadata {
     name      = "example"

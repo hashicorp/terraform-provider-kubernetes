@@ -55,13 +55,6 @@ func (s *RawProviderServer) ValidateDataSourceConfig(ctx context.Context, req *t
 	return resp, nil
 }
 
-// ReadDataSource function
-func (s *RawProviderServer) ReadDataSource(ctx context.Context, req *tfprotov5.ReadDataSourceRequest) (*tfprotov5.ReadDataSourceResponse, error) {
-	s.logger.Trace("[ReadDataSource][Request]\n%s\n", dump(*req))
-
-	return nil, status.Errorf(codes.Unimplemented, "method ReadDataSource not implemented")
-}
-
 // StopProvider function
 func (s *RawProviderServer) StopProvider(ctx context.Context, req *tfprotov5.StopProviderRequest) (*tfprotov5.StopProviderResponse, error) {
 	s.logger.Trace("[StopProvider][Request]\n%s\n", dump(*req))

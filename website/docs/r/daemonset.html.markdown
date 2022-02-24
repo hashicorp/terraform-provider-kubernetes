@@ -366,6 +366,16 @@ The following arguments are supported:
 * `name` - (Optional) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 * `optional` - (Optional) Specify whether the ConfigMap or its key must be defined
 
+### `csi`
+
+#### Arguments
+
+* `driver` - (Required) the name of the volume driver to use. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes/#csi).
+* `volume_attributes` - (Optional) Attributes of the volume to publish.
+* `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. `ext4`, `xfs`, `ntfs`.
+* `read_only` - (Optional) Whether to set the read-only property in VolumeMounts to `true`. If omitted, the default is `false`.
+* `node_publish_secret_ref` - (Optional) A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodePublishVolume and NodeUnpublishVolume calls. see [secret_ref](#secret_ref) for more details.
+
 ### `dns_config`
 
 #### Arguments
@@ -787,6 +797,7 @@ The `items` block supports the following:
 * `ceph_fs` - (Optional) Represents a Ceph FS mount on the host that shares a pod's lifetime
 * `cinder` - (Optional) Represents a cinder volume attached and mounted on kubelets host machine. For more info see https://github.com/kubernetes/examples/blob/master/mysql-cinder-pd/README.md#mysql-installation-with-cinder-volume-plugin.
 * `config_map` - (Optional) ConfigMap represents a configMap that should populate this volume
+* `csi` - (Optional) CSI represents storage that is handled by an external CSI driver. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes/#csi)
 * `downward_api` - (Optional) DownwardAPI represents downward API about the pod that should populate this volume
 * `empty_dir` - (Optional) EmptyDir represents a temporary directory that shares a pod's lifetime. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#emptydir)
 * `fc` - (Optional) Represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.

@@ -283,6 +283,15 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						ValidateFunc: validateTypeStringNullableInt,
 						ForceNew:     !isUpdatable,
 					},
+					"seccomp_profile": {
+						Type:        schema.TypeList,
+						Description: "The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows.",
+						Optional:    true,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: seccompProfileField(isUpdatable),
+						},
+					},
 					"se_linux_options": {
 						Type:        schema.TypeList,
 						Description: "The SELinux context to be applied to all containers. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.",

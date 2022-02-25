@@ -26,6 +26,15 @@ func buildId(meta metav1.ObjectMeta) string {
 	return meta.Namespace + "/" + meta.Name
 }
 
+func buildIdWithVersionKind(meta metav1.ObjectMeta, apiVersion, kind string) string {
+	id := fmt.Sprintf("apiVersion=%v,kind=%v,name=%s",
+		apiVersion, kind, meta.Name)
+	if meta.Namespace != "" {
+		id += fmt.Sprintf(",namespace=%v", meta.Namespace)
+	}
+	return id
+}
+
 func expandMetadata(in []interface{}) metav1.ObjectMeta {
 	meta := metav1.ObjectMeta{}
 	if len(in) < 1 {

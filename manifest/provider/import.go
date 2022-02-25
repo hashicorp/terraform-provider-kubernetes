@@ -3,15 +3,15 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/payload"
+	"github.com/hashicorp/terraform-provider-kubernetes/util"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // ImportResourceState function
@@ -28,7 +28,7 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 		return resp, nil
 	}
 
-	gvk, name, namespace, err := parseImportID(req.ID)
+	gvk, name, namespace, err := util.ParseResourceID(req.ID)
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -172,53 +172,4 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 		Detail:   "Please run apply after a successful import to realign the resource state to the configuration in Terraform.",
 	})
 	return resp, nil
-}
-
-// parseImportID processes the resource ID string passed by the user to the "terraform import" command
-// and extracts the values for GVK, name and (optionally) namespace of the target resource as required
-// during the import process.
-//
-// The expected format for the import resource ID is:
-//
-// "apiVersion=<value>,kind=<value>,name=<value>[,namespace=<value>"]
-//
-// where 'namespace' is only required for resources that expect a namespace.
-//
-// Example: "apiVersion=v1,kind=Secret,namespace=default,name=default-token-qgm6s"
-//
-func parseImportID(id string) (gvk schema.GroupVersionKind, name string, namespace string, err error) {
-	tokens := map[string]string{
-		"apiVersion": "",
-		"kind":       "",
-		"name":       "",
-		"namespace":  "default", // FIXME we should check if the kind is namespaced or not
-	}
-	var invalidFormat bool = false
-
-	parts := strings.Split(id, ",")
-	if len(parts) < 3 || len(parts) > 4 {
-		invalidFormat = true
-	}
-	for _, p := range parts {
-		t := strings.Split(p, "=")
-		if len(t) != 2 {
-			invalidFormat = true
-			continue
-		}
-		_, ok := tokens[t[0]]
-		if !ok {
-			invalidFormat = true
-			continue
-		}
-		tokens[t[0]] = t[1]
-	}
-	if invalidFormat {
-		err = fmt.Errorf("invalid format for import ID [%s]\nExpected format is: apiVersion=<value>,kind=<value>,name=<value>[,namespace=<value>]", id)
-		return
-	}
-	gvk = schema.FromAPIVersionAndKind(tokens["apiVersion"], tokens["kind"])
-	namespace = tokens["namespace"]
-	name = tokens["name"]
-
-	return
 }

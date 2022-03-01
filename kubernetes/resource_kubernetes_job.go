@@ -278,11 +278,14 @@ func resourceKubernetesJobExists(ctx context.Context, d *schema.ResourceData, me
 	return true, err
 }
 
-// retryUntilJobIsFinished checks if a give job finished its execution and either in Complete or Failed state
+// retryUntilJobIsFinished checks if a given job has finished its execution in either a Complete or Failed state
 func retryUntilJobIsFinished(ctx context.Context, conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
 	return func() *resource.RetryError {
 		job, err := conn.BatchV1().Jobs(ns).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
+			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+				return nil
+			}
 			return resource.NonRetryableError(err)
 		}
 

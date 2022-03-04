@@ -108,6 +108,30 @@ func TestAccKubernetesMutatingWebhookConfiguration_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "webhook.0.timeout_seconds", "5"),
 				),
 			},
+			{
+				Config: testAccKubernetesMutatingWebhookConfigurationConfig_without_rules(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.0", "v1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.1", "v1beta1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.0.service.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.0.url", "https://test"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.failure_policy", "Ignore"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.match_policy", "Exact"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.namespace_selector.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.object_selector.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.reinvocation_policy", "Never"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.side_effects", "NoneOnDryRun"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.timeout_seconds", "5"),
+				),
+			},
 		},
 	})
 }
@@ -254,6 +278,41 @@ func testAccKubernetesMutatingWebhookConfigurationConfig_modified(name string) s
       operations   = ["CREATE"]
       resources    = ["cronjobs"]
       scope        = "Namespaced"
+    }
+
+    object_selector {
+      match_labels = {
+        app = "test"
+      }
+    }
+
+    reinvocation_policy = "Never"
+    side_effects        = "NoneOnDryRun"
+    timeout_seconds     = 5
+  }
+}
+`, name, name)
+}
+
+func testAccKubernetesMutatingWebhookConfigurationConfig_without_rules(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_mutating_webhook_configuration" "test" {
+  metadata {
+    name = %q
+  }
+
+  webhook {
+    name = %q
+
+    failure_policy = "Ignore"
+    match_policy   = "Exact"
+
+    admission_review_versions = [
+      "v1",
+      "v1beta1"
+    ]
+
+    client_config {
+      url = "https://test"
     }
 
     object_selector {

@@ -99,7 +99,7 @@ func resourceKubernetesValidatingWebhookConfigurationV1() *schema.Resource {
 						"rule": {
 							Type:        schema.TypeList,
 							Description: webhookDoc["rules"],
-							Required:    true,
+							Optional:    true,
 							MinItems:    1,
 							Elem: &schema.Resource{
 								Schema: ruleWithOperationsFields(),

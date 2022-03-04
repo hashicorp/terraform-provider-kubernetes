@@ -377,7 +377,8 @@ func testAccCheckKubernetesIngressV1Exists(n string, obj *networking.Ingress) re
 }
 
 func testAccKubernetesIngressV1Config_serviceBackend(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -412,7 +413,8 @@ func testAccKubernetesIngressV1Config_serviceBackend(name string) string {
 }
 
 func testAccKubernetesIngressV1Config_resourceBackend(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -446,7 +448,8 @@ func testAccKubernetesIngressV1Config_resourceBackend(name string) string {
 }
 
 func testAccKubernetesIngressV1Config_serviceBackend_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -465,7 +468,8 @@ func testAccKubernetesIngressV1Config_serviceBackend_modified(name string) strin
 }
 
 func testAccKubernetesIngressV1Config_TLS(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -487,7 +491,8 @@ func testAccKubernetesIngressV1Config_TLS(name string) string {
 }
 
 func testAccKubernetesIngressV1Config_TLS_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -509,7 +514,8 @@ func testAccKubernetesIngressV1Config_TLS_modified(name string) string {
 }
 
 func testAccKubernetesIngressV1Config_internalKey(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
     annotations = {
@@ -540,7 +546,8 @@ func testAccKubernetesIngressV1Config_internalKey(name string) string {
 }
 
 func testAccKubernetesIngressV1Config_internalKey_removed(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
     annotations = {
@@ -569,7 +576,8 @@ func testAccKubernetesIngressV1Config_internalKey_removed(name string) string {
 }
 
 func testAccKubernetesIngressV1Config_waitForLoadBalancer(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_service" "test" {
   metadata {
     name = %q
   }
@@ -639,7 +647,8 @@ resource "kubernetes_ingress_v1" "test" {
 }
 
 func testAccKubernetesIngressV1Config_ruleHostOnly(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -647,13 +656,14 @@ func testAccKubernetesIngressV1Config_ruleHostOnly(name string) string {
     ingress_class_name = "ingress-class"
     rule {
       host = "server.domain.com"
-	}
+    }
   }
 }`, name)
 }
 
 func testAccKubernetesIngressV1Config_multipleRulesDifferentHosts(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -661,7 +671,7 @@ func testAccKubernetesIngressV1Config_multipleRulesDifferentHosts(name string) s
     ingress_class_name = "ingress-class"
     rule {
       host = "server.domain.com"
-	  http {
+      http {
         path {
           backend {
             service {
@@ -674,34 +684,34 @@ func testAccKubernetesIngressV1Config_multipleRulesDifferentHosts(name string) s
           path = "/app1/*"
         }
       }
-	}
+    }
     rule {
-		host = "server.example.com"
-		http {
-		  path {
-			backend {
-			  service {
-				name = "app1"
-				port {
-				  number = 8080
-				}
-			  }
-			}
-			path = "/app1/*"
-		  }
-		  path {
-			backend {
-			  service {
-				name = "app2"
-				port {
-				  number = 8080
-				}
-			  }
-			}
-			path = "/app2/*"
-		  }
-		}
-	  }
+      host = "server.example.com"
+      http {
+        path {
+          backend {
+            service {
+              name = "app1"
+              port {
+                number = 8080
+              }
+            }
+          }
+          path = "/app1/*"
+        }
+        path {
+          backend {
+            service {
+              name = "app2"
+              port {
+                number = 8080
+              }
+            }
+          }
+          path = "/app2/*"
+        }
+      }
+    }
   }
 }`, name)
 }

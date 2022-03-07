@@ -1557,7 +1557,8 @@ func testAccKubernetesPodConfigWithSecurityContextRunAsGroup(podName, imageName 
 }
 
 func testAccKubernetesPodConfigWithSecurityContextSeccompProfile(podName, imageName, seccompProfileType string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_pod" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1567,20 +1568,21 @@ func testAccKubernetesPodConfigWithSecurityContextSeccompProfile(podName, imageN
   }
 
   spec {
+    automount_service_account_token = false
     security_context {
-	  seccomp_profile {
-		type = "%s"
-	  }
+      seccomp_profile {
+        type = "%s"
+      }
     }
 
     container {
       image = "%s"
       name  = "containername"
-	  security_context {
-		seccomp_profile {
-			type = "%s"
-		}
-	  }
+      security_context {
+        seccomp_profile {
+          type = "%s"
+        }
+      }
     }
   }
 }
@@ -1588,7 +1590,8 @@ func testAccKubernetesPodConfigWithSecurityContextSeccompProfile(podName, imageN
 }
 
 func testAccKubernetesPodConfigWithSecurityContextSeccompProfileLocalhost(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_pod" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1598,22 +1601,23 @@ func testAccKubernetesPodConfigWithSecurityContextSeccompProfileLocalhost(podNam
   }
 
   spec {
+    automount_service_account_token = false
     security_context {
-	  seccomp_profile {
-		type              = "Localhost"
-		localhost_profile = ""
-	  }
+      seccomp_profile {
+        type              = "Localhost"
+        localhost_profile = ""
+      }
     }
 
     container {
       image = "%s"
       name  = "containername"
-	  security_context {
-		seccomp_profile {
-			type              = "Localhost"
-			localhost_profile = ""
-		}
-	  }
+      security_context {
+        seccomp_profile {
+          type              = "Localhost"
+          localhost_profile = ""
+        }
+      }
     }
   }
 }

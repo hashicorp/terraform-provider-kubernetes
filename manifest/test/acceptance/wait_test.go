@@ -3,16 +3,27 @@
 package acceptance
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
 	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
 )
 
 func TestKubernetesManifest_WaitFields_Pod(t *testing.T) {
+	ctx := context.Background()
+
 	name := randName()
 	namespace := randName()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
 
 	tf := tfhelper.RequireNewWorkingDir(t)
 	tf.SetReattachInfo(reattachInfo)
@@ -59,8 +70,15 @@ func TestKubernetesManifest_WaitFields_Pod(t *testing.T) {
 }
 
 func TestKubernetesManifest_WaitRollout_Deployment(t *testing.T) {
+	ctx := context.Background()
+
 	name := randName()
 	namespace := randName()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
 
 	tf := tfhelper.RequireNewWorkingDir(t)
 	tf.SetReattachInfo(reattachInfo)

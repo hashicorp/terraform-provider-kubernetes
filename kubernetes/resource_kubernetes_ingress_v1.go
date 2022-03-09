@@ -64,7 +64,7 @@ func resourceKubernetesIngressV1Schema() map[string]*schema.Schema {
 								},
 								"http": {
 									Type:        schema.TypeList,
-									Required:    true,
+									Optional:    true,
 									MaxItems:    1,
 									Description: "http is a list of http selectors pointing to backends. In the example: http:///? -> backend where where parts of the url correspond to RFC 3986, this resource will be used to match against everything after the last '/' and before the first '?' or '#'.",
 									Elem: &schema.Resource{

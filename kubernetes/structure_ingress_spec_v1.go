@@ -148,13 +148,13 @@ func expandIngressV1Rule(l []interface{}) []networking.IngressRule {
 			}
 		}
 
-		obj[i] = networking.IngressRule{
-			Host: cfg["host"].(string),
-			IngressRuleValue: networking.IngressRuleValue{
+		obj[i].Host = cfg["host"].(string)
+		if len(paths) > 0 {
+			obj[i].IngressRuleValue = networking.IngressRuleValue{
 				HTTP: &networking.HTTPIngressRuleValue{
 					Paths: paths,
 				},
-			},
+			}
 		}
 	}
 	return obj

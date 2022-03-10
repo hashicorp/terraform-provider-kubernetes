@@ -385,9 +385,10 @@ func resourceKubernetesServiceAccountImportState(ctx context.Context, d *schema.
 	if err != nil {
 		return nil, fmt.Errorf("Unable to fetch service account from Kubernetes: %s", err)
 	}
+
 	defaultSecret, err := findDefaultServiceAccount(ctx, sa, conn)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to discover the default service account token: %s", err)
+		log.Printf("[WARN] Failed to discover the default service account token: %s", err)
 	}
 
 	err = d.Set("default_secret_name", defaultSecret)

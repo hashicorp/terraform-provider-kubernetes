@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -69,7 +70,7 @@ func dataSourceKubernetesServiceAccountRead(ctx context.Context, d *schema.Resou
 
 	defaultSecret, err := findDefaultServiceAccount(ctx, sa, conn)
 	if err != nil {
-		return diag.Errorf("Failed to discover the default service account token: %s", err)
+		log.Printf("[WARN] Failed to discover the default service account token: %s", err)
 	}
 
 	err = d.Set("default_secret_name", defaultSecret)

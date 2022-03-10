@@ -117,11 +117,17 @@ resource "kubernetes_manifest" "test" {
 
   wait_for = {
     fields = {
+      # crd status.additionalStringProperties filed with additionalProperties type string
+      "status.additionalStringProperties[\"key1\"]" = "value1"
+
+      # crd status.additionalIntProperties filed with additionalProperties type int
+      "status.additionalIntProperties[0]" = "value1"
+
       # Check the phase of a pod
       "status.phase" = "Running"
 
       # Check a container's status
-      "status.containerStatuses[0].ready" = "true",
+      "status.containerStatuses[0].ready" = "true"
 
       # Check an ingress has an IP
       "status.loadBalancer.ingress[0].ip" = "^(\\d+(\\.|$)){4}"

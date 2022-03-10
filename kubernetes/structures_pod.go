@@ -208,6 +208,9 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	if in.RunAsUser != nil {
 		att["run_as_user"] = strconv.Itoa(int(*in.RunAsUser))
 	}
+	if in.SeccompProfile != nil {
+		att["seccomp_profile"] = flattenSeccompProfile(in.SeccompProfile)
+	}
 	if len(in.SupplementalGroups) > 0 {
 		att["supplemental_groups"] = newInt64Set(schema.HashSchema(&schema.Schema{
 			Type: schema.TypeInt,
@@ -224,6 +227,17 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 		return []interface{}{att}
 	}
 	return []interface{}{}
+}
+
+func flattenSeccompProfile(in *v1.SeccompProfile) []interface{} {
+	att := make(map[string]interface{})
+	if in.Type != "" {
+		att["type"] = in.Type
+		if in.Type == "Localhost" {
+			att["localhost_profile"] = in.LocalhostProfile
+		}
+	}
+	return []interface{}{att}
 }
 
 func flattenSeLinuxOptions(in *v1.SELinuxOptions) []interface{} {
@@ -871,6 +885,9 @@ func expandPodSecurityContext(l []interface{}) (*v1.PodSecurityContext, error) {
 		}
 		obj.RunAsUser = ptrToInt64(int64(i))
 	}
+	if v, ok := in["seccomp_profile"].([]interface{}); ok && len(v) > 0 {
+		obj.SeccompProfile = expandSeccompProfile(v)
+	}
 	if v, ok := in["se_linux_options"].([]interface{}); ok && len(v) > 0 {
 		obj.SELinuxOptions = expandSeLinuxOptions(v)
 	}
@@ -900,6 +917,23 @@ func expandSysctls(l []interface{}) []v1.Sysctl {
 
 	}
 	return sysctls
+}
+
+func expandSeccompProfile(l []interface{}) *v1.SeccompProfile {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.SeccompProfile{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.SeccompProfile{}
+	if v, ok := in["type"].(string); ok {
+		obj.Type = v1.SeccompProfileType(v)
+		if v == "Localhost" {
+			if lp, ok := in["localhost_profile"].(string); ok {
+				obj.LocalhostProfile = &lp
+			}
+		}
+	}
+	return obj
 }
 
 func expandSeLinuxOptions(l []interface{}) *v1.SELinuxOptions {

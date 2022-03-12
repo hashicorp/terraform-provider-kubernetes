@@ -1,4 +1,5 @@
 ---
+subcategory: "rbac/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_cluster_role_binding"
 description: |-

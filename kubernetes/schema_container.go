@@ -162,6 +162,30 @@ func resourcesFieldV0() map[string]*schema.Schema {
 	}
 }
 
+func seccompProfileField(isUpdatable bool) map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"localhost_profile": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			ForceNew:    !isUpdatable,
+			Default:     "",
+			Description: "Localhost Profile indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work.",
+		},
+		"type": {
+			Type:     schema.TypeString,
+			Optional: true,
+			ForceNew: !isUpdatable,
+			Default:  string(api.SeccompProfileTypeUnconfined),
+			ValidateFunc: validation.StringInSlice([]string{
+				string(api.SeccompProfileTypeLocalhost),
+				string(api.SeccompProfileTypeRuntimeDefault),
+				string(api.SeccompProfileTypeUnconfined),
+			}, false),
+			Description: "Type indicates which kind of seccomp profile will be applied. Valid options are: Localhost, RuntimeDefault, Unconfined.",
+		},
+	}
+}
+
 func seLinuxOptionsField(isUpdatable bool) map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"level": {
@@ -740,6 +764,15 @@ func securityContextSchema(isUpdatable bool) *schema.Resource {
 			Optional:     true,
 			ForceNew:     !isUpdatable,
 			ValidateFunc: validateTypeStringNullableInt,
+		},
+		"seccomp_profile": {
+			Type:        schema.TypeList,
+			Description: "The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows.",
+			Optional:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: seccompProfileField(isUpdatable),
+			},
 		},
 		"se_linux_options": {
 			Type:        schema.TypeList,

@@ -63,6 +63,26 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 	}
 	s.logger.Trace("[ApplyResourceChange]", "[PriorState]", dump(applyPriorState))
 
+	config, err := req.Config.Unmarshal(rt)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to unmarshal manifest configuration",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+	confVals := make(map[string]tftypes.Value)
+	err = config.As(&confVals)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to extract attributes from resource configuration",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+
 	var plannedStateVal map[string]tftypes.Value = make(map[string]tftypes.Value)
 	err = applyPlannedState.As(&plannedStateVal)
 	if err != nil {
@@ -148,7 +168,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, fmt.Errorf("failed to determine resource GVK: %s", err)
 		}
 
-		tsch, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
+		tsch, th, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
 		if err != nil {
 			return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
 		}
@@ -184,16 +204,65 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		if err != nil {
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 				Severity: tfprotov5.DiagnosticSeverityError,
-				Summary:  "Failed to backfill computed values in proposed object",
+				Summary:  "Failed to backfill computed values in proposed value",
 				Detail:   err.Error(),
 			})
 			return resp, nil
 		}
 
-		minObj := morph.UnknownToNull(obj)
-		s.logger.Trace("[ApplyResourceChange][Apply]", "[UnknownToNull]", dump(minObj))
+		nullObj := morph.UnknownToNull(obj)
+		s.logger.Trace("[ApplyResourceChange][Apply]", "[UnknownToNull]", dump(nullObj))
 
-		pu, err := payload.FromTFValue(minObj, tftypes.NewAttributePath())
+		// Remove empty objects unless explicitly set by the user in manifest.
+		// They only serve a structural purpose in the planning phase and should not be included in the API payload.
+		minObj, err := tftypes.Transform(nullObj, func(ap *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
+			if v.IsNull() {
+				return tftypes.NewValue(v.Type(), nil), nil
+			}
+			switch {
+			case v.Type().Is(tftypes.Object{}) || v.Type().Is(tftypes.Map{}):
+				atts := make(map[string]tftypes.Value)
+				err := v.As(&atts)
+				if err != nil {
+					return v, err
+				}
+				var isEmpty bool = true
+				for _, atv := range atts {
+					if !atv.IsNull() {
+						isEmpty = false
+						break
+					}
+				}
+				// check if attribute path is present in user-supplied manifest
+				// (this means the value is intentional, not structural)
+				_, restPath, err := tftypes.WalkAttributePath(confVals["manifest"], ap)
+				if (err == nil && len(restPath.Steps()) == 0) || !isEmpty {
+					// attribute is not empty and/or was set by the user -> retain
+					return tftypes.NewValue(v.Type(), atts), nil
+				}
+				return tftypes.NewValue(v.Type(), nil), nil
+			case v.Type().Is(tftypes.List{}) || v.Type().Is(tftypes.Set{}) || v.Type().Is(tftypes.Tuple{}):
+				atts := make([]tftypes.Value, 0)
+				err := v.As(&atts)
+				if err != nil {
+					return v, err
+				}
+				return tftypes.NewValue(v.Type(), atts), nil
+			default:
+				return v, nil
+			}
+		})
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics,
+				&tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityError,
+					Detail:   err.Error(),
+					Summary:  "Failed to sanitize empty block ahead of payload preparation",
+				})
+			return resp, nil
+		}
+
+		pu, err := payload.FromTFValue(minObj, th, tftypes.NewAttributePath())
 		if err != nil {
 			return resp, err
 		}
@@ -287,6 +356,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		defer cancel()
 
 		// Call the Kubernetes API to create the new resource
+		s.logger.Trace("[ApplyResourceChange][API Payload]: %s", jsonManifest)
 		result, err := rs.Patch(ctxDeadline, rname, types.ApplyPatchType, jsonManifest,
 			metav1.PatchOptions{
 				FieldManager: fieldManagerName,
@@ -320,20 +390,26 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, nil
 		}
 
-		newResObject, err := payload.ToTFValue(RemoveServerSideFields(result.Object), tsch, tftypes.NewAttributePath())
+		newResObject, err := payload.ToTFValue(RemoveServerSideFields(result.Object), tsch, th, tftypes.NewAttributePath())
 		if err != nil {
-			return resp, err
+			resp.Diagnostics = append(resp.Diagnostics,
+				&tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityError,
+					Summary:  "Conversion from Unstructured to tftypes.Value failed",
+					Detail:   err.Error(),
+				})
+			return resp, nil
 		}
 		s.logger.Trace("[ApplyResourceChange][Apply]", "[payload.ToTFValue]", dump(newResObject))
 
-		wt, err := s.TFTypeFromOpenAPI(ctx, gvk, true)
+		wt, _, err := s.TFTypeFromOpenAPI(ctx, gvk, true)
 		if err != nil {
 			return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
 		}
 
 		wf, ok := plannedStateVal["wait_for"]
 		if ok {
-			err = s.waitForCompletion(ctxDeadline, wf, rs, rname, wt)
+			err = s.waitForCompletion(ctxDeadline, wf, rs, rname, wt, th)
 			if err != nil {
 				if err == context.DeadlineExceeded {
 					resp.Diagnostics = append(resp.Diagnostics,
@@ -389,7 +465,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, nil
 		}
 
-		pu, err := payload.FromTFValue(pco, tftypes.NewAttributePath())
+		pu, err := payload.FromTFValue(pco, nil, tftypes.NewAttributePath())
 		if err != nil {
 			return resp, err
 		}
@@ -466,9 +542,6 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 
 		resp.NewState = req.PlannedState
 	}
-	// force a refresh of the OpenAPI foundry on next use
-	// we do this to capture any potentially new resource type that might have been added
-	s.OAPIFoundry = nil // this needs to be optimized to refresh only when CRDs are applied (or maybe other schema altering resources too?)
 
 	return resp, nil
 }

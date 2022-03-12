@@ -38,6 +38,7 @@ func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
 						},
 						"metric": {
 							Type:        schema.TypeList,
+							Computed:    true,
 							Optional:    true,
 							Description: "The specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used). The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods. Ergo, metrics used must decrease as the pod count is increased, and vice-versa. See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization.",
 							Elem:        metricSpecFields(),
@@ -47,6 +48,28 @@ func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
 							Description: "Lower limit for the number of pods that can be set by the autoscaler, defaults to `1`.",
 							Optional:    true,
 							Default:     1,
+						},
+						"behavior": {
+							Type:        schema.TypeList,
+							Description: "Behavior configures the scaling behavior of the target in both Up and Down directions (scale_up and scale_down fields respectively).",
+							Optional:    true,
+							MaxItems:    1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"scale_up": {
+										Type:        schema.TypeList,
+										Description: "Scaling policy for scaling Up",
+										Optional:    true,
+										Elem:        scalingRulesSpecFields(),
+									},
+									"scale_down": {
+										Type:        schema.TypeList,
+										Description: "Scaling policy for scaling Down",
+										Optional:    true,
+										Elem:        scalingRulesSpecFields(),
+									},
+								},
+							},
 						},
 						"scale_target_ref": {
 							Type:        schema.TypeList,
@@ -87,8 +110,8 @@ func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
 }
 
 func resourceKubernetesHorizontalPodAutoscalerCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if useV2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Create(ctx, d, meta)
+	if useV2Beta2(d) {
+		return resourceKubernetesHorizontalPodAutoscalerV2Beta2Create(ctx, d, meta)
 	}
 
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -127,8 +150,8 @@ func resourceKubernetesHorizontalPodAutoscalerRead(ctx context.Context, d *schem
 		d.SetId("")
 		return diag.Diagnostics{}
 	}
-	if useV2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Read(ctx, d, meta)
+	if useV2Beta2(d) {
+		return resourceKubernetesHorizontalPodAutoscalerV2Beta2Read(ctx, d, meta)
 	}
 
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -149,7 +172,7 @@ func resourceKubernetesHorizontalPodAutoscalerRead(ctx context.Context, d *schem
 
 	// NOTE: this is needed for import
 	if _, exists := hpa.ObjectMeta.GetAnnotations()["autoscaling.alpha.kubernetes.io/metrics"]; exists {
-		return resourceKubernetesHorizontalPodAutoscalerV2Read(ctx, d, meta)
+		return resourceKubernetesHorizontalPodAutoscalerV2Beta2Read(ctx, d, meta)
 	}
 
 	log.Printf("[INFO] Received horizontal pod autoscaler: %#v", hpa)
@@ -169,8 +192,8 @@ func resourceKubernetesHorizontalPodAutoscalerRead(ctx context.Context, d *schem
 }
 
 func resourceKubernetesHorizontalPodAutoscalerUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if useV2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Update(ctx, d, meta)
+	if useV2Beta2(d) {
+		return resourceKubernetesHorizontalPodAutoscalerV2Beta2Update(ctx, d, meta)
 	}
 
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -204,8 +227,8 @@ func resourceKubernetesHorizontalPodAutoscalerUpdate(ctx context.Context, d *sch
 }
 
 func resourceKubernetesHorizontalPodAutoscalerDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if useV2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Delete(ctx, d, meta)
+	if useV2Beta2(d) {
+		return resourceKubernetesHorizontalPodAutoscalerV2Beta2Delete(ctx, d, meta)
 	}
 
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -230,8 +253,8 @@ func resourceKubernetesHorizontalPodAutoscalerDelete(ctx context.Context, d *sch
 }
 
 func resourceKubernetesHorizontalPodAutoscalerExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
-	if useV2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Exists(ctx, d, meta)
+	if useV2Beta2(d) {
+		return resourceKubernetesHorizontalPodAutoscalerV2Beta2Exists(ctx, d, meta)
 	}
 
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -255,10 +278,16 @@ func resourceKubernetesHorizontalPodAutoscalerExists(ctx context.Context, d *sch
 	return true, err
 }
 
-func useV2(d *schema.ResourceData) bool {
+func useV2Beta2(d *schema.ResourceData) bool {
 	if len(d.Get("spec.0.metric").([]interface{})) > 0 {
 		log.Printf("[INFO] Using autoscaling/v2beta2 because this resource has a metric field")
 		return true
 	}
+
+	if len(d.Get("spec.0.behavior").([]interface{})) > 0 {
+		log.Printf("[INFO] Using autoscaling/v2beta2 because this resource has a behavior field")
+		return true
+	}
+
 	return false
 }

@@ -16,10 +16,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	k8sretry "k8s.io/client-go/util/retry"
+	"k8s.io/kubectl/pkg/scheme"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -27,7 +27,8 @@ import (
 // Helper is a Kubernetes dynamic client wrapped with a set of helper functions
 // for making assertions about API resources
 type Helper struct {
-	client dynamic.Interface
+	dynClient  dynamic.Interface
+	restClient *rest.RESTClient
 }
 
 type apiVersionResponse struct {
@@ -47,19 +48,30 @@ func NewHelper() *Helper {
 		config = &rest.Config{}
 	}
 
-	// print API server version to log output
-	// also serves as validation for client config
-	logAPIVersion(config)
-
 	client, err := dynamic.NewForConfig(config)
 	if err != nil {
 		//lintignore:R009
 		panic(err)
 	}
 
-	return &Helper{
-		client: client,
+	codec := runtime.NoopEncoder{Decoder: scheme.Codecs.UniversalDecoder()}
+	config.NegotiatedSerializer = serializer.NegotiatedSerializerWrapper(runtime.SerializerInfo{Serializer: codec})
+
+	rc, err := rest.UnversionedRESTClientFor(config)
+	if err != nil {
+		//lintignore:R009
+		panic(err)
 	}
+
+	h := Helper{
+		dynClient:  client,
+		restClient: rc,
+	}
+	// print API server version to log output
+	// also serves as validation for client config
+	h.logAPIVersion()
+
+	return &h
 }
 
 // CreateNamespace creates a new namespace
@@ -76,7 +88,7 @@ func (k *Helper) CreateNamespace(t *testing.T, name string) {
 		},
 	}
 	gvr := NewGroupVersionResource("v1", "namespaces")
-	_, err := k.client.Resource(gvr).Create(context.TODO(), namespace, metav1.CreateOptions{})
+	_, err := k.dynClient.Resource(gvr).Create(context.TODO(), namespace, metav1.CreateOptions{})
 	if err != nil {
 		t.Fatalf("Failed to create namespace %q: %v", name, err)
 	}
@@ -98,7 +110,7 @@ func (k *Helper) CreateConfigMap(t *testing.T, name string, namespace string, da
 		},
 	}
 	gvr := NewGroupVersionResource("v1", "configmaps")
-	_, err := k.client.Resource(gvr).Namespace(namespace).Create(context.TODO(), cfgmap, metav1.CreateOptions{})
+	_, err := k.dynClient.Resource(gvr).Namespace(namespace).Create(context.TODO(), cfgmap, metav1.CreateOptions{})
 	if err != nil {
 		t.Fatalf("Failed to create configmap %q/%q: %v", namespace, name, err)
 	}
@@ -108,7 +120,7 @@ func (k *Helper) CreateConfigMap(t *testing.T, name string, namespace string, da
 func (k *Helper) DeleteResource(t *testing.T, name string, gvr schema.GroupVersionResource) {
 	t.Helper()
 
-	err := k.client.Resource(gvr).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	err := k.dynClient.Resource(gvr).Delete(context.TODO(), name, metav1.DeleteOptions{})
 	if err != nil {
 		t.Fatalf("Failed to delete resource %q: %v", name, err)
 	}
@@ -118,7 +130,7 @@ func (k *Helper) DeleteResource(t *testing.T, name string, gvr schema.GroupVersi
 func (k *Helper) DeleteNamespacedResource(t *testing.T, name string, namespace string, gvr schema.GroupVersionResource) {
 	t.Helper()
 
-	err := k.client.Resource(gvr).Namespace(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	err := k.dynClient.Resource(gvr).Namespace(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 	if err != nil {
 		t.Fatalf("Failed to delete resource \"%s/%s\": %v", namespace, name, err)
 	}
@@ -137,7 +149,7 @@ func (k *Helper) AssertNamespacedResourceExists(t *testing.T, gv, resource, name
 	gvr := NewGroupVersionResource(gv, resource)
 
 	op := func() error {
-		_, operr := k.client.Resource(gvr).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		_, operr := k.dynClient.Resource(gvr).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 		return operr
 	}
 
@@ -161,7 +173,7 @@ func (k *Helper) AssertResourceExists(t *testing.T, gv, resource, name string) {
 	gvr := NewGroupVersionResource(gv, resource)
 
 	op := func() error {
-		_, operr := k.client.Resource(gvr).Get(context.TODO(), name, metav1.GetOptions{})
+		_, operr := k.dynClient.Resource(gvr).Get(context.TODO(), name, metav1.GetOptions{})
 		return operr
 	}
 	err := k8sretry.OnError(k8sretry.DefaultBackoff, func(e error) bool {
@@ -186,10 +198,10 @@ func (k *Helper) AssertResourceGeneration(t *testing.T, gv, resource, namespace,
 		var res *unstructured.Unstructured
 		var operr error
 		if namespace != "" {
-			res, operr = k.client.Resource(gvr).Namespace(namespace).Get(
+			res, operr = k.dynClient.Resource(gvr).Namespace(namespace).Get(
 				context.TODO(), name, metav1.GetOptions{})
 		} else {
-			res, operr = k.client.Resource(gvr).Get(context.TODO(),
+			res, operr = k.dynClient.Resource(gvr).Get(context.TODO(),
 				name, metav1.GetOptions{})
 		}
 
@@ -223,7 +235,7 @@ func (k *Helper) AssertNamespacedResourceDoesNotExist(t *testing.T, gv, resource
 	gvr := NewGroupVersionResource(gv, resource)
 
 	op := func() error {
-		_, operr := k.client.Resource(gvr).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		_, operr := k.dynClient.Resource(gvr).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 		if errors.IsNotFound(operr) {
 			return nil
 		}
@@ -249,7 +261,7 @@ func (k *Helper) AssertResourceDoesNotExist(t *testing.T, gv, resource, name str
 	gvr := NewGroupVersionResource(gv, resource)
 
 	op := func() error {
-		_, operr := k.client.Resource(gvr).Get(context.TODO(), name, metav1.GetOptions{})
+		_, operr := k.dynClient.Resource(gvr).Get(context.TODO(), name, metav1.GetOptions{})
 		if errors.IsNotFound(operr) {
 			return nil
 		}
@@ -280,25 +292,19 @@ func isErrorRetriable(e error) bool {
 	return true
 }
 
-func logAPIVersion(config *rest.Config) {
-	codec := runtime.NoopEncoder{Decoder: scheme.Codecs.UniversalDecoder()}
-	config.NegotiatedSerializer = serializer.NegotiatedSerializerWrapper(runtime.SerializerInfo{Serializer: codec})
-	rc, err := rest.UnversionedRESTClientFor(config)
-	if err != nil {
-		//lintignore:R009
-		panic(err)
-	}
-	apiVer, err := rc.Get().AbsPath("/version").DoRaw(context.Background())
+func (k *Helper) logAPIVersion() {
+	log.Printf("Testing against Kubernetes API version: %s", k.ClusterVersion().String())
+}
+
+func (k *Helper) ClusterVersion() (vInfo version.Info) {
+	apiVer, err := k.restClient.Get().AbsPath("/version").DoRaw(context.Background())
 	if err != nil {
 		log.Printf("API version check responded with error: %s", err)
 		return
 	}
-	var vInfo version.Info
 	err = json.Unmarshal(apiVer, &vInfo)
 	if err != nil {
 		log.Printf("Failed to decode API version block: %s", err)
-		return
 	}
-	log.Printf("Testing against Kubernetes API version: %s", vInfo.String())
-
+	return
 }

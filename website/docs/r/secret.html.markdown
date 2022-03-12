@@ -1,4 +1,5 @@
 ---
+subcategory: "core/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_secret"
 description: |-
@@ -58,24 +59,27 @@ resource "kubernetes_secret" "example" {
     name = "docker-cfg"
   }
 
+  type = "kubernetes.io/dockerconfigjson"
+
   data = {
     ".dockerconfigjson" = jsonencode({
       auths = {
         "${var.registry_server}" = {
-          auth = "${base64encode("${var.registry_username}:${var.registry_password}")}"
+          "username" = var.registry_username
+          "password" = var.registry_password
+          "email"    = var.registry_email
+          "auth"     = base64encode("${var.registry_username}:${var.registry_password}")
         }
       }
     })
   }
-
-  type = "kubernetes.io/dockerconfigjson"
 }
 ```
 
 This is equivalent to the following kubectl command:
 
 ```sh
-$ kubectl create secret docker-registry docker-cfg --docker-server=${registry_server} --docker-username=${registry_username} --docker-password=${registry_password}
+$ kubectl create secret docker-registry docker-cfg --docker-server=${registry_server} --docker-username=${registry_username} --docker-password=${registry_password} --docker-email=${registry_email}
 ```
 
 ## Example Usage (Service account token)

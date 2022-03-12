@@ -18,8 +18,11 @@ func TestAccKubernetesIngress_basic(t *testing.T) {
 	resourceName := "kubernetes_ingress.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
+		},
+		IDRefreshName:     "kubernetes_ingress.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{
@@ -142,8 +145,11 @@ func TestAccKubernetesIngress_TLS(t *testing.T) {
 	resourceName := "kubernetes_ingress.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
+		},
+		IDRefreshName:     "kubernetes_ingress.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{
@@ -191,8 +197,11 @@ func TestAccKubernetesIngress_InternalKey(t *testing.T) {
 	resourceName := "kubernetes_ingress.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
+		},
+		IDRefreshName:     "kubernetes_ingress.test",
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
@@ -239,8 +248,12 @@ func TestAccKubernetesIngress_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 	resourceName := "kubernetes_ingress.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
-		IDRefreshName:     resourceName,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
+			skipIfNotRunningInGke(t)
+		},
+		IDRefreshName:     "kubernetes_ingress.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{
@@ -266,7 +279,11 @@ func TestAccKubernetesIngress_stateUpgradeV0_loadBalancerIngress(t *testing.T) {
 	resourceName := "kubernetes_ingress.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInEks(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
+			skipIfNotRunningInEks(t)
+		},
 		ExternalProviders: testAccExternalProviders,
 		IDRefreshName:     resourceName,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,

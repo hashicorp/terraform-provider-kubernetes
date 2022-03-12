@@ -12,15 +12,16 @@ import (
 )
 
 type testSample struct {
-	gvk  schema.GroupVersionKind
-	want tftypes.Type
+	gvk   schema.GroupVersionKind
+	hints map[string]string
+	want  tftypes.Type
 }
 
 type testSamples map[string]testSample
 
 var objectMetaType = tftypes.Object{
 	AttributeTypes: map[string]tftypes.Type{
-		"annotations":                tftypes.Map{AttributeType: tftypes.String},
+		"annotations":                tftypes.Map{ElementType: tftypes.String},
 		"clusterName":                tftypes.String,
 		"creationTimestamp":          tftypes.String,
 		"deletionGracePeriodSeconds": tftypes.Number,
@@ -28,9 +29,9 @@ var objectMetaType = tftypes.Object{
 		"finalizers":                 tftypes.List{ElementType: tftypes.String},
 		"generateName":               tftypes.String,
 		"generation":                 tftypes.Number,
-		"labels":                     tftypes.Map{AttributeType: tftypes.String},
-		"managedFields": tftypes.List{
-			ElementType: tftypes.Object{
+		"labels":                     tftypes.Map{ElementType: tftypes.String},
+		"managedFields": tftypes.Tuple{
+			ElementTypes: []tftypes.Type{tftypes.Object{
 				AttributeTypes: map[string]tftypes.Type{
 					"apiVersion": tftypes.String,
 					"fieldsType": tftypes.String,
@@ -39,7 +40,7 @@ var objectMetaType = tftypes.Object{
 					"operation":  tftypes.String,
 					"time":       tftypes.String,
 				},
-			},
+			}},
 		},
 		"name":      tftypes.String,
 		"namespace": tftypes.String,
@@ -63,20 +64,24 @@ var objectMetaType = tftypes.Object{
 
 var samples = testSamples{
 	"core.v1/ConfigMap": {
-		gvk: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
+		gvk:   schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
+		hints: map[string]string{},
 		want: tftypes.Object{
 			AttributeTypes: map[string]tftypes.Type{
 				"apiVersion": tftypes.String,
 				"kind":       tftypes.String,
 				"metadata":   objectMetaType,
 				"immutable":  tftypes.Bool,
-				"data":       tftypes.Map{AttributeType: tftypes.String},
-				"binaryData": tftypes.Map{AttributeType: tftypes.String},
+				"data":       tftypes.Map{ElementType: tftypes.String},
+				"binaryData": tftypes.Map{ElementType: tftypes.String},
 			},
 		},
 	},
 	"core.v1/Service": {
 		gvk: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"},
+		hints: map[string]string{
+			"AttributeName(\"spec\").AttributeName(\"ports\").ElementKeyInt(-1).AttributeName(\"targetPort\")": "io.k8s.apimachinery.pkg.util.intstr.IntOrString",
+		},
 		want: tftypes.Object{
 			AttributeTypes: map[string]tftypes.Type{
 				"apiVersion": tftypes.String,
@@ -92,20 +97,20 @@ var samples = testSamples{
 						"ipFamily":                 tftypes.String,
 						"loadBalancerIP":           tftypes.String,
 						"loadBalancerSourceRanges": tftypes.List{ElementType: tftypes.String},
-						"ports": tftypes.List{
-							ElementType: tftypes.Object{
+						"ports": tftypes.Tuple{
+							ElementTypes: []tftypes.Type{tftypes.Object{
 								AttributeTypes: map[string]tftypes.Type{
 									"appProtocol": tftypes.String,
 									"name":        tftypes.String,
 									"nodePort":    tftypes.Number,
 									"port":        tftypes.Number,
 									"protocol":    tftypes.String,
-									"targetPort":  tftypes.DynamicPseudoType,
+									"targetPort":  tftypes.String,
 								},
-							},
+							}},
 						},
 						"publishNotReadyAddresses": tftypes.Bool,
-						"selector":                 tftypes.Map{AttributeType: tftypes.String},
+						"selector":                 tftypes.Map{ElementType: tftypes.String},
 						"sessionAffinity":          tftypes.String,
 						"sessionAffinityConfig": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
 							"clientIP": tftypes.Object{
@@ -131,92 +136,6 @@ var samples = testSamples{
 			},
 		},
 	},
-	"apiextensions.v1/CustomResourceDefinition": {
-		gvk: schema.GroupVersionKind{Group: "apiextensions.k8s.io", Version: "v1", Kind: "CustomResourceDefinition"},
-		want: tftypes.Object{
-			AttributeTypes: map[string]tftypes.Type{
-				"apiVersion": tftypes.String,
-				"kind":       tftypes.String,
-				"metadata":   objectMetaType,
-				"spec": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-					"conversion": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-						"strategy": tftypes.String,
-						"webhook": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-							"clientConfig": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-								"caBundle": tftypes.String,
-								"service": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-									"name":      tftypes.String,
-									"namespace": tftypes.String,
-									"path":      tftypes.String,
-									"port":      tftypes.Number,
-								}},
-								"url": tftypes.String,
-							}},
-							"conversionReviewVersions": tftypes.List{ElementType: tftypes.String},
-						}},
-					}},
-					"group": tftypes.String,
-					"names": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-						"categories": tftypes.List{ElementType: tftypes.String},
-						"kind":       tftypes.String,
-						"listKind":   tftypes.String,
-						"plural":     tftypes.String,
-						"shortNames": tftypes.List{ElementType: tftypes.String},
-						"singular":   tftypes.String,
-					}},
-					"preserveUnknownFields": tftypes.Bool,
-					"scope":                 tftypes.String,
-					"versions": tftypes.Tuple{ElementTypes: []tftypes.Type{
-						tftypes.Object{
-							AttributeTypes: map[string]tftypes.Type{
-								"additionalPrinterColumns": tftypes.List{ElementType: tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-									"description": tftypes.String,
-									"format":      tftypes.String,
-									"jsonPath":    tftypes.String,
-									"name":        tftypes.String,
-									"priority":    tftypes.Number,
-									"type":        tftypes.String,
-								}}},
-								"deprecated":         tftypes.Bool,
-								"deprecationWarning": tftypes.String,
-								"name":               tftypes.String,
-								"schema": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-									"openAPIV3Schema": tftypes.DynamicPseudoType,
-								}},
-								"served":  tftypes.Bool,
-								"storage": tftypes.Bool,
-								"subresources": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-									"scale": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-										"labelSelectorPath":  tftypes.String,
-										"specReplicasPath":   tftypes.String,
-										"statusReplicasPath": tftypes.String,
-									}},
-									"status": tftypes.Map{AttributeType: tftypes.String},
-								}},
-							}}},
-					},
-				}},
-				"status": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-					"acceptedNames": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-						"categories": tftypes.List{ElementType: tftypes.String},
-						"kind":       tftypes.String,
-						"listKind":   tftypes.String,
-						"plural":     tftypes.String,
-						"shortNames": tftypes.List{ElementType: tftypes.String},
-						"singular":   tftypes.String,
-					}},
-					"conditions": tftypes.List{ElementType: tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-						"lastTransitionTime": tftypes.String,
-						"message":            tftypes.String,
-						"reason":             tftypes.String,
-						"status":             tftypes.String,
-						"type":               tftypes.String,
-					}}},
-					"storedVersions": tftypes.List{ElementType: tftypes.String},
-				}},
-			},
-		},
-	},
 }
 
 func TestGetType(t *testing.T) {
@@ -227,12 +146,15 @@ func TestGetType(t *testing.T) {
 	for name, s := range samples {
 		t.Run(name,
 			func(t *testing.T) {
-				rt, err := tf.GetTypeByGVK(s.gvk)
+				rt, th, err := tf.GetTypeByGVK(s.gvk)
 				if err != nil {
 					t.Fatal(fmt.Errorf("GetTypeByID() failed: %s", err))
 				}
 				if !rt.Is(s.want) {
-					t.Fatalf("\nRETURNED %#v\nEXPECTED: %#v", rt, s.want)
+					t.Fatalf("\nRETURNED type: %#v\nEXPECTED type: %#v", rt, s.want)
+				}
+				if len(th) != len(s.hints) {
+					t.Fatalf("\nRETURNED hints: %#v\nEXPECTED hints: %#v", th, s.hints)
 				}
 			})
 	}

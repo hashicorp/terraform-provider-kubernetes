@@ -1,14 +1,25 @@
+//go:build acceptance
 // +build acceptance
 
 package acceptance
 
 import (
+	"context"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
 )
 
 func TestKubernetesManifest_InstallCertManager(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
 	namespace := randName()
 
 	tf := tfhelper.RequireNewWorkingDir(t)

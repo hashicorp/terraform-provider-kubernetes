@@ -25,7 +25,6 @@ func resourceKubernetesCSIDriver() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("csi driver", true),
 			"spec": {

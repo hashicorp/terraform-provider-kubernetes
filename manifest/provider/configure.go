@@ -57,7 +57,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		return response, nil
 	}
 
-	var providerEnabled bool
+	providerEnabled := true
 	if !providerConfig["experiments"].IsNull() && providerConfig["experiments"].IsKnown() {
 		var experimentsBlock []tftypes.Value
 		err = providerConfig["experiments"].As(&experimentsBlock)
@@ -486,6 +486,24 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		overrides.AuthInfo.Token = token
 	}
 
+	var proxyURL string
+	if !providerConfig["proxy_url"].IsNull() && providerConfig["proxy_url"].IsKnown() {
+		err = providerConfig["proxy_url"].As(&proxyURL)
+		if err != nil {
+			// invalid attribute type - this shouldn't happen, bail out for now
+			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Provider configuration: failed to assert type of 'proxy_url' value",
+				Detail:   err.Error(),
+			})
+			return response, nil
+		}
+		overrides.ClusterDefaults.ProxyURL = proxyURL
+	}
+	if proxyUrl, ok := os.LookupEnv("KUBE_PROXY_URL"); ok && proxyUrl != "" {
+		overrides.ClusterDefaults.ProxyURL = proxyURL
+	}
+
 	if !providerConfig["exec"].IsNull() && providerConfig["exec"].IsKnown() {
 		var execBlock []tftypes.Value
 		err = providerConfig["exec"].As(&execBlock)
@@ -499,6 +517,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			return response, nil
 		}
 		execCfg := clientcmdapi.ExecConfig{}
+		execCfg.InteractiveMode = clientcmdapi.IfAvailableExecInteractiveMode
 		if len(execBlock) > 0 {
 			var execObj map[string]tftypes.Value
 			err := execBlock[0].As(&execObj)
@@ -538,7 +557,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 				}
 				execCfg.Command = cmd
 			}
-			if !execObj["args"].IsNull() && execObj["args"].IsKnown() {
+			if !execObj["args"].IsNull() && execObj["args"].IsFullyKnown() {
 				var xcmdArgs []tftypes.Value
 				err = execObj["args"].As(&xcmdArgs)
 				if err != nil {
@@ -566,7 +585,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 					execCfg.Args = append(execCfg.Args, v)
 				}
 			}
-			if !execObj["env"].IsNull() && execObj["env"].IsKnown() {
+			if !execObj["env"].IsNull() && execObj["env"].IsFullyKnown() {
 				var xcmdEnvs map[string]tftypes.Value
 				err = execObj["env"].As(&xcmdEnvs)
 				if err != nil {

@@ -29,7 +29,7 @@ const (
 	// SchemaNestedBlockNestingModeMap indicates that multiple instances of
 	// the nested block should be permitted, each with a single label, and
 	// that they should be represented in state and config values as a
-	// tftypes.Map, with an AttributeType of tftypes.Object. The labels on
+	// tftypes.Map, with an ElementType of tftypes.Object. The labels on
 	// the blocks will be used as the map keys. It is an error, therefore,
 	// to use the same label value on multiple block instances.
 	SchemaNestedBlockNestingModeMap SchemaNestedBlockNestingMode = 4
@@ -73,7 +73,7 @@ const (
 
 	// SchemaObjectNestingModeMap indicates that multiple instances of the
 	// nested type should be permitted, and that they should be appear in state
-	// and config values as a tftypes.Map, with an AttributeType of
+	// and config values as a tftypes.Map, with an ElementType of
 	// tftypes.Object.
 	SchemaObjectNestingModeMap SchemaObjectNestingMode = 4
 )
@@ -260,14 +260,6 @@ type SchemaObject struct {
 	Attributes []*SchemaAttribute
 
 	Nesting SchemaObjectNestingMode
-
-	// MinItems is the minimum number of instances of this type that a
-	// user must specify or Terraform will return an error.
-	MinItems int64
-
-	// MaxItems is the maximum number of instances of this type that a
-	// user may specify before Terraform returns an error.
-	MaxItems int64
 }
 
 // SchemaObjectNestingMode indicates the nesting mode for

@@ -1,3 +1,4 @@
+//go:build acceptance
 // +build acceptance
 
 package acceptance
@@ -9,12 +10,31 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
 )
 
 func TestKubernetesManifest_NonStructuredCustomResource(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
+	cv, err := semver.NewVersion(k8shelper.ClusterVersion().String())
+	if err != nil {
+		t.Skip("cannot determine cluster version")
+	}
+	mv, err := semver.NewConstraint(">= 1.22.0")
+	if err != nil {
+		t.Skip("cannot establish cluster version constraint")
+	}
+	if mv.Check(cv) {
+		t.Skip("only applicable to cluster versions < 1.22")
+	}
 	kind := randName()
 	plural := strings.ToLower(kind) + "s"
 	group := "k8s.terraform.io"
@@ -56,7 +76,7 @@ func TestKubernetesManifest_NonStructuredCustomResource(t *testing.T) {
 	// wait for API to finish ingesting the CRD
 	time.Sleep(5 * time.Second) //lintignore:R018
 
-	reattachInfo2, err := provider.ServeTest(context.TODO(), hclog.Default())
+	reattachInfo2, err := provider.ServeTest(ctx, hclog.Default(), t)
 	if err != nil {
 		t.Errorf("Failed to create additional provider instance: %q", err)
 	}

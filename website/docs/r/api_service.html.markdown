@@ -1,4 +1,5 @@
 ---
+subcategory: "apiregistration/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_api_service"
 description: |-

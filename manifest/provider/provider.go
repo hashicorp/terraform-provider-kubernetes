@@ -39,12 +39,22 @@ func GetResourceType(name string) (tftypes.Type, error) {
 	return GetObjectTypeFromSchema(rsch), nil
 }
 
+// GetDataSourceType returns the tftypes.Type of a datasource of type 'name'
+func GetDataSourceType(name string) (tftypes.Type, error) {
+	sch := GetProviderDataSourceSchema()
+	rsch, ok := sch[name]
+	if !ok {
+		return tftypes.DynamicPseudoType, fmt.Errorf("unknown data source %q: cannot find schema", name)
+	}
+	return GetObjectTypeFromSchema(rsch), nil
+}
+
 // GetProviderResourceSchema contains the definitions of all supported resources
 func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 	waitForType := tftypes.Object{
 		AttributeTypes: map[string]tftypes.Type{
 			"fields": tftypes.Map{
-				AttributeType: tftypes.String,
+				ElementType: tftypes.String,
 			},
 		},
 	}
@@ -141,6 +151,63 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 						Type:        tftypes.List{ElementType: tftypes.String},
 						Description: "List of manifest fields whose values can be altered by the API server during 'apply'. Defaults to: [\"metadata.annotations\", \"metadata.labels\"]",
 						Optional:    true,
+					},
+				},
+			},
+		},
+	}
+}
+
+// GetProviderDataSourceSchema contains the definitions of all supported data sources
+func GetProviderDataSourceSchema() map[string]*tfprotov5.Schema {
+	return map[string]*tfprotov5.Schema{
+		"kubernetes_resource": {
+			Version: 1,
+			Block: &tfprotov5.SchemaBlock{
+				Attributes: []*tfprotov5.SchemaAttribute{
+					{
+						Name:        "api_version",
+						Type:        tftypes.String,
+						Required:    true,
+						Description: "The resource apiVersion.",
+					},
+					{
+						Name:        "kind",
+						Type:        tftypes.String,
+						Required:    true,
+						Description: "The resource kind.",
+					},
+					{
+						Name:        "object",
+						Type:        tftypes.DynamicPseudoType,
+						Optional:    true,
+						Computed:    true,
+						Description: "The response from the API server.",
+					},
+				},
+				BlockTypes: []*tfprotov5.SchemaNestedBlock{
+					{
+						TypeName: "metadata",
+						Nesting:  tfprotov5.SchemaNestedBlockNestingModeList,
+						MinItems: 1,
+						MaxItems: 1,
+						Block: &tfprotov5.SchemaBlock{
+							Description: "Metadata for the resource",
+							Attributes: []*tfprotov5.SchemaAttribute{
+								{
+									Name:        "name",
+									Type:        tftypes.String,
+									Required:    true,
+									Description: "The resource name.",
+								},
+								{
+									Name:        "namespace",
+									Type:        tftypes.String,
+									Optional:    true,
+									Description: "The resource namespace.",
+								},
+							},
+						},
 					},
 				},
 			},

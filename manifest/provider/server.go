@@ -55,43 +55,6 @@ func (s *RawProviderServer) ValidateDataSourceConfig(ctx context.Context, req *t
 	return resp, nil
 }
 
-// UpgradeResourceState isn't really useful in this provider, but we have to loop the state back through to keep Terraform happy.
-func (s *RawProviderServer) UpgradeResourceState(ctx context.Context, req *tfprotov5.UpgradeResourceStateRequest) (*tfprotov5.UpgradeResourceStateResponse, error) {
-	resp := &tfprotov5.UpgradeResourceStateResponse{}
-	resp.Diagnostics = []*tfprotov5.Diagnostic{}
-
-	sch := GetProviderResourceSchema()
-	rt := GetObjectTypeFromSchema(sch[req.TypeName])
-
-	rv, err := req.RawState.Unmarshal(rt)
-	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to decode old state during upgrade",
-			Detail:   err.Error(),
-		})
-		return resp, nil
-	}
-	us, err := tfprotov5.NewDynamicValue(rt, rv)
-	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to encode new state during upgrade",
-			Detail:   err.Error(),
-		})
-	}
-	resp.UpgradedState = &us
-
-	return resp, nil
-}
-
-// ReadDataSource function
-func (s *RawProviderServer) ReadDataSource(ctx context.Context, req *tfprotov5.ReadDataSourceRequest) (*tfprotov5.ReadDataSourceResponse, error) {
-	s.logger.Trace("[ReadDataSource][Request]\n%s\n", dump(*req))
-
-	return nil, status.Errorf(codes.Unimplemented, "method ReadDataSource not implemented")
-}
-
 // StopProvider function
 func (s *RawProviderServer) StopProvider(ctx context.Context, req *tfprotov5.StopProviderRequest) (*tfprotov5.StopProviderResponse, error) {
 	s.logger.Trace("[StopProvider][Request]\n%s\n", dump(*req))

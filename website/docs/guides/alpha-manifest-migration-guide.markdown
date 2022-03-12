@@ -17,9 +17,6 @@ Follow these steps to migrate your configuration and continue using the `kuberne
 
 The provider configuration blocks for the `kubernetes-alpha` provider are no longer supported. To carry over the configuration, simply rename the provider block to "kubernetes".
 
-**It is important to note that the `kubernetes_manifest` resource is still in Beta stage and therefore guarded by a feature flag. 
-To enable it, add a `manifest_resource = true` entry in the `experiments` block in the provider configuration.**
-
 For example:
 
 ```

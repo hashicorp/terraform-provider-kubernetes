@@ -13,21 +13,6 @@ Once applied, the `object` attribute contains the state of the resource as retur
 
 ~> A minimum Terraform version of 0.14.8 is required to use this resource.
 
-~> This resource is currently in beta, and should not be used in production. To use it, you must enable it in the provider block.
-
-How to enable the experiment:
-
-```hcl
-provider "kubernetes" {
-  experiments {
-    manifest_resource = true
-  }
-
-  config_path = "~/.kube/config"
-}
-```
-
-
 ### Before you use this resource
 
 * This resource requires API access during planning time. This means the cluster has to be accessible at plan time and thus cannot be created in the same apply operation. We recommend only using this resource for custom resources or resources not yet fully supported by the provider.
@@ -115,7 +100,7 @@ terraform import kubernetes_manifest.secret_sample "apiVersion=v1,kind=Secret,na
 ```
 
 Note the import ID as the last argument to the import command. This ID points Terraform at which Kubernetes object to read when importing.
-It should be constructed with the following syntax: `"<apiVersion>#<Kind>#<metadata.namespace>#<metadata.name>"`
+It should be constructed with the following syntax: `"apiVersion=<string>,kind=<string>,[namespace=<string>,]name=<string>"`
 
 ## Using `wait_for` to block create and update calls
 

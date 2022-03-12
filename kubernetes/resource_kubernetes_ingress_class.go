@@ -6,12 +6,13 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	core "k8s.io/api/core/v1"
-	networking "k8s.io/api/networking/v1"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
+	core "k8s.io/api/core/v1"
+	networking "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -73,6 +74,7 @@ func resourceKubernetesIngressClassSchema() map[string]*schema.Schema {
 									Type:         schema.TypeString,
 									Description:  docIngressClassSpecParametes["scope"],
 									Optional:     true,
+									Computed:     true,
 									ValidateFunc: validation.StringInSlice([]string{"Cluster", "Namespace"}, false),
 								},
 								"namespace": {
@@ -268,11 +270,11 @@ func expandIngressClassParameters(l []interface{}) *networking.IngressClassParam
 		obj.Name = v
 	}
 
-	if v, ok := in["scope"].(string); ok {
+	if v, ok := in["scope"].(string); ok && v != "" {
 		obj.Scope = &v
 	}
 
-	if v, ok := in["namespace"].(string); ok {
+	if v, ok := in["namespace"].(string); ok && v != "" {
 		obj.Namespace = &v
 	}
 

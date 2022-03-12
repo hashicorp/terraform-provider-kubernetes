@@ -14,7 +14,10 @@ func TestAccKubernetesDataSourceIngress_basic(t *testing.T) {
 	dataSourceName := "data.kubernetes_ingress.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
+		},
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{ // Create the ingress resource in the first apply. Then check it in the second apply.
@@ -68,8 +71,12 @@ func TestAccKubernetesDataSourceIngress_regression(t *testing.T) {
 	dataSourceName := "data.kubernetes_ingress.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInEks(t) },
-		IDRefreshName:     resourceName,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
+			skipIfNotRunningInEks(t)
+		},
+		IDRefreshName:     "kubernetes_ingress.test",
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{

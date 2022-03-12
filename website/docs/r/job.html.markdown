@@ -1,4 +1,5 @@
 ---
+subcategory: "batch/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_job"
 description: |-
@@ -60,6 +61,10 @@ resource "kubernetes_job" "demo" {
     backoff_limit = 4
   }
   wait_for_completion = true
+  timeouts {
+    create = "2m"
+    update = "2m"
+  }
 }
 ```
 
@@ -126,10 +131,10 @@ Please see the [Pod resource](pod.html#spec-1) for reference.
 
 ## Timeouts
 
-The following [Timeout](/docs/configuration/resources.html#operation-timeouts) configuration options are available for the `kubernetes_job` resource when used with `wait_for_completion = true`:
+The following [Timeout](/docs/language/resources/syntax.html#operation-timeouts) configuration options are available for the `kubernetes_job` resource when used with `wait_for_completion = true`:
 
-* `create` - (Default `1 minute`) Used for creating a new job and waiting for a successful job completion.
-* `update` - (Default `1 minute`) Used for updating an existing job and waiting for a successful job completion.
+* `create` - (Default `1m`) Used for creating a new job and waiting for a successful job completion.
+* `update` - (Default `1m`) Used for updating an existing job and waiting for a successful job completion.
 
 Note: 
 

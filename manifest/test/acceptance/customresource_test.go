@@ -1,3 +1,4 @@
+//go:build acceptance
 // +build acceptance
 
 package acceptance
@@ -15,6 +16,13 @@ import (
 )
 
 func TestKubernetesManifest_CustomResource(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
 	kind := strings.Title(randString(8))
 	plural := strings.ToLower(kind) + "s"
 	group := "terraform.io"
@@ -52,7 +60,7 @@ func TestKubernetesManifest_CustomResource(t *testing.T) {
 	// wait for API to finish ingesting the CRD
 	time.Sleep(5 * time.Second) //lintignore:R018
 
-	reattachInfo2, err := provider.ServeTest(context.TODO(), hclog.Default())
+	reattachInfo2, err := provider.ServeTest(ctx, hclog.Default(), t)
 	if err != nil {
 		t.Errorf("Failed to create additional provider instance: %q", err)
 	}
@@ -74,5 +82,12 @@ func TestKubernetesManifest_CustomResource(t *testing.T) {
 		"kubernetes_manifest.test.object.metadata.name":      name,
 		"kubernetes_manifest.test.object.metadata.namespace": namespace,
 		"kubernetes_manifest.test.object.data":               "this is a test",
+		"kubernetes_manifest.test.object.stuff.0":            map[string]interface{}{"foo": interface{}(nil)},
+		"kubernetes_manifest.test.object.limits": map[string]interface{}{
+			"foo": interface{}("bar"),
+			"baz": interface{}("42"),
+		},
+		"kubernetes_manifest.test.object.limits.foo": "bar",
+		"kubernetes_manifest.test.object.limits.baz": "42",
 	})
 }

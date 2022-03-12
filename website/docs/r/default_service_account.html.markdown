@@ -1,4 +1,5 @@
 ---
+subcategory: "core/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_default_service_account"
 description: |-

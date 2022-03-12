@@ -12,6 +12,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
@@ -66,13 +67,16 @@ func (ps *RawProviderServer) getRestMapper() (meta.RESTMapper, error) {
 	if err != nil {
 		return nil, err
 	}
-	agr, err := restmapper.GetAPIGroupResources(dc)
-	if err != nil {
-		return nil, err
-	}
-	mapper := restmapper.NewDiscoveryRESTMapper(agr)
-	ps.restMapper = mapper
-	return mapper, nil
+
+	// agr, err := restmapper.GetAPIGroupResources(dc)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// mapper := restmapper.NewDeferredDiscoveryRESTMapper(agr)
+
+	cache := memory.NewMemCacheClient(dc)
+	ps.restMapper = restmapper.NewDeferredDiscoveryRESTMapper(cache)
+	return ps.restMapper, nil
 }
 
 // getRestClient returns a raw REST client instance

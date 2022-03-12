@@ -153,6 +153,17 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 				DescriptionKind: 0,
 				Deprecated:      false,
 			},
+			{
+				Name:            "proxy_url",
+				Type:            tftypes.String,
+				Description:     "URL to the proxy to be used for all API requests",
+				Required:        false,
+				Optional:        true,
+				Computed:        false,
+				Sensitive:       false,
+				DescriptionKind: 0,
+				Deprecated:      false,
+			},
 		},
 		BlockTypes: []*tfprotov5.SchemaNestedBlock{
 			{
@@ -184,7 +195,7 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 						},
 						{
 							Name:            "env",
-							Type:            tftypes.Map{AttributeType: tftypes.String},
+							Type:            tftypes.Map{ElementType: tftypes.String},
 							Required:        false,
 							Optional:        true,
 							Computed:        false,

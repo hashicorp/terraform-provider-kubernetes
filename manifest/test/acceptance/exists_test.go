@@ -4,13 +4,23 @@
 package acceptance
 
 import (
+	"context"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
 )
 
 func TestKubernetesManifest_alreadyExists(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
 	name := randName()
 	namespace := randName()
 
@@ -43,7 +53,7 @@ func TestKubernetesManifest_alreadyExists(t *testing.T) {
 	tf2.SetReattachInfo(reattachInfo)
 	tfconfigModified := loadTerraformConfig(t, "alreadyExists/configmap.tf", tfvars)
 	tf2.RequireSetConfig(t, tfconfigModified)
-	err := tf2.Apply()
+	err = tf2.Apply()
 
 	if err == nil {
 		t.Fatal("Creating a resource that already exists should cause an error")

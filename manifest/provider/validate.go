@@ -117,6 +117,39 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 		}
 	}
 
+	// validate wait block
+	if wait, ok := configVal["wait"]; ok && !wait.IsNull() {
+		var waitBlock []tftypes.Value
+		wait.As(&waitBlock)
+		if len(waitBlock) > 0 {
+			var w map[string]tftypes.Value
+			waitBlock[0].As(&w)
+			n := 0
+			for _, ww := range w {
+				if !ww.IsNull() {
+					n += 1
+				}
+			}
+			if n > 1 {
+
+				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+					Severity:  tfprotov5.DiagnosticSeverityError,
+					Summary:   "Invalid wait configuration",
+					Detail:    `Only one of "rollout", "fields" may be set.`,
+					Attribute: tftypes.NewAttributePath().WithAttributeName("wait"),
+				})
+			}
+		}
+	}
+	if waitFor, ok := configVal["wait_for"]; ok && !waitFor.IsNull() {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity:  tfprotov5.DiagnosticSeverityWarning,
+			Summary:   "Deprecated Attribute",
+			Detail:    `The "wait_for" attribute has been deprecated. Please use the "wait" block instead.`,
+			Attribute: tftypes.NewAttributePath().WithAttributeName("wait_for"),
+		})
+	}
+
 	return resp, nil
 }
 

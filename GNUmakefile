@@ -1,14 +1,15 @@
 # PROVIDER_DIR is used instead of PWD since docker volume commands can be dangerous to run in $HOME.
 # This ensures docker volumes are mounted from within provider directory instead.
-PROVIDER_DIR := $(abspath $(lastword $(dir $(MAKEFILE_LIST))))
-TEST         := "$(PROVIDER_DIR)/kubernetes"
-GOFMT_FILES  := $$(find $(PROVIDER_DIR) -name '*.go' |grep -v vendor)
-WEBSITE_REPO := github.com/hashicorp/terraform-website
-PKG_NAME     := kubernetes
-OS_ARCH      := $(shell go env GOOS)_$(shell go env GOARCH)
-TF_PROV_DOCS := $(PWD)/kubernetes/test-infra/tfproviderdocs
-EXT_PROV_DIR := $(PWD)/kubernetes/test-infra/external-providers
-EXT_PROV_BIN := /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH)/terraform-provider-kubernetes_9.9.9_$(OS_ARCH)
+PROVIDER_DIR  := $(abspath $(lastword $(dir $(MAKEFILE_LIST))))
+TEST          := "$(PROVIDER_DIR)/kubernetes"
+MANIFEST_TEST := "$(PROVIDER_DIR)/manifest/test/acceptance"
+GOFMT_FILES   := $$(find $(PROVIDER_DIR) -name '*.go' |grep -v vendor)
+WEBSITE_REPO  := github.com/hashicorp/terraform-website
+PKG_NAME      := kubernetes
+OS_ARCH       := $(shell go env GOOS)_$(shell go env GOARCH)
+TF_PROV_DOCS  := $(PWD)/kubernetes/test-infra/tfproviderdocs
+EXT_PROV_DIR  := $(PWD)/kubernetes/test-infra/external-providers
+EXT_PROV_BIN  := /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH)/terraform-provider-kubernetes_9.9.9_$(OS_ARCH)
 
 ifneq ($(PWD),$(PROVIDER_DIR))
 $(error "Makefile must be run from the provider directory")
@@ -56,13 +57,20 @@ test: fmtcheck
 	echo $(TEST) | \
 		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
-testacc: fmtcheck vet
+testacc: fmtcheck vet testacc-setup testacc-kubernetes testacc-manifest
+
+testacc-setup:
 	rm -rf $(EXT_PROV_DIR)/.terraform $(EXT_PROV_DIR)/.terraform.lock.hcl || true
 	mkdir $(EXT_PROV_DIR)/.terraform
 	mkdir -p /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH) || true
 	ls $(EXT_PROV_BIN) || go build -o $(EXT_PROV_BIN)
 	cd $(EXT_PROV_DIR) && TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform terraform init -upgrade
+
+testacc-kubernetes:
 	TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
+
+testacc-manifest:
+	TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform TF_ACC=1 go test $(MANIFEST_TEST) -v $(TESTARGS) -tags acceptance -timeout 120m
 
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \
@@ -163,4 +171,4 @@ website-lint-fix: tools
 	@echo "==> Fixing website terraform blocks code with terrafmt..."
 	@terrafmt fmt ./website --pattern '*.markdown'
 
-.PHONY: build test testacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix website-lint website-lint-fix
+.PHONY: build test testacc testacc-setup testacc-kubernetes testacc-manifest tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix website-lint website-lint-fix

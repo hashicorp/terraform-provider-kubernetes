@@ -31,12 +31,6 @@ func resolveSchemaRef(ref *openapi3.SchemaRef, defs map[string]*openapi3.SchemaR
 
 	// These are exceptional situations that require non-standard types.
 	switch sid {
-	case "io.k8s.apimachinery.pkg.util.intstr.IntOrString":
-		t := openapi3.Schema{
-			Type:        "string",
-			Description: "io.k8s.apimachinery.pkg.util.intstr.IntOrString", // this value later carries over as the "type hint"
-		}
-		return &t, nil
 	case "io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps":
 		t := openapi3.Schema{
 			Type: "",
@@ -75,8 +69,7 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 	// }
 	switch elem.Type {
 	case "string":
-		switch elem.Description {
-		case "io.k8s.apimachinery.pkg.util.intstr.IntOrString":
+		if elem.Format == "int-or-string" {
 			th[ap.String()] = "io.k8s.apimachinery.pkg.util.intstr.IntOrString"
 		}
 		return tftypes.String, nil

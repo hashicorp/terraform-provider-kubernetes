@@ -7,9 +7,9 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/stale@v1.1.0
+    - uses: actions/stale@v4.0.0
       with:
-        repo-token: ${{ secrets.k8s_github_actions }}
-        stale-issue-message: 'This issue has been open 365 days with no activity. If this issue is reproducible with the latest version of the provider and with Terraform 0.12/0.13, please comment. Otherwise this issue will be closed in 30 days.'
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        stale-issue-message: 'Marking this issue as stale due to inactivity. If this issue receives no comments in the next 30 days it will automatically be closed. If this issue was automatically closed and you feel this issue should be reopened, we encourage creating a new issue linking back to this one for added context. This helps our maintainers find and focus on the active issues. Maintainers may also remove the stale label at their discretion. Thank you!'
         days-before-stale: 365
         days-before-close: 30

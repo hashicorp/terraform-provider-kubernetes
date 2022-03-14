@@ -3,8 +3,9 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -44,15 +45,23 @@ func resourceKubernetesStorageClass() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "Indicates the type of the reclaim policy",
 				Optional:    true,
-				Default:     "Delete",
+				Default:     string(v1.PersistentVolumeReclaimDelete),
+				ValidateFunc: validation.StringInSlice([]string{
+					string(v1.PersistentVolumeReclaimRecycle),
+					string(v1.PersistentVolumeReclaimDelete),
+					string(v1.PersistentVolumeReclaimRetain),
+				}, false),
 			},
 			"volume_binding_mode": {
-				Type:         schema.TypeString,
-				Description:  "Indicates when volume binding and dynamic provisioning should occur",
-				Optional:     true,
-				ForceNew:     true,
-				Default:      "Immediate",
-				ValidateFunc: validation.StringInSlice([]string{"Immediate", "WaitForFirstConsumer"}, false),
+				Type:        schema.TypeString,
+				Description: "Indicates when volume binding and dynamic provisioning should occur",
+				Optional:    true,
+				ForceNew:    true,
+				Default:     string(api.VolumeBindingImmediate),
+				ValidateFunc: validation.StringInSlice([]string{
+					string(api.VolumeBindingImmediate),
+					string(api.VolumeBindingWaitForFirstConsumer),
+				}, false),
 			},
 			"allow_volume_expansion": {
 				Type:        schema.TypeBool,
@@ -151,6 +160,7 @@ func resourceKubernetesStorageClassRead(ctx context.Context, d *schema.ResourceD
 		return diag.FromErr(err)
 	}
 	if !exists {
+		d.SetId("")
 		return diags
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -222,7 +232,7 @@ func resourceKubernetesStorageClassDelete(ctx context.Context, d *schema.Resourc
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		_, err := conn.StorageV1().StorageClasses().Get(ctx, d.Id(), metav1.GetOptions{})
 		if err != nil {
-			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
 			return resource.NonRetryableError(err)
@@ -250,7 +260,7 @@ func resourceKubernetesStorageClassExists(ctx context.Context, d *schema.Resourc
 	log.Printf("[INFO] Checking storage class %s", name)
 	_, err = conn.StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

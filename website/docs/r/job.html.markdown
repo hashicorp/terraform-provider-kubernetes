@@ -1,4 +1,5 @@
 ---
+subcategory: "batch/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_job"
 description: |-
@@ -34,6 +35,7 @@ resource "kubernetes_job" "demo" {
     }
     backoff_limit = 4
   }
+  wait_for_completion = false
 }
 ```
 
@@ -59,6 +61,10 @@ resource "kubernetes_job" "demo" {
     backoff_limit = 4
   }
   wait_for_completion = true
+  timeouts {
+    create = "2m"
+    update = "2m"
+  }
 }
 ```
 
@@ -66,8 +72,8 @@ resource "kubernetes_job" "demo" {
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard resource's metadata. For more info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
-* `spec` - (Required) Specification of the desired behavior of a job. For more info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
+* `metadata` - (Required) Standard resource's metadata. For more info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata
+* `spec` - (Required) Specification of the desired behavior of a job. For more info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 * `wait_for_completion` - 
 (Optional) If `true` blocks job `create` or `update` until the status of the job has a `Complete` or `Failed` condition. Defaults to `true`.
 
@@ -125,10 +131,10 @@ Please see the [Pod resource](pod.html#spec-1) for reference.
 
 ## Timeouts
 
-The following [Timeout](/docs/configuration/resources.html#operation-timeouts) configuration options are available for the `kubernetes_job` resource when used with `wait_for_completion = true`:
+The following [Timeout](/docs/language/resources/syntax.html#operation-timeouts) configuration options are available for the `kubernetes_job` resource when used with `wait_for_completion = true`:
 
-* `create` - (Default `1 minute`) Used for creating a new job and waiting for a successful job completion.
-* `update` - (Default `1 minute`) Used for updating an existing job and waiting for a successful job completion.
+* `create` - (Default `1m`) Used for creating a new job and waiting for a successful job completion.
+* `update` - (Default `1m`) Used for updating an existing job and waiting for a successful job completion.
 
 Note: 
 

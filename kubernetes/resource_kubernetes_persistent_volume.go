@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -95,11 +96,12 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Set: schema.HashString,
 						},
 						"capacity": {
-							Type:         schema.TypeMap,
-							Description:  "A description of the persistent volume's resources and capacity. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#capacity",
-							Required:     true,
-							Elem:         schema.TypeString,
-							ValidateFunc: validateResourceList,
+							Type:             schema.TypeMap,
+							Description:      "A description of the persistent volume's resources and capacity. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#capacity",
+							Required:         true,
+							Elem:             schema.TypeString,
+							ValidateFunc:     validateResourceList,
+							DiffSuppressFunc: suppressEquivalentResourceQuantity,
 						},
 						"persistent_volume_reclaim_policy": {
 							Type:        schema.TypeString,
@@ -111,6 +113,30 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 								"Delete",
 								"Retain",
 							}, false),
+						},
+						"claim_ref": {
+							Type:        schema.TypeList,
+							Description: "A reference to the persistent volume claim details for statically managed PVs. More Info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#binding",
+							Optional:    true,
+							Computed:    true,
+							MaxItems:    1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"namespace": {
+										Type:        schema.TypeString,
+										Description: "The namespace of the PersistentVolumeClaim. Uses 'default' namespace if none is specified.",
+										Elem:        schema.TypeString,
+										Optional:    true,
+										Default:     "default",
+									},
+									"name": {
+										Type:        schema.TypeString,
+										Description: "The name of the PersistentVolumeClaim",
+										Elem:        schema.TypeString,
+										Required:    true,
+									},
+								},
+							},
 						},
 						"persistent_volume_source": {
 							Type:        schema.TypeList,
@@ -232,6 +258,7 @@ func resourceKubernetesPersistentVolumeRead(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 	if !exists {
+		d.SetId("")
 		return diag.Diagnostics{}
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()

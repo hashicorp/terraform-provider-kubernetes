@@ -95,14 +95,11 @@ test-update: fmtcheck vet
 	TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform TF_ACC=1 go test $(TEST) -v -run 'regression' $(TESTARGS)
 
 tools:
-	go install github.com/bflad/tfproviderdocs
-	go install github.com/client9/misspell/cmd/misspell
-	go install github.com/katbyte/terrafmt
-	go mod tidy
-	go mod vendor
-# TODO:
-# go install github.com/bflad/tfproviderlint/cmd/tfproviderlint
-# go install github.com/golangci/golangci-lint/cmd/golangci-lint
+	go install github.com/client9/misspell/cmd/misspell@v0.3.4
+	go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@v0.26.0
+	go install github.com/bflad/tfproviderdocs@v0.9.1
+	go install github.com/katbyte/terrafmt@v0.3.0
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.39.0
 
 vet:
 	@echo "go vet ."
@@ -155,10 +152,8 @@ website-lint: tools
 	@echo "==> Running tfproviderdocs..."
 	@tfproviderdocs check -providers-schema-json $(TF_PROV_DOCS)/schema.json -provider-name kubernetes
 	@rm -f $(TF_PROV_DOCS)/schema.json $(TF_PROV_DOCS)/terraform-provider-kubernetes
-#	@echo "==> Checking for broken links..."
-#@scripts/markdown-link-check.sh "$(DOCKER)" "$(DOCKER_RUN_OPTS)" "$(DOCKER_VOLUME_OPTS)" "$(PROVIDER_DIR)"
-# TODO: enable this check when links have been fixed.
-# https://github.com/hashicorp/terraform-provider-kubernetes/issues/990
+	@echo "==> Checking for broken links..."
+	@scripts/markdown-link-check.sh "$(DOCKER)" "$(DOCKER_RUN_OPTS)" "$(DOCKER_VOLUME_OPTS)" "$(PROVIDER_DIR)"
 
 website-lint-fix: tools
 	@echo "==> Applying automatic website linter fixes..."
@@ -169,4 +164,3 @@ website-lint-fix: tools
 	@terrafmt fmt ./website --pattern '*.markdown'
 
 .PHONY: build test testacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix website-lint website-lint-fix
-

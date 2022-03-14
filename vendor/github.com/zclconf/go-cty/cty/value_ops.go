@@ -116,9 +116,9 @@ func (val Value) GoString() string {
 // Use RawEquals to compare if two values are equal *ignoring* the
 // short-circuit rules and the exception for null values.
 func (val Value) Equals(other Value) Value {
-	if val.IsMarked() || other.IsMarked() {
-		val, valMarks := val.Unmark()
-		other, otherMarks := other.Unmark()
+	if val.ContainsMarked() || other.ContainsMarked() {
+		val, valMarks := val.UnmarkDeep()
+		other, otherMarks := other.UnmarkDeep()
 		return val.Equals(other).WithMarks(valMarks, otherMarks)
 	}
 
@@ -492,18 +492,23 @@ func (val Value) RawEquals(other Value) bool {
 
 	case ty.IsMapType():
 		ety := ty.typeImpl.(typeMap).ElementTypeT
-		if len(val.v.(map[string]interface{})) == len(other.v.(map[string]interface{})) {
-			for k := range val.v.(map[string]interface{}) {
-				if _, ok := other.v.(map[string]interface{})[k]; !ok {
+		if !val.HasSameMarks(other) {
+			return false
+		}
+		valUn, _ := val.Unmark()
+		otherUn, _ := other.Unmark()
+		if len(valUn.v.(map[string]interface{})) == len(otherUn.v.(map[string]interface{})) {
+			for k := range valUn.v.(map[string]interface{}) {
+				if _, ok := otherUn.v.(map[string]interface{})[k]; !ok {
 					return false
 				}
 				lhs := Value{
 					ty: ety,
-					v:  val.v.(map[string]interface{})[k],
+					v:  valUn.v.(map[string]interface{})[k],
 				}
 				rhs := Value{
 					ty: ety,
-					v:  other.v.(map[string]interface{})[k],
+					v:  otherUn.v.(map[string]interface{})[k],
 				}
 				eq := lhs.RawEquals(rhs)
 				if !eq {
@@ -596,8 +601,25 @@ func (val Value) Multiply(other Value) Value {
 		return *shortCircuit
 	}
 
-	ret := new(big.Float)
+	// find the larger precision of the arguments
+	resPrec := val.v.(*big.Float).Prec()
+	otherPrec := other.v.(*big.Float).Prec()
+	if otherPrec > resPrec {
+		resPrec = otherPrec
+	}
+
+	// make sure we have enough precision for the product
+	ret := new(big.Float).SetPrec(512)
 	ret.Mul(val.v.(*big.Float), other.v.(*big.Float))
+
+	// now reduce the precision back to the greater argument, or the minimum
+	// required by the product.
+	minPrec := ret.MinPrec()
+	if minPrec > resPrec {
+		resPrec = minPrec
+	}
+	ret.SetPrec(resPrec)
+
 	return NumberVal(ret)
 }
 
@@ -669,11 +691,14 @@ func (val Value) Modulo(other Value) Value {
 	// FIXME: This is a bit clumsy. Should come back later and see if there's a
 	// more straightforward way to do this.
 	rat := val.Divide(other)
-	ratFloorInt := &big.Int{}
-	rat.v.(*big.Float).Int(ratFloorInt)
-	work := (&big.Float{}).SetInt(ratFloorInt)
+	ratFloorInt, _ := rat.v.(*big.Float).Int(nil)
+
+	// start with a copy of the original larger value so that we do not lose
+	// precision.
+	v := val.v.(*big.Float)
+	work := new(big.Float).Copy(v).SetInt(ratFloorInt)
 	work.Mul(other.v.(*big.Float), work)
-	work.Sub(val.v.(*big.Float), work)
+	work.Sub(v, work)
 
 	return NumberVal(work)
 }
@@ -1258,9 +1283,7 @@ func (val Value) AsBigFloat() *big.Float {
 	}
 
 	// Copy the float so that callers can't mutate our internal state
-	ret := *(val.v.(*big.Float))
-
-	return &ret
+	return new(big.Float).Copy(val.v.(*big.Float))
 }
 
 // AsValueSlice returns a []cty.Value representation of a non-null, non-unknown

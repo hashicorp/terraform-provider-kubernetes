@@ -2,10 +2,12 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -55,13 +57,21 @@ func resourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 							Type:        schema.TypeString,
 							Description: webhookDoc["failurePolicy"],
 							Optional:    true,
-							Default:     "Fail",
+							Default:     string(admissionregistrationv1.Fail),
+							ValidateFunc: validation.StringInSlice([]string{
+								string(admissionregistrationv1.Fail),
+								string(admissionregistrationv1.Ignore),
+							}, false),
 						},
 						"match_policy": {
 							Type:        schema.TypeString,
 							Description: webhookDoc["matchPolicy"],
 							Optional:    true,
-							Default:     "Equivalent",
+							Default:     string(admissionregistrationv1.Equivalent),
+							ValidateFunc: validation.StringInSlice([]string{
+								string(admissionregistrationv1.Equivalent),
+								string(admissionregistrationv1.Exact),
+							}, false),
 						},
 						"name": {
 							Type:        schema.TypeString,
@@ -90,7 +100,11 @@ func resourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 							Type:        schema.TypeString,
 							Description: webhookDoc["reinvocationPolicy"],
 							Optional:    true,
-							Default:     "Never",
+							Default:     string(admissionregistrationv1.NeverReinvocationPolicy),
+							ValidateFunc: validation.StringInSlice([]string{
+								string(admissionregistrationv1.NeverReinvocationPolicy),
+								string(admissionregistrationv1.IfNeededReinvocationPolicy),
+							}, false),
 						},
 						"rule": {
 							Type:        schema.TypeList,
@@ -105,12 +119,19 @@ func resourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 							Type:        schema.TypeString,
 							Description: webhookDoc["sideEffects"],
 							Optional:    true,
+							ValidateFunc: validation.StringInSlice([]string{
+								string(admissionregistrationv1.SideEffectClassUnknown),
+								string(admissionregistrationv1.SideEffectClassNone),
+								string(admissionregistrationv1.SideEffectClassSome),
+								string(admissionregistrationv1.SideEffectClassNoneOnDryRun),
+							}, false),
 						},
 						"timeout_seconds": {
-							Type:        schema.TypeInt,
-							Description: webhookDoc["timeoutSeconds"],
-							Default:     10,
-							Optional:    true,
+							Type:         schema.TypeInt,
+							Description:  webhookDoc["timeoutSeconds"],
+							Default:      10,
+							Optional:     true,
+							ValidateFunc: validation.IntBetween(1, 30),
 						},
 					},
 				},
@@ -165,6 +186,7 @@ func resourceKubernetesMutatingWebhookConfigurationRead(ctx context.Context, d *
 		return diag.FromErr(err)
 	}
 	if !exists {
+		d.SetId("")
 		return diag.Diagnostics{}
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -316,7 +338,7 @@ func resourceKubernetesMutatingWebhookConfigurationExists(ctx context.Context, d
 	}
 
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		return false, err

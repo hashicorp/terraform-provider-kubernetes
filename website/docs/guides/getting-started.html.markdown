@@ -77,10 +77,10 @@ data "azurerm_kubernetes_cluster" "example" {
 }
 
 provider "kubernetes" {
-  host                   = "${data.azurerm_kubernetes_cluster.main.kube_config.0.host}"
-  client_certificate     = "${base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)}"
-  client_key             = "${base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_key)}"
-  cluster_ca_certificate = "${base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)}"
+  host                   = "${data.azurerm_kubernetes_cluster.example.kube_config.0.host}"
+  client_certificate     = "${base64decode(data.azurerm_kubernetes_cluster.example.kube_config.0.client_certificate)}"
+  client_key             = "${base64decode(data.azurerm_kubernetes_cluster.example.kube_config.0.client_key)}"
+  cluster_ca_certificate = "${base64decode(data.azurerm_kubernetes_cluster.example.kube_config.0.cluster_ca_certificate)}"
 }
 ```
 
@@ -100,7 +100,7 @@ provider "kubernetes" {
 }
 ```
 
-For short-lived authentication tokens, like those found in EKS, which [expire in 15 minutes](https://aws.github.io/aws-eks-best-practices/security/docs/iam/#controlling-access-to-eks-clusters), an exec-based credential plugin can be used to ensure the token is always up to date:
+For short-lived authentication tokens, like those found in EKS, which [expire in 15 minutes](https://aws.github.io/aws-eks-best-practices/security/docs/iam#controlling-access-to-eks-clusters), an exec-based credential plugin can be used to ensure the token is always up to date:
 
 ```hcl
 data "aws_eks_cluster" "example" {
@@ -122,7 +122,7 @@ provider "kubernetes" {
 
 ## Creating your first Kubernetes resources
 
-Once the provider is configured, you can apply the Kubernetes resources defined in you Terraform config file. The following is an example Terraform config file containing a few Kubernetes resources. We'll use [minikube](https://minikube.sigs.k8s.io/docs/start/) for the Kubernetes cluster in this example, but any Kubernetes cluster can be used. Ensure that a Kubernetes cluster of some kind is running before applying the example config below.
+Once the provider is configured, you can apply the Kubernetes resources defined in your Terraform config file. The following is an example Terraform config file containing a few Kubernetes resources. We'll use [minikube](https://minikube.sigs.k8s.io/docs/start/) for the Kubernetes cluster in this example, but any Kubernetes cluster can be used. Ensure that a Kubernetes cluster of some kind is running before applying the example config below.
 
 This configuration will create a scalable Nginx Deployment with 2 replicas. It will expose the Nginx frontend using a Service of type NodePort, which will make Nginx accessible via the public IP of the node running the containers.
 
@@ -241,7 +241,6 @@ Terraform will perform the following actions:
           + name             = "nginx"
           + namespace        = "nginx"
           + resource_version = (known after apply)
-          + self_link        = (known after apply)
           + uid              = (known after apply)
         }
 
@@ -275,7 +274,6 @@ Terraform will perform the following actions:
                     }
                   + name             = (known after apply)
                   + resource_version = (known after apply)
-                  + self_link        = (known after apply)
                   + uid              = (known after apply)
                 }
 
@@ -350,9 +348,10 @@ Terraform will perform the following actions:
                         }
 
                       + azure_file {
-                          + read_only   = (known after apply)
-                          + secret_name = (known after apply)
-                          + share_name  = (known after apply)
+                          + read_only        = (known after apply)
+                          + secret_name      = (known after apply)
+                          + share_name       = (known after apply)
+                          + secret_namespace = (known after apply)
                         }
 
                       + ceph_fs {
@@ -621,7 +620,6 @@ Terraform will perform the following actions:
           + generation       = (known after apply)
           + name             = "nginx"
           + resource_version = (known after apply)
-          + self_link        = (known after apply)
           + uid              = (known after apply)
         }
     }
@@ -637,7 +635,6 @@ Terraform will perform the following actions:
           + name             = "nginx"
           + namespace        = "nginx"
           + resource_version = (known after apply)
-          + self_link        = (known after apply)
           + uid              = (known after apply)
         }
 

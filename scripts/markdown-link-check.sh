@@ -15,6 +15,12 @@ DOCKER_RUN_OPTS=${2:-}
 DOCKER_VOLUME_OPTS=${3:-}
 PROVIDER_DIR=${4:-}
 
+# In CI, we use a Github Action instead of this script.
+if [ ${CI:-} ]; then
+  echo "Running inside of Github Actions. Exiting"
+  exit 0
+fi
+
 if [ -z "${PROVIDER_DIR}" ]; then
   echo "Please specify the directory containing the kubernetes provider"
   exit  1

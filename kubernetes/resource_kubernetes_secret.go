@@ -2,8 +2,9 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/core/v1"
@@ -21,6 +22,29 @@ func resourceKubernetesSecret() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
+		CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+			if diff.Id() == "" {
+				return nil
+			}
+
+			// ForceNew if immutable has been set to true
+			// and there are any changes to data, binary_data, or immutable
+			immutable, _ := diff.GetChange("immutable")
+			if immutable.(bool) {
+				immutableFields := []string{
+					"data",
+					"binary_data",
+					"immutable",
+				}
+				for _, f := range immutableFields {
+					if diff.HasChange(f) {
+						diff.ForceNew(f)
+					}
+				}
+			}
+
+			return nil
+		},
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("secret", true),
@@ -28,12 +52,24 @@ func resourceKubernetesSecret() *schema.Resource {
 				Type:        schema.TypeMap,
 				Description: "A map of the secret data.",
 				Optional:    true,
+				Computed:    true,
 				Sensitive:   true,
+			},
+			"binary_data": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Sensitive:   true,
+				Description: "A map of the secret data in base64 encoding. Use this for binary data.",
+			},
+			"immutable": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Ensures that data stored in the Secret cannot be updated (only object metadata can be modified).",
 			},
 			"type": {
 				Type:        schema.TypeString,
 				Description: "Type of secret",
-				Default:     "Opaque",
+				Default:     string(api.SecretTypeOpaque),
 				Optional:    true,
 				ForceNew:    true,
 			},
@@ -50,11 +86,31 @@ func resourceKubernetesSecretCreate(ctx context.Context, d *schema.ResourceData,
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	secret := api.Secret{
 		ObjectMeta: metadata,
-		Data:       expandStringMapToByteMap(d.Get("data").(map[string]interface{})),
+	}
+
+	if v, ok := d.GetOk("data"); ok {
+		m := map[string]string{}
+		for k, v := range v.(map[string]interface{}) {
+			vv := v.(string)
+			m[k] = vv
+		}
+		secret.StringData = m
+	}
+
+	if v, ok := d.GetOk("binary_data"); ok {
+		m, err := base64DecodeStringMap(v.(map[string]interface{}))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		secret.Data = m
 	}
 
 	if v, ok := d.GetOk("type"); ok {
 		secret.Type = api.SecretType(v.(string))
+	}
+
+	if v, ok := d.GetOkExists("immutable"); ok {
+		secret.Immutable = ptrToBool(v.(bool))
 	}
 
 	log.Printf("[INFO] Creating new secret: %#v", secret)
@@ -75,6 +131,7 @@ func resourceKubernetesSecretRead(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 	if !exists {
+		d.SetId("")
 		return diag.Diagnostics{}
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -99,8 +156,22 @@ func resourceKubernetesSecretRead(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
+	binaryDataKeys := []string{}
+	if v, ok := d.GetOk("binary_data"); ok {
+		binaryData := map[string][]byte{}
+		for k := range v.(map[string]interface{}) {
+			binaryData[k] = secret.Data[k]
+			binaryDataKeys = append(binaryDataKeys, k)
+		}
+		d.Set("binary_data", base64EncodeByteMap(binaryData))
+	}
+
+	for _, k := range binaryDataKeys {
+		delete(secret.Data, k)
+	}
 	d.Set("data", flattenByteMapToStringMap(secret.Data))
 	d.Set("type", secret.Type)
+	d.Set("immutable", secret.Immutable)
 
 	return nil
 }
@@ -117,15 +188,45 @@ func resourceKubernetesSecretUpdate(ctx context.Context, d *schema.ResourceData,
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
+
+	newData := map[string]interface{}{}
+	updateData := false
 	if d.HasChange("data") {
-		oldV, newV := d.GetChange("data")
+		_, new := d.GetChange("data")
+		new = base64EncodeStringMap(new.(map[string]interface{}))
+		for k, v := range new.(map[string]interface{}) {
+			newData[k] = v
+		}
+		updateData = true
+	} else if v, ok := d.GetOk("data"); ok {
+		for k, vv := range base64EncodeStringMap(v.(map[string]interface{})) {
+			newData[k] = vv
+		}
+	}
+	if d.HasChange("binary_data") {
+		_, new := d.GetChange("binary_data")
+		for k, v := range new.(map[string]interface{}) {
+			newData[k] = v
+		}
+		updateData = true
+	} else if v, ok := d.GetOk("binary_data"); ok {
+		for k, vv := range v.(map[string]interface{}) {
+			newData[k] = vv
+		}
+	}
 
-		oldV = base64EncodeStringMap(oldV.(map[string]interface{}))
-		newV = base64EncodeStringMap(newV.(map[string]interface{}))
+	if updateData {
+		ops = append(ops, &AddOperation{
+			Path:  "/data",
+			Value: newData,
+		})
+	}
 
-		diffOps := diffStringMap("/data/", oldV.(map[string]interface{}), newV.(map[string]interface{}))
-
-		ops = append(ops, diffOps...)
+	if d.HasChange("immutable") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/immutable",
+			Value: ptrToBool(d.Get("immutable").(bool)),
+		})
 	}
 
 	data, err := ops.MarshalJSON()
@@ -183,7 +284,7 @@ func resourceKubernetesSecretExists(ctx context.Context, d *schema.ResourceData,
 	log.Printf("[INFO] Checking secret %s", name)
 	_, err = conn.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

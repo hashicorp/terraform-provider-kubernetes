@@ -278,6 +278,17 @@ func resourceKubernetesDeploymentUpdate(ctx context.Context, d *schema.ResourceD
 			Value: spec,
 		})
 	}
+
+	if d.HasChange("spec.0.strategy") {
+		o, n := d.GetChange("spec.0.strategy.0.type")
+
+		if o.(string) == "RollingUpdate" && n.(string) == "Recreate" {
+			ops = append(ops, &RemoveOperation{
+				Path: "/spec/strategy/rollingUpdate",
+			})
+		}
+	}
+
 	data, err := ops.MarshalJSON()
 	if err != nil {
 		return diag.Errorf("Failed to marshal update operations: %s", err)
@@ -307,6 +318,7 @@ func resourceKubernetesDeploymentRead(ctx context.Context, d *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 	if !exists {
+		d.SetId("")
 		return diag.Diagnostics{}
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -366,7 +378,7 @@ func resourceKubernetesDeploymentDelete(ctx context.Context, d *schema.ResourceD
 	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		_, err := conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
 			return resource.NonRetryableError(err)
@@ -399,7 +411,7 @@ func resourceKubernetesDeploymentExists(ctx context.Context, d *schema.ResourceD
 	log.Printf("[INFO] Checking deployment %s", name)
 	_, err = conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)
@@ -432,11 +444,14 @@ func waitForDeploymentReplicasFunc(ctx context.Context, conn *kubernetes.Clients
 			specReplicas = *dply.Spec.Replicas
 		}
 
-		if dply.Generation <= dply.Status.ObservedGeneration {
+		if dply.Generation > dply.Status.ObservedGeneration {
+			return resource.RetryableError(fmt.Errorf("Waiting for rollout to start"))
+		}
+
+		if dply.Generation == dply.Status.ObservedGeneration {
 			cond := GetDeploymentCondition(dply.Status, appsv1.DeploymentProgressing)
 			if cond != nil && cond.Reason == TimedOutReason {
-				err := fmt.Errorf("Deployment exceeded its progress deadline")
-				return resource.NonRetryableError(err)
+				return resource.NonRetryableError(fmt.Errorf("Deployment exceeded its progress deadline"))
 			}
 
 			if dply.Status.UpdatedReplicas < specReplicas {
@@ -454,9 +469,9 @@ func waitForDeploymentReplicasFunc(ctx context.Context, conn *kubernetes.Clients
 			if dply.Status.AvailableReplicas < dply.Status.UpdatedReplicas {
 				return resource.RetryableError(fmt.Errorf("Waiting for rollout to finish: %d of %d updated replicas are available...", dply.Status.AvailableReplicas, dply.Status.UpdatedReplicas))
 			}
-		} else if dply.Status.ObservedGeneration == 0 {
-			return resource.RetryableError(fmt.Errorf("Waiting for rollout to start"))
+			return nil
 		}
-		return nil
+
+		return resource.NonRetryableError(fmt.Errorf("Observed generation %d is not expected to be greater than generation %d", dply.Status.ObservedGeneration, dply.Generation))
 	}
 }

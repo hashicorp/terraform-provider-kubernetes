@@ -2,8 +2,9 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	policy "k8s.io/api/policy/v1beta1"
@@ -399,6 +400,7 @@ func resourceKubernetesPodSecurityPolicyRead(ctx context.Context, d *schema.Reso
 		return diag.FromErr(err)
 	}
 	if !exists {
+		d.SetId("")
 		return diag.Diagnostics{}
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -492,7 +494,7 @@ func resourceKubernetesPodSecurityPolicyExists(ctx context.Context, d *schema.Re
 	log.Printf("[INFO] Checking PodSecurityPolicy %s", name)
 	_, err = conn.PolicyV1beta1().PodSecurityPolicies().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

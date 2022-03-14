@@ -1,7 +1,6 @@
 package tfexec
 
 import (
-	"bytes"
 	"context"
 	"strings"
 )
@@ -11,10 +10,10 @@ func (tf *Terraform) WorkspaceList(ctx context.Context) ([]string, string, error
 	// TODO: [DIR] param option
 	wlCmd := tf.buildTerraformCmd(ctx, nil, "workspace", "list", "-no-color")
 
-	var outBuf bytes.Buffer
+	var outBuf strings.Builder
 	wlCmd.Stdout = &outBuf
 
-	err := tf.runTerraformCmd(wlCmd)
+	err := tf.runTerraformCmd(ctx, wlCmd)
 	if err != nil {
 		return nil, "", err
 	}

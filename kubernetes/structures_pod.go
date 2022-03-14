@@ -5,12 +5,22 @@ import (
 	"log"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
+
+// https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions
+var builtInTolerations = map[string]string{
+	v1.TaintNodeNotReady:           "",
+	v1.TaintNodeUnreachable:        "",
+	v1.TaintNodeUnschedulable:      "",
+	v1.TaintNodeMemoryPressure:     "",
+	v1.TaintNodeDiskPressure:       "",
+	v1.TaintNodeNetworkUnavailable: "",
+	v1.TaintNodePIDPressure:        "",
+}
 
 // Flatteners
 
@@ -113,6 +123,10 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["toleration"] = flattenTolerations(in.Tolerations)
 	}
 
+	if len(in.TopologySpreadConstraints) > 0 {
+		att["topology_spread_constraint"] = flattenTopologySpreadConstraints(in.TopologySpreadConstraints)
+	}
+
 	if len(in.Volumes) > 0 {
 		for i, volume := range in.Volumes {
 			// To avoid perpetual diff, remove the service account token volume from PodSpec.
@@ -194,6 +208,9 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	if in.RunAsUser != nil {
 		att["run_as_user"] = strconv.Itoa(int(*in.RunAsUser))
 	}
+	if in.SeccompProfile != nil {
+		att["seccomp_profile"] = flattenSeccompProfile(in.SeccompProfile)
+	}
 	if len(in.SupplementalGroups) > 0 {
 		att["supplemental_groups"] = newInt64Set(schema.HashSchema(&schema.Schema{
 			Type: schema.TypeInt,
@@ -210,6 +227,17 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 		return []interface{}{att}
 	}
 	return []interface{}{}
+}
+
+func flattenSeccompProfile(in *v1.SeccompProfile) []interface{} {
+	att := make(map[string]interface{})
+	if in.Type != "" {
+		att["type"] = in.Type
+		if in.Type == "Localhost" {
+			att["localhost_profile"] = in.LocalhostProfile
+		}
+	}
+	return []interface{}{att}
 }
 
 func flattenSeLinuxOptions(in *v1.SELinuxOptions) []interface{} {
@@ -249,7 +277,7 @@ func flattenTolerations(tolerations []v1.Toleration) []interface{} {
 	att := []interface{}{}
 	for _, v := range tolerations {
 		// The API Server may automatically add several Tolerations to pods, strip these to avoid TF diff.
-		if strings.Contains(v.Key, "node.kubernetes.io/") {
+		if _, ok := builtInTolerations[v.Key]; ok {
 			log.Printf("[INFO] ignoring toleration with key: %s", v.Key)
 			continue
 		}
@@ -269,6 +297,28 @@ func flattenTolerations(tolerations []v1.Toleration) []interface{} {
 		}
 		if v.Value != "" {
 			obj["value"] = v.Value
+		}
+		att = append(att, obj)
+	}
+	return att
+}
+
+func flattenTopologySpreadConstraints(tsc []v1.TopologySpreadConstraint) []interface{} {
+	att := []interface{}{}
+	for _, v := range tsc {
+		obj := map[string]interface{}{}
+
+		if v.TopologyKey != "" {
+			obj["topology_key"] = v.TopologyKey
+		}
+		if v.MaxSkew != 0 {
+			obj["max_skew"] = v.MaxSkew
+		}
+		if v.WhenUnsatisfiable != "" {
+			obj["when_unsatisfiable"] = string(v.WhenUnsatisfiable)
+		}
+		if v.LabelSelector != nil {
+			obj["label_selector"] = flattenLabelSelector(v.LabelSelector)
 		}
 		att = append(att, obj)
 	}
@@ -330,6 +380,9 @@ func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
 		}
 		if v.CephFS != nil {
 			obj["ceph_fs"] = flattenCephFSVolumeSource(v.CephFS)
+		}
+		if v.CSI != nil {
+			obj["csi"] = flattenCSIVolumeSource(v.CSI)
 		}
 		if v.FC != nil {
 			obj["fc"] = flattenFCVolumeSource(v.FC)
@@ -746,6 +799,17 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		}
 		obj.Volumes = cs
 	}
+
+	if v, ok := in["topology_spread_constraint"].([]interface{}); ok && len(v) > 0 {
+		ts, err := expandTopologySpreadConstraints(v)
+		if err != nil {
+			return obj, err
+		}
+		for _, t := range ts {
+			obj.TopologySpreadConstraints = append(obj.TopologySpreadConstraints, *t)
+		}
+	}
+
 	return obj, nil
 }
 
@@ -821,6 +885,9 @@ func expandPodSecurityContext(l []interface{}) (*v1.PodSecurityContext, error) {
 		}
 		obj.RunAsUser = ptrToInt64(int64(i))
 	}
+	if v, ok := in["seccomp_profile"].([]interface{}); ok && len(v) > 0 {
+		obj.SeccompProfile = expandSeccompProfile(v)
+	}
 	if v, ok := in["se_linux_options"].([]interface{}); ok && len(v) > 0 {
 		obj.SELinuxOptions = expandSeLinuxOptions(v)
 	}
@@ -850,6 +917,23 @@ func expandSysctls(l []interface{}) []v1.Sysctl {
 
 	}
 	return sysctls
+}
+
+func expandSeccompProfile(l []interface{}) *v1.SeccompProfile {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.SeccompProfile{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.SeccompProfile{}
+	if v, ok := in["type"].(string); ok {
+		obj.Type = v1.SeccompProfileType(v)
+		if v == "Localhost" {
+			if lp, ok := in["localhost_profile"].(string); ok {
+				obj.LocalhostProfile = &lp
+			}
+		}
+	}
+	return obj
 }
 
 func expandSeLinuxOptions(l []interface{}) *v1.SELinuxOptions {
@@ -1267,6 +1351,35 @@ func expandTolerations(tolerations []interface{}) ([]*v1.Toleration, error) {
 	return ts, nil
 }
 
+func expandTopologySpreadConstraints(tsc []interface{}) ([]*v1.TopologySpreadConstraint, error) {
+	if len(tsc) == 0 {
+		return []*v1.TopologySpreadConstraint{}, nil
+	}
+	ts := make([]*v1.TopologySpreadConstraint, len(tsc))
+	for i, t := range tsc {
+		m := t.(map[string]interface{})
+		ts[i] = &v1.TopologySpreadConstraint{}
+
+		if value, ok := m["topology_key"].(string); ok {
+			ts[i].TopologyKey = value
+		}
+
+		if v, ok := m["label_selector"].([]interface{}); ok && len(v) > 0 {
+			ts[i].LabelSelector = expandLabelSelector(v)
+		}
+
+		if value, ok := m["when_unsatisfiable"].(string); ok {
+			ts[i].WhenUnsatisfiable = v1.UnsatisfiableConstraintAction(value)
+		}
+
+		if value, ok := m["max_skew"].(int); ok {
+			ts[i].MaxSkew = int32(value)
+		}
+
+	}
+	return ts, nil
+}
+
 func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 	if len(volumes) == 0 {
 		return []v1.Volume{}, nil
@@ -1348,6 +1461,9 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 		}
 		if v, ok := m["ceph_fs"].([]interface{}); ok && len(v) > 0 {
 			vl[i].CephFS = expandCephFSVolumeSource(v)
+		}
+		if v, ok := m["csi"].([]interface{}); ok && len(v) > 0 {
+			vl[i].CSI = expandCSIVolumeSource(v)
 		}
 		if v, ok := m["fc"].([]interface{}); ok && len(v) > 0 {
 			vl[i].FC = expandFCVolumeSource(v)

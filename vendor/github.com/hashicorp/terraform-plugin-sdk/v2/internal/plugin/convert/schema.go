@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5/tftypes"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/internal/configs/configschema"
 )
 
@@ -56,7 +56,7 @@ func tftypeFromCtyType(in cty.Type) (tftypes.Type, error) {
 			return nil, err
 		}
 		return tftypes.Map{
-			AttributeType: elemType,
+			ElementType: elemType,
 		}, nil
 	case in.IsObjectType():
 		attrTypes := make(map[string]tftypes.Type)
@@ -97,7 +97,7 @@ func ctyTypeFromTFType(in tftypes.Type) (cty.Type, error) {
 		}
 		return cty.Set(elemType), nil
 	case in.Is(tftypes.Map{}):
-		elemType, err := ctyTypeFromTFType(in.(tftypes.Map).AttributeType)
+		elemType, err := ctyTypeFromTFType(in.(tftypes.Map).ElementType)
 		if err != nil {
 			return cty.Type{}, err
 		}

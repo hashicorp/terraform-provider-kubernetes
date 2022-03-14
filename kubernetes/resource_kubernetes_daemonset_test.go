@@ -294,6 +294,49 @@ func TestAccKubernetesDaemonSet_regression(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDaemonSet_with_container_security_context_seccomp_profile(t *testing.T) {
+	var conf appsv1.DaemonSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := nginxImageVersion
+	resourceName := "kubernetes_daemonset.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_daemonset.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDaemonSetConfigWithContainerSecurityContextSeccompProfile(name, imageName, "Unconfined"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.type", "Unconfined"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.type", "Unconfined"),
+				),
+			},
+			{
+				Config: testAccKubernetesDaemonSetConfigWithContainerSecurityContextSeccompProfile(name, imageName, "RuntimeDefault"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.type", "RuntimeDefault"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.type", "RuntimeDefault"),
+				),
+			},
+			{
+				Config: testAccKubernetesDaemonSetConfigWithContainerSecurityContextSeccompProfileLocalhost(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.type", "Localhost"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.localhost_profile", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.type", "Localhost"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.localhost_profile", ""),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesDaemonsetForceNew(old, new *appsv1.DaemonSet, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {
@@ -804,4 +847,100 @@ func testAccKubernetesDaemonSetConfig_afterUpdate(name, imageName string) string
   }
 }
 `, name, imageName)
+}
+
+func testAccKubernetesDaemonSetConfigWithContainerSecurityContextSeccompProfile(deploymentName, imageName, seccompProfileType string) string {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        security_context {
+          seccomp_profile {
+            type = "%s"
+          }
+        }
+        container {
+          image = "%s"
+          name  = "containername"
+
+          security_context {
+            seccomp_profile {
+              type = "%s"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, deploymentName, seccompProfileType, imageName, seccompProfileType)
+}
+
+func testAccKubernetesDaemonSetConfigWithContainerSecurityContextSeccompProfileLocalhost(deploymentName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        security_context {
+          seccomp_profile {
+            type              = "Localhost"
+            localhost_profile = ""
+          }
+        }
+        container {
+          image = "%s"
+          name  = "containername"
+
+          security_context {
+            seccomp_profile {
+              type              = "Localhost"
+              localhost_profile = ""
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, deploymentName, imageName)
 }

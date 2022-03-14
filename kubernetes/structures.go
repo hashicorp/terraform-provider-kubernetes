@@ -157,7 +157,17 @@ func isKeyInMap(key string, d map[string]interface{}) bool {
 
 func isInternalKey(annotationKey string) bool {
 	u, err := url.Parse("//" + annotationKey)
-	if err == nil && strings.HasSuffix(u.Hostname(), "kubernetes.io") {
+	if err != nil {
+		return false
+	}
+
+	// allow user specified application specific keys
+	if u.Hostname() == "app.kubernetes.io" {
+		return false
+	}
+
+	// internal *.kubernetes.io keys
+	if strings.HasSuffix(u.Hostname(), "kubernetes.io") {
 		return true
 	}
 
@@ -165,7 +175,6 @@ func isInternalKey(annotationKey string) bool {
 	if strings.Contains(annotationKey, "deprecated.daemonset.template.generation") {
 		return true
 	}
-
 	return false
 }
 
@@ -216,6 +225,26 @@ func base64EncodeStringMap(m map[string]interface{}) map[string]interface{} {
 		result[k] = base64.StdEncoding.EncodeToString([]byte(value))
 	}
 	return result
+}
+
+func base64EncodeByteMap(m map[string][]byte) map[string]interface{} {
+	result := map[string]interface{}{}
+	for k, v := range m {
+		result[k] = base64.StdEncoding.EncodeToString(v)
+	}
+	return result
+}
+
+func base64DecodeStringMap(m map[string]interface{}) (map[string][]byte, error) {
+	mm := map[string][]byte{}
+	for k, v := range m {
+		d, err := base64.StdEncoding.DecodeString(v.(string))
+		if err != nil {
+			return nil, err
+		}
+		mm[k] = []byte(d)
+	}
+	return mm, nil
 }
 
 func flattenResourceList(l api.ResourceList) map[string]string {
@@ -273,6 +302,10 @@ func flattenResourceQuotaSpec(in api.ResourceQuotaSpec) []interface{} {
 	m["hard"] = flattenResourceList(in.Hard)
 	m["scopes"] = flattenResourceQuotaScopes(in.Scopes)
 
+	if in.ScopeSelector != nil {
+		m["scope_selector"] = flattenResourceQuotaScopeSelector(in.ScopeSelector)
+	}
+
 	out[0] = m
 	return out
 }
@@ -296,6 +329,10 @@ func expandResourceQuotaSpec(s []interface{}) (*api.ResourceQuotaSpec, error) {
 		out.Scopes = expandResourceQuotaScopes(v.(*schema.Set).List())
 	}
 
+	if v, ok := m["scope_selector"]; ok {
+		out.ScopeSelector = expandResourceQuotaScopeSelector(v.([]interface{}))
+	}
+
 	return out, nil
 }
 
@@ -311,6 +348,72 @@ func expandResourceQuotaScopes(s []interface{}) []api.ResourceQuotaScope {
 	out := make([]api.ResourceQuotaScope, len(s), len(s))
 	for i, scope := range s {
 		out[i] = api.ResourceQuotaScope(scope.(string))
+	}
+	return out
+}
+
+func expandResourceQuotaScopeSelector(s []interface{}) *api.ScopeSelector {
+	if len(s) < 1 {
+		return nil
+	}
+	m := s[0].(map[string]interface{})
+
+	att := &api.ScopeSelector{}
+
+	if v, ok := m["match_expression"].([]interface{}); ok {
+		att.MatchExpressions = expandResourceQuotaScopeSelectorMatchExpressions(v)
+	}
+
+	return att
+}
+
+func expandResourceQuotaScopeSelectorMatchExpressions(s []interface{}) []api.ScopedResourceSelectorRequirement {
+	out := make([]api.ScopedResourceSelectorRequirement, len(s), len(s))
+
+	for i, raw := range s {
+		matchExp := raw.(map[string]interface{})
+
+		if v, ok := matchExp["scope_name"].(string); ok {
+			out[i].ScopeName = api.ResourceQuotaScope(v)
+		}
+
+		if v, ok := matchExp["operator"].(string); ok {
+			out[i].Operator = api.ScopeSelectorOperator(v)
+		}
+
+		if v, ok := matchExp["values"].(*schema.Set); ok && v.Len() > 0 {
+			out[i].Values = sliceOfString(v.List())
+		}
+	}
+	return out
+}
+
+func flattenResourceQuotaScopeSelector(in *api.ScopeSelector) []interface{} {
+	out := make([]interface{}, 1)
+
+	m := make(map[string]interface{}, 0)
+	m["match_expression"] = flattenResourceQuotaScopeSelectorMatchExpressions(in.MatchExpressions)
+
+	out[0] = m
+	return out
+}
+
+func flattenResourceQuotaScopeSelectorMatchExpressions(in []api.ScopedResourceSelectorRequirement) []interface{} {
+	if len(in) == 0 {
+		return []interface{}{}
+	}
+	out := make([]interface{}, 1)
+
+	for i, l := range in {
+		m := make(map[string]interface{}, 0)
+		m["operator"] = string(l.Operator)
+		m["scope_name"] = string(l.ScopeName)
+
+		if l.Values != nil && len(l.Values) > 0 {
+			m["values"] = newStringSet(schema.HashString, l.Values)
+		}
+
+		out[i] = m
 	}
 	return out
 }

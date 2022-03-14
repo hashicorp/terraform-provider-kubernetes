@@ -199,3 +199,49 @@ func metricSpecFields() *schema.Resource {
 		},
 	}
 }
+
+func scalingRulesSpecFields() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"policy": {
+				Type:        schema.TypeList,
+				Required:    true,
+				MinItems:    1,
+				Elem:        scalingPolicySpecFields(),
+				Description: "List of potential scaling polices which can be used during scaling. At least one policy must be specified, otherwise the scaling rule will be discarded as invalid.",
+			},
+			"select_policy": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Used to specify which policy should be used. If not set, the default value Max is used.",
+			},
+			"stabilization_window_seconds": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "Number of seconds for which past recommendations should be considered while scaling up or scaling down. This value must be greater than or equal to zero and less than or equal to 3600 (one hour). If not set, use the default values: - For scale up: 0 (i.e. no stabilization is done). - For scale down: 300 (i.e. the stabilization window is 300 seconds long).",
+			},
+		},
+	}
+}
+
+func scalingPolicySpecFields() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"period_seconds": {
+				Type:        schema.TypeInt,
+				Required:    true,
+				Description: "Period specifies the window of time for which the policy should hold true. PeriodSeconds must be greater than zero and less than or equal to 1800 (30 min).",
+			},
+			"type": {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Type is used to specify the scaling policy: Percent or Pods",
+			},
+			"value": {
+				Type:        schema.TypeInt,
+				Required:    true,
+				Description: "Value contains the amount of change which is permitted by the policy. It must be greater than zero.",
+			},
+		},
+	}
+}

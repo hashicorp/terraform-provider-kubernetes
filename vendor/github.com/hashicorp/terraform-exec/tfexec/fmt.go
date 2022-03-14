@@ -1,7 +1,6 @@
 package tfexec
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -44,7 +43,7 @@ func FormatString(ctx context.Context, execPath string, content string) (string,
 // FormatString formats a passed string.
 func (tf *Terraform) FormatString(ctx context.Context, content string) (string, error) {
 	in := strings.NewReader(content)
-	var outBuf bytes.Buffer
+	var outBuf strings.Builder
 	err := tf.Format(ctx, in, &outBuf)
 	if err != nil {
 		return "", err
@@ -63,7 +62,7 @@ func (tf *Terraform) Format(ctx context.Context, unformatted io.Reader, formatte
 	cmd.Stdin = unformatted
 	cmd.Stdout = mergeWriters(cmd.Stdout, formatted)
 
-	return tf.runTerraformCmd(cmd)
+	return tf.runTerraformCmd(ctx, cmd)
 }
 
 // FormatWrite attempts to format and modify all config files in the working or selected (via DirOption) directory.
@@ -82,7 +81,7 @@ func (tf *Terraform) FormatWrite(ctx context.Context, opts ...FormatOption) erro
 		return err
 	}
 
-	return tf.runTerraformCmd(cmd)
+	return tf.runTerraformCmd(ctx, cmd)
 }
 
 // FormatCheck returns true if the config files in the working or selected (via DirOption) directory are already formatted.
@@ -101,10 +100,10 @@ func (tf *Terraform) FormatCheck(ctx context.Context, opts ...FormatOption) (boo
 		return false, nil, err
 	}
 
-	var outBuf bytes.Buffer
+	var outBuf strings.Builder
 	cmd.Stdout = mergeWriters(cmd.Stdout, &outBuf)
 
-	err = tf.runTerraformCmd(cmd)
+	err = tf.runTerraformCmd(ctx, cmd)
 	if err == nil {
 		return true, nil, nil
 	}

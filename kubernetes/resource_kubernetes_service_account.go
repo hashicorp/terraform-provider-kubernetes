@@ -222,6 +222,7 @@ func resourceKubernetesServiceAccountRead(ctx context.Context, d *schema.Resourc
 		return diag.FromErr(err)
 	}
 	if !exists {
+		d.SetId("")
 		return diag.Diagnostics{}
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -361,7 +362,7 @@ func resourceKubernetesServiceAccountExists(ctx context.Context, d *schema.Resou
 	log.Printf("[INFO] Checking service account %s", name)
 	_, err = conn.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

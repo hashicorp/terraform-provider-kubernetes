@@ -45,16 +45,18 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"limits": {
-						Type:        schema.TypeMap,
-						Description: "Map describing the maximum amount of compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
-						Optional:    true,
-						ForceNew:    true,
+						Type:             schema.TypeMap,
+						Description:      "Map describing the maximum amount of compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
+						Optional:         true,
+						ForceNew:         true,
+						DiffSuppressFunc: suppressEquivalentResourceQuantity,
 					},
 					// This is the only field the API will allow modifying in-place, so ForceNew is not used.
 					"requests": {
-						Type:        schema.TypeMap,
-						Description: "Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
-						Optional:    true,
+						Type:             schema.TypeMap,
+						Description:      "Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
+						Optional:         true,
+						DiffSuppressFunc: suppressEquivalentResourceQuantity,
 					},
 				},
 			},

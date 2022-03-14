@@ -1,3 +1,179 @@
+## 2.8.0 (February 09, 2022)
+
+IMPROVEMENTS:
+
+* Add mutating_webhook_configuration_v1 data source (#1423)
+* Remove enabling experiment section (#1564)
+* Update kubernetes dependencies (#1574)
+* Update terraform-plugin-go and terraform-plugin-sdk (#1551)
+
+BUG FIXES:
+
+* Fix `panic: lists must only contain one type of element` errors on `kubernetes_manifest`
+* Attribute `backend.service.port.name` in `kubernetes_ingress_v1` should be type String  (#1541)
+
+## 2.7.1 (December 06, 2021)
+
+BUG FIXES:
+* Fix type-morphing of Map into Map (#1521)
+
+## 2.7.0 (November 30, 2021)
+
+IMPROVEMENTS:
+* Add support for storage/v1
+* Add support for certificates/v1
+* Add support for networking/v1
+* Add support for policy/v1
+* Add `completion_mode` to job spec 
+* Improve performance of `kubernetes_manifest` by reducing amount of API calls
+
+BUG FIXES:
+* Fix crash when container env block is empty 
+* Fix invalid allowedHostPaths PodSecurityPolicy patch 
+* Fix handling of "null" values on fields of `kubernetes_manifest` (#1478)
+
+This release introduces version suffixes to the names of resources and datasources. See our [documentation page](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/guides/versioned-resources) for more details on this convention and the motivation behind it.   
+
+## 2.6.1 (October 22, 2021)
+
+BUG FIXES:
+  * Fix import ID syntax in manifest import docs
+  * Tolerate unknown values in "env" and "exec" provider attributes
+  * Remove "beta" designation of the kubernetes_manifest from documentation
+
+## 2.6.0 (October 19, 2021)
+
+IMPROVEMENTS:
+* kubernetes_manifest is now GA and enabled by default
+
+BUG FIXES:
+* kubernetes_manifest now correctly handles empty blocks as attribute values (#1352)
+* kubernetes_manifest now correctly handles multiple CRDs with different number of schema versions (#1460)
+
+## 2.5.1 (October 14, 2021)
+
+IMPROVEMENTS:
+* Allow setting kubernetes_job parallelism to zero (#1334)
+* Add kubernetes_ingress_class resource (#1236)
+* Add immutable field to kubernetes_secret (#1280)
+* Add behavior field to horizontal_pod_autoscaler (#1030)
+* Add proxy_url attribute to provider configuration block (#1441)
+
+BUG FIXES:
+* Always generate standard ObjectMeta for CRD types (#1418)
+* Fix importing kubernetes_manifest resources (#1440)
+* Fix documentation example for field_manager block (#1410)
+* Fix kubernetes_job "No waiting" documentation example (#1383)
+* Fix docs formatting for kubernetes_secret (#1434)
+
+## 2.5.0 (September 14, 2021)
+
+IMPROVEMENTS:
+* Timeouts block on `kubernetes_manifest`
+* `kubernetes_manifest` supports setting field_manager name and "force" mode
+* `kubernetes_manifest` checks that resource exists before trying to create
+* `kubernetes_manifest` supports "computed" attributtes
+* `kubernetes_manifest` supports import operations
+
+BUG FIXES:
+* Fix typo in kubernetes_manifest documentation
+* Document that kubernetes_manifest must be enabled in the provider block.
+* Docs for ingress_class_name in kubernetes_ingress
+
+## 2.4.1 (August 03, 2021)
+
+HOTFIX:
+* Fix kubernetes_manifest Terraform version constraint causing error on 0.12/0.13  ([#1345](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1345))
+
+## 2.4.0 (August 02, 2021)
+
+IMPROVEMENTS:
+* Add `kubernetes_manifest` resource as experimental feature 
+* Upgrade Terraform SDK to v2.7.0
+
+## 2.3.2 (June 10, 2021)
+
+BUG FIXES:
+* Revert "Filter well known labels and annotations" ([#1298](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1298))
+
+IMPROVEMENTS:
+* docs/stateful_set: add import section ([#1287](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1287))
+
+
+## 2.3.1 (June 03, 2021)
+
+BUG FIXES:
+* `cluster_ip` for `kubernetes_service` should support value `None` ([#1291](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1291))
+* Remove `self_link` from metadata ([#1294](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1294))
+* Add missing labels to fix "`kubernetes.io/metadata.name` always in plan" ([#1293](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1293))
+
+
+## 2.3.0 (June 02, 2021)
+
+BUG FIXES:
+* Add missing annotations ([#1289](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1289))
+
+
+IMPROVEMENTS:
+* Datasource: `kubernetes_secret`: add `binary_data` attribute ([#1285](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1285))
+* Add validations to `validating_webhook_configuration` ([#1279](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1279))
+* Add validations to `mutating_webhook_configuration` ([#1278](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1278))
+* Add validations to `storage_class` ([#1276](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1276))
+* Add validations to container PodSpec ([#1275](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1275))
+* Add validations to `service` ([#1273](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1273))
+* Update EKS example to use two applies ([#1260](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1260))
+* Resource `kubernetes_deployment`: allow changing strategy from `rolling` to `recreate` ([#1255](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1255))
+* Filter well known labels and annotations ([#1253](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1253))
+* Resource `kubernetes_resource_quota`: suppress diff for no-op changes ([#1251](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1251))
+* Resource `kubernetes_deployment`: allow removing volume mount ([#1246](https://github.com/hashicorp/terraform-provider-kubernetes/pull/1246))
+
+## 2.2.0 (May 12, 2021)
+
+IMPROVEMENTS:
+* Match specific tolerations to prevent diffs (#978)
+* Update all go modules (#1240)
+* Docs: fix broken links (#1041)
+* Docs: fix typo in getting started guide (#1262)
+
+
+## 2.1.0 (April 15, 2021)
+
+BUG FIXES:
+* Fix `kubernetes_cron_job` ForceNew when modifying `job_template` (#1212)
+* Fix error returned by Create CSR (#1206)
+* Fix `kubernetes_pod_disruption_budget`: `100%` now is a valid value (#1107)
+* Fix perpetual diff in persistent volume claimRef (#1227)
+
+IMPROVEMENTS:
+* Add `binary_data` field to `kubernetes_secret` (#1228)
+* Add support for setting the persistent volume claimRef (#1020)
+* Add `secret_namespace` to `volume_source` `azure_file` (#1204)
+* Docs: fix grammar in Network Policy (#1210)
+* Docs: `kubernetes_cron_job` add link to Kubernetes reference (#1200)
+
+## 2.0.3 (March 17, 2021)
+
+BUG FIXES:
+
+* Fix resource_field_ref schema for projected_volume (#1189)
+* Add diff suppression to persistent_volume and persistent_volume_claim (#1145)
+* Remove error for missing kubeconfig, to allow generating it at apply time (#1142)
+
+IMPROVEMENTS:
+
+* Support topologySpreadConstraint in pod spec schema (#1022)
+* Wait for kubernetes_ingress to be deleted (#1143)
+* Improve docs for configuring the provider (#1132)
+* Update docs to reflect Kubernetes service status attribute (#1148)
+
+## 2.0.2 (February 02, 2021)
+
+BUG FIXES:
+* Read operation should set resource id to null if not found (#1136)
+
+IMPROVEMENTS:
+* Add service timeouts docs (#963)
+
 ## 2.0.1 (January 22, 2021)
 
 BUG FIXES:

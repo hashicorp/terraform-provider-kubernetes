@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	api "k8s.io/api/core/v1"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
@@ -43,8 +45,12 @@ func handlerFields() map[string]*schema.Schema {
 					"scheme": {
 						Type:        schema.TypeString,
 						Optional:    true,
-						Default:     "HTTP",
+						Default:     string(api.URISchemeHTTP),
 						Description: `Scheme to use for connecting to the host.`,
+						ValidateFunc: validation.StringInSlice([]string{
+							string(api.URISchemeHTTP),
+							string(api.URISchemeHTTPS),
+						}, false),
 					},
 					"port": {
 						Type:         schema.TypeString,
@@ -152,6 +158,30 @@ func resourcesFieldV0() map[string]*schema.Schema {
 					},
 				},
 			},
+		},
+	}
+}
+
+func seccompProfileField(isUpdatable bool) map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"localhost_profile": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			ForceNew:    !isUpdatable,
+			Default:     "",
+			Description: "Localhost Profile indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work.",
+		},
+		"type": {
+			Type:     schema.TypeString,
+			Optional: true,
+			ForceNew: !isUpdatable,
+			Default:  string(api.SeccompProfileTypeUnconfined),
+			ValidateFunc: validation.StringInSlice([]string{
+				string(api.SeccompProfileTypeLocalhost),
+				string(api.SeccompProfileTypeRuntimeDefault),
+				string(api.SeccompProfileTypeUnconfined),
+			}, false),
+			Description: "Type indicates which kind of seccomp profile will be applied. Valid options are: Localhost, RuntimeDefault, Unconfined.",
 		},
 	}
 }
@@ -506,10 +536,11 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 						Description: "What host IP to bind the external port to.",
 					},
 					"host_port": {
-						Type:        schema.TypeInt,
-						Optional:    true,
-						ForceNew:    !isUpdatable,
-						Description: "Number of port to expose on the host. If specified, this must be a valid port number, 0 < x < 65536. If HostNetwork is specified, this must match ContainerPort. Most containers do not need this.",
+						Type:         schema.TypeInt,
+						Optional:     true,
+						ForceNew:     !isUpdatable,
+						Description:  "Number of port to expose on the host. If specified, this must be a valid port number, 0 < x < 65536. If HostNetwork is specified, this must match ContainerPort. Most containers do not need this.",
+						ValidateFunc: validation.IsPortNumber,
 					},
 					"name": {
 						Type:         schema.TypeString,
@@ -523,7 +554,11 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						Description: `Protocol for port. Must be UDP or TCP. Defaults to "TCP".`,
-						Default:     "TCP",
+						Default:     string(api.ProtocolTCP),
+						ValidateFunc: validation.StringInSlice([]string{
+							string(api.ProtocolTCP),
+							string(api.ProtocolUDP),
+						}, false),
 					},
 				},
 			},
@@ -585,12 +620,15 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Description: "Optional: Path at which the file to which the container's termination message will be written is mounted into the container's filesystem. Message written is intended to be brief final status, such as an assertion failure message. Defaults to /dev/termination-log. Cannot be updated.",
 		},
 		"termination_message_policy": {
-			Type:         schema.TypeString,
-			Optional:     true,
-			ForceNew:     !isUpdatable,
-			ValidateFunc: validation.StringInSlice([]string{"File", "FallbackToLogsOnError"}, false),
-			Computed:     true,
-			Description:  "Optional: Indicate how the termination message should be populated. File will use the contents of terminationMessagePath to populate the container status message on both success and failure. FallbackToLogsOnError will use the last chunk of container log output if the termination message file is empty and the container exited with an error. The log output is limited to 2048 bytes or 80 lines, whichever is smaller. Defaults to File. Cannot be updated.",
+			Type:     schema.TypeString,
+			Optional: true,
+			ForceNew: !isUpdatable,
+			ValidateFunc: validation.StringInSlice([]string{
+				string(api.TerminationMessageReadFile),
+				string(api.TerminationMessageFallbackToLogsOnError),
+			}, false),
+			Computed:    true,
+			Description: "Optional: Indicate how the termination message should be populated. File will use the contents of terminationMessagePath to populate the container status message on both success and failure. FallbackToLogsOnError will use the last chunk of container log output if the termination message file is empty and the container exited with an error. The log output is limited to 2048 bytes or 80 lines, whichever is smaller. Defaults to File. Cannot be updated.",
 		},
 		"tty": {
 			Type:        schema.TypeBool,
@@ -603,7 +641,6 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Type:        schema.TypeList,
 			Optional:    true,
 			ForceNew:    !isUpdatable,
-			Computed:    true,
 			Description: "Pod volumes to mount into the container's filesystem. Cannot be updated.",
 			Elem: &schema.Resource{
 				Schema: volumeMountFields(),
@@ -727,6 +764,15 @@ func securityContextSchema(isUpdatable bool) *schema.Resource {
 			Optional:     true,
 			ForceNew:     !isUpdatable,
 			ValidateFunc: validateTypeStringNullableInt,
+		},
+		"seccomp_profile": {
+			Type:        schema.TypeList,
+			Description: "The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows.",
+			Optional:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: seccompProfileField(isUpdatable),
+			},
 		},
 		"se_linux_options": {
 			Type:        schema.TypeList,

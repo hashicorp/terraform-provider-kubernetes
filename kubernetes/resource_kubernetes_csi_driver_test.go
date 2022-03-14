@@ -13,14 +13,15 @@ import (
 )
 
 func TestAccKubernetesCSIDriver_basic(t *testing.T) {
-	skipIfClusterVersionLessThan(t, "1.16.0")
-
 	var conf api.CSIDriver
 	resourceName := "kubernetes_csi_driver.test"
 	name := acctest.RandomWithPrefix("tf-acc-test")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
+		},
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCSIDriverDestroy,

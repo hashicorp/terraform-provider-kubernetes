@@ -8,19 +8,21 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+
+	"github.com/mitchellh/go-homedir"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/mitchellh/go-homedir"
-	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
+
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+
+	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	restclient "k8s.io/client-go/rest"
-
-	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	aggregator "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
@@ -106,6 +108,12 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_TOKEN", ""),
 				Description: "Token to authenticate an service account",
 			},
+			"proxy_url": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "URL to the proxy to be used for all API requests",
+				DefaultFunc: schema.EnvDefaultFunc("KUBE_PROXY_URL", ""),
+			},
 			"exec": {
 				Type:     schema.TypeList,
 				Optional: true,
@@ -134,56 +142,158 @@ func Provider() *schema.Provider {
 				},
 				Description: "",
 			},
+			"experiments": {
+				Type:        schema.TypeList,
+				MaxItems:    1,
+				Optional:    true,
+				Description: "Enable and disable experimental features.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"manifest_resource": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							DefaultFunc: func() (interface{}, error) {
+								if v := os.Getenv("TF_X_KUBERNETES_MANIFEST_RESOURCE"); v != "" {
+									vv, err := strconv.ParseBool(v)
+									if err != nil {
+										return true, err
+									}
+									return vv, nil
+								}
+								return true, nil
+							},
+							Description: "Enable the `kubernetes_manifest` resource.",
+						},
+					},
+				},
+			},
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"kubernetes_all_namespaces":          dataSourceKubernetesAllNamespaces(),
-			"kubernetes_config_map":              dataSourceKubernetesConfigMap(),
-			"kubernetes_ingress":                 dataSourceKubernetesIngress(),
-			"kubernetes_namespace":               dataSourceKubernetesNamespace(),
-			"kubernetes_secret":                  dataSourceKubernetesSecret(),
-			"kubernetes_service":                 dataSourceKubernetesService(),
-			"kubernetes_service_account":         dataSourceKubernetesServiceAccount(),
-			"kubernetes_storage_class":           dataSourceKubernetesStorageClass(),
-			"kubernetes_pod":                     dataSourceKubernetesPod(),
-			"kubernetes_persistent_volume_claim": dataSourceKubernetesPersistentVolumeClaim(),
+			// core
+			"kubernetes_config_map":                 dataSourceKubernetesConfigMap(),
+			"kubernetes_config_map_v1":              dataSourceKubernetesConfigMap(),
+			"kubernetes_namespace":                  dataSourceKubernetesNamespace(),
+			"kubernetes_namespace_v1":               dataSourceKubernetesNamespace(),
+			"kubernetes_all_namespaces":             dataSourceKubernetesAllNamespaces(),
+			"kubernetes_secret":                     dataSourceKubernetesSecret(),
+			"kubernetes_secret_v1":                  dataSourceKubernetesSecret(),
+			"kubernetes_service":                    dataSourceKubernetesService(),
+			"kubernetes_service_v1":                 dataSourceKubernetesService(),
+			"kubernetes_pod":                        dataSourceKubernetesPod(),
+			"kubernetes_pod_v1":                     dataSourceKubernetesPod(),
+			"kubernetes_service_account":            dataSourceKubernetesServiceAccount(),
+			"kubernetes_service_account_v1":         dataSourceKubernetesServiceAccount(),
+			"kubernetes_persistent_volume_claim":    dataSourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_persistent_volume_claim_v1": dataSourceKubernetesPersistentVolumeClaim(),
+
+			// networking
+			"kubernetes_ingress":    dataSourceKubernetesIngress(),
+			"kubernetes_ingress_v1": dataSourceKubernetesIngressV1(),
+
+			// storage
+			"kubernetes_storage_class":    dataSourceKubernetesStorageClass(),
+			"kubernetes_storage_class_v1": dataSourceKubernetesStorageClass(),
+
+			// admission control
+			"kubernetes_mutating_webhook_configuration_v1": dataSourceKubernetesMutatingWebhookConfiguration(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"kubernetes_api_service":                      resourceKubernetesAPIService(),
-			"kubernetes_certificate_signing_request":      resourceKubernetesCertificateSigningRequest(),
-			"kubernetes_cluster_role":                     resourceKubernetesClusterRole(),
-			"kubernetes_cluster_role_binding":             resourceKubernetesClusterRoleBinding(),
-			"kubernetes_config_map":                       resourceKubernetesConfigMap(),
-			"kubernetes_cron_job":                         resourceKubernetesCronJob(),
-			"kubernetes_csi_driver":                       resourceKubernetesCSIDriver(),
-			"kubernetes_daemonset":                        resourceKubernetesDaemonSet(),
-			"kubernetes_default_service_account":          resourceKubernetesDefaultServiceAccount(),
-			"kubernetes_deployment":                       resourceKubernetesDeployment(),
-			"kubernetes_endpoints":                        resourceKubernetesEndpoints(),
-			"kubernetes_horizontal_pod_autoscaler":        resourceKubernetesHorizontalPodAutoscaler(),
-			"kubernetes_ingress":                          resourceKubernetesIngress(),
-			"kubernetes_job":                              resourceKubernetesJob(),
-			"kubernetes_limit_range":                      resourceKubernetesLimitRange(),
-			"kubernetes_namespace":                        resourceKubernetesNamespace(),
-			"kubernetes_network_policy":                   resourceKubernetesNetworkPolicy(),
-			"kubernetes_persistent_volume":                resourceKubernetesPersistentVolume(),
-			"kubernetes_persistent_volume_claim":          resourceKubernetesPersistentVolumeClaim(),
-			"kubernetes_pod":                              resourceKubernetesPod(),
-			"kubernetes_pod_disruption_budget":            resourceKubernetesPodDisruptionBudget(),
-			"kubernetes_pod_security_policy":              resourceKubernetesPodSecurityPolicy(),
-			"kubernetes_priority_class":                   resourceKubernetesPriorityClass(),
-			"kubernetes_replication_controller":           resourceKubernetesReplicationController(),
-			"kubernetes_role_binding":                     resourceKubernetesRoleBinding(),
-			"kubernetes_resource_quota":                   resourceKubernetesResourceQuota(),
-			"kubernetes_role":                             resourceKubernetesRole(),
-			"kubernetes_secret":                           resourceKubernetesSecret(),
-			"kubernetes_service":                          resourceKubernetesService(),
-			"kubernetes_service_account":                  resourceKubernetesServiceAccount(),
-			"kubernetes_stateful_set":                     resourceKubernetesStatefulSet(),
-			"kubernetes_storage_class":                    resourceKubernetesStorageClass(),
-			"kubernetes_validating_webhook_configuration": resourceKubernetesValidatingWebhookConfiguration(),
-			"kubernetes_mutating_webhook_configuration":   resourceKubernetesMutatingWebhookConfiguration(),
+			// core
+			"kubernetes_namespace":                  resourceKubernetesNamespace(),
+			"kubernetes_namespace_v1":               resourceKubernetesNamespace(),
+			"kubernetes_service":                    resourceKubernetesService(),
+			"kubernetes_service_v1":                 resourceKubernetesService(),
+			"kubernetes_service_account":            resourceKubernetesServiceAccount(),
+			"kubernetes_service_account_v1":         resourceKubernetesServiceAccount(),
+			"kubernetes_default_service_account":    resourceKubernetesDefaultServiceAccount(),
+			"kubernetes_default_service_account_v1": resourceKubernetesDefaultServiceAccount(),
+			"kubernetes_config_map":                 resourceKubernetesConfigMap(),
+			"kubernetes_config_map_v1":              resourceKubernetesConfigMap(),
+			"kubernetes_secret":                     resourceKubernetesSecret(),
+			"kubernetes_secret_v1":                  resourceKubernetesSecret(),
+			"kubernetes_pod":                        resourceKubernetesPod(),
+			"kubernetes_pod_v1":                     resourceKubernetesPod(),
+			"kubernetes_endpoints":                  resourceKubernetesEndpoints(),
+			"kubernetes_endpoints_v1":               resourceKubernetesEndpoints(),
+			"kubernetes_limit_range":                resourceKubernetesLimitRange(),
+			"kubernetes_limit_range_v1":             resourceKubernetesLimitRange(),
+			"kubernetes_persistent_volume":          resourceKubernetesPersistentVolume(),
+			"kubernetes_persistent_volume_v1":       resourceKubernetesPersistentVolume(),
+			"kubernetes_persistent_volume_claim":    resourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_persistent_volume_claim_v1": resourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_replication_controller":     resourceKubernetesReplicationController(),
+			"kubernetes_replication_controller_v1":  resourceKubernetesReplicationController(),
+			"kubernetes_resource_quota":             resourceKubernetesResourceQuota(),
+			"kubernetes_resource_quota_v1":          resourceKubernetesResourceQuota(),
+
+			// api registration
+			"kubernetes_api_service":    resourceKubernetesAPIService(),
+			"kubernetes_api_service_v1": resourceKubernetesAPIService(),
+
+			// apps
+			"kubernetes_deployment":      resourceKubernetesDeployment(),
+			"kubernetes_deployment_v1":   resourceKubernetesDeployment(),
+			"kubernetes_daemonset":       resourceKubernetesDaemonSet(),
+			"kubernetes_daemon_set_v1":   resourceKubernetesDaemonSet(),
+			"kubernetes_stateful_set":    resourceKubernetesStatefulSet(),
+			"kubernetes_stateful_set_v1": resourceKubernetesStatefulSet(),
+
+			// batch
+			"kubernetes_job":         resourceKubernetesJob(),
+			"kubernetes_job_v1":      resourceKubernetesJob(),
+			"kubernetes_cron_job":    resourceKubernetesCronJob(),
+			"kubernetes_cron_job_v1": resourceKubernetesCronJobV1(),
+
+			// autoscaling
+			"kubernetes_horizontal_pod_autoscaler":         resourceKubernetesHorizontalPodAutoscaler(),
+			"kubernetes_horizontal_pod_autoscaler_v1":      resourceKubernetesHorizontalPodAutoscalerV1(),
+			"kubernetes_horizontal_pod_autoscaler_v2beta2": resourceKubernetesHorizontalPodAutoscalerV2Beta2(),
+
+			// certificates
+			"kubernetes_certificate_signing_request":    resourceKubernetesCertificateSigningRequest(),
+			"kubernetes_certificate_signing_request_v1": resourceKubernetesCertificateSigningRequestV1(),
+
+			// rbac
+			"kubernetes_role":                    resourceKubernetesRole(),
+			"kubernetes_role_v1":                 resourceKubernetesRole(),
+			"kubernetes_role_binding":            resourceKubernetesRoleBinding(),
+			"kubernetes_role_binding_v1":         resourceKubernetesRoleBinding(),
+			"kubernetes_cluster_role":            resourceKubernetesClusterRole(),
+			"kubernetes_cluster_role_v1":         resourceKubernetesClusterRole(),
+			"kubernetes_cluster_role_binding":    resourceKubernetesClusterRoleBinding(),
+			"kubernetes_cluster_role_binding_v1": resourceKubernetesClusterRoleBinding(),
+
+			// networking
+			"kubernetes_ingress":           resourceKubernetesIngress(),
+			"kubernetes_ingress_v1":        resourceKubernetesIngressV1(),
+			"kubernetes_ingress_class":     resourceKubernetesIngressClass(),
+			"kubernetes_ingress_class_v1":  resourceKubernetesIngressClass(),
+			"kubernetes_network_policy":    resourceKubernetesNetworkPolicy(),
+			"kubernetes_network_policy_v1": resourceKubernetesNetworkPolicy(),
+
+			// policy
+			"kubernetes_pod_disruption_budget":       resourceKubernetesPodDisruptionBudget(),
+			"kubernetes_pod_disruption_budget_v1":    resourceKubernetesPodDisruptionBudgetV1(),
+			"kubernetes_pod_security_policy":         resourceKubernetesPodSecurityPolicy(),
+			"kubernetes_pod_security_policy_v1beta1": resourceKubernetesPodSecurityPolicy(),
+
+			// scheduling
+			"kubernetes_priority_class":    resourceKubernetesPriorityClass(),
+			"kubernetes_priority_class_v1": resourceKubernetesPriorityClass(),
+
+			// admission control
+			"kubernetes_validating_webhook_configuration":    resourceKubernetesValidatingWebhookConfiguration(),
+			"kubernetes_validating_webhook_configuration_v1": resourceKubernetesValidatingWebhookConfigurationV1(),
+			"kubernetes_mutating_webhook_configuration":      resourceKubernetesMutatingWebhookConfiguration(),
+			"kubernetes_mutating_webhook_configuration_v1":   resourceKubernetesMutatingWebhookConfigurationV1(),
+
+			// storage
+			"kubernetes_storage_class":    resourceKubernetesStorageClass(),
+			"kubernetes_storage_class_v1": resourceKubernetesStorageClass(),
+			"kubernetes_csi_driver":       resourceKubernetesCSIDriver(),
+			"kubernetes_csi_driver_v1":    resourceKubernetesCSIDriverV1(),
 		},
 	}
 
@@ -293,9 +403,6 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 			if err != nil {
 				return nil, err
 			}
-			if _, err := os.Stat(path); err != nil {
-				return nil, fmt.Errorf("could not open kubeconfig %q: %v", p, err)
-			}
 
 			log.Printf("[DEBUG] Using kubeconfig: %s", path)
 			expandedPaths = append(expandedPaths, path)
@@ -374,6 +481,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	if v, ok := d.GetOk("exec"); ok {
 		exec := &clientcmdapi.ExecConfig{}
 		if spec, ok := v.([]interface{})[0].(map[string]interface{}); ok {
+			exec.InteractiveMode = clientcmdapi.IfAvailableExecInteractiveMode
 			exec.APIVersion = spec["api_version"].(string)
 			exec.Command = spec["command"].(string)
 			exec.Args = expandStringSlice(spec["args"].([]interface{}))
@@ -384,6 +492,10 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 			return nil, fmt.Errorf("Failed to parse exec")
 		}
 		overrides.AuthInfo.Exec = exec
+	}
+
+	if v, ok := d.GetOk("proxy_url"); ok {
+		overrides.ClusterDefaults.ProxyURL = v.(string)
 	}
 
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)

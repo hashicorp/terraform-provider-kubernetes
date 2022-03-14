@@ -1,4 +1,5 @@
 ---
+subcategory: "core/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_service"
 description: |-
@@ -41,7 +42,7 @@ resource "kubernetes_pod" "example" {
 
   spec {
     container {
-      image = "nginx:1.7.9"
+      image = "nginx:1.21.6"
       name  = "example"
     }
   }
@@ -50,7 +51,7 @@ resource "kubernetes_pod" "example" {
 
 ## Example using AWS load balancer
 
-```
+```hcl
 variable "cluster_name" {
   type = string
 }
@@ -83,7 +84,7 @@ resource "kubernetes_service" "example" {
   }
   spec {
     port {
-      port = 8080
+      port        = 8080
       target_port = 80
     }
     type = "LoadBalancer"
@@ -157,7 +158,7 @@ The following arguments are supported:
 * `external_name` - (Optional) The external reference that kubedns or equivalent will return as a CNAME record for this service. No proxying will be involved. Must be a valid DNS name and requires `type` to be `ExternalName`.
 * `external_traffic_policy` - (Optional) Denotes if this Service desires to route external traffic to node-local or cluster-wide endpoints. `Local` preserves the client source IP and avoids a second hop for LoadBalancer and Nodeport type services, but risks potentially imbalanced traffic spreading. `Cluster` obscures the client source IP and may cause a second hop to another node, but should have good overall load-spreading. For more info: https://kubernetes.io/docs/tutorials/services/source-ip/
 * `load_balancer_ip` - (Optional) Only applies to `type = LoadBalancer`. LoadBalancer will get created with the IP specified in this field. This feature depends on whether the underlying cloud-provider supports specifying this field when a load balancer is created. This field will be ignored if the cloud-provider does not support the feature.
-* `load_balancer_source_ranges` - (Optional) If specified and supported by the platform, this will restrict traffic through the cloud-provider load-balancer will be restricted to the specified client IPs. This field will be ignored if the cloud-provider does not support the feature. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/services-firewalls)
+* `load_balancer_source_ranges` - (Optional) If specified and supported by the platform, this will restrict traffic through the cloud-provider load-balancer will be restricted to the specified client IPs. This field will be ignored if the cloud-provider does not support the feature. For more info see [Kubernetes reference](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/).
 * `port` - (Required) The list of ports that are exposed by this service. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies)
 * `publish_not_ready_addresses` - (Optional) When set to true, indicates that DNS implementations must publish the `notReadyAddresses` of subsets for the Endpoints associated with the Service. The default value is `false`. The primary use case for setting this field is to use a StatefulSet's Headless Service to propagate `SRV` records for its Pods without respect to their readiness for purpose of peer discovery.
 * `selector` - (Optional) Route service traffic to pods with label keys and values matching this selector. Only applies to types `ClusterIP`, `NodePort`, and `LoadBalancer`. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/services#overview)
@@ -177,19 +178,20 @@ The following arguments are supported:
 
 ## Attributes
 
+* `status` - Status is a list containing the most recently observed status of the service. Populated by the system. Read-only. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+
 ### `status`
+#### Attributes
 
-* `status` - Most recently observed status of the service. Populated by the system. Read-only. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+* `load_balancer` - a list containing the current status of the load-balancer, if one is present.
 
-#### `load_balancer`
+### `load_balancer`
+#### Attributes
 
-* LoadBalancer contains the current status of the load-balancer, if one is present.
+* `ingress` - a list containing ingress points for the load-balancer. Traffic intended for the service should be sent to these ingress points.
 
-##### `ingress`
-
-* `ingress` - Ingress is a list containing ingress points for the load-balancer. Traffic intended for the service should be sent to these ingress points.
-
-###### Attributes
+### `ingress`
+#### Attributes
 
 * `ip` -  IP is set for load-balancer ingress points that are IP based (typically GCE or OpenStack load-balancers).
 * `hostname` - Hostname is set for load-balancer ingress points that are DNS based (typically AWS load-balancers).

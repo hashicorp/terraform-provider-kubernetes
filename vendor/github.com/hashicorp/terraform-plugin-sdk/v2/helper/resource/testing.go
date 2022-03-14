@@ -9,11 +9,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-multierror"
 	testing "github.com/mitchellh/go-testing-interface"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/internal/addrs"
@@ -112,6 +114,7 @@ func runSweepers(regions []string, sweepers map[string]*Sweeper, allowFailures b
 		var regionSweeperErrorFound bool
 		regionSweeperRunList := make(map[string]error)
 
+		start := time.Now()
 		log.Printf("[DEBUG] Running Sweepers for region (%s):\n", region)
 		for _, sweeper := range sweepers {
 			if err := runSweeperWithRegion(region, sweeper, sweepers, regionSweeperRunList, allowFailures); err != nil {
@@ -123,8 +126,10 @@ func runSweepers(regions []string, sweepers map[string]*Sweeper, allowFailures b
 				return sweeperRunList, fmt.Errorf("sweeper (%s) for region (%s) failed: %s", sweeper.Name, region, err)
 			}
 		}
+		elapsed := time.Now().Sub(start)
+		log.Printf("Completed Sweepers for region (%s) in %s", region, elapsed)
 
-		log.Printf("Sweeper Tests ran successfully:\n")
+		log.Printf("Sweeper Tests for region (%s) ran successfully:\n", region)
 		for sweeper, sweeperErr := range regionSweeperRunList {
 			if sweeperErr == nil {
 				fmt.Printf("\t- %s\n", sweeper)
@@ -135,7 +140,7 @@ func runSweepers(regions []string, sweepers map[string]*Sweeper, allowFailures b
 
 		if regionSweeperErrorFound {
 			sweeperErrorFound = true
-			log.Printf("Sweeper Tests ran unsuccessfully:\n")
+			log.Printf("Sweeper Tests for region (%s) ran unsuccessfully:\n", region)
 			for sweeper, sweeperErr := range regionSweeperRunList {
 				if sweeperErr != nil {
 					fmt.Printf("\t- %s: %s\n", sweeper, sweeperErr)
@@ -232,7 +237,11 @@ func runSweeperWithRegion(region string, s *Sweeper, sweepers map[string]*Sweepe
 
 	log.Printf("[DEBUG] Running Sweeper (%s) in region (%s)", s.Name, region)
 
+	start := time.Now()
 	runE := s.F(region)
+	elapsed := time.Now().Sub(start)
+
+	log.Printf("[DEBUG] Completed Sweeper (%s) in region (%s) in %s", s.Name, region, elapsed)
 
 	sweeperRunList[s.Name] = runE
 
@@ -304,6 +313,13 @@ type TestCase struct {
 	// but for protocol v5 providers defined using the terraform-plugin-go
 	// ProviderServer interface.
 	ProtoV5ProviderFactories map[string]func() (tfprotov5.ProviderServer, error)
+
+	// ProtoV6ProviderFactories serves the same purpose as ProviderFactories,
+	// but for protocol v6 providers defined using the terraform-plugin-go
+	// ProviderServer interface.
+	// The version of Terraform used in acceptance testing must be greater
+	// than or equal to v0.15.4 to use ProtoV6ProviderFactories.
+	ProtoV6ProviderFactories map[string]func() (tfprotov6.ProviderServer, error)
 
 	// Providers is the ResourceProvider that will be under test.
 	//

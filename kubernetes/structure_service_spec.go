@@ -85,7 +85,7 @@ func flattenLoadBalancerStatus(in v1.LoadBalancerStatus) []interface{} {
 
 // Expanders
 
-func expandServicePort(l []interface{}) []v1.ServicePort {
+func expandServicePort(l []interface{}, removeNodePort bool) []v1.ServicePort {
 	if len(l) == 0 || l[0] == nil {
 		return []v1.ServicePort{}
 	}
@@ -102,7 +102,7 @@ func expandServicePort(l []interface{}) []v1.ServicePort {
 		if v, ok := cfg["protocol"].(string); ok {
 			obj[i].Protocol = v1.Protocol(v)
 		}
-		if v, ok := cfg["node_port"].(int); ok {
+		if v, ok := cfg["node_port"].(int); ok && !removeNodePort {
 			obj[i].NodePort = int32(v)
 		}
 	}
@@ -117,7 +117,7 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 	obj := v1.ServiceSpec{}
 
 	if v, ok := in["port"].([]interface{}); ok && len(v) > 0 {
-		obj.Ports = expandServicePort(v)
+		obj.Ports = expandServicePort(v, false)
 	}
 	if v, ok := in["selector"].(map[string]interface{}); ok && len(v) > 0 {
 		obj.Selector = expandStringMap(v)
@@ -166,12 +166,7 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 			Value: d.Get(keyPrefix + "selector").(map[string]interface{}),
 		})
 	}
-	if d.HasChange(keyPrefix + "type") {
-		ops = append(ops, &ReplaceOperation{
-			Path:  pathPrefix + "type",
-			Value: d.Get(keyPrefix + "type").(string),
-		})
-	}
+
 	if d.HasChange(keyPrefix + "session_affinity") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "sessionAffinity",
@@ -193,7 +188,28 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 	if d.HasChange(keyPrefix + "port") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "ports",
-			Value: expandServicePort(d.Get(keyPrefix + "port").([]interface{})),
+			Value: expandServicePort(d.Get(keyPrefix+"port").([]interface{}), false),
+		})
+	}
+	if d.HasChange(keyPrefix + "type") {
+		_, n := d.GetChange(keyPrefix + "type")
+
+		if n.(string) == "ExternalName" {
+			ops = append(ops, &RemoveOperation{
+				Path: pathPrefix + "clusterIP",
+			})
+		}
+
+		if n.(string) == "ClusterIP" {
+			ops = append(ops, &ReplaceOperation{
+				Path:  pathPrefix + "ports",
+				Value: expandServicePort(d.Get(keyPrefix+"port").([]interface{}), true),
+			})
+		}
+
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "type",
+			Value: d.Get(keyPrefix + "type").(string),
 		})
 	}
 	if d.HasChange(keyPrefix + "external_ips") {

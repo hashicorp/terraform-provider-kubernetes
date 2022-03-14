@@ -22,6 +22,10 @@ func flattenJobSpec(in batchv1.JobSpec, d *schema.ResourceData, prefix ...string
 		att["completions"] = *in.Completions
 	}
 
+	if in.CompletionMode != nil {
+		att["completion_mode"] = string(*in.CompletionMode)
+	}
+
 	if in.ManualSelector != nil {
 		att["manual_selector"] = *in.ManualSelector
 	}
@@ -78,11 +82,16 @@ func expandJobSpec(j []interface{}) (batchv1.JobSpec, error) {
 		obj.Completions = ptrToInt32(int32(v))
 	}
 
+	if v, ok := in["completion_mode"].(string); ok && v != "" {
+		m := batchv1.CompletionMode(v)
+		obj.CompletionMode = &m
+	}
+
 	if v, ok := in["manual_selector"]; ok {
 		obj.ManualSelector = ptrToBool(v.(bool))
 	}
 
-	if v, ok := in["parallelism"].(int); ok && v > 0 {
+	if v, ok := in["parallelism"].(int); ok && v >= 0 {
 		obj.Parallelism = ptrToInt32(int32(v))
 	}
 

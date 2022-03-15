@@ -125,7 +125,7 @@ variable "token_name" {
 
 resource "kubernetes_service_account" "test" {
   metadata {
-   name = "%s"
+    name = "%s"
   }
   secret {
     name = var.token_name

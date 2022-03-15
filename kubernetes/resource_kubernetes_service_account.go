@@ -156,7 +156,7 @@ func getServiceAccountDefaultSecret(ctx context.Context, name string, config api
 	return &svcAccTokens[0], nil
 }
 
-func findDefaultServiceAccount(ctx context.Context, sa *api.ServiceAccount, conn *kubernetes.Clientset) (string, error) {
+func findDefaultServiceAccount(ctx context.Context, sa *api.ServiceAccount, conn *kubernetes.Clientset) (string, diag.Diagnostics) {
 	/*
 	   The default service account token secret would have:
 	   - been created either at the same moment as the service account or _just_ after (Kubernetes controllers appears to work off a queue)
@@ -165,6 +165,8 @@ func findDefaultServiceAccount(ctx context.Context, sa *api.ServiceAccount, conn
 	   See this for where the default token is created in Kubernetes
 	   https://github.com/kubernetes/kubernetes/blob/release-1.13/pkg/controller/serviceaccount/tokens_controller.go#L384
 	*/
+	ds := make([]string, 0)
+
 	for _, saSecret := range sa.Secrets {
 		if !strings.HasPrefix(saSecret.Name, fmt.Sprintf("%s-token-", sa.Name)) {
 			log.Printf("[DEBUG] Skipping %s as it doesn't have the right name", saSecret.Name)
@@ -173,7 +175,7 @@ func findDefaultServiceAccount(ctx context.Context, sa *api.ServiceAccount, conn
 
 		secret, err := conn.CoreV1().Secrets(sa.Namespace).Get(ctx, saSecret.Name, metav1.GetOptions{})
 		if err != nil {
-			return "", fmt.Errorf("Unable to fetch secret %s/%s from Kubernetes: %s", sa.Namespace, saSecret.Name, err)
+			return "", diag.Errorf("Unable to fetch secret %s/%s from Kubernetes: %s", sa.Namespace, saSecret.Name, err)
 		}
 
 		if secret.Type != api.SecretTypeServiceAccountToken {
@@ -181,22 +183,40 @@ func findDefaultServiceAccount(ctx context.Context, sa *api.ServiceAccount, conn
 			continue
 		}
 
-		if secret.CreationTimestamp.Before(&sa.CreationTimestamp) {
-			log.Printf("[DEBUG] Skipping %s as it existed before the service account", saSecret.Name)
+		if secret.Annotations[api.ServiceAccountNameKey] != sa.ObjectMeta.Name {
+			log.Printf("[DEBUG] Skipping %s as it has a different name than the service account", saSecret.Name)
 			continue
 		}
 
-		if secret.CreationTimestamp.Sub(sa.CreationTimestamp.Time) > (3 * time.Second) {
-			log.Printf("[DEBUG] Skipping %s as it wasn't created at the same time as the service account", saSecret.Name)
+		if secret.Annotations[api.ServiceAccountUIDKey] != string(sa.ObjectMeta.UID) {
+			log.Printf("[DEBUG] Skipping %s as it has a different UID than the service account", saSecret.Name)
 			continue
 		}
 
 		log.Printf("[DEBUG] Found %s as a candidate for the default service account token", saSecret.Name)
-
-		return saSecret.Name, nil
+		ds = append(ds, saSecret.Name)
 	}
 
-	return "", fmt.Errorf("Unable to find any service accounts tokens which could have been the default one")
+	if len(ds) == 0 {
+		return "", diag.Diagnostics{
+			diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "Unable to find any service accounts tokens which could have been the default one.",
+			},
+		}
+	}
+
+	if len(ds) == 1 {
+		return ds[0], nil
+	}
+
+	return "", diag.Diagnostics{
+		diag.Diagnostic{
+			Severity: diag.Warning,
+			Summary:  "Unable to discover default secret name.",
+			Detail:   "There is more than one service account token associated to the service account.",
+		},
+	}
 }
 
 func diffObjectReferences(origOrs []api.ObjectReference, ors []api.ObjectReference) []api.ObjectReference {
@@ -385,9 +405,10 @@ func resourceKubernetesServiceAccountImportState(ctx context.Context, d *schema.
 	if err != nil {
 		return nil, fmt.Errorf("Unable to fetch service account from Kubernetes: %s", err)
 	}
-	defaultSecret, err := findDefaultServiceAccount(ctx, sa, conn)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to discover the default service account token: %s", err)
+
+	defaultSecret, diagMsg := findDefaultServiceAccount(ctx, sa, conn)
+	if diagMsg.HasError() {
+		log.Print("[WARN] Failed to discover the default service account token")
 	}
 
 	err = d.Set("default_secret_name", defaultSecret)

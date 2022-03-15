@@ -49,15 +49,16 @@ func GetDataSourceType(name string) (tftypes.Type, error) {
 	return GetObjectTypeFromSchema(rsch), nil
 }
 
+var waitForType = tftypes.Object{
+	AttributeTypes: map[string]tftypes.Type{
+		"fields": tftypes.Map{
+			ElementType: tftypes.String,
+		},
+	},
+}
+
 // GetProviderResourceSchema contains the definitions of all supported resources
 func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
-	waitForType := tftypes.Object{
-		AttributeTypes: map[string]tftypes.Type{
-			"fields": tftypes.Map{
-				ElementType: tftypes.String,
-			},
-		},
-	}
 
 	return map[string]*tfprotov5.Schema{
 		"kubernetes_manifest": {
@@ -183,6 +184,12 @@ func GetProviderDataSourceSchema() map[string]*tfprotov5.Schema {
 						Optional:    true,
 						Computed:    true,
 						Description: "The response from the API server.",
+					},
+					{
+						Name:        "wait_for",
+						Type:        waitForType,
+						Optional:    true,
+						Description: "A map of attribute paths and desired patterns to be matched. After each apply the provider will wait for all attributes listed here to reach a value that matches the desired pattern.",
 					},
 				},
 				BlockTypes: []*tfprotov5.SchemaNestedBlock{

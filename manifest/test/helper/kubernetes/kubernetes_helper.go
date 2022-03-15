@@ -116,6 +116,40 @@ func (k *Helper) CreateConfigMap(t *testing.T, name string, namespace string, da
 	}
 }
 
+// CreateConfigMap creates a new ConfigMap
+func (k *Helper) CreatePod(t *testing.T, name string, namespace string) {
+	t.Helper()
+
+	pod := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Pod",
+			"metadata": map[string]interface{}{
+				"name":      name,
+				"namespace": namespace,
+			},
+			"spec": map[string]interface{}{
+				"containers": []map[string]interface{}{{
+					"name":  "nginx",
+					"image": "nginx:1.19",
+					"readinessProbe": map[string]interface{}{
+						"initialDelaySeconds": 10,
+						"httpGet": map[string]interface{}{
+							"path": "/",
+							"port": 80,
+						},
+					},
+				}},
+			},
+		},
+	}
+	gvr := NewGroupVersionResource("v1", "pods")
+	_, err := k.dynClient.Resource(gvr).Namespace(namespace).Create(context.TODO(), pod, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create pod %q/%q: %v", namespace, name, err)
+	}
+}
+
 // DeleteResource deletes a resource referred to by the name and GVK
 func (k *Helper) DeleteResource(t *testing.T, name string, gvr schema.GroupVersionResource) {
 	t.Helper()

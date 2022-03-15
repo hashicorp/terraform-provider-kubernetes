@@ -3,11 +3,13 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/payload"
+	"k8s.io/client-go/dynamic"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -125,14 +127,17 @@ func (s *RawProviderServer) ReadDataSource(ctx context.Context, req *tfprotov5.R
 	metadata["name"].As(&name)
 
 	var res *unstructured.Unstructured
+	var drcl dynamic.ResourceInterface
 	if ns {
 		var namespace string
 		metadata["namespace"].As(&namespace)
 		if namespace == "" {
 			namespace = "default"
 		}
-		res, err = rcl.Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+		drcl = rcl.Namespace(namespace)
+		res, err = drcl.Get(ctx, name, metav1.GetOptions{})
 	} else {
+		drcl = rcl
 		res, err = rcl.Get(ctx, name, metav1.GetOptions{})
 	}
 	if err != nil {
@@ -146,6 +151,41 @@ func (s *RawProviderServer) ReadDataSource(ctx context.Context, req *tfprotov5.R
 		}
 		resp.Diagnostics = append(resp.Diagnostics, &d)
 		return resp, nil
+	}
+
+	timeouts := s.getTimeouts(dsConfig)
+	timeout, _ := time.ParseDuration(timeouts["update"])
+	deadline := time.Now().Add(timeout)
+	
+	ctxDeadline, cancel := context.WithDeadline(ctx, deadline)
+	defer cancel()
+
+	wt, _, err := s.TFTypeFromOpenAPI(ctx, gvk, true)
+	if err != nil {
+		return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
+	}
+
+	wf, ok := dsConfig["wait_for"]
+	if ok {
+		err = s.waitForCompletion(ctxDeadline, wf, drcl, name, wt, th)
+		if err != nil {
+			if err == context.DeadlineExceeded {
+				resp.Diagnostics = append(resp.Diagnostics,
+					&tfprotov5.Diagnostic{
+						Severity: tfprotov5.DiagnosticSeverityError,
+						Summary:  "Operation timed out",
+						Detail:   "Terraform timed out waiting on the operation to complete",
+					})
+			} else {
+				resp.Diagnostics = append(resp.Diagnostics,
+					&tfprotov5.Diagnostic{
+						Severity: tfprotov5.DiagnosticSeverityError,
+						Summary:  "Error waiting for operation to complete",
+						Detail:   err.Error(),
+					})
+			}
+			return resp, nil
+		}
 	}
 
 	fo := RemoveServerSideFields(res.Object)

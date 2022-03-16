@@ -3,7 +3,15 @@ variable "kubernetes_version" {
 }
 
 variable "workers_count" {
-  default = "3"
+  default = "1"
+}
+
+variable "node_machine_type" {
+  default = "e2-micro"
+}
+
+variable "enable_alpha" {
+  default = true
 }
 
 data "google_compute_zones" "available" {
@@ -29,25 +37,35 @@ resource "google_service_account" "default" {
 resource "google_container_cluster" "primary" {
   name               = "tf-acc-test-${random_id.cluster_name.hex}"
   location           = data.google_compute_zones.available.names[0]
-  initial_node_count = var.workers_count
   node_version       = data.google_container_engine_versions.supported.latest_node_version
   min_master_version = data.google_container_engine_versions.supported.latest_master_version
+
+  // Alpha features are disabled by default and can be enabled by GKE for a particular GKE control plane version.
+  // Creating an alpha cluster enables all alpha features by default.
+  // Ref: https://cloud.google.com/kubernetes-engine/docs/concepts/feature-gates
+  enable_kubernetes_alpha = var.enable_alpha
 
   node_locations = [
     data.google_compute_zones.available.names[1],
   ]
 
-  node_config {
-    machine_type    = "n1-standard-4"
-    service_account = google_service_account.default.email
-
-    oauth_scopes = [
-      "https://www.googleapis.com/auth/cloud-platform",
-      "https://www.googleapis.com/auth/compute",
-      "https://www.googleapis.com/auth/devstorage.read_only",
-      "https://www.googleapis.com/auth/logging.write",
-      "https://www.googleapis.com/auth/monitoring",
-    ]
+  node_pool {
+    initial_node_count = var.workers_count
+    management {
+      auto_repair  = var.enable_alpha ? false : true
+      auto_upgrade = var.enable_alpha ? false : true
+    }
+    node_config {
+      machine_type    = var.node_machine_type
+      service_account = google_service_account.default.email
+      oauth_scopes = [
+        "https://www.googleapis.com/auth/cloud-platform",
+        "https://www.googleapis.com/auth/compute",
+        "https://www.googleapis.com/auth/devstorage.read_only",
+        "https://www.googleapis.com/auth/logging.write",
+        "https://www.googleapis.com/auth/monitoring",
+      ]
+    }
   }
 }
 
@@ -85,10 +103,10 @@ locals {
           auth-provider = {
             name = "gcp"
             config = {
-              cmd-args = "config config-helper --format=json --access-token-file=${path.cwd}/gcptoken"
-              cmd-path = "gcloud"
+              cmd-args   = "config config-helper --format=json --access-token-file=${path.cwd}/gcptoken"
+              cmd-path   = "gcloud"
               expiry-key = "{.credential.token_expiry}"
-              token-key = "{.credential.access_token}"
+              token-key  = "{.credential.access_token}"
             }
           }
         }

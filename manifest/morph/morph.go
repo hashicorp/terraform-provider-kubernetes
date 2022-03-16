@@ -345,3 +345,25 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 	}
 	return tftypes.Value{}, p.NewErrorf("[%s] unsupported morph of object value into type: %s", p.String(), t.String())
 }
+
+// ValueToTypePath "normalizes" AttributePaths of values into a form that only describes the type hyerarchy.
+// this is used when comparing value paths to type hints generated during the translation from OpenAPI into tftypes.
+func ValueToTypePath(a *tftypes.AttributePath) *tftypes.AttributePath {
+	if a == nil {
+		return nil
+	}
+	ns := make([]tftypes.AttributePathStep, len(a.Steps()))
+	os := a.Steps()
+	for i := range os {
+		switch os[i].(type) {
+		case tftypes.AttributeName:
+			ns[i] = tftypes.AttributeName(os[i].(tftypes.AttributeName))
+		case tftypes.ElementKeyString:
+			ns[i] = tftypes.ElementKeyString("#")
+		case tftypes.ElementKeyInt:
+			ns[i] = tftypes.ElementKeyInt(-1)
+		}
+	}
+
+	return tftypes.NewAttributePathWithSteps(ns)
+}

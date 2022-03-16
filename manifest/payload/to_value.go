@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
 )
 
 // ToTFValue converts a Kubernetes dynamic client unstructured value
@@ -51,7 +52,7 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
 			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(int64(in.(int)))), nil
 		case st.Is(tftypes.String):
-			ht, ok := th[valueToTypePath(at).String()]
+			ht, ok := th[morph.ValueToTypePath(at).String()]
 			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
 				return tftypes.NewValue(tftypes.String, strconv.FormatInt(int64(in.(int)), 10)), nil
 			}
@@ -64,7 +65,7 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
 			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(in.(int64))), nil
 		case st.Is(tftypes.String):
-			ht, ok := th[valueToTypePath(at).String()]
+			ht, ok := th[morph.ValueToTypePath(at).String()]
 			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
 				return tftypes.NewValue(tftypes.String, strconv.FormatInt(in.(int64), 10)), nil
 			}
@@ -77,7 +78,7 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
 			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(int64(in.(int32)))), nil
 		case st.Is(tftypes.String):
-			ht, ok := th[valueToTypePath(at).String()]
+			ht, ok := th[morph.ValueToTypePath(at).String()]
 			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
 				return tftypes.NewValue(tftypes.String, strconv.FormatInt(int64(in.(int32)), 10)), nil
 			}
@@ -90,7 +91,7 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
 			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(int64(in.(int16)))), nil
 		case st.Is(tftypes.String):
-			ht, ok := th[valueToTypePath(at).String()]
+			ht, ok := th[morph.ValueToTypePath(at).String()]
 			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
 				return tftypes.NewValue(tftypes.String, strconv.FormatInt(int64(in.(int16)), 10)), nil
 			}

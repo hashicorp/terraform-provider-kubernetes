@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
 )
 
 func TestFromTFValue(t *testing.T) {
@@ -167,7 +168,7 @@ func TestValueToTypePath(t *testing.T) {
 	}
 	for n, s := range samples {
 		t.Run(n, func(t *testing.T) {
-			p := valueToTypePath(s.In)
+			p := morph.ValueToTypePath(s.In)
 			if !p.Equal(s.Out) {
 				t.Logf("Expected %#v, received: %#v", s.Out, p)
 				t.Fail()

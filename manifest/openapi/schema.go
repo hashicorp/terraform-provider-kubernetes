@@ -66,6 +66,20 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 
 	var t tftypes.Type
 
+	// Check if attribute type is tagged as 'x-kubernetes-preserve-unknown-fields' in OpenAPI.
+	// If so, we add a type hint to indicate this and return DynamicPseudoType for this attribute,
+	// since we have no further structural information about it.
+	if xpufJSON, ok := elem.Extensions["x-kubernetes-preserve-unknown-fields"]; ok {
+		var xpuf bool
+		v, err := xpufJSON.(json.RawMessage).MarshalJSON()
+		if err == nil {
+			err = json.Unmarshal(v, &xpuf)
+			if err == nil && xpuf {
+				th[ap.String()] = "x-kubernetes-preserve-unknown-fields"
+			}
+		}
+	}
+
 	// check if type is in cache
 	// HACK: this is temporarily disabled to diagnose a cache corruption issue.
 	// if herr == nil {

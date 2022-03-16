@@ -277,7 +277,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	}
 
 	// Request a complete type for the resource from the OpenAPI spec
-	objectType, _, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
+	objectType, hints, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
 	if err != nil {
 		return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
 	}
@@ -403,6 +403,13 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 				}
 				nowCfg, restPath, err := tftypes.WalkAttributePath(ppMan, ap)
 				hasChanged = err == nil && len(restPath.Steps()) == 0 && wasCfg.(tftypes.Value).IsKnown() && !wasCfg.(tftypes.Value).Equal(nowCfg.(tftypes.Value))
+				if hasChanged {
+					h, ok := hints[morph.ValueToTypePath(ap).String()]
+					if ok && h == "x-kubernetes-preserve-unknown-fields" {
+						apm := append(tftypes.NewAttributePath().WithAttributeName("manifest").Steps(), ap.Steps()...)
+						resp.RequiresReplace = append(resp.RequiresReplace, tftypes.NewAttributePathWithSteps(apm))
+					}
+				}
 				if isComputed {
 					if hasChanged {
 						return tftypes.NewValue(v.Type(), tftypes.UnknownValue), nil

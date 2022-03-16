@@ -110,6 +110,30 @@ func externalMetricSourceFields() *schema.Resource {
 	}
 }
 
+func containerResourceMetricSourceFields() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"container": {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "name of the container in the pods of the scaling target",
+			},
+			"name": {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "name of the resource in question",
+			},
+			"target": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Elem:        metricTargetFields(),
+				Description: "target specifies the target value for the given metric",
+			},
+		},
+	}
+}
+
 func crossVersionObjectReferenceFields() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
@@ -163,6 +187,13 @@ func objectMetricSourceFields() *schema.Resource {
 func metricSpecFields() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
+			"container_resource": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Elem:        containerResourceMetricSourceFields(),
+				Description: "",
+			},
 			"external": {
 				Type:        schema.TypeList,
 				Optional:    true,
@@ -194,7 +225,7 @@ func metricSpecFields() *schema.Resource {
 			"type": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: `type is the type of metric source. It should be one of "Object", "Pods", "External" or "Resource", each mapping to a matching field in the object.`,
+				Description: `type is the type of metric source. It should be one of "ContainerResource", "External", "Object", "Pods" or "Resource", each mapping to a matching field in the object. Note: "ContainerResource" type is available on when the feature-gate HPAContainerMetrics is enabled`,
 			},
 		},
 	}

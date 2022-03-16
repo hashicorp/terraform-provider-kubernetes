@@ -148,6 +148,24 @@ func expandV2ObjectMetricSource(m map[string]interface{}) *autoscalingv2beta2.Ob
 	return source
 }
 
+func expandV2ContainerResourceMetricSource(m map[string]interface{}) *autoscalingv2beta2.ContainerResourceMetricSource {
+	source := &autoscalingv2beta2.ContainerResourceMetricSource{}
+
+	if v, ok := m["container"].(string); ok {
+		source.Container = v
+	}
+
+	if v, ok := m["name"].(string); ok {
+		source.Name = v1.ResourceName(v)
+	}
+
+	if v, ok := m["target"].([]interface{}); ok && len(v) == 1 {
+		source.Target = expandV2MetricTarget(v[0].(map[string]interface{}))
+	}
+
+	return source
+}
+
 func expandV2MetricSpec(m map[string]interface{}) autoscalingv2beta2.MetricSpec {
 	spec := autoscalingv2beta2.MetricSpec{}
 
@@ -169,6 +187,10 @@ func expandV2MetricSpec(m map[string]interface{}) autoscalingv2beta2.MetricSpec 
 
 	if v, ok := m["object"].([]interface{}); ok && len(v) == 1 {
 		spec.Object = expandV2ObjectMetricSource(v[0].(map[string]interface{}))
+	}
+
+	if v, ok := m["container_resource"].([]interface{}); ok && len(v) == 1 {
+		spec.ContainerResource = expandV2ContainerResourceMetricSource(v[0].(map[string]interface{}))
 	}
 
 	return spec
@@ -321,6 +343,15 @@ func flattenV2ObjectMetricSource(object *autoscalingv2beta2.ObjectMetricSource) 
 	return []interface{}{m}
 }
 
+func flattenV2ContainerResourceMetricSource(cr *autoscalingv2beta2.ContainerResourceMetricSource) []interface{} {
+	m := map[string]interface{}{
+		"name":      cr.Name.String(),
+		"container": cr.Container,
+		"target":    flattenV2MetricTarget(cr.Target),
+	}
+	return []interface{}{m}
+}
+
 func flattenV2ResourceMetricSource(resource *autoscalingv2beta2.ResourceMetricSource) []interface{} {
 	m := map[string]interface{}{
 		"name":   resource.Name,
@@ -348,6 +379,10 @@ func flattenV2MetricSpec(spec autoscalingv2beta2.MetricSpec) map[string]interfac
 
 	if spec.Object != nil {
 		m["object"] = flattenV2ObjectMetricSource(spec.Object)
+	}
+
+	if spec.ContainerResource != nil {
+		m["container_resource"] = flattenV2ContainerResourceMetricSource(spec.ContainerResource)
 	}
 
 	return m

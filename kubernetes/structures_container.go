@@ -1,9 +1,9 @@
 package kubernetes
 
 import (
-	"strconv"
-
 	"regexp"
+	"strconv"
+	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -418,7 +418,7 @@ func flattenContainers(in []v1.Container, serviceAccountRegex string) ([]interfa
 				if err != nil {
 					return att, err
 				}
-				if nameMatchesDefaultToken {
+				if nameMatchesDefaultToken || strings.HasPrefix(m.Name, "kube-api-access") {
 					v.VolumeMounts = removeVolumeMountFromContainer(num, v.VolumeMounts)
 					break
 				}

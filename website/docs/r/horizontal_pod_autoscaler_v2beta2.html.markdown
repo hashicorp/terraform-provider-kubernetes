@@ -148,11 +148,20 @@ The following arguments are supported:
 
 #### Arguments
 
-* `type` - (Required) The type of metric. It can be one of "Object", "Pods", "Resource", or "External".
+* `type` - (Required) The type of metric. It can be one of "Object", "Pods", "Resource", "External", or "ContainerResource".
 * `object` - (Optional) A metric describing a single kubernetes object (for example, hits-per-second on an Ingress object).
 * `pods` - (Optional) A metric describing each pod in the current scale target (for example, transactions-processed-per-second). The values will be averaged together before being compared to the target value.
 * `resource` - (Optional) A resource metric (such as those specified in requests and limits) known to Kubernetes describing each pod in the current scale target (e.g. CPU or memory). Such metrics are built in to Kubernetes, and have special scaling options on top of those available to normal per-pod metrics using the "pods" source.
 * `external` - (Optional) A global metric that is not associated with any Kubernetes object. It allows autoscaling based on information coming from components running outside of cluster (for example length of queue in cloud messaging service, or QPS from loadbalancer running outside of cluster).
+* `container_resource` - (Optional) A resource metric (such as those specified in requests and limits) known to Kubernetes describing a single container in each pod of the current scale target (e.g. CPU or memory). Such metrics are built in to Kubernetes, and have special scaling options on top of those available to normal per-pod metrics using the "pods" source.
+
+### Metric Type: `container_resource`
+
+#### Arguments
+
+* `container` - (Required) Name of the container in the pods of the scaling target.
+* `name` - (Required) Name of the resource in question.
+* `target` - (Required) The target for the given metric.
 
 ### Metric Type: `external`
 

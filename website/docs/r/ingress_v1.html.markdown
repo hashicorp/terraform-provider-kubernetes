@@ -163,11 +163,9 @@ resource "kubernetes_ingress_v1" "example" {
   wait_for_load_balancer = true
   metadata {
     name = "example"
-    annotations = {
-      "kubernetes.io/ingress.class" = "nginx"
-    }
   }
   spec {
+    ingress_class_name = "nginx"
     rule {
       http {
         path {

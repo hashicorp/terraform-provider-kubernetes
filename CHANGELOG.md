@@ -8,7 +8,7 @@ IMPROVEMENTS:
 * Make attribute `http` of resource `kubernetes_ingress_v1` optional (#1613)
 * Add a new attribute `seccomp_profile` to pod and container spec (#1617)
 * Add additional check to resource `kubernetes_job_v1` when attributes `wait_for_completion` and `ttl_seconds_after_finished` are used together (#1619)
-* Update documentation examples and correct some errors (#1597, #1611, #1626)
+* Update documentation examples and correct some errors (#1597, #1611, #1612, #1626)
 
 BUG FIXES:
 

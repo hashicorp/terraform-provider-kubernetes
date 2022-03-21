@@ -1,3 +1,20 @@
+## 2.9.0 (March 17, 2022)
+
+IMPROVEMENTS:
+
+* Add attribute `csi` to pod spec (#1092)
+* Add `kubernetes_resource` data source (#1548)
+* `kubernetes_manifest` resource force the re-creation of the resource when either `apiVersion` or `kind` attributes change (#1593)
+* Make attribute `http` of resource `kubernetes_ingress_v1` optional (#1613)
+* Add a new attribute `seccomp_profile` to pod and container spec (#1617)
+* Add additional check to resource `kubernetes_job_v1` when attributes `wait_for_completion` and `ttl_seconds_after_finished` are used together (#1619)
+* Update documentation examples and correct some errors (#1597, #1611, #1612, #1626)
+
+BUG FIXES:
+
+* Fix logic of `wait_for_rollout` attribute of `kubernetes_deployment` (#1405)
+* Fix fail when the provider cannot determine `default_secret_name` (#1634)
+
 ## 2.8.0 (February 09, 2022)
 
 IMPROVEMENTS:

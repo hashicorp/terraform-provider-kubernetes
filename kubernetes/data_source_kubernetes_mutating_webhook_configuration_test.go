@@ -10,14 +10,14 @@ import (
 
 func TestAccKubernetesDataSourceMutatingWebhookConfiguration_basic(t *testing.T) {
 	name := fmt.Sprintf("acc-test-%v.terraform.io", acctest.RandString(10))
-	resourceName := "kubernetes_mutating_webhook_configuration.test"
+	resourceName := "kubernetes_mutating_webhook_configuration_v1.test"
 	dataSourceName := fmt.Sprintf("data.%s", resourceName)
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesMutatingWebhookConfigurationConfig_basic(name),
+				Config: testAccKubernetesDataSourceMutatingWebhookConfigurationConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesMutatingWebhookConfigurationExists(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -95,7 +95,7 @@ func TestAccKubernetesDataSourceMutatingWebhookConfiguration_basic(t *testing.T)
 }
 
 func testAccKubernetesDataSourceMutatingWebhookConfigurationConfig_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_mutating_webhook_configuration" "test" {
+	return fmt.Sprintf(`resource "kubernetes_mutating_webhook_configuration_v1" "test" {
   metadata {
     name = %q
   }
@@ -132,9 +132,9 @@ func testAccKubernetesDataSourceMutatingWebhookConfigurationConfig_basic(name st
 }
 
 func testAccKubernetesDataSourceMutatingWebhookConfigurationConfig_read() string {
-	return `data "kubernetes_mutating_webhook_configuration" "test" {
+	return `data "kubernetes_mutating_webhook_configuration_v1" "test" {
   metadata {
-    name = "${kubernetes_mutating_webhook_configuration.test.metadata.0.name}"
+    name = "${kubernetes_mutating_webhook_configuration_v1.test.metadata.0.name}"
   }
 }
 `

@@ -1,0 +1,44 @@
+name: Acceptance Tests (EKS)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  acceptance_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Read go-version
+        id: go-version
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: ./.go-version
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ steps.go-version.outputs.content }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: us-east-2
+          role-to-assume: ${{secrets.AWS_ASSUME_ROLE_ARN}}
+          role-session-name: github-actions-tests-${{github.run_number}}
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v1
+      - name: Provision EKS Cluster
+        working-directory: ./kubernetes/test-infra/eks
+        run: |
+          terraform init
+          terraform apply --auto-approve
+      - name: Run Acceptance Test Suite
+        env:
+          KUBE_CONFIG_PATH: ${{env.GITHUB_WORKSPACE}}/kubernetes/test-infra/eks/kubeconfig
+        run: | 
+          make testacc
+      - name: Destroy EKS cluster
+        if: always() # we should destroy the cluster even if the tests fail
+        working-directory: ./kubernetes/test-infra/eks
+        run: |
+          terraform destroy --auto-approve
+          
+        

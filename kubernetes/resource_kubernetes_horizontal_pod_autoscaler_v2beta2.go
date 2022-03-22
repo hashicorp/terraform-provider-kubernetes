@@ -53,7 +53,6 @@ func resourceKubernetesHorizontalPodAutoscalerV2Beta2() *schema.Resource {
 						"behavior": {
 							Type:        schema.TypeList,
 							Description: "Behavior configures the scaling behavior of the target in both Up and Down directions (scale_up and scale_down fields respectively).",
-							Computed:    true,
 							Optional:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{

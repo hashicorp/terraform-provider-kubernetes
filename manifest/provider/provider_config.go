@@ -57,7 +57,7 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 			{
 				Name:            "tls_server_name",
 				Type:            tftypes.String,
-				Description:     "Passed to the server for SNI and is used in the client to check server certificates against.",
+				Description:     "Server name passed to the server for SNI and is used in the client to check server certificates against.",
 				Required:        false,
 				Optional:        true,
 				Computed:        false,

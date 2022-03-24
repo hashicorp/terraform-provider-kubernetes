@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -26,6 +27,8 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	aggregator "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
+
+const defaultFieldManagerName = "Terraform"
 
 func Provider() *schema.Provider {
 	p := &schema.Provider{
@@ -294,6 +297,9 @@ func Provider() *schema.Provider {
 			"kubernetes_storage_class_v1": resourceKubernetesStorageClass(),
 			"kubernetes_csi_driver":       resourceKubernetesCSIDriver(),
 			"kubernetes_csi_driver_v1":    resourceKubernetesCSIDriverV1(),
+
+			// provider helper resources
+			"kubernetes_labels": resourceKubernetesLabels(),
 		},
 	}
 
@@ -307,12 +313,16 @@ func Provider() *schema.Provider {
 type KubeClientsets interface {
 	MainClientset() (*kubernetes.Clientset, error)
 	AggregatorClientset() (*aggregator.Clientset, error)
+	DynamicClient() (dynamic.Interface, error)
+	DiscoveryClient() (discovery.DiscoveryInterface, error)
 }
 
 type kubeClientsets struct {
 	config              *restclient.Config
 	mainClientset       *kubernetes.Clientset
 	aggregatorClientset *aggregator.Clientset
+	dynamicClient       dynamic.Interface
+	discoveryClient     discovery.DiscoveryInterface
 
 	configData *schema.ResourceData
 }
@@ -344,6 +354,36 @@ func (k kubeClientsets) AggregatorClientset() (*aggregator.Clientset, error) {
 		k.aggregatorClientset = ac
 	}
 	return k.aggregatorClientset, nil
+}
+
+func (k kubeClientsets) DynamicClient() (dynamic.Interface, error) {
+	if k.dynamicClient != nil {
+		return k.dynamicClient, nil
+	}
+
+	if k.config != nil {
+		kc, err := dynamic.NewForConfig(k.config)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to configure dynamic client: %s", err)
+		}
+		k.dynamicClient = kc
+	}
+	return k.dynamicClient, nil
+}
+
+func (k kubeClientsets) DiscoveryClient() (discovery.DiscoveryInterface, error) {
+	if k.discoveryClient != nil {
+		return k.discoveryClient, nil
+	}
+
+	if k.config != nil {
+		kc, err := discovery.NewDiscoveryClientForConfig(k.config)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to configure discovery client: %s", err)
+		}
+		k.discoveryClient = kc
+	}
+	return k.discoveryClient, nil
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {

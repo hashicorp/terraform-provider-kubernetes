@@ -402,7 +402,7 @@ func flattenResourceQuotaScopeSelectorMatchExpressions(in []api.ScopedResourceSe
 	if len(in) == 0 {
 		return []interface{}{}
 	}
-	out := make([]interface{}, 1)
+	out := make([]interface{}, len(in))
 
 	for i, l := range in {
 		m := make(map[string]interface{}, 0)

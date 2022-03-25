@@ -9,6 +9,7 @@ resource "kubernetes_manifest" "test" {
       name      = var.name
     }
     data = "this is a test"
+    refs = 98.765
     stuff = [
       {
         foo = null

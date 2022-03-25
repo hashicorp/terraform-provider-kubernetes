@@ -23,7 +23,8 @@ jobs:
           # and there is no image available for the latest v1.19.x
           # - v1.19.11@sha256:07db187ae84b4b7de440a73886f008cf903fcf5764ba8106a9fd5243d6f32729
         terraform_version:
-          - 1.0.8
+          - 1.1.7
+          - 1.0.11
           - 0.15.5
           - 0.14.11
     steps:

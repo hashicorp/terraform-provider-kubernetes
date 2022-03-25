@@ -9,6 +9,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest"
 	"github.com/mitchellh/hashstructure"
 )
 
@@ -69,13 +70,13 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 	// Check if attribute type is tagged as 'x-kubernetes-preserve-unknown-fields' in OpenAPI.
 	// If so, we add a type hint to indicate this and return DynamicPseudoType for this attribute,
 	// since we have no further structural information about it.
-	if xpufJSON, ok := elem.Extensions["x-kubernetes-preserve-unknown-fields"]; ok {
+	if xpufJSON, ok := elem.Extensions[manifest.PreserveUnknownFieldsLabel]; ok {
 		var xpuf bool
 		v, err := xpufJSON.(json.RawMessage).MarshalJSON()
 		if err == nil {
 			err = json.Unmarshal(v, &xpuf)
 			if err == nil && xpuf {
-				th[ap.String()] = "x-kubernetes-preserve-unknown-fields"
+				th[ap.String()] = manifest.PreserveUnknownFieldsLabel
 			}
 		}
 	}

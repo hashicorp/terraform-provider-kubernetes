@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/payload"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -405,7 +406,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 				hasChanged = err == nil && len(restPath.Steps()) == 0 && wasCfg.(tftypes.Value).IsKnown() && !wasCfg.(tftypes.Value).Equal(nowCfg.(tftypes.Value))
 				if hasChanged {
 					h, ok := hints[morph.ValueToTypePath(ap).String()]
-					if ok && h == "x-kubernetes-preserve-unknown-fields" {
+					if ok && h == manifest.PreserveUnknownFieldsLabel {
 						apm := append(tftypes.NewAttributePath().WithAttributeName("manifest").Steps(), ap.Steps()...)
 						resp.RequiresReplace = append(resp.RequiresReplace, tftypes.NewAttributePathWithSteps(apm))
 					}

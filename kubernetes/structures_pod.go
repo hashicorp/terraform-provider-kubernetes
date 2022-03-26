@@ -5,6 +5,7 @@ import (
 	"log"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
@@ -134,7 +135,7 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 			if err != nil {
 				return []interface{}{att}, err
 			}
-			if nameMatchesDefaultToken {
+			if nameMatchesDefaultToken || strings.HasPrefix(volume.Name, "kube-api-access") {
 				in.Volumes = removeVolumeFromPodSpec(i, in.Volumes)
 				break
 			}

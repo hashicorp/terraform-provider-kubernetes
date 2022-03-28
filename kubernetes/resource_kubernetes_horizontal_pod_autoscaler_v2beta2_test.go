@@ -138,6 +138,10 @@ func TestAccKubernetesHorizontalPodAutoscalerV2Beta2_containerResource(t *testin
 		IDRefreshName:     "kubernetes_horizontal_pod_autoscaler_v2beta2.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
+		ErrorCheck: func(err error) error {
+			t.Skipf("HPAContainerMetrics feature might not be enabled on the cluster and therefore this step will be skipped if an error occurs. Refer to the error for more details:\n%s", err)
+			return nil
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesHorizontalPodAutoscalerV2Beta2Config_containerResource(name),

@@ -7,7 +7,7 @@ variable "region" {
 }
 
 variable "node_count" {
-  default = 4
+  default = 2
 }
 
 variable "instance_type" {

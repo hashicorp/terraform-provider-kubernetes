@@ -1,7 +1,9 @@
 name: Acceptance Tests (EKS)
 
 on:
-  workflow_dispatch: {}
+  # TODO add inputs for:
+  # region, cluster version, node size, node count, test name matcher
+  workflow_dispatch: {}  
 
 jobs:
   acceptance_tests:
@@ -20,9 +22,12 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-region: us-east-2
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           role-to-assume: ${{secrets.AWS_ASSUME_ROLE_ARN}}
           role-session-name: github-actions-tests-${{github.run_number}}
+          role-duration-seconds: 14400
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v1
       - name: Provision EKS Cluster
@@ -40,5 +45,3 @@ jobs:
         working-directory: ./kubernetes/test-infra/eks
         run: |
           terraform destroy --auto-approve
-          
-        

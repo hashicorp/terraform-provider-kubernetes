@@ -1,6 +1,11 @@
 package kubernetes
 
-import "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+import (
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
+	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
+)
 
 func metricTargetFields() *schema.Resource {
 	return &schema.Resource{
@@ -226,6 +231,13 @@ func metricSpecFields() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: `type is the type of metric source. It should be one of "ContainerResource", "External", "Object", "Pods" or "Resource", each mapping to a matching field in the object. Note: "ContainerResource" type is available on when the feature-gate HPAContainerMetrics is enabled`,
+				ValidateFunc: validation.StringInSlice([]string{
+					string(autoscalingv2beta2.ContainerResourceMetricSourceType),
+					string(autoscalingv2beta2.ExternalMetricSourceType),
+					string(autoscalingv2beta2.ObjectMetricSourceType),
+					string(autoscalingv2beta2.PodsMetricSourceType),
+					string(autoscalingv2beta2.ResourceMetricSourceType),
+				}, false),
 			},
 		},
 	}

@@ -454,7 +454,8 @@ func testAccCheckKubernetesValidatingWebhookConfigV1Beta1ForceNew(old, new *admi
 }
 
 func testAccKubernetesValidatingWebhookConfigurationConfig_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_validating_webhook_configuration" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_validating_webhook_configuration" "test" {
   metadata {
     name = %q
   }
@@ -490,7 +491,8 @@ func testAccKubernetesValidatingWebhookConfigurationConfig_basic(name string) st
 }
 
 func testAccKubernetesValidatingWebhookConfigurationConfig_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_validating_webhook_configuration" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_validating_webhook_configuration" "test" {
   metadata {
     name = %q
   }
@@ -545,7 +547,8 @@ func testAccKubernetesValidatingWebhookConfigurationConfig_modified(name string)
 }
 
 func testAccKubernetesValidatingWebhookConfigurationConfig_without_rules(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_validating_webhook_configuration_v1" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_validating_webhook_configuration_v1" "test" {
   metadata {
     name = %q
   }
@@ -584,7 +587,8 @@ func testAccKubernetesValidatingWebhookConfigurationConfig_without_rules(name st
 }
 
 func testAccKubernetesValidatingWebhookConfigurationConfig_regression(provider, name string) string {
-	return fmt.Sprintf(`resource "kubernetes_validating_webhook_configuration" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_validating_webhook_configuration" "test" {
   provider = %s
   metadata {
     name = %q

@@ -14,6 +14,7 @@ func flattenServicePort(in []v1.ServicePort) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
+		m["app_protocol"] = n.AppProtocol
 		m["name"] = n.Name
 		m["protocol"] = string(n.Protocol)
 		m["port"] = int(n.Port)
@@ -95,6 +96,9 @@ func expandServicePort(l []interface{}, removeNodePort bool) []v1.ServicePort {
 		obj[i] = v1.ServicePort{
 			Port:       int32(cfg["port"].(int)),
 			TargetPort: intstr.Parse(cfg["target_port"].(string)),
+		}
+		if v, ok := cfg["app_protocol"].(string); ok && v != "" {
+			obj[i].AppProtocol = &v
 		}
 		if v, ok := cfg["name"].(string); ok {
 			obj[i].Name = v

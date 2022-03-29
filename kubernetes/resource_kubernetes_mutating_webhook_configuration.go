@@ -109,8 +109,7 @@ func resourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 						"rule": {
 							Type:        schema.TypeList,
 							Description: webhookDoc["rules"],
-							Required:    true,
-							MinItems:    1,
+							Optional:    true,
 							Elem: &schema.Resource{
 								Schema: ruleWithOperationsFields(),
 							},

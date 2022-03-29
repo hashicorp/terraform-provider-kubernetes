@@ -95,7 +95,8 @@ func TestAccKubernetesDataSourceMutatingWebhookConfiguration_basic(t *testing.T)
 }
 
 func testAccKubernetesDataSourceMutatingWebhookConfigurationConfig_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_mutating_webhook_configuration_v1" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_mutating_webhook_configuration_v1" "test" {
   metadata {
     name = %q
   }
@@ -132,7 +133,8 @@ func testAccKubernetesDataSourceMutatingWebhookConfigurationConfig_basic(name st
 }
 
 func testAccKubernetesDataSourceMutatingWebhookConfigurationConfig_read() string {
-	return `data "kubernetes_mutating_webhook_configuration_v1" "test" {
+	return `
+data "kubernetes_mutating_webhook_configuration_v1" "test" {
   metadata {
     name = "${kubernetes_mutating_webhook_configuration_v1.test.metadata.0.name}"
   }

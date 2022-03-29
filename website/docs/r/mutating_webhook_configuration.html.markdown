@@ -1,12 +1,12 @@
 ---
 subcategory: "admissionregistration/v1beta1"
 layout: "kubernetes"
-page_title: "Kubernetes: mutating_webhook_configuration"
+page_title: "Kubernetes: kubernetes_mutating_webhook_configuration"
 description: |-
   Mutating Webhook Configuration configures a mutating admission webhook
 ---
 
-# mutating_webhook_configuration
+# kubernetes_mutating_webhook_configuration
 
 Mutating Webhook Configuration configures a [mutating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks).
 
@@ -131,5 +131,5 @@ The following arguments are supported:
 Mutating Webhook Configuration can be imported using the name, e.g.
 
 ```
-$ terraform import mutating_webhook_configuration.example terraform-example
+$ terraform import kubernetes_mutating_webhook_configuration.example terraform-example
 ```

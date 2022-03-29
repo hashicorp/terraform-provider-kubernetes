@@ -1,6 +1,6 @@
 ---
-layout: "kubernetes"
 subcategory: "admissionregistration/v1"
+layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_mutating_webhook_configuration_v1"
 description: |-
   Mutating Webhook Configuration configures a mutating admission webhook

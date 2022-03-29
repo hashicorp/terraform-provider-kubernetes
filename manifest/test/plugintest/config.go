@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/hc-install/product"
 	"github.com/hashicorp/hc-install/releases"
 	"github.com/hashicorp/hc-install/src"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/internal/logging"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/logging"
 )
 
 // Config is used to configure the test helper. In most normal test programs

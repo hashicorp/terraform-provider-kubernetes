@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/terraform-exec/tfexec"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/internal/logging"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/logging"
 )
 
 // AutoInitProviderHelper is the main entrypoint for testing provider plugins

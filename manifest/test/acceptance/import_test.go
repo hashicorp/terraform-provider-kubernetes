@@ -25,10 +25,10 @@ func TestKubernetesManifest_Import(t *testing.T) {
 	name := randName()
 	namespace := randName()
 
-	tf := tfhelper.RequireNewWorkingDir(t)
-	tf.SetReattachInfo(reattachInfo)
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
 	defer func() {
-		tf.RequireDestroy(t)
+		tf.Destroy(ctx)
 		tf.Close()
 		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "configmaps", namespace, name)
 	}()
@@ -48,15 +48,19 @@ func TestKubernetesManifest_Import(t *testing.T) {
 		"name":      name,
 	}
 	tfconfig := loadTerraformConfig(t, "Import/import.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfig)
-	tf.RequireInit(t)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
 
 	importId := fmt.Sprintf("apiVersion=%s,kind=%s,namespace=%s,name=%s", "v1", "ConfigMap", namespace, name)
 
-	tf.RequireImport(t, "kubernetes_manifest.test", importId)
+	tf.Import(ctx, "kubernetes_manifest.test", importId)
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "configmaps", namespace, name)
 
-	tfstate := tfstatehelper.NewHelper(tf.RequireState(t))
+	s, err := tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	tfstate := tfstatehelper.NewHelper(s)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
 		"kubernetes_manifest.test.object.metadata.namespace": namespace,
 		"kubernetes_manifest.test.object.metadata.name":      name,
@@ -64,9 +68,13 @@ func TestKubernetesManifest_Import(t *testing.T) {
 	})
 	tfstate.AssertAttributeDoesNotExist(t, "kubernetes_manifest.test.data.fizz")
 
-	tf.RequireApply(t)
+	tf.Apply(ctx)
 
-	tfstate = tfstatehelper.NewHelper(tf.RequireState(t))
+	s, err = tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	tfstate = tfstatehelper.NewHelper(s)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
 		"kubernetes_manifest.test.object.metadata.namespace": namespace,
 		"kubernetes_manifest.test.object.metadata.name":      name,

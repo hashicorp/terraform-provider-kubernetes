@@ -12,7 +12,7 @@ import (
 
 	"github.com/hashicorp/terraform-exec/tfexec"
 	tfjson "github.com/hashicorp/terraform-json"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/internal/logging"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/logging"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 
 // WorkingDir represents a distinct working directory that can be used for
 // running tests. Each test should construct its own WorkingDir by calling
-// NewWorkingDir or RequireNewWorkingDir on its package's singleton
+// NewWorkingDir or NewWorkingDir on its package's singleton
 // plugintest.Helper.
 type WorkingDir struct {
 	h *Helper

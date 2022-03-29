@@ -26,10 +26,10 @@ func TestKubernetesManifest_Service_ExternalName(t *testing.T) {
 	name := randName()
 	namespace := randName()
 
-	tf := tfhelper.RequireNewWorkingDir(t)
-	tf.SetReattachInfo(reattachInfo)
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
 	defer func() {
-		tf.RequireDestroy(t)
+		tf.Destroy(ctx)
 		tf.Close()
 		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "services", namespace, name)
 	}()
@@ -42,13 +42,17 @@ func TestKubernetesManifest_Service_ExternalName(t *testing.T) {
 		"name":      name,
 	}
 	tfconfig := loadTerraformConfig(t, "Service_ExternalName/service.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfig)
-	tf.RequireInit(t)
-	tf.RequireApply(t)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
+	tf.Apply(ctx)
 
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "services", namespace, name)
 
-	tfstate := tfstatehelper.NewHelper(tf.RequireState(t))
+	s, err := tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	tfstate := tfstatehelper.NewHelper(s)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
 		"kubernetes_manifest.test.object.metadata.namespace": namespace,
 		"kubernetes_manifest.test.object.metadata.name":      name,
@@ -60,10 +64,14 @@ func TestKubernetesManifest_Service_ExternalName(t *testing.T) {
 	tfstate.AssertAttributeDoesNotExist(t, "kubernetes_manifest.test.object.spec.ports.0")
 
 	tfconfigModified := loadTerraformConfig(t, "Service_ExternalName/service_modified.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfigModified)
-	tf.RequireApply(t)
+	tf.SetConfig(ctx, tfconfigModified)
+	tf.Apply(ctx)
 
-	tfstate = tfstatehelper.NewHelper(tf.RequireState(t))
+	s, err = tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	tfstate = tfstatehelper.NewHelper(s)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
 		"kubernetes_manifest.test.object.metadata.namespace":        namespace,
 		"kubernetes_manifest.test.object.metadata.name":             name,

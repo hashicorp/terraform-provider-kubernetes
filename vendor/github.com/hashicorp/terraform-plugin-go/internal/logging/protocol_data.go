@@ -57,17 +57,18 @@ func ProtocolData(ctx context.Context, dataDir string, rpc string, message strin
 
 	fileName := fmt.Sprintf("%d_%s_%s_%s.%s", time.Now().Unix(), rpc, message, field, fileExtension)
 	filePath := path.Join(dataDir, fileName)
+	logFields := map[string]interface{}{KeyProtocolDataFile: filePath} // should not be persisted using With()
 
-	ProtocolTrace(ctx, "Writing protocol data file", KeyProtocolDataFile, filePath)
+	ProtocolTrace(ctx, "Writing protocol data file", logFields)
 
 	err := os.WriteFile(filePath, fileContents, 0644)
 
 	if err != nil {
-		ProtocolError(ctx, fmt.Sprintf("Unable to write protocol data file: %s", err), KeyProtocolDataFile, filePath)
+		ProtocolError(ctx, fmt.Sprintf("Unable to write protocol data file: %s", err), logFields)
 		return
 	}
 
-	ProtocolTrace(ctx, "Wrote protocol data file", KeyProtocolDataFile, filePath)
+	ProtocolTrace(ctx, "Wrote protocol data file", logFields)
 }
 
 func protocolDataDynamicValue5(_ context.Context, value *tfprotov5.DynamicValue) (string, []byte) {

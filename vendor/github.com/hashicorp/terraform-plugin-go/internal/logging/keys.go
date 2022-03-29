@@ -5,6 +5,9 @@ package logging
 // Practitioners or tooling reading logs may be depending on these keys, so be
 // conscious of that when changing them.
 const (
+	// Underlying error string
+	KeyError = "error"
+
 	// A unique ID for the RPC request
 	KeyRequestID = "tf_req_id"
 

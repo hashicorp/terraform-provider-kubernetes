@@ -299,7 +299,8 @@ func Provider() *schema.Provider {
 			"kubernetes_csi_driver_v1":    resourceKubernetesCSIDriverV1(),
 
 			// provider helper resources
-			"kubernetes_labels": resourceKubernetesLabels(),
+			"kubernetes_labels":      resourceKubernetesLabels(),
+			"kubernetes_annotations": resourceKubernetesAnnotations(),
 		},
 	}
 

@@ -1,3 +1,7 @@
+provider "kubernetes" {
+  config_path    = "~/.kube/config"
+  config_context = "docker-desktop"
+}
 
 resource "kubernetes_manifest" "test" {
   manifest = {
@@ -13,7 +17,6 @@ resource "kubernetes_manifest" "test" {
   }
 
   field_manager {
-    name = "data"
     force_conflicts = true
   }
 }

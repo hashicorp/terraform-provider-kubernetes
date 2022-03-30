@@ -129,6 +129,52 @@ func TestAccKubernetesHorizontalPodAutoscalerV2Beta2_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesHorizontalPodAutoscalerV2Beta2_containerResource(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_horizontal_pod_autoscaler_v2beta2.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_horizontal_pod_autoscaler_v2beta2.test",
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
+		ErrorCheck: func(err error) error {
+			t.Skipf("HPAContainerMetrics feature might not be enabled on the cluster and therefore this step will be skipped if an error occurs. Refer to the error for more details:\n%s", err)
+			return nil
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesHorizontalPodAutoscalerV2Beta2Config_containerResource(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesHorizontalPodAutoscalerV2Exists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.test", "test"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.test", "test"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.min_replicas", "50"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.max_replicas", "100"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.scale_target_ref.0.api_version", "apps/v1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.scale_target_ref.0.kind", "Deployment"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.scale_target_ref.0.name", "TerraformAccTest"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.0.type", "ContainerResource"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.0.container_resource.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.0.container_resource.0.name", "cpu"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.0.container_resource.0.container", "test"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.0.container_resource.0.target.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.0.container_resource.0.target.0.type", "Utilization"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.0.container_resource.0.target.0.average_utilization", "75"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesHorizontalPodAutoscalerV2Exists(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
@@ -338,6 +384,47 @@ func testAccKubernetesHorizontalPodAutoscalerV2Beta2Config_modified(name string)
         target {
           type  = "Value"
           value = "100"
+        }
+      }
+    }
+  }
+}
+`, name)
+}
+
+func testAccKubernetesHorizontalPodAutoscalerV2Beta2Config_containerResource(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_horizontal_pod_autoscaler_v2beta2" "test" {
+  metadata {
+    name = %q
+
+    annotations = {
+      test = "test"
+    }
+
+    labels = {
+      test = "test"
+    }
+  }
+
+  spec {
+    min_replicas = 50
+    max_replicas = 100
+
+    scale_target_ref {
+      api_version = "apps/v1"
+      kind        = "Deployment"
+      name        = "TerraformAccTest"
+    }
+
+    metric {
+      type = "ContainerResource"
+      container_resource {
+        name      = "cpu"
+        container = "test"
+        target {
+          type                = "Utilization"
+          average_utilization = "75"
         }
       }
     }

@@ -299,8 +299,20 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			rs = c.Resource(gvr)
 		}
 
+		// get fieldManager config
+		fieldManagerName, forceConflicts, err := s.getFieldManagerConfig(plannedStateVal)
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Could not extract field_manager config",
+				Detail:   err.Error(),
+			})
+			return resp, nil
+		}
+
 		// Check the resource does not exist if this is a create operation
-		if applyPriorState.IsNull() {
+		// forceConflicts will allow creation even if the resource already exists
+		if applyPriorState.IsNull() && !forceConflicts {
 			_, err := rs.Get(ctx, rname, metav1.GetOptions{})
 			if err == nil {
 				resp.Diagnostics = append(resp.Diagnostics,
@@ -329,17 +341,6 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 					Detail:   err.Error(),
 					Summary:  fmt.Sprintf("Failed to marshall resource '%s' to JSON", rnn),
 				})
-			return resp, nil
-		}
-
-		// get fieldManager config
-		fieldManagerName, forceConflicts, err := s.getFieldManagerConfig(plannedStateVal)
-		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
-				Summary:  "Could not extract field_manager config",
-				Detail:   err.Error(),
-			})
 			return resp, nil
 		}
 

@@ -248,7 +248,7 @@ func flattenSeLinuxOptions(in *v1.SELinuxOptions) []interface{} {
 	if in.Role != "" {
 		att["role"] = in.Role
 	}
-	if in.User != "" {
+	if in.Type != "" {
 		att["type"] = in.Type
 	}
 	if in.Level != "" {

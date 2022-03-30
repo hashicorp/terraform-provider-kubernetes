@@ -366,6 +366,8 @@ func TestAccKubernetesService_nodePort(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service.test"
+	appProtocolFirst := "ssh"
+	appProtocolSecond := "terraform.io/kubernetes"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -391,27 +393,31 @@ func TestAccKubernetesService_nodePort(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.port", "10222"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.protocol", "TCP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.target_port", "22"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.app_protocol", appProtocolFirst),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.name", "second"),
 					resource.TestCheckResourceAttrSet(resourceName, "spec.0.port.1.node_port"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.port", "10333"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.protocol", "TCP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.target_port", "33"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.1.app_protocol", appProtocolSecond),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "ClientIP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "NodePort"),
 					testAccCheckServicePorts(&conf, []api.ServicePort{
 						{
-							Name:       "first",
-							Port:       int32(10222),
-							Protocol:   api.ProtocolTCP,
-							TargetPort: intstr.FromInt(22),
+							AppProtocol: &appProtocolFirst,
+							Name:        "first",
+							Port:        int32(10222),
+							Protocol:    api.ProtocolTCP,
+							TargetPort:  intstr.FromInt(22),
 						},
 						{
-							Name:       "second",
-							Port:       int32(10333),
-							Protocol:   api.ProtocolTCP,
-							TargetPort: intstr.FromInt(33),
+							AppProtocol: &appProtocolSecond,
+							Name:        "second",
+							Port:        int32(10333),
+							Protocol:    api.ProtocolTCP,
+							TargetPort:  intstr.FromInt(33),
 						},
 					}),
 				),
@@ -1165,15 +1171,17 @@ func testAccKubernetesServiceConfig_nodePort(name string) string {
     session_affinity = "ClientIP"
 
     port {
-      name        = "first"
-      port        = 10222
-      target_port = 22
+      name         = "first"
+      port         = 10222
+      target_port  = 22
+      app_protocol = "ssh"
     }
 
     port {
-      name        = "second"
-      port        = 10333
-      target_port = 33
+      name         = "second"
+      port         = 10333
+      target_port  = 33
+      app_protocol = "terraform.io/kubernetes"
     }
 
     type = "NodePort"

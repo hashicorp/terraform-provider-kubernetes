@@ -266,6 +266,13 @@ func resourceKubernetesAnnotationsUpdate(ctx context.Context, d *schema.Resource
 		},
 	)
 	if err != nil {
+		if errors.IsConflict(err) {
+			return diag.Diagnostics{{
+				Severity: diag.Error,
+				Summary:  "Field manager conflict",
+				Detail:   fmt.Sprintf(`Another client is managing a field Terraform tried to update. Set "force" to true to override: %v`, err),
+			}}
+		}
 		return diag.FromErr(err)
 	}
 

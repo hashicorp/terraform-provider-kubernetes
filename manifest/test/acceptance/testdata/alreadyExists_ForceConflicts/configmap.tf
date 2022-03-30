@@ -1,0 +1,19 @@
+
+resource "kubernetes_manifest" "test" {
+  manifest = {
+    apiVersion = "v1"
+    kind       = "ConfigMap"
+    metadata = {
+      name      = var.name
+      namespace = var.namespace
+    }
+    data = {
+      TEST = "test"
+    }
+  }
+
+  field_manager {
+    name = "data"
+    force_conflicts = true
+  }
+}

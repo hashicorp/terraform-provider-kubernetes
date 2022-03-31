@@ -47,5 +47,5 @@ jobs:
     with:
       release-notes: true
       setup-go-version: '${{ needs.go-version.outputs.version }}'
-      # this will need to be updated if the `push` event no longer uses tags
+      # Product Version (e.g. v1.2.3 or github.ref_name)
       product-version: '${{ github.ref_name }}'

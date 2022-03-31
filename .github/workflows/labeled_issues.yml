@@ -8,7 +8,7 @@ jobs:
     steps:
     - uses: aareet/move-labeled-or-milestoned-issue@v2.0
       with:
-        action-token: "${{ secrets.k8s_github_actions }}"
+        action-token: "${{ secrets.GITHUB_TOKEN }}"
         project-url: "https://github.com/orgs/hashicorp/projects/59"
         column-name: "Blocked"
         label-name: "waiting-response"

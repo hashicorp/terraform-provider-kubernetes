@@ -407,9 +407,21 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
 		}
 
-		wf, ok := plannedStateVal["wait_for"]
-		if ok {
-			err = s.waitForCompletion(ctxDeadline, wf, rs, rname, wt, th)
+		var waitConfig tftypes.Value
+		if w, ok := plannedStateVal["wait"]; ok && !w.IsNull() {
+			s.logger.Trace("[ApplyResourceChange][Wait] Using waiter config from `wait` block")
+			var waitBlocks []tftypes.Value
+			w.As(&waitBlocks)
+			if len(waitBlocks) > 0 {
+				waitConfig = waitBlocks[0]
+			}
+		}
+		if wf, ok := plannedStateVal["wait_for"]; ok && !wf.IsNull() {
+			s.logger.Trace("[ApplyResourceChange][Wait] Using waiter config from deprecated `wait_for` attribute")
+			waitConfig = wf
+		}
+		if !waitConfig.IsNull() {
+			err = s.waitForCompletion(ctxDeadline, waitConfig, rs, rname, wt, th)
 			if err != nil {
 				if err == context.DeadlineExceeded {
 					resp.Diagnostics = append(resp.Diagnostics,

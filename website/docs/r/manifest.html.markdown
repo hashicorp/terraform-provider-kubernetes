@@ -194,11 +194,19 @@ The following arguments are supported:
 - `wait_for` (Optional) An object which allows you configure the provider to wait for certain conditions to be met. See below for schema. 
 - `field_manager` (Optional) Configure field manager options. See below.
 
-### `wait_for`
+### `wait`
 
 #### Arguments
 
-- **fields** (Required) A map of fields and a corresponding regular expression with a pattern to wait for. The provider will wait until the field matches the regular expression. Use `*` for any value. 
+- **rollout** (Optional) When set to `true` will wait for the resource to roll out, equivalent to `kubectl rollout status`. 
+- **fields** (Optional) A map of fields and a corresponding regular expression with a pattern to wait for. The provider will wait until the field matches the regular expression. Use `*` for any value. 
+
+### `wait_for` (deprecated, use `wait`)
+
+#### Arguments
+
+- **fields** (Optional) A map of fields and a corresponding regular expression with a pattern to wait for. The provider will wait until the field matches the regular expression. Use `*` for any value. 
+
 
 ### `field_manager`
 

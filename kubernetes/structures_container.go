@@ -65,7 +65,7 @@ func flattenSecurityCapabilities(in *v1.Capabilities) []interface{} {
 	return []interface{}{att}
 }
 
-func flattenHandler(in *v1.Handler) []interface{} {
+func flattenLifecycleHandler(in *v1.LifecycleHandler) []interface{} {
 	att := make(map[string]interface{})
 
 	if in.Exec != nil {
@@ -134,10 +134,10 @@ func flattenLifeCycle(in *v1.Lifecycle) []interface{} {
 	att := make(map[string]interface{})
 
 	if in.PostStart != nil {
-		att["post_start"] = flattenHandler(in.PostStart)
+		att["post_start"] = flattenLifecycleHandler(in.PostStart)
 	}
 	if in.PreStop != nil {
-		att["pre_stop"] = flattenHandler(in.PreStop)
+		att["pre_stop"] = flattenLifecycleHandler(in.PreStop)
 	}
 
 	return []interface{}{att}
@@ -725,12 +725,12 @@ func expandProbe(l []interface{}) *v1.Probe {
 	return &obj
 }
 
-func expandHandlers(l []interface{}) *v1.Handler {
+func expandLifecycleHandlers(l []interface{}) *v1.LifecycleHandler {
 	if len(l) == 0 || l[0] == nil {
-		return &v1.Handler{}
+		return &v1.LifecycleHandler{}
 	}
 	in := l[0].(map[string]interface{})
-	obj := v1.Handler{}
+	obj := v1.LifecycleHandler{}
 	if v, ok := in["exec"].([]interface{}); ok && len(v) > 0 {
 		obj.Exec = expandExec(v)
 	}
@@ -750,10 +750,10 @@ func expandLifeCycle(l []interface{}) *v1.Lifecycle {
 	in := l[0].(map[string]interface{})
 	obj := &v1.Lifecycle{}
 	if v, ok := in["post_start"].([]interface{}); ok && len(v) > 0 {
-		obj.PostStart = expandHandlers(v)
+		obj.PostStart = expandLifecycleHandlers(v)
 	}
 	if v, ok := in["pre_stop"].([]interface{}); ok && len(v) > 0 {
-		obj.PreStop = expandHandlers(v)
+		obj.PreStop = expandLifecycleHandlers(v)
 	}
 	return obj
 }

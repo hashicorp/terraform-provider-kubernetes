@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
-func handlerFields() map[string]*schema.Schema {
+func lifecycleHandlerFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"exec": {
 			Type:        schema.TypeList,
@@ -487,7 +487,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						Elem: &schema.Resource{
-							Schema: handlerFields(),
+							Schema: lifecycleHandlerFields(),
 						},
 					},
 					"pre_stop": {
@@ -496,7 +496,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						Elem: &schema.Resource{
-							Schema: handlerFields(),
+							Schema: lifecycleHandlerFields(),
 						},
 					},
 				},
@@ -657,7 +657,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 }
 
 func probeSchema() *schema.Resource {
-	h := handlerFields()
+	h := lifecycleHandlerFields()
 	h["failure_threshold"] = &schema.Schema{
 		Type:         schema.TypeInt,
 		Optional:     true,

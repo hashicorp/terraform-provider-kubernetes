@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -80,7 +79,7 @@ func resourceKubernetesConfigMapV1DataRead(ctx context.Context, d *schema.Resour
 	}
 
 	// get the configmap data
-	res, err := conn.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
+	res, err := conn.CoreV1().ConfigMaps(namespace).Get(ctx, name, v1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return diag.Diagnostics{{

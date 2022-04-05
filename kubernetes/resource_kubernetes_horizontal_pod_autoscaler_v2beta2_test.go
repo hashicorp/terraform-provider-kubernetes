@@ -25,7 +25,7 @@ func TestAccKubernetesHorizontalPodAutoscalerV2Beta2_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesHorizontalPodAutoscalerV2Beta2Config_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesHorizontalPodAutoscalerV2Exists(resourceName),
+					testAccCheckKubernetesHorizontalPodAutoscalerV2Beta2Exists(resourceName),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler_v2beta2.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler_v2beta2.test", "metadata.0.annotations.test", "test"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler_v2beta2.test", "metadata.0.labels.%", "1"),
@@ -146,7 +146,7 @@ func TestAccKubernetesHorizontalPodAutoscalerV2Beta2_containerResource(t *testin
 			{
 				Config: testAccKubernetesHorizontalPodAutoscalerV2Beta2Config_containerResource(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesHorizontalPodAutoscalerV2Exists(resourceName),
+					testAccCheckKubernetesHorizontalPodAutoscalerV2Beta2Exists(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.test", "test"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "1"),
@@ -175,7 +175,7 @@ func TestAccKubernetesHorizontalPodAutoscalerV2Beta2_containerResource(t *testin
 	})
 }
 
-func testAccCheckKubernetesHorizontalPodAutoscalerV2Exists(n string) resource.TestCheckFunc {
+func testAccCheckKubernetesHorizontalPodAutoscalerV2Beta2Exists(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {

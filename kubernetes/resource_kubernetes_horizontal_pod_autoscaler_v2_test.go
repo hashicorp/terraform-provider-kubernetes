@@ -17,7 +17,10 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_basic(t *testing.T) {
 	resourceName := "kubernetes_horizontal_pod_autoscaler_v2.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.23.0")
+		},
 		IDRefreshName:     "kubernetes_horizontal_pod_autoscaler_v2.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
@@ -134,7 +137,10 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_containerResource(t *testing.T) 
 	resourceName := "kubernetes_horizontal_pod_autoscaler_v2.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.23.0")
+		},
 		IDRefreshName:     "kubernetes_horizontal_pod_autoscaler_v2.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerDestroy,

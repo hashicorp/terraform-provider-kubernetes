@@ -39,6 +39,7 @@ func resourceKubernetesConfigMapV1Data() *schema.Resource {
 							Description: "The namespace of the ConfigMap.",
 							Optional:    true,
 							ForceNew:    true,
+							Default:     "default",
 						},
 					},
 				},
@@ -76,9 +77,6 @@ func resourceKubernetesConfigMapV1DataRead(ctx context.Context, d *schema.Resour
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
-	}
-	if namespace == "" {
-		namespace = "default"
 	}
 
 	// get the configmap data
@@ -142,9 +140,6 @@ func resourceKubernetesConfigMapV1DataUpdate(ctx context.Context, d *schema.Reso
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	name := metadata.GetName()
 	namespace := metadata.GetNamespace()
-	if namespace == "" {
-		namespace = "default"
-	}
 
 	// check the resource exists before we try and patch it
 	_, err = conn.CoreV1().ConfigMaps(namespace).Get(ctx, name, v1.GetOptions{})

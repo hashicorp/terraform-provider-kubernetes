@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func expandHorizontalPodAutoscalerV2Spec(in []interface{}) (*autoscalingv2beta2.HorizontalPodAutoscalerSpec, error) {
+func expandHorizontalPodAutoscalerV2Beta2Spec(in []interface{}) (*autoscalingv2beta2.HorizontalPodAutoscalerSpec, error) {
 	if len(in) == 0 || in[0] == nil {
 		return nil, fmt.Errorf("failed to expand HorizontalPodAutoscaler.Spec: null or empty input")
 	}
@@ -26,31 +26,31 @@ func expandHorizontalPodAutoscalerV2Spec(in []interface{}) (*autoscalingv2beta2.
 	}
 
 	if v, ok := m["scale_target_ref"]; ok {
-		spec.ScaleTargetRef = expandV2CrossVersionObjectReference(v.([]interface{}))
+		spec.ScaleTargetRef = expandV2Beta2CrossVersionObjectReference(v.([]interface{}))
 	}
 
 	if v, ok := m["metric"].([]interface{}); ok {
-		spec.Metrics = expandV2Metrics(v)
+		spec.Metrics = expandV2Beta2Metrics(v)
 	}
 
 	if v, ok := m["behavior"].([]interface{}); ok {
-		spec.Behavior = expandV2Behavior(v)
+		spec.Behavior = expandV2Beta2Behavior(v)
 	}
 
 	return spec, nil
 }
 
-func expandV2Metrics(in []interface{}) []autoscalingv2beta2.MetricSpec {
+func expandV2Beta2Metrics(in []interface{}) []autoscalingv2beta2.MetricSpec {
 	metrics := []autoscalingv2beta2.MetricSpec{}
 
 	for _, m := range in {
-		metrics = append(metrics, expandV2MetricSpec(m.(map[string]interface{})))
+		metrics = append(metrics, expandV2Beta2MetricSpec(m.(map[string]interface{})))
 	}
 
 	return metrics
 }
 
-func expandV2MetricTarget(m map[string]interface{}) autoscalingv2beta2.MetricTarget {
+func expandV2Beta2MetricTarget(m map[string]interface{}) autoscalingv2beta2.MetricTarget {
 	target := autoscalingv2beta2.MetricTarget{}
 
 	if v, ok := m["type"].(string); ok {
@@ -77,7 +77,7 @@ func expandV2MetricTarget(m map[string]interface{}) autoscalingv2beta2.MetricTar
 	return target
 }
 
-func expandV2ResourceMetricSource(m map[string]interface{}) *autoscalingv2beta2.ResourceMetricSource {
+func expandV2Beta2ResourceMetricSource(m map[string]interface{}) *autoscalingv2beta2.ResourceMetricSource {
 	source := &autoscalingv2beta2.ResourceMetricSource{}
 
 	if v, ok := m["name"].(string); ok {
@@ -85,13 +85,13 @@ func expandV2ResourceMetricSource(m map[string]interface{}) *autoscalingv2beta2.
 	}
 
 	if v, ok := m["target"].([]interface{}); ok && len(v) == 1 {
-		source.Target = expandV2MetricTarget(v[0].(map[string]interface{}))
+		source.Target = expandV2Beta2MetricTarget(v[0].(map[string]interface{}))
 	}
 
 	return source
 }
 
-func expandV2MetricIdentifier(m map[string]interface{}) autoscalingv2beta2.MetricIdentifier {
+func expandV2Beta2MetricIdentifier(m map[string]interface{}) autoscalingv2beta2.MetricIdentifier {
 	identifier := autoscalingv2beta2.MetricIdentifier{}
 	identifier.Name = m["name"].(string)
 
@@ -102,53 +102,53 @@ func expandV2MetricIdentifier(m map[string]interface{}) autoscalingv2beta2.Metri
 	return identifier
 }
 
-func expandV2ExternalMetricSource(m map[string]interface{}) *autoscalingv2beta2.ExternalMetricSource {
+func expandV2Beta2ExternalMetricSource(m map[string]interface{}) *autoscalingv2beta2.ExternalMetricSource {
 	source := &autoscalingv2beta2.ExternalMetricSource{}
 
 	if v, ok := m["metric"].([]interface{}); ok && len(v) == 1 {
-		source.Metric = expandV2MetricIdentifier(v[0].(map[string]interface{}))
+		source.Metric = expandV2Beta2MetricIdentifier(v[0].(map[string]interface{}))
 	}
 
 	if v, ok := m["target"].([]interface{}); ok && len(v) == 1 {
-		source.Target = expandV2MetricTarget(v[0].(map[string]interface{}))
+		source.Target = expandV2Beta2MetricTarget(v[0].(map[string]interface{}))
 	}
 
 	return source
 }
 
-func expandV2PodsMetricSource(m map[string]interface{}) *autoscalingv2beta2.PodsMetricSource {
+func expandV2Beta2PodsMetricSource(m map[string]interface{}) *autoscalingv2beta2.PodsMetricSource {
 	source := &autoscalingv2beta2.PodsMetricSource{}
 
 	if v, ok := m["metric"].([]interface{}); ok && len(v) == 1 {
-		source.Metric = expandV2MetricIdentifier(v[0].(map[string]interface{}))
+		source.Metric = expandV2Beta2MetricIdentifier(v[0].(map[string]interface{}))
 	}
 
 	if v, ok := m["target"].([]interface{}); ok && len(v) == 1 {
-		source.Target = expandV2MetricTarget(v[0].(map[string]interface{}))
+		source.Target = expandV2Beta2MetricTarget(v[0].(map[string]interface{}))
 	}
 
 	return source
 }
 
-func expandV2ObjectMetricSource(m map[string]interface{}) *autoscalingv2beta2.ObjectMetricSource {
+func expandV2Beta2ObjectMetricSource(m map[string]interface{}) *autoscalingv2beta2.ObjectMetricSource {
 	source := &autoscalingv2beta2.ObjectMetricSource{}
 
 	if v, ok := m["described_object"].([]interface{}); ok && len(v) == 1 {
-		source.DescribedObject = expandV2CrossVersionObjectReference(v)
+		source.DescribedObject = expandV2Beta2CrossVersionObjectReference(v)
 	}
 
 	if v, ok := m["metric"].([]interface{}); ok && len(v) == 1 {
-		source.Metric = expandV2MetricIdentifier(v[0].(map[string]interface{}))
+		source.Metric = expandV2Beta2MetricIdentifier(v[0].(map[string]interface{}))
 	}
 
 	if v, ok := m["target"].([]interface{}); ok && len(v) == 1 {
-		source.Target = expandV2MetricTarget(v[0].(map[string]interface{}))
+		source.Target = expandV2Beta2MetricTarget(v[0].(map[string]interface{}))
 	}
 
 	return source
 }
 
-func expandV2ContainerResourceMetricSource(m map[string]interface{}) *autoscalingv2beta2.ContainerResourceMetricSource {
+func expandV2Beta2ContainerResourceMetricSource(m map[string]interface{}) *autoscalingv2beta2.ContainerResourceMetricSource {
 	source := &autoscalingv2beta2.ContainerResourceMetricSource{}
 
 	if v, ok := m["container"].(string); ok {
@@ -160,13 +160,13 @@ func expandV2ContainerResourceMetricSource(m map[string]interface{}) *autoscalin
 	}
 
 	if v, ok := m["target"].([]interface{}); ok && len(v) == 1 {
-		source.Target = expandV2MetricTarget(v[0].(map[string]interface{}))
+		source.Target = expandV2Beta2MetricTarget(v[0].(map[string]interface{}))
 	}
 
 	return source
 }
 
-func expandV2MetricSpec(m map[string]interface{}) autoscalingv2beta2.MetricSpec {
+func expandV2Beta2MetricSpec(m map[string]interface{}) autoscalingv2beta2.MetricSpec {
 	spec := autoscalingv2beta2.MetricSpec{}
 
 	if v, ok := m["type"].(string); ok {
@@ -174,29 +174,29 @@ func expandV2MetricSpec(m map[string]interface{}) autoscalingv2beta2.MetricSpec 
 	}
 
 	if v, ok := m["resource"].([]interface{}); ok && len(v) == 1 {
-		spec.Resource = expandV2ResourceMetricSource(v[0].(map[string]interface{}))
+		spec.Resource = expandV2Beta2ResourceMetricSource(v[0].(map[string]interface{}))
 	}
 
 	if v, ok := m["external"].([]interface{}); ok && len(v) == 1 {
-		spec.External = expandV2ExternalMetricSource(v[0].(map[string]interface{}))
+		spec.External = expandV2Beta2ExternalMetricSource(v[0].(map[string]interface{}))
 	}
 
 	if v, ok := m["pods"].([]interface{}); ok && len(v) == 1 {
-		spec.Pods = expandV2PodsMetricSource(v[0].(map[string]interface{}))
+		spec.Pods = expandV2Beta2PodsMetricSource(v[0].(map[string]interface{}))
 	}
 
 	if v, ok := m["object"].([]interface{}); ok && len(v) == 1 {
-		spec.Object = expandV2ObjectMetricSource(v[0].(map[string]interface{}))
+		spec.Object = expandV2Beta2ObjectMetricSource(v[0].(map[string]interface{}))
 	}
 
 	if v, ok := m["container_resource"].([]interface{}); ok && len(v) == 1 {
-		spec.ContainerResource = expandV2ContainerResourceMetricSource(v[0].(map[string]interface{}))
+		spec.ContainerResource = expandV2Beta2ContainerResourceMetricSource(v[0].(map[string]interface{}))
 	}
 
 	return spec
 }
 
-func expandV2Behavior(in []interface{}) *autoscalingv2beta2.HorizontalPodAutoscalerBehavior {
+func expandV2Beta2Behavior(in []interface{}) *autoscalingv2beta2.HorizontalPodAutoscalerBehavior {
 	spec := &autoscalingv2beta2.HorizontalPodAutoscalerBehavior{}
 
 	if len(in) == 0 || in[0] == nil {
@@ -206,17 +206,17 @@ func expandV2Behavior(in []interface{}) *autoscalingv2beta2.HorizontalPodAutosca
 	b := in[0].(map[string]interface{})
 
 	if v, ok := b["scale_up"].([]interface{}); ok {
-		spec.ScaleUp = expandV2ScalingRules(v)
+		spec.ScaleUp = expandV2Beta2ScalingRules(v)
 	}
 
 	if v, ok := b["scale_down"].([]interface{}); ok {
-		spec.ScaleDown = expandV2ScalingRules(v)
+		spec.ScaleDown = expandV2Beta2ScalingRules(v)
 	}
 
 	return spec
 }
 
-func expandV2ScalingRules(in []interface{}) *autoscalingv2beta2.HPAScalingRules {
+func expandV2Beta2ScalingRules(in []interface{}) *autoscalingv2beta2.HPAScalingRules {
 	spec := &autoscalingv2beta2.HPAScalingRules{}
 
 	if len(in) == 0 || in[0] == nil {
@@ -225,7 +225,7 @@ func expandV2ScalingRules(in []interface{}) *autoscalingv2beta2.HPAScalingRules 
 
 	r := in[0].(map[string]interface{})
 
-	spec.Policies = expandV2ScalingPolicies(r["policy"].([]interface{}))
+	spec.Policies = expandV2Beta2ScalingPolicies(r["policy"].([]interface{}))
 
 	if v, ok := r["select_policy"].(string); ok {
 		spec.SelectPolicy = (*autoscalingv2beta2.ScalingPolicySelect)(&v)
@@ -238,17 +238,17 @@ func expandV2ScalingRules(in []interface{}) *autoscalingv2beta2.HPAScalingRules 
 	return spec
 }
 
-func expandV2ScalingPolicies(in []interface{}) []autoscalingv2beta2.HPAScalingPolicy {
+func expandV2Beta2ScalingPolicies(in []interface{}) []autoscalingv2beta2.HPAScalingPolicy {
 	policies := []autoscalingv2beta2.HPAScalingPolicy{}
 
 	for _, m := range in {
-		policies = append(policies, expandV2ScalingPolicy(m.(map[string]interface{})))
+		policies = append(policies, expandV2Beta2ScalingPolicy(m.(map[string]interface{})))
 	}
 
 	return policies
 }
 
-func expandV2ScalingPolicy(in map[string]interface{}) autoscalingv2beta2.HPAScalingPolicy {
+func expandV2Beta2ScalingPolicy(in map[string]interface{}) autoscalingv2beta2.HPAScalingPolicy {
 	spec := autoscalingv2beta2.HPAScalingPolicy{}
 
 	if v, ok := in["period_seconds"].(int); ok {
@@ -266,7 +266,7 @@ func expandV2ScalingPolicy(in map[string]interface{}) autoscalingv2beta2.HPAScal
 	return spec
 }
 
-func expandV2CrossVersionObjectReference(in []interface{}) autoscalingv2beta2.CrossVersionObjectReference {
+func expandV2Beta2CrossVersionObjectReference(in []interface{}) autoscalingv2beta2.CrossVersionObjectReference {
 	ref := autoscalingv2beta2.CrossVersionObjectReference{}
 
 	if len(in) == 0 || in[0] == nil {
@@ -289,7 +289,7 @@ func expandV2CrossVersionObjectReference(in []interface{}) autoscalingv2beta2.Cr
 	return ref
 }
 
-func flattenV2MetricTarget(target autoscalingv2beta2.MetricTarget) []interface{} {
+func flattenV2Beta2MetricTarget(target autoscalingv2beta2.MetricTarget) []interface{} {
 	m := map[string]interface{}{
 		"type": target.Type,
 	}
@@ -306,7 +306,7 @@ func flattenV2MetricTarget(target autoscalingv2beta2.MetricTarget) []interface{}
 	return []interface{}{m}
 }
 
-func flattenV2MetricIdentifier(identifier autoscalingv2beta2.MetricIdentifier) []interface{} {
+func flattenV2Beta2MetricIdentifier(identifier autoscalingv2beta2.MetricIdentifier) []interface{} {
 	m := map[string]interface{}{
 		"name": identifier.Name,
 	}
@@ -318,77 +318,77 @@ func flattenV2MetricIdentifier(identifier autoscalingv2beta2.MetricIdentifier) [
 	return []interface{}{m}
 }
 
-func flattenV2ExternalMetricSource(external *autoscalingv2beta2.ExternalMetricSource) []interface{} {
+func flattenV2Beta2ExternalMetricSource(external *autoscalingv2beta2.ExternalMetricSource) []interface{} {
 	m := map[string]interface{}{
-		"metric": flattenV2MetricIdentifier(external.Metric),
-		"target": flattenV2MetricTarget(external.Target),
+		"metric": flattenV2Beta2MetricIdentifier(external.Metric),
+		"target": flattenV2Beta2MetricTarget(external.Target),
 	}
 	return []interface{}{m}
 }
 
-func flattenV2PodsMetricSource(pods *autoscalingv2beta2.PodsMetricSource) []interface{} {
+func flattenV2Beta2PodsMetricSource(pods *autoscalingv2beta2.PodsMetricSource) []interface{} {
 	m := map[string]interface{}{
-		"metric": flattenV2MetricIdentifier(pods.Metric),
-		"target": flattenV2MetricTarget(pods.Target),
+		"metric": flattenV2Beta2MetricIdentifier(pods.Metric),
+		"target": flattenV2Beta2MetricTarget(pods.Target),
 	}
 	return []interface{}{m}
 }
 
-func flattenV2ObjectMetricSource(object *autoscalingv2beta2.ObjectMetricSource) []interface{} {
+func flattenV2Beta2ObjectMetricSource(object *autoscalingv2beta2.ObjectMetricSource) []interface{} {
 	m := map[string]interface{}{
-		"described_object": flattenV2CrossVersionObjectReference(object.DescribedObject),
-		"metric":           flattenV2MetricIdentifier(object.Metric),
-		"target":           flattenV2MetricTarget(object.Target),
+		"described_object": flattenV2Beta2CrossVersionObjectReference(object.DescribedObject),
+		"metric":           flattenV2Beta2MetricIdentifier(object.Metric),
+		"target":           flattenV2Beta2MetricTarget(object.Target),
 	}
 	return []interface{}{m}
 }
 
-func flattenV2ContainerResourceMetricSource(cr *autoscalingv2beta2.ContainerResourceMetricSource) []interface{} {
+func flattenV2Beta2ContainerResourceMetricSource(cr *autoscalingv2beta2.ContainerResourceMetricSource) []interface{} {
 	m := map[string]interface{}{
 		"name":      cr.Name.String(),
 		"container": cr.Container,
-		"target":    flattenV2MetricTarget(cr.Target),
+		"target":    flattenV2Beta2MetricTarget(cr.Target),
 	}
 	return []interface{}{m}
 }
 
-func flattenV2ResourceMetricSource(resource *autoscalingv2beta2.ResourceMetricSource) []interface{} {
+func flattenV2Beta2ResourceMetricSource(resource *autoscalingv2beta2.ResourceMetricSource) []interface{} {
 	m := map[string]interface{}{
 		"name":   resource.Name,
-		"target": flattenV2MetricTarget(resource.Target),
+		"target": flattenV2Beta2MetricTarget(resource.Target),
 	}
 	return []interface{}{m}
 }
 
-func flattenV2MetricSpec(spec autoscalingv2beta2.MetricSpec) map[string]interface{} {
+func flattenV2Beta2MetricSpec(spec autoscalingv2beta2.MetricSpec) map[string]interface{} {
 	m := map[string]interface{}{}
 
 	m["type"] = spec.Type
 
 	if spec.Resource != nil {
-		m["resource"] = flattenV2ResourceMetricSource(spec.Resource)
+		m["resource"] = flattenV2Beta2ResourceMetricSource(spec.Resource)
 	}
 
 	if spec.External != nil {
-		m["external"] = flattenV2ExternalMetricSource(spec.External)
+		m["external"] = flattenV2Beta2ExternalMetricSource(spec.External)
 	}
 
 	if spec.Pods != nil {
-		m["pods"] = flattenV2PodsMetricSource(spec.Pods)
+		m["pods"] = flattenV2Beta2PodsMetricSource(spec.Pods)
 	}
 
 	if spec.Object != nil {
-		m["object"] = flattenV2ObjectMetricSource(spec.Object)
+		m["object"] = flattenV2Beta2ObjectMetricSource(spec.Object)
 	}
 
 	if spec.ContainerResource != nil {
-		m["container_resource"] = flattenV2ContainerResourceMetricSource(spec.ContainerResource)
+		m["container_resource"] = flattenV2Beta2ContainerResourceMetricSource(spec.ContainerResource)
 	}
 
 	return m
 }
 
-func flattenHorizontalPodAutoscalerV2Spec(spec autoscalingv2beta2.HorizontalPodAutoscalerSpec) []interface{} {
+func flattenHorizontalPodAutoscalerV2Beta2Spec(spec autoscalingv2beta2.HorizontalPodAutoscalerSpec) []interface{} {
 	m := make(map[string]interface{}, 0)
 
 	m["max_replicas"] = spec.MaxReplicas
@@ -397,22 +397,22 @@ func flattenHorizontalPodAutoscalerV2Spec(spec autoscalingv2beta2.HorizontalPodA
 		m["min_replicas"] = *spec.MinReplicas
 	}
 
-	m["scale_target_ref"] = flattenV2CrossVersionObjectReference(spec.ScaleTargetRef)
+	m["scale_target_ref"] = flattenV2Beta2CrossVersionObjectReference(spec.ScaleTargetRef)
 
 	metrics := []interface{}{}
 	for _, m := range spec.Metrics {
-		metrics = append(metrics, flattenV2MetricSpec(m))
+		metrics = append(metrics, flattenV2Beta2MetricSpec(m))
 	}
 	m["metric"] = metrics
 
 	if spec.Behavior != nil {
-		m["behavior"] = flattenV2Behavior(*spec.Behavior)
+		m["behavior"] = flattenV2Beta2Behavior(*spec.Behavior)
 	}
 
 	return []interface{}{m}
 }
 
-func flattenV2CrossVersionObjectReference(ref autoscalingv2beta2.CrossVersionObjectReference) []interface{} {
+func flattenV2Beta2CrossVersionObjectReference(ref autoscalingv2beta2.CrossVersionObjectReference) []interface{} {
 	m := make(map[string]interface{}, 0)
 
 	if ref.APIVersion != "" {
@@ -430,27 +430,27 @@ func flattenV2CrossVersionObjectReference(ref autoscalingv2beta2.CrossVersionObj
 	return []interface{}{m}
 }
 
-func flattenV2Behavior(spec autoscalingv2beta2.HorizontalPodAutoscalerBehavior) []interface{} {
+func flattenV2Beta2Behavior(spec autoscalingv2beta2.HorizontalPodAutoscalerBehavior) []interface{} {
 	b := map[string]interface{}{}
 
 	if spec.ScaleUp != nil {
-		b["scale_up"] = flattenV2ScalingRules(*spec.ScaleUp)
+		b["scale_up"] = flattenV2Beta2ScalingRules(*spec.ScaleUp)
 	}
 
 	if spec.ScaleDown != nil {
-		b["scale_down"] = flattenV2ScalingRules(*spec.ScaleDown)
+		b["scale_down"] = flattenV2Beta2ScalingRules(*spec.ScaleDown)
 	}
 
 	return []interface{}{b}
 }
 
-func flattenV2ScalingRules(spec autoscalingv2beta2.HPAScalingRules) []interface{} {
+func flattenV2Beta2ScalingRules(spec autoscalingv2beta2.HPAScalingRules) []interface{} {
 	r := map[string]interface{}{}
 
 	if spec.Policies != nil {
 		policies := []interface{}{}
 		for _, m := range spec.Policies {
-			policies = append(policies, flattenV2ScalingPolicy(m))
+			policies = append(policies, flattenV2Beta2ScalingPolicy(m))
 		}
 
 		r["policy"] = policies
@@ -467,7 +467,7 @@ func flattenV2ScalingRules(spec autoscalingv2beta2.HPAScalingRules) []interface{
 	return []interface{}{r}
 }
 
-func flattenV2ScalingPolicy(spec autoscalingv2beta2.HPAScalingPolicy) map[string]interface{} {
+func flattenV2Beta2ScalingPolicy(spec autoscalingv2beta2.HPAScalingPolicy) map[string]interface{} {
 	return map[string]interface{}{
 		"type":           string(spec.Type),
 		"value":          int(spec.Value),
@@ -475,7 +475,7 @@ func flattenV2ScalingPolicy(spec autoscalingv2beta2.HPAScalingPolicy) map[string
 	}
 }
 
-func patchHorizontalPodAutoscalerV2Spec(prefix string, pathPrefix string, d *schema.ResourceData) []PatchOperation {
+func patchHorizontalPodAutoscalerV2Beta2Spec(prefix string, pathPrefix string, d *schema.ResourceData) []PatchOperation {
 	ops := make([]PatchOperation, 0)
 
 	if d.HasChange(prefix + "max_replicas") {
@@ -502,14 +502,14 @@ func patchHorizontalPodAutoscalerV2Spec(prefix string, pathPrefix string, d *sch
 	if d.HasChange(prefix + "metric") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/metrics",
-			Value: expandV2Metrics(d.Get(prefix + "metric").([]interface{})),
+			Value: expandV2Beta2Metrics(d.Get(prefix + "metric").([]interface{})),
 		})
 	}
 
 	if d.HasChange(prefix + "behavior") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/behavior",
-			Value: expandV2Behavior(d.Get(prefix + "behavior").([]interface{})),
+			Value: expandV2Beta2Behavior(d.Get(prefix + "behavior").([]interface{})),
 		})
 	}
 

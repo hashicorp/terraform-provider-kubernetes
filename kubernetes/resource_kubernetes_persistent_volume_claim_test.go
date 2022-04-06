@@ -745,7 +745,7 @@ func testAccKubernetesPersistentVolumeClaimConfig_updateStorageGKE(name, request
     name = "test"
   }
   allow_volume_expansion = true
-  storage_provisioner    = "kubernetes.io/gce-pd"
+  storage_provisioner    = "pd.csi.storage.gke.io"
 }
 resource "kubernetes_persistent_volume_claim" "test" {
   wait_until_bound = true
@@ -1093,7 +1093,7 @@ func testAccKubernetesPersistentVolumeClaimConfig_storageClass(className, claimN
     name = "%s"
   }
 
-  storage_provisioner = "kubernetes.io/gce-pd"
+  storage_provisioner = "pd.csi.storage.gke.io"
 
   parameters = {
     type = "pd-standard"
@@ -1126,7 +1126,7 @@ func testAccKubernetesPersistentVolumeClaimConfig_storageClassUpdated(className,
     name = "%s"
   }
 
-  storage_provisioner = "kubernetes.io/gce-pd"
+  storage_provisioner = "pd.csi.storage.gke.io"
 
   parameters = {
     type = "pd-standard"
@@ -1138,7 +1138,7 @@ resource "kubernetes_storage_class" "second" {
     name = "%s-second"
   }
 
-  storage_provisioner = "kubernetes.io/gce-pd"
+  storage_provisioner = "pd.csi.storage.gke.io"
 
   parameters = {
     type = "pd-ssd"

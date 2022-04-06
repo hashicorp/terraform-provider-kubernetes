@@ -7,7 +7,7 @@ variable "workers_count" {
 }
 
 variable "node_machine_type" {
-  default = "e2-micro"
+  default = "e2-medium"
 }
 
 variable "enable_alpha" {

@@ -214,6 +214,7 @@ func Provider() *schema.Provider {
 			"kubernetes_default_service_account_v1": resourceKubernetesDefaultServiceAccount(),
 			"kubernetes_config_map":                 resourceKubernetesConfigMap(),
 			"kubernetes_config_map_v1":              resourceKubernetesConfigMap(),
+			"kubernetes_config_map_v1_data":         resourceKubernetesConfigMapV1Data(),
 			"kubernetes_secret":                     resourceKubernetesSecret(),
 			"kubernetes_secret_v1":                  resourceKubernetesSecret(),
 			"kubernetes_pod":                        resourceKubernetesPod(),

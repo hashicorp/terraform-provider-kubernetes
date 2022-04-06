@@ -1112,12 +1112,12 @@ func testAccKubernetesPersistentVolumeConfig_googleCloud_basic(name, diskName, z
             operator = "Exists"
           }
           match_expressions {
-            key      = "failure-domain.beta.kubernetes.io/zone"
+            key      = "topology.kubernetes.io/zone"
             operator = "In"
             values   = ["%s"]
           }
           match_expressions {
-            key      = "failure-domain.beta.kubernetes.io/region"
+            key      = "topology.kubernetes.io/region"
             operator = "In"
             values   = ["%s"]
           }

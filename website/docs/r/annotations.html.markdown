@@ -1,4 +1,5 @@
 ---
+subcategory: "manifest"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_annotations"
 description: |-

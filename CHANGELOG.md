@@ -5,14 +5,14 @@ NEW:
 * Resource `kubernetes_labels` (#692)
 * Resource `kubernetes_annotations` (#692)
 * Resource `kubernetes_config_map_v1_data` (#723)
-* Rollout option to `wait_for` block in `kubernetes_manifest` (#1549)
+* Attribute `rollout` of `wait` (or depricated `wait_for`) block in `kubernetes_manifest` (#1549)
 * Data source and resource attributes `app_protocol` of `kubernetes_service` (#1554)
 * Attribute `container_resource` of resource `kubernetes_horizontal_pod_autoscaler_v2beta2` (#1637)
 
 IMPROVEMENTS:
 
 * Make attribute `rule` optional of `kubernetes_validating_webhook_configuration(_v1)` and `kubernetes_mutating_webhook_configuration(_v1)` (#1618, #1643)
-* Update documentation and correct some errors (#1622, #1628, #1657)
+* Update documentation and correct some errors (#1622, #1628, #1657, #1681)
 
 BUG FIXES:
 

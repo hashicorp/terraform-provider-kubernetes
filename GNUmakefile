@@ -62,7 +62,7 @@ testacc: fmtcheck vet
 	mkdir -p /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH) || true
 	ls $(EXT_PROV_BIN) || go build -o $(EXT_PROV_BIN)
 	cd $(EXT_PROV_DIR) && TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform terraform init -upgrade
-	TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
+	TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 3h
 
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \

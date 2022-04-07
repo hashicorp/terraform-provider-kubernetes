@@ -175,6 +175,11 @@ func isInternalKey(annotationKey string) bool {
 		return false
 	}
 
+	// allow AWS load balancer configuration annotations
+	if u.Hostname() == "service.beta.kubernetes.io" {
+		return false
+	}
+
 	// internal *.kubernetes.io keys
 	if strings.HasSuffix(u.Hostname(), "kubernetes.io") {
 		return true

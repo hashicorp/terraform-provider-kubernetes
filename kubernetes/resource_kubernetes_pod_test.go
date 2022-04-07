@@ -637,7 +637,7 @@ func TestAccKubernetesPod_with_cfg_map_volume_mount(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPod_with_csi_volume(t *testing.T) {
+func TestAccKubernetesPod_with_csi_volume_hostpath(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
@@ -646,7 +646,12 @@ func TestAccKubernetesPod_with_csi_volume(t *testing.T) {
 	imageName := "busybox:1.32"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			if err := testAccCheckCSIDriverExists("hostpath.csi.k8s.io"); err != nil {
+				t.Skip(err.Error())
+			}
+		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
 		Steps: []resource.TestStep{
@@ -1263,6 +1268,19 @@ func TestAccKubernetesPod_topologySpreadConstraint(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testAccCheckCSIDriverExists(csiDriverName string) error {
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	_, err = conn.StorageV1().CSIDrivers().Get(ctx, csiDriverName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("could not find CSIDriver %q", csiDriverName)
+	}
+	return nil
 }
 
 func testAccCheckKubernetesPodDestroy(s *terraform.State) error {

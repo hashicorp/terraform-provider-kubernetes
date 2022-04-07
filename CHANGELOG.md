@@ -5,12 +5,13 @@ NEW:
 * Resource `kubernetes_labels` (#692)
 * Resource `kubernetes_annotations` (#692)
 * Resource `kubernetes_config_map_v1_data` (#723)
-* Attribute `rollout` of `wait` (or depricated `wait_for`) block in `kubernetes_manifest` (#1549)
+* Block `wait` with attribute `rollout` of `kubernetes_manifest` (#1549)
 * Data source and resource attributes `app_protocol` of `kubernetes_service` (#1554)
 * Attribute `container_resource` of resource `kubernetes_horizontal_pod_autoscaler_v2beta2` (#1637)
 
 IMPROVEMENTS:
 
+* Deprecate `wait_for` attribute in favor of `wait` block in `kubernetes_manifest` (#1549)
 * Make attribute `rule` optional of `kubernetes_validating_webhook_configuration(_v1)` and `kubernetes_mutating_webhook_configuration(_v1)` (#1618, #1643)
 * Update documentation and correct some errors (#1622, #1628, #1657, #1681)
 
@@ -18,6 +19,7 @@ BUG FIXES:
 
 * Fix crash when multiple `match_expression` are used in `kubernetes_resource_quota` (#1561)
 * Fix issue when in some circumstances changes of `seLinuxOptions.Type` doesn't reflect in the state file (#1650)
+* Ignore service account volumes with `kube-api-access` prefix (#1663)
 
 ## 2.9.0 (March 17, 2022)
 

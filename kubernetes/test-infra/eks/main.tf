@@ -1,100 +1,126 @@
-terraform {
-  required_providers {
-    kubernetes = {
-      source = "hashicorp/kubernetes"
-      version = ">= 2.0.2"
-    }
-    helm = {
-      source  = "hashicorp/helm"
-      version = ">= 2.0.2"
-    }
-    aws = {
-      source  = "hashicorp/aws"
-      version = "3.22.0"
-    }
-  }
+resource "random_string" "rand" {
+  length  = 8
+  lower   = true
+  special = false
 }
 
-data "aws_eks_cluster" "default" {
-  name = module.cluster.cluster_id
-}
-
-# This configuration relies on a plugin binary to fetch the token to the EKS cluster.
-# The main advantage is that the token will always be up-to-date, even when the `terraform apply` runs for
-# a longer time than the token TTL. The downside of this approach is that the binary must be present
-# on the system running terraform, either in $PATH as shown below, or in another location, which can be
-# specified in the `command`.
-# See the commented provider blocks below for alternative configuration options.
-provider "kubernetes" {
-  host                   = data.aws_eks_cluster.default.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.default.certificate_authority[0].data)
-  exec {
-    api_version = "client.authentication.k8s.io/v1alpha1"
-    args        = ["eks", "get-token", "--cluster-name", module.vpc.cluster_name]
-    command     = "aws"
-  }
-}
-
-# This configuration is also valid, but the token may expire during long-running applies.
-# data "aws_eks_cluster_auth" "default" {
-#  name = module.cluster.cluster_id
-#}
-#provider "kubernetes" {
-#  host                   = data.aws_eks_cluster.default.endpoint
-#  cluster_ca_certificate = base64decode(data.aws_eks_cluster.default.certificate_authority[0].data)
-#  token                  = data.aws_eks_cluster_auth.default.token
-#}
-
-provider "helm" {
-  kubernetes {
-    host                   = data.aws_eks_cluster.default.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.default.certificate_authority[0].data)
-    exec {
-      api_version = "client.authentication.k8s.io/v1alpha1"
-      args        = ["eks", "get-token", "--cluster-name", module.vpc.cluster_name]
-      command     = "aws"
-    }
-  }
-}
-
-provider "aws" {
-  region = var.region
-}
-
-module "vpc" {
-  source = "./vpc"
-}
-
-module "cluster" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "15.1.0"
-
-  vpc_id  = module.vpc.vpc_id
-  subnets = module.vpc.subnets
-
-  cluster_name    = module.vpc.cluster_name
-  cluster_version = var.kubernetes_version
-  manage_aws_auth = false # Managed in ./kubernetes-config/main.tf instead.
-  write_kubeconfig = true
-
-  workers_group_defaults = {
-    root_volume_type = "gp2"
-  }
-  worker_groups = [
-    {
-      instance_type        = var.workers_type
-      asg_desired_capacity = var.workers_count
-      asg_max_size         = 4
-    },
-  ]
+locals {
+  cluster_name    = "test-cluster-${random_string.rand.result}"
+  cluster_version = var.cluster_version
+  region          = var.region
 
   tags = {
+    team        = "terraform-kubernetes-providers"
     environment = "test"
   }
 }
 
-module "kubernetes-config" {
-  cluster_name      = module.cluster.cluster_id # creates dependency on cluster creation
-  source            = "./kubernetes-config"
-  k8s_node_role_arn = module.cluster.worker_iam_role_arn
+provider "aws" {
+  region = local.region
+}
+
+module "eks" {
+  source = "terraform-aws-modules/eks/aws"
+  version = "~> 18.11"
+
+  cluster_name                    = local.cluster_name
+  cluster_version                 = local.cluster_version
+  cluster_endpoint_private_access = true
+  cluster_endpoint_public_access  = true
+
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnets
+
+  eks_managed_node_group_defaults = {
+    instance_types = [var.instance_type]
+    min_size       = 1
+    max_size       = var.node_count
+    desired_size   = var.node_count
+  }
+
+  eks_managed_node_groups = {
+    default_node_group = {
+      create_launch_template = false
+      launch_template_name   = ""
+    }
+  }
+
+  tags = local.tags
+}
+
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "~> 3.0"
+
+  name = local.cluster_name
+  cidr = "10.0.0.0/16"
+
+  azs             = ["${local.region}a", "${local.region}b"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
+  public_subnets  = ["10.0.4.0/24", "10.0.5.0/24"]
+
+  create_egress_only_igw  = true
+
+  enable_nat_gateway   = true
+  single_nat_gateway   = true
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  public_subnet_tags = {
+    "kubernetes.io/cluster/${local.cluster_name}" = "shared"
+    "kubernetes.io/role/elb"                      = 1
+  }
+
+  private_subnet_tags = {
+    "kubernetes.io/cluster/${local.cluster_name}" = "shared"
+    "kubernetes.io/role/internal-elb"             = 1
+  }
+
+  tags = local.tags
+}
+
+data "aws_eks_cluster_auth" "this" {
+  name = module.eks.cluster_id
+}
+
+locals {
+  kubeconfig = yamlencode({
+    apiVersion      = "v1"
+    kind            = "Config"
+    current-context = "terraform"
+    clusters = [{
+      name = module.eks.cluster_id
+      cluster = {
+        certificate-authority-data = module.eks.cluster_certificate_authority_data
+        server                     = module.eks.cluster_endpoint
+      }
+    }]
+    contexts = [{
+      name = "terraform"
+      context = {
+        cluster = module.eks.cluster_id
+        user    = "terraform"
+      }
+    }]
+    users = [{
+      name = "terraform"
+      user = {
+        token = data.aws_eks_cluster_auth.this.token
+      }
+      user = {
+        exec = {
+          apiVersion = "client.authentication.k8s.io/v1alpha1"
+          command = "aws"
+          args = [
+            "eks", "get-token", "--cluster-name", local.cluster_name
+          ]
+        }
+      }
+    }]
+  })
+}
+
+resource "local_file" "kubeconfig" {
+  content = local.kubeconfig
+  filename = "${path.module}/kubeconfig"
 }

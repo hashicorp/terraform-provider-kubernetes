@@ -1,21 +1,15 @@
-#
-# Variables Configuration
-#
+variable "cluster_version" {
+  default = "1.21"
+}
+
 variable "region" {
-  default = "us-west-1"
-  type    = string
+  default = "us-east-1"
 }
 
-variable "kubernetes_version" {
-  type    = string
-  default = "1.18"
-}
-
-variable "workers_count" {
+variable "node_count" {
   default = 2
 }
 
-variable "workers_type" {
-  type    = string
-  default = "m4.large"
+variable "instance_type" {
+  default = "m5.large"
 }

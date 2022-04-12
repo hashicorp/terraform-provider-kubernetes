@@ -38,7 +38,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-region: us-east-1
+          aws-region: ${{ github.event.inputs.region }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           role-to-assume: ${{ secrets.AWS_ASSUME_ROLE_ARN }}
@@ -49,8 +49,10 @@ jobs:
       - name: Provision EKS Cluster
         working-directory: ./kubernetes/test-infra/eks
         env:
+          TF_VAR_region: ${{ github.event.inputs.region }}
           TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion }}
-          TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion }}
+          TF_VAR_node_count: ${{ github.event.inputs.nodeCount }}
+          TF_VAR_instance_type: ${{ github.event.inputs.instanceType }}
         run: |
           terraform init
           terraform apply --auto-approve

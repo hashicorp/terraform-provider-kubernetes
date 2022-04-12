@@ -26,6 +26,14 @@ func flattenServicePort(in []v1.ServicePort) []interface{} {
 	return att
 }
 
+func flattenIPFamilies(in []v1.IPFamily) []interface{} {
+	att := make([]interface{}, len(in), len(in))
+	for i, n := range in {
+		att[i] = string(n)
+	}
+	return att
+}
+
 func flattenServiceSpec(in v1.ServiceSpec) []interface{} {
 	att := make(map[string]interface{})
 	if len(in.Ports) > 0 {
@@ -42,6 +50,12 @@ func flattenServiceSpec(in v1.ServiceSpec) []interface{} {
 	}
 	if len(in.ExternalIPs) > 0 {
 		att["external_ips"] = newStringSet(schema.HashString, in.ExternalIPs)
+	}
+	if len(in.IPFamilies) > 0 {
+		att["ip_families"] = flattenIPFamilies(in.IPFamilies)
+	}
+	if in.IPFamilyPolicy != nil {
+		att["ip_family_policy"] = *in.IPFamilyPolicy
 	}
 	if in.SessionAffinity != "" {
 		att["session_affinity"] = string(in.SessionAffinity)
@@ -113,6 +127,17 @@ func expandServicePort(l []interface{}, removeNodePort bool) []v1.ServicePort {
 	return obj
 }
 
+func expandIPFamilies(l []interface{}) []v1.IPFamily {
+	if l[0] == nil {
+		return []v1.IPFamily{}
+	}
+	obj := make([]v1.IPFamily, len(l), len(l))
+	for i, n := range l {
+		obj[i] = v1.IPFamily(n.(string))
+	}
+	return obj
+}
+
 func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 	if len(l) == 0 || l[0] == nil {
 		return v1.ServiceSpec{}
@@ -134,6 +159,13 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 	}
 	if v, ok := in["external_ips"].(*schema.Set); ok && v.Len() > 0 {
 		obj.ExternalIPs = sliceOfString(v.List())
+	}
+	if v, ok := in["ip_families"].([]interface{}); ok && len(v) > 0 {
+		obj.IPFamilies = expandIPFamilies(v)
+	}
+	if v, ok := in["ip_family_policy"].(string); ok && len(v) > 0 {
+		p := v1.IPFamilyPolicyType(v)
+		obj.IPFamilyPolicy = &p
 	}
 	if v, ok := in["session_affinity"].(string); ok {
 		obj.SessionAffinity = v1.ServiceAffinity(v)
@@ -245,6 +277,18 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "externalTrafficPolicy",
 			Value: d.Get(keyPrefix + "external_traffic_policy").(string),
+		})
+	}
+	if d.HasChange(keyPrefix + "ip_families") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "ipFamilies",
+			Value: expandIPFamilies(d.Get(keyPrefix + "ip_families").([]interface{})),
+		})
+	}
+	if d.HasChange(keyPrefix + "ip_family_policy") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "ipFamilyPolicy",
+			Value: d.Get(keyPrefix + "ip_family_policy").(string),
 		})
 	}
 	if d.HasChange(keyPrefix + "publish_not_ready_addresses") {

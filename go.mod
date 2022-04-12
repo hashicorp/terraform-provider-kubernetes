@@ -23,7 +23,7 @@ require (
 	github.com/hashicorp/terraform-json v0.13.0
 	github.com/hashicorp/terraform-plugin-go v0.8.0
 	github.com/hashicorp/terraform-plugin-log v0.3.0
-	github.com/hashicorp/terraform-plugin-mux v0.2.0
+	github.com/hashicorp/terraform-plugin-mux v0.6.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.12.0
 	github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864 // indirect
 	github.com/jinzhu/copier v0.2.9

@@ -58,6 +58,7 @@ jobs:
           terraform apply --auto-approve
       - name: Run Acceptance Test Suite
         env:
+          TF_ACC_TERRAFORM_VERSION: 1.1.8
           TESTARGS: "-run ${{ github.event.inputs.runTests }}"
           KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/eks/kubeconfig
         run: | 

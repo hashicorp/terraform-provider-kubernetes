@@ -47,6 +47,8 @@ jobs:
           role-duration-seconds: 14400
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ${{ github.event.inputs.terraformVersion }}
       - name: Provision EKS Cluster
         working-directory: ./kubernetes/test-infra/eks
         env:
@@ -60,7 +62,7 @@ jobs:
       - name: Run Acceptance Test Suite
         env:
           TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion }}
-          TESTARGS: "-run ${{ github.event.inputs.runTests }}"
+          TESTARGS: -run '${{ github.event.inputs.runTests }}'
           KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/eks/kubeconfig
         run: | 
           make testacc

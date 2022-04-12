@@ -25,6 +25,9 @@ func TestAccKubernetesDataSourceService_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ip_families.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ip_families.0", "IPv4"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ip_family_policy", "SingleStack"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.port.#", "1"),
 					resource.TestCheckResourceAttrSet(resourceName, "spec.0.cluster_ip"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.name", ""),
@@ -47,6 +50,9 @@ func TestAccKubernetesDataSourceService_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(dataSourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(dataSourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(dataSourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.ip_families.#", "1"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.ip_families.0", "IPv4"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.ip_family_policy", "SingleStack"),
 					resource.TestCheckResourceAttr(dataSourceName, "spec.0.port.#", "1"),
 					resource.TestCheckResourceAttrSet(dataSourceName, "spec.0.cluster_ip"),
 					resource.TestCheckResourceAttr(dataSourceName, "spec.0.port.0.name", ""),
@@ -79,6 +85,8 @@ func testAccKubernetesDataSourceServiceConfig_basic(name string) string {
     }
   }
   spec {
+	ip_families = ["IPv4"]
+	ip_family_policy = "SingleStack"
     port {
       port         = 8080
       target_port  = 80

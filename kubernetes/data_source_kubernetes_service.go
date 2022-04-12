@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	corev1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -43,6 +44,30 @@ func dataSourceKubernetesService() *schema.Resource {
 							Optional:     true,
 							Computed:     true,
 							ValidateFunc: validation.StringInSlice([]string{"Local", "Cluster"}, false),
+						},
+						"ip_families": {
+							Type:        schema.TypeList,
+							Description: "IPFamilies is a list of IP families (e.g. IPv4, IPv6) assigned to this service. This field is usually assigned automatically based on cluster configuration and the ipFamilyPolicy field. If this field is specified manually, the requested family is available in the cluster, and ipFamilyPolicy allows it, it will be used; otherwise creation of the service will fail. This field is conditionally mutable: it allows for adding or removing a secondary IP family, but it does not allow changing the primary IP family of the Service.",
+							Optional:    true,
+							Computed:    true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+								ValidateFunc: validation.StringInSlice([]string{
+									string(corev1.IPv4Protocol),
+									string(corev1.IPv6Protocol),
+								}, false),
+							},
+						},
+						"ip_family_policy": {
+							Type:        schema.TypeString,
+							Description: "IPFamilyPolicy represents the dual-stack-ness requested or required by this Service. If there is no value provided, then this field will be set to SingleStack. Services can be 'SingleStack' (a single IP family), 'PreferDualStack' (two IP families on dual-stack configured clusters or a single IP family on single-stack clusters), or 'RequireDualStack' (two IP families on dual-stack configured clusters, otherwise fail). The ipFamilies and clusterIPs fields depend on the value of this field.",
+							Optional:    true,
+							Computed:    true,
+							ValidateFunc: validation.StringInSlice([]string{
+								string(corev1.IPFamilyPolicySingleStack),
+								string(corev1.IPFamilyPolicyPreferDualStack),
+								string(corev1.IPFamilyPolicyRequireDualStack),
+							}, false),
 						},
 						"load_balancer_ip": {
 							Type:        schema.TypeString,

@@ -1,8 +1,6 @@
 name: Acceptance Tests (EKS)
 
 on:
-  # TODO add inputs for:
-  # region, cluster version, node size, node count, test name matcher
   workflow_dispatch: 
     inputs:
       region: 
@@ -20,6 +18,9 @@ on:
       runTests:
         description: The regex passed to the -run option of go test
         default: ".*"
+      terraformVersion:
+        description: Terraform version 
+        default: 1.1.8
 
 jobs:
   acceptance_tests:
@@ -58,7 +59,7 @@ jobs:
           terraform apply --auto-approve
       - name: Run Acceptance Test Suite
         env:
-          TF_ACC_TERRAFORM_VERSION: 1.1.8
+          TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion }}
           TESTARGS: "-run ${{ github.event.inputs.runTests }}"
           KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/eks/kubeconfig
         run: | 

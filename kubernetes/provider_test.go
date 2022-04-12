@@ -43,14 +43,6 @@ func init() {
 		},
 	}
 	testAccExternalProviders = map[string]resource.ExternalProvider{
-		"kubernetes-local": {
-			VersionConstraint: "9.9.9",
-			Source:            "localhost/test/kubernetes",
-		},
-		"kubernetes-released": {
-			VersionConstraint: "~> 1.13.2",
-			Source:            "hashicorp/kubernetes",
-		},
 		"aws": {
 			Source: "hashicorp/aws",
 		},
@@ -435,20 +427,4 @@ type currentEnv struct {
 	ClusterCACertData string
 	Insecure          string
 	Token             string
-}
-
-func requiredProviders() string {
-	return fmt.Sprintf(`terraform {
-  required_providers {
-    kubernetes-local = {
-      source  = "localhost/test/kubernetes"
-      version = "9.9.9"
-    }
-    kubernetes-released = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 1.13.2"
-    }
-  }
-}
-`)
 }

@@ -116,38 +116,6 @@ func TestAccKubernetesConfigMap_basic(t *testing.T) {
 		},
 	})
 }
-
-func TestAccKubernetesConfigMap_delete_regression(t *testing.T) {
-	var conf api.ConfigMap
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_config_map.test"
-
-	// NOTE this test is to assert that if the resource is deleted
-	// outside of terraform then we should get a plan with a diff
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		ProviderFactories: testAccProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesConfigMapConfig_basic(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
-				),
-			},
-			{
-				PreConfig: func() {
-					deleteConfigMap(t, &conf)
-				},
-				Config:             testAccKubernetesConfigMapConfig_basic(name),
-				ResourceName:       resourceName,
-				PlanOnly:           true,
-				ExpectNonEmptyPlan: true,
-			},
-		},
-	})
-}
-
 func TestAccKubernetesConfigMap_binaryData(t *testing.T) {
 	var conf api.ConfigMap
 	prefix := "tf-acc-test-gen-"

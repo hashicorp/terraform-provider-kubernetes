@@ -1312,45 +1312,6 @@ func testAccCheckKubernetesPodDestroy(s *terraform.State) error {
 	return nil
 }
 
-func TestAccKubernetesPod_regression(t *testing.T) {
-	var conf1, conf2 api.Pod
-
-	name := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ExternalProviders: testAccExternalProviders,
-		CheckDestroy:      testAccCheckKubernetesPodDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: requiredProviders() + testAccKubernetesPodConfig_beforeUpdate(name, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodExists(resourceName, &conf1),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
-				),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
-			},
-			{
-				Config: requiredProviders() + testAccKubernetesPodConfig_afterUpdate(name, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodExists(resourceName, &conf2),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
-					testAccCheckKubernetesPodForceNew(&conf1, &conf2, false),
-				),
-			},
-		},
-	})
-}
-
 func testAccCheckKubernetesPodExists(n string, obj *api.Pod) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
@@ -2756,60 +2717,6 @@ resource "kubernetes_pod" "test" {
   }
 }
 `, name, serviceAccount, imageName)
-}
-
-func testAccKubernetesPodConfig_beforeUpdate(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
-  provider = kubernetes-released
-  metadata {
-    name = "%s"
-  }
-  spec {
-	automount_service_account_token = false
-    container {
-      image = "%s"
-      name  = "containername"
-      resources {
-        limits {
-          memory = "512M"
-          cpu = "1"
-        }
-        requests {
-          memory = "256M"
-          cpu = "50m"
-        }
-      }
-    }
-  }
-}
-`, name, imageName)
-}
-
-func testAccKubernetesPodConfig_afterUpdate(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
-  provider = kubernetes-local
-  metadata {
-    name = "%s"
-  }
-  spec {
-	automount_service_account_token = false
-    container {
-      image = "%s"
-      name  = "containername"
-      resources {
-        limits = {
-          memory = "512M"
-          cpu = "1"
-        }
-        requests = {
-          memory = "256M"
-          cpu = "50m"
-        }
-      }
-    }
-  }
-}
-`, name, imageName)
 }
 
 func testAccKubernetesPodTopologySpreadConstraintConfig(podName, imageName string) string {

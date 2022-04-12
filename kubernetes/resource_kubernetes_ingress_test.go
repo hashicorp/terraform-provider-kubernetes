@@ -182,37 +182,6 @@ func TestAccKubernetesIngress_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesIngress_stateUpgradeV0_loadBalancerIngress(t *testing.T) {
-	var conf1, conf2 api.Ingress
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
-			skipIfNotRunningInEks(t)
-		},
-		ExternalProviders: testAccExternalProviders,
-		IDRefreshName:     "kubernetes_ingress.test",
-		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: requiredProviders() + testAccKubernetesIngressConfig_stateUpgradev0("kubernetes-released", name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf1),
-				),
-			},
-			{
-				Config: requiredProviders() + testAccKubernetesIngressConfig_stateUpgradev0("kubernetes-local", name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf2),
-					testAccCheckKubernetesIngressForceNew(&conf1, &conf2, false),
-				),
-			},
-		},
-	})
-}
-
 func testAccCheckKubernetesIngressForceNew(old, new *api.Ingress, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {

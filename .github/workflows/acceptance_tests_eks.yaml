@@ -3,7 +3,23 @@ name: Acceptance Tests (EKS)
 on:
   # TODO add inputs for:
   # region, cluster version, node size, node count, test name matcher
-  workflow_dispatch: {}  
+  workflow_dispatch: 
+    inputs:
+      region: 
+        description: The AWS region 
+        default: us-east-1
+      clusterVersion:
+        description: The EKS cluster version
+        default: 1.21
+      nodeCount:
+        description: The number of cluster nodes to provision 
+        default: 2
+      instanceType:
+        description: The type of EC2 instance to use for cluster nodes
+        default: m5.large
+      runTests:
+        description: The regex passed to the -run option of go test
+        default: ".*"
 
 jobs:
   acceptance_tests:
@@ -25,19 +41,23 @@ jobs:
           aws-region: us-east-1
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          role-to-assume: ${{secrets.AWS_ASSUME_ROLE_ARN}}
-          role-session-name: github-actions-tests-${{github.run_number}}
+          role-to-assume: ${{ secrets.AWS_ASSUME_ROLE_ARN }}
+          role-session-name: github-actions-tests-${{ github.run_number }}
           role-duration-seconds: 14400
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v1
       - name: Provision EKS Cluster
         working-directory: ./kubernetes/test-infra/eks
+        env:
+          TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion }}
+          TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion }}
         run: |
           terraform init
           terraform apply --auto-approve
       - name: Run Acceptance Test Suite
         env:
-          KUBE_CONFIG_PATH: ${{env.GITHUB_WORKSPACE}}/kubernetes/test-infra/eks/kubeconfig
+          TESTARGS: "-run ${{ github.event.inputs.runTests }}"
+          KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/eks/kubeconfig
         run: | 
           make testacc
       - name: Destroy EKS cluster

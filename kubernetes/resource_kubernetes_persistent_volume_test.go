@@ -294,8 +294,8 @@ func TestAccKubernetesPersistentVolume_aws_basic(t *testing.T) {
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 
-	zone := os.Getenv("AWS_ZONE")
 	region := os.Getenv("AWS_DEFAULT_REGION")
+	zone := region + "a"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInEks(t) },

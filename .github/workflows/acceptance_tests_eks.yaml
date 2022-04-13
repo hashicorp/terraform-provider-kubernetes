@@ -16,7 +16,7 @@ on:
         description: The type of EC2 instance to use for cluster nodes
         default: m5.large
       runTests:
-        description: The regex passed to the -run option of go test
+        description: The regex passed to the -run option of `go test`
         default: ".*"
       terraformVersion:
         description: Terraform version 

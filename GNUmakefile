@@ -7,8 +7,6 @@ WEBSITE_REPO := github.com/hashicorp/terraform-website
 PKG_NAME     := kubernetes
 OS_ARCH      := $(shell go env GOOS)_$(shell go env GOARCH)
 TF_PROV_DOCS := $(PWD)/kubernetes/test-infra/tfproviderdocs
-EXT_PROV_DIR := $(PWD)/kubernetes/test-infra/external-providers
-EXT_PROV_BIN := /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH)/terraform-provider-kubernetes_9.9.9_$(OS_ARCH)
 
 ifneq ($(PWD),$(PROVIDER_DIR))
 $(error "Makefile must be run from the provider directory")
@@ -16,7 +14,7 @@ endif
 
 default: build
 
-all: build depscheck fmtcheck test test-update testacc test-compile tests-lint tests-lint-fix tools vet website-lint website-lint-fix
+all: build depscheck fmtcheck test testacc test-compile tests-lint tests-lint-fix tools vet website-lint website-lint-fix
 
 build: fmtcheck
 	go install
@@ -57,12 +55,7 @@ test: fmtcheck
 		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
 testacc: fmtcheck vet
-	rm -rf $(EXT_PROV_DIR)/.terraform $(EXT_PROV_DIR)/.terraform.lock.hcl || true
-	mkdir $(EXT_PROV_DIR)/.terraform
-	mkdir -p /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH) || true
-	ls $(EXT_PROV_BIN) || go build -o $(EXT_PROV_BIN)
-	cd $(EXT_PROV_DIR) && TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform terraform init -upgrade
-	TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 3h
+	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 3h
 
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \
@@ -84,15 +77,6 @@ tests-lint-fix: tools
 	@echo "==> Fixing acceptance test terraform blocks code with terrafmt..."
 	@find ./kubernetes -name "*_test.go" -exec sed -i ':a;N;$$!ba;s/fmt.Sprintf(`\n/fmt.Sprintf(`/g' '{}' \; # remove newlines for terrafmt
 	@terrafmt fmt -f ./kubernetes --pattern '*_test.go'
-
-test-update: fmtcheck vet
-	rm -rf $(EXT_PROV_DIR)/.terraform $(EXT_PROV_DIR)/.terraform.lock.hcl || true
-	mkdir $(EXT_PROV_DIR)/.terraform
-	mkdir -p /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH) || true
-	go clean -cache
-	go build -o /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH)/terraform-provider-kubernetes_9.9.9_$(OS_ARCH)
-	cd $(EXT_PROV_DIR) && TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform terraform init -upgrade
-	TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform TF_ACC=1 go test $(TEST) -v -run 'regression' $(TESTARGS)
 
 tools:
 	go install github.com/client9/misspell/cmd/misspell@v0.3.4

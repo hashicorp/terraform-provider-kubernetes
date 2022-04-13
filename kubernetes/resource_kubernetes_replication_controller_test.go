@@ -154,36 +154,6 @@ func TestAccKubernetesReplicationController_initContainer(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesReplicationController_regression(t *testing.T) {
-	var conf1, conf2 api.ReplicationController
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImageVersion
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_replication_controller.test",
-		ExternalProviders: testAccExternalProviders,
-		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: requiredProviders() + testAccKubernetesReplicationControllerConfig_beforeUpdate(name, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf1),
-				),
-				// Version 1.13 of the provider has a perpetual diff with enable_service_links
-				ExpectNonEmptyPlan: true,
-			},
-			{
-				Config: requiredProviders() + testAccKubernetesReplicationControllerConfig_afterUpdate(name, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists("kubernetes_replication_controller.test", &conf2),
-					testAccCheckKubernetesReplicationControllerForceNew(&conf1, &conf2, false),
-				),
-			},
-		},
-	})
-}
-
 func TestAccKubernetesReplicationController_generatedName(t *testing.T) {
 	var conf api.ReplicationController
 	prefix := "tf-acc-test-gen-"
@@ -1276,89 +1246,6 @@ func testAccKubernetesReplicationControllerConfigMinimal(name, imageName string)
         container {
           image = "%s"
           name  = "containername"
-        }
-      }
-    }
-  }
-}
-`, name, name, name, name, imageName)
-}
-
-func testAccKubernetesReplicationControllerConfig_beforeUpdate(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
-  provider = kubernetes-released
-  metadata {
-    name = "%s"
-    labels = {
-      test = "%s"
-    }
-  }
-  spec {
-    selector = {
-      test = "%s"
-    }
-    template {
-      metadata {
-        labels = {
-          test = "%s"
-        }
-      }
-      spec {
-        container {
-          image = "%s"
-          name  = "containername"
-          resources {
-            limits {
-              memory = "512M"
-              cpu = "1"
-            }
-            requests {
-              memory = "256M"
-              cpu = "50m"
-            }
-          }
-        }
-      }
-    }
-  }
-}
-`, name, name, name, name, imageName)
-}
-
-func testAccKubernetesReplicationControllerConfig_afterUpdate(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_replication_controller" "test" {
-  provider = kubernetes-local
-  metadata {
-    name = "%s"
-    labels = {
-      test = "%s"
-    }
-  }
-  spec {
-    selector = {
-      test = "%s"
-    }
-    template {
-      metadata {
-        labels = {
-          test = "%s"
-        }
-      }
-      spec {
-        automount_service_account_token = false
-        container {
-          image = "%s"
-          name  = "containername"
-          resources {
-            limits = {
-              memory = "512M"
-              cpu = "1"
-            }
-            requests = {
-              memory = "256M"
-              cpu = "50m"
-            }
-          }
         }
       }
     }

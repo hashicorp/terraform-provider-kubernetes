@@ -265,35 +265,6 @@ func TestAccKubernetesDaemonSet_with_tolerations_unset_toleration_seconds(t *tes
 	})
 }
 
-func TestAccKubernetesDaemonSet_regression(t *testing.T) {
-	var conf1, conf2 appsv1.DaemonSet
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_daemonset.test",
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
-		ExternalProviders: testAccExternalProviders,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: requiredProviders() + testAccKubernetesDaemonSetConfig_beforeUpdate(name, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf1),
-				),
-			},
-			{
-				Config: requiredProviders() + testAccKubernetesDaemonSetConfig_afterUpdate(name, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDaemonSetExists("kubernetes_daemonset.test", &conf2),
-					testAccCheckKubernetesDaemonsetForceNew(&conf1, &conf2, false),
-				),
-			},
-		},
-	})
-}
-
 func TestAccKubernetesDaemonSet_with_container_security_context_seccomp_profile(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -760,93 +731,6 @@ func testAccKubernetesDaemonSetConfigWithTolerations(rcName, imageName string, t
   }
 }
 `, rcName, operator, valueString, tolerationDuration, imageName)
-}
-
-func testAccKubernetesDaemonSetConfig_beforeUpdate(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
-  provider = kubernetes-released
-  metadata {
-    name = "%s"
-  }
-
-  spec {
-    selector {
-      match_labels = {
-        foo = "bar"
-      }
-    }
-
-    template {
-      metadata {
-        labels = {
-          foo = "bar"
-        }
-      }
-
-      spec {
-        container {
-          image = "%s"
-          name  = "tf-acc-test"
-          resources {
-            limits {
-              memory = "512M"
-              cpu = "1"
-            }
-            requests {
-              memory = "256M"
-              cpu = "50m"
-            }
-          }
-        }
-      }
-    }
-  }
-}
-`, name, imageName)
-}
-
-func testAccKubernetesDaemonSetConfig_afterUpdate(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_daemonset" "test" {
-  provider = kubernetes-local
-  metadata {
-    name = "%s"
-  }
-
-  spec {
-    selector {
-      match_labels = {
-        foo = "bar"
-      }
-    }
-
-    template {
-      metadata {
-        labels = {
-          foo = "bar"
-        }
-      }
-
-      spec {
-        container {
-          image = "%s"
-          name  = "tf-acc-test"
-
-          resources {
-            limits = {
-              memory = "512M"
-              cpu = "1"
-            }
-            requests = {
-              memory = "256M"
-              cpu = "50m"
-            }
-          }
-        }
-      }
-    }
-  }
-}
-`, name, imageName)
 }
 
 func testAccKubernetesDaemonSetConfigWithContainerSecurityContextSeccompProfile(deploymentName, imageName, seccompProfileType string) string {

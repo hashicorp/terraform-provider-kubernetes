@@ -20,9 +20,12 @@ func TestAccKubernetesJob_wait_for_completion(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
 		IDRefreshName: "kubernetes_job.test",
-		IDRefreshIgnore: []string{"spec.0.selector.0.match_expressions.#",
+		IDRefreshIgnore: []string{
+			"metadata.0.resource_version",
+			"spec.0.selector.0.match_expressions.#",
 			"spec.0.template.0.spec.0.container.0.resources.0.limits.#",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests.#"},
+			"spec.0.template.0.spec.0.container.0.resources.0.requests.#",
+		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesJobDestroy,
 		Steps: []resource.TestStep{

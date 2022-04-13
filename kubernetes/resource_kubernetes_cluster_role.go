@@ -142,7 +142,7 @@ func resourceKubernetesClusterRoleRead(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received cluster role: %#v", cRole)
-	err = d.Set("metadata", flattenMetadata(cRole.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(cRole.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

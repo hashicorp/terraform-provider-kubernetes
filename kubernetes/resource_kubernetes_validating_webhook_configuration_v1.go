@@ -203,7 +203,7 @@ func resourceKubernetesValidatingWebhookConfigurationV1Read(ctx context.Context,
 		return diag.FromErr(err)
 	}
 
-	err = d.Set("metadata", flattenMetadata(cfg.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(cfg.ObjectMeta, d, meta))
 	if err != nil {
 		return nil
 	}

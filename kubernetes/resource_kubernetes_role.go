@@ -118,7 +118,7 @@ func resourceKubernetesRoleRead(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	log.Printf("[INFO] Received role: %#v", role)
-	err = d.Set("metadata", flattenMetadata(role.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(role.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

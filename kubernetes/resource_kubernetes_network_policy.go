@@ -288,7 +288,7 @@ func resourceKubernetesNetworkPolicyRead(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received network policy: %#v", svc)
-	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

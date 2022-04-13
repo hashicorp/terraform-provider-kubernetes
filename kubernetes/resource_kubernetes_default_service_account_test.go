@@ -2,11 +2,12 @@ package kubernetes
 
 import (
 	"fmt"
+	"regexp"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	api "k8s.io/api/core/v1"
-	"regexp"
-	"testing"
 )
 
 func TestAccKubernetesDefaultServiceAccount_basic(t *testing.T) {
@@ -27,12 +28,10 @@ func TestAccKubernetesDefaultServiceAccount_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelTwo", "two"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelThree", "three"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelTwo": "two", "TestLabelThree": "three"}),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", "default"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),

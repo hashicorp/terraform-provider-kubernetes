@@ -177,12 +177,12 @@ func resourceKubernetesReplicationControllerRead(ctx context.Context, d *schema.
 	}
 	log.Printf("[INFO] Received replication controller: %#v", rc)
 
-	err = d.Set("metadata", flattenMetadata(rc.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(rc.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	spec, err := flattenReplicationControllerSpec(rc.Spec, d)
+	spec, err := flattenReplicationControllerSpec(rc.Spec, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}

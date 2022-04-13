@@ -175,7 +175,7 @@ func resourceKubernetesPodRead(ctx context.Context, d *schema.ResourceData, meta
 	}
 	log.Printf("[INFO] Received pod: %#v", pod)
 
-	err = d.Set("metadata", flattenMetadata(pod.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(pod.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

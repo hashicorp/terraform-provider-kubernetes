@@ -262,7 +262,7 @@ func resourceKubernetesServiceAccountRead(ctx context.Context, d *schema.Resourc
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received service account: %#v", svcAcc)
-	err = d.Set("metadata", flattenMetadata(svcAcc.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(svcAcc.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

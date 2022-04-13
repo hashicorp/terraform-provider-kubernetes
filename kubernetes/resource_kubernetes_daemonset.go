@@ -251,12 +251,12 @@ func resourceKubernetesDaemonSetRead(ctx context.Context, d *schema.ResourceData
 	}
 	log.Printf("[INFO] Received daemonset: %#v", daemonset)
 
-	err = d.Set("metadata", flattenMetadata(daemonset.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(daemonset.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	spec, err := flattenDaemonSetSpec(daemonset.Spec, d)
+	spec, err := flattenDaemonSetSpec(daemonset.Spec, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}

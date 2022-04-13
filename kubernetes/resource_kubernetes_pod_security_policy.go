@@ -418,7 +418,7 @@ func resourceKubernetesPodSecurityPolicyRead(ctx context.Context, d *schema.Reso
 	}
 
 	log.Printf("[INFO] Received PodSecurityPolicy: %#v", psp)
-	err = d.Set("metadata", flattenMetadata(psp.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(psp.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

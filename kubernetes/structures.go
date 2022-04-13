@@ -118,19 +118,31 @@ func expandStringSlice(s []interface{}) []string {
 	return result
 }
 
-func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, metaPrefix ...string) []interface{} {
+func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMetadata interface{}, metaPrefix ...string) []interface{} {
 	m := make(map[string]interface{})
 	prefix := ""
 	if len(metaPrefix) > 0 {
 		prefix = metaPrefix[0]
 	}
 	configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
-	m["annotations"] = removeInternalKeys(meta.Annotations, configAnnotations)
+
+	var ignoreAnnotations []string
+	if v, ok := providerMetadata.(kubeClientsets).configData.Get("ignore_annotations").([]interface{}); ok {
+		ignoreAnnotations = expandStringSlice(v)
+	}
+
+	m["annotations"] = removeInternalKeys(meta.Annotations, configAnnotations, ignoreAnnotations)
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}
 	configLabels := d.Get(prefix + "metadata.0.labels").(map[string]interface{})
-	m["labels"] = removeInternalKeys(meta.Labels, configLabels)
+
+	var ignoreLabels []string
+	if v, ok := providerMetadata.(kubeClientsets).configData.Get("ignore_labels").([]interface{}); ok {
+		ignoreLabels = expandStringSlice(v)
+	}
+
+	m["labels"] = removeInternalKeys(meta.Labels, configLabels, ignoreLabels)
 	m["name"] = meta.Name
 	m["resource_version"] = meta.ResourceVersion
 	m["uid"] = fmt.Sprintf("%v", meta.UID)
@@ -143,16 +155,20 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, metaPrefix 
 	return []interface{}{m}
 }
 
-func removeInternalKeys(m map[string]string, d map[string]interface{}) map[string]string {
+// This function removes given Kubernetes metadata(annotations and labels) keys
+// So they won't be available in the TF state file and will be ignored during apply/plan operations
+func removeInternalKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadata []string) map[string]string {
 	for k := range m {
-		if isInternalKey(k) && !isKeyInMap(k, d) {
+		if isKubernetesMetadataKey(k, ignoreKubernetesMetadata) && !isProvderManagedKey(k, d) {
 			delete(m, k)
 		}
 	}
 	return m
 }
 
-func isKeyInMap(key string, d map[string]interface{}) bool {
+// This function verifies if a given Kubernetes metadata(annotations and labels) key
+// is among the keys that were applied by the provider and if so, they can't be ignored
+func isProvderManagedKey(key string, d map[string]interface{}) bool {
 	if d == nil {
 		return false
 	}
@@ -164,8 +180,10 @@ func isKeyInMap(key string, d map[string]interface{}) bool {
 	return false
 }
 
-func isInternalKey(annotationKey string) bool {
-	u, err := url.Parse("//" + annotationKey)
+// This function verifies if a given Kubernetes metadata(annotations and labels) key
+// is among the keys that need to be ignored
+func isKubernetesMetadataKey(kubernetesMetadataKey string, ignoreKubernetesMetadata []string) bool {
+	u, err := url.Parse("//" + kubernetesMetadataKey)
 	if err != nil {
 		return false
 	}
@@ -186,9 +204,16 @@ func isInternalKey(annotationKey string) bool {
 	}
 
 	// Specific to DaemonSet annotations, generated & controlled by the server.
-	if strings.Contains(annotationKey, "deprecated.daemonset.template.generation") {
+	if strings.Contains(kubernetesMetadataKey, "deprecated.daemonset.template.generation") {
 		return true
 	}
+
+	for _, im := range ignoreKubernetesMetadata {
+		if kubernetesMetadataKey == im {
+			return true
+		}
+	}
+
 	return false
 }
 

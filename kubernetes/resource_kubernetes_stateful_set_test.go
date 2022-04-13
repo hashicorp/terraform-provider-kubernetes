@@ -41,8 +41,11 @@ func TestAccKubernetesStatefulSet_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
 		IDRefreshName: "kubernetes_stateful_set.test",
-		IDRefreshIgnore: []string{"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests"},
+		IDRefreshIgnore: []string{
+			"metadata.0.resource_version",
+			"spec.0.template.0.spec.0.container.0.resources.0.limits",
+			"spec.0.template.0.spec.0.container.0.resources.0.requests",
+		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{
@@ -111,8 +114,11 @@ func TestAccKubernetesStatefulSet_basic_idempotency(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
 		IDRefreshName: "kubernetes_stateful_set.test",
-		IDRefreshIgnore: []string{"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests"},
+		IDRefreshIgnore: []string{
+			"metadata.0.resource_version",
+			"spec.0.template.0.spec.0.container.0.resources.0.limits",
+			"spec.0.template.0.spec.0.container.0.resources.0.requests",
+		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{
@@ -140,8 +146,11 @@ func TestAccKubernetesStatefulSet_Update(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
 		IDRefreshName: "kubernetes_stateful_set.test",
-		IDRefreshIgnore: []string{"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests"},
+		IDRefreshIgnore: []string{
+			"metadata.0.resource_version",
+			"spec.0.template.0.spec.0.container.0.resources.0.limits",
+			"spec.0.template.0.spec.0.container.0.resources.0.requests",
+		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{

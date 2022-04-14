@@ -676,6 +676,34 @@ func TestAccKubernetesService_generatedName(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesServiceV1_ipFamilies(t *testing.T) {
+	var conf api.Service
+	prefix := "tf-acc-test-gen-"
+	resourceName := "kubernetes_service_v1.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesServiceConfigV1_ipFamilies(prefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", prefix),
+					resource.TestMatchResourceAttr(resourceName, "metadata.0.name", regexp.MustCompile("^"+prefix)),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesServiceForceNew(old, new *api.Service, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {
@@ -1160,6 +1188,27 @@ func testAccKubernetesServiceConfig_generatedName(prefix string) string {
       port        = 8080
       target_port = 80
     }
+  }
+}
+`, prefix)
+}
+
+func testAccKubernetesServiceConfigV1_ipFamilies(prefix string) string {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
+  metadata {
+    generate_name = "%s"
+  }
+
+  spec {
+    port {
+      port        = 8080
+      target_port = 80
+    }
+
+    ip_families = [
+      "IPv4",
+    ]
+    ip_family_policy = "SingleStack"
   }
 }
 `, prefix)

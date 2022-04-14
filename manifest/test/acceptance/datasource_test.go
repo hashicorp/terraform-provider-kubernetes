@@ -1,3 +1,4 @@
+//go:build acceptance
 // +build acceptance
 
 package acceptance
@@ -29,10 +30,10 @@ func TestDataSourceKubernetesResource_ConfigMap(t *testing.T) {
 	defer k8shelper.DeleteResource(t, namespace, kubernetes.NewGroupVersionResource("v1", "namespaces"))
 
 	// STEP 1: Create a ConfigMap to use as a data source
-	tf := tfhelper.RequireNewWorkingDir(t)
-	tf.SetReattachInfo(reattachInfo)
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
 	defer func() {
-		tf.RequireDestroy(t)
+		tf.Destroy(ctx)
 		tf.Close()
 		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "configmaps", namespace, name)
 	}()
@@ -43,9 +44,9 @@ func TestDataSourceKubernetesResource_ConfigMap(t *testing.T) {
 		"namespace": namespace,
 	}
 	tfconfig := loadTerraformConfig(t, "datasource/step1.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfig)
-	tf.RequireInit(t)
-	tf.RequireApply(t)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
+	tf.Apply(ctx)
 
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "configmaps", namespace, name)
 
@@ -54,20 +55,24 @@ func TestDataSourceKubernetesResource_ConfigMap(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to create additional provider instance: %q", err)
 	}
-	step2 := tfhelper.RequireNewWorkingDir(t)
-	step2.SetReattachInfo(reattachInfo2)
+	step2 := tfhelper.RequireNewWorkingDir(ctx, t)
+	step2.SetReattachInfo(ctx, reattachInfo2)
 	defer func() {
-		step2.RequireDestroy(t)
+		step2.Destroy(ctx)
 		step2.Close()
 		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "configmaps", namespace, name2)
 	}()
 
 	tfconfig = loadTerraformConfig(t, "datasource/step2.tf", tfvars)
-	step2.RequireSetConfig(t, string(tfconfig))
-	step2.RequireInit(t)
-	step2.RequireApply(t)
+	step2.SetConfig(ctx, string(tfconfig))
+	step2.Init(ctx)
+	step2.Apply(ctx)
 
-	tfstate := tfstatehelper.NewHelper(step2.RequireState(t))
+	s2, err := step2.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	tfstate := tfstatehelper.NewHelper(s2)
 
 	// check the data source
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{

@@ -25,10 +25,10 @@ func TestKubernetesManifest_fieldManager(t *testing.T) {
 	name := randName()
 	namespace := randName()
 
-	tf := tfhelper.RequireNewWorkingDir(t)
-	tf.SetReattachInfo(reattachInfo)
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
 	defer func() {
-		tf.RequireDestroy(t)
+		tf.Destroy(ctx)
 		tf.Close()
 		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "configmaps", namespace, name)
 	}()
@@ -45,13 +45,17 @@ func TestKubernetesManifest_fieldManager(t *testing.T) {
 		"data":          "bar",
 	}
 	tfconfig := loadTerraformConfig(t, "FieldManager/field_manager.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfig)
-	tf.RequireInit(t)
-	tf.RequireApply(t)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
+	tf.Apply(ctx)
 
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "configmaps", namespace, name)
 
-	tfstate := tfstatehelper.NewHelper(tf.RequireState(t))
+	s, err := tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	tfstate := tfstatehelper.NewHelper(s)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
 		"kubernetes_manifest.test.object.metadata.namespace":       namespace,
 		"kubernetes_manifest.test.object.metadata.name":            name,
@@ -69,9 +73,9 @@ func TestKubernetesManifest_fieldManager(t *testing.T) {
 		"data":          "foobar",
 	}
 	tfconfig = loadTerraformConfig(t, "FieldManager/field_manager.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfig)
-	tf.RequireInit(t)
-	err = tf.Apply() // this should fail
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
+	err = tf.Apply(ctx) // this should fail
 	if err == nil || !strings.Contains(err.Error(), "There was a field manager conflict when trying to apply the manifest") {
 		t.Log(err.Error())
 		t.Fatal("Expected terraform apply to cause a field manager conflict")
@@ -86,13 +90,17 @@ func TestKubernetesManifest_fieldManager(t *testing.T) {
 		"data":          "foobar",
 	}
 	tfconfig = loadTerraformConfig(t, "FieldManager/field_manager.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfig)
-	tf.RequireInit(t)
-	tf.RequireApply(t)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
+	tf.Apply(ctx)
 
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "configmaps", namespace, name)
 
-	tfstate = tfstatehelper.NewHelper(tf.RequireState(t))
+	s, err = tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	tfstate = tfstatehelper.NewHelper(s)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
 		"kubernetes_manifest.test.object.metadata.namespace":       namespace,
 		"kubernetes_manifest.test.object.metadata.name":            name,

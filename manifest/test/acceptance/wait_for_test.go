@@ -25,10 +25,10 @@ func TestKubernetesManifest_WaitForFields_Pod(t *testing.T) {
 	name := randName()
 	namespace := randName()
 
-	tf := tfhelper.RequireNewWorkingDir(t)
-	tf.SetReattachInfo(reattachInfo)
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
 	defer func() {
-		tf.RequireDestroy(t)
+		tf.Destroy(ctx)
 		tf.Close()
 		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "pods", namespace, name)
 	}()
@@ -41,11 +41,11 @@ func TestKubernetesManifest_WaitForFields_Pod(t *testing.T) {
 		"name":      name,
 	}
 	tfconfig := loadTerraformConfig(t, "WaitFor/wait_for_fields_pod.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfig)
-	tf.RequireInit(t)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
 
 	startTime := time.Now()
-	tf.RequireApply(t)
+	tf.Apply(ctx)
 
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "pods", namespace, name)
 
@@ -57,7 +57,11 @@ func TestKubernetesManifest_WaitForFields_Pod(t *testing.T) {
 		t.Fatalf("the apply should have taken at least %s", minDuration)
 	}
 
-	tfstate := tfstatehelper.NewHelper(tf.RequireState(t))
+	s, err := tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	tfstate := tfstatehelper.NewHelper(s)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
 		"kubernetes_manifest.test.wait_for.fields": map[string]interface{}{
 			"metadata.annotations[\"test.terraform.io\"]": "test",

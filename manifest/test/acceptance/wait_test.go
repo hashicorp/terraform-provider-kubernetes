@@ -1,3 +1,4 @@
+//go:build acceptance
 // +build acceptance
 
 package acceptance
@@ -25,10 +26,10 @@ func TestKubernetesManifest_WaitFields_Pod(t *testing.T) {
 		t.Errorf("Failed to create provider instance: %q", err)
 	}
 
-	tf := tfhelper.RequireNewWorkingDir(t)
-	tf.SetReattachInfo(reattachInfo)
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
 	defer func() {
-		tf.RequireDestroy(t)
+		tf.Destroy(ctx)
 		tf.Close()
 		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "pods", namespace, name)
 	}()
@@ -41,11 +42,11 @@ func TestKubernetesManifest_WaitFields_Pod(t *testing.T) {
 		"name":      name,
 	}
 	tfconfig := loadTerraformConfig(t, "Wait/wait_for_fields_pod.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfig)
-	tf.RequireInit(t)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
 
 	startTime := time.Now()
-	tf.RequireApply(t)
+	tf.Apply(ctx)
 
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "pods", namespace, name)
 
@@ -57,7 +58,11 @@ func TestKubernetesManifest_WaitFields_Pod(t *testing.T) {
 		t.Fatalf("the apply should have taken at least %s", minDuration)
 	}
 
-	tfstate := tfstatehelper.NewHelper(tf.RequireState(t))
+	st, err := tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to obtain state: %q", err)
+	}
+	tfstate := tfstatehelper.NewHelper(st)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
 		"kubernetes_manifest.test.wait.0.fields": map[string]interface{}{
 			"metadata.annotations[\"test.terraform.io\"]": "test",
@@ -80,10 +85,10 @@ func TestKubernetesManifest_WaitRollout_Deployment(t *testing.T) {
 		t.Errorf("Failed to create provider instance: %q", err)
 	}
 
-	tf := tfhelper.RequireNewWorkingDir(t)
-	tf.SetReattachInfo(reattachInfo)
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
 	defer func() {
-		tf.RequireDestroy(t)
+		tf.Destroy(ctx)
 		tf.Close()
 		k8shelper.AssertNamespacedResourceDoesNotExist(t, "apps/v1", "deployments", namespace, name)
 	}()
@@ -96,11 +101,11 @@ func TestKubernetesManifest_WaitRollout_Deployment(t *testing.T) {
 		"name":      name,
 	}
 	tfconfig := loadTerraformConfig(t, "Wait/wait_for_rollout.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfig)
-	tf.RequireInit(t)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
 
 	startTime := time.Now()
-	tf.RequireApply(t)
+	tf.Apply(ctx)
 
 	k8shelper.AssertNamespacedResourceExists(t, "apps/v1", "deployments", namespace, name)
 
@@ -112,7 +117,11 @@ func TestKubernetesManifest_WaitRollout_Deployment(t *testing.T) {
 		t.Fatalf("the apply should have taken at least %s", minDuration)
 	}
 
-	tfstate := tfstatehelper.NewHelper(tf.RequireState(t))
+	st, err := tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get state: %q", err)
+	}
+	tfstate := tfstatehelper.NewHelper(st)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
 		"kubernetes_manifest.wait_for_rollout.wait.0.rollout": true,
 	})

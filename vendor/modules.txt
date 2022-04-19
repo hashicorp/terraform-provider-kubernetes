@@ -72,7 +72,6 @@ github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
 # github.com/golang/protobuf v1.5.2
 github.com/golang/protobuf/proto
-github.com/golang/protobuf/protoc-gen-go
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
@@ -119,12 +118,6 @@ github.com/hashicorp/go-cty/cty/gocty
 github.com/hashicorp/go-cty/cty/json
 github.com/hashicorp/go-cty/cty/msgpack
 github.com/hashicorp/go-cty/cty/set
-<<<<<<< HEAD
-=======
-# github.com/hashicorp/go-getter v1.5.3
-github.com/hashicorp/go-getter
-github.com/hashicorp/go-getter/helper/url
->>>>>>> 2167f7ff (Upgrade terraform-plugin-mux to v0.6.0)
 # github.com/hashicorp/go-hclog v1.2.0
 ## explicit
 github.com/hashicorp/go-hclog
@@ -184,24 +177,16 @@ github.com/hashicorp/terraform-plugin-go/tfprotov6/internal/toproto
 github.com/hashicorp/terraform-plugin-go/tfprotov6/tf6server
 github.com/hashicorp/terraform-plugin-go/tftypes
 # github.com/hashicorp/terraform-plugin-log v0.3.0
-<<<<<<< HEAD
 ## explicit
-=======
->>>>>>> 2167f7ff (Upgrade terraform-plugin-mux to v0.6.0)
 github.com/hashicorp/terraform-plugin-log/internal/hclogutils
 github.com/hashicorp/terraform-plugin-log/internal/logging
 github.com/hashicorp/terraform-plugin-log/tflog
 github.com/hashicorp/terraform-plugin-log/tfsdklog
 # github.com/hashicorp/terraform-plugin-mux v0.6.0
 ## explicit
-<<<<<<< HEAD
-github.com/hashicorp/terraform-plugin-mux
-# github.com/hashicorp/terraform-plugin-sdk/v2 v2.12.0
-=======
 github.com/hashicorp/terraform-plugin-mux/internal/logging
 github.com/hashicorp/terraform-plugin-mux/tf5muxserver
-# github.com/hashicorp/terraform-plugin-sdk/v2 v2.10.0
->>>>>>> 2167f7ff (Upgrade terraform-plugin-mux to v0.6.0)
+# github.com/hashicorp/terraform-plugin-sdk/v2 v2.12.0
 ## explicit
 github.com/hashicorp/terraform-plugin-sdk/v2/diag
 github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest
@@ -419,10 +404,6 @@ google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
 # google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c
 google.golang.org/genproto/googleapis/rpc/status
-<<<<<<< HEAD
-=======
-google.golang.org/genproto/googleapis/type/expr
->>>>>>> 2167f7ff (Upgrade terraform-plugin-mux to v0.6.0)
 # google.golang.org/grpc v1.45.0
 ## explicit
 google.golang.org/grpc
@@ -475,11 +456,6 @@ google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
 # google.golang.org/protobuf v1.27.1
-<<<<<<< HEAD
-=======
-google.golang.org/protobuf/cmd/protoc-gen-go/internal_gengo
-google.golang.org/protobuf/compiler/protogen
->>>>>>> 2167f7ff (Upgrade terraform-plugin-mux to v0.6.0)
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
 google.golang.org/protobuf/internal/descfmt

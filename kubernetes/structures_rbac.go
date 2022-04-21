@@ -88,8 +88,10 @@ func expandClusterRoleAggregationRule(in []interface{}) *api.AggregationRule {
 	m := in[0].(map[string]interface{})
 
 	if v, ok := m["cluster_role_selectors"].([]interface{}); ok && len(v) > 0 {
-		crs := make([]metav1.LabelSelector, 0)
-		crs = append(crs, *expandLabelSelector(v))
+		crs := make([]metav1.LabelSelector, len(v))
+		for i, w := range v {
+			crs[i] = *expandLabelSelector([]interface{}{w})
+		}
 		ref.ClusterRoleSelectors = crs
 	}
 
@@ -142,9 +144,11 @@ func flattenClusterRoleAggregationRule(in *api.AggregationRule) []interface{} {
 	att := make(map[string]interface{})
 
 	if len(in.ClusterRoleSelectors) > 0 {
-		for _, crs := range in.ClusterRoleSelectors {
-			att["cluster_role_selectors"] = flattenLabelSelector(&crs)
+		crs := make([]interface{}, 0)
+		for _, v := range in.ClusterRoleSelectors {
+			crs = append(crs, flattenLabelSelector(&v)...)
 		}
+		att["cluster_role_selectors"] = crs
 	}
 
 	return []interface{}{att}

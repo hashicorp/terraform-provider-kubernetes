@@ -182,6 +182,46 @@ func TestAccKubernetesClusterRole_aggregationRuleBasic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesClusterRole_aggregationRuleMultiple(t *testing.T) {
+	var conf api.ClusterRole
+	resourceName := "kubernetes_cluster_role.test"
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesClusterRoleConfig_aggRuleMultiple(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.0.match_labels.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.1.match_labels.bar", "foo"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
+				Config: testAccKubernetesClusterRoleConfig_aggRuleMultipleModified(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.0.match_labels.bar", "foo"),
+					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.1.match_labels.foo", "bar"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesClusterRole_aggregationRuleRuleAggregation(t *testing.T) {
 	var conf api.ClusterRole
 	resourceName := "kubernetes_cluster_role.test"
@@ -440,6 +480,50 @@ func testAccKubernetesClusterRoleConfig_aggRuleModified(name string) string {
         key      = "env"
         operator = "NotIn"
         values   = ["non"]
+      }
+    }
+  }
+}
+`, name)
+}
+
+func testAccKubernetesClusterRoleConfig_aggRuleMultiple(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  aggregation_rule {
+    cluster_role_selectors {
+      match_labels = {
+        foo = "bar"
+      }
+    }
+    cluster_role_selectors {
+      match_labels = {
+        bar = "foo"
+      }
+    }
+  }
+}
+`, name)
+}
+
+func testAccKubernetesClusterRoleConfig_aggRuleMultipleModified(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  aggregation_rule {
+    cluster_role_selectors {
+      match_labels = {
+        bar = "foo"
+      }
+    }
+    cluster_role_selectors {
+      match_labels = {
+        foo = "bar"
       }
     }
   }

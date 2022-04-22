@@ -38,10 +38,7 @@ func FromTFValue(in tftypes.Value, th map[string]string, ap *tftypes.AttributePa
 			}
 			return inv, nil
 		}
-		fnv, acc := nv.Float64()
-		if acc != big.Exact {
-			return nil, ap.NewErrorf("[%s] inexact float approximation when converting number value", ap.String())
-		}
+		fnv, _ := nv.Float64()
 		return fnv, err
 	case in.Type().Is(tftypes.String):
 		var sv string

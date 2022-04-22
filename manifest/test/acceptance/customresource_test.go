@@ -5,6 +5,7 @@ package acceptance
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -86,6 +87,7 @@ func TestKubernetesManifest_CustomResource(t *testing.T) {
 		"kubernetes_manifest.test.object.metadata.name":      name,
 		"kubernetes_manifest.test.object.metadata.namespace": namespace,
 		"kubernetes_manifest.test.object.data":               "this is a test",
+		"kubernetes_manifest.test.object.refs":               json.Number("98.765"),
 		"kubernetes_manifest.test.object.stuff.0":            map[string]interface{}{"foo": interface{}(nil)},
 		"kubernetes_manifest.test.object.limits": map[string]interface{}{
 			"foo": interface{}("bar"),

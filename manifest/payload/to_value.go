@@ -69,7 +69,7 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
 				return tftypes.NewValue(tftypes.String, strconv.FormatInt(in.(int64), 10)), nil
 			}
-			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "in64" to "tftypes.String"`, at.String())
+			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "int64" to "tftypes.String"`, at.String())
 		default:
 			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "int64" to "%s"`, at.String(), st.String())
 		}

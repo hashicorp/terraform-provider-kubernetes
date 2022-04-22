@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -209,7 +210,7 @@ func isKubernetesMetadataKey(kubernetesMetadataKey string, ignoreKubernetesMetad
 	}
 
 	for _, im := range ignoreKubernetesMetadata {
-		if kubernetesMetadataKey == im {
+		if ok, _ := regexp.MatchString(im, kubernetesMetadataKey); ok {
 			return true
 		}
 	}

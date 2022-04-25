@@ -34,6 +34,22 @@ func flattenIPFamilies(in []v1.IPFamily) []interface{} {
 	return att
 }
 
+func flattenSessionAffinityConfigClientIP(in v1.ClientIPConfig) []interface{} {
+	a := make([]interface{}, 0, 0)
+	att := make(map[string]interface{})
+	att["timeout_seconds"] = in.TimeoutSeconds
+	a = append(a, att)
+	return a
+}
+
+func flattenSessionAffinityConfig(in v1.SessionAffinityConfig) []interface{} {
+	a := make([]interface{}, 0, 0)
+	att := make(map[string]interface{})
+	att["client_ip"] = flattenSessionAffinityConfigClientIP(*in.ClientIP)
+	a = append(a, att)
+	return a
+}
+
 func flattenServiceSpec(in v1.ServiceSpec) []interface{} {
 	att := make(map[string]interface{})
 	if len(in.Ports) > 0 {
@@ -45,11 +61,31 @@ func flattenServiceSpec(in v1.ServiceSpec) []interface{} {
 	if in.ClusterIP != "" {
 		att["cluster_ip"] = in.ClusterIP
 	}
+	if len(in.ClusterIPs) > 0 {
+		att["cluster_ips"] = in.ClusterIPs
+	}
+	// Set 'allocate_load_balancer_node_ports' to 'true' to match with its default value
+	// when it is not declared in the TF code. That helps to avoid plan diff when
+	// service type is not 'LoadBalancer'.
+	att["allocate_load_balancer_node_ports"] = true
 	if in.Type != "" {
 		att["type"] = string(in.Type)
+		if in.Type == v1.ServiceTypeLoadBalancer {
+			// spec.allocateLoadBalancerNodePorts may only be used when `type` is 'LoadBalancer'
+			if in.AllocateLoadBalancerNodePorts != nil {
+				att["allocate_load_balancer_node_ports"] = in.AllocateLoadBalancerNodePorts
+			}
+			// spec.loadBalancerClass may only be used when `type` is 'LoadBalancer'
+			if in.LoadBalancerClass != nil {
+				att["load_balancer_class"] = in.LoadBalancerClass
+			}
+		}
 	}
 	if len(in.ExternalIPs) > 0 {
 		att["external_ips"] = newStringSet(schema.HashString, in.ExternalIPs)
+	}
+	if in.InternalTrafficPolicy != nil {
+		att["internal_traffic_policy"] = in.InternalTrafficPolicy
 	}
 	if len(in.IPFamilies) > 0 {
 		att["ip_families"] = flattenIPFamilies(in.IPFamilies)
@@ -59,6 +95,9 @@ func flattenServiceSpec(in v1.ServiceSpec) []interface{} {
 	}
 	if in.SessionAffinity != "" {
 		att["session_affinity"] = string(in.SessionAffinity)
+	}
+	if in.SessionAffinityConfig != nil {
+		att["session_affinity_config"] = flattenSessionAffinityConfig(*in.SessionAffinityConfig)
 	}
 	if in.LoadBalancerIP != "" {
 		att["load_balancer_ip"] = in.LoadBalancerIP
@@ -138,6 +177,30 @@ func expandIPFamilies(l []interface{}) []v1.IPFamily {
 	return obj
 }
 
+func expandSessionAffinityConfigClientIP(l []interface{}) *v1.ClientIPConfig {
+	var to int32
+	in := l[0].(map[string]interface{})
+	if v, ok := in["timeout_seconds"].(int); ok {
+		to = int32(v)
+	}
+	return &v1.ClientIPConfig{TimeoutSeconds: &to}
+}
+
+func expandSessionAffinityConfig(l []interface{}) *v1.SessionAffinityConfig {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.SessionAffinityConfig{}
+	}
+
+	in := l[0].(map[string]interface{})
+	obj := &v1.SessionAffinityConfig{}
+
+	if v, ok := in["client_ip"].([]interface{}); ok {
+		obj.ClientIP = expandSessionAffinityConfigClientIP(v)
+	}
+
+	return obj
+}
+
 func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 	if len(l) == 0 || l[0] == nil {
 		return v1.ServiceSpec{}
@@ -154,11 +217,29 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 	if v, ok := in["cluster_ip"].(string); ok {
 		obj.ClusterIP = v
 	}
+	if v, ok := in["cluster_ips"].([]interface{}); ok && len(v) > 0 {
+		obj.ClusterIPs = expandStringSlice(v)
+	}
 	if v, ok := in["type"].(string); ok {
 		obj.Type = v1.ServiceType(v)
+
+		if v == string(v1.ServiceTypeLoadBalancer) {
+			// spec.allocateLoadBalancerNodePorts may only be used when `type` is 'LoadBalancer'
+			if v, ok := in["allocate_load_balancer_node_ports"].(bool); ok {
+				obj.AllocateLoadBalancerNodePorts = &v
+			}
+			// spec.loadBalancerClass may only be used when `type` is 'LoadBalancer'
+			if v, ok := in["load_balancer_class"].(string); ok && v != "" {
+				obj.LoadBalancerClass = &v
+			}
+		}
 	}
 	if v, ok := in["external_ips"].(*schema.Set); ok && v.Len() > 0 {
 		obj.ExternalIPs = sliceOfString(v.List())
+	}
+	if v, ok := in["internal_traffic_policy"].(string); ok && v != "" {
+		p := v1.ServiceInternalTrafficPolicyType(v)
+		obj.InternalTrafficPolicy = &p
 	}
 	if v, ok := in["ip_families"].([]interface{}); ok && len(v) > 0 {
 		obj.IPFamilies = expandIPFamilies(v)
@@ -169,6 +250,9 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 	}
 	if v, ok := in["session_affinity"].(string); ok {
 		obj.SessionAffinity = v1.ServiceAffinity(v)
+	}
+	if v, ok := in["session_affinity_config"].([]interface{}); ok && len(v) > 0 {
+		obj.SessionAffinityConfig = expandSessionAffinityConfig(v)
 	}
 	if v, ok := in["load_balancer_ip"].(string); ok {
 		obj.LoadBalancerIP = v
@@ -196,6 +280,14 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 
 func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *version.Info) (PatchOperations, error) {
 	ops := make([]PatchOperation, 0, 0)
+
+	if d.HasChange(keyPrefix + "allocate_load_balancer_node_ports") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "allocateLoadBalancerNodePorts",
+			Value: d.Get(keyPrefix + "allocate_load_balancer_node_ports").(bool),
+		})
+	}
+
 	if d.HasChange(keyPrefix + "selector") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "selector",
@@ -207,6 +299,12 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "sessionAffinity",
 			Value: d.Get(keyPrefix + "session_affinity").(string),
+		})
+	}
+	if d.HasChange(keyPrefix + "session_affinity_config") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "sessionAffinityConfig",
+			Value: expandSessionAffinityConfig(d.Get(keyPrefix + "session_affinity_config").([]interface{})),
 		})
 	}
 	if d.HasChange(keyPrefix + "load_balancer_ip") {
@@ -240,6 +338,13 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 			ops = append(ops, &ReplaceOperation{
 				Path:  pathPrefix + "ports",
 				Value: expandServicePort(d.Get(keyPrefix+"port").([]interface{}), true),
+			})
+		}
+
+		if n.(string) == "LoadBalancer" {
+			ops = append(ops, &ReplaceOperation{
+				Path:  pathPrefix + "allocateLoadBalancerNodePorts",
+				Value: d.Get(keyPrefix + "allocate_load_balancer_node_ports").(bool),
 			})
 		}
 
@@ -277,6 +382,12 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "externalTrafficPolicy",
 			Value: d.Get(keyPrefix + "external_traffic_policy").(string),
+		})
+	}
+	if d.HasChange(keyPrefix + "internal_traffic_policy") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "internalTrafficPolicy",
+			Value: d.Get(keyPrefix + "internal_traffic_policy").(string),
 		})
 	}
 	if d.HasChange(keyPrefix + "ip_families") {

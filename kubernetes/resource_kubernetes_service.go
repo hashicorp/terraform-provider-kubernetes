@@ -52,6 +52,12 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
+					"allocate_load_balancer_node_ports": {
+						Type:        schema.TypeBool,
+						Description: "Defines if `NodePorts` will be automatically allocated for services with type `LoadBalancer`. It may be set to `false` if the cluster load-balancer does not rely on `NodePorts`.  If the caller requests specific `NodePorts` (by specifying a value), those requests will be respected, regardless of this field. This field may only be set for services with type `LoadBalancer`. Default is `true`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-nodeport-allocation",
+						Optional:    true,
+						Default:     true,
+					},
 					"cluster_ip": {
 						Type:        schema.TypeString,
 						Description: "The IP address of the service. It is usually assigned randomly by the master. If an address is specified manually and is not in use by others, it will be allocated to the service; otherwise, creation of the service will fail. `None` can be specified for headless services when proxying is not required. Ignored if type is `ExternalName`. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",
@@ -62,6 +68,21 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 							validation.StringInSlice([]string{api.ClusterIPNone}, false),
 							validation.IsIPAddress,
 						),
+					},
+					"cluster_ips": {
+						Type:        schema.TypeList,
+						Description: "List of IP addresses assigned to this service, and are usually assigned randomly. If an address is specified manually and is not in use by others, it will be allocated to the service; otherwise creation of the service will fail. If this field is not specified, it will be initialized from the `clusterIP` field. If this field is specified, clients must ensure that `clusterIPs[0]` and `clusterIP` have the same value. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",
+						Optional:    true,
+						ForceNew:    true,
+						Computed:    true,
+						MaxItems:    2,
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+							ValidateFunc: validation.Any(
+								validation.StringInSlice([]string{api.ClusterIPNone}, false),
+								validation.IsIPAddress,
+							),
+						},
 					},
 					"external_ips": {
 						Type:        schema.TypeSet,
@@ -111,6 +132,22 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 							string(api.IPFamilyPolicyPreferDualStack),
 							string(api.IPFamilyPolicyRequireDualStack),
 						}, false),
+					},
+					"internal_traffic_policy": {
+						Type:        schema.TypeString,
+						Description: "Specifies if the cluster internal traffic should be routed to all endpoints or node-local endpoints only. `Cluster` routes internal traffic to a Service to all endpoints. `Local` routes traffic to node-local endpoints only, traffic is dropped if no node-local endpoints are ready. The default value is `Cluster`.",
+						Optional:    true,
+						Computed:    true,
+						ValidateFunc: validation.StringInSlice([]string{
+							string(api.ServiceInternalTrafficPolicyCluster),
+							string(api.ServiceInternalTrafficPolicyLocal),
+						}, false),
+					},
+					"load_balancer_class": {
+						Type:        schema.TypeString,
+						Description: "The class of the load balancer implementation this Service belongs to. If specified, the value of this field must be a label-style identifier, with an optional prefix. This field can only be set when the Service type is `LoadBalancer`. If not set, the default load balancer implementation is used. This field can only be set when creating or updating a Service to type `LoadBalancer`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-class",
+						Optional:    true,
+						ForceNew:    true,
 					},
 					"load_balancer_ip": {
 						Type:         schema.TypeString,
@@ -197,6 +234,34 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 							string(api.ServiceAffinityClientIP),
 							string(api.ServiceAffinityNone),
 						}, false),
+					},
+					"session_affinity_config": {
+						Type:        schema.TypeList,
+						Description: "Contains the configurations of session affinity. More info: https://kubernetes.io/docs/concepts/services-networking/service/#proxy-mode-ipvs",
+						Optional:    true,
+						Computed:    true,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"client_ip": {
+									Type:        schema.TypeList,
+									Description: "",
+									Optional:    true,
+									Computed:    true,
+									MaxItems:    1,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"timeout_seconds": {
+												Type:        schema.TypeInt,
+												Description: "",
+												Optional:    true,
+												Computed:    true,
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 					"type": {
 						Type:        schema.TypeString,

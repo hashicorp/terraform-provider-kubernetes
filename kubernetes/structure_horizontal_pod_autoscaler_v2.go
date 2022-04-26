@@ -4,17 +4,17 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
-	v1 "k8s.io/api/core/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func expandHorizontalPodAutoscalerV2Spec(in []interface{}) (*autoscalingv2beta2.HorizontalPodAutoscalerSpec, error) {
+func expandHorizontalPodAutoscalerV2Spec(in []interface{}) (*autoscalingv2.HorizontalPodAutoscalerSpec, error) {
 	if len(in) == 0 || in[0] == nil {
 		return nil, fmt.Errorf("failed to expand HorizontalPodAutoscaler.Spec: null or empty input")
 	}
 
-	spec := &autoscalingv2beta2.HorizontalPodAutoscalerSpec{}
+	spec := &autoscalingv2.HorizontalPodAutoscalerSpec{}
 	m := in[0].(map[string]interface{})
 
 	if v, ok := m["max_replicas"]; ok {
@@ -40,8 +40,8 @@ func expandHorizontalPodAutoscalerV2Spec(in []interface{}) (*autoscalingv2beta2.
 	return spec, nil
 }
 
-func expandV2Metrics(in []interface{}) []autoscalingv2beta2.MetricSpec {
-	metrics := []autoscalingv2beta2.MetricSpec{}
+func expandV2Metrics(in []interface{}) []autoscalingv2.MetricSpec {
+	metrics := []autoscalingv2.MetricSpec{}
 
 	for _, m := range in {
 		metrics = append(metrics, expandV2MetricSpec(m.(map[string]interface{})))
@@ -50,24 +50,24 @@ func expandV2Metrics(in []interface{}) []autoscalingv2beta2.MetricSpec {
 	return metrics
 }
 
-func expandV2MetricTarget(m map[string]interface{}) autoscalingv2beta2.MetricTarget {
-	target := autoscalingv2beta2.MetricTarget{}
+func expandV2MetricTarget(m map[string]interface{}) autoscalingv2.MetricTarget {
+	target := autoscalingv2.MetricTarget{}
 
 	if v, ok := m["type"].(string); ok {
-		target.Type = autoscalingv2beta2.MetricTargetType(v)
+		target.Type = autoscalingv2.MetricTargetType(v)
 	}
 
 	switch target.Type {
-	case autoscalingv2beta2.AverageValueMetricType:
+	case autoscalingv2.AverageValueMetricType:
 		if v, ok := m["average_value"].(string); ok && v != "0" && v != "" {
 			q := resource.MustParse(v)
 			target.AverageValue = &q
 		}
-	case autoscalingv2beta2.UtilizationMetricType:
+	case autoscalingv2.UtilizationMetricType:
 		if v, ok := m["average_utilization"].(int); ok && v > 0 {
 			target.AverageUtilization = ptrToInt32(int32(v))
 		}
-	case autoscalingv2beta2.ValueMetricType:
+	case autoscalingv2.ValueMetricType:
 		if v, ok := m["value"].(string); ok && v != "0" && v != "" {
 			q := resource.MustParse(v)
 			target.Value = &q
@@ -77,11 +77,11 @@ func expandV2MetricTarget(m map[string]interface{}) autoscalingv2beta2.MetricTar
 	return target
 }
 
-func expandV2ResourceMetricSource(m map[string]interface{}) *autoscalingv2beta2.ResourceMetricSource {
-	source := &autoscalingv2beta2.ResourceMetricSource{}
+func expandV2ResourceMetricSource(m map[string]interface{}) *autoscalingv2.ResourceMetricSource {
+	source := &autoscalingv2.ResourceMetricSource{}
 
 	if v, ok := m["name"].(string); ok {
-		source.Name = v1.ResourceName(v)
+		source.Name = corev1.ResourceName(v)
 	}
 
 	if v, ok := m["target"].([]interface{}); ok && len(v) == 1 {
@@ -91,8 +91,8 @@ func expandV2ResourceMetricSource(m map[string]interface{}) *autoscalingv2beta2.
 	return source
 }
 
-func expandV2MetricIdentifier(m map[string]interface{}) autoscalingv2beta2.MetricIdentifier {
-	identifier := autoscalingv2beta2.MetricIdentifier{}
+func expandV2MetricIdentifier(m map[string]interface{}) autoscalingv2.MetricIdentifier {
+	identifier := autoscalingv2.MetricIdentifier{}
 	identifier.Name = m["name"].(string)
 
 	if v, ok := m["selector"].([]interface{}); ok && len(v) == 1 {
@@ -102,8 +102,8 @@ func expandV2MetricIdentifier(m map[string]interface{}) autoscalingv2beta2.Metri
 	return identifier
 }
 
-func expandV2ExternalMetricSource(m map[string]interface{}) *autoscalingv2beta2.ExternalMetricSource {
-	source := &autoscalingv2beta2.ExternalMetricSource{}
+func expandV2ExternalMetricSource(m map[string]interface{}) *autoscalingv2.ExternalMetricSource {
+	source := &autoscalingv2.ExternalMetricSource{}
 
 	if v, ok := m["metric"].([]interface{}); ok && len(v) == 1 {
 		source.Metric = expandV2MetricIdentifier(v[0].(map[string]interface{}))
@@ -116,8 +116,8 @@ func expandV2ExternalMetricSource(m map[string]interface{}) *autoscalingv2beta2.
 	return source
 }
 
-func expandV2PodsMetricSource(m map[string]interface{}) *autoscalingv2beta2.PodsMetricSource {
-	source := &autoscalingv2beta2.PodsMetricSource{}
+func expandV2PodsMetricSource(m map[string]interface{}) *autoscalingv2.PodsMetricSource {
+	source := &autoscalingv2.PodsMetricSource{}
 
 	if v, ok := m["metric"].([]interface{}); ok && len(v) == 1 {
 		source.Metric = expandV2MetricIdentifier(v[0].(map[string]interface{}))
@@ -130,8 +130,8 @@ func expandV2PodsMetricSource(m map[string]interface{}) *autoscalingv2beta2.Pods
 	return source
 }
 
-func expandV2ObjectMetricSource(m map[string]interface{}) *autoscalingv2beta2.ObjectMetricSource {
-	source := &autoscalingv2beta2.ObjectMetricSource{}
+func expandV2ObjectMetricSource(m map[string]interface{}) *autoscalingv2.ObjectMetricSource {
+	source := &autoscalingv2.ObjectMetricSource{}
 
 	if v, ok := m["described_object"].([]interface{}); ok && len(v) == 1 {
 		source.DescribedObject = expandV2CrossVersionObjectReference(v)
@@ -148,15 +148,15 @@ func expandV2ObjectMetricSource(m map[string]interface{}) *autoscalingv2beta2.Ob
 	return source
 }
 
-func expandV2ContainerResourceMetricSource(m map[string]interface{}) *autoscalingv2beta2.ContainerResourceMetricSource {
-	source := &autoscalingv2beta2.ContainerResourceMetricSource{}
+func expandV2ContainerResourceMetricSource(m map[string]interface{}) *autoscalingv2.ContainerResourceMetricSource {
+	source := &autoscalingv2.ContainerResourceMetricSource{}
 
 	if v, ok := m["container"].(string); ok {
 		source.Container = v
 	}
 
 	if v, ok := m["name"].(string); ok {
-		source.Name = v1.ResourceName(v)
+		source.Name = corev1.ResourceName(v)
 	}
 
 	if v, ok := m["target"].([]interface{}); ok && len(v) == 1 {
@@ -166,11 +166,11 @@ func expandV2ContainerResourceMetricSource(m map[string]interface{}) *autoscalin
 	return source
 }
 
-func expandV2MetricSpec(m map[string]interface{}) autoscalingv2beta2.MetricSpec {
-	spec := autoscalingv2beta2.MetricSpec{}
+func expandV2MetricSpec(m map[string]interface{}) autoscalingv2.MetricSpec {
+	spec := autoscalingv2.MetricSpec{}
 
 	if v, ok := m["type"].(string); ok {
-		spec.Type = autoscalingv2beta2.MetricSourceType(v)
+		spec.Type = autoscalingv2.MetricSourceType(v)
 	}
 
 	if v, ok := m["resource"].([]interface{}); ok && len(v) == 1 {
@@ -196,8 +196,8 @@ func expandV2MetricSpec(m map[string]interface{}) autoscalingv2beta2.MetricSpec 
 	return spec
 }
 
-func expandV2Behavior(in []interface{}) *autoscalingv2beta2.HorizontalPodAutoscalerBehavior {
-	spec := &autoscalingv2beta2.HorizontalPodAutoscalerBehavior{}
+func expandV2Behavior(in []interface{}) *autoscalingv2.HorizontalPodAutoscalerBehavior {
+	spec := &autoscalingv2.HorizontalPodAutoscalerBehavior{}
 
 	if len(in) == 0 || in[0] == nil {
 		return spec
@@ -216,8 +216,8 @@ func expandV2Behavior(in []interface{}) *autoscalingv2beta2.HorizontalPodAutosca
 	return spec
 }
 
-func expandV2ScalingRules(in []interface{}) *autoscalingv2beta2.HPAScalingRules {
-	spec := &autoscalingv2beta2.HPAScalingRules{}
+func expandV2ScalingRules(in []interface{}) *autoscalingv2.HPAScalingRules {
+	spec := &autoscalingv2.HPAScalingRules{}
 
 	if len(in) == 0 || in[0] == nil {
 		return spec
@@ -228,7 +228,7 @@ func expandV2ScalingRules(in []interface{}) *autoscalingv2beta2.HPAScalingRules 
 	spec.Policies = expandV2ScalingPolicies(r["policy"].([]interface{}))
 
 	if v, ok := r["select_policy"].(string); ok {
-		spec.SelectPolicy = (*autoscalingv2beta2.ScalingPolicySelect)(&v)
+		spec.SelectPolicy = (*autoscalingv2.ScalingPolicySelect)(&v)
 	}
 
 	if v, ok := r["stabilization_window_seconds"].(int); ok {
@@ -238,8 +238,8 @@ func expandV2ScalingRules(in []interface{}) *autoscalingv2beta2.HPAScalingRules 
 	return spec
 }
 
-func expandV2ScalingPolicies(in []interface{}) []autoscalingv2beta2.HPAScalingPolicy {
-	policies := []autoscalingv2beta2.HPAScalingPolicy{}
+func expandV2ScalingPolicies(in []interface{}) []autoscalingv2.HPAScalingPolicy {
+	policies := []autoscalingv2.HPAScalingPolicy{}
 
 	for _, m := range in {
 		policies = append(policies, expandV2ScalingPolicy(m.(map[string]interface{})))
@@ -248,15 +248,15 @@ func expandV2ScalingPolicies(in []interface{}) []autoscalingv2beta2.HPAScalingPo
 	return policies
 }
 
-func expandV2ScalingPolicy(in map[string]interface{}) autoscalingv2beta2.HPAScalingPolicy {
-	spec := autoscalingv2beta2.HPAScalingPolicy{}
+func expandV2ScalingPolicy(in map[string]interface{}) autoscalingv2.HPAScalingPolicy {
+	spec := autoscalingv2.HPAScalingPolicy{}
 
 	if v, ok := in["period_seconds"].(int); ok {
 		spec.PeriodSeconds = int32(v)
 	}
 
 	if v, ok := in["type"].(string); ok {
-		spec.Type = autoscalingv2beta2.HPAScalingPolicyType(v)
+		spec.Type = autoscalingv2.HPAScalingPolicyType(v)
 	}
 
 	if v, ok := in["value"].(int); ok {
@@ -266,8 +266,8 @@ func expandV2ScalingPolicy(in map[string]interface{}) autoscalingv2beta2.HPAScal
 	return spec
 }
 
-func expandV2CrossVersionObjectReference(in []interface{}) autoscalingv2beta2.CrossVersionObjectReference {
-	ref := autoscalingv2beta2.CrossVersionObjectReference{}
+func expandV2CrossVersionObjectReference(in []interface{}) autoscalingv2.CrossVersionObjectReference {
+	ref := autoscalingv2.CrossVersionObjectReference{}
 
 	if len(in) == 0 || in[0] == nil {
 		return ref
@@ -289,24 +289,24 @@ func expandV2CrossVersionObjectReference(in []interface{}) autoscalingv2beta2.Cr
 	return ref
 }
 
-func flattenV2MetricTarget(target autoscalingv2beta2.MetricTarget) []interface{} {
+func flattenV2MetricTarget(target autoscalingv2.MetricTarget) []interface{} {
 	m := map[string]interface{}{
 		"type": target.Type,
 	}
 
 	switch target.Type {
-	case autoscalingv2beta2.AverageValueMetricType:
+	case autoscalingv2.AverageValueMetricType:
 		m["average_value"] = target.AverageValue.String()
-	case autoscalingv2beta2.UtilizationMetricType:
+	case autoscalingv2.UtilizationMetricType:
 		m["average_utilization"] = *target.AverageUtilization
-	case autoscalingv2beta2.ValueMetricType:
+	case autoscalingv2.ValueMetricType:
 		m["value"] = target.Value.String()
 	}
 
 	return []interface{}{m}
 }
 
-func flattenV2MetricIdentifier(identifier autoscalingv2beta2.MetricIdentifier) []interface{} {
+func flattenV2MetricIdentifier(identifier autoscalingv2.MetricIdentifier) []interface{} {
 	m := map[string]interface{}{
 		"name": identifier.Name,
 	}
@@ -318,7 +318,7 @@ func flattenV2MetricIdentifier(identifier autoscalingv2beta2.MetricIdentifier) [
 	return []interface{}{m}
 }
 
-func flattenV2ExternalMetricSource(external *autoscalingv2beta2.ExternalMetricSource) []interface{} {
+func flattenV2ExternalMetricSource(external *autoscalingv2.ExternalMetricSource) []interface{} {
 	m := map[string]interface{}{
 		"metric": flattenV2MetricIdentifier(external.Metric),
 		"target": flattenV2MetricTarget(external.Target),
@@ -326,7 +326,7 @@ func flattenV2ExternalMetricSource(external *autoscalingv2beta2.ExternalMetricSo
 	return []interface{}{m}
 }
 
-func flattenV2PodsMetricSource(pods *autoscalingv2beta2.PodsMetricSource) []interface{} {
+func flattenV2PodsMetricSource(pods *autoscalingv2.PodsMetricSource) []interface{} {
 	m := map[string]interface{}{
 		"metric": flattenV2MetricIdentifier(pods.Metric),
 		"target": flattenV2MetricTarget(pods.Target),
@@ -334,7 +334,7 @@ func flattenV2PodsMetricSource(pods *autoscalingv2beta2.PodsMetricSource) []inte
 	return []interface{}{m}
 }
 
-func flattenV2ObjectMetricSource(object *autoscalingv2beta2.ObjectMetricSource) []interface{} {
+func flattenV2ObjectMetricSource(object *autoscalingv2.ObjectMetricSource) []interface{} {
 	m := map[string]interface{}{
 		"described_object": flattenV2CrossVersionObjectReference(object.DescribedObject),
 		"metric":           flattenV2MetricIdentifier(object.Metric),
@@ -343,7 +343,7 @@ func flattenV2ObjectMetricSource(object *autoscalingv2beta2.ObjectMetricSource) 
 	return []interface{}{m}
 }
 
-func flattenV2ContainerResourceMetricSource(cr *autoscalingv2beta2.ContainerResourceMetricSource) []interface{} {
+func flattenV2ContainerResourceMetricSource(cr *autoscalingv2.ContainerResourceMetricSource) []interface{} {
 	m := map[string]interface{}{
 		"name":      cr.Name.String(),
 		"container": cr.Container,
@@ -352,7 +352,7 @@ func flattenV2ContainerResourceMetricSource(cr *autoscalingv2beta2.ContainerReso
 	return []interface{}{m}
 }
 
-func flattenV2ResourceMetricSource(resource *autoscalingv2beta2.ResourceMetricSource) []interface{} {
+func flattenV2ResourceMetricSource(resource *autoscalingv2.ResourceMetricSource) []interface{} {
 	m := map[string]interface{}{
 		"name":   resource.Name,
 		"target": flattenV2MetricTarget(resource.Target),
@@ -360,7 +360,7 @@ func flattenV2ResourceMetricSource(resource *autoscalingv2beta2.ResourceMetricSo
 	return []interface{}{m}
 }
 
-func flattenV2MetricSpec(spec autoscalingv2beta2.MetricSpec) map[string]interface{} {
+func flattenV2MetricSpec(spec autoscalingv2.MetricSpec) map[string]interface{} {
 	m := map[string]interface{}{}
 
 	m["type"] = spec.Type
@@ -388,7 +388,7 @@ func flattenV2MetricSpec(spec autoscalingv2beta2.MetricSpec) map[string]interfac
 	return m
 }
 
-func flattenHorizontalPodAutoscalerV2Spec(spec autoscalingv2beta2.HorizontalPodAutoscalerSpec) []interface{} {
+func flattenHorizontalPodAutoscalerV2Spec(spec autoscalingv2.HorizontalPodAutoscalerSpec) []interface{} {
 	m := make(map[string]interface{}, 0)
 
 	m["max_replicas"] = spec.MaxReplicas
@@ -412,7 +412,7 @@ func flattenHorizontalPodAutoscalerV2Spec(spec autoscalingv2beta2.HorizontalPodA
 	return []interface{}{m}
 }
 
-func flattenV2CrossVersionObjectReference(ref autoscalingv2beta2.CrossVersionObjectReference) []interface{} {
+func flattenV2CrossVersionObjectReference(ref autoscalingv2.CrossVersionObjectReference) []interface{} {
 	m := make(map[string]interface{}, 0)
 
 	if ref.APIVersion != "" {
@@ -430,7 +430,7 @@ func flattenV2CrossVersionObjectReference(ref autoscalingv2beta2.CrossVersionObj
 	return []interface{}{m}
 }
 
-func flattenV2Behavior(spec autoscalingv2beta2.HorizontalPodAutoscalerBehavior) []interface{} {
+func flattenV2Behavior(spec autoscalingv2.HorizontalPodAutoscalerBehavior) []interface{} {
 	b := map[string]interface{}{}
 
 	if spec.ScaleUp != nil {
@@ -444,7 +444,7 @@ func flattenV2Behavior(spec autoscalingv2beta2.HorizontalPodAutoscalerBehavior) 
 	return []interface{}{b}
 }
 
-func flattenV2ScalingRules(spec autoscalingv2beta2.HPAScalingRules) []interface{} {
+func flattenV2ScalingRules(spec autoscalingv2.HPAScalingRules) []interface{} {
 	r := map[string]interface{}{}
 
 	if spec.Policies != nil {
@@ -467,7 +467,7 @@ func flattenV2ScalingRules(spec autoscalingv2beta2.HPAScalingRules) []interface{
 	return []interface{}{r}
 }
 
-func flattenV2ScalingPolicy(spec autoscalingv2beta2.HPAScalingPolicy) map[string]interface{} {
+func flattenV2ScalingPolicy(spec autoscalingv2.HPAScalingPolicy) map[string]interface{} {
 	return map[string]interface{}{
 		"type":           string(spec.Type),
 		"value":          int(spec.Value),

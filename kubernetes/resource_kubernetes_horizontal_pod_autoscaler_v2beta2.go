@@ -117,7 +117,7 @@ func resourceKubernetesHorizontalPodAutoscalerV2Beta2Create(ctx context.Context,
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	spec, err := expandHorizontalPodAutoscalerV2Spec(d.Get("spec").([]interface{}))
+	spec, err := expandHorizontalPodAutoscalerV2Beta2Spec(d.Get("spec").([]interface{}))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -168,7 +168,7 @@ func resourceKubernetesHorizontalPodAutoscalerV2Beta2Read(ctx context.Context, d
 		return diag.FromErr(err)
 	}
 
-	flattened := flattenHorizontalPodAutoscalerV2Spec(hpa.Spec)
+	flattened := flattenHorizontalPodAutoscalerV2Beta2Spec(hpa.Spec)
 	log.Printf("[DEBUG] Flattened horizontal pod autoscaler spec: %#v", flattened)
 	err = d.Set("spec", flattened)
 	if err != nil {
@@ -191,7 +191,7 @@ func resourceKubernetesHorizontalPodAutoscalerV2Beta2Update(ctx context.Context,
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("spec") {
-		diffOps := patchHorizontalPodAutoscalerV2Spec("spec.0.", "/spec", d)
+		diffOps := patchHorizontalPodAutoscalerV2Beta2Spec("spec.0.", "/spec", d)
 		ops = append(ops, diffOps...)
 	}
 	data, err := ops.MarshalJSON()

@@ -1,3 +1,22 @@
+## 2.11.0 (April 27, 2022)
+
+NEW:
+
+* Add a new resource `kubernetes_horizontal_pod_autoscaler_v2` (#1674)
+
+IMPROVEMENTS:
+
+* Add `ip_families` and `ip_family_policy` attributes to `kubernetes_service` (#1662)
+* Handle `x-kubernetes-preserve-unknown-fields` type annotation from OpenAPI: changes to attributes of this type trigger whole resource recreation. (#1646)
+* Upgrade terraform-plugin-mux to v0.6.0 (#1686)
+* Add GitHub action for EKS acceptance tests (#1656)
+* Add github action for acceptance tests using kind (#1691)
+
+BUG FIXES:
+
+* Fix conversion of big.Float to float64 in `kubernetes_manifest` (#1661)
+* Fix identification of `int-or-string` type attributes to include 3rd party types defined by aggregated APIs (#1640)
+
 ## 2.10.0 (April 7, 2022)
 
 NEW:

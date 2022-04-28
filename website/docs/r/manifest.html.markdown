@@ -103,20 +103,19 @@ terraform import kubernetes_manifest.secret_sample "apiVersion=v1,kind=Secret,na
 Note the import ID as the last argument to the import command. This ID points Terraform at which Kubernetes object to read when importing.
 It should be constructed with the following syntax: `"apiVersion=<string>,kind=<string>,[namespace=<string>,]name=<string>"`
 
-## Using `wait_for` to block create and update calls
+## Using `wait` to block create and update calls
 
-The `kubernetes_manifest` resource supports the ability to block create and update calls until a field is set or has a particular value by specifying the `wait_for` attribute. This is useful for when you create resources like Jobs and Services when you want to wait for something to happen after the resource is created by the API server before Terraform should consider the resource created.
+The `kubernetes_manifest` resource supports the ability to block create and update calls until a field is set or has a particular value by specifying the `wait` block. This is useful for when you create resources like Jobs and Services when you want to wait for something to happen after the resource is created by the API server before Terraform should consider the resource created.
 
-`wait_for` currently supports a `fields` attribute which allows you specify a map of fields paths to regular expressions. You can also specify `*` if you just want to wait for a field to have any value.
+`wait` supports supports a `fields` attribute which allows you specify a map of fields paths to regular expressions. You can also specify `*` if you just want to wait for a field to have any value.
 
 ```hcl
 resource "kubernetes_manifest" "test" {
-
   manifest = {
     // ...
   }
 
-  wait_for = {
+  wait {
     fields = {
       # Check the phase of a pod
       "status.phase" = "Running"
@@ -136,6 +135,37 @@ resource "kubernetes_manifest" "test" {
     create = "10m"
     update = "10m"
     delete = "30s"
+  }
+}
+```
+
+The `wait` block also supports a `rollout` attribute which will wait for rollout to complete on Deployment, StatefulSet, and DaemonSet resources. 
+
+```hcl
+resource "kubernetes_manifest" "test" {
+  manifest = {
+    // ...
+  }
+
+  wait {
+    rollout = true
+  }
+}
+```
+
+You can also wait for specified conditions to be met by specifying a `condition` block.
+
+```hcl
+resource "kubernetes_manifest" "test" {
+  manifest = {
+    // ...
+  }
+
+  wait {
+    condition {
+      type = "ContainersReady"
+      status = "True"
+    }
   }
 }
 ```
@@ -184,7 +214,8 @@ resource "kubernetes_manifest" "test-ns" {
 
 **IMPORTANT**: By default, `metadata.labels` and `metadata.annotations` are already included in the list. You don't have to set them explicitly in the `computed_fields` list. To turn off these defaults, set the value of `computed_fields` to an empty list or a concrete list of other fields. For example `computed_fields = []`.
 
-The syntax for the field paths is the same as the one used in the `wait_for` block.
+The syntax for the field paths is the same as the one used in the `wait` block.
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -192,30 +223,30 @@ The following arguments are supported:
 - `computed_fields` - (Optional) List of paths of fields to be handled as "computed". The user-configured value for the field will be overridden by any different value returned by the API after apply.
 - `manifest` (Required) An object Kubernetes manifest describing the desired state of the resource in HCL format.
 - `object` (Optional) The resulting resource state, as returned by the API server after applying the desired state from `manifest`.
-- `wait_for` (Optional) An object which allows you configure the provider to wait for certain conditions to be met. See below for schema. 
+- `wait_for` (Optional) An object which allows you configure the provider to wait for certain conditions to be met. See below for schema. **DEPRECATED: use `wait` block**.
 - `field_manager` (Optional) Configure field manager options. See below.
 
 ### `wait`
 
 #### Arguments
 
-- **rollout** (Optional) When set to `true` will wait for the resource to roll out, equivalent to `kubectl rollout status`. 
-- **conditions** (Optional) A set of conditions to wait for.
-- **fields** (Optional) A map of fields and a corresponding regular expression with a pattern to wait for. The provider will wait until the field matches the regular expression. Use `*` for any value. 
+- `rollout` (Optional) When set to `true` will wait for the resource to roll out, equivalent to `kubectl rollout status`. 
+- `condition` (Optional) A set of condition to wait for. You can specify multiple `condition` blocks and it will wait for all of them. 
+- `fields` (Optional) A map of fields and a corresponding regular expression with a pattern to wait for. The provider will wait until the field matches the regular expression. Use `*` for any value. 
 
 ### `wait_for` (deprecated, use `wait`)
 
 #### Arguments
 
-- **fields** (Optional) A map of fields and a corresponding regular expression with a pattern to wait for. The provider will wait until the field matches the regular expression. Use `*` for any value. 
+- `fields` (Optional) A map of fields and a corresponding regular expression with a pattern to wait for. The provider will wait until the field matches the regular expression. Use `*` for any value. 
 
 
 ### `field_manager`
 
 #### Arguments
 
-- **name** (Optional) The name of the field manager to use when applying the resource. Defaults to `Terraform`.
-- **force_conflicts** (Optional) Forcibly override any field manager conflicts when applying the resource. Defaults to `false`.
+- `name` (Optional) The name of the field manager to use when applying the resource. Defaults to `Terraform`.
+- `force_conflicts` (Optional) Forcibly override any field manager conflicts when applying the resource. Defaults to `false`.
 
 ### `timeouts`
 

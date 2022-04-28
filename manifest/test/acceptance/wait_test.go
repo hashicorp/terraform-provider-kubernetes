@@ -138,10 +138,10 @@ func TestKubernetesManifest_WaitCondition_Pod(t *testing.T) {
 		t.Errorf("Failed to create provider instance: %q", err)
 	}
 
-	tf := tfhelper.RequireNewWorkingDir(t)
-	tf.SetReattachInfo(reattachInfo)
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
 	defer func() {
-		tf.RequireDestroy(t)
+		tf.Destroy(ctx)
 		tf.Close()
 		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "pods", namespace, name)
 	}()
@@ -154,23 +154,30 @@ func TestKubernetesManifest_WaitCondition_Pod(t *testing.T) {
 		"name":      name,
 	}
 	tfconfig := loadTerraformConfig(t, "Wait/wait_for_conditions.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfig)
-	tf.RequireInit(t)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
 
 	startTime := time.Now()
-	tf.RequireApply(t)
+	err = tf.Apply(ctx)
+	if err != nil {
+		t.Fatalf("Failed to apply: %q", err)
+	}
 
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "pods", namespace, name)
 
 	// NOTE We set a readinessProbe in the fixture with a delay of 10s
 	// so the apply should take at least 10 seconds to complete.
-	minDuration := time.Duration(5) * time.Second
+	minDuration := time.Duration(10) * time.Second
 	applyDuration := time.Since(startTime)
 	if applyDuration < minDuration {
 		t.Fatalf("the apply should have taken at least %s", minDuration)
 	}
 
-	tfstate := tfstatehelper.NewHelper(tf.RequireState(t))
+	st, err := tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get state: %q", err)
+	}
+	tfstate := tfstatehelper.NewHelper(st)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
 		"kubernetes_manifest.test.wait.0.condition.0.type":   "Ready",
 		"kubernetes_manifest.test.wait.0.condition.0.status": "True",

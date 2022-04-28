@@ -344,30 +344,25 @@ func (w *ConditionsWaiter) Wait(ctx context.Context) error {
 
 		status := res.Object["status"].(map[string]interface{})
 		conditions := status["conditions"].([]interface{})
-		conditionsMet := map[string]bool{}
+		conditionsMet := true
 		for _, c := range w.conditions {
 			var condition map[string]tftypes.Value
 			c.As(&condition)
 			var conditionType, conditionStatus string
 			condition["type"].As(&conditionType)
 			condition["status"].As(&conditionStatus)
-			conditionsMet[conditionType] = false
+			conditionMet := false
 			for _, cc := range conditions {
 				ccc := cc.(map[string]interface{})
-				if ccc["type"].(string) != conditionType {
-					continue
+				if ccc["type"].(string) == conditionType {
+					conditionMet = ccc["status"].(string) == conditionStatus
+					break
 				}
-				conditionsMet[conditionType] = ccc["status"].(string) == conditionStatus
 			}
+			conditionsMet = conditionsMet && conditionMet
 		}
 
-		done := true
-		for _, v := range conditionsMet {
-			if !v {
-				done = false
-			}
-		}
-		if done {
+		if conditionsMet {
 			break
 		}
 

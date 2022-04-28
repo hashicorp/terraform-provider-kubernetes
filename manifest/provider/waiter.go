@@ -59,6 +59,19 @@ func NewResourceWaiter(resource dynamic.ResourceInterface, resourceName string, 
 		}
 	}
 
+	if v, ok := waitForBlockVal["condition"]; ok {
+		var conditionsBlocks []tftypes.Value
+		v.As(&conditionsBlocks)
+		if len(conditionsBlocks) > 0 {
+			return &ConditionsWaiter{
+				resource,
+				resourceName,
+				conditionsBlocks,
+				hl,
+			}, nil
+		}
+	}
+
 	fields, ok := waitForBlockVal["fields"]
 	if !ok || fields.IsNull() || !fields.IsKnown() {
 		return &NoopWaiter{}, nil
@@ -298,5 +311,64 @@ func (w *RolloutWaiter) Wait(ctx context.Context) error {
 	}
 
 	w.logger.Info("[ApplyResourceChange][Wait] Rollout complete\n")
+	return nil
+}
+
+// ConditionsWaiter will wait for the specified conditions on
+// the resource to be met
+type ConditionsWaiter struct {
+	resource     dynamic.ResourceInterface
+	resourceName string
+	conditions   []tftypes.Value
+	logger       hclog.Logger
+}
+
+// Wait checks all the configured conditions have been met
+func (w *ConditionsWaiter) Wait(ctx context.Context) error {
+	w.logger.Info("[ApplyResourceChange][Wait] Waiting for conditions...\n")
+
+	for {
+		if deadline, ok := ctx.Deadline(); ok {
+			if time.Now().After(deadline) {
+				return context.DeadlineExceeded
+			}
+		}
+
+		res, err := w.resource.Get(ctx, w.resourceName, v1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if errors.IsGone(err) {
+			return fmt.Errorf("resource was deleted")
+		}
+
+		status := res.Object["status"].(map[string]interface{})
+		conditions := status["conditions"].([]interface{})
+		conditionsMet := true
+		for _, c := range w.conditions {
+			var condition map[string]tftypes.Value
+			c.As(&condition)
+			var conditionType, conditionStatus string
+			condition["type"].As(&conditionType)
+			condition["status"].As(&conditionStatus)
+			conditionMet := false
+			for _, cc := range conditions {
+				ccc := cc.(map[string]interface{})
+				if ccc["type"].(string) == conditionType {
+					conditionMet = ccc["status"].(string) == conditionStatus
+					break
+				}
+			}
+			conditionsMet = conditionsMet && conditionMet
+		}
+
+		if conditionsMet {
+			break
+		}
+
+		time.Sleep(waiterSleepTime) // lintignore:R018
+	}
+
+	w.logger.Info("[ApplyResourceChange][Wait] All conditions met.\n")
 	return nil
 }

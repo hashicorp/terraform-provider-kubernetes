@@ -16,14 +16,25 @@ func GetObjectTypeFromSchema(schema *tfprotov5.Schema) tftypes.Type {
 	}
 
 	for _, b := range schema.Block.BlockTypes {
-		attrs := map[string]tftypes.Type{}
+		a := map[string]tftypes.Type{}
 		for _, att := range b.Block.Attributes {
-			attrs[att.Name] = att.Type
+			a[att.Name] = att.Type
 		}
 		bm[b.TypeName] = tftypes.List{
-			ElementType: tftypes.Object{AttributeTypes: attrs},
+			ElementType: tftypes.Object{AttributeTypes: a},
 		}
-		// TODO handle repeated blocks
+
+		// FIXME we can make this function recursive to handle
+		// n levels of nested blocks
+		for _, bb := range b.Block.BlockTypes {
+			aa := map[string]tftypes.Type{}
+			for _, att := range bb.Block.Attributes {
+				aa[att.Name] = att.Type
+			}
+			a[bb.TypeName] = tftypes.List{
+				ElementType: tftypes.Object{AttributeTypes: aa},
+			}
+		}
 	}
 
 	return tftypes.Object{AttributeTypes: bm}
@@ -124,6 +135,28 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 						MaxItems: 1,
 						Block: &tfprotov5.SchemaBlock{
 							Description: "Configure waiter options.",
+							BlockTypes: []*tfprotov5.SchemaNestedBlock{
+								{
+									TypeName: "condition",
+									Nesting:  tfprotov5.SchemaNestedBlockNestingModeList,
+									MinItems: 0,
+									Block: &tfprotov5.SchemaBlock{
+										Attributes: []*tfprotov5.SchemaAttribute{
+											{
+												Name:        "status",
+												Type:        tftypes.String,
+												Optional:    true,
+												Description: "The condition status.",
+											}, {
+												Name:        "type",
+												Type:        tftypes.String,
+												Optional:    true,
+												Description: "The type of condition.",
+											},
+										},
+									},
+								},
+							},
 							Attributes: []*tfprotov5.SchemaAttribute{
 								{
 									Name:        "rollout",

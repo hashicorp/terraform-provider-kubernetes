@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
@@ -124,18 +125,24 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 		if len(waitBlock) > 0 {
 			var w map[string]tftypes.Value
 			waitBlock[0].As(&w)
-			n := 0
-			for _, ww := range w {
+			waiters := []string{}
+			for k, ww := range w {
 				if !ww.IsNull() {
-					n += 1
+					if k == "condition" {
+						var cb []tftypes.Value
+						ww.As(&cb)
+						if len(cb) == 0 {
+							continue
+						}
+					}
+					waiters = append(waiters, k)
 				}
 			}
-			if n > 1 {
-
+			if len(waiters) > 1 {
 				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 					Severity:  tfprotov5.DiagnosticSeverityError,
 					Summary:   "Invalid wait configuration",
-					Detail:    `Only one of "rollout", "fields" may be set.`,
+					Detail:    fmt.Sprintf(`You may only set one of "%s".`, strings.Join(waiters, "\", \"")),
 					Attribute: tftypes.NewAttributePath().WithAttributeName("wait"),
 				})
 			}

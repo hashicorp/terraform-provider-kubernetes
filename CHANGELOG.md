@@ -16,6 +16,7 @@ BUG FIXES:
 
 * Fix conversion of big.Float to float64 in `kubernetes_manifest` (#1661)
 * Fix identification of `int-or-string` type attributes to include 3rd party types defined by aggregated APIs (#1640)
+* Fix not handling multiple `cluster_role_selectors` of `kubernetes_cluster_role(_v1)` (#1360)
 
 ## 2.10.0 (April 7, 2022)
 

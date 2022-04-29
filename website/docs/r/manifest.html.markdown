@@ -163,7 +163,7 @@ resource "kubernetes_manifest" "test" {
 
   wait {
     condition {
-      type = "ContainersReady"
+      type   = "ContainersReady"
       status = "True"
     }
   }

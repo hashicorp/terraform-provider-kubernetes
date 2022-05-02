@@ -60,20 +60,27 @@ func resourceKubernetesDefaultServiceAccountCreate(ctx context.Context, d *schem
 		return diag.FromErr(err)
 	}
 
+	secret, err := getServiceAccountDefaultSecret(ctx, "default", svcAcc, d.Timeout(schema.TimeoutCreate), conn)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	d.Set("default_secret_name", secret.Name)
+
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
-	imagePullSecrets := d.Get("image_pull_secret").(*schema.Set).List()
-	ops = append(ops, &ReplaceOperation{
-		Path:  "/imagePullSecrets",
-		Value: expandLocalObjectReferenceArray(imagePullSecrets),
-	})
-
-	secrets := d.Get("secret").(*schema.Set).List()
-	defaultSecretName := d.Get("default_secret_name").(string)
-
-	ops = append(ops, &ReplaceOperation{
-		Path:  "/secrets",
-		Value: expandServiceAccountSecrets(secrets, defaultSecretName),
-	})
+	if d.HasChange("image_pull_secret") {
+		v := d.Get("image_pull_secret").(*schema.Set).List()
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/imagePullSecrets",
+			Value: expandLocalObjectReferenceArray(v),
+		})
+	}
+	if d.HasChange("secret") {
+		v := d.Get("secret").(*schema.Set).List()
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/secrets",
+			Value: expandServiceAccountSecrets(v, secret.Name),
+		})
+	}
 
 	automountServiceAccountToken := d.Get("automount_service_account_token").(bool)
 	ops = append(ops, &ReplaceOperation{
@@ -93,12 +100,6 @@ func resourceKubernetesDefaultServiceAccountCreate(ctx context.Context, d *schem
 	log.Printf("[INFO] Submitted updated default service account: %#v", out)
 
 	d.SetId(buildId(metadata))
-
-	secret, err := getServiceAccountDefaultSecret(ctx, "default", svcAcc, d.Timeout(schema.TimeoutCreate), conn)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	d.Set("default_secret_name", secret.Name)
 
 	return resourceKubernetesServiceAccountRead(ctx, d, meta)
 }

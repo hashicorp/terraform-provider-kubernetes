@@ -5,7 +5,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func flattenReplicationControllerSpec(in corev1.ReplicationControllerSpec, d *schema.ResourceData, providerMetadata interface{}) ([]interface{}, error) {
+func flattenReplicationControllerSpec(in corev1.ReplicationControllerSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	att["min_ready_seconds"] = in.MinReadySeconds
 
@@ -24,7 +24,7 @@ func flattenReplicationControllerSpec(in corev1.ReplicationControllerSpec, d *sc
 		}
 		template := make(map[string]interface{})
 		template["spec"] = podSpec
-		template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d, providerMetadata)
+		template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d, meta)
 		att["template"] = []interface{}{template}
 	}
 

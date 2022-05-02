@@ -7,7 +7,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 )
 
-func flattenJobSpec(in batchv1.JobSpec, d *schema.ResourceData, providerMetadata interface{}, prefix ...string) ([]interface{}, error) {
+func flattenJobSpec(in batchv1.JobSpec, d *schema.ResourceData, meta interface{}, prefix ...string) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
 	if in.ActiveDeadlineSeconds != nil {
@@ -48,7 +48,7 @@ func flattenJobSpec(in batchv1.JobSpec, d *schema.ResourceData, providerMetadata
 		delete(labels, "job-name")
 	}
 
-	podSpec, err := flattenPodTemplateSpec(in.Template, d, providerMetadata, prefix...)
+	podSpec, err := flattenPodTemplateSpec(in.Template, d, meta, prefix...)
 	if err != nil {
 		return nil, err
 	}

@@ -736,10 +736,10 @@ Commercial support is available at
 Alternatively, look for the hostIP associated with a running Nginx pod and combine it with the NodePort to assemble the URL:
 
 ```
-$ kubectl get pod nginx-86c669bff4-zgjkv -n nginx -o json |jq .status.hostIP
+$ kubectl get pod nginx-86c669bff4-zgjkv -n nginx -o json | jq .status.hostIP
 "192.168.39.189"
 
-$ kube get services -n nginx
+$ kubectl get services -n nginx
 NAME    TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
 nginx   NodePort   10.109.205.23   <none>        80:30201/TCP   19m
 

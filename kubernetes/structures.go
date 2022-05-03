@@ -132,7 +132,8 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMet
 		ignoreAnnotations = expandStringSlice(v)
 	}
 
-	m["annotations"] = removeInternalKeys(meta.Annotations, configAnnotations, ignoreAnnotations)
+	annotations := removeInternalKeys(meta.Annotations, configAnnotations)
+	m["annotations"] = removeKeys(annotations, configAnnotations, ignoreAnnotations)
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}
@@ -143,7 +144,8 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMet
 		ignoreLabels = expandStringSlice(v)
 	}
 
-	m["labels"] = removeInternalKeys(meta.Labels, configLabels, ignoreLabels)
+	labels := removeInternalKeys(meta.Labels, configLabels)
+	m["labels"] = removeKeys(labels, configLabels, ignoreLabels)
 	m["name"] = meta.Name
 	m["resource_version"] = meta.ResourceVersion
 	m["uid"] = fmt.Sprintf("%v", meta.UID)
@@ -156,20 +158,27 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMet
 	return []interface{}{m}
 }
 
-// This function removes given Kubernetes metadata(annotations and labels) keys
-// So they won't be available in the TF state file and will be ignored during apply/plan operations
-func removeInternalKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadata []string) map[string]string {
+func removeInternalKeys(m map[string]string, d map[string]interface{}) map[string]string {
 	for k := range m {
-		if isKubernetesMetadataKey(k, ignoreKubernetesMetadata) && !isProvderManagedKey(k, d) {
+		if isInternalKey(k) && !isKeyInMap(k, d) {
 			delete(m, k)
 		}
 	}
 	return m
 }
 
-// This function verifies if a given Kubernetes metadata(annotations and labels) key
-// is among the keys that were applied by the provider and if so, they can't be ignored
-func isProvderManagedKey(key string, d map[string]interface{}) bool {
+// This function removes given Kubernetes metadata(annotations and labels) keys
+// So they won't be available in the TF state file and will be ignored during apply/plan operations
+func removeKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadataKeys []string) map[string]string {
+	for k := range m {
+		if isIgnoteKey(k, ignoreKubernetesMetadataKeys) && !isKeyInMap(k, d) {
+			delete(m, k)
+		}
+	}
+	return m
+}
+
+func isKeyInMap(key string, d map[string]interface{}) bool {
 	if d == nil {
 		return false
 	}
@@ -181,10 +190,8 @@ func isProvderManagedKey(key string, d map[string]interface{}) bool {
 	return false
 }
 
-// This function verifies if a given Kubernetes metadata(annotations and labels) key
-// is among the keys that need to be ignored
-func isKubernetesMetadataKey(kubernetesMetadataKey string, ignoreKubernetesMetadata []string) bool {
-	u, err := url.Parse("//" + kubernetesMetadataKey)
+func isInternalKey(annotationKey string) bool {
+	u, err := url.Parse("//" + annotationKey)
 	if err != nil {
 		return false
 	}
@@ -205,10 +212,15 @@ func isKubernetesMetadataKey(kubernetesMetadataKey string, ignoreKubernetesMetad
 	}
 
 	// Specific to DaemonSet annotations, generated & controlled by the server.
-	if strings.Contains(kubernetesMetadataKey, "deprecated.daemonset.template.generation") {
+	if strings.Contains(annotationKey, "deprecated.daemonset.template.generation") {
 		return true
 	}
+	return false
+}
 
+// This function verifies if a given Kubernetes metadata(annotations and labels) key
+// is among the keys that need to be ignored
+func isIgnoteKey(kubernetesMetadataKey string, ignoreKubernetesMetadata []string) bool {
 	for _, im := range ignoreKubernetesMetadata {
 		if ok, _ := regexp.MatchString(im, kubernetesMetadataKey); ok {
 			return true

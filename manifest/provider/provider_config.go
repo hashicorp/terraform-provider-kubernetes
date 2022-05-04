@@ -167,7 +167,7 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 			{
 				Name:            "ignore_annotations",
 				Type:            tftypes.List{ElementType: tftypes.String},
-				Description:     "List of Kubernetes metadata annotations to ignore across all resources handled by this provider for situations where external systems are managing certain resource annotations.",
+				Description:     "List of Kubernetes metadata annotations to ignore across all resources handled by this provider for situations where external systems are managing certain resource annotations. Each item is a regular expression.",
 				Required:        false,
 				Optional:        true,
 				Computed:        false,
@@ -178,7 +178,7 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 			{
 				Name:            "ignore_labels",
 				Type:            tftypes.List{ElementType: tftypes.String},
-				Description:     "List of Kubernetes metadata labels to ignore across all resources handled by this provider for situations where external systems are managing certain resource labels.",
+				Description:     "List of Kubernetes metadata labels to ignore across all resources handled by this provider for situations where external systems are managing certain resource labels. Each item is a regular expression.",
 				Required:        false,
 				Optional:        true,
 				Computed:        false,

@@ -19,12 +19,10 @@ func TestIsInternalKey(t *testing.T) {
 		{"kubernetes.io", true},
 		{"kubectl.kubernetes.io", true},
 		{"pv.kubernetes.io/any/path", true},
-		{"terraform.io/provider", true},
 	}
-	ignoreAnnotations := []string{"terraform.io/provider"}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%s", tc.Key), func(t *testing.T) {
-			isInternal := isKubernetesMetadataKey(tc.Key, ignoreAnnotations)
+			isInternal := isInternalKey(tc.Key)
 			if tc.Expected && isInternal != tc.Expected {
 				t.Fatalf("Expected %q to be internal", tc.Key)
 			}

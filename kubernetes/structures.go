@@ -167,11 +167,11 @@ func removeInternalKeys(m map[string]string, d map[string]interface{}) map[strin
 	return m
 }
 
-// This function removes given Kubernetes metadata(annotations and labels) keys
-// So they won't be available in the TF state file and will be ignored during apply/plan operations
+// removeKeys removes given Kubernetes metadata(annotations and labels) keys.
+// In that case, they won't be available in the TF state file and will be ignored during apply/plan operations.
 func removeKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadataKeys []string) map[string]string {
 	for k := range m {
-		if isIgnoteKey(k, ignoreKubernetesMetadataKeys) && !isKeyInMap(k, d) {
+		if ignoreKey(k, ignoreKubernetesMetadataKeys) && !isKeyInMap(k, d) {
 			delete(m, k)
 		}
 	}
@@ -218,11 +218,11 @@ func isInternalKey(annotationKey string) bool {
 	return false
 }
 
-// This function verifies if a given Kubernetes metadata(annotations and labels) key
-// is among the keys that need to be ignored
-func isIgnoteKey(kubernetesMetadataKey string, ignoreKubernetesMetadata []string) bool {
-	for _, im := range ignoreKubernetesMetadata {
-		if ok, _ := regexp.MatchString(im, kubernetesMetadataKey); ok {
+// ignoreKey reports whether the Kubernetes metadata(annotations and labels) key contains
+// any match of the regular expression pattern from the expressions slice.
+func ignoreKey(key string, expressions []string) bool {
+	for _, e := range expressions {
+		if ok, _ := regexp.MatchString(e, key); ok {
 			return true
 		}
 	}

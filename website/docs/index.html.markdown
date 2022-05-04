@@ -184,5 +184,5 @@ The following arguments are supported:
     * `command` - (Required) Command to execute.
     * `args` - (Optional) List of arguments to pass when executing the plugin.
     * `env` - (Optional) Map of environment variables to set when executing the plugin.
-* `ignore_annotations` - (Optional) List of Kubernetes metadata annotations to ignore across all resources handled by this provider for situations where external systems are managing certain resource annotations.
-* `ignore_labels` - (Optional) List of Kubernetes metadata labels to ignore across all resources handled by this provider for situations where external systems are managing certain resource labels.
+* `ignore_annotations` - (Optional) List of Kubernetes metadata annotations to ignore across all resources handled by this provider for situations where external systems are managing certain resource annotations. Each item is a regular expression.
+* `ignore_labels` - (Optional) List of Kubernetes metadata labels to ignore across all resources handled by this provider for situations where external systems are managing certain resource labels. Each item is a regular expression.

@@ -2,10 +2,10 @@ package kubernetes
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
-func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec, d *schema.ResourceData) ([]interface{}, error) {
+func flattenReplicationControllerSpec(in corev1.ReplicationControllerSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	att["min_ready_seconds"] = in.MinReadySeconds
 
@@ -24,15 +24,15 @@ func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec, d *schema
 		}
 		template := make(map[string]interface{})
 		template["spec"] = podSpec
-		template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d)
+		template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d, meta)
 		att["template"] = []interface{}{template}
 	}
 
 	return []interface{}{att}, nil
 }
 
-func expandReplicationControllerSpec(rc []interface{}) (*v1.ReplicationControllerSpec, error) {
-	obj := &v1.ReplicationControllerSpec{}
+func expandReplicationControllerSpec(rc []interface{}) (*corev1.ReplicationControllerSpec, error) {
+	obj := &corev1.ReplicationControllerSpec{}
 	if len(rc) == 0 || rc[0] == nil {
 		return obj, nil
 	}
@@ -51,8 +51,8 @@ func expandReplicationControllerSpec(rc []interface{}) (*v1.ReplicationControlle
 	return obj, nil
 }
 
-func expandReplicationControllerTemplate(rct []interface{}) (*v1.PodTemplateSpec, error) {
-	obj := &v1.PodTemplateSpec{}
+func expandReplicationControllerTemplate(rct []interface{}) (*corev1.PodTemplateSpec, error) {
+	obj := &corev1.PodTemplateSpec{}
 	in := rct[0].(map[string]interface{})
 	metadata := in["metadata"].([]interface{})
 	obj.ObjectMeta = expandMetadata(metadata)

@@ -3,10 +3,11 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"log"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesPod() *schema.Resource {
@@ -43,21 +44,21 @@ func dataSourceKubernetesPodRead(ctx context.Context, d *schema.ResourceData, me
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
-	om := meta_v1.ObjectMeta{
+	om := metav1.ObjectMeta{
 		Namespace: metadata.Namespace,
 		Name:      metadata.Name,
 	}
 	d.SetId(buildId(om))
 
 	log.Printf("[INFO] Reading pod %s", metadata.Name)
-	pod, err := conn.CoreV1().Pods(metadata.Namespace).Get(ctx, metadata.Name, meta_v1.GetOptions{})
+	pod, err := conn.CoreV1().Pods(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received pod: %#v", pod)
 
-	err = d.Set("metadata", flattenMetadata(pod.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(pod.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -118,19 +119,33 @@ func expandStringSlice(s []interface{}) []string {
 	return result
 }
 
-func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, metaPrefix ...string) []interface{} {
+func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMetadata interface{}, metaPrefix ...string) []interface{} {
 	m := make(map[string]interface{})
 	prefix := ""
 	if len(metaPrefix) > 0 {
 		prefix = metaPrefix[0]
 	}
 	configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
-	m["annotations"] = removeInternalKeys(meta.Annotations, configAnnotations)
+
+	var ignoreAnnotations []string
+	if v, ok := providerMetadata.(kubeClientsets).configData.Get("ignore_annotations").([]interface{}); ok {
+		ignoreAnnotations = expandStringSlice(v)
+	}
+
+	annotations := removeInternalKeys(meta.Annotations, configAnnotations)
+	m["annotations"] = removeKeys(annotations, configAnnotations, ignoreAnnotations)
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}
 	configLabels := d.Get(prefix + "metadata.0.labels").(map[string]interface{})
-	m["labels"] = removeInternalKeys(meta.Labels, configLabels)
+
+	var ignoreLabels []string
+	if v, ok := providerMetadata.(kubeClientsets).configData.Get("ignore_labels").([]interface{}); ok {
+		ignoreLabels = expandStringSlice(v)
+	}
+
+	labels := removeInternalKeys(meta.Labels, configLabels)
+	m["labels"] = removeKeys(labels, configLabels, ignoreLabels)
 	m["name"] = meta.Name
 	m["resource_version"] = meta.ResourceVersion
 	m["uid"] = fmt.Sprintf("%v", meta.UID)
@@ -146,6 +161,17 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, metaPrefix 
 func removeInternalKeys(m map[string]string, d map[string]interface{}) map[string]string {
 	for k := range m {
 		if isInternalKey(k) && !isKeyInMap(k, d) {
+			delete(m, k)
+		}
+	}
+	return m
+}
+
+// removeKeys removes given Kubernetes metadata(annotations and labels) keys.
+// In that case, they won't be available in the TF state file and will be ignored during apply/plan operations.
+func removeKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadataKeys []string) map[string]string {
+	for k := range m {
+		if ignoreKey(k, ignoreKubernetesMetadataKeys) && !isKeyInMap(k, d) {
 			delete(m, k)
 		}
 	}
@@ -189,6 +215,18 @@ func isInternalKey(annotationKey string) bool {
 	if strings.Contains(annotationKey, "deprecated.daemonset.template.generation") {
 		return true
 	}
+	return false
+}
+
+// ignoreKey reports whether the Kubernetes metadata(annotations and labels) key contains
+// any match of the regular expression pattern from the expressions slice.
+func ignoreKey(key string, expressions []string) bool {
+	for _, e := range expressions {
+		if ok, _ := regexp.MatchString(e, key); ok {
+			return true
+		}
+	}
+
 	return false
 }
 

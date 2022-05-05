@@ -157,12 +157,12 @@ func resourceKubernetesCronJobV1Read(ctx context.Context, d *schema.ResourceData
 		}
 	}
 
-	err = d.Set("metadata", flattenMetadata(job.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(job.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	jobSpec, err := flattenCronJobSpecV1(job.Spec, d)
+	jobSpec, err := flattenCronJobSpecV1(job.Spec, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}

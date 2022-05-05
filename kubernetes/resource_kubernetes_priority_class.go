@@ -100,7 +100,7 @@ func resourceKubernetesPriorityClassRead(ctx context.Context, d *schema.Resource
 	}
 	log.Printf("[INFO] Received priority class: %#v", priorityClass)
 
-	err = d.Set("metadata", flattenMetadata(priorityClass.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(priorityClass.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

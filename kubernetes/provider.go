@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
@@ -170,6 +171,24 @@ func Provider() *schema.Provider {
 					},
 				},
 			},
+			"ignore_annotations": {
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type:         schema.TypeString,
+					ValidateFunc: validation.StringIsValidRegExp,
+				},
+				Optional:    true,
+				Description: "List of Kubernetes metadata annotations to ignore across all resources handled by this provider for situations where external systems are managing certain resource annotations. Each item is a regular expression.",
+			},
+			"ignore_labels": {
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type:         schema.TypeString,
+					ValidateFunc: validation.StringIsValidRegExp,
+				},
+				Optional:    true,
+				Description: "List of Kubernetes metadata labels to ignore across all resources handled by this provider for situations where external systems are managing certain resource labels. Each item is a regular expression.",
+			},
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -321,6 +340,8 @@ type KubeClientsets interface {
 }
 
 type kubeClientsets struct {
+	// TODO: this struct has become overloaded we should
+	// rename this or break it into smaller structs
 	config              *restclient.Config
 	mainClientset       *kubernetes.Clientset
 	aggregatorClientset *aggregator.Clientset

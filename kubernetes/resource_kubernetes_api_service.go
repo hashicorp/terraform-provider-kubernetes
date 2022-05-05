@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	v1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 )
@@ -114,7 +114,7 @@ func resourceKubernetesAPIServiceCreate(ctx context.Context, d *schema.ResourceD
 	}
 
 	log.Printf("[INFO] Creating new API service: %#v", svc)
-	out, err := conn.ApiregistrationV1().APIServices().Create(ctx, &svc, meta_v1.CreateOptions{})
+	out, err := conn.ApiregistrationV1().APIServices().Create(ctx, &svc, metav1.CreateOptions{})
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -140,13 +140,13 @@ func resourceKubernetesAPIServiceRead(ctx context.Context, d *schema.ResourceDat
 
 	name := d.Id()
 	log.Printf("[INFO] Reading service %s", name)
-	svc, err := conn.ApiregistrationV1().APIServices().Get(ctx, name, meta_v1.GetOptions{})
+	svc, err := conn.ApiregistrationV1().APIServices().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received API service: %#v", svc)
-	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -180,7 +180,7 @@ func resourceKubernetesAPIServiceUpdate(ctx context.Context, d *schema.ResourceD
 		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating service %q: %v", name, string(data))
-	out, err := conn.ApiregistrationV1().APIServices().Patch(ctx, name, pkgApi.JSONPatchType, data, meta_v1.PatchOptions{})
+	out, err := conn.ApiregistrationV1().APIServices().Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return diag.Errorf("Failed to update API service: %s", err)
 	}
@@ -199,7 +199,7 @@ func resourceKubernetesAPIServiceDelete(ctx context.Context, d *schema.ResourceD
 	name := d.Id()
 
 	log.Printf("[INFO] Deleting API service: %#v", name)
-	err = conn.ApiregistrationV1().APIServices().Delete(ctx, name, meta_v1.DeleteOptions{})
+	err = conn.ApiregistrationV1().APIServices().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -219,7 +219,7 @@ func resourceKubernetesAPIServiceExists(ctx context.Context, d *schema.ResourceD
 	name := d.Id()
 
 	log.Printf("[INFO] Checking API service %s", name)
-	_, err = conn.ApiregistrationV1().APIServices().Get(ctx, name, meta_v1.GetOptions{})
+	_, err = conn.ApiregistrationV1().APIServices().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil

@@ -130,6 +130,36 @@ provider "kubernetes" {
 
 For further reading, see these examples which demonstrate different approaches to keeping the cluster credentials up to date: [AKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/main/_examples/aks/README.md), [EKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/main/_examples/eks/README.md), and [GKE](https://github.com/hashicorp/terraform-provider-kubernetes/blob/main/_examples/gke/README.md).
 
+## Ignore Kubernetes annotations and labels
+
+In certain cases, external systems can add and modify resources annotations and labels for their own purposes. However, Terraform will remove them since they are not presented in the code. It also might be hard to update code accordingly to stay tuned with the changes that come outside. In order to address this `ingore_annotations` and `ignote_labels` attributes were introduced on the provider level. They allow Terraform to ignore certain annotations and labels across all resources.
+
+Both attributes support RegExp to match metadata objects more effectively.
+
+### Examples
+
+The following example demonstrates how to ignore particular annotation keys:
+
+```hcl
+provider "kubernetes" {
+  ignore_annotations = [
+    "cni\\.projectcalico\\.org\\/podIP",
+    "cni\\.projectcalico\\.org\\/podIPs",
+  ]
+}
+```
+
+Next example demonstrates how to ignore AWS load balancer annotations:
+
+```hcl
+provider "kubernetes" {
+  ignore_annotations = [
+    "^service\\.beta\\.kubernetes\\.io\\/aws-load-balancer.*",
+  ]
+}
+```
+
+Since dot `.`, forward slash `/`, and some other symbols have special meaning in RegExp, they should be escaped by adding a double backslash in front of them if you want to use them as they are.
 
 ## Argument Reference
 
@@ -154,3 +184,5 @@ The following arguments are supported:
     * `command` - (Required) Command to execute.
     * `args` - (Optional) List of arguments to pass when executing the plugin.
     * `env` - (Optional) Map of environment variables to set when executing the plugin.
+* `ignore_annotations` - (Optional) List of Kubernetes metadata annotations to ignore across all resources handled by this provider for situations where external systems are managing certain resource annotations. Each item is a regular expression.
+* `ignore_labels` - (Optional) List of Kubernetes metadata labels to ignore across all resources handled by this provider for situations where external systems are managing certain resource labels. Each item is a regular expression.

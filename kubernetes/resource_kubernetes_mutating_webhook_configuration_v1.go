@@ -182,7 +182,7 @@ func resourceKubernetesMutatingWebhookConfigurationV1Read(ctx context.Context, d
 		return diag.FromErr(err)
 	}
 
-	err = d.Set("metadata", flattenMetadata(cfg.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(cfg.ObjectMeta, d, meta))
 	if err != nil {
 		return nil
 	}

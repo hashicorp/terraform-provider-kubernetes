@@ -95,7 +95,7 @@ func resourceKubernetesClusterRoleBindingRead(ctx context.Context, d *schema.Res
 	}
 
 	log.Printf("[INFO] Received ClusterRoleBinding: %#v", binding)
-	err = d.Set("metadata", flattenMetadata(binding.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(binding.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

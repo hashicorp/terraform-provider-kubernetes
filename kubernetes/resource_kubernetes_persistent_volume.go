@@ -274,7 +274,7 @@ func resourceKubernetesPersistentVolumeRead(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received persistent volume: %#v", volume)
-	err = d.Set("metadata", flattenMetadata(volume.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(volume.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

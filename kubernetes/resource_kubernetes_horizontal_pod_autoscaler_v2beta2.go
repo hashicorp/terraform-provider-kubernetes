@@ -163,7 +163,7 @@ func resourceKubernetesHorizontalPodAutoscalerV2Beta2Read(ctx context.Context, d
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received horizontal pod autoscaler: %#v", hpa)
-	err = d.Set("metadata", flattenMetadata(hpa.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(hpa.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

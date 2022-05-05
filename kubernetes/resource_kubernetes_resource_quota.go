@@ -181,7 +181,7 @@ func resourceKubernetesResourceQuotaRead(ctx context.Context, d *schema.Resource
 		}
 	}
 
-	err = d.Set("metadata", flattenMetadata(resQuota.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(resQuota.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

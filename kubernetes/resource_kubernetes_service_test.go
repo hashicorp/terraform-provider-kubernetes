@@ -1167,23 +1167,22 @@ func testAccKubernetesServiceConfig_loadBalancer_internal_traffic_policy_modifie
 }
 
 func testAccKubernetesServiceConfig_loadBalancer_class(name string) string {
-	return fmt.Sprintf(`
-    resource "kubernetes_service_v1" "test" {
-        metadata {
-          name = "%s"
-        }
-        spec {
-          type                = "LoadBalancer"
-          load_balancer_class = "loadbalancer.io/loadbalancer"
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
+  metadata {
+    name = "%s"
+  }
 
-          port {
-            port        = 80
-            target_port = 8080
-         }
-        }
+  spec {
+    type                = "LoadBalancer"
+    load_balancer_class = "loadbalancer.io/loadbalancer"
+    port {
+      port        = 80
+      target_port = 8080
+    }
+  }
 
-        wait_for_load_balancer = false
-      }
+  wait_for_load_balancer = false
+}
 `, name)
 }
 
@@ -1203,11 +1202,11 @@ func testAccKubernetesServiceConfig_nodePort(name string) string {
     }
 
     session_affinity = "ClientIP"
-	session_affinity_config {
-		client_ip {
-			timeout_seconds = 300
-		}
-	}
+    session_affinity_config {
+      client_ip {
+        timeout_seconds = 300
+      }
+    }
 
     port {
       name         = "first"
@@ -1245,11 +1244,11 @@ func testAccKubernetesServiceConfig_nodePort_toClusterIP(name string) string {
     }
 
     session_affinity = "ClientIP"
-	session_affinity_config {
-		client_ip {
-			timeout_seconds = 300
-		}
-	}
+    session_affinity_config {
+      client_ip {
+        timeout_seconds = 300
+      }
+    }
 
     port {
       name        = "first"

@@ -184,6 +184,18 @@ The following arguments are supported:
 * `protocol` - (Optional) The IP protocol for this port. Supports `TCP` and `UDP`. Default is `TCP`.
 * `target_port` - (Optional) Number or name of the port to access on the pods targeted by the service. Number must be in the range 1 to 65535. This field is ignored for services with `cluster_ip = "None"`. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/services#defining-a-service)
 
+### `session_affinity_config`
+
+#### Arguments
+
+* `client_ip` - (Optional) Contains the configurations of Client IP based session affinity.
+
+### `client_ip`
+
+#### Arguments
+
+* `timeout_seconds` - (Optional) Specifies the seconds of `ClientIP` type session sticky time. The value must be > 0 and <= 86400(for 1 day) if ServiceAffinity == `ClientIP`.
+
 ## Attributes
 
 * `status` - Status is a list containing the most recently observed status of the service. Populated by the system. Read-only. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status

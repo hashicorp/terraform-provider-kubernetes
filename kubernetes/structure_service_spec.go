@@ -35,19 +35,19 @@ func flattenIPFamilies(in []v1.IPFamily) []interface{} {
 }
 
 func flattenSessionAffinityConfigClientIP(in v1.ClientIPConfig) []interface{} {
-	a := make([]interface{}, 0, 0)
-	att := make(map[string]interface{})
-	att["timeout_seconds"] = in.TimeoutSeconds
-	a = append(a, att)
-	return a
+	return []interface{}{
+		map[string]interface{}{
+			"timeout_seconds": in.TimeoutSeconds,
+		},
+	}
 }
 
 func flattenSessionAffinityConfig(in v1.SessionAffinityConfig) []interface{} {
-	a := make([]interface{}, 0, 0)
-	att := make(map[string]interface{})
-	att["client_ip"] = flattenSessionAffinityConfigClientIP(*in.ClientIP)
-	a = append(a, att)
-	return a
+	return []interface{}{
+		map[string]interface{}{
+			"client_ip": flattenSessionAffinityConfigClientIP(*in.ClientIP),
+		},
+	}
 }
 
 func flattenServiceSpec(in v1.ServiceSpec) []interface{} {
@@ -178,12 +178,18 @@ func expandIPFamilies(l []interface{}) []v1.IPFamily {
 }
 
 func expandSessionAffinityConfigClientIP(l []interface{}) *v1.ClientIPConfig {
-	var to int32
+	obj := &v1.ClientIPConfig{}
+
+	if len(l) == 0 || l[0] == nil {
+		return obj
+	}
+
 	in := l[0].(map[string]interface{})
 	if v, ok := in["timeout_seconds"].(int); ok {
-		to = int32(v)
+		obj.TimeoutSeconds = ptrToInt32(int32(v))
 	}
-	return &v1.ClientIPConfig{TimeoutSeconds: &to}
+
+	return obj
 }
 
 func expandSessionAffinityConfig(l []interface{}) *v1.SessionAffinityConfig {

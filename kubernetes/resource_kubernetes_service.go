@@ -245,17 +245,18 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 							Schema: map[string]*schema.Schema{
 								"client_ip": {
 									Type:        schema.TypeList,
-									Description: "",
+									Description: "Contains the configurations of Client IP based session affinity.",
 									Optional:    true,
 									Computed:    true,
 									MaxItems:    1,
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"timeout_seconds": {
-												Type:        schema.TypeInt,
-												Description: "",
-												Optional:    true,
-												Computed:    true,
+												Type:         schema.TypeInt,
+												Description:  "Specifies the seconds of `ClientIP` type session sticky time. The value must be > 0 and <= 86400(for 1 day) if `ServiceAffinity` == `ClientIP`.",
+												Optional:     true,
+												Computed:     true,
+												ValidateFunc: validation.IntBetween(1, 86400),
 											},
 										},
 									},

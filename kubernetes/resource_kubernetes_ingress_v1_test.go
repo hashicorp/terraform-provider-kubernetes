@@ -377,8 +377,7 @@ func testAccCheckKubernetesIngressV1Exists(n string, obj *networking.Ingress) re
 }
 
 func testAccKubernetesIngressV1Config_serviceBackend(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -413,8 +412,7 @@ resource "kubernetes_ingress_v1" "test" {
 }
 
 func testAccKubernetesIngressV1Config_resourceBackend(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -448,8 +446,7 @@ resource "kubernetes_ingress_v1" "test" {
 }
 
 func testAccKubernetesIngressV1Config_serviceBackend_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -468,8 +465,7 @@ resource "kubernetes_ingress_v1" "test" {
 }
 
 func testAccKubernetesIngressV1Config_TLS(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -491,8 +487,7 @@ resource "kubernetes_ingress_v1" "test" {
 }
 
 func testAccKubernetesIngressV1Config_TLS_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -514,8 +509,7 @@ resource "kubernetes_ingress_v1" "test" {
 }
 
 func testAccKubernetesIngressV1Config_internalKey(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
     annotations = {
@@ -546,8 +540,7 @@ resource "kubernetes_ingress_v1" "test" {
 }
 
 func testAccKubernetesIngressV1Config_internalKey_removed(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
     annotations = {
@@ -576,8 +569,7 @@ resource "kubernetes_ingress_v1" "test" {
 }
 
 func testAccKubernetesIngressV1Config_waitForLoadBalancer(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     name = %q
   }
@@ -647,8 +639,7 @@ resource "kubernetes_ingress_v1" "test" {
 }
 
 func testAccKubernetesIngressV1Config_ruleHostOnly(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -662,8 +653,7 @@ resource "kubernetes_ingress_v1" "test" {
 }
 
 func testAccKubernetesIngressV1Config_multipleRulesDifferentHosts(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
   metadata {
     name = "%s"
   }

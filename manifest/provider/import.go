@@ -164,10 +164,23 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 		})
 		return resp, nil
 	}
-	resp.ImportedResources = append(resp.ImportedResources, &tfprotov5.ImportedResource{
+	impf := tftypes.NewValue(privateStateSchema,
+		map[string]tftypes.Value{"IsImported": tftypes.NewValue(tftypes.Bool, true)},
+	)
+	fb, err := impf.MarshalMsgPack(privateStateSchema)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityWarning,
+			Summary:  "Failed to earmark imported resource",
+			Detail:   err.Error(),
+		})
+	}
+	nr := &tfprotov5.ImportedResource{
 		TypeName: req.TypeName,
 		State:    &impState,
-	})
+		Private:  fb,
+	}
+	resp.ImportedResources = append(resp.ImportedResources, nr)
 	resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 		Severity: tfprotov5.DiagnosticSeverityWarning,
 		Summary:  "Apply needed after 'import'",

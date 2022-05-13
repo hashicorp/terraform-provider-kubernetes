@@ -17,6 +17,9 @@ import (
 func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.ReadResourceRequest) (*tfprotov5.ReadResourceResponse, error) {
 	resp := &tfprotov5.ReadResourceResponse{}
 
+	// loop private state back in - ATM it's not needed here
+	resp.Private = req.Private
+
 	execDiag := s.canExecute()
 	if len(execDiag) > 0 {
 		resp.Diagnostics = append(resp.Diagnostics, execDiag...)

@@ -68,6 +68,22 @@ func TestKubernetesManifest_Import(t *testing.T) {
 	})
 	tfstate.AssertAttributeDoesNotExist(t, "kubernetes_manifest.test.data.fizz")
 
+	err = tf.CreatePlan(ctx)
+	if err != nil {
+		t.Fatalf("Failed to create plan: %q", err)
+	}
+	plan, err := tf.SavedPlan(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve saved plan: %q", err)
+	}
+
+	if len(plan.ResourceChanges) != 1 || plan.ResourceChanges[0].Address != "kubernetes_manifest.test" {
+		t.Fatalf("Failed to find resource in plan data: %q", plan.ResourceChanges[0].Address)
+	}
+	if len(plan.ResourceChanges[0].Change.Actions) != 1 || plan.ResourceChanges[0].Change.Actions[0] != "update" {
+		t.Fatalf("Failed to plan for resource update - in fact, planned for: %q", plan.ResourceChanges[0].Change.Actions[0])
+	}
+
 	tf.Apply(ctx)
 
 	s, err = tf.State(ctx)

@@ -262,6 +262,8 @@ func (ps *RawProviderServer) lookUpGVKinCRDs(ctx context.Context, gvk schema.Gro
 	return nil, nil
 }
 
+// privateStateSchema describes the structure of the private state payload that
+// Terraform can store along with the "regular" resource state state.
 var privateStateSchema tftypes.Object = tftypes.Object{AttributeTypes: map[string]tftypes.Type{
 	"IsImported": tftypes.Bool,
 }}

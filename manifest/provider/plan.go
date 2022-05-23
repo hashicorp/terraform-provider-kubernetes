@@ -99,15 +99,44 @@ func (s *RawProviderServer) getFieldManagerConfig(v map[string]tftypes.Value) (s
 	return fieldManagerName, forceConflicts, nil
 }
 
+func isImportedFlagFromPrivate(p []byte) (f bool, d []*tfprotov5.Diagnostic) {
+	if p == nil || len(p) == 0 {
+		return
+	}
+	ps, err := getPrivateStateValue(p)
+	if err != nil {
+		d = append(d, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Unexpected format for private state",
+			Detail:   err.Error(),
+		})
+	}
+	err = ps["IsImported"].As(&f)
+	if err != nil {
+		d = append(d, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Unexpected format for import flag in private state",
+			Detail:   err.Error(),
+		})
+	}
+	return
+}
+
 // PlanResourceChange function
 func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfprotov5.PlanResourceChangeRequest) (*tfprotov5.PlanResourceChangeResponse, error) {
 	resp := &tfprotov5.PlanResourceChangeResponse{}
 
-	resp.RequiresReplace = append(resp.RequiresReplace,
-		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("apiVersion"),
-		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("kind"),
-		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("metadata").WithAttributeName("name"),
-	)
+	isImported, d := isImportedFlagFromPrivate(req.PriorPrivate)
+	resp.Diagnostics = append(resp.Diagnostics, d...)
+	if !isImported {
+		resp.RequiresReplace = append(resp.RequiresReplace,
+			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("apiVersion"),
+			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("kind"),
+			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("metadata").WithAttributeName("name"),
+		)
+	} else {
+		resp.PlannedPrivate = req.PriorPrivate
+	}
 
 	execDiag := s.canExecute()
 	if len(execDiag) > 0 {
@@ -271,7 +300,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		})
 		return resp, nil
 	}
-	if ns {
+	if ns && !isImported {
 		resp.RequiresReplace = append(resp.RequiresReplace,
 			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("metadata").WithAttributeName("namespace"),
 		)

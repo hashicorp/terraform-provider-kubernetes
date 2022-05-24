@@ -1,9 +1,6 @@
 package kubernetes
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
@@ -149,17 +146,11 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 		},
 		// This field can be edited in place.
 		"ttl_seconds_after_finished": {
-			Type:     schema.TypeString,
-			Optional: true,
-			ForceNew: false,
-			ValidateFunc: func(value interface{}, key string) ([]string, []error) {
-				v, err := strconv.Atoi(value.(string))
-				if err != nil {
-					return []string{}, []error{fmt.Errorf("%s is not a valid integer", key)}
-				}
-				return validateNonNegativeInteger(v, key)
-			},
-			Description: "ttlSecondsAfterFinished limits the lifetime of a Job that has finished execution (either Complete or Failed). If this field is set, ttlSecondsAfterFinished after the Job finishes, it is eligible to be automatically deleted. When the Job is being deleted, its lifecycle guarantees (e.g. finalizers) will be honored. If this field is unset, the Job won't be automatically deleted. If this field is set to zero, the Job becomes eligible to be deleted immediately after it finishes.",
+			Type:         schema.TypeInt,
+			Optional:     true,
+			ForceNew:     false,
+			ValidateFunc: validateNonNegativeInteger,
+			Description:  "ttlSecondsAfterFinished limits the lifetime of a Job that has finished execution (either Complete or Failed). If this field is set, ttlSecondsAfterFinished after the Job finishes, it is eligible to be automatically deleted. When the Job is being deleted, its lifecycle guarantees (e.g. finalizers) will be honored. If this field is unset, the Job won't be automatically deleted. If this field is set to zero, the Job becomes eligible to be deleted immediately after it finishes.",
 		},
 	}
 

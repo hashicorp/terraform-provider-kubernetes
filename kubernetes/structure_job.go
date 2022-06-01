@@ -106,7 +106,7 @@ func expandJobSpec(j []interface{}) (batchv1.JobSpec, error) {
 	obj.Template = *template
 
 	if v, ok := in["ttl_seconds_after_finished"].(string); ok && v != "" {
-		i, err := strconv.Atoi(v)
+		i, err := strconv.ParseInt(v,10,32)
 		if err != nil {
 			return obj, err
 		}

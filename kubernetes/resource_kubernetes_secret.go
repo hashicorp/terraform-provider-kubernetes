@@ -150,7 +150,7 @@ func resourceKubernetesSecretRead(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Received secret: %#v", secret)
+	log.Printf("[INFO] Received secret: %#v", secret.ObjectMeta)
 	err = d.Set("metadata", flattenMetadata(secret.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
@@ -240,7 +240,7 @@ func resourceKubernetesSecretUpdate(ctx context.Context, d *schema.ResourceData,
 		return diag.Errorf("Failed to update secret: %s", err)
 	}
 
-	log.Printf("[INFO] Submitting updated secret: %#v", out)
+	log.Printf("[INFO] Submitting updated secret: %#v", out.ObjectMeta)
 	d.SetId(buildId(out.ObjectMeta))
 
 	return resourceKubernetesSecretRead(ctx, d, meta)

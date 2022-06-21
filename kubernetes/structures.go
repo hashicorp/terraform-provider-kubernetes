@@ -637,12 +637,12 @@ func flattenLabelSelectorRequirementList(l []metav1.LabelSelectorRequirement) []
 func flattenLocalObjectReferenceArray(in []api.LocalObjectReference) []interface{} {
 	att := []interface{}{}
 	for _, v := range in {
-			m := map[string]interface{}{
-				"name": v.Name,
-			}
-			att = append(att, m)
+		m := map[string]interface{}{
+			"name": v.Name,
 		}
+		att = append(att, m)
 	}
+
 	return att
 }
 
@@ -668,7 +668,7 @@ func flattenServiceAccountSecrets(in []api.ObjectReference, defaultSecretName st
 			continue
 		}
 		m := map[string]interface{}{}
-			m["name"] = v.Name
+		m["name"] = v.Name
 		att = append(att, m)
 	}
 	return att

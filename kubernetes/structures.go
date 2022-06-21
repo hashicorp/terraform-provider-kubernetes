@@ -642,7 +642,6 @@ func flattenLocalObjectReferenceArray(in []api.LocalObjectReference) []interface
 		}
 		att = append(att, m)
 	}
-
 	return att
 }
 
@@ -668,7 +667,9 @@ func flattenServiceAccountSecrets(in []api.ObjectReference, defaultSecretName st
 			continue
 		}
 		m := map[string]interface{}{}
-		m["name"] = v.Name
+		if v.Name != "" {
+			m["name"] = v.Name
+		}
 		att = append(att, m)
 	}
 	return att

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -108,7 +109,7 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 }
 
 func testAccCheckKubernetesAPIServiceDestroy(s *terraform.State) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).AggregatorClientset()
+	conn, err := testAccProvider.Meta().(provider.KubeClientsets).AggregatorClientset()
 	if err != nil {
 		return err
 	}
@@ -139,7 +140,7 @@ func testAccCheckKubernetesAPIServiceExists(n string) resource.TestCheckFunc {
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn, err := testAccProvider.Meta().(KubeClientsets).AggregatorClientset()
+		conn, err := testAccProvider.Meta().(provider.KubeClientsets).AggregatorClientset()
 		if err != nil {
 			return err
 		}

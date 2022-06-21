@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 	v1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 )
 
@@ -59,7 +60,7 @@ func expandAPIServiceSpec(l []interface{}) v1.APIServiceSpec {
 		}
 
 		if v, ok := m["port"].(int); ok && v > 0 {
-			obj.Service.Port = ptrToInt32(int32(v))
+			obj.Service.Port = structures.PtrToInt32(int32(v))
 		}
 	}
 	if v, ok := in["version"].(string); ok {

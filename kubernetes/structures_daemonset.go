@@ -4,6 +4,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	providercorev1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/core/v1"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 )
 
 func flattenDaemonSetSpec(in appsv1.DaemonSetSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
@@ -17,16 +21,16 @@ func flattenDaemonSetSpec(in appsv1.DaemonSetSpec, d *schema.ResourceData, meta 
 	}
 
 	if in.Selector != nil {
-		att["selector"] = flattenLabelSelector(in.Selector)
+		att["selector"] = structures.FlattenLabelSelector(in.Selector)
 	}
 
-	podSpec, err := flattenPodSpec(in.Template.Spec)
+	podSpec, err := providercorev1.FlattenPodSpec(in.Template.Spec)
 	if err != nil {
 		return nil, err
 	}
 	template := make(map[string]interface{})
 	template["spec"] = podSpec
-	template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d, meta, "spec.0.template.0.")
+	template["metadata"] = providermetav1.FlattenMetadata(in.Template.ObjectMeta, d, meta, "spec.0.template.0.")
 	att["template"] = []interface{}{template}
 
 	return []interface{}{att}, nil
@@ -61,10 +65,10 @@ func expandDaemonSetSpec(daemonset []interface{}) (appsv1.DaemonSetSpec, error) 
 	in := daemonset[0].(map[string]interface{})
 
 	obj.MinReadySeconds = int32(in["min_ready_seconds"].(int))
-	obj.RevisionHistoryLimit = ptrToInt32(int32(in["revision_history_limit"].(int)))
+	obj.RevisionHistoryLimit = structures.PtrToInt32(int32(in["revision_history_limit"].(int)))
 
 	if v, ok := in["selector"].([]interface{}); ok && len(v) > 0 {
-		obj.Selector = expandLabelSelector(v)
+		obj.Selector = structures.ExpandLabelSelector(v)
 	}
 
 	if v, ok := in["strategy"].([]interface{}); ok && len(v) > 0 {

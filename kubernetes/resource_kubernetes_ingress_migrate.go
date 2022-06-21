@@ -2,9 +2,11 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	networking "k8s.io/api/networking/v1beta1"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
+	networking "k8s.io/api/networking/v1beta1"
 )
 
 // resourceKubernetesIngressV0 is a copy of the Kubernetes Ingress schema (before migration).
@@ -17,7 +19,7 @@ func resourceKubernetesIngressV0() *schema.Resource {
 	docIngressSpec := networking.IngressSpec{}.SwaggerDoc()
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("ingress", true),
+			"metadata": providermetav1.MetadataSchema("ingress", true),
 			"spec": {
 				Type:        schema.TypeList,
 				Description: docIngress["spec"],

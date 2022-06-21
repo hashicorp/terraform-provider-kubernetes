@@ -4,8 +4,9 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 	api "k8s.io/api/core/v1"
-	"k8s.io/api/networking/v1"
+	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -16,7 +17,7 @@ func flattenNetworkPolicySpec(in v1.NetworkPolicySpec) []interface{} {
 	att["ingress"] = flattenNetworkPolicyIngress(in.Ingress)
 	att["egress"] = flattenNetworkPolicyEgress(in.Egress)
 	if len(in.PodSelector.MatchExpressions) > 0 || len(in.PodSelector.MatchLabels) > 0 {
-		att["pod_selector"] = flattenLabelSelector(&in.PodSelector)
+		att["pod_selector"] = structures.FlattenLabelSelector(&in.PodSelector)
 	} else {
 		att["pod_selector"] = []interface{}{make(map[string]interface{})}
 	}
@@ -79,10 +80,10 @@ func flattenNetworkPolicyPeer(in []v1.NetworkPolicyPeer) []interface{} {
 			m["ip_block"] = flattenIPBlock(peer.IPBlock)
 		}
 		if peer.NamespaceSelector != nil {
-			m["namespace_selector"] = flattenLabelSelector(peer.NamespaceSelector)
+			m["namespace_selector"] = structures.FlattenLabelSelector(peer.NamespaceSelector)
 		}
 		if peer.PodSelector != nil {
-			m["pod_selector"] = flattenLabelSelector(peer.PodSelector)
+			m["pod_selector"] = structures.FlattenLabelSelector(peer.PodSelector)
 		}
 		att[i] = m
 	}
@@ -113,7 +114,7 @@ func expandNetworkPolicySpec(in []interface{}) (*v1.NetworkPolicySpec, error) {
 	if !ok {
 		return nil, fmt.Errorf("failed to expand NetworkPolicy.Spec: malformed input")
 	}
-	spec.PodSelector = *expandLabelSelector(m["pod_selector"].([]interface{}))
+	spec.PodSelector = *structures.ExpandLabelSelector(m["pod_selector"].([]interface{}))
 	if v, ok := m["ingress"].([]interface{}); ok && len(v) > 0 {
 		ingress, err := expandNetworkPolicyIngress(v)
 		if err != nil {
@@ -232,10 +233,10 @@ func expandNetworkPolicyPeer(l []interface{}) (*[]v1.NetworkPolicyPeer, error) {
 			policyPeers[i].IPBlock = ipBlock
 		}
 		if v, ok := in["namespace_selector"].([]interface{}); ok && len(v) > 0 {
-			policyPeers[i].NamespaceSelector = expandLabelSelector(v)
+			policyPeers[i].NamespaceSelector = structures.ExpandLabelSelector(v)
 		}
 		if v, ok := in["pod_selector"].([]interface{}); ok && len(v) > 0 {
-			policyPeers[i].PodSelector = expandLabelSelector(v)
+			policyPeers[i].PodSelector = structures.ExpandLabelSelector(v)
 		}
 	}
 	return &policyPeers, nil
@@ -254,7 +255,7 @@ func expandIPBlock(l []interface{}) (*v1.IPBlock, error) {
 		ipBlock.CIDR = v
 	}
 	if v, ok := in["except"].([]interface{}); ok && len(v) > 0 {
-		ipBlock.Except = expandStringSlice(v)
+		ipBlock.Except = structures.ExpandStringSlice(v)
 	}
 	return &ipBlock, nil
 }
@@ -269,8 +270,8 @@ func expandNetworkPolicyTypes(l []interface{}) (*[]v1.PolicyType, error) {
 
 // Patchers
 
-func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData) (*PatchOperations, error) {
-	ops := make(PatchOperations, 0, 0)
+func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData) (*structures.PatchOperations, error) {
+	ops := make(structures.PatchOperations, 0, 0)
 	if d.HasChange(keyPrefix + "ingress") {
 		oldV, _ := d.GetChange(keyPrefix + "ingress")
 		ingress, err := expandNetworkPolicyIngress(d.Get(keyPrefix + "ingress").([]interface{}))
@@ -278,12 +279,12 @@ func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData
 			return nil, err
 		}
 		if len(oldV.([]interface{})) == 0 {
-			ops = append(ops, &AddOperation{
+			ops = append(ops, &structures.AddOperation{
 				Path:  pathPrefix + "/ingress",
 				Value: ingress,
 			})
 		} else {
-			ops = append(ops, &ReplaceOperation{
+			ops = append(ops, &structures.ReplaceOperation{
 				Path:  pathPrefix + "/ingress",
 				Value: ingress,
 			})
@@ -296,21 +297,21 @@ func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData
 			return nil, err
 		}
 		if len(oldV.([]interface{})) == 0 {
-			ops = append(ops, &AddOperation{
+			ops = append(ops, &structures.AddOperation{
 				Path:  pathPrefix + "/egress",
 				Value: egress,
 			})
 		} else {
-			ops = append(ops, &ReplaceOperation{
+			ops = append(ops, &structures.ReplaceOperation{
 				Path:  pathPrefix + "/egress",
 				Value: egress,
 			})
 		}
 	}
 	if d.HasChange(keyPrefix + "pod_selector") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/podSelector",
-			Value: expandLabelSelector(d.Get(keyPrefix + "pod_selector").([]interface{})),
+			Value: structures.ExpandLabelSelector(d.Get(keyPrefix + "pod_selector").([]interface{})),
 		})
 	}
 	if d.HasChange(keyPrefix + "policy_types") {
@@ -318,7 +319,7 @@ func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData
 		if err != nil {
 			return nil, err
 		}
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/policyTypes",
 			Value: *policyTypes,
 		})

@@ -3,6 +3,9 @@ package kubernetes
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
+	providercorev1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/core/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/validators"
 )
 
 func statefulSetSpecFields() map[string]*schema.Schema {
@@ -23,14 +26,14 @@ func statefulSetSpecFields() map[string]*schema.Schema {
 			Optional:     true,
 			Computed:     true,
 			Description:  "The desired number of replicas of the given Template, in the sense that they are instantiations of the same Template. Value must be a positive integer.",
-			ValidateFunc: validateTypeStringNullableInt,
+			ValidateFunc: validators.ValidateTypeStringNullableInt,
 		},
 		"revision_history_limit": {
 			Type:         schema.TypeInt,
 			Optional:     true,
 			ForceNew:     true,
 			Computed:     true,
-			ValidateFunc: validatePositiveInteger,
+			ValidateFunc: validators.ValidatePositiveInteger,
 			Description:  "The maximum number of revisions that will be maintained in the StatefulSet's revision history. The default value is 10.",
 		},
 		"selector": {
@@ -55,7 +58,7 @@ func statefulSetSpecFields() map[string]*schema.Schema {
 			Required:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: podTemplateFields("stateful set"),
+				Schema: providercorev1.PodTemplateFields("stateful set"),
 			},
 		},
 		"update_strategy": {
@@ -98,7 +101,7 @@ func statefulSetSpecFields() map[string]*schema.Schema {
 			ForceNew:    true,
 			Description: "A list of claims that pods are allowed to reference. Every claim in this list must have at least one matching (by name) volumeMount in one container in the template.",
 			Elem: &schema.Resource{
-				Schema: persistentVolumeClaimFields(),
+				Schema: providercorev1.PersistentVolumeClaimFields(),
 			},
 		},
 	}

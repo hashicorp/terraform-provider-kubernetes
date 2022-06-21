@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 	v1 "k8s.io/api/core/v1"
 	storageapi "k8s.io/api/storage/v1"
 )
@@ -17,7 +18,7 @@ func flattenStorageClass(in storageapi.StorageClass) map[string]interface{} {
 	if in.AllowedTopologies != nil {
 		att["allowed_topologies"] = flattenStorageClassAllowedTopologies(in.AllowedTopologies)
 	}
-	att["mount_options"] = newStringSet(schema.HashString, in.MountOptions)
+	att["mount_options"] = structures.NewStringSet(schema.HashString, in.MountOptions)
 	if in.AllowVolumeExpansion != nil {
 		att["allow_volume_expansion"] = *in.AllowVolumeExpansion
 	}
@@ -51,7 +52,7 @@ func expandStorageClassMatchLabelExpressions(l []interface{}) []v1.TopologySelec
 		in := n.(map[string]interface{})
 		obj[i] = v1.TopologySelectorLabelRequirement{
 			Key:    in["key"].(string),
-			Values: sliceOfString(in["values"].(*schema.Set).List()),
+			Values: structures.SliceOfString(in["values"].(*schema.Set).List()),
 		}
 	}
 	return obj
@@ -72,7 +73,7 @@ func flattenStorageClassMatchLabelExpressions(in []v1.TopologySelectorLabelRequi
 	for i, n := range in {
 		m := make(map[string]interface{})
 		m["key"] = n.Key
-		m["values"] = newStringSet(schema.HashString, n.Values)
+		m["values"] = structures.NewStringSet(schema.HashString, n.Values)
 		att[i] = m
 	}
 	return att

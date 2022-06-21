@@ -6,6 +6,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -36,7 +38,7 @@ func resourceKubernetesIngressClassSchema() map[string]*schema.Schema {
 	docIngressClassSpecParametes := core.TypedLocalObjectReference{}.SwaggerDoc()
 
 	return map[string]*schema.Schema{
-		"metadata": metadataSchema("ingress_class", true),
+		"metadata": providermetav1.MetadataSchema("ingress_class", true),
 		"spec": {
 			Type:        schema.TypeList,
 			Description: docIngressClass["spec"],
@@ -92,12 +94,12 @@ func resourceKubernetesIngressClassSchema() map[string]*schema.Schema {
 }
 
 func resourceKubernetesIngressClassCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	metadata := providermetav1.ExpandMetadata(d.Get("metadata").([]interface{}))
 	ing := &networking.IngressClass{
 		Spec: expandIngressClassSpec(d.Get("spec").([]interface{})),
 	}
@@ -105,7 +107,7 @@ func resourceKubernetesIngressClassCreate(ctx context.Context, d *schema.Resourc
 	log.Printf("[INFO] Creating new Ingress Class: %#v", ing)
 	out, err := conn.NetworkingV1().IngressClasses().Create(ctx, ing, metav1.CreateOptions{})
 	if err != nil {
-		return diag.Errorf("Failed to create Ingress Class '%s' because: %s", buildId(ing.ObjectMeta), err)
+		return diag.Errorf("Failed to create Ingress Class '%s' because: %s", providermetav1.BuildId(ing.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Submitted new IngressClass: %#v", out)
 	d.SetId(out.ObjectMeta.GetName())
@@ -122,7 +124,7 @@ func resourceKubernetesIngressClassRead(ctx context.Context, d *schema.ResourceD
 		d.SetId("")
 		return diag.Diagnostics{}
 	}
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -133,10 +135,10 @@ func resourceKubernetesIngressClassRead(ctx context.Context, d *schema.ResourceD
 	ing, err := conn.NetworkingV1().IngressClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return diag.Errorf("Failed to read Ingress Class '%s' because: %s", buildId(ing.ObjectMeta), err)
+		return diag.Errorf("Failed to read Ingress Class '%s' because: %s", providermetav1.BuildId(ing.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Received Ingress Class: %#v", ing)
-	err = d.Set("metadata", flattenMetadata(ing.ObjectMeta, d, meta))
+	err = d.Set("metadata", providermetav1.FlattenMetadata(ing.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -152,12 +154,12 @@ func resourceKubernetesIngressClassRead(ctx context.Context, d *schema.ResourceD
 }
 
 func resourceKubernetesIngressClassUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	metadata := providermetav1.ExpandMetadata(d.Get("metadata").([]interface{}))
 	spec := expandIngressClassSpec(d.Get("spec").([]interface{}))
 
 	if metadata.Namespace == "" {
@@ -171,7 +173,7 @@ func resourceKubernetesIngressClassUpdate(ctx context.Context, d *schema.Resourc
 
 	out, err := conn.NetworkingV1().IngressClasses().Update(ctx, ingressClass, metav1.UpdateOptions{})
 	if err != nil {
-		return diag.Errorf("Failed to update Ingress Class %s because: %s", buildId(ingressClass.ObjectMeta), err)
+		return diag.Errorf("Failed to update Ingress Class %s because: %s", providermetav1.BuildId(ingressClass.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Submitted updated Ingress Class: %#v", out)
 
@@ -179,7 +181,7 @@ func resourceKubernetesIngressClassUpdate(ctx context.Context, d *schema.Resourc
 }
 
 func resourceKubernetesIngressClassDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -215,7 +217,7 @@ func resourceKubernetesIngressClassDelete(ctx context.Context, d *schema.Resourc
 }
 
 func resourceKubernetesIngressClassExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}

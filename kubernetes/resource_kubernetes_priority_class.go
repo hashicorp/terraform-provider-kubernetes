@@ -5,6 +5,9 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/scheduling/v1"
@@ -24,7 +27,7 @@ func resourceKubernetesPriorityClass() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("priority class", true),
+			"metadata": providermetav1.MetadataSchema("priority class", true),
 			"description": {
 				Type:        schema.TypeString,
 				Description: "An arbitrary string that usually provides guidelines on when this priority class should be used.",
@@ -48,12 +51,12 @@ func resourceKubernetesPriorityClass() *schema.Resource {
 }
 
 func resourceKubernetesPriorityClassCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	metadata := providermetav1.ExpandMetadata(d.Get("metadata").([]interface{}))
 	value := d.Get("value").(int)
 	description := d.Get("description").(string)
 	globalDefault := d.Get("global_default").(bool)
@@ -85,7 +88,7 @@ func resourceKubernetesPriorityClassRead(ctx context.Context, d *schema.Resource
 		d.SetId("")
 		return diag.Diagnostics{}
 	}
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -100,7 +103,7 @@ func resourceKubernetesPriorityClassRead(ctx context.Context, d *schema.Resource
 	}
 	log.Printf("[INFO] Received priority class: %#v", priorityClass)
 
-	err = d.Set("metadata", flattenMetadata(priorityClass.ObjectMeta, d, meta))
+	err = d.Set("metadata", providermetav1.FlattenMetadata(priorityClass.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -124,18 +127,18 @@ func resourceKubernetesPriorityClassRead(ctx context.Context, d *schema.Resource
 }
 
 func resourceKubernetesPriorityClassUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	name := d.Id()
 
-	ops := patchMetadata("metadata.0.", "/metadata/", d)
+	ops := providermetav1.PatchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("description") {
 		description := d.Get("description").(string)
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  "/description",
 			Value: description,
 		})
@@ -143,7 +146,7 @@ func resourceKubernetesPriorityClassUpdate(ctx context.Context, d *schema.Resour
 
 	if d.HasChange("global_default") {
 		globalDefault := d.Get("global_default").(bool)
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  "/globalDefault",
 			Value: globalDefault,
 		})
@@ -165,7 +168,7 @@ func resourceKubernetesPriorityClassUpdate(ctx context.Context, d *schema.Resour
 }
 
 func resourceKubernetesPriorityClassDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -185,7 +188,7 @@ func resourceKubernetesPriorityClassDelete(ctx context.Context, d *schema.Resour
 }
 
 func resourceKubernetesPriorityClassExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}

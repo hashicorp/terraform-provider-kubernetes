@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -115,7 +116,7 @@ func TestAccKubernetesValidatingWebhookConfiguration_basic(t *testing.T) {
 }
 
 func testAccCheckKubernetesValdiatingWebhookConfigurationDestroy(s *terraform.State) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(provider.KubeClientsets).MainClientset()
 
 	if err != nil {
 		return err
@@ -159,7 +160,7 @@ func testAccCheckKubernetesValidatingWebhookConfigurationExists(n string) resour
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		conn, err := testAccProvider.Meta().(provider.KubeClientsets).MainClientset()
 		if err != nil {
 			return err
 		}
@@ -190,7 +191,7 @@ func testAccCheckKubernetesValidatingWebhookGetObjectV1(n string, obj *admission
 		if !ok {
 			return fmt.Errorf("Not found: %s", n)
 		}
-		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		conn, err := testAccProvider.Meta().(provider.KubeClientsets).MainClientset()
 		if err != nil {
 			return err
 		}
@@ -207,7 +208,7 @@ func testAccCheckKubernetesValidatingWebhookGetObjectV1Beta1(n string, obj *admi
 		if !ok {
 			return fmt.Errorf("Not found: %s", n)
 		}
-		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		conn, err := testAccProvider.Meta().(provider.KubeClientsets).MainClientset()
 		if err != nil {
 			return err
 		}
@@ -382,7 +383,7 @@ resource "kubernetes_validating_webhook_configuration_v1" "test" {
 }
 
 func skipIfNotAdmissionRegistrationV1Beta1(t *testing.T) {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -396,7 +397,7 @@ func skipIfNotAdmissionRegistrationV1Beta1(t *testing.T) {
 }
 
 func skipIfNotAdmissionRegistrationV1(t *testing.T) {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
 	"github.com/robfig/cron"
 )
 
@@ -30,7 +31,7 @@ func cronJobSpecFields() map[string]*schema.Schema {
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
-					"metadata": metadataSchema("jobTemplateSpec", true),
+					"metadata": providermetav1.MetadataSchema("jobTemplateSpec", true),
 					"spec": {
 						Type:        schema.TypeList,
 						Description: "Specification of the desired behavior of the job",

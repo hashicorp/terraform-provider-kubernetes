@@ -5,15 +5,16 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
 	pathValidation "k8s.io/apimachinery/pkg/api/validation/path"
 )
 
 func metadataSchemaRBAC(objectName string, generatableName bool, namespaced bool) *schema.Schema {
 	var m *schema.Schema
 	if namespaced {
-		m = namespacedMetadataSchema(objectName, generatableName)
+		m = providermetav1.NamespacedMetadataSchema(objectName, generatableName)
 	} else {
-		m = metadataSchema(objectName, generatableName)
+		m = providermetav1.MetadataSchema(objectName, generatableName)
 	}
 	metadataFields := (m.Elem.(*schema.Resource)).Schema
 	nameSchema := metadataFields["name"]

@@ -6,6 +6,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -29,7 +31,7 @@ func resourceKubernetesCSIDriverV1() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("csi driver", true),
+			"metadata": providermetav1.MetadataSchema("csi driver", true),
 			"spec": {
 				Type:        schema.TypeList,
 				Description: fmt.Sprintf("Spec of the CSIDriver"),
@@ -68,13 +70,13 @@ func resourceKubernetesCSIDriverV1() *schema.Resource {
 }
 
 func resourceKubernetesCSIDriverV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	CSIDriver := storage.CSIDriver{
-		ObjectMeta: expandMetadata(d.Get("metadata").([]interface{})),
+		ObjectMeta: providermetav1.ExpandMetadata(d.Get("metadata").([]interface{})),
 		Spec:       expandCSIDriverV1Spec(d.Get("spec").([]interface{})),
 	}
 
@@ -98,7 +100,7 @@ func resourceKubernetesCSIDriverV1Read(ctx context.Context, d *schema.ResourceDa
 		d.SetId("")
 		return diag.Diagnostics{}
 	}
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -111,7 +113,7 @@ func resourceKubernetesCSIDriverV1Read(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received CSIDriver: %#v", CSIDriver)
-	err = d.Set("metadata", flattenMetadata(CSIDriver.ObjectMeta, d, meta))
+	err = d.Set("metadata", providermetav1.FlattenMetadata(CSIDriver.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -130,13 +132,13 @@ func resourceKubernetesCSIDriverV1Read(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceKubernetesCSIDriverV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	name := d.Id()
-	ops := patchMetadata("metadata.0.", "/metadata/", d)
+	ops := providermetav1.PatchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("spec") {
 		diffOps, err := patchCSIDriverV1Spec("spec.0.", "/spec", d)
 		if err != nil {
@@ -160,7 +162,7 @@ func resourceKubernetesCSIDriverV1Update(ctx context.Context, d *schema.Resource
 }
 
 func resourceKubernetesCSIDriverV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -194,7 +196,7 @@ func resourceKubernetesCSIDriverV1Delete(ctx context.Context, d *schema.Resource
 }
 
 func resourceKubernetesCSIDriverV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}

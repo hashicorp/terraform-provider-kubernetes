@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
 	policy "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -161,7 +162,7 @@ func TestAccKubernetesPodSecurityPolicy_basic(t *testing.T) {
 }
 
 func testAccCheckKubernetesPodSecurityPolicyDestroy(s *terraform.State) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(provider.KubeClientsets).MainClientset()
 
 	if err != nil {
 		return err
@@ -193,7 +194,7 @@ func testAccCheckKubernetesPodSecurityPolicyExists(n string, obj *policy.PodSecu
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		conn, err := testAccProvider.Meta().(provider.KubeClientsets).MainClientset()
 		if err != nil {
 			return err
 		}

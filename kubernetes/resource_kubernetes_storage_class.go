@@ -6,6 +6,9 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -28,7 +31,7 @@ func resourceKubernetesStorageClass() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("storage class", true),
+			"metadata": providermetav1.MetadataSchema("storage class", true),
 			"parameters": {
 				Type:        schema.TypeMap,
 				Description: "The parameters for the provisioner that should create volumes of this storage class",
@@ -113,12 +116,12 @@ func resourceKubernetesStorageClass() *schema.Resource {
 }
 
 func resourceKubernetesStorageClassCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	metadata := providermetav1.ExpandMetadata(d.Get("metadata").([]interface{}))
 	reclaimPolicy := v1.PersistentVolumeReclaimPolicy(d.Get("reclaim_policy").(string))
 	volumeBindingMode := api.VolumeBindingMode(d.Get("volume_binding_mode").(string))
 	allowVolumeExpansion := d.Get("allow_volume_expansion").(bool)
@@ -131,11 +134,11 @@ func resourceKubernetesStorageClassCreate(ctx context.Context, d *schema.Resourc
 	}
 
 	if v, ok := d.GetOk("parameters"); ok {
-		storageClass.Parameters = expandStringMap(v.(map[string]interface{}))
+		storageClass.Parameters = structures.ExpandStringMap(v.(map[string]interface{}))
 	}
 
 	if v, ok := d.GetOk("mount_options"); ok {
-		storageClass.MountOptions = schemaSetToStringArray(v.(*schema.Set))
+		storageClass.MountOptions = structures.SchemaSetToStringArray(v.(*schema.Set))
 	}
 	if v, ok := d.GetOk("allowed_topologies"); ok && len(v.([]interface{})) > 0 {
 		storageClass.AllowedTopologies = expandStorageClassAllowedTopologies(v.([]interface{}))
@@ -163,7 +166,7 @@ func resourceKubernetesStorageClassRead(ctx context.Context, d *schema.ResourceD
 		d.SetId("")
 		return diags
 	}
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -178,7 +181,7 @@ func resourceKubernetesStorageClassRead(ctx context.Context, d *schema.ResourceD
 
 	log.Printf("[INFO] Received storage class: %#v", storageClass)
 
-	err = d.Set("metadata", flattenMetadata(storageClass.ObjectMeta, d, meta))
+	err = d.Set("metadata", providermetav1.FlattenMetadata(storageClass.ObjectMeta, d, meta))
 	if err != nil {
 		diags = append(diags, diag.FromErr(err)[0])
 	}
@@ -194,13 +197,13 @@ func resourceKubernetesStorageClassRead(ctx context.Context, d *schema.ResourceD
 }
 
 func resourceKubernetesStorageClassUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	name := d.Id()
-	ops := patchMetadata("metadata.0.", "/metadata/", d)
+	ops := providermetav1.PatchMetadata("metadata.0.", "/metadata/", d)
 	data, err := ops.MarshalJSON()
 	if err != nil {
 		return diag.Errorf("Failed to marshal update operations: %s", err)
@@ -217,7 +220,7 @@ func resourceKubernetesStorageClassUpdate(ctx context.Context, d *schema.Resourc
 }
 
 func resourceKubernetesStorageClassDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -251,7 +254,7 @@ func resourceKubernetesStorageClassDelete(ctx context.Context, d *schema.Resourc
 }
 
 func resourceKubernetesStorageClassExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}

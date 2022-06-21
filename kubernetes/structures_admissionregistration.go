@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 )
 
@@ -39,11 +40,11 @@ func expandServiceReference(l []interface{}) *admissionregistrationv1.ServiceRef
 	}
 
 	if v, ok := in["path"].(string); ok && v != "" {
-		obj.Path = ptrToString(v)
+		obj.Path = structures.PtrToString(v)
 	}
 
 	if v, ok := in["port"].(int); ok {
-		obj.Port = ptrToInt32(int32(v))
+		obj.Port = structures.PtrToInt32(int32(v))
 	}
 
 	return obj
@@ -85,7 +86,7 @@ func expandWebhookClientConfig(l []interface{}) admissionregistrationv1.WebhookC
 	}
 
 	if v, ok := in["url"].(string); ok && v != "" {
-		obj.URL = ptrToString(v)
+		obj.URL = structures.PtrToString(v)
 	}
 
 	return obj
@@ -110,11 +111,11 @@ func expandRuleWithOperations(in map[string]interface{}) admissionregistrationv1
 	obj := admissionregistrationv1.RuleWithOperations{}
 
 	if v, ok := in["api_groups"].([]interface{}); ok {
-		obj.APIGroups = expandStringSlice(v)
+		obj.APIGroups = structures.ExpandStringSlice(v)
 	}
 
 	if v, ok := in["api_versions"].([]interface{}); ok {
-		obj.APIVersions = expandStringSlice(v)
+		obj.APIVersions = structures.ExpandStringSlice(v)
 	}
 
 	if v, ok := in["operations"].([]interface{}); ok {
@@ -126,7 +127,7 @@ func expandRuleWithOperations(in map[string]interface{}) admissionregistrationv1
 	}
 
 	if v, ok := in["resources"].([]interface{}); ok {
-		obj.Resources = expandStringSlice(v)
+		obj.Resources = structures.ExpandStringSlice(v)
 	}
 
 	if v, ok := in["scope"].(string); ok {

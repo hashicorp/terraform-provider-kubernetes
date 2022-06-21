@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 
 	policy "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -24,7 +25,7 @@ func expandPodDisruptionBudgetV1Spec(in []interface{}) (*policy.PodDisruptionBud
 		spec.MinAvailable = &val
 	}
 	if v, ok := m["selector"].([]interface{}); ok && len(v) > 0 {
-		spec.Selector = expandLabelSelector(v)
+		spec.Selector = structures.ExpandLabelSelector(v)
 	}
 
 	return spec, nil
@@ -39,33 +40,33 @@ func flattenPodDisruptionBudgetV1Spec(spec policy.PodDisruptionBudgetSpec) []int
 		m["min_available"] = spec.MinAvailable.String()
 	}
 	if spec.Selector != nil {
-		m["selector"] = flattenLabelSelector(spec.Selector)
+		m["selector"] = structures.FlattenLabelSelector(spec.Selector)
 	}
 
 	return []interface{}{m}
 }
 
 // Currently unused, but will be useful for Kubernetes 1.15 when patching is allowed.
-func patchPodDisruptionBudgetV1Spec(prefix string, pathPrefix string, d *schema.ResourceData) (*[]PatchOperation, error) {
-	ops := make([]PatchOperation, 0)
+func patchPodDisruptionBudgetV1Spec(prefix string, pathPrefix string, d *schema.ResourceData) (*[]structures.PatchOperation, error) {
+	ops := make([]structures.PatchOperation, 0)
 
 	if d.HasChange(prefix + "max_unavailable") {
 		old, new := d.GetChange(prefix + "max_unavailable")
 		oldV, oldOk := old.(string)
 		if newV, newOk := new.(string); newOk && len(newV) > 0 {
 			if oldOk && len(oldV) > 0 {
-				ops = append(ops, &ReplaceOperation{
+				ops = append(ops, &structures.ReplaceOperation{
 					Path:  pathPrefix + "/maxUnavailable",
 					Value: newV,
 				})
 			} else {
-				ops = append(ops, &AddOperation{
+				ops = append(ops, &structures.AddOperation{
 					Path:  pathPrefix + "/maxUnavailable",
 					Value: newV,
 				})
 			}
 		} else if oldOk && len(oldV) > 0 {
-			ops = append(ops, &RemoveOperation{
+			ops = append(ops, &structures.RemoveOperation{
 				Path: pathPrefix + "/maxUnavailable",
 			})
 		}
@@ -75,26 +76,26 @@ func patchPodDisruptionBudgetV1Spec(prefix string, pathPrefix string, d *schema.
 		oldV, oldOk := old.(string)
 		if newV, newOk := new.(string); newOk && len(newV) > 0 {
 			if oldOk && len(oldV) > 0 {
-				ops = append(ops, &ReplaceOperation{
+				ops = append(ops, &structures.ReplaceOperation{
 					Path:  pathPrefix + "/minAvailable",
 					Value: newV,
 				})
 			} else {
-				ops = append(ops, &AddOperation{
+				ops = append(ops, &structures.AddOperation{
 					Path:  pathPrefix + "/minAvailable",
 					Value: newV,
 				})
 			}
 		} else if oldOk && len(oldV) > 0 {
-			ops = append(ops, &RemoveOperation{
+			ops = append(ops, &structures.RemoveOperation{
 				Path: pathPrefix + "/minAvailable",
 			})
 		}
 	}
 	if d.HasChange(prefix + "selector") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/selector",
-			Value: expandLabelSelector(d.Get(prefix + "selector").([]interface{})),
+			Value: structures.ExpandLabelSelector(d.Get(prefix + "selector").([]interface{})),
 		})
 	}
 

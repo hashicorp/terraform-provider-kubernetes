@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 	storage "k8s.io/api/storage/v1"
 )
 
@@ -13,11 +14,11 @@ func expandCSIDriverV1Spec(l []interface{}) storage.CSIDriverSpec {
 	obj := storage.CSIDriverSpec{}
 
 	if v, ok := in["attach_required"].(bool); ok {
-		obj.AttachRequired = ptrToBool(v)
+		obj.AttachRequired = structures.PtrToBool(v)
 	}
 
 	if v, ok := in["pod_info_on_mount"].(bool); ok {
-		obj.PodInfoOnMount = ptrToBool(v)
+		obj.PodInfoOnMount = structures.PtrToBool(v)
 	}
 
 	if v, ok := in["volume_lifecycle_modes"].([]interface{}); ok && len(v) > 0 {
@@ -51,24 +52,24 @@ func flattenCSIDriverV1Spec(in storage.CSIDriverSpec) ([]interface{}, error) {
 	return []interface{}{att}, nil
 }
 
-func patchCSIDriverV1Spec(keyPrefix, pathPrefix string, d *schema.ResourceData) (*PatchOperations, error) {
-	ops := make(PatchOperations, 0, 0)
+func patchCSIDriverV1Spec(keyPrefix, pathPrefix string, d *schema.ResourceData) (*structures.PatchOperations, error) {
+	ops := make(structures.PatchOperations, 0, 0)
 	if d.HasChange(keyPrefix + "attach_required") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/attachRequired",
 			Value: d.Get(keyPrefix + "attach_required").(bool),
 		})
 	}
 
 	if d.HasChange(keyPrefix + "pod_info_on_mount") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/podInfoOnMount",
 			Value: d.Get(keyPrefix + "pod_info_on_mount").(bool),
 		})
 	}
 
 	if d.HasChange(keyPrefix + "volume_lifecycle_modes") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/volumeLifecycleModes",
 			Value: expandCSIDriverV1VolumeLifecycleModes(d.Get(keyPrefix + "volume_lifecycle_modes").([]interface{})),
 		})

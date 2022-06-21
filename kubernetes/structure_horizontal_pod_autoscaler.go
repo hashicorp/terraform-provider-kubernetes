@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 	api "k8s.io/api/autoscaling/v1"
 )
 
@@ -17,13 +18,13 @@ func expandHorizontalPodAutoscalerSpec(in []interface{}) (*api.HorizontalPodAuto
 		spec.MaxReplicas = int32(v.(int))
 	}
 	if v, ok := m["min_replicas"].(int); ok && v > 0 {
-		spec.MinReplicas = ptrToInt32(int32(v))
+		spec.MinReplicas = structures.PtrToInt32(int32(v))
 	}
 	if v, ok := m["scale_target_ref"]; ok {
 		spec.ScaleTargetRef = expandCrossVersionObjectReference(v.([]interface{}))
 	}
 	if v, ok := m["target_cpu_utilization_percentage"].(int); ok && v > 0 {
-		spec.TargetCPUUtilizationPercentage = ptrToInt32(int32(v))
+		spec.TargetCPUUtilizationPercentage = structures.PtrToInt32(int32(v))
 	}
 
 	return spec, nil
@@ -75,29 +76,29 @@ func flattenCrossVersionObjectReference(ref api.CrossVersionObjectReference) []i
 	return []interface{}{m}
 }
 
-func patchHorizontalPodAutoscalerSpec(prefix string, pathPrefix string, d *schema.ResourceData) []PatchOperation {
-	ops := make([]PatchOperation, 0)
+func patchHorizontalPodAutoscalerSpec(prefix string, pathPrefix string, d *schema.ResourceData) []structures.PatchOperation {
+	ops := make([]structures.PatchOperation, 0)
 
 	if d.HasChange(prefix + "max_replicas") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/maxReplicas",
 			Value: d.Get(prefix + "max_replicas").(int),
 		})
 	}
 	if d.HasChange(prefix + "min_replicas") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/minReplicas",
 			Value: d.Get(prefix + "min_replicas").(int),
 		})
 	}
 	if d.HasChange(prefix + "scale_target_ref") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/scaleTargetRef",
 			Value: expandCrossVersionObjectReference(d.Get(prefix + "scale_target_ref").([]interface{})),
 		})
 	}
 	if d.HasChange(prefix + "target_cpu_utilization_percentage") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/targetCPUUtilizationPercentage",
 			Value: d.Get(prefix + "target_cpu_utilization_percentage").(int),
 		})

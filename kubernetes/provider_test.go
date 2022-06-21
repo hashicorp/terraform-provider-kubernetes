@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
 
 	gversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -201,7 +202,7 @@ func getClusterVersion() (*gversion.Version, error) {
 		return nil, fmt.Errorf("Provider not initialized, unable to check cluster version")
 	}
 
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return nil, err
 	}
@@ -339,7 +340,7 @@ func isRunningInEks() (bool, error) {
 	if meta == nil {
 		return false, errors.New("Provider not initialized, unable to fetch provider metadata")
 	}
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
@@ -369,7 +370,7 @@ func getFirstNode() (api.Node, error) {
 	if meta == nil {
 		return api.Node{}, errors.New("Provider not initialized, unable to get cluster node")
 	}
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return api.Node{}, err
 	}

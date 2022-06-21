@@ -7,6 +7,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 	"github.com/hashicorp/terraform-provider-kubernetes/util"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -74,8 +77,8 @@ func resourceKubernetesAnnotations() *schema.Resource {
 }
 
 func resourceKubernetesAnnotationsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	d.SetId(buildIdWithVersionKind(metadata,
+	metadata := providermetav1.ExpandMetadata(d.Get("metadata").([]interface{}))
+	d.SetId(providermetav1.BuildIdWithVersionKind(metadata,
 		d.Get("api_version").(string),
 		d.Get("kind").(string)))
 	diag := resourceKubernetesAnnotationsUpdate(ctx, d, m)
@@ -86,7 +89,7 @@ func resourceKubernetesAnnotationsCreate(ctx context.Context, d *schema.Resource
 }
 
 func resourceKubernetesAnnotationsRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	conn, err := m.(KubeClientsets).DynamicClient()
+	conn, err := m.(provider.KubeClientsets).DynamicClient()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -97,7 +100,7 @@ func resourceKubernetesAnnotationsRead(ctx context.Context, d *schema.ResourceDa
 	}
 
 	// figure out which resource client to use
-	dc, err := m.(KubeClientsets).DiscoveryClient()
+	dc, err := m.(provider.KubeClientsets).DiscoveryClient()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -176,19 +179,19 @@ func getManagedAnnotations(managedFields []v1.ManagedFieldsEntry, manager string
 }
 
 func resourceKubernetesAnnotationsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	conn, err := m.(KubeClientsets).DynamicClient()
+	conn, err := m.(provider.KubeClientsets).DynamicClient()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	apiVersion := d.Get("api_version").(string)
 	kind := d.Get("kind").(string)
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	metadata := providermetav1.ExpandMetadata(d.Get("metadata").([]interface{}))
 	name := metadata.GetName()
 	namespace := metadata.GetNamespace()
 
 	// figure out which resource client to use
-	dc, err := m.(KubeClientsets).DiscoveryClient()
+	dc, err := m.(provider.KubeClientsets).DiscoveryClient()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -262,7 +265,7 @@ func resourceKubernetesAnnotationsUpdate(ctx context.Context, d *schema.Resource
 		patchbytes,
 		v1.PatchOptions{
 			FieldManager: defaultFieldManagerName,
-			Force:        ptrToBool(d.Get("force").(bool)),
+			Force:        structures.PtrToBool(d.Get("force").(bool)),
 		},
 	)
 	if err != nil {

@@ -5,6 +5,9 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/rbac/v1"
@@ -67,12 +70,12 @@ func resourceKubernetesRole() *schema.Resource {
 }
 
 func resourceKubernetesRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	metadata := providermetav1.ExpandMetadata(d.Get("metadata").([]interface{}))
 	rules := expandRules(d.Get("rule").([]interface{}))
 
 	role := v1.Role{
@@ -86,7 +89,7 @@ func resourceKubernetesRoleCreate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	log.Printf("[INFO] Submitted new role: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(providermetav1.BuildId(out.ObjectMeta))
 
 	return resourceKubernetesRoleRead(ctx, d, meta)
 }
@@ -100,12 +103,12 @@ func resourceKubernetesRoleRead(ctx context.Context, d *schema.ResourceData, met
 		d.SetId("")
 		return diag.Diagnostics{}
 	}
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := providermetav1.IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -118,7 +121,7 @@ func resourceKubernetesRoleRead(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	log.Printf("[INFO] Received role: %#v", role)
-	err = d.Set("metadata", flattenMetadata(role.ObjectMeta, d, meta))
+	err = d.Set("metadata", providermetav1.FlattenMetadata(role.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -132,21 +135,21 @@ func resourceKubernetesRoleRead(ctx context.Context, d *schema.ResourceData, met
 }
 
 func resourceKubernetesRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := providermetav1.IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	ops := patchMetadata("metadata.0.", "/metadata/", d)
+	ops := providermetav1.PatchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("rule") {
 		rules := expandRules(d.Get("rule").([]interface{}))
 
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  "/rules",
 			Value: rules,
 		})
@@ -162,18 +165,18 @@ func resourceKubernetesRoleUpdate(ctx context.Context, d *schema.ResourceData, m
 		return diag.Errorf("Failed to update role: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated role: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(providermetav1.BuildId(out.ObjectMeta))
 
 	return resourceKubernetesRoleRead(ctx, d, meta)
 }
 
 func resourceKubernetesRoleDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := providermetav1.IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -190,12 +193,12 @@ func resourceKubernetesRoleDelete(ctx context.Context, d *schema.ResourceData, m
 }
 
 func resourceKubernetesRoleExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := providermetav1.IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}
@@ -218,16 +221,16 @@ func expandRules(rules []interface{}) *[]v1.PolicyRule {
 		in := rule.(map[string]interface{})
 		obj := v1.PolicyRule{}
 		if v, ok := in["api_groups"].(*schema.Set); ok && v.Len() > 0 {
-			obj.APIGroups = sliceOfString(v.List())
+			obj.APIGroups = structures.SliceOfString(v.List())
 		}
 		if v, ok := in["resources"].(*schema.Set); ok && v.Len() > 0 {
-			obj.Resources = sliceOfString(v.List())
+			obj.Resources = structures.SliceOfString(v.List())
 		}
 		if v, ok := in["resource_names"].(*schema.Set); ok && v.Len() > 0 {
-			obj.ResourceNames = sliceOfString(v.List())
+			obj.ResourceNames = structures.SliceOfString(v.List())
 		}
 		if v, ok := in["verbs"].(*schema.Set); ok && v.Len() > 0 {
-			obj.Verbs = sliceOfString(v.List())
+			obj.Verbs = structures.SliceOfString(v.List())
 		}
 		objects = append(objects, obj)
 	}
@@ -240,16 +243,16 @@ func flattenRules(in *[]v1.PolicyRule) []interface{} {
 	for _, rule := range *in {
 		att := make(map[string]interface{})
 		if len(rule.APIGroups) > 0 {
-			att["api_groups"] = newStringSet(schema.HashString, rule.APIGroups)
+			att["api_groups"] = structures.NewStringSet(schema.HashString, rule.APIGroups)
 		}
 		if len(rule.Resources) > 0 {
-			att["resources"] = newStringSet(schema.HashString, rule.Resources)
+			att["resources"] = structures.NewStringSet(schema.HashString, rule.Resources)
 		}
 		if len(rule.ResourceNames) > 0 {
-			att["resource_names"] = newStringSet(schema.HashString, rule.ResourceNames)
+			att["resource_names"] = structures.NewStringSet(schema.HashString, rule.ResourceNames)
 		}
 		if len(rule.Verbs) > 0 {
-			att["verbs"] = newStringSet(schema.HashString, rule.Verbs)
+			att["verbs"] = structures.NewStringSet(schema.HashString, rule.Verbs)
 		}
 		flattened = append(flattened, att)
 	}

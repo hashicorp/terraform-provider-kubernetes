@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 )
 
@@ -23,13 +24,13 @@ func flattenMutatingWebhook(in admissionregistrationv1.MutatingWebhook) map[stri
 
 	if in.NamespaceSelector != nil {
 		if in.NamespaceSelector.MatchExpressions != nil || in.NamespaceSelector.MatchLabels != nil {
-			att["namespace_selector"] = flattenLabelSelector(in.NamespaceSelector)
+			att["namespace_selector"] = structures.FlattenLabelSelector(in.NamespaceSelector)
 		}
 	}
 
 	if in.ObjectSelector != nil {
 		if in.ObjectSelector.MatchExpressions != nil || in.ObjectSelector.MatchLabels != nil {
-			att["object_selector"] = flattenLabelSelector(in.ObjectSelector)
+			att["object_selector"] = structures.FlattenLabelSelector(in.ObjectSelector)
 		}
 	}
 
@@ -58,7 +59,7 @@ func expandMutatingWebhook(in map[string]interface{}) admissionregistrationv1.Mu
 	obj := admissionregistrationv1.MutatingWebhook{}
 
 	if v, ok := in["admission_review_versions"].([]interface{}); ok {
-		obj.AdmissionReviewVersions = expandStringSlice(v)
+		obj.AdmissionReviewVersions = structures.ExpandStringSlice(v)
 	}
 
 	if v, ok := in["client_config"].([]interface{}); ok {
@@ -80,11 +81,11 @@ func expandMutatingWebhook(in map[string]interface{}) admissionregistrationv1.Mu
 	}
 
 	if v, ok := in["namespace_selector"].([]interface{}); ok && len(v) != 0 {
-		obj.NamespaceSelector = expandLabelSelector(v)
+		obj.NamespaceSelector = structures.ExpandLabelSelector(v)
 	}
 
 	if v, ok := in["object_selector"].([]interface{}); ok && len(v) != 0 {
-		obj.ObjectSelector = expandLabelSelector(v)
+		obj.ObjectSelector = structures.ExpandLabelSelector(v)
 	}
 
 	if v, ok := in["reinvocation_policy"].(string); ok {
@@ -106,7 +107,7 @@ func expandMutatingWebhook(in map[string]interface{}) admissionregistrationv1.Mu
 	}
 
 	if v, ok := in["timeout_seconds"].(int); ok {
-		obj.TimeoutSeconds = ptrToInt32(int32(v))
+		obj.TimeoutSeconds = structures.PtrToInt32(int32(v))
 	}
 
 	return obj

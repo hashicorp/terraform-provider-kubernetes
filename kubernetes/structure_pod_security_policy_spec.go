@@ -7,6 +7,9 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/policy/v1beta1"
+
+	providercorev1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/core/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 )
 
 func flattenPodSecurityPolicySpec(in v1beta1.PodSecurityPolicySpec) []interface{} {
@@ -17,7 +20,7 @@ func flattenPodSecurityPolicySpec(in v1beta1.PodSecurityPolicySpec) []interface{
 	}
 
 	if len(in.AllowedCapabilities) > 0 {
-		spec["allowed_capabilities"] = flattenCapability(in.AllowedCapabilities)
+		spec["allowed_capabilities"] = providercorev1.FlattenCapability(in.AllowedCapabilities)
 	}
 
 	if len(in.AllowedFlexVolumes) > 0 {
@@ -37,7 +40,7 @@ func flattenPodSecurityPolicySpec(in v1beta1.PodSecurityPolicySpec) []interface{
 	}
 
 	if len(in.DefaultAddCapabilities) > 0 {
-		spec["default_add_capabilities"] = flattenCapability(in.DefaultAddCapabilities)
+		spec["default_add_capabilities"] = providercorev1.FlattenCapability(in.DefaultAddCapabilities)
 	}
 
 	if in.DefaultAllowPrivilegeEscalation != nil {
@@ -61,7 +64,7 @@ func flattenPodSecurityPolicySpec(in v1beta1.PodSecurityPolicySpec) []interface{
 	spec["read_only_root_filesystem"] = in.ReadOnlyRootFilesystem
 
 	if len(in.RequiredDropCapabilities) > 0 {
-		spec["required_drop_capabilities"] = flattenCapability(in.RequiredDropCapabilities)
+		spec["required_drop_capabilities"] = providercorev1.FlattenCapability(in.RequiredDropCapabilities)
 	}
 
 	spec["run_as_user"] = flattenRunAsUser(in.RunAsUser)
@@ -181,7 +184,7 @@ func flattenSELinuxStrategy(in v1beta1.SELinuxStrategyOptions) []interface{} {
 	}
 
 	if in.SELinuxOptions != nil {
-		result["se_linux_options"] = flattenSeLinuxOptions(in.SELinuxOptions)
+		result["se_linux_options"] = providercorev1.FlattenSeLinuxOptions(in.SELinuxOptions)
 	}
 
 	return []interface{}{result}
@@ -218,11 +221,11 @@ func expandPodSecurityPolicySpec(in []interface{}) (v1beta1.PodSecurityPolicySpe
 	}
 
 	if v, ok := m["allow_privilege_escalation"].(bool); ok {
-		spec.AllowPrivilegeEscalation = ptrToBool(v)
+		spec.AllowPrivilegeEscalation = structures.PtrToBool(v)
 	}
 
 	if v, ok := m["allowed_capabilities"].([]interface{}); ok && len(v) > 0 {
-		spec.AllowedCapabilities = expandCapabilitySlice(v)
+		spec.AllowedCapabilities = providercorev1.ExpandCapabilitySlice(v)
 	}
 
 	if v, ok := m["allowed_flex_volumes"].([]interface{}); ok && len(v) > 0 {
@@ -238,19 +241,19 @@ func expandPodSecurityPolicySpec(in []interface{}) (v1beta1.PodSecurityPolicySpe
 	}
 
 	if v, ok := m["allowed_unsafe_sysctls"].([]interface{}); ok && len(v) > 0 {
-		spec.AllowedUnsafeSysctls = expandStringSlice(v)
+		spec.AllowedUnsafeSysctls = structures.ExpandStringSlice(v)
 	}
 
 	if v, ok := m["default_add_capabilities"].([]interface{}); ok && len(v) > 0 {
-		spec.DefaultAddCapabilities = expandCapabilitySlice(v)
+		spec.DefaultAddCapabilities = providercorev1.ExpandCapabilitySlice(v)
 	}
 
 	if v, ok := m["default_allow_privilege_escalation"].(bool); ok {
-		spec.DefaultAllowPrivilegeEscalation = ptrToBool(v)
+		spec.DefaultAllowPrivilegeEscalation = structures.PtrToBool(v)
 	}
 
 	if v, ok := m["forbidden_sysctls"].([]interface{}); ok && len(v) > 0 {
-		spec.ForbiddenSysctls = expandStringSlice(v)
+		spec.ForbiddenSysctls = structures.ExpandStringSlice(v)
 	}
 
 	if v, ok := m["fs_group"].([]interface{}); ok && len(v) > 0 {
@@ -282,7 +285,7 @@ func expandPodSecurityPolicySpec(in []interface{}) (v1beta1.PodSecurityPolicySpe
 	}
 
 	if v, ok := m["required_drop_capabilities"].([]interface{}); ok && len(v) > 0 {
-		spec.RequiredDropCapabilities = expandCapabilitySlice(v)
+		spec.RequiredDropCapabilities = providercorev1.ExpandCapabilitySlice(v)
 	}
 
 	if v, ok := m["run_as_user"].([]interface{}); ok && len(v) > 0 {
@@ -493,25 +496,25 @@ func expandVolumeFSTypeSlice(in []interface{}) []v1beta1.FSType {
 
 // Patchers
 
-func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.ResourceData) (*PatchOperations, error) {
-	ops := make(PatchOperations, 0, 0)
+func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.ResourceData) (*structures.PatchOperations, error) {
+	ops := make(structures.PatchOperations, 0, 0)
 
 	if d.HasChange(keyPrefix + "allow_privilege_escalation") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/allowPrivilegeEscalation",
 			Value: d.Get(keyPrefix + "allow_privilege_escalation").(bool),
 		})
 	}
 
 	if d.HasChange(keyPrefix + "allowed_capabilities") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/allowedCapabilities",
 			Value: d.Get(keyPrefix + "allowed_capabilities").([]interface{}),
 		})
 	}
 
 	if d.HasChange(keyPrefix + "allowed_flex_volumes") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/allowedFlexVolumes",
 			Value: d.Get(keyPrefix + "allowed_flex_volumes").([]interface{}),
 		})
@@ -520,42 +523,42 @@ func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.R
 	if d.HasChange(keyPrefix + "allowed_host_paths") {
 		n := d.Get(keyPrefix + "allowed_host_paths").([]interface{})
 		allowedHostPaths := expandAllowedHostPathSlice(n)
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/allowedHostPaths",
 			Value: allowedHostPaths,
 		})
 	}
 
 	if d.HasChange(keyPrefix + "allowed_proc_mount_types") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/allowedProcMountTypes",
 			Value: d.Get(keyPrefix + "allowed_proc_mount_types").([]interface{}),
 		})
 	}
 
 	if d.HasChange(keyPrefix + "allowed_unsafe_sysctls") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/allowedUnsafeSysctls",
 			Value: d.Get(keyPrefix + "allowed_unsafe_sysctls").([]interface{}),
 		})
 	}
 
 	if d.HasChange(keyPrefix + "default_add_capabilities") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/defaultAddCapabilities",
 			Value: d.Get(keyPrefix + "default_add_capabilities").([]interface{}),
 		})
 	}
 
 	if d.HasChange(keyPrefix + "default_allow_privilege_escalation") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/defaultAllowPrivilegeEscalation",
 			Value: d.Get(keyPrefix + "default_allow_privilege_escalation").(bool),
 		})
 	}
 
 	if d.HasChange(keyPrefix + "forbidden_sysctls") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/forbiddenSysctls",
 			Value: d.Get(keyPrefix + "forbidden_sysctls").([]interface{}),
 		})
@@ -563,56 +566,56 @@ func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.R
 
 	if d.HasChange(keyPrefix + "fs_group") {
 		fsGroup := expandFSGroup(d.Get(keyPrefix + "fs_group").([]interface{}))
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/fsGroup",
 			Value: fsGroup,
 		})
 	}
 
 	if d.HasChange(keyPrefix + "host_ipc") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/hostIPC",
 			Value: d.Get(keyPrefix + "host_ipc").(bool),
 		})
 	}
 
 	if d.HasChange(keyPrefix + "host_network") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/hostNetwork",
 			Value: d.Get(keyPrefix + "host_network").(bool),
 		})
 	}
 
 	if d.HasChange(keyPrefix + "host_pid") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/hostPID",
 			Value: d.Get(keyPrefix + "host_pid").(bool),
 		})
 	}
 
 	if d.HasChange(keyPrefix + "host_ports") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/hostPorts",
 			Value: d.Get(keyPrefix + "host_ports").([]interface{}),
 		})
 	}
 
 	if d.HasChange(keyPrefix + "privileged") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/privileged",
 			Value: d.Get(keyPrefix + "privileged").(bool),
 		})
 	}
 
 	if d.HasChange(keyPrefix + "readonly_root_filesystem") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/readOnlyRootFilesystem",
 			Value: d.Get(keyPrefix + "readonly_root_filesystem").(bool),
 		})
 	}
 
 	if d.HasChange(keyPrefix + "required_drop_capabilities") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/requiredDropCapabilities",
 			Value: d.Get(keyPrefix + "required_drop_capabilities").([]interface{}),
 		})
@@ -620,7 +623,7 @@ func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.R
 
 	if d.HasChange(keyPrefix + "run_as_group") {
 		runAsGroup := expandRunAsGroup(d.Get(keyPrefix + "run_as_group").([]interface{}))
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/runAsGroup",
 			Value: runAsGroup,
 		})
@@ -628,14 +631,14 @@ func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.R
 
 	if d.HasChange(keyPrefix + "run_as_user") {
 		runAsUser := expandRunAsUser(d.Get(keyPrefix + "run_as_user").([]interface{}))
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/runAsUser",
 			Value: runAsUser,
 		})
 	}
 
 	if d.HasChange(keyPrefix + "se_linux") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/seLinux",
 			Value: d.Get(keyPrefix + "se_linux").([]interface{}),
 		})
@@ -643,14 +646,14 @@ func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.R
 
 	if d.HasChange(keyPrefix + "supplemental_groups") {
 		supplementalGroups := expandSupplementalGroup(d.Get(keyPrefix + "supplemental_groups").([]interface{}))
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/supplementalGroups",
 			Value: supplementalGroups,
 		})
 	}
 
 	if d.HasChange(keyPrefix + "volumes") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/volumes",
 			Value: d.Get(keyPrefix + "volumes").([]interface{}),
 		})

@@ -5,6 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	policy "k8s.io/api/policy/v1beta1"
@@ -72,7 +74,7 @@ func resourceKubernetesPodSecurityPolicy() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("podsecuritypolicy", false),
+			"metadata": providermetav1.MetadataSchema("podsecuritypolicy", false),
 			"spec": {
 				Type:        schema.TypeList,
 				Description: pspSpecDoc,
@@ -365,12 +367,12 @@ func resourceKubernetesPodSecurityPolicy() *schema.Resource {
 }
 
 func resourceKubernetesPodSecurityPolicyCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	metadata := providermetav1.ExpandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandPodSecurityPolicySpec(d.Get("spec").([]interface{}))
 
 	if err != nil {
@@ -403,7 +405,7 @@ func resourceKubernetesPodSecurityPolicyRead(ctx context.Context, d *schema.Reso
 		d.SetId("")
 		return diag.Diagnostics{}
 	}
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -418,7 +420,7 @@ func resourceKubernetesPodSecurityPolicyRead(ctx context.Context, d *schema.Reso
 	}
 
 	log.Printf("[INFO] Received PodSecurityPolicy: %#v", psp)
-	err = d.Set("metadata", flattenMetadata(psp.ObjectMeta, d, meta))
+	err = d.Set("metadata", providermetav1.FlattenMetadata(psp.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -434,14 +436,14 @@ func resourceKubernetesPodSecurityPolicyRead(ctx context.Context, d *schema.Reso
 }
 
 func resourceKubernetesPodSecurityPolicyUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	name := d.Id()
 
-	ops := patchMetadata("metadata.0.", "/metadata/", d)
+	ops := providermetav1.PatchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("spec") {
 		diffOps, err := patchPodSecurityPolicySpec("spec.0.", "/spec", d)
@@ -466,7 +468,7 @@ func resourceKubernetesPodSecurityPolicyUpdate(ctx context.Context, d *schema.Re
 }
 
 func resourceKubernetesPodSecurityPolicyDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -484,7 +486,7 @@ func resourceKubernetesPodSecurityPolicyDelete(ctx context.Context, d *schema.Re
 }
 
 func resourceKubernetesPodSecurityPolicyExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}

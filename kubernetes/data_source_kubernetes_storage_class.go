@@ -2,15 +2,17 @@ package kubernetes
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
 )
 
 func dataSourceKubernetesStorageClass() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceKubernetesStorageClassRead,
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("storage class", false),
+			"metadata": providermetav1.MetadataSchema("storage class", false),
 			"parameters": {
 				Type:        schema.TypeMap,
 				Description: "The parameters for the provisioner that should create volumes of this storage class",

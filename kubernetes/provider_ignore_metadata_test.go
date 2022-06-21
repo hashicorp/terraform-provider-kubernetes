@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -58,7 +59,7 @@ data "kubernetes_namespace_v1" "this" {
 }
 
 func createNamespaceIgnoreKubernetesMetadata(namespaceName string, ignoreKubernetesMetadata string) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return err
 	}
@@ -76,7 +77,7 @@ func createNamespaceIgnoreKubernetesMetadata(namespaceName string, ignoreKuberne
 }
 
 func deleteNamespaceIgnoreKubernetesMetadata(namespaceName string) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return err
 	}

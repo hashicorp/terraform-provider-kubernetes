@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -22,7 +23,7 @@ func expandHorizontalPodAutoscalerV2Spec(in []interface{}) (*autoscalingv2.Horiz
 	}
 
 	if v, ok := m["min_replicas"].(int); ok && v > 0 {
-		spec.MinReplicas = ptrToInt32(int32(v))
+		spec.MinReplicas = structures.PtrToInt32(int32(v))
 	}
 
 	if v, ok := m["scale_target_ref"]; ok {
@@ -65,7 +66,7 @@ func expandV2MetricTarget(m map[string]interface{}) autoscalingv2.MetricTarget {
 		}
 	case autoscalingv2.UtilizationMetricType:
 		if v, ok := m["average_utilization"].(int); ok && v > 0 {
-			target.AverageUtilization = ptrToInt32(int32(v))
+			target.AverageUtilization = structures.PtrToInt32(int32(v))
 		}
 	case autoscalingv2.ValueMetricType:
 		if v, ok := m["value"].(string); ok && v != "0" && v != "" {
@@ -96,7 +97,7 @@ func expandV2MetricIdentifier(m map[string]interface{}) autoscalingv2.MetricIden
 	identifier.Name = m["name"].(string)
 
 	if v, ok := m["selector"].([]interface{}); ok && len(v) == 1 {
-		identifier.Selector = expandLabelSelector(v)
+		identifier.Selector = structures.ExpandLabelSelector(v)
 	}
 
 	return identifier
@@ -232,7 +233,7 @@ func expandV2ScalingRules(in []interface{}) *autoscalingv2.HPAScalingRules {
 	}
 
 	if v, ok := r["stabilization_window_seconds"].(int); ok {
-		spec.StabilizationWindowSeconds = ptrToInt32(int32(v))
+		spec.StabilizationWindowSeconds = structures.PtrToInt32(int32(v))
 	}
 
 	return spec
@@ -312,7 +313,7 @@ func flattenV2MetricIdentifier(identifier autoscalingv2.MetricIdentifier) []inte
 	}
 
 	if identifier.Selector != nil {
-		m["selector"] = flattenLabelSelector(identifier.Selector)
+		m["selector"] = structures.FlattenLabelSelector(identifier.Selector)
 	}
 
 	return []interface{}{m}
@@ -475,39 +476,39 @@ func flattenV2ScalingPolicy(spec autoscalingv2.HPAScalingPolicy) map[string]inte
 	}
 }
 
-func patchHorizontalPodAutoscalerV2Spec(prefix string, pathPrefix string, d *schema.ResourceData) []PatchOperation {
-	ops := make([]PatchOperation, 0)
+func patchHorizontalPodAutoscalerV2Spec(prefix string, pathPrefix string, d *schema.ResourceData) []structures.PatchOperation {
+	ops := make([]structures.PatchOperation, 0)
 
 	if d.HasChange(prefix + "max_replicas") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/maxReplicas",
 			Value: d.Get(prefix + "max_replicas").(int),
 		})
 	}
 
 	if d.HasChange(prefix + "min_replicas") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/minReplicas",
 			Value: d.Get(prefix + "min_replicas").(int),
 		})
 	}
 
 	if d.HasChange(prefix + "scale_target_ref") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/scaleTargetRef",
 			Value: expandCrossVersionObjectReference(d.Get(prefix + "scale_target_ref").([]interface{})),
 		})
 	}
 
 	if d.HasChange(prefix + "metric") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/metrics",
 			Value: expandV2Metrics(d.Get(prefix + "metric").([]interface{})),
 		})
 	}
 
 	if d.HasChange(prefix + "behavior") {
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/behavior",
 			Value: expandV2Behavior(d.Get(prefix + "behavior").([]interface{})),
 		})

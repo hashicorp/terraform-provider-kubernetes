@@ -11,7 +11,6 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/go-cty/cty"
-	gversion "github.com/hashicorp/go-version"
 	"github.com/mitchellh/go-homedir"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -29,6 +28,9 @@ import (
 	restclient "k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	aggregator "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
+
+	providercorev1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/core/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 )
 
 const defaultFieldManagerName = "Terraform"
@@ -206,21 +208,21 @@ func Provider() *schema.Provider {
 
 		DataSourcesMap: map[string]*schema.Resource{
 			// core
-			"kubernetes_config_map":                 dataSourceKubernetesConfigMap(),
-			"kubernetes_config_map_v1":              dataSourceKubernetesConfigMap(),
-			"kubernetes_namespace":                  dataSourceKubernetesNamespace(),
-			"kubernetes_namespace_v1":               dataSourceKubernetesNamespace(),
-			"kubernetes_all_namespaces":             dataSourceKubernetesAllNamespaces(),
-			"kubernetes_secret":                     dataSourceKubernetesSecret(),
-			"kubernetes_secret_v1":                  dataSourceKubernetesSecret(),
-			"kubernetes_service":                    dataSourceKubernetesService(),
-			"kubernetes_service_v1":                 dataSourceKubernetesService(),
-			"kubernetes_pod":                        dataSourceKubernetesPod(),
-			"kubernetes_pod_v1":                     dataSourceKubernetesPod(),
-			"kubernetes_service_account":            dataSourceKubernetesServiceAccount(),
-			"kubernetes_service_account_v1":         dataSourceKubernetesServiceAccount(),
-			"kubernetes_persistent_volume_claim":    dataSourceKubernetesPersistentVolumeClaim(),
-			"kubernetes_persistent_volume_claim_v1": dataSourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_config_map":                 providercorev1.DataSourceKubernetesConfigMap(),
+			"kubernetes_config_map_v1":              providercorev1.DataSourceKubernetesConfigMap(),
+			"kubernetes_namespace":                  providercorev1.DataSourceKubernetesNamespace(),
+			"kubernetes_namespace_v1":               providercorev1.DataSourceKubernetesNamespace(),
+			"kubernetes_all_namespaces":             providercorev1.DataSourceKubernetesAllNamespaces(),
+			"kubernetes_secret":                     providercorev1.DataSourceKubernetesSecret(),
+			"kubernetes_secret_v1":                  providercorev1.DataSourceKubernetesSecret(),
+			"kubernetes_service":                    providercorev1.DataSourceKubernetesService(),
+			"kubernetes_service_v1":                 providercorev1.DataSourceKubernetesService(),
+			"kubernetes_pod":                        providercorev1.DataSourceKubernetesPod(),
+			"kubernetes_pod_v1":                     providercorev1.DataSourceKubernetesPod(),
+			"kubernetes_service_account":            providercorev1.DataSourceKubernetesServiceAccount(),
+			"kubernetes_service_account_v1":         providercorev1.DataSourceKubernetesServiceAccount(),
+			"kubernetes_persistent_volume_claim":    providercorev1.DataSourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_persistent_volume_claim_v1": providercorev1.DataSourceKubernetesPersistentVolumeClaim(),
 
 			// networking
 			"kubernetes_ingress":    dataSourceKubernetesIngress(),
@@ -236,33 +238,33 @@ func Provider() *schema.Provider {
 
 		ResourcesMap: map[string]*schema.Resource{
 			// core
-			"kubernetes_namespace":                  resourceKubernetesNamespace(),
-			"kubernetes_namespace_v1":               resourceKubernetesNamespace(),
-			"kubernetes_service":                    resourceKubernetesService(),
-			"kubernetes_service_v1":                 resourceKubernetesService(),
-			"kubernetes_service_account":            resourceKubernetesServiceAccount(),
-			"kubernetes_service_account_v1":         resourceKubernetesServiceAccount(),
-			"kubernetes_default_service_account":    resourceKubernetesDefaultServiceAccount(),
-			"kubernetes_default_service_account_v1": resourceKubernetesDefaultServiceAccount(),
-			"kubernetes_config_map":                 resourceKubernetesConfigMap(),
-			"kubernetes_config_map_v1":              resourceKubernetesConfigMap(),
-			"kubernetes_config_map_v1_data":         resourceKubernetesConfigMapV1Data(),
-			"kubernetes_secret":                     resourceKubernetesSecret(),
-			"kubernetes_secret_v1":                  resourceKubernetesSecret(),
-			"kubernetes_pod":                        resourceKubernetesPod(),
-			"kubernetes_pod_v1":                     resourceKubernetesPod(),
-			"kubernetes_endpoints":                  resourceKubernetesEndpoints(),
-			"kubernetes_endpoints_v1":               resourceKubernetesEndpoints(),
-			"kubernetes_limit_range":                resourceKubernetesLimitRange(),
-			"kubernetes_limit_range_v1":             resourceKubernetesLimitRange(),
-			"kubernetes_persistent_volume":          resourceKubernetesPersistentVolume(),
-			"kubernetes_persistent_volume_v1":       resourceKubernetesPersistentVolume(),
-			"kubernetes_persistent_volume_claim":    resourceKubernetesPersistentVolumeClaim(),
-			"kubernetes_persistent_volume_claim_v1": resourceKubernetesPersistentVolumeClaim(),
-			"kubernetes_replication_controller":     resourceKubernetesReplicationController(),
-			"kubernetes_replication_controller_v1":  resourceKubernetesReplicationController(),
-			"kubernetes_resource_quota":             resourceKubernetesResourceQuota(),
-			"kubernetes_resource_quota_v1":          resourceKubernetesResourceQuota(),
+			"kubernetes_namespace":                  providercorev1.ResourceKubernetesNamespace(),
+			"kubernetes_namespace_v1":               providercorev1.ResourceKubernetesNamespace(),
+			"kubernetes_service":                    providercorev1.ResourceKubernetesService(),
+			"kubernetes_service_v1":                 providercorev1.ResourceKubernetesService(),
+			"kubernetes_service_account":            providercorev1.ResourceKubernetesServiceAccount(),
+			"kubernetes_service_account_v1":         providercorev1.ResourceKubernetesServiceAccount(),
+			"kubernetes_default_service_account":    providercorev1.ResourceKubernetesDefaultServiceAccount(),
+			"kubernetes_default_service_account_v1": providercorev1.ResourceKubernetesDefaultServiceAccount(),
+			"kubernetes_config_map":                 providercorev1.ResourceKubernetesConfigMap(),
+			"kubernetes_config_map_v1":              providercorev1.ResourceKubernetesConfigMap(),
+			"kubernetes_config_map_v1_data":         providercorev1.ResourceKubernetesConfigMapV1Data(),
+			"kubernetes_secret":                     providercorev1.ResourceKubernetesSecret(),
+			"kubernetes_secret_v1":                  providercorev1.ResourceKubernetesSecret(),
+			"kubernetes_pod":                        providercorev1.ResourceKubernetesPod(),
+			"kubernetes_pod_v1":                     providercorev1.ResourceKubernetesPod(),
+			"kubernetes_endpoints":                  providercorev1.ResourceKubernetesEndpoints(),
+			"kubernetes_endpoints_v1":               providercorev1.ResourceKubernetesEndpoints(),
+			"kubernetes_limit_range":                providercorev1.ResourceKubernetesLimitRange(),
+			"kubernetes_limit_range_v1":             providercorev1.ResourceKubernetesLimitRange(),
+			"kubernetes_persistent_volume":          providercorev1.ResourceKubernetesPersistentVolume(),
+			"kubernetes_persistent_volume_v1":       providercorev1.ResourceKubernetesPersistentVolume(),
+			"kubernetes_persistent_volume_claim":    providercorev1.ResourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_persistent_volume_claim_v1": providercorev1.ResourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_replication_controller":     providercorev1.ResourceKubernetesReplicationController(),
+			"kubernetes_replication_controller_v1":  providercorev1.ResourceKubernetesReplicationController(),
+			"kubernetes_resource_quota":             providercorev1.ResourceKubernetesResourceQuota(),
+			"kubernetes_resource_quota_v1":          providercorev1.ResourceKubernetesResourceQuota(),
 
 			// api registration
 			"kubernetes_api_service":    resourceKubernetesAPIService(),
@@ -345,24 +347,19 @@ func Provider() *schema.Provider {
 	return p
 }
 
-type KubeClientsets interface {
-	MainClientset() (*kubernetes.Clientset, error)
-	AggregatorClientset() (*aggregator.Clientset, error)
-	DynamicClient() (dynamic.Interface, error)
-	DiscoveryClient() (discovery.DiscoveryInterface, error)
-}
-
 type kubeClientsets struct {
-	// TODO: this struct has become overloaded we should
-	// rename this or break it into smaller structs
 	config              *restclient.Config
 	mainClientset       *kubernetes.Clientset
 	aggregatorClientset *aggregator.Clientset
 	dynamicClient       dynamic.Interface
 	discoveryClient     discovery.DiscoveryInterface
+}
 
-	IgnoreAnnotations []string
-	IgnoreLabels      []string
+type providerMeta struct {
+	ignoredAnnotations []string
+	ignoredLabels      []string
+
+	kubeClientsets
 }
 
 func (k kubeClientsets) MainClientset() (*kubernetes.Clientset, error) {
@@ -424,6 +421,14 @@ func (k kubeClientsets) DiscoveryClient() (discovery.DiscoveryInterface, error) 
 	return k.discoveryClient, nil
 }
 
+func (p providerMeta) IgnoredAnnotations() []string {
+	return p.ignoredAnnotations
+}
+
+func (p providerMeta) IgnoredLabels() []string {
+	return p.ignoredLabels
+}
+
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {
 	// Config initialization
 	cfg, err := initializeConfiguration(d)
@@ -451,18 +456,20 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 	ignoreLabels := []string{}
 
 	if v, ok := d.Get("ignore_annotations").([]interface{}); ok {
-		ignoreAnnotations = expandStringSlice(v)
+		ignoreAnnotations = structures.ExpandStringSlice(v)
 	}
 	if v, ok := d.Get("ignore_labels").([]interface{}); ok {
-		ignoreLabels = expandStringSlice(v)
+		ignoreLabels = structures.ExpandStringSlice(v)
 	}
 
-	m := kubeClientsets{
-		config:              cfg,
-		mainClientset:       nil,
-		aggregatorClientset: nil,
-		IgnoreAnnotations:   ignoreAnnotations,
-		IgnoreLabels:        ignoreLabels,
+	m := providerMeta{
+		ignoreAnnotations,
+		ignoreLabels,
+		kubeClientsets{
+			config:              cfg,
+			mainClientset:       nil,
+			aggregatorClientset: nil,
+		},
 	}
 	return m, diag.Diagnostics{}
 }
@@ -573,7 +580,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 			exec.InteractiveMode = clientcmdapi.IfAvailableExecInteractiveMode
 			exec.APIVersion = spec["api_version"].(string)
 			exec.Command = spec["command"].(string)
-			exec.Args = expandStringSlice(spec["args"].([]interface{}))
+			exec.Args = structures.ExpandStringSlice(spec["args"].([]interface{}))
 			for kk, vv := range spec["env"].(map[string]interface{}) {
 				exec.Env = append(exec.Env, clientcmdapi.ExecEnvVar{Name: kk, Value: vv.(string)})
 			}
@@ -616,7 +623,7 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 	err = discovery.ServerSupportsVersion(d, v1)
 	if err == nil {
 		log.Printf("[INFO] Using %s/v1", group)
-		useadmissionregistrationv1beta1 = ptrToBool(false)
+		useadmissionregistrationv1beta1 = structures.PtrToBool(false)
 		return false, nil
 	}
 
@@ -631,29 +638,6 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 	}
 
 	log.Printf("[INFO] Using %s/v1beta1", group)
-	useadmissionregistrationv1beta1 = ptrToBool(true)
+	useadmissionregistrationv1beta1 = structures.PtrToBool(true)
 	return true, nil
-}
-
-func getServerVersion(connection *kubernetes.Clientset) (*gversion.Version, error) {
-	sv, err := connection.ServerVersion()
-	if err != nil {
-		return nil, err
-	}
-
-	return gversion.NewVersion(sv.String())
-}
-
-func serverVersionGreaterThanOrEqual(connection *kubernetes.Clientset, version string) (bool, error) {
-	sv, err := getServerVersion(connection)
-	if err != nil {
-		return false, err
-	}
-	// server version that we need to compare with
-	cv, err := gversion.NewVersion(version)
-	if err != nil {
-		return false, err
-	}
-
-	return sv.GreaterThanOrEqual(cv), nil
 }

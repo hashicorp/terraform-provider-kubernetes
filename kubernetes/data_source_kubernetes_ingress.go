@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
 	networking "k8s.io/api/networking/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -20,7 +21,7 @@ func dataSourceKubernetesIngress() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceKubernetesIngressRead,
 		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("ingress", false),
+			"metadata": providermetav1.NamespacedMetadataSchema("ingress", false),
 			"spec": {
 				Type:        schema.TypeList,
 				Description: docIngress["spec"],
@@ -131,13 +132,13 @@ func dataSourceKubernetesIngress() *schema.Resource {
 }
 
 func dataSourceKubernetesIngressRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	metadata := providermetav1.ExpandMetadata(d.Get("metadata").([]interface{}))
 
 	om := meta_v1.ObjectMeta{
 		Namespace: metadata.Namespace,
 		Name:      metadata.Name,
 	}
-	d.SetId(buildId(om))
+	d.SetId(providermetav1.BuildId(om))
 
 	return resourceKubernetesIngressRead(ctx, d, meta)
 }

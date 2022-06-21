@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -49,7 +51,7 @@ func resourceKubernetesStatefulSet() *schema.Resource {
 
 func resourceKubernetesStatefulSetSchemaV1() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
-		"metadata": namespacedMetadataSchema("stateful set", true),
+		"metadata": providermetav1.NamespacedMetadataSchema("stateful set", true),
 		"spec": {
 			Type:        schema.TypeList,
 			Description: "Spec defines the desired identities of pods in this set.",
@@ -70,12 +72,12 @@ func resourceKubernetesStatefulSetSchemaV1() map[string]*schema.Schema {
 }
 
 func resourceKubernetesStatefulSetCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	metadata := providermetav1.ExpandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandStatefulSetSpec(d.Get("spec").([]interface{}))
 	if err != nil {
 		return diag.FromErr(err)
@@ -93,7 +95,7 @@ func resourceKubernetesStatefulSetCreate(ctx context.Context, d *schema.Resource
 	}
 	log.Printf("[INFO] Submitted new StatefulSet: %#v", out)
 
-	id := buildId(out.ObjectMeta)
+	id := providermetav1.BuildId(out.ObjectMeta)
 	d.SetId(id)
 
 	log.Printf("[INFO] StatefulSet %s created", id)
@@ -113,12 +115,12 @@ func resourceKubernetesStatefulSetCreate(ctx context.Context, d *schema.Resource
 }
 
 func resourceKubernetesStatefulSetExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := providermetav1.IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}
@@ -143,13 +145,13 @@ func resourceKubernetesStatefulSetRead(ctx context.Context, d *schema.ResourceDa
 		d.SetId("")
 		return diag.Diagnostics{}
 	}
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	id := d.Id()
-	namespace, name, err := idParts(id)
+	namespace, name, err := providermetav1.IdParts(id)
 	if err != nil {
 		return diag.Errorf("Error parsing resource ID: %#v", err)
 	}
@@ -167,7 +169,7 @@ func resourceKubernetesStatefulSetRead(ctx context.Context, d *schema.ResourceDa
 		}
 	}
 	log.Printf("[INFO] Received stateful set: %#v", statefulSet)
-	if d.Set("metadata", flattenMetadata(statefulSet.ObjectMeta, d, meta)) != nil {
+	if d.Set("metadata", providermetav1.FlattenMetadata(statefulSet.ObjectMeta, d, meta)) != nil {
 		return diag.Errorf("Error setting `metadata`: %+v", err)
 	}
 	sss, err := flattenStatefulSetSpec(statefulSet.Spec, d, meta)
@@ -182,16 +184,16 @@ func resourceKubernetesStatefulSetRead(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceKubernetesStatefulSetUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := providermetav1.IdParts(d.Id())
 	if err != nil {
 		return diag.Errorf("Error parsing resource ID: %#v", err)
 	}
-	ops := patchMetadata("metadata.0.", "/metadata/", d)
+	ops := providermetav1.PatchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("spec") {
 		log.Println("[TRACE] StatefulSet.Spec has changes")
@@ -227,12 +229,12 @@ func resourceKubernetesStatefulSetUpdate(ctx context.Context, d *schema.Resource
 }
 
 func resourceKubernetesStatefulSetDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := providermetav1.IdParts(d.Id())
 	if err != nil {
 		return diag.Errorf("Error parsing resource ID: %#v", err)
 	}

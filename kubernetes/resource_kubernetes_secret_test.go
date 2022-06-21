@@ -10,6 +10,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
+
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -317,7 +322,7 @@ func testAccCheckSecretData(m *api.Secret, expected map[string]string) resource.
 		if len(expected) == 0 && len(m.Data) == 0 {
 			return nil
 		}
-		if !reflect.DeepEqual(flattenByteMapToStringMap(m.Data), expected) {
+		if !reflect.DeepEqual(structures.FlattenByteMapToStringMap(m.Data), expected) {
 			return fmt.Errorf("%s data don't match.\nExpected: %q\nGiven: %q",
 				m.Name, expected, m.Data)
 		}
@@ -346,7 +351,7 @@ func testAccCheckSecretNotRecreated(sec1, sec2 *api.Secret) resource.TestCheckFu
 }
 
 func testAccCheckKubernetesSecretDestroy(s *terraform.State) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(provider.KubeClientsets).MainClientset()
 
 	if err != nil {
 		return err
@@ -358,7 +363,7 @@ func testAccCheckKubernetesSecretDestroy(s *terraform.State) error {
 			continue
 		}
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := providermetav1.IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -381,13 +386,13 @@ func testAccCheckKubernetesSecretExists(n string, obj *api.Secret) resource.Test
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		conn, err := testAccProvider.Meta().(provider.KubeClientsets).MainClientset()
 		if err != nil {
 			return err
 		}
 		ctx := context.TODO()
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := providermetav1.IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}

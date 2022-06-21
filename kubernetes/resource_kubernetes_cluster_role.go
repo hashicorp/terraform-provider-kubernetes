@@ -5,6 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/rbac/v1"
@@ -58,12 +60,12 @@ func resourceKubernetesClusterRole() *schema.Resource {
 }
 
 func resourceKubernetesClusterRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	metadata := providermetav1.ExpandMetadata(d.Get("metadata").([]interface{}))
 	cRole := api.ClusterRole{
 		ObjectMeta: metadata,
 		Rules:      expandClusterRoleRules(d.Get("rule").([]interface{})),
@@ -85,13 +87,13 @@ func resourceKubernetesClusterRoleCreate(ctx context.Context, d *schema.Resource
 }
 
 func resourceKubernetesClusterRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	name := d.Id()
-	ops := patchMetadata("metadata.0.", "/metadata/", d)
+	ops := providermetav1.PatchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("rule") {
 		diffOps := patchRbacRule(d)
 		ops = append(ops, diffOps...)
@@ -125,7 +127,7 @@ func resourceKubernetesClusterRoleRead(ctx context.Context, d *schema.ResourceDa
 		return diag.Diagnostics{}
 	}
 
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -142,7 +144,7 @@ func resourceKubernetesClusterRoleRead(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received cluster role: %#v", cRole)
-	err = d.Set("metadata", flattenMetadata(cRole.ObjectMeta, d, meta))
+	err = d.Set("metadata", providermetav1.FlattenMetadata(cRole.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -160,7 +162,7 @@ func resourceKubernetesClusterRoleRead(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceKubernetesClusterRoleDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -178,7 +180,7 @@ func resourceKubernetesClusterRoleDelete(ctx context.Context, d *schema.Resource
 }
 
 func resourceKubernetesClusterRoleExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}

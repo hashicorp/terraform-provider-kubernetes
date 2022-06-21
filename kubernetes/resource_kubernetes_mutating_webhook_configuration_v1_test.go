@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -137,7 +138,7 @@ func TestAccKubernetesMutatingWebhookConfigurationV1_basic(t *testing.T) {
 }
 
 func testAccCheckKubernetesMutatingWebhookConfigurationV1Destroy(s *terraform.State) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(provider.KubeClientsets).MainClientset()
 
 	if err != nil {
 		return err
@@ -171,7 +172,7 @@ func testAccCheckKubernetesMutatingWebhookConfigurationV1Exists(n string) resour
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		conn, err := testAccProvider.Meta().(provider.KubeClientsets).MainClientset()
 		if err != nil {
 			return err
 		}

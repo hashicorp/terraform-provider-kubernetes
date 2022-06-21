@@ -7,11 +7,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
+	providercorev1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/core/v1"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/validators"
+
 	batchv1 "k8s.io/api/batch/v1"
 )
 
 func jobMetadataSchema() *schema.Schema {
-	m := namespacedMetadataSchema("job", true)
+	m := providermetav1.NamespacedMetadataSchema("job", true)
 	mr := m.Elem.(*schema.Resource)
 	mr.Schema["labels"].Computed = true
 	return m
@@ -19,7 +23,7 @@ func jobMetadataSchema() *schema.Schema {
 
 func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 	podTemplateFields := map[string]*schema.Schema{
-		"metadata": metadataSchema("job", true),
+		"metadata": providermetav1.MetadataSchema("job", true),
 		"spec": {
 			Type:        schema.TypeList,
 			Description: "Spec of the pods owned by the job",
@@ -27,7 +31,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			ForceNew:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: podSpecFields(specUpdatable, false),
+				Schema: providercorev1.PodSpecFields(specUpdatable, false),
 			},
 		},
 	}
@@ -43,14 +47,14 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			Type:         schema.TypeInt,
 			Optional:     true,
 			ForceNew:     false,
-			ValidateFunc: validatePositiveInteger,
+			ValidateFunc: validators.ValidatePositiveInteger,
 			Description:  "Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.",
 		},
 		"backoff_limit": {
 			Type:         schema.TypeInt,
 			Optional:     true,
 			ForceNew:     false,
-			ValidateFunc: validateNonNegativeInteger,
+			ValidateFunc: validators.ValidateNonNegativeInteger,
 			Description:  "Specifies the number of retries before marking this job failed. Defaults to 6",
 		},
 		// This field is immutable in Jobs.
@@ -59,7 +63,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			Optional:     true,
 			ForceNew:     true,
 			Default:      1,
-			ValidateFunc: validatePositiveInteger,
+			ValidateFunc: validators.ValidatePositiveInteger,
 			Description:  "Specifies the desired number of successfully finished pods the job should be run with. Setting to nil means that the success of any pod signals the success of all pods, and allows parallelism to have any positive value. Setting to 1 means that parallelism is limited to 1 and the success of that pod signals the success of the job. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
 		},
 		"completion_mode": {
@@ -84,7 +88,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			Optional:     true,
 			ForceNew:     false,
 			Default:      1,
-			ValidateFunc: validateNonNegativeInteger,
+			ValidateFunc: validators.ValidateNonNegativeInteger,
 			Description:  "Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
 		},
 		// This field is immutable in Jobs.
@@ -157,7 +161,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 				if err != nil {
 					return []string{}, []error{fmt.Errorf("%s is not a valid integer", key)}
 				}
-				return validateNonNegativeInteger(v, key)
+				return validators.ValidateNonNegativeInteger(v, key)
 			},
 			Description: "ttlSecondsAfterFinished limits the lifetime of a Job that has finished execution (either Complete or Failed). If this field is set, ttlSecondsAfterFinished after the Job finishes, it is eligible to be automatically deleted. When the Job is being deleted, its lifecycle guarantees (e.g. finalizers) will be honored. If this field is unset, the Job won't be automatically deleted. If this field is set to zero, the Job becomes eligible to be deleted immediately after it finishes.",
 		},

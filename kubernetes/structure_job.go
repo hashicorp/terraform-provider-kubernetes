@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 	batchv1 "k8s.io/api/batch/v1"
 )
 
@@ -35,7 +36,7 @@ func flattenJobSpec(in batchv1.JobSpec, d *schema.ResourceData, meta interface{}
 	}
 
 	if in.Selector != nil {
-		att["selector"] = flattenLabelSelector(in.Selector)
+		att["selector"] = structures.FlattenLabelSelector(in.Selector)
 	}
 	// Remove server-generated labels
 	labels := in.Template.ObjectMeta.Labels
@@ -71,15 +72,15 @@ func expandJobSpec(j []interface{}) (batchv1.JobSpec, error) {
 	in := j[0].(map[string]interface{})
 
 	if v, ok := in["active_deadline_seconds"].(int); ok && v > 0 {
-		obj.ActiveDeadlineSeconds = ptrToInt64(int64(v))
+		obj.ActiveDeadlineSeconds = structures.PtrToInt64(int64(v))
 	}
 
 	if v, ok := in["backoff_limit"].(int); ok && v != 6 {
-		obj.BackoffLimit = ptrToInt32(int32(v))
+		obj.BackoffLimit = structures.PtrToInt32(int32(v))
 	}
 
 	if v, ok := in["completions"].(int); ok && v > 0 {
-		obj.Completions = ptrToInt32(int32(v))
+		obj.Completions = structures.PtrToInt32(int32(v))
 	}
 
 	if v, ok := in["completion_mode"].(string); ok && v != "" {
@@ -88,15 +89,15 @@ func expandJobSpec(j []interface{}) (batchv1.JobSpec, error) {
 	}
 
 	if v, ok := in["manual_selector"]; ok {
-		obj.ManualSelector = ptrToBool(v.(bool))
+		obj.ManualSelector = structures.PtrToBool(v.(bool))
 	}
 
 	if v, ok := in["parallelism"].(int); ok && v >= 0 {
-		obj.Parallelism = ptrToInt32(int32(v))
+		obj.Parallelism = structures.PtrToInt32(int32(v))
 	}
 
 	if v, ok := in["selector"].([]interface{}); ok && len(v) > 0 {
-		obj.Selector = expandLabelSelector(v)
+		obj.Selector = structures.ExpandLabelSelector(v)
 	}
 
 	template, err := expandPodTemplate(in["template"].([]interface{}))
@@ -110,18 +111,18 @@ func expandJobSpec(j []interface{}) (batchv1.JobSpec, error) {
 		if err != nil {
 			return obj, err
 		}
-		obj.TTLSecondsAfterFinished = ptrToInt32(int32(i))
+		obj.TTLSecondsAfterFinished = structures.PtrToInt32(int32(i))
 	}
 
 	return obj, nil
 }
 
-func patchJobSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOperations, error) {
-	ops := make([]PatchOperation, 0)
+func patchJobSpec(pathPrefix, prefix string, d *schema.ResourceData) (structures.PatchOperations, error) {
+	ops := make([]structures.PatchOperation, 0)
 
 	if d.HasChange(prefix + "active_deadline_seconds") {
 		v := d.Get(prefix + "active_deadline_seconds").(int)
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/activeDeadlineSeconds",
 			Value: v,
 		})
@@ -129,7 +130,7 @@ func patchJobSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOpera
 
 	if d.HasChange(prefix + "backoff_limit") {
 		v := d.Get(prefix + "backoff_limit").(int)
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/backoffLimit",
 			Value: v,
 		})
@@ -137,7 +138,7 @@ func patchJobSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOpera
 
 	if d.HasChange(prefix + "manual_selector") {
 		v := d.Get(prefix + "manual_selector").(bool)
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/manualSelector",
 			Value: v,
 		})
@@ -145,7 +146,7 @@ func patchJobSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOpera
 
 	if d.HasChange(prefix + "parallelism") {
 		v := d.Get(prefix + "parallelism").(int)
-		ops = append(ops, &ReplaceOperation{
+		ops = append(ops, &structures.ReplaceOperation{
 			Path:  pathPrefix + "/parallelism",
 			Value: v,
 		})

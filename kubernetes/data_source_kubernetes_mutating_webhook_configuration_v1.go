@@ -7,6 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
 )
 
 func dataSourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
@@ -15,7 +17,7 @@ func dataSourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceKubernetesMutatingWebhookConfigurationRead,
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("mutating webhook configuration", false),
+			"metadata": providermetav1.MetadataSchema("mutating webhook configuration", false),
 			"webhook": {
 				Type:        schema.TypeList,
 				Description: apiDoc["webhooks"],

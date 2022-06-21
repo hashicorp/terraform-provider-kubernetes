@@ -5,6 +5,9 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	providermetav1 "github.com/hashicorp/terraform-provider-kubernetes/kubernetes/meta/v1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/provider"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes/structures"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -30,7 +33,7 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("validating webhook configuration", true),
+			"metadata": providermetav1.MetadataSchema("validating webhook configuration", true),
 			"webhook": {
 				Type:        schema.TypeList,
 				Description: apiDoc["webhooks"],
@@ -130,13 +133,13 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 }
 
 func resourceKubernetesValidatingWebhookConfigurationCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	cfg := admissionregistrationv1.ValidatingWebhookConfiguration{
-		ObjectMeta: expandMetadata(d.Get("metadata").([]interface{})),
+		ObjectMeta: providermetav1.ExpandMetadata(d.Get("metadata").([]interface{})),
 		Webhooks:   expandValidatingWebhooks(d.Get("webhook").([]interface{})),
 	}
 
@@ -178,7 +181,7 @@ func resourceKubernetesValidatingWebhookConfigurationRead(ctx context.Context, d
 		d.SetId("")
 		return diag.Diagnostics{}
 	}
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -203,7 +206,7 @@ func resourceKubernetesValidatingWebhookConfigurationRead(ctx context.Context, d
 		return diag.FromErr(err)
 	}
 
-	err = d.Set("metadata", flattenMetadata(cfg.ObjectMeta, d, meta))
+	err = d.Set("metadata", providermetav1.FlattenMetadata(cfg.ObjectMeta, d, meta))
 	if err != nil {
 		return nil
 	}
@@ -219,15 +222,15 @@ func resourceKubernetesValidatingWebhookConfigurationRead(ctx context.Context, d
 }
 
 func resourceKubernetesValidatingWebhookConfigurationUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	ops := patchMetadata("metadata.0.", "/metadata/", d)
+	ops := providermetav1.PatchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("webhook") {
-		op := &ReplaceOperation{
+		op := &structures.ReplaceOperation{
 			Path: "/webhooks",
 		}
 
@@ -279,7 +282,7 @@ func resourceKubernetesValidatingWebhookConfigurationUpdate(ctx context.Context,
 }
 
 func resourceKubernetesValidatingWebhookConfigurationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -307,7 +310,7 @@ func resourceKubernetesValidatingWebhookConfigurationDelete(ctx context.Context,
 }
 
 func resourceKubernetesValidatingWebhookConfigurationExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(provider.KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}

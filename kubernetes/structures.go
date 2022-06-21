@@ -637,7 +637,6 @@ func flattenLabelSelectorRequirementList(l []metav1.LabelSelectorRequirement) []
 func flattenLocalObjectReferenceArray(in []api.LocalObjectReference) []interface{} {
 	att := []interface{}{}
 	for _, v := range in {
-		if v.Name != "" {
 			m := map[string]interface{}{
 				"name": v.Name,
 			}
@@ -669,9 +668,7 @@ func flattenServiceAccountSecrets(in []api.ObjectReference, defaultSecretName st
 			continue
 		}
 		m := map[string]interface{}{}
-		if v.Name != "" {
 			m["name"] = v.Name
-		}
 		att = append(att, m)
 	}
 	return att

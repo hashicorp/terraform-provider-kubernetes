@@ -255,13 +255,11 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 
 	ppMan, ok := proposedVal["manifest"]
 	if !ok {
-		matp := tftypes.NewAttributePath()
-		matp = matp.WithAttributeName("manifest")
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity:  tfprotov5.DiagnosticSeverityError,
 			Summary:   "Invalid proposed state during planning",
 			Detail:    "Missing 'manifest' attribute",
-			Attribute: matp,
+			Attribute: tftypes.NewAttributePath().WithAttributeName("manifest"),
 		})
 		return resp, nil
 	}
@@ -353,23 +351,20 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	s.logger.Debug("[PlanUpdateResource]", "OAPI type", dump(so))
 
 	// Transform the input manifest to adhere to the type model from the OpenAPI spec
-	morphedManifest, err := morph.ValueToType(ppMan, objectType, tftypes.NewAttributePath())
-	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to morph manifest to OAPI type",
-			Detail:   err.Error(),
-		})
+	morphedManifest, d := morph.ValueToType(ppMan, objectType, tftypes.NewAttributePath().WithAttributeName("object"))
+	if len(d) > 0 {
+		resp.Diagnostics = append(resp.Diagnostics, d...)
 		return resp, nil
 	}
 	s.logger.Debug("[PlanResourceChange]", "morphed manifest", dump(morphedManifest))
 
-	completePropMan, err := morph.DeepUnknown(objectType, morphedManifest, tftypes.NewAttributePath())
+	completePropMan, err := morph.DeepUnknown(objectType, morphedManifest, tftypes.NewAttributePath().WithAttributeName("object"))
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to backfill manifest from OAPI type",
-			Detail:   err.Error(),
+			Severity:  tfprotov5.DiagnosticSeverityError,
+			Summary:   "Failed to backfill manifest from OAPI type",
+			Detail:    err.Error(),
+			Attribute: tftypes.NewAttributePath().WithAttributeName("object"),
 		})
 		return resp, nil
 	}
@@ -386,13 +381,11 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 			return v, nil
 		})
 		if err != nil {
-			oatp := tftypes.NewAttributePath()
-			oatp = oatp.WithAttributeName("object")
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 				Severity:  tfprotov5.DiagnosticSeverityError,
 				Summary:   "Failed to set computed attributes in new resource state",
 				Detail:    err.Error(),
-				Attribute: oatp,
+				Attribute: tftypes.NewAttributePath().WithAttributeName("object"),
 			})
 			return resp, nil
 		}
@@ -401,25 +394,21 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		// plan for Update
 		priorObj, ok := priorVal["object"]
 		if !ok {
-			oatp := tftypes.NewAttributePath()
-			oatp = oatp.WithAttributeName("object")
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 				Severity:  tfprotov5.DiagnosticSeverityError,
 				Summary:   "Invalid prior state during planning",
 				Detail:    "Missing 'object' attribute",
-				Attribute: oatp,
+				Attribute: tftypes.NewAttributePath().WithAttributeName("object"),
 			})
 			return resp, nil
 		}
 		priorMan, ok := priorVal["manifest"]
 		if !ok {
-			oatp := tftypes.NewAttributePath()
-			oatp = oatp.WithAttributeName("manifest")
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 				Severity:  tfprotov5.DiagnosticSeverityError,
 				Summary:   "Invalid prior state during planning",
 				Detail:    "Missing 'manifest' attribute",
-				Attribute: oatp,
+				Attribute: tftypes.NewAttributePath().WithAttributeName("manifest"),
 			})
 			return resp, nil
 		}
@@ -476,13 +465,11 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 			return priorAtrVal.(tftypes.Value), nil
 		})
 		if err != nil {
-			oatp := tftypes.NewAttributePath()
-			oatp = oatp.WithAttributeName("object")
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 				Severity:  tfprotov5.DiagnosticSeverityError,
 				Summary:   "Failed to update proposed state from prior state",
 				Detail:    err.Error(),
-				Attribute: oatp,
+				Attribute: tftypes.NewAttributePath().WithAttributeName("object"),
 			})
 			return resp, nil
 		}

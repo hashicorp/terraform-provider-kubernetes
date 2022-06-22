@@ -86,13 +86,9 @@ func (s *RawProviderServer) UpgradeResourceState(ctx context.Context, req *tfpro
 		return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
 	}
 
-	morphedObject, err := morph.ValueToType(obj, tsch, tftypes.NewAttributePath())
+	morphedObject, d := morph.ValueToType(obj, tsch, tftypes.NewAttributePath())
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to morph manifest to OAPI type",
-			Detail:   err.Error(),
-		})
+		resp.Diagnostics = append(resp.Diagnostics, d...)
 		return resp, nil
 	}
 	s.logger.Debug("[UpgradeResourceState]", "morphed object", dump(morphedObject))

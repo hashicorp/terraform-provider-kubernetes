@@ -165,7 +165,12 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 
 		gvk, err := GVKFromTftypesObject(&obj, m)
 		if err != nil {
-			return resp, fmt.Errorf("failed to determine resource GVK: %s", err)
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Failed to determine resource GVK",
+				Detail:   err.Error(),
+			})
+			return resp, nil
 		}
 
 		tsch, th, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
@@ -195,9 +200,10 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 				}
 				return v, ap.NewError(err)
 			}
-			nv, err := morph.ValueToType(ppMan.(tftypes.Value), v.Type(), tftypes.NewAttributePath())
-			if err != nil {
-				return v, ap.NewError(err)
+			nv, d := morph.ValueToType(ppMan.(tftypes.Value), v.Type(), tftypes.NewAttributePath())
+			if len(d) > 0 {
+				resp.Diagnostics = append(resp.Diagnostics, d...)
+				return v, nil
 			}
 			return nv, nil
 		})

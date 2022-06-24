@@ -635,13 +635,12 @@ func flattenLabelSelectorRequirementList(l []metav1.LabelSelectorRequirement) []
 }
 
 func flattenLocalObjectReferenceArray(in []api.LocalObjectReference) []interface{} {
-	att := make([]interface{}, len(in))
-	for i, v := range in {
-		m := map[string]interface{}{}
-		if v.Name != "" {
-			m["name"] = v.Name
+	att := []interface{}{}
+	for _, v := range in {
+		m := map[string]interface{}{
+			"name": v.Name,
 		}
-		att[i] = m
+		att = append(att, m)
 	}
 	return att
 }

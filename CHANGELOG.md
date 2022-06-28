@@ -14,11 +14,14 @@ NEW:
 IMPROVEMENTS:
 
 * Update documentation and correct some errors (#1706, #1708)
+* Fix security scan alerts (#1727, #1730, #1731)
+* Attribute `topology_key` of `kubernetes_deployment(_v1)` marked as `Required` (#1736)
 
 BUG FIXES:
 
 * Fix `kubernetes_default_service_account` doesn't set the `automount_service_account_token` to `false` (#1247)
 * Fix an issue when the imported `kubernetes_manifest` resource is replaced instead of getting updated (#1712)
+* Fix provider crash when `image_pull_secret` of `kubernetes_service_account(_v1)` is `null`
 
 ## 2.11.0 (April 27, 2022)
 

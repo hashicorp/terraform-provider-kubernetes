@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/mitchellh/go-homedir"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -127,6 +128,17 @@ func Provider() *schema.Provider {
 						"api_version": {
 							Type:     schema.TypeString,
 							Required: true,
+							ValidateDiagFunc: func(val interface{}, key cty.Path) diag.Diagnostics {
+								apiVersion := val.(string)
+								if apiVersion == "client.authentication.k8s.io/v1alpha1" {
+									return diag.Diagnostics{{
+										Severity: diag.Warning,
+										Summary:  "v1alpha1 of the client authentication API is deprecated, use v1beta1 or above",
+										Detail:   "v1alpha1 of the client authentication API will be removed in Kubernetes client versions 1.24 and above. You may need to update your exec plugin to use the latest version.",
+									}}
+								}
+								return nil
+							},
 						},
 						"command": {
 							Type:     schema.TypeString,

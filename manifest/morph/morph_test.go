@@ -139,7 +139,7 @@ func TestMorphValueToType(t *testing.T) {
 				}),
 				T: tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.DynamicPseudoType}},
 			},
-			Out: tftypes.NewValue(tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.DynamicPseudoType, tftypes.DynamicPseudoType, tftypes.DynamicPseudoType}}, []tftypes.Value{
+			Out: tftypes.NewValue(tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String, tftypes.String, tftypes.String}}, []tftypes.Value{
 				tftypes.NewValue(tftypes.String, "foo"),
 				tftypes.NewValue(tftypes.String, "bar"),
 				tftypes.NewValue(tftypes.String, "baz"),
@@ -200,6 +200,90 @@ func TestMorphValueToType(t *testing.T) {
 				tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
 					map[string]tftypes.Value{"foo": tftypes.NewValue(tftypes.String, "baz")}),
 			}),
+		},
+		"tuple(object)->tuple(object)": {
+			In: sampleInType{
+				V: tftypes.NewValue(
+					tftypes.Tuple{ElementTypes: []tftypes.Type{
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{"first": tftypes.String}},
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{"second": tftypes.DynamicPseudoType}},
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{"third": tftypes.Tuple{ElementTypes: []tftypes.Type{
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{"bar": tftypes.String}},
+						}},
+						}},
+					}},
+					[]tftypes.Value{
+						tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"first": tftypes.String}},
+							map[string]tftypes.Value{"first": tftypes.NewValue(tftypes.String, "foo")}),
+
+						tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"second": tftypes.DynamicPseudoType}},
+							map[string]tftypes.Value{"second": tftypes.NewValue(tftypes.DynamicPseudoType, nil)}),
+
+						tftypes.NewValue(
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+								"third": tftypes.Tuple{ElementTypes: []tftypes.Type{
+									tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+									tftypes.Object{AttributeTypes: map[string]tftypes.Type{"bar": tftypes.String}},
+								}},
+							}},
+							map[string]tftypes.Value{
+								"third": tftypes.NewValue(tftypes.Tuple{ElementTypes: []tftypes.Type{
+									tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+									tftypes.Object{AttributeTypes: map[string]tftypes.Type{"bar": tftypes.String}},
+								}}, []tftypes.Value{
+									tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}}, map[string]tftypes.Value{"foo": tftypes.NewValue(tftypes.String, "some")}),
+									tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"bar": tftypes.String}}, map[string]tftypes.Value{"bar": tftypes.NewValue(tftypes.String, "other")}),
+								}),
+							},
+						),
+					},
+				),
+				T: tftypes.Tuple{ElementTypes: []tftypes.Type{
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{"first": tftypes.String}},
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{"second": tftypes.DynamicPseudoType}},
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{"third": tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String, "bar": tftypes.String}}}}}},
+				}},
+			},
+
+			Out: tftypes.NewValue(tftypes.Tuple{ElementTypes: []tftypes.Type{
+				tftypes.Object{AttributeTypes: map[string]tftypes.Type{"first": tftypes.String}},
+				tftypes.Object{AttributeTypes: map[string]tftypes.Type{"second": tftypes.DynamicPseudoType}},
+				tftypes.Object{AttributeTypes: map[string]tftypes.Type{"third": tftypes.Tuple{ElementTypes: []tftypes.Type{
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String, "bar": tftypes.String}},
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String, "bar": tftypes.String}},
+				}}}},
+			}},
+				[]tftypes.Value{
+					tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"first": tftypes.String}},
+						map[string]tftypes.Value{"first": tftypes.NewValue(tftypes.String, "foo")}),
+
+					tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"second": tftypes.DynamicPseudoType}},
+						map[string]tftypes.Value{"second": tftypes.NewValue(tftypes.String, nil)}),
+
+					tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"third": tftypes.Tuple{ElementTypes: []tftypes.Type{
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String, "bar": tftypes.String}},
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String, "bar": tftypes.String}},
+					}}}},
+						map[string]tftypes.Value{"third": tftypes.NewValue(tftypes.Tuple{ElementTypes: []tftypes.Type{
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String, "bar": tftypes.String}},
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String, "bar": tftypes.String}},
+						}},
+							[]tftypes.Value{
+								tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String, "bar": tftypes.String}},
+									map[string]tftypes.Value{
+										"foo": tftypes.NewValue(tftypes.String, "some"),
+										"bar": tftypes.NewValue(tftypes.String, nil),
+									}),
+								tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String, "bar": tftypes.String}},
+									map[string]tftypes.Value{
+										"foo": tftypes.NewValue(tftypes.String, nil),
+										"bar": tftypes.NewValue(tftypes.String, "other"),
+									}),
+							},
+						)},
+					),
+				}),
 		},
 		"set->tuple": {
 			In: sampleInType{
@@ -410,9 +494,9 @@ func TestMorphValueToType(t *testing.T) {
 				}},
 			},
 			Out: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-				"one": tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.DynamicPseudoType, tftypes.DynamicPseudoType}},
+				"one": tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String, tftypes.String}},
 			}}, map[string]tftypes.Value{
-				"one": tftypes.NewValue(tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.DynamicPseudoType, tftypes.DynamicPseudoType}},
+				"one": tftypes.NewValue(tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String, tftypes.String}},
 					[]tftypes.Value{
 						tftypes.NewValue(tftypes.String, "bar"),
 						tftypes.NewValue(tftypes.String, "baz"),

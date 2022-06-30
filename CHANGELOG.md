@@ -1,3 +1,28 @@
+## 2.12.0 (June 30, 2022)
+
+NEW:
+
+* Attribute `ignore_annotations` of `provider` (#746)
+* Attribute `ignore_labels` of `provider` (#746)
+* Attribute `condition` to `wait` block of `kubernetes_manifest` (#1595)
+* Attribute `allocate_load_balancer_node_ports` of `kubernetes_service(_v1)` (#1683)
+* Attribute `cluster_ips` of `kubernetes_service(_v1)` (#1683)
+* Attribute `internal_traffic_policy` of `kubernetes_service(_v1)` (#1683)
+* Attribute `load_balancer_class` of `kubernetes_service(_v1)` (#1683)
+* Attribute `session_affinity_config` of `kubernetes_service(_v1)` (#1683)
+
+IMPROVEMENTS:
+
+* Update documentation and correct some errors (#1706, #1708)
+* Fix security scan alerts (#1727, #1730, #1731)
+* Attribute `topology_key` of `kubernetes_deployment(_v1)` marked as `Required` (#1736)
+
+BUG FIXES:
+
+* Fix `kubernetes_default_service_account` doesn't set the `automount_service_account_token` to `false` (#1247)
+* Fix an issue when the imported `kubernetes_manifest` resource is replaced instead of getting updated (#1712)
+* Fix provider crash when `image_pull_secret` of `kubernetes_service_account(_v1)` is `null`
+
 ## 2.11.0 (April 27, 2022)
 
 NEW:

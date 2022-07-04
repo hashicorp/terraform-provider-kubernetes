@@ -33,6 +33,8 @@ func flattenCronJobSpecV1(in batch.CronJobSpec, d *schema.ResourceData, meta int
 
 	att["suspend"] = in.Suspend
 
+	att["time_zone"] = in.TimeZone
+
 	return []interface{}{att}, nil
 }
 
@@ -87,6 +89,10 @@ func expandCronJobSpecV1(j []interface{}) (batch.CronJobSpec, error) {
 
 	if v, ok := in["suspend"].(bool); ok {
 		obj.Suspend = ptrToBool(v)
+	}
+
+	if v, ok := in["time_zone"].(string); ok && v != "" {
+		obj.TimeZone = ptrToString(v)
 	}
 
 	return obj, nil

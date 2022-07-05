@@ -186,6 +186,7 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 				return tftypes.Value{}, elp.NewErrorf("[%s] failed to morph tuple element into tuple element: %v", elp.String(), err)
 			}
 			lvals[i] = nv
+			eltypes[i] = nv.Type()
 		}
 		return tftypes.NewValue(tftypes.Tuple{ElementTypes: eltypes}, lvals), nil
 	case t.Is(tftypes.List{}):

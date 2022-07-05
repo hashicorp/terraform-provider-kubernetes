@@ -34,7 +34,7 @@ func flattenDeploymentSpec(in appsv1.DeploymentSpec, d *schema.ResourceData, met
 
 	att["strategy"] = flattenDeploymentStrategy(in.Strategy)
 
-	podSpec, err := flattenPodSpec(in.Template.Spec)
+	podSpec, err := flattenPodSpec(in.Template.Spec, d, meta)
 	if err != nil {
 		return nil, err
 	}

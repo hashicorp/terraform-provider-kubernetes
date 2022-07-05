@@ -23,7 +23,7 @@ func flattenDaemonSetSpec(in appsv1.DaemonSetSpec, d *schema.ResourceData, meta 
 		att["selector"] = flattenLabelSelector(in.Selector)
 	}
 
-	podSpec, err := flattenPodSpec(in.Template.Spec)
+	podSpec, err := flattenPodSpec(in.Template.Spec, d, meta)
 	if err != nil {
 		return nil, err
 	}

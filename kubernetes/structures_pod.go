@@ -28,7 +28,7 @@ var builtInTolerations = map[string]string{
 
 // Flatteners
 
-func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
+func flattenPodSpec(in v1.PodSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	if in.ActiveDeadlineSeconds != nil {
 		att["active_deadline_seconds"] = *in.ActiveDeadlineSeconds
@@ -151,7 +151,7 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 			}
 		}
 
-		v, err := flattenVolumes(in.Volumes)
+		v, err := flattenVolumes(in.Volumes, d, meta)
 		if err != nil {
 			return []interface{}{att}, err
 		}
@@ -339,7 +339,7 @@ func flattenTopologySpreadConstraints(tsc []v1.TopologySpreadConstraint) []inter
 	return att
 }
 
-func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
+func flattenVolumes(volumes []v1.Volume, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make([]interface{}, len(volumes))
 	for i, v := range volumes {
 		obj := map[string]interface{}{}
@@ -355,6 +355,9 @@ func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
 		}
 		if v.EmptyDir != nil {
 			obj["empty_dir"] = flattenEmptyDirVolumeSource(v.EmptyDir)
+		}
+		if v.Ephemeral != nil {
+			obj["ephemeral"] = flattenEphemeralVolumeSource(v.Ephemeral, d, meta)
 		}
 		if v.DownwardAPI != nil {
 			obj["downward_api"] = flattenDownwardAPIVolumeSource(v.DownwardAPI)
@@ -519,6 +522,19 @@ func flattenEmptyDirVolumeSource(in *v1.EmptyDirVolumeSource) []interface{} {
 	if in.SizeLimit != nil {
 		att["size_limit"] = in.SizeLimit.String()
 	}
+	return []interface{}{att}
+}
+
+func flattenVolumeClaimTemplate(in *v1.PersistentVolumeClaimTemplate, d *schema.ResourceData, meta interface{}) []interface{} {
+	att := make(map[string]interface{})
+	att["metadata"] = flattenMetadata(in.ObjectMeta, d, meta)
+	att["spec"] = flattenPersistentVolumeClaimSpec(in.Spec)
+	return []interface{}{att}
+}
+
+func flattenEphemeralVolumeSource(in *v1.EphemeralVolumeSource, d *schema.ResourceData, meta interface{}) []interface{} {
+	att := make(map[string]interface{})
+	att["volume_claim_template"] = flattenVolumeClaimTemplate(in.VolumeClaimTemplate, d, meta)
 	return []interface{}{att}
 }
 
@@ -1201,6 +1217,48 @@ func expandProjectedVolumeSource(l []interface{}) (*v1.ProjectedVolumeSource, er
 	return obj, nil
 }
 
+func expandPersistentVolumeClaimTemplate(pvct []interface{}) (*v1.PersistentVolumeClaimTemplate, error) {
+	obj := &v1.PersistentVolumeClaimTemplate{}
+	if len(pvct) == 0 || pvct[0] == nil {
+		return obj, nil
+	}
+	in := pvct[0].(map[string]interface{})
+
+	if meta, ok := in["metadata"].([]interface{}); ok && len(meta) > 0 {
+		obj.ObjectMeta = expandMetadata(meta)
+	}
+	if s, ok := in["spec"].([]interface{}); ok && len(s) > 0 {
+		spec, err := expandPersistentVolumeClaimSpec(s)
+		if err != nil {
+			return obj, fmt.Errorf("Persistent volume claim template: failed to parse 'spec': %s", err)
+		}
+		obj.Spec = *spec
+	}
+
+	return obj, nil
+}
+
+func expandEphemeralVolumeSource(e []interface{}) (*v1.EphemeralVolumeSource, error) {
+	obj := &v1.EphemeralVolumeSource{}
+	if len(e) == 0 || e[0] == nil {
+		return obj, nil
+	}
+	in := e[0].(map[string]interface{})
+
+	vct, ok := in["volume_claim_template"].([]interface{})
+	if !ok {
+		return obj, fmt.Errorf("Ephemeral Volume: failed to parse 'volume_claim_template'.")
+	}
+
+	pvct, err := expandPersistentVolumeClaimTemplate(vct)
+	if err != nil {
+		return obj, err
+	}
+	obj.VolumeClaimTemplate = pvct
+
+	return obj, nil
+}
+
 func expandProjectedSources(sources []interface{}) ([]v1.VolumeProjection, error) {
 	if len(sources) == 0 || sources[0] == nil {
 		return []v1.VolumeProjection{}, nil
@@ -1431,6 +1489,13 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 		if value, ok := m["empty_dir"].([]interface{}); ok && len(value) > 0 {
 			var err error
 			vl[i].EmptyDir, err = expandEmptyDirVolumeSource(value)
+			if err != nil {
+				return vl, err
+			}
+		}
+		if value, ok := m["ephemeral"].([]interface{}); ok && len(value) > 0 {
+			var err error
+			vl[i].Ephemeral, err = expandEphemeralVolumeSource(value)
 			if err != nil {
 				return vl, err
 			}

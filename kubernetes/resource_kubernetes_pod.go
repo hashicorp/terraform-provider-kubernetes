@@ -183,7 +183,7 @@ func resourceKubernetesPodRead(ctx context.Context, d *schema.ResourceData, meta
 		return diag.FromErr(err)
 	}
 
-	podSpec, err := flattenPodSpec(pod.Spec)
+	podSpec, err := flattenPodSpec(pod.Spec, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -1473,6 +1473,37 @@ func TestAccKubernetesPod_runtimeClassName(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPod_EphemeralVolume(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	imageName := alpineImageVersion
+	var conf api.Pod
+	resourceName := "kubernetes_pod.test"
+	volumeName := acctest.RandomWithPrefix("tf-acc-test")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodEphemeralVolume(name, imageName, volumeName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.name", volumeName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.ephemeral.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.ephemeral.0.volume_claim_template.#", "1"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
 func createRuncRuntimeClass(rn string) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
@@ -3269,4 +3300,43 @@ resource "kubernetes_pod_v1" "scheduler" {
   }
 }
 `, name)
+}
+
+func testAccKubernetesPodEphemeralVolume(podName, imageName string, volumeName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+  metadata {
+    name = %[1]q
+  }
+  spec {
+    container {
+      image = %[2]q
+      name  = "containername"
+      volume_mount {
+	name       = %[3]q
+	mount_path = "/ephemeral"
+      }
+    }
+    volume {
+      name = %[3]q
+      ephemeral {
+	volume_claim_template {
+	  metadata {
+	    labels = {
+	      type = "ephemeral"
+	    }
+	  }
+	  spec {
+	    access_modes = ["ReadWriteOnce"]
+	    resources {
+	      requests = {
+		storage = "1Gi"
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+}
+`, podName, imageName, volumeName)
 }

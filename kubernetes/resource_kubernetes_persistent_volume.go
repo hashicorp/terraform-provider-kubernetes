@@ -46,12 +46,12 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 			diskURI := "spec.0.persistent_volume_source.0.azure_disk.0.data_disk_uri"
 			kindValue, _ := diff.GetOk(kind)
 			diskURIValue, diskURIExists := diff.GetOk(diskURI)
-			if diskURIExists && strings.Contains(diskURIValue.(string), "blob.core.windows.net") && kindValue == "Managed" {
+			if diskURIExists && strings.Contains(diskURIValue.(string), "blob.core.windows.net") && kindValue == string(api.AzureManagedDisk) {
 				log.Printf("Configuration error:")
 				log.Printf("Mismatch between Disk URI: %v = %v and Disk Kind: %v = %v", diskURI, diskURIValue, kind, kindValue)
 				return errors.New(persistentVolumeAzureBlobError)
 			}
-			if diskURIExists && strings.Contains(diskURIValue.(string), "/providers/Microsoft.Compute/disks/") && kindValue != "Managed" {
+			if diskURIExists && strings.Contains(diskURIValue.(string), "/providers/Microsoft.Compute/disks/") && kindValue != string(api.AzureManagedDisk) {
 				log.Printf("Configuration error:")
 				log.Printf("Mismatch between Disk URI: %v = %v and disk Kind: %v = %v", diskURI, diskURIValue, kind, kindValue)
 				return errors.New(persistentVolumeAzureManagedError)
@@ -88,9 +88,9 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 								ValidateFunc: validation.StringInSlice([]string{
-									"ReadWriteOnce",
-									"ReadOnlyMany",
-									"ReadWriteMany",
+									string(api.ReadWriteOnce),
+									string(api.ReadOnlyMany),
+									string(api.ReadWriteMany),
 								}, false),
 							},
 							Set: schema.HashString,
@@ -107,11 +107,11 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Type:        schema.TypeString,
 							Description: "What happens to a persistent volume when released from its claim. Valid options are Retain (default) and Recycle. Recycling must be supported by the volume plugin underlying this persistent volume. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#recycling-policy",
 							Optional:    true,
-							Default:     "Retain",
+							Default:     string(api.PersistentVolumeReclaimRetain),
 							ValidateFunc: validation.StringInSlice([]string{
-								"Recycle",
-								"Delete",
-								"Retain",
+								string(api.PersistentVolumeReclaimRecycle),
+								string(api.PersistentVolumeReclaimDelete),
+								string(api.PersistentVolumeReclaimRetain),
 							}, false),
 						},
 						"claim_ref": {
@@ -189,10 +189,10 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 							Description: "Defines if a volume is intended to be used with a formatted filesystem. or to remain in raw block state.",
 							Optional:    true,
 							ForceNew:    true,
-							Default:     "Filesystem",
+							Default:     string(api.PersistentVolumeFilesystem),
 							ValidateFunc: validation.StringInSlice([]string{
-								"Block",
-								"Filesystem",
+								string(api.PersistentVolumeBlock),
+								string(api.PersistentVolumeFilesystem),
 							}, false),
 						},
 					},
@@ -226,8 +226,8 @@ func resourceKubernetesPersistentVolumeCreate(ctx context.Context, d *schema.Res
 	log.Printf("[INFO] Submitted new persistent volume: %#v", out)
 
 	stateConf := &resource.StateChangeConf{
-		Target:  []string{"Available", "Bound"},
-		Pending: []string{"Pending"},
+		Target:  []string{string(api.VolumeAvailable), string(api.VolumeBound)},
+		Pending: []string{string(api.VolumePending)},
 		Timeout: d.Timeout(schema.TimeoutCreate),
 		Refresh: func() (interface{}, string, error) {
 			out, err := conn.CoreV1().PersistentVolumes().Get(ctx, metadata.Name, metav1.GetOptions{})

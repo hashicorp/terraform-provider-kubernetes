@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	api "k8s.io/api/core/v1"
 )
 
 func persistentVolumeClaimFields() map[string]*schema.Schema {
@@ -30,9 +31,9 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 				ValidateFunc: validation.StringInSlice([]string{
-					"ReadWriteOnce",
-					"ReadOnlyMany",
-					"ReadWriteMany",
+					string(api.ReadWriteOnce),
+					string(api.ReadOnlyMany),
+					string(api.ReadWriteMany),
 				}, false),
 			},
 			Set: schema.HashString,

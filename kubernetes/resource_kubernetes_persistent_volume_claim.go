@@ -111,8 +111,8 @@ func resourceKubernetesPersistentVolumeClaimCreate(ctx context.Context, d *schem
 
 	if d.Get("wait_until_bound").(bool) {
 		stateConf := &resource.StateChangeConf{
-			Target:  []string{"Bound"},
-			Pending: []string{"Pending"},
+			Target:  []string{string(api.ClaimBound)},
+			Pending: []string{string(api.ClaimPending)},
 			Timeout: d.Timeout(schema.TimeoutCreate),
 			Refresh: func() (interface{}, string, error) {
 				out, err := conn.CoreV1().PersistentVolumeClaims(claim.Namespace).Get(ctx, name, metav1.GetOptions{})

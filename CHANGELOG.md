@@ -1,3 +1,14 @@
+## 2.12.1 (UNRELEASED)
+
+IMPROVEMENTS:
+
+* Update documentation and correct some errors (#1759)
+
+BUG FIXES:
+
+* Fix type morphing of nested tuples that causes `Failed to morph` errors (#1756)
+* Fix an issue when provider crashes intermittently in version `v2.12.0` (#1762)
+
 ## 2.12.0 (June 30, 2022)
 
 NEW:

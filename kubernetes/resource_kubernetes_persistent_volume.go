@@ -74,7 +74,7 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("persistent volume", false),
+			"metadata": metadataSchema("persistent volume", true),
 			"spec": {
 				Type:        schema.TypeList,
 				Description: "Spec of the persistent volume owned by the cluster",
@@ -208,13 +208,12 @@ func resourceKubernetesPersistentVolumeCreate(ctx context.Context, d *schema.Res
 		return diag.FromErr(err)
 	}
 
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandPersistentVolumeSpec(d.Get("spec").([]interface{}))
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	volume := api.PersistentVolume{
-		ObjectMeta: metadata,
+		ObjectMeta: expandMetadata(d.Get("metadata").([]interface{})),
 		Spec:       *spec,
 	}
 
@@ -225,12 +224,15 @@ func resourceKubernetesPersistentVolumeCreate(ctx context.Context, d *schema.Res
 	}
 	log.Printf("[INFO] Submitted new persistent volume: %#v", out)
 
+	name := out.Name
+	d.SetId(name)
+
 	stateConf := &resource.StateChangeConf{
 		Target:  []string{"Available", "Bound"},
 		Pending: []string{"Pending"},
 		Timeout: d.Timeout(schema.TimeoutCreate),
 		Refresh: func() (interface{}, string, error) {
-			out, err := conn.CoreV1().PersistentVolumes().Get(ctx, metadata.Name, metav1.GetOptions{})
+			out, err := conn.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
 			if err != nil {
 				log.Printf("[ERROR] Received error: %#v", err)
 				return out, "Error", err
@@ -246,8 +248,6 @@ func resourceKubernetesPersistentVolumeCreate(ctx context.Context, d *schema.Res
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Persistent volume %s created", out.Name)
-
-	d.SetId(out.Name)
 
 	return resourceKubernetesPersistentVolumeRead(ctx, d, meta)
 }

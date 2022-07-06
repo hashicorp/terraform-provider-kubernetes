@@ -39,6 +39,30 @@ func TestAccKubernetesPersistentVolume_minimal(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPersistentVolume_minimalGenerateName(t *testing.T) {
+	var conf api.PersistentVolume
+
+	const generateNamePrefix string = "tf-acc-test-"
+	var generatedNameRegexp = regexp.MustCompile(generateNamePrefix + "[a-z0-9]{5,}")
+
+	const resourceName = "kubernetes_persistent_volume.test"
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPersistentVolumeDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPersistentVolumeConfig_hostPath_generateName(generateNamePrefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeExists(resourceName, &conf),
+					resource.TestMatchResourceAttr(resourceName, "metadata.0.name", generatedNameRegexp),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesPersistentVolume_azure_basic(t *testing.T) {
 	var conf api.PersistentVolume
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
@@ -1856,6 +1880,27 @@ func testAccKubernetesPersistentVolumeConfig_hostPath_basic(name string) string 
     }
   }
 }`, name)
+}
+
+func testAccKubernetesPersistentVolumeConfig_hostPath_generateName(generateName string) string {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
+  metadata {
+    generate_name = %[1]q
+  }
+  spec {
+    capacity = {
+      storage = "1Gi"
+    }
+    access_modes = ["ReadWriteMany"]
+    mount_options = ["foo"]
+
+    persistent_volume_source {
+      host_path {
+        path = "/mnt/local-volume"
+      }
+    }
+  }
+}`, generateName)
 }
 
 func testAccKubernetesPersistentVolumeConfig_hostPath_claimRef_noNamespace(name string) string {

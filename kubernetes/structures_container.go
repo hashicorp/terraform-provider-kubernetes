@@ -284,6 +284,8 @@ func flattenContainerVolumeMounts(in []v1.VolumeMount) ([]interface{}, error) {
 		}
 		if v.MountPropagation != nil {
 			m["mount_propagation"] = string(*v.MountPropagation)
+		} else {
+			m["mount_propagation"] = "None"
 		}
 		att[i] = m
 	}

@@ -361,6 +361,9 @@ type kubeClientsets struct {
 	discoveryClient     discovery.DiscoveryInterface
 
 	configData *schema.ResourceData
+
+	IgnoreAnnotations []string
+	IgnoreLabels      []string
 }
 
 func (k kubeClientsets) MainClientset() (*kubernetes.Clientset, error) {
@@ -445,11 +448,23 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		}
 	}
 
+	ignoreAnnotations := []string{}
+	ignoreLabels := []string{}
+
+	if v, ok := d.Get("ignore_annotations").([]interface{}); ok {
+		ignoreAnnotations = expandStringSlice(v)
+	}
+	if v, ok := d.Get("ignore_labels").([]interface{}); ok {
+		ignoreLabels = expandStringSlice(v)
+	}
+
 	m := kubeClientsets{
 		config:              cfg,
 		mainClientset:       nil,
 		aggregatorClientset: nil,
 		configData:          d,
+		IgnoreAnnotations:   ignoreAnnotations,
+		IgnoreLabels:        ignoreLabels,
 	}
 	return m, diag.Diagnostics{}
 }

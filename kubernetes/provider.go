@@ -360,8 +360,6 @@ type kubeClientsets struct {
 	dynamicClient       dynamic.Interface
 	discoveryClient     discovery.DiscoveryInterface
 
-	configData *schema.ResourceData
-
 	IgnoreAnnotations []string
 	IgnoreLabels      []string
 }
@@ -462,7 +460,6 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		config:              cfg,
 		mainClientset:       nil,
 		aggregatorClientset: nil,
-		configData:          d,
 		IgnoreAnnotations:   ignoreAnnotations,
 		IgnoreLabels:        ignoreLabels,
 	}

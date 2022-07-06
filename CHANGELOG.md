@@ -1,4 +1,4 @@
-## 2.12.1 (UNRELEASED)
+## 2.12.1 (July 6, 2022)
 
 IMPROVEMENTS:
 

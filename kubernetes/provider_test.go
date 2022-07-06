@@ -101,12 +101,32 @@ func TestProvider_configure_paths(t *testing.T) {
 	}
 }
 
+func TestProvider_configure_data(t *testing.T) {
+	ctx := context.TODO()
+	resetEnv := unsetEnv(t)
+	defer resetEnv()
+
+	b, _ := os.ReadFile("test-fixtures/kube-config.yaml")
+	os.Setenv("KUBE_CONFIG_DATA", string(b))
+	os.Setenv("KUBE_CTX", "oidc")
+
+	rc := terraform.NewResourceConfigRaw(map[string]interface{}{})
+	p := Provider()
+	if diags := p.Validate(rc); diags.HasError() {
+		t.Fatal(diags)
+	}
+	if diags := p.Configure(ctx, rc); diags.HasError() {
+		t.Fatal(diags)
+	}
+}
+
 func unsetEnv(t *testing.T) func() {
 	e := getEnv()
 
 	envVars := map[string]string{
 		"KUBE_CONFIG_PATH":          e.ConfigPath,
 		"KUBE_CONFIG_PATHS":         strings.Join(e.ConfigPaths, string(os.PathListSeparator)),
+		"KUBE_CONFIG_DATA":          e.ConfigData,
 		"KUBE_CTX":                  e.Ctx,
 		"KUBE_CTX_AUTH_INFO":        e.CtxAuthInfo,
 		"KUBE_CTX_CLUSTER":          e.CtxCluster,
@@ -155,6 +175,9 @@ func getEnv() *currentEnv {
 	if v := os.Getenv("KUBE_CONFIG_PATH"); v != "" {
 		e.ConfigPaths = filepath.SplitList(v)
 	}
+	if v := os.Getenv("KUBE_CONFIG_DATA"); v != "" {
+		e.ConfigData = v
+	}
 	return e
 }
 
@@ -168,10 +191,11 @@ func testAccPreCheck(t *testing.T) {
 	hasStaticCfg := (os.Getenv("KUBE_HOST") != "" &&
 		os.Getenv("KUBE_CLUSTER_CA_CERT_DATA") != "") &&
 		(hasUserCredentials || hasClientCert || os.Getenv("KUBE_TOKEN") != "")
+	hasConfigData := os.Getenv("KUBE_CONFIG_DATA") != ""
 
-	if !hasFileCfg && !hasStaticCfg && !hasUserCredentials {
-		t.Fatalf("File config (KUBE_CTX_AUTH_INFO and KUBE_CTX_CLUSTER) or static configuration"+
-			"(%s) or (%s) must be set for acceptance tests",
+	if !hasFileCfg && !hasStaticCfg && !hasUserCredentials && !hasConfigData {
+		t.Fatalf("File config (KUBE_CTX_AUTH_INFO and KUBE_CTX_CLUSTER), config data (KUBE_CONFIG_DATA) "+
+			"or static configuration (%s) or (%s) must be set for acceptance tests",
 			strings.Join([]string{
 				"KUBE_HOST",
 				"KUBE_USER",
@@ -416,6 +440,7 @@ func clusterVersionGreaterThanOrEqual(vs string) bool {
 type currentEnv struct {
 	ConfigPath        string
 	ConfigPaths       []string
+	ConfigData        string
 	Ctx               string
 	CtxAuthInfo       string
 	CtxCluster        string

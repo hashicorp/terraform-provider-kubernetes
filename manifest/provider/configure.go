@@ -195,6 +195,25 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		}
 		loader.Precedence = precedence
 	}
+	// Handle 'config_data' attribute
+	//
+	var configData string
+	if !providerConfig["config_data"].IsNull() && providerConfig["config_data"].IsKnown() {
+		err = providerConfig["config_data"].As(&configData)
+		if err != nil {
+			// invalid attribute - this shouldn't happen, bail out now
+			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Provider configuration: failed to extract 'config_data' value",
+				Detail:   err.Error(),
+			})
+			return response, nil
+		}
+	}
+	// check environment - this overrides any value found in provider configuration
+	if configDataEnv, ok := os.LookupEnv("KUBE_CONFIG_DATA"); ok && configDataEnv != "" {
+		configData = configDataEnv
+	}
 
 	// Handle 'client_certificate' attribute
 	//
@@ -621,6 +640,19 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	}
 
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
+	if configData != "" {
+		if c, err := clientcmd.Load([]byte(configData)); err != nil {
+			s.logger.Error("[Configure]", "Failed to load config data")
+			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Provider configuration: cannot load Kubernetes config data",
+				Detail:   err.Error(),
+			})
+			return response, nil
+		} else {
+			cc = clientcmd.NewDefaultClientConfig(*c, overrides)
+		}
+	}
 	clientConfig, err := cc.ClientConfig()
 	if err != nil {
 		s.logger.Error("[Configure]", "Failed to load config:", dump(cc))

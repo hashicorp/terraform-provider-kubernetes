@@ -110,6 +110,17 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 				Deprecated:      false,
 			},
 			{
+				Name:            "config_data",
+				Type:            tftypes.String,
+				Description:     "Contents of the kube config. Can be set with KUBE_CONFIG_DATA.",
+				Required:        false,
+				Optional:        true,
+				Computed:        false,
+				Sensitive:       false,
+				DescriptionKind: 0,
+				Deprecated:      false,
+			},
+			{
 				Name:            "config_context",
 				Type:            tftypes.String,
 				Description:     "",

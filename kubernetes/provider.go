@@ -90,6 +90,13 @@ func Provider() *schema.Provider {
 				Description:   "Path to the kube config file. Can be set with KUBE_CONFIG_PATH.",
 				ConflictsWith: []string{"config_paths"},
 			},
+			"config_data": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CONFIG_DATA", nil),
+				Description:   "Contents of the kube config. Can be set with KUBE_CONFIG_DATA.",
+				ConflictsWith: []string{"config_path", "config_paths"},
+			},
 			"config_context": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -459,6 +466,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	loader := &clientcmd.ClientConfigLoadingRules{}
 
 	configPaths := []string{}
+	var configData string
 
 	if v, ok := d.Get("config_path").(string); ok && v != "" {
 		configPaths = []string{v}
@@ -470,6 +478,8 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		// NOTE we have to do this here because the schema
 		// does not yet allow you to set a default for a TypeList
 		configPaths = filepath.SplitList(v)
+	} else if v, ok := d.Get("config_data").(string); ok && v != "" {
+		configData = v
 	}
 
 	if len(configPaths) > 0 {
@@ -489,7 +499,9 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		} else {
 			loader.Precedence = expandedPaths
 		}
+	}
 
+	if len(configPaths) > 0 || len(configData) > 0 {
 		ctxSuffix := "; default context"
 
 		kubectx, ctxOk := d.GetOk("config_context")
@@ -575,6 +587,13 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	}
 
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
+	if len(configData) > 0 {
+		if c, err := clientcmd.Load([]byte(configData)); err != nil {
+			return nil, fmt.Errorf("Failed to parse config_data")
+		} else {
+			cc = clientcmd.NewDefaultClientConfig(*c, overrides)
+		}
+	}
 	cfg, err := cc.ClientConfig()
 	if err != nil {
 		log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail: %v", err)

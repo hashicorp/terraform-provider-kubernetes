@@ -2,7 +2,7 @@ name: Acceptance Tests (GKE)
 
 on:
   push:
-    branch: add-GKE-tests
+    branches: [add-GKE-tests]
   workflow_dispatch:
     inputs:
       region:
@@ -25,8 +25,8 @@ on:
         default: 1.1.8
 
 env:
-  GOOGLE_CREDENTIALS: "${{ secrets.GKE_SA_KEY }}"
-  GOOGLE_PROJECT: "${{ secrets.GOOGLE_PROJECT }}"
+  GOOGLE_CREDENTIALS: ${{ secrets.GKE_SA_KEY }}
+  GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
   GOOGLE_REGION: ${{ github.event.inputs.region }}
 
 jobs:
@@ -46,7 +46,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: "google-github-actions/auth@v0"
         with:
-          credentials_json: "$GOOGLE_CREDENTIALS"
+          credentials_json: ${{ secrets.GKE_SA_KEY }}
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v1
         with:

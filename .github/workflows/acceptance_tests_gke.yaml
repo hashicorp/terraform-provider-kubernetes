@@ -1,6 +1,8 @@
 name: Acceptance Tests (GKE)
 
 on:
+  push:
+    branch: add-GKE-tests
   workflow_dispatch: 
     inputs:
       region: 

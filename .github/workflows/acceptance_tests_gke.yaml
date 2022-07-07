@@ -8,7 +8,7 @@ on:
         default: us-east1
       kubernetesVersion:
         description: The GKE kubernetes version
-        default: 1.24
+        default: 1.23
       workersCount:
         description: The number of cluster nodes to provision
         default: 2
@@ -20,7 +20,7 @@ on:
         default: ".*"
       terraformVersion:
         description: Terraform version
-        default: 1.1.8
+        default: 1.2.4
 
 env:
   GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}

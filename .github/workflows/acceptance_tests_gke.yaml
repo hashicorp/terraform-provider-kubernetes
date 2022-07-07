@@ -60,7 +60,6 @@ jobs:
         env:
           TF_VAR_kubernetes_version: ${{ github.event.inputs.kubernetesVersion }}
           TF_VAR_workers_count: ${{ github.event.inputs.workersCount }}
-
           TF_VAR_node_machine_type: ${{ github.event.inputs.nodeMachineType }}
         run: |
           terraform init

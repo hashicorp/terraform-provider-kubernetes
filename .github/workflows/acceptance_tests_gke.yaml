@@ -25,9 +25,9 @@ on:
         default: 1.1.8
 
 env:
-  GOOGLE_CREDENTIALS: ${{ secrets.GKE_SA_KEY }}
+  GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
   GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
-  GOOGLE_REGION: us-east1 # ${{ github.event.inputs.region }}
+  GOOGLE_REGION: ${{ github.event.inputs.region }}
 
 jobs:
   acceptance_tests:

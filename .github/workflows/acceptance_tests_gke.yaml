@@ -6,9 +6,9 @@ on:
       region: 
         description: The GKE region 
         default: us-east1
-      clusterVersion:
-        description: The GKE cluster version
-        default: 1.21
+      kubernetesVersion:
+        description: The GKE kubernetes version
+        default: 1.24
       workersCount:
         description: The number of cluster nodes to provision 
         default: 2
@@ -56,7 +56,7 @@ jobs:
       - name: Provision GKE Cluster
         working-directory: ./kubernetes/test-infra/gke
         env:
-          TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion }}
+          TF_VAR_kubernetes_version: ${{ github.event.inputs.kubernetesVersion }}
           TF_VAR_workers_count: ${{ github.event.inputs.workersCount }}
 
           TF_VAR_node_machine_type: ${{ github.event.inputs.nodeMachineType }}

@@ -1,0 +1,77 @@
+name: Acceptance Tests (GKE)
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: The GKE region
+        default: us-east1
+      kubernetesVersion:
+        description: The GKE kubernetes version
+        default: 1.23
+      workersCount:
+        description: The number of cluster nodes to provision
+        default: 2
+      nodeMachineType:
+        description: The type of GKE instance to use for cluster nodes
+        default: e2-standard-2
+      runTests:
+        description: The regex passed to the -run option of `go test`
+        default: ".*"
+      terraformVersion:
+        description: Terraform version
+        default: 1.2.4
+
+env:
+  GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+  GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+  GOOGLE_REGION: ${{ github.event.inputs.region }}
+
+jobs:
+  acceptance_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Read go-version
+        id: go-version
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: ./.go-version
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ steps.go-version.outputs.content }}
+      - name: Authenticate to Google Cloud
+        uses: "google-github-actions/auth@v0"
+        with:
+          credentials_json: ${{ secrets.GKE_SA_KEY }}
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ${{ github.event.inputs.terraformVersion }}
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v0"
+      - name: "Initialize gcloud SDK"
+        run: "gcloud init"
+      - name: Provision GKE Cluster
+        working-directory: ./kubernetes/test-infra/gke
+        env:
+          TF_VAR_kubernetes_version: ${{ github.event.inputs.kubernetesVersion }}
+          TF_VAR_workers_count: ${{ github.event.inputs.workersCount }}
+          TF_VAR_node_machine_type: ${{ github.event.inputs.nodeMachineType }}
+        run: |
+          env
+          terraform init
+          terraform apply -auto-approve
+      - name: Run Acceptance Test Suite
+        env:
+          TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion }}
+          TESTARGS: -run '${{ github.event.inputs.runTests }}'
+          KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig
+        run: |
+          make testacc
+      - name: Destroy GKE cluster
+        if: always() # we should destroy the cluster even if the tests fail
+        working-directory: ./kubernetes/test-infra/gke
+        run: |
+          terraform destroy --auto-approve

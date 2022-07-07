@@ -3,11 +3,11 @@ variable "kubernetes_version" {
 }
 
 variable "workers_count" {
-  default = "1"
+  default = "2"
 }
 
 variable "node_machine_type" {
-  default = "e2-medium"
+  default = "e2-standard-2"
 }
 
 variable "enable_alpha" {

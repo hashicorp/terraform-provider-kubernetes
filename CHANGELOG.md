@@ -1,3 +1,7 @@
+## 2.13.0
+
+* Add Acceptance Tests (GKE) to Github Actions
+
 ## 2.12.1 (July 6, 2022)
 
 IMPROVEMENTS:

@@ -1,13 +1,13 @@
-name: Acceptance Tests (GKS)
+name: Acceptance Tests (GKE)
 
 on:
   workflow_dispatch: 
     inputs:
       region: 
-        description: The GKS region 
+        description: The GKE region 
         default: us-east1
       clusterVersion:
-        description: The GKS cluster version
+        description: The GKE cluster version
         default: 1.21
       workersCount:
         description: The number of cluster nodes to provision 
@@ -42,11 +42,9 @@ jobs:
         with:
           go-version: ${{ steps.go-version.outputs.content }}
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/setup-gcloud@v0
+        uses: 'google-github-actions/auth@v0'
         with:
           credentials_json: '$GOOGLE_CREDENTIALS'
-          role-session-name: github-actions-tests-${{ github.run_number }}
-          role-duration-seconds: 14400
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v1
         with:
@@ -55,8 +53,6 @@ jobs:
         uses: 'google-github-actions/setup-gcloud@v0'
       - name: 'Initialize gcloud SDK'
         run: 'gcloud init'
-      
-      
       - name: Provision GKE Cluster
         working-directory: ./kubernetes/test-infra/gke
         env:
@@ -66,7 +62,7 @@ jobs:
           TF_VAR_node_machine_type: ${{ github.event.inputs.nodeMachineType }}
         run: |
           terraform init
-          terraform apply -var=kubernetes_version=1.6.4
+          terraform apply
       - name: Run Acceptance Test Suite
         env:
           TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion }}

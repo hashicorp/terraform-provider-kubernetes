@@ -62,6 +62,7 @@ jobs:
           TF_VAR_workers_count: ${{ github.event.inputs.workersCount }}
           TF_VAR_node_machine_type: ${{ github.event.inputs.nodeMachineType }}
         run: |
+          env
           terraform init
           terraform apply -auto-approve
       - name: Run Acceptance Test Suite

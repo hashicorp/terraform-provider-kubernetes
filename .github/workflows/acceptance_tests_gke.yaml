@@ -6,6 +6,9 @@ on:
       region:
         description: The GKE region
         default: us-east1
+      zone:
+        description: The GKE zone
+        default: us-east1-b
       kubernetesVersion:
         description: The GKE kubernetes version
         default: 1.23
@@ -26,6 +29,7 @@ env:
   GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
   GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
   GOOGLE_REGION: ${{ github.event.inputs.region }}
+  GOOGLE_ZONE: ${{github.event.inputs.zone}}
 
 jobs:
   acceptance_tests:
@@ -45,6 +49,7 @@ jobs:
         uses: "google-github-actions/auth@v0"
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+          access_token_lifetime: '10800s'
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v1
         with:

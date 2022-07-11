@@ -33,6 +33,9 @@ env:
 
 jobs:
   acceptance_tests:
+    permissions:
+      contents: 'read'
+      id-token: 'write'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -50,6 +53,12 @@ jobs:
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
           access_token_lifetime: '10800s'
+      - name: Get GKE Credentials
+        uses: 'google-github-actions/get-gke-credentials@v0'
+        with:
+          cluster_name: 'GKE_ACTION_TESTS'
+          location: ${{github.event.inputs.zone}}
+          project_id: ${{ secrets.GOOGLE_PROJECT }}
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v1
         with:

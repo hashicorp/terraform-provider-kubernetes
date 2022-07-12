@@ -71,13 +71,13 @@ jobs:
           env
           terraform init
           terraform apply -auto-approve
-          export GOOGLE_CLUSTER_NAME=`terraform output -raw cluster_name`
+          echo "GOOGLE_CLUSTER_NAME=`terraform output -raw cluster_name`" >> $GITHUB_ENV
       - name: Get GKE Credentials
         env:
           KUBECONFIG: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig
         uses: 'google-github-actions/get-gke-credentials@v0'
         with:
-          cluster_name: $GOOGLE_CLUSTER_NAME
+          cluster_name: ${{ env.GOOGLE_CLUSTER_NAME }}
           location: ${{github.event.inputs.zone}}
           project_id: ${{ secrets.GOOGLE_PROJECT }}
           use_auth_provider: true

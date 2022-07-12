@@ -6,6 +6,10 @@ on:
       region:
         description: The GKE region
         default: us-east1
+      zone:
+        description: The GKE zone
+        default: us-east1-b
+
       kubernetesVersion:
         description: The GKE kubernetes version
         default: 1.23
@@ -27,8 +31,13 @@ env:
   GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
   GOOGLE_REGION: ${{ github.event.inputs.region }}
 
+  GOOGLE_ZONE: ${{github.event.inputs.zone}}
+
 jobs:
   acceptance_tests:
+    permissions:
+      contents: 'read'
+      id-token: 'write'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -45,6 +54,8 @@ jobs:
         uses: "google-github-actions/auth@v0"
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+          access_token_lifetime: '10800s'
+
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v1
         with:
@@ -63,11 +74,22 @@ jobs:
           env
           terraform init
           terraform apply -auto-approve
+          export GOOGLE_CLUSTER_NAME=`terraform output -raw cluster_name`
+      - name: Get GKE Credentials
+        env:
+          KUBECONFIG: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig
+        uses: 'google-github-actions/get-gke-credentials@v0'
+        with:
+          cluster_name: $GOOGLE_CLUSTER_NAME
+          location: ${{github.event.inputs.zone}}
+          project_id: ${{ secrets.GOOGLE_PROJECT }}
+          use_auth_provider: true
+
       - name: Run Acceptance Test Suite
         env:
           TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion }}
           TESTARGS: -run '${{ github.event.inputs.runTests }}'
-          KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig
+          KUBE_CONFIG_PATH: $KUBECONFIG
         run: |
           make testacc
       - name: Destroy GKE cluster

@@ -72,6 +72,7 @@ jobs:
           terraform init
           terraform apply -auto-approve
           echo "GOOGLE_CLUSTER_NAME=`terraform output -raw cluster_name`" >> $GITHUB_ENV
+
       - name: Get GKE Credentials
         env:
           KUBECONFIG: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig

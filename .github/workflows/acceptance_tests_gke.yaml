@@ -86,7 +86,7 @@ jobs:
         env:
           TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion }}
           TESTARGS: -run '${{ github.event.inputs.runTests }}'
-          KUBE_CONFIG_PATH: $KUBECONFIG
+          KUBE_CONFIG_PATH: ${{env.KUBECONFIG}}
         run: |
           make testacc
       - name: Destroy GKE cluster

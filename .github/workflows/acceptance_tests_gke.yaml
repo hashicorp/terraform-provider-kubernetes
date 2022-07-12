@@ -72,7 +72,6 @@ jobs:
           terraform init
           terraform apply -auto-approve
           export GOOGLE_CLUSTER_NAME=`terraform output -raw cluster_name`
-          export GOOGLE_ZONE=`terraform output -raw google_zone'
       - name: Get GKE Credentials
         env:
           KUBECONFIG: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig

@@ -57,6 +57,7 @@ jobs:
         uses: hashicorp/setup-terraform@v1
         with:
           terraform_version: ${{ github.event.inputs.terraformVersion }}
+          terraform_wrapper: false
       - name: "Set up Cloud SDK"
         uses: "google-github-actions/setup-gcloud@v0"
       - name: "Initialize gcloud SDK"
@@ -72,7 +73,6 @@ jobs:
           terraform init
           terraform apply -auto-approve
           echo "GOOGLE_CLUSTER_NAME=`terraform output -raw cluster_name`" >> $GITHUB_ENV
-
       - name: Get GKE Credentials
         env:
           KUBECONFIG: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig

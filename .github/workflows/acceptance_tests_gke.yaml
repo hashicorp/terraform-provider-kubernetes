@@ -60,6 +60,8 @@ jobs:
           terraform_wrapper: false
       - name: "Set up Cloud SDK"
         uses: "google-github-actions/setup-gcloud@v0"
+        with:
+          install_components: "beta"
       - name: "Initialize gcloud SDK"
         run: "gcloud init"
       - name: Provision GKE Cluster
@@ -72,7 +74,9 @@ jobs:
           env
           terraform init
           terraform apply -auto-approve
-          echo "GOOGLE_CLUSTER_NAME=`terraform output -raw cluster_name`" >> $GITHUB_ENV
+          export CLUSTER_NAME=`terraform output -raw cluster_name`
+          echo "GOOGLE_CLUSTER_NAME=$CLUSTER_NAME" >> $GITHUB_ENV
+          gcloud beta container clusters update --enable-service-externalips $CLUSTER_NAME --zone $GOOGLE_ZONE
       - name: Get GKE Credentials
         env:
           KUBECONFIG: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig

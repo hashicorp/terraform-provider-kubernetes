@@ -507,9 +507,12 @@ func TestMorphValueToType(t *testing.T) {
 	for n, s := range samples {
 		t.Run(n, func(t *testing.T) {
 			r, err := ValueToType(s.In.V, s.In.T, tftypes.NewAttributePath())
-			if err != nil {
+			if len(err) > 0 {
 				if !s.WantErr {
-					t.Logf("Failed type-morphing for sample '%s': %s", n, err)
+					t.Logf("Failed type-morphing for sample '%s'", n)
+					for i := range err {
+						t.Logf("[%s] %s\n%s\n", err[i].Severity.String(), err[i].Summary, err[i].Detail)
+					}
 					t.FailNow()
 				}
 				return

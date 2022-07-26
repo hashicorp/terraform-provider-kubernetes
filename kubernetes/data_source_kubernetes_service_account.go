@@ -48,8 +48,9 @@ func dataSourceKubernetesServiceAccount() *schema.Resource {
 				Computed:    true,
 			},
 			"default_secret_name": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:       schema.TypeString,
+				Computed:   true,
+				Deprecated: "Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, `default_secret_name` will be empty and deprecated in future",
 			},
 		},
 	}

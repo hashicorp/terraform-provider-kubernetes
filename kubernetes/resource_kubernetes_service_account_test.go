@@ -63,6 +63,38 @@ func TestAccKubernetesServiceAccount_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesServiceAccount_default_secret(t *testing.T) {
+	var conf api.ServiceAccount
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_service_account_v1.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.24.0")
+		},
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesServiceAccountDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesServiceAccountConfig_default_secret(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceAccountExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "default_secret_name"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "automount_service_account_token"},
+			},
+		},
+	})
+}
+
 func TestAccKubernetesServiceAccount_automount(t *testing.T) {
 	var conf api.ServiceAccount
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -187,7 +219,7 @@ func TestAccKubernetesServiceAccount_update(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "image_pull_secret.#", "0"),
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", "true"),
 					testAccCheckServiceAccountImagePullSecrets(&conf, []*regexp.Regexp{}),
-					testAccCheckServiceAccountSecrets(&conf, []*regexp.Regexp{
+					testAccCheckServiceAccountDefaultSecrets(&conf, []*regexp.Regexp{
 						regexp.MustCompile("^" + name + "-token-[a-z0-9]+$"),
 					}),
 				),
@@ -219,7 +251,7 @@ func TestAccKubernetesServiceAccount_generatedName(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_service_account.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", "true"),
 					testAccCheckServiceAccountImagePullSecrets(&conf, []*regexp.Regexp{}),
-					testAccCheckServiceAccountSecrets(&conf, []*regexp.Regexp{
+					testAccCheckServiceAccountDefaultSecrets(&conf, []*regexp.Regexp{
 						regexp.MustCompile("^" + prefix + "[a-z0-9]+-token-[a-z0-9]+$"),
 					}),
 				),
@@ -253,6 +285,15 @@ func matchLocalObjectReferenceName(lor []api.LocalObjectReference, expected []*r
 		}
 	}
 	return false
+}
+
+func testAccCheckServiceAccountDefaultSecrets(m *api.ServiceAccount, expected []*regexp.Regexp) resource.TestCheckFunc {
+	if clusterVersionGreaterThanOrEqual("1.24.0") {
+		return func(s *terraform.State) error {
+			return nil
+		}
+	}
+	return testAccCheckServiceAccountSecrets(m, expected)
 }
 
 func testAccCheckServiceAccountSecrets(m *api.ServiceAccount, expected []*regexp.Regexp) resource.TestCheckFunc {
@@ -395,6 +436,14 @@ resource "kubernetes_secret" "four" {
   }
 }
 `, name, name, name, name, name)
+}
+
+func testAccKubernetesServiceAccountConfig_default_secret(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_service_account_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+}`, name)
 }
 
 func testAccKubernetesServiceAccountConfig_modified(name string) string {

@@ -87,9 +87,13 @@ func (s *RawProviderServer) UpgradeResourceState(ctx context.Context, req *tfpro
 	}
 
 	morphedObject, d := morph.ValueToType(obj, tsch, tftypes.NewAttributePath())
-	if err != nil {
+	if len(d) > 0 {
 		resp.Diagnostics = append(resp.Diagnostics, d...)
-		return resp, nil
+		for i := range d {
+			if d[i].Severity == tfprotov5.DiagnosticSeverityError {
+				return resp, nil
+			}
+		}
 	}
 	s.logger.Debug("[UpgradeResourceState]", "morphed object", dump(morphedObject))
 

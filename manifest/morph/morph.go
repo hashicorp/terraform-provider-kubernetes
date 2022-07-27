@@ -480,21 +480,26 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			if !ok {
 				diags = append(diags, &tfprotov5.Diagnostic{
 					Attribute: p,
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Missing schema information",
+					Severity:  tfprotov5.DiagnosticSeverityInvalid,
+					Summary:   "Attribute not found in schema",
 					Detail:    fmt.Sprintf("Unable to find schema type for attribute:\n%s", elp),
 				})
-				return tftypes.Value{}, diags
+				continue
 			}
 			nv, d := ValueToType(v, et, elp)
 			if len(d) > 0 {
-				diags = append(diags, &tfprotov5.Diagnostic{
-					Attribute: elp,
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Failed to transform Map element into Object element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", elp),
-				})
-				return tftypes.Value{}, diags
+				diags = append(diags, d...)
+				for i := range d {
+					if d[i].Severity == tfprotov5.DiagnosticSeverityError {
+						diags = append(diags, &tfprotov5.Diagnostic{
+							Attribute: elp,
+							Severity:  tfprotov5.DiagnosticSeverityError,
+							Summary:   "Failed to transform Map element into Object element type",
+							Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", elp),
+						})
+						return tftypes.Value{}, diags
+					}
+				}
 			}
 			ovals[k] = nv
 		}
@@ -551,22 +556,26 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			if !ok {
 				diags = append(diags, &tfprotov5.Diagnostic{
 					Attribute: p,
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Missing schema information",
+					Severity:  tfprotov5.DiagnosticSeverityInvalid,
+					Summary:   "Attribute not found in schema",
 					Detail:    fmt.Sprintf("Unable to find schema type for attribute:\n%s", elp),
 				})
-				return tftypes.Value{}, diags
+				continue
 			}
 			nv, d := ValueToType(v, nt, elp)
 			if len(d) > 0 {
 				diags = append(diags, d...)
-				diags = append(diags, &tfprotov5.Diagnostic{
-					Attribute: p,
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Failed to transform Object element into Object element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", elp),
-				})
-				return tftypes.Value{}, diags
+				for i := range d {
+					if d[i].Severity == tfprotov5.DiagnosticSeverityError {
+						diags = append(diags, &tfprotov5.Diagnostic{
+							Attribute: p,
+							Severity:  tfprotov5.DiagnosticSeverityError,
+							Summary:   "Failed to transform Object element into Object element type",
+							Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", elp),
+						})
+						return tftypes.Value{}, diags
+					}
+				}
 			}
 			ovals[k] = nv
 		}
@@ -581,7 +590,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 		for k, v := range ovals {
 			otypes[k] = v.Type()
 		}
-		return tftypes.NewValue(tftypes.Object{AttributeTypes: otypes}, ovals), nil
+		return tftypes.NewValue(tftypes.Object{AttributeTypes: otypes}, ovals), diags
 	case t.Is(tftypes.Map{}):
 		var mvals map[string]tftypes.Value = make(map[string]tftypes.Value, len(vals))
 		for k, v := range vals {

@@ -124,6 +124,7 @@ func TestAccKubernetesService_basic(t *testing.T) {
 
 func TestAccKubernetesService_loadBalancer(t *testing.T) {
 	var conf api.Service
+	var load api.LoadBalancerIngress
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service.test"
 
@@ -157,7 +158,7 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
-					resource.TestCheckResourceAttrSet(resourceName, "status.0.load_balancer.0.ingress.0.hostname"),
+					testAccCheckloadBalancerIngressCheck(&load),
 					testAccCheckServicePorts(&conf, []api.ServicePort{
 						{
 							Port:       int32(8888),
@@ -808,6 +809,24 @@ func testAccCheckServicePorts(svc *api.Service, expected []api.ServicePort) reso
 		}
 
 		return nil
+	}
+}
+
+func testAccCheckloadBalancerIngressCheck(svc *api.LoadBalancerIngress) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		// Used with EKS Cluster
+		print(svc.Hostname)
+		print(svc.IP)
+		if svc.Hostname != "" {
+			return nil
+		}
+
+		// Used with GKE Cluster
+		if svc.IP != "" {
+			return nil
+		}
+
+		return fmt.Errorf("hostname/ip is not set")
 	}
 }
 

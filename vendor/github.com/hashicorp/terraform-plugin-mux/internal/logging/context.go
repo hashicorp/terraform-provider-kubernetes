@@ -19,9 +19,9 @@ func InitContext(ctx context.Context) context.Context {
 
 // RpcContext injects the RPC name into logger contexts.
 func RpcContext(ctx context.Context, rpc string) context.Context {
-	ctx = tflog.With(ctx, KeyTfRpc, rpc)
-	ctx = tfsdklog.With(ctx, KeyTfRpc, rpc)
-	ctx = tfsdklog.SubsystemWith(ctx, SubsystemMux, KeyTfRpc, rpc)
+	ctx = tflog.SetField(ctx, KeyTfRpc, rpc)
+	ctx = tfsdklog.SetField(ctx, KeyTfRpc, rpc)
+	ctx = tfsdklog.SubsystemSetField(ctx, SubsystemMux, KeyTfRpc, rpc)
 
 	return ctx
 }
@@ -29,9 +29,9 @@ func RpcContext(ctx context.Context, rpc string) context.Context {
 // Tfprotov5ProviderServerContext injects the chosen provider Go type
 func Tfprotov5ProviderServerContext(ctx context.Context, p tfprotov5.ProviderServer) context.Context {
 	providerType := fmt.Sprintf("%T", p)
-	ctx = tflog.With(ctx, KeyTfMuxProvider, providerType)
-	ctx = tfsdklog.With(ctx, KeyTfMuxProvider, providerType)
-	ctx = tfsdklog.SubsystemWith(ctx, SubsystemMux, KeyTfMuxProvider, providerType)
+	ctx = tflog.SetField(ctx, KeyTfMuxProvider, providerType)
+	ctx = tfsdklog.SetField(ctx, KeyTfMuxProvider, providerType)
+	ctx = tfsdklog.SubsystemSetField(ctx, SubsystemMux, KeyTfMuxProvider, providerType)
 
 	return ctx
 }
@@ -39,9 +39,9 @@ func Tfprotov5ProviderServerContext(ctx context.Context, p tfprotov5.ProviderSer
 // Tfprotov6ProviderServerContext injects the chosen provider Go type
 func Tfprotov6ProviderServerContext(ctx context.Context, p tfprotov6.ProviderServer) context.Context {
 	providerType := fmt.Sprintf("%T", p)
-	ctx = tflog.With(ctx, KeyTfMuxProvider, providerType)
-	ctx = tfsdklog.With(ctx, KeyTfMuxProvider, providerType)
-	ctx = tfsdklog.SubsystemWith(ctx, SubsystemMux, KeyTfMuxProvider, providerType)
+	ctx = tflog.SetField(ctx, KeyTfMuxProvider, providerType)
+	ctx = tfsdklog.SetField(ctx, KeyTfMuxProvider, providerType)
+	ctx = tfsdklog.SubsystemSetField(ctx, SubsystemMux, KeyTfMuxProvider, providerType)
 
 	return ctx
 }

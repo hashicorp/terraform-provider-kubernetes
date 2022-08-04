@@ -818,30 +818,29 @@ func testAccCheckloadBalancerIngressCheck(resourceName string) resource.TestChec
 			return fmt.Errorf("Not found: %s", resourceName)
 		}
 
+		node, err := getFirstNode()
+
+		if err != nil {
+			return err
+		}
+
+		labels := node.GetLabels()
+
 		lb := "status.0.load_balancer.0.ingress.0"
 
-		InGke, _ := isRunningInGke()
-		if InGke {
+		if _, ok := labels["cloud.google.com/gke-nodepool"]; ok {
 			ip := fmt.Sprintf("%s.ip", lb)
-
-			if rs.Primary.Attributes[ip] == "" {
-				return fmt.Errorf("Attribute %s expected to be set in GKE cluster", ip)
+			if rs.Primary.Attributes[ip] != "" {
+				return nil
 			}
-
-			return nil
-		}
-
-		InEks, _ := isRunningInEks()
-		if InEks {
+			return fmt.Errorf("Attribute '%s' expected to be set for GKE cluster", ip)
+		} else {
 			hostname := fmt.Sprintf("%s.hostname", lb)
-
-			if rs.Primary.Attributes[hostname] == "" {
-				return fmt.Errorf("Attribute %s expected to be set in EKS cluster", hostname)
+			if rs.Primary.Attributes[hostname] != "" {
+				return nil
 			}
-			return nil
+			return fmt.Errorf("Attribute '%s' expected to be set for EKS cluster", hostname)
 		}
-
-		return fmt.Errorf("Cannot verify status of attribute %s", lb)
 	}
 }
 

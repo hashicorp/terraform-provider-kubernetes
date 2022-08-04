@@ -124,7 +124,6 @@ func TestAccKubernetesService_basic(t *testing.T) {
 
 func TestAccKubernetesService_loadBalancer(t *testing.T) {
 	var conf api.Service
-	var load api.LoadBalancerIngress
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service.test"
 
@@ -158,7 +157,7 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
-					testAccCheckloadBalancerIngressCheck(&load),
+					testAccCheckloadBalancerIngressCheck(resourceName),
 					testAccCheckServicePorts(&conf, []api.ServicePort{
 						{
 							Port:       int32(8888),
@@ -812,21 +811,37 @@ func testAccCheckServicePorts(svc *api.Service, expected []api.ServicePort) reso
 	}
 }
 
-func testAccCheckloadBalancerIngressCheck(svc *api.LoadBalancerIngress) resource.TestCheckFunc {
+func testAccCheckloadBalancerIngressCheck(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		// Used with EKS Cluster
-		print(svc.Hostname)
-		print(svc.IP)
-		if svc.Hostname != "" {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("Not found: %s", resourceName)
+		}
+
+		lb := "status.0.load_balancer.0.ingress.0"
+
+		InGke, _ := isRunningInGke()
+		if InGke {
+			ip := fmt.Sprintf("%s.ip", lb)
+
+			if rs.Primary.Attributes[ip] == "" {
+				return fmt.Errorf("Attribute %s expected to be set in GKE cluster", ip)
+			}
+
 			return nil
 		}
 
-		// Used with GKE Cluster
-		if svc.IP != "" {
+		InEks, _ := isRunningInEks()
+		if InEks {
+			hostname := fmt.Sprintf("%s.hostname", lb)
+
+			if rs.Primary.Attributes[hostname] == "" {
+				return fmt.Errorf("Attribute %s expected to be set in EKS cluster", hostname)
+			}
 			return nil
 		}
 
-		return fmt.Errorf("hostname/ip is not set")
+		return fmt.Errorf("Cannot verify status of attribute %s", lb)
 	}
 }
 

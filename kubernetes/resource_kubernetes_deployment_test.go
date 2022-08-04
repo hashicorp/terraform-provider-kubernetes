@@ -856,26 +856,6 @@ func TestAccKubernetesDeployment_with_share_process_namespace(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesDeployment_no_rollout_wait(t *testing.T) {
-	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesDeploymentConfigWithWaitForRolloutFalse(deploymentName, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentRollingOut("kubernetes_deployment.test"),
-					resource.TestCheckResourceAttr("kubernetes_deployment.test", "wait_for_rollout", "false"),
-				),
-			},
-		},
-	})
-}
-
 func TestAccKubernetesDeployment_with_deployment_strategy_rollingupdate_max_surge_30perc_max_unavailable_40perc(t *testing.T) {
 	var conf appsv1.Deployment
 
@@ -1208,21 +1188,6 @@ func testAccCheckKubernetesDeploymentExists(n string, obj *appsv1.Deployment) re
 			return err
 		}
 		*obj = *d
-		return nil
-	}
-}
-
-func testAccCheckKubernetesDeploymentRollingOut(n string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		d, err := getDeploymentFromResourceName(s, n)
-		if err != nil {
-			return err
-		}
-
-		if d.Status.Replicas == d.Status.ReadyReplicas {
-			return fmt.Errorf("deployment has already rolled out")
-		}
-
 		return nil
 	}
 }
@@ -2640,48 +2605,6 @@ func testAccKubernetesDeploymentConfigWithAutomountServiceAccountToken(deploymen
   }
 }
 `, deploymentName, imageName)
-}
-
-func testAccKubernetesDeploymentConfigWithWaitForRolloutFalse(deploymentName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
-  metadata {
-    name = %q
-  }
-  spec {
-    replicas = 5
-    selector {
-      match_labels = {
-        "app" = "test"
-      }
-    }
-    template {
-      metadata {
-        name = "test-automount"
-        labels = {
-          "app" = "test"
-        }
-      }
-      spec {
-        container {
-          name  = "nginx"
-          image = %q
-          port {
-            container_port = 80
-          }
-          readiness_probe {
-            initial_delay_seconds = 5
-            http_get {
-              path = "/"
-              port = 80
-            }
-          }
-        }
-      }
-    }
-  }
-  wait_for_rollout = false
-}
-`, deploymentName, nginxImageVersion)
 }
 
 func testAccKubernetesDeploymentConfigLocal(provider, name, imageName string) string {

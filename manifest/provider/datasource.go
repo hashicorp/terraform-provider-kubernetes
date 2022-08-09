@@ -105,7 +105,7 @@ func (s *RawProviderServer) ReadDataSource(ctx context.Context, req *tfprotov5.R
 	}
 	rcl := client.Resource(gvr)
 
-	objectType, th, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
+	objectType, th, err := s.TFTypeFromOpenAPI(ctx, gvk, true)
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -148,8 +148,7 @@ func (s *RawProviderServer) ReadDataSource(ctx context.Context, req *tfprotov5.R
 		return resp, nil
 	}
 
-	fo := RemoveServerSideFields(res.Object)
-	nobj, err := payload.ToTFValue(fo, objectType, th, tftypes.NewAttributePath())
+	nobj, err := payload.ToTFValue(res.Object, objectType, th, tftypes.NewAttributePath())
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,

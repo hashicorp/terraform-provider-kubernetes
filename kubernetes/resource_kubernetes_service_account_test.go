@@ -219,7 +219,7 @@ func TestAccKubernetesServiceAccount_update(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "image_pull_secret.#", "0"),
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", "true"),
 					testAccCheckServiceAccountImagePullSecrets(&conf, []*regexp.Regexp{}),
-					testAccCheckServiceAccountDefaultSecrets(&conf, []*regexp.Regexp{
+					testAccCheckServiceAccountSecrets(&conf, []*regexp.Regexp{
 						regexp.MustCompile("^" + name + "-token-[a-z0-9]+$"),
 					}),
 				),
@@ -251,7 +251,7 @@ func TestAccKubernetesServiceAccount_generatedName(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_service_account.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", "true"),
 					testAccCheckServiceAccountImagePullSecrets(&conf, []*regexp.Regexp{}),
-					testAccCheckServiceAccountDefaultSecrets(&conf, []*regexp.Regexp{
+					testAccCheckServiceAccountSecrets(&conf, []*regexp.Regexp{
 						regexp.MustCompile("^" + prefix + "[a-z0-9]+-token-[a-z0-9]+$"),
 					}),
 				),
@@ -287,17 +287,11 @@ func matchLocalObjectReferenceName(lor []api.LocalObjectReference, expected []*r
 	return false
 }
 
-func testAccCheckServiceAccountDefaultSecrets(m *api.ServiceAccount, expected []*regexp.Regexp) resource.TestCheckFunc {
-	if clusterVersionGreaterThanOrEqual("1.24.0") {
-		return func(s *terraform.State) error {
-			return nil
-		}
-	}
-	return testAccCheckServiceAccountSecrets(m, expected)
-}
-
 func testAccCheckServiceAccountSecrets(m *api.ServiceAccount, expected []*regexp.Regexp) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
+		if clusterVersionGreaterThanOrEqual("1.24.0") {
+			return nil
+		}
 		if len(expected) == 0 && len(m.Secrets) == 0 {
 			return nil
 		}

@@ -18,7 +18,7 @@ func ValueToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tft
 			Attribute: p,
 			Severity:  tfprotov5.DiagnosticSeverityInvalid,
 			Summary:   "Invalid reference type for attribute",
-			Detail:    fmt.Sprintf("Cannot convert value into 'nil' type at attribute: %s", p),
+			Detail:    fmt.Sprintf("Cannot convert value into 'nil' type at attribute: %s", attributePathSummary(p)),
 		})
 		return tftypes.Value{}, diags
 	}
@@ -50,15 +50,15 @@ func ValueToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tft
 			Attribute: p,
 			Severity:  tfprotov5.DiagnosticSeverityInvalid,
 			Summary:   "Value that isn't fully known",
-			Detail:    fmt.Sprintf("Type conversion cannot be performed on (partially) unknown value at attribute: %s", p),
+			Detail:    fmt.Sprintf("Type conversion cannot be performed on (partially) unknown value at attribute: %s", attributePathSummary(p)),
 		})
 		return v, diags
 	}
 	diags = append(diags, &tfprotov5.Diagnostic{
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
-		Summary:   "No way to convert value to type",
-		Detail:    fmt.Sprintf("Attribute: %s\n...has unsupported value type:\n%+v\n...cannot be converted to type:\n%s", p, typeNameNoPrefix(v.Type()), typeNameNoPrefix(t)),
+		Summary:   "Value incompatible with expected type",
+		Detail:    fmt.Sprintf("Attribute: %s\n... of type:\n%+v\n...cannot be converted to type:\n%s", attributePathSummary(p), typeNameNoPrefix(v.Type()), typeNameNoPrefix(t)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -75,7 +75,7 @@ func morphBoolToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 			Attribute: p,
 			Severity:  tfprotov5.DiagnosticSeverityError,
 			Summary:   "Invalid Boolean value",
-			Detail:    fmt.Sprintf("Error: %s\nat attribute:\n%s", err, p),
+			Detail:    fmt.Sprintf("Error: %s\nat attribute:\n%s", err, attributePathSummary(p)),
 		})
 		return tftypes.Value{}, diags
 	}
@@ -88,8 +88,8 @@ func morphBoolToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 	diags = append(diags, &tfprotov5.Diagnostic{
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
-		Summary:   "Invalid Boolean value",
-		Detail:    fmt.Sprintf("Expected type %s, but got %s\n ...at attribute\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Bool), p),
+		Summary:   "Value incompatible with expected type",
+		Detail:    fmt.Sprintf("Cannot convert Bool values into type %s\n ...at attribute\n%s", typeNameNoPrefix(t), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -119,8 +119,8 @@ func morphNumberToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 	diags = append(diags, &tfprotov5.Diagnostic{
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
-		Summary:   "Cannot transform Number value into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n ...at attribute\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Number), p),
+		Summary:   "Value incompatible with expected type",
+		Detail:    fmt.Sprintf("Cannot convert Number values into type %s\n ...at attribute\n%s", typeNameNoPrefix(t), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -137,7 +137,7 @@ func morphStringToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			Attribute: p,
 			Severity:  tfprotov5.DiagnosticSeverityError,
 			Summary:   "Failed to extract value of String attribute",
-			Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, p),
+			Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, attributePathSummary(p)),
 		})
 		return tftypes.Value{}, diags
 	}
@@ -149,7 +149,7 @@ func morphStringToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 				Attribute: p,
 				Severity:  tfprotov5.DiagnosticSeverityError,
 				Summary:   "String value doesn't parse as Number",
-				Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, p),
+				Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, attributePathSummary(p)),
 			})
 			return tftypes.Value{}, diags
 		}
@@ -162,7 +162,7 @@ func morphStringToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 				Attribute: p,
 				Severity:  tfprotov5.DiagnosticSeverityError,
 				Summary:   "String value doesn't parse as Boolean",
-				Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, p),
+				Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, attributePathSummary(p)),
 			})
 			return tftypes.Value{}, diags
 		}
@@ -173,8 +173,8 @@ func morphStringToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 	diags = append(diags, &tfprotov5.Diagnostic{
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
-		Summary:   "Cannot transform String value into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n ...at attribute\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.String), p),
+		Summary:   "Value incompatible with expected type",
+		Detail:    fmt.Sprintf("Cannot transform String value into type %s\n ...at attribute\n%s", typeNameNoPrefix(t), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -188,7 +188,7 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 			Attribute: p,
 			Severity:  tfprotov5.DiagnosticSeverityError,
 			Summary:   "Failed to extract value of List attribute",
-			Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, p),
+			Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, attributePathSummary(p)),
 		})
 		return tftypes.Value{}, diags
 	}
@@ -204,7 +204,7 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 					Attribute: elp,
 					Severity:  tfprotov5.DiagnosticSeverityError,
 					Summary:   "Invalid List value element",
-					Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, elp),
+					Detail:    fmt.Sprintf("Error at attribute:\n%s", attributePathSummary(elp)),
 				})
 				return tftypes.Value{}, diags
 			}
@@ -217,7 +217,7 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 				Attribute: p,
 				Severity:  tfprotov5.DiagnosticSeverityError,
 				Summary:   "Failed to transform List value into Tuple of different length",
-				Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, p),
+				Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, attributePathSummary(p)),
 			})
 			return tftypes.Value{}, diags
 		}
@@ -231,7 +231,7 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 					Attribute: elp,
 					Severity:  tfprotov5.DiagnosticSeverityError,
 					Summary:   "Failed to transform List element into Tuple element type",
-					Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, elp),
+					Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, attributePathSummary(elp)),
 				})
 				return tftypes.Value{}, diags
 			}
@@ -249,7 +249,7 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 					Attribute: elp,
 					Severity:  tfprotov5.DiagnosticSeverityError,
 					Summary:   "Failed to transform List element into Set element type",
-					Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, elp),
+					Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, attributePathSummary(elp)),
 				})
 				return tftypes.Value{}, diags
 			}
@@ -263,7 +263,7 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
 		Summary:   "Cannot transform List value into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n ...at attribute\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.List{}), p),
+		Detail:    fmt.Sprintf("Required type %s, but got %s\n ...at attribute\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.List{}), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -277,7 +277,7 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 			Attribute: p,
 			Severity:  tfprotov5.DiagnosticSeverityError,
 			Summary:   "Failed to extract value of Tuple attribute",
-			Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, p),
+			Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, attributePathSummary(p)),
 		})
 		return tftypes.Value{}, diags
 	}
@@ -291,7 +291,7 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 					Attribute: p,
 					Severity:  tfprotov5.DiagnosticSeverityError,
 					Summary:   "Failed to transform Tuple value into Tuple of different length",
-					Detail:    fmt.Sprintf("Error at attribute:\n%s", p),
+					Detail:    fmt.Sprintf("Error at attribute:\n%s", attributePathSummary(p)),
 				})
 				return tftypes.Value{}, diags
 			}
@@ -313,7 +313,7 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 					Attribute: elp,
 					Severity:  tfprotov5.DiagnosticSeverityError,
 					Summary:   "Failed to transform Tuple element into Tuple element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", elp),
+					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
 				})
 				return tftypes.Value{}, diags
 			}
@@ -332,7 +332,7 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 					Attribute: elp,
 					Severity:  tfprotov5.DiagnosticSeverityError,
 					Summary:   "Failed to transform Tuple element into List element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", elp),
+					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
 				})
 				return tftypes.Value{}, diags
 			}
@@ -350,7 +350,7 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 					Attribute: elp,
 					Severity:  tfprotov5.DiagnosticSeverityError,
 					Summary:   "Failed to transform Tuple element into Set element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", elp),
+					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
 				})
 				return tftypes.Value{}, diags
 			}
@@ -364,7 +364,7 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
 		Summary:   "Cannot transform Tuple value into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n ...at attribute\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Tuple{}), p),
+		Detail:    fmt.Sprintf("Required type %s, but got %s\n ...at attribute\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Tuple{}), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -378,7 +378,7 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			Attribute: p,
 			Severity:  tfprotov5.DiagnosticSeverityError,
 			Summary:   "Failed to extract value of Set attribute",
-			Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, p),
+			Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, attributePathSummary(p)),
 		})
 		return tftypes.Value{}, diags
 	}
@@ -394,7 +394,7 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 					Attribute: elp,
 					Severity:  tfprotov5.DiagnosticSeverityError,
 					Summary:   "Failed to transform Set element into Set element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", elp),
+					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
 				})
 				return tftypes.Value{}, diags
 			}
@@ -412,7 +412,7 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 					Attribute: elp,
 					Severity:  tfprotov5.DiagnosticSeverityError,
 					Summary:   "Failed to transform Set element into List element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", elp),
+					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
 				})
 				return tftypes.Value{}, diags
 			}
@@ -425,7 +425,7 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 				Attribute: p,
 				Severity:  tfprotov5.DiagnosticSeverityError,
 				Summary:   "Failed to transform Set value into Tuple of different length",
-				Detail:    fmt.Sprintf("Error at attribute:\n%s", p),
+				Detail:    fmt.Sprintf("Error at attribute:\n%s", attributePathSummary(p)),
 			})
 			return tftypes.Value{}, diags
 		}
@@ -439,7 +439,7 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 					Attribute: elp,
 					Severity:  tfprotov5.DiagnosticSeverityError,
 					Summary:   "Failed to transform Set element into Tuple element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", elp),
+					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
 				})
 				return tftypes.Value{}, diags
 			}
@@ -453,7 +453,7 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
 		Summary:   "Cannot transform Set value into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Set{}), p),
+		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Set{}), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -467,7 +467,7 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			Attribute: p,
 			Severity:  tfprotov5.DiagnosticSeverityError,
 			Summary:   "Failed to extract value of Map attribute",
-			Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, p),
+			Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, attributePathSummary(p)),
 		})
 		return tftypes.Value{}, diags
 	}
@@ -482,7 +482,7 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 					Attribute: p,
 					Severity:  tfprotov5.DiagnosticSeverityInvalid,
 					Summary:   "Attribute not found in schema",
-					Detail:    fmt.Sprintf("Unable to find schema type for attribute:\n%s", elp),
+					Detail:    fmt.Sprintf("Unable to find schema type for attribute:\n%s", attributePathSummary(elp)),
 				})
 				continue
 			}
@@ -495,7 +495,7 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 							Attribute: elp,
 							Severity:  tfprotov5.DiagnosticSeverityError,
 							Summary:   "Failed to transform Map element into Object element type",
-							Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", elp),
+							Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
 						})
 						return tftypes.Value{}, diags
 					}
@@ -515,7 +515,7 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 					Attribute: elp,
 					Severity:  tfprotov5.DiagnosticSeverityError,
 					Summary:   "Failed to transform Map element into Map element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", elp),
+					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
 				})
 				return tftypes.Value{}, diags
 			}
@@ -529,7 +529,7 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
 		Summary:   "Cannot transform Map value into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Map{}), p),
+		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Map{}), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -558,7 +558,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 					Attribute: p,
 					Severity:  tfprotov5.DiagnosticSeverityInvalid,
 					Summary:   "Attribute not found in schema",
-					Detail:    fmt.Sprintf("Unable to find schema type for attribute:\n%s", elp),
+					Detail:    fmt.Sprintf("Unable to find schema type for attribute:\n%s", attributePathSummary(elp)),
 				})
 				continue
 			}
@@ -571,7 +571,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 							Attribute: p,
 							Severity:  tfprotov5.DiagnosticSeverityError,
 							Summary:   "Failed to transform Object element into Object element type",
-							Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", elp),
+							Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
 						})
 						return tftypes.Value{}, diags
 					}
@@ -602,7 +602,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 					Attribute: p,
 					Severity:  tfprotov5.DiagnosticSeverityError,
 					Summary:   "Failed to transform Object element into Map element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", elp),
+					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
 				})
 				return tftypes.Value{}, diags
 			}
@@ -616,7 +616,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
 		Summary:   "Failed to transform Object into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Object{}), p),
+		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Object{}), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -644,7 +644,7 @@ func ValueToTypePath(a *tftypes.AttributePath) *tftypes.AttributePath {
 }
 
 func typeNameNoPrefix(t tftypes.Type) string {
-	return strings.TrimPrefix(t.String(), "tftypes.")
+	return strings.ReplaceAll(t.String(), "tftypes.", "")
 }
 
 func attributePathSummary(p *tftypes.AttributePath) string {

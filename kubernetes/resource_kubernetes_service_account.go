@@ -261,9 +261,6 @@ func diffObjectReferences(origOrs []api.ObjectReference, ors []api.ObjectReferen
 }
 
 func resourceKubernetesServiceAccountRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-
-	var diagMessages []diag.Diagnostic
-
 	exists, err := resourceKubernetesServiceAccountExists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
@@ -311,17 +308,6 @@ func resourceKubernetesServiceAccountRead(ctx context.Context, d *schema.Resourc
 	}
 
 	defaultSecretName := d.Get("default_secret_name").(string)
-	sv, err := serverVersionGreaterThanOrEqual(conn, "1.24.0")
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if sv {
-		diagMessages = append(diagMessages, diag.Diagnostic{
-			Severity: diag.Warning,
-			Summary:  `"default_secret_name" is no longer applicable for Kubernetes v1.24.0 and above`,
-			Detail:   `Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, "default_secret_name" will be empty`,
-		})
-	}
 	log.Printf("[DEBUG] Default secret name is %q", defaultSecretName)
 	secrets := flattenServiceAccountSecrets(svcAcc.Secrets, defaultSecretName)
 	log.Printf("[DEBUG] Flattened secrets: %#v", secrets)
@@ -330,7 +316,21 @@ func resourceKubernetesServiceAccountRead(ctx context.Context, d *schema.Resourc
 		return diag.FromErr(err)
 	}
 
-	return diagMessages
+	sv, err := serverVersionGreaterThanOrEqual(conn, "1.24.0")
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if sv {
+		return diag.Diagnostics{
+			diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  `"default_secret_name" is no longer applicable for Kubernetes v1.24.0 and above`,
+				Detail:   `Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, "default_secret_name" will be empty`,
+			},
+		}
+	}
+
+	return nil
 }
 
 func resourceKubernetesServiceAccountUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

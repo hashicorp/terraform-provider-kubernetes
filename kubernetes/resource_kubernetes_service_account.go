@@ -112,11 +112,11 @@ func resourceKubernetesServiceAccountCreate(ctx context.Context, d *schema.Resou
 }
 
 func getServiceAccountDefaultSecret(ctx context.Context, name string, config api.ServiceAccount, timeout time.Duration, conn *kubernetes.Clientset) (*api.Secret, error) {
-	b, err := serverVersionGreaterThanOrEqual(conn, "1.24.0")
+	sv, err := serverVersionGreaterThanOrEqual(conn, "1.24.0")
 	if err != nil {
 		return &api.Secret{}, err
 	}
-	if b {
+	if sv {
 		return &api.Secret{}, nil
 	}
 
@@ -177,16 +177,16 @@ func findDefaultServiceAccount(ctx context.Context, sa *api.ServiceAccount, conn
 	*/
 	ds := make([]string, 0)
 
-	b, err := serverVersionGreaterThanOrEqual(conn, "1.24.0")
+	sv, err := serverVersionGreaterThanOrEqual(conn, "1.24.0")
 	if err != nil {
 		return "", diag.FromErr(err)
 	}
-	if b {
+	if sv {
 		return "", diag.Diagnostics{
 			diag.Diagnostic{
 				Severity: diag.Warning,
-				Summary:  "'default_secret_name' is no longer applicable for Kubernetes 'v1.24.0' and above",
-				Detail:   "Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, `default_secret_name` will be empty",
+				Summary:  `"default_secret_name" is no longer applicable for Kubernetes v1.24.0 and above`,
+				Detail:   `Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, "default_secret_name" will be empty`,
 			},
 		}
 	}
@@ -311,15 +311,15 @@ func resourceKubernetesServiceAccountRead(ctx context.Context, d *schema.Resourc
 	}
 
 	defaultSecretName := d.Get("default_secret_name").(string)
-	b, err := serverVersionGreaterThanOrEqual(conn, "1.24.0")
+	sv, err := serverVersionGreaterThanOrEqual(conn, "1.24.0")
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if b {
+	if sv {
 		diagMessages = append(diagMessages, diag.Diagnostic{
 			Severity: diag.Warning,
-			Summary:  "'default_secret_name' is no longer applicable for Kubernetes 'v1.24.0' and above",
-			Detail:   "Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, `default_secret_name` will be empty",
+			Summary:  `"default_secret_name" is no longer applicable for Kubernetes v1.24.0 and above`,
+			Detail:   `Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, "default_secret_name" will be empty`,
 		})
 	}
 	log.Printf("[DEBUG] Default secret name is %q", defaultSecretName)

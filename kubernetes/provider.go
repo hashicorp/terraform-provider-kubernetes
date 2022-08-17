@@ -212,6 +212,8 @@ func Provider() *schema.Provider {
 			"kubernetes_all_namespaces":             dataSourceKubernetesAllNamespaces(),
 			"kubernetes_secret":                     dataSourceKubernetesSecret(),
 			"kubernetes_secret_v1":                  dataSourceKubernetesSecret(),
+			"kubernetes_endpoints":                  dataSourceKubernetesEndpoint(),
+			"kubernetes_endpoints_v1":               dataSourceKubernetesEndpoint(),
 			"kubernetes_service":                    dataSourceKubernetesService(),
 			"kubernetes_service_v1":                 dataSourceKubernetesService(),
 			"kubernetes_pod":                        dataSourceKubernetesPod(),

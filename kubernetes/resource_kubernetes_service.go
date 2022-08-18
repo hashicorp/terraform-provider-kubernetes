@@ -442,7 +442,7 @@ func resourceKubernetesServiceUpdate(ctx context.Context, d *schema.ResourceData
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("spec") {
-		serverVersion, err := conn.ServerVersion()
+		serverVersion, err := getServerVersion(conn)
 		if err != nil {
 			return diag.FromErr(err)
 		}

@@ -53,7 +53,7 @@ The following arguments are supported:
 
 * `image_pull_secret` - A list of image pull secrets associated with the service account.
 * `secret` - A list of secrets associated with the service account.
-* `default_secret_name` - Name of the default secret, containing service account token, created & managed by the service. By default, the provider will try to find the secret containing the service account token that Kubernetes automatically created for the service account. Where there are multiple tokens and the provider cannot determine which was created by Kubernetes, this attribute will be empty. When only one token is associated with the service account, the provider will return this single token secret.
+* `default_secret_name` - Name of the default secret, containing service account token, created & managed by the service. By default, the provider will try to find the secret containing the service account token that Kubernetes automatically created for the service account. Where there are multiple tokens and the provider cannot determine which was created by Kubernetes, this attribute will be empty. When only one token is associated with the service account, the provider will return this single token secret. Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, `default_secret_name` will be empty.
 
 ### `image_pull_secret`
 

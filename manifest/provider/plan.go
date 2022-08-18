@@ -353,6 +353,11 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	// Transform the input manifest to adhere to the type model from the OpenAPI spec
 	morphedManifest, d := morph.ValueToType(ppMan, objectType, tftypes.NewAttributePath().WithAttributeName("object"))
 	if len(d) > 0 {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Manifest configuration incompatible with resource schema",
+			Detail:   "Detailed descriptions of errors will follow below.",
+		})
 		resp.Diagnostics = append(resp.Diagnostics, d...)
 		return resp, nil
 	}
@@ -362,8 +367,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity:  tfprotov5.DiagnosticSeverityError,
-			Summary:   "Failed to backfill manifest from OAPI type",
-			Detail:    err.Error(),
+			Summary:   "Failed to backfill manifest from OpenAPI type",
+			Detail:    fmt.Sprintf("This usually happens when the provider cannot fully process the schema retrieved from cluster. Please report this to the provider maintainers.\nError: %s", err.Error()),
 			Attribute: tftypes.NewAttributePath().WithAttributeName("object"),
 		})
 		return resp, nil

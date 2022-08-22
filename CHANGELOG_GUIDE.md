@@ -1,6 +1,6 @@
 # How To Use
 
-Helm Provider uses `go-changelog` to generate its changelog on release:
+Kubernetes Provider uses `go-changelog` to generate its changelog on release:
 
 * https://github.com/hashicorp/go-changelog
 

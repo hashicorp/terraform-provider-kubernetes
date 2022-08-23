@@ -1,4 +1,4 @@
-## 2.13.0 (unreleased, 2022)
+## 2.13.0 (August 23, 2022)
 
 BUG FIXES:
 * Starting from Kubernetes 1.24.0 service account token is not automatically generated, thus it has to create separately. The following resources were updated to handle this change: `d/kubernetes_service_account`, `r/kubernetes_default_service_account`, `r/kubernetes_service_account`. For Kubernetes clusters running v1.24+ `default_secret_name` will be empty. A warning message will be printed once any of the above resources are in use. (#1792)

@@ -818,17 +818,9 @@ func testAccCheckloadBalancerIngressCheck(resourceName string) resource.TestChec
 			return fmt.Errorf("Not found: %s", resourceName)
 		}
 
-		node, err := getFirstNode()
-
-		if err != nil {
-			return err
-		}
-
-		labels := node.GetLabels()
-
 		lb := "status.0.load_balancer.0.ingress.0"
 
-		if _, ok := labels["cloud.google.com/gke-nodepool"]; ok {
+		if ok, _ := isRunningInGke(); ok {
 			ip := fmt.Sprintf("%s.ip", lb)
 			if rs.Primary.Attributes[ip] != "" {
 				return nil

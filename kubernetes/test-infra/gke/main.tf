@@ -11,7 +11,7 @@ variable "node_machine_type" {
 }
 
 variable "enable_alpha" {
-  default = true
+  default = false
 }
 
 data "google_compute_zones" "available" {

@@ -1,6 +1,13 @@
-## 2.13.0
+## 2.13.0 (August 23, 2022)
 
-* Add Acceptance Tests (GKE) to Github Actions
+BUG FIXES:
+* Starting from Kubernetes 1.24.0 service account token is not automatically generated, thus it has to create separately. The following resources were updated to handle this change: `d/kubernetes_service_account`, `r/kubernetes_default_service_account`, `r/kubernetes_service_account`. For Kubernetes clusters running v1.24+ `default_secret_name` will be empty. A warning message will be printed once any of the above resources are in use. (#1792)
+
+IMPROVEMENTS:
+
+* `r/kubernetes_manifest`: Better error messages from OpenAPI schema transformations (#1780)
+* Update documentation and correct some errors (#1768, #1786)
+* Update acceptance tests infrastructure code for GKE and AKE and related GitHub Actions
 
 ## 2.12.1 (July 6, 2022)
 

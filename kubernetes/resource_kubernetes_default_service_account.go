@@ -55,7 +55,6 @@ func resourceKubernetesDefaultServiceAccountCreate(ctx context.Context, d *schem
 		log.Printf("[INFO] Default service account exists: %s", metadata.Namespace)
 		return nil
 	})
-
 	if err != nil {
 		return diag.FromErr(err)
 	}

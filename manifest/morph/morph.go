@@ -16,7 +16,7 @@ func ValueToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tft
 	if t == nil {
 		diags = append(diags, &tfprotov5.Diagnostic{
 			Attribute: p,
-			Severity:  tfprotov5.DiagnosticSeverityInvalid,
+			Severity:  tfprotov5.DiagnosticSeverityError,
 			Summary:   "Invalid reference type for attribute",
 			Detail:    fmt.Sprintf("Cannot convert value into 'nil' type at attribute: %s", attributePathSummary(p)),
 		})
@@ -33,7 +33,7 @@ func ValueToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tft
 	case v.Type().Is(tftypes.Bool):
 		return morphBoolToType(v, t, p)
 	case v.Type().Is(tftypes.DynamicPseudoType):
-		return v, nil
+		return v, diags
 	case v.Type().Is(tftypes.List{}):
 		return morphListToType(v, t, p)
 	case v.Type().Is(tftypes.Tuple{}):
@@ -48,7 +48,7 @@ func ValueToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tft
 	if !v.IsKnown() {
 		diags = append(diags, &tfprotov5.Diagnostic{
 			Attribute: p,
-			Severity:  tfprotov5.DiagnosticSeverityInvalid,
+			Severity:  tfprotov5.DiagnosticSeverityWarning,
 			Summary:   "Value that isn't fully known",
 			Detail:    fmt.Sprintf("Type conversion cannot be performed on (partially) unknown value at attribute: %s", attributePathSummary(p)),
 		})
@@ -66,7 +66,7 @@ func ValueToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tft
 func morphBoolToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tftypes.Value, []*tfprotov5.Diagnostic) {
 	var diags []*tfprotov5.Diagnostic
 	if t.Is(tftypes.Bool) {
-		return v, nil
+		return v, diags
 	}
 	var bnat bool
 	err := v.As(&bnat)
@@ -83,7 +83,7 @@ func morphBoolToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 	case t.Is(tftypes.String):
 		return tftypes.NewValue(t, strconv.FormatBool(bnat)), nil
 	case t.Is(tftypes.DynamicPseudoType):
-		return v, nil
+		return v, diags
 	}
 	diags = append(diags, &tfprotov5.Diagnostic{
 		Attribute: p,
@@ -97,7 +97,7 @@ func morphBoolToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 func morphNumberToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tftypes.Value, []*tfprotov5.Diagnostic) {
 	var diags []*tfprotov5.Diagnostic
 	if t.Is(tftypes.Number) {
-		return v, nil
+		return v, diags
 	}
 	var vnat big.Float
 	err := v.As(&vnat)
@@ -114,7 +114,7 @@ func morphNumberToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 	case t.Is(tftypes.String):
 		return tftypes.NewValue(t, vnat.String()), nil
 	case t.Is(tftypes.DynamicPseudoType):
-		return v, nil
+		return v, diags
 	}
 	diags = append(diags, &tfprotov5.Diagnostic{
 		Attribute: p,
@@ -128,7 +128,7 @@ func morphNumberToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 func morphStringToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tftypes.Value, []*tfprotov5.Diagnostic) {
 	var diags []*tfprotov5.Diagnostic
 	if t.Is(tftypes.String) {
-		return v, nil
+		return v, diags
 	}
 	var vnat string
 	err := v.As(&vnat)
@@ -168,7 +168,7 @@ func morphStringToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 		}
 		return tftypes.NewValue(t, bv), nil
 	case t.Is(tftypes.DynamicPseudoType):
-		return v, nil
+		return v, diags
 	}
 	diags = append(diags, &tfprotov5.Diagnostic{
 		Attribute: p,
@@ -200,13 +200,17 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 			nv, d := ValueToType(v, t.(tftypes.List).ElementType, elp)
 			if len(d) > 0 {
 				diags = append(diags, d...)
-				diags = append(diags, &tfprotov5.Diagnostic{
-					Attribute: elp,
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Invalid List value element",
-					Detail:    fmt.Sprintf("Error at attribute:\n%s", attributePathSummary(elp)),
-				})
-				return tftypes.Value{}, diags
+				for i := range d {
+					if d[i].Severity == tfprotov5.DiagnosticSeverityError {
+						diags = append(diags, &tfprotov5.Diagnostic{
+							Attribute: elp,
+							Severity:  tfprotov5.DiagnosticSeverityError,
+							Summary:   "Invalid List value element",
+							Detail:    fmt.Sprintf("Error at attribute:\n%s", attributePathSummary(elp)),
+						})
+						return tftypes.Value{}, diags
+					}
+				}
 			}
 			nlvals[i] = nv
 		}
@@ -227,13 +231,17 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 			nv, d := ValueToType(v, t.(tftypes.Tuple).ElementTypes[i], elp)
 			if len(d) > 0 {
 				diags = append(diags, d...)
-				diags = append(diags, &tfprotov5.Diagnostic{
-					Attribute: elp,
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Failed to transform List element into Tuple element type",
-					Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, attributePathSummary(elp)),
-				})
-				return tftypes.Value{}, diags
+				for i := range d {
+					if d[i].Severity == tfprotov5.DiagnosticSeverityError {
+						diags = append(diags, &tfprotov5.Diagnostic{
+							Attribute: elp,
+							Severity:  tfprotov5.DiagnosticSeverityError,
+							Summary:   "Failed to transform List element into Tuple element type",
+							Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, attributePathSummary(elp)),
+						})
+						return tftypes.Value{}, diags
+					}
+				}
 			}
 			tvals[i] = nv
 		}
@@ -245,19 +253,23 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 			nv, d := ValueToType(v, t.(tftypes.Set).ElementType, elp)
 			if len(d) > 0 {
 				diags = append(diags, d...)
-				diags = append(diags, &tfprotov5.Diagnostic{
-					Attribute: elp,
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Failed to transform List element into Set element type",
-					Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, attributePathSummary(elp)),
-				})
-				return tftypes.Value{}, diags
+				for i := range d {
+					if d[i].Severity == tfprotov5.DiagnosticSeverityError {
+						diags = append(diags, &tfprotov5.Diagnostic{
+							Attribute: elp,
+							Severity:  tfprotov5.DiagnosticSeverityError,
+							Summary:   "Failed to transform List element into Set element type",
+							Detail:    fmt.Sprintf("Error: %s\n...at attribute:\n%s", err, attributePathSummary(elp)),
+						})
+						return tftypes.Value{}, diags
+					}
+				}
 			}
 			svals[i] = nv
 		}
 		return tftypes.NewValue(t, svals), nil
 	case t.Is(tftypes.DynamicPseudoType):
-		return v, nil
+		return v, diags
 	}
 	diags = append(diags, &tfprotov5.Diagnostic{
 		Attribute: p,
@@ -309,18 +321,22 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 			nv, d := ValueToType(v, eltypes[i], elp)
 			if len(d) > 0 {
 				diags = append(diags, d...)
-				diags = append(diags, &tfprotov5.Diagnostic{
-					Attribute: elp,
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Failed to transform Tuple element into Tuple element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
-				})
-				return tftypes.Value{}, diags
+				for i := range d {
+					if d[i].Severity == tfprotov5.DiagnosticSeverityError {
+						diags = append(diags, &tfprotov5.Diagnostic{
+							Attribute: elp,
+							Severity:  tfprotov5.DiagnosticSeverityError,
+							Summary:   "Failed to transform Tuple element into Tuple element type",
+							Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
+						})
+						return tftypes.Value{}, diags
+					}
+				}
 			}
 			lvals[i] = nv
 			eltypes[i] = nv.Type()
 		}
-		return tftypes.NewValue(tftypes.Tuple{ElementTypes: eltypes}, lvals), nil
+		return tftypes.NewValue(tftypes.Tuple{ElementTypes: eltypes}, lvals), diags
 	case t.Is(tftypes.List{}):
 		var lvals []tftypes.Value = make([]tftypes.Value, len(tvals))
 		for i, v := range tvals {
@@ -328,17 +344,21 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 			nv, d := ValueToType(v, t.(tftypes.List).ElementType, elp)
 			if len(d) > 0 {
 				diags = append(diags, d...)
-				diags = append(diags, &tfprotov5.Diagnostic{
-					Attribute: elp,
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Failed to transform Tuple element into List element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
-				})
-				return tftypes.Value{}, diags
+				for i := range d {
+					if d[i].Severity == tfprotov5.DiagnosticSeverityError {
+						diags = append(diags, &tfprotov5.Diagnostic{
+							Attribute: elp,
+							Severity:  tfprotov5.DiagnosticSeverityError,
+							Summary:   "Failed to transform Tuple element into List element type",
+							Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
+						})
+						return tftypes.Value{}, diags
+					}
+				}
 			}
 			lvals[i] = nv
 		}
-		return tftypes.NewValue(t, lvals), nil
+		return tftypes.NewValue(t, lvals), diags
 	case t.Is(tftypes.Set{}):
 		var svals []tftypes.Value = make([]tftypes.Value, len(tvals))
 		for i, v := range tvals {
@@ -346,19 +366,23 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 			nv, d := ValueToType(v, t.(tftypes.Set).ElementType, elp)
 			if len(d) > 0 {
 				diags = append(diags, d...)
-				diags = append(diags, &tfprotov5.Diagnostic{
-					Attribute: elp,
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Failed to transform Tuple element into Set element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
-				})
-				return tftypes.Value{}, diags
+				for i := range d {
+					if d[i].Severity == tfprotov5.DiagnosticSeverityError {
+						diags = append(diags, &tfprotov5.Diagnostic{
+							Attribute: elp,
+							Severity:  tfprotov5.DiagnosticSeverityError,
+							Summary:   "Failed to transform Tuple element into Set element type",
+							Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
+						})
+						return tftypes.Value{}, diags
+					}
+				}
 			}
 			svals[i] = nv
 		}
-		return tftypes.NewValue(t, svals), nil
+		return tftypes.NewValue(t, svals), diags
 	case t.Is(tftypes.DynamicPseudoType):
-		return v, nil
+		return v, diags
 	}
 	diags = append(diags, &tfprotov5.Diagnostic{
 		Attribute: p,
@@ -390,17 +414,21 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			nv, d := ValueToType(v, t.(tftypes.Set).ElementType, elp)
 			if len(d) > 0 {
 				diags = append(diags, d...)
-				diags = append(diags, &tfprotov5.Diagnostic{
-					Attribute: elp,
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Failed to transform Set element into Set element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
-				})
-				return tftypes.Value{}, diags
+				for i := range d {
+					if d[i].Severity == tfprotov5.DiagnosticSeverityError {
+						diags = append(diags, &tfprotov5.Diagnostic{
+							Attribute: elp,
+							Severity:  tfprotov5.DiagnosticSeverityError,
+							Summary:   "Failed to transform Set element into Set element type",
+							Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
+						})
+						return tftypes.Value{}, diags
+					}
+				}
 			}
 			svals[i] = nv
 		}
-		return tftypes.NewValue(t, svals), nil
+		return tftypes.NewValue(t, svals), diags
 	case t.Is(tftypes.List{}):
 		var lvals []tftypes.Value = make([]tftypes.Value, len(svals))
 		for i, v := range svals {
@@ -408,17 +436,21 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			nv, d := ValueToType(v, t.(tftypes.List).ElementType, elp)
 			if len(d) > 0 {
 				diags = append(diags, d...)
-				diags = append(diags, &tfprotov5.Diagnostic{
-					Attribute: elp,
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Failed to transform Set element into List element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
-				})
-				return tftypes.Value{}, diags
+				for i := range d {
+					if d[i].Severity == tfprotov5.DiagnosticSeverityError {
+						diags = append(diags, &tfprotov5.Diagnostic{
+							Attribute: elp,
+							Severity:  tfprotov5.DiagnosticSeverityError,
+							Summary:   "Failed to transform Set element into List element type",
+							Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
+						})
+						return tftypes.Value{}, diags
+					}
+				}
 			}
 			lvals[i] = nv
 		}
-		return tftypes.NewValue(t, lvals), nil
+		return tftypes.NewValue(t, lvals), diags
 	case t.Is(tftypes.Tuple{}):
 		if len(t.(tftypes.Tuple).ElementTypes) != len(svals) {
 			diags = append(diags, &tfprotov5.Diagnostic{
@@ -435,19 +467,23 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			nv, d := ValueToType(v, t.(tftypes.Tuple).ElementTypes[i], elp)
 			if len(d) > 0 {
 				diags = append(diags, d...)
-				diags = append(diags, &tfprotov5.Diagnostic{
-					Attribute: elp,
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Failed to transform Set element into Tuple element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
-				})
-				return tftypes.Value{}, diags
+				for i := range d {
+					if d[i].Severity == tfprotov5.DiagnosticSeverityError {
+						diags = append(diags, &tfprotov5.Diagnostic{
+							Attribute: elp,
+							Severity:  tfprotov5.DiagnosticSeverityError,
+							Summary:   "Failed to transform Set element into Tuple element type",
+							Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
+						})
+						return tftypes.Value{}, diags
+					}
+				}
 			}
 			tvals[i] = nv
 		}
-		return tftypes.NewValue(t, tvals), nil
+		return tftypes.NewValue(t, tvals), diags
 	case t.Is(tftypes.DynamicPseudoType):
-		return v, nil
+		return v, diags
 	}
 	diags = append(diags, &tfprotov5.Diagnostic{
 		Attribute: p,
@@ -480,7 +516,7 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			if !ok {
 				diags = append(diags, &tfprotov5.Diagnostic{
 					Attribute: p,
-					Severity:  tfprotov5.DiagnosticSeverityInvalid,
+					Severity:  tfprotov5.DiagnosticSeverityWarning,
 					Summary:   "Attribute not found in schema",
 					Detail:    fmt.Sprintf("Unable to find schema type for attribute:\n%s", attributePathSummary(elp)),
 				})
@@ -503,7 +539,7 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			}
 			ovals[k] = nv
 		}
-		return tftypes.NewValue(t, ovals), nil
+		return tftypes.NewValue(t, ovals), diags
 	case t.Is(tftypes.Map{}):
 		var nmvals map[string]tftypes.Value = make(map[string]tftypes.Value, len(mvals))
 		for k, v := range mvals {
@@ -511,19 +547,23 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			nv, d := ValueToType(v, t.(tftypes.Map).ElementType, elp)
 			if len(d) > 0 {
 				diags = append(diags, d...)
-				diags = append(diags, &tfprotov5.Diagnostic{
-					Attribute: elp,
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Failed to transform Map element into Map element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
-				})
-				return tftypes.Value{}, diags
+				for i := range d {
+					if d[i].Severity == tfprotov5.DiagnosticSeverityError {
+						diags = append(diags, &tfprotov5.Diagnostic{
+							Attribute: elp,
+							Severity:  tfprotov5.DiagnosticSeverityError,
+							Summary:   "Failed to transform Map element into Map element type",
+							Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
+						})
+						return tftypes.Value{}, diags
+					}
+				}
 			}
 			nmvals[k] = nv
 		}
-		return tftypes.NewValue(t, nmvals), nil
+		return tftypes.NewValue(t, nmvals), diags
 	case t.Is(tftypes.DynamicPseudoType):
-		return v, nil
+		return v, diags
 	}
 	diags = append(diags, &tfprotov5.Diagnostic{
 		Attribute: p,
@@ -556,7 +596,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			if !ok {
 				diags = append(diags, &tfprotov5.Diagnostic{
 					Attribute: p,
-					Severity:  tfprotov5.DiagnosticSeverityInvalid,
+					Severity:  tfprotov5.DiagnosticSeverityWarning,
 					Summary:   "Attribute not found in schema",
 					Detail:    fmt.Sprintf("Unable to find schema type for attribute:\n%s", attributePathSummary(elp)),
 				})
@@ -598,19 +638,23 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			nv, d := ValueToType(v, t.(tftypes.Map).ElementType, elp)
 			if len(d) > 0 {
 				diags = append(diags, d...)
-				diags = append(diags, &tfprotov5.Diagnostic{
-					Attribute: p,
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Failed to transform Object element into Map element type",
-					Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
-				})
-				return tftypes.Value{}, diags
+				for i := range d {
+					if d[i].Severity == tfprotov5.DiagnosticSeverityError {
+						diags = append(diags, &tfprotov5.Diagnostic{
+							Attribute: p,
+							Severity:  tfprotov5.DiagnosticSeverityError,
+							Summary:   "Failed to transform Object element into Map element type",
+							Detail:    fmt.Sprintf("Error (see above) at attribute:\n%s", attributePathSummary(elp)),
+						})
+						return tftypes.Value{}, diags
+					}
+				}
 			}
 			mvals[k] = nv
 		}
-		return tftypes.NewValue(t, mvals), nil
+		return tftypes.NewValue(t, mvals), diags
 	case t.Is(tftypes.DynamicPseudoType):
-		return v, nil
+		return v, diags
 	}
 	diags = append(diags, &tfprotov5.Diagnostic{
 		Attribute: p,

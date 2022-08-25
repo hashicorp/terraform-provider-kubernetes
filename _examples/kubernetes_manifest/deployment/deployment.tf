@@ -34,6 +34,18 @@ resource "kubernetes_manifest" "test-deployment" {
                   "protocol"      = "TCP"
                 },
               ]
+              "volumeMounts" = [
+                {
+                  "mountPath" = "/foobar/"
+                  "name"      = "vol-foobar"
+                },
+              ]
+            },
+          ],
+          "volumes" = [
+            {
+              "emptyDir" = {}
+              "name"     = "vol-foobar"
             },
           ]
         }

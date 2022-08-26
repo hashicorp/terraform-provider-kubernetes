@@ -651,6 +651,39 @@ func TestMorphValueToTypeDiagnostics(t *testing.T) {
 				},
 			},
 		},
+		"object -> object (deep)": {
+			In: sampleInType{
+				V: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"two": tftypes.String,
+					"three": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"foo": tftypes.String,
+						"bar": tftypes.Number,
+					}},
+				}}, map[string]tftypes.Value{
+					"two": tftypes.NewValue(tftypes.String, "stuff"),
+					"three": tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"foo": tftypes.String,
+						"bar": tftypes.Number,
+					}}, map[string]tftypes.Value{
+						"foo": tftypes.NewValue(tftypes.String, "fourtytwo"),
+						"bar": tftypes.NewValue(tftypes.Number, 42),
+					}),
+				}),
+				T: tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"one":   tftypes.Number,
+					"two":   tftypes.String,
+					"three": tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+				}},
+			},
+			Diags: []*tfprotov5.Diagnostic{
+				{
+					Severity:  tfprotov5.DiagnosticSeverityWarning,
+					Summary:   "Attribute not found in schema",
+					Detail:    "Unable to find schema type for attribute:\nthree.bar",
+					Attribute: tftypes.NewAttributePath().WithAttributeName("three"),
+				},
+			},
+		},
 	}
 	for n, s := range samples {
 		t.Run(n, func(t *testing.T) {

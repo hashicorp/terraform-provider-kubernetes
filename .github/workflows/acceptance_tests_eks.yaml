@@ -8,7 +8,7 @@ on:
         default: us-east-1
       clusterVersion:
         description: The EKS cluster version
-        default: 1.21
+        default: 1.23
       nodeCount:
         description: The number of cluster nodes to provision 
         default: 2
@@ -20,7 +20,7 @@ on:
         default: ".*"
       terraformVersion:
         description: Terraform version 
-        default: 1.1.8
+        default: 1.2.8
 
 jobs:
   acceptance_tests:

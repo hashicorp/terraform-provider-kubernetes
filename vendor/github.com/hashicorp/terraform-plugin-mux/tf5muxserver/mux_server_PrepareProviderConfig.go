@@ -48,7 +48,7 @@ func (s muxServer) PrepareProviderConfig(ctx context.Context, req *tfprotov5.Pre
 			continue
 		}
 
-		equal, err := dynamicValueEquals(schemaType(s.providerSchema), res.PreparedConfig, resp.PreparedConfig)
+		equal, err := dynamicValueEquals(s.providerSchema.ValueType(), res.PreparedConfig, resp.PreparedConfig)
 
 		if err != nil {
 			return nil, fmt.Errorf("unable to compare PrepareProviderConfig PreparedConfig responses: %w", err)

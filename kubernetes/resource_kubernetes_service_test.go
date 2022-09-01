@@ -157,7 +157,7 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
-					resource.TestCheckResourceAttrSet(resourceName, "status.0.load_balancer.0.ingress.0.hostname"),
+					testAccCheckloadBalancerIngressCheck(resourceName),
 					testAccCheckServicePorts(&conf, []api.ServicePort{
 						{
 							Port:       int32(8888),
@@ -808,6 +808,31 @@ func testAccCheckServicePorts(svc *api.Service, expected []api.ServicePort) reso
 		}
 
 		return nil
+	}
+}
+
+func testAccCheckloadBalancerIngressCheck(resourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("Not found: %s", resourceName)
+		}
+
+		lb := "status.0.load_balancer.0.ingress.0"
+
+		if ok, _ := isRunningInGke(); ok {
+			ip := fmt.Sprintf("%s.ip", lb)
+			if rs.Primary.Attributes[ip] != "" {
+				return nil
+			}
+			return fmt.Errorf("Attribute '%s' expected to be set for GKE cluster", ip)
+		} else {
+			hostname := fmt.Sprintf("%s.hostname", lb)
+			if rs.Primary.Attributes[hostname] != "" {
+				return nil
+			}
+			return fmt.Errorf("Attribute '%s' expected to be set for EKS cluster", hostname)
+		}
 	}
 }
 

@@ -165,7 +165,12 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 
 		gvk, err := GVKFromTftypesObject(&obj, m)
 		if err != nil {
-			return resp, fmt.Errorf("failed to determine resource GVK: %s", err)
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Failed to determine the type of the resource",
+				Detail:   fmt.Sprintf(`This can happen when the "apiVersion" or "kind" fields are not present in the manifest, or when the corresponding "kind" or "apiVersion" could not be found on the Kubernetes cluster.\nError: %s`, err),
+			})
+			return resp, nil
 		}
 
 		tsch, th, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
@@ -195,9 +200,15 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 				}
 				return v, ap.NewError(err)
 			}
-			nv, err := morph.ValueToType(ppMan.(tftypes.Value), v.Type(), tftypes.NewAttributePath())
-			if err != nil {
-				return v, ap.NewError(err)
+			nv, d := morph.ValueToType(ppMan.(tftypes.Value), v.Type(), tftypes.NewAttributePath())
+			if len(d) > 0 {
+				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityError,
+					Summary:  "Manifest configuration is incompatible with resource schema",
+					Detail:   "Detailed descriptions of errors will follow below.",
+				})
+				resp.Diagnostics = append(resp.Diagnostics, d...)
+				return v, nil
 			}
 			return nv, nil
 		})

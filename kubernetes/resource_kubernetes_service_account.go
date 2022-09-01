@@ -69,8 +69,9 @@ func resourceKubernetesServiceAccount() *schema.Resource {
 				Default:     true,
 			},
 			"default_secret_name": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:       schema.TypeString,
+				Computed:   true,
+				Deprecated: "Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, `default_secret_name` will be empty",
 			},
 		},
 	}
@@ -106,12 +107,21 @@ func resourceKubernetesServiceAccountCreate(ctx context.Context, d *schema.Resou
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
 	return resourceKubernetesServiceAccountRead(ctx, d, meta)
 }
 
 func getServiceAccountDefaultSecret(ctx context.Context, name string, config api.ServiceAccount, timeout time.Duration, conn *kubernetes.Clientset) (*api.Secret, error) {
+	sv, err := serverVersionGreaterThanOrEqual(conn, "1.24.0")
+	if err != nil {
+		return &api.Secret{}, err
+	}
+	if sv {
+		return &api.Secret{}, nil
+	}
+
 	var svcAccTokens []api.Secret
-	err := resource.RetryContext(ctx, timeout, func() *resource.RetryError {
+	err = resource.RetryContext(ctx, timeout, func() *resource.RetryError {
 		resp, err := conn.CoreV1().ServiceAccounts(config.Namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
@@ -166,6 +176,20 @@ func findDefaultServiceAccount(ctx context.Context, sa *api.ServiceAccount, conn
 	   https://github.com/kubernetes/kubernetes/blob/release-1.13/pkg/controller/serviceaccount/tokens_controller.go#L384
 	*/
 	ds := make([]string, 0)
+
+	sv, err := serverVersionGreaterThanOrEqual(conn, "1.24.0")
+	if err != nil {
+		return "", diag.FromErr(err)
+	}
+	if sv {
+		return "", diag.Diagnostics{
+			diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  `"default_secret_name" is no longer applicable for Kubernetes v1.24.0 and above`,
+				Detail:   `Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, "default_secret_name" will be empty`,
+			},
+		}
+	}
 
 	for _, saSecret := range sa.Secrets {
 		if !strings.HasPrefix(saSecret.Name, fmt.Sprintf("%s-token-", sa.Name)) {
@@ -292,6 +316,20 @@ func resourceKubernetesServiceAccountRead(ctx context.Context, d *schema.Resourc
 		return diag.FromErr(err)
 	}
 
+	sv, err := serverVersionGreaterThanOrEqual(conn, "1.24.0")
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if sv {
+		return diag.Diagnostics{
+			diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  `"default_secret_name" is no longer applicable for Kubernetes v1.24.0 and above`,
+				Detail:   `Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, "default_secret_name" will be empty`,
+			},
+		}
+	}
+
 	return nil
 }
 
@@ -415,6 +453,7 @@ func resourceKubernetesServiceAccountImportState(ctx context.Context, d *schema.
 	if err != nil {
 		return nil, fmt.Errorf("Unable to set default_secret_name: %s", err)
 	}
+
 	d.SetId(buildId(sa.ObjectMeta))
 
 	return []*schema.ResourceData{d}, nil

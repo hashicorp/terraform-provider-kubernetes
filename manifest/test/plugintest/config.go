@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/logging"
+
 	"github.com/hashicorp/go-version"
 	install "github.com/hashicorp/hc-install"
 	"github.com/hashicorp/hc-install/checkpoint"
@@ -14,7 +16,6 @@ import (
 	"github.com/hashicorp/hc-install/product"
 	"github.com/hashicorp/hc-install/releases"
 	"github.com/hashicorp/hc-install/src"
-	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/logging"
 )
 
 // Config is used to configure the test helper. In most normal test programs
@@ -78,7 +79,7 @@ func DiscoverConfig(ctx context.Context, sourceDir string) (*Config, error) {
 	installer := install.NewInstaller()
 	tfExec, err := installer.Ensure(context.Background(), sources)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to find or install Terraform CLI from %+v: %w", sources, err)
 	}
 
 	ctx = logging.TestTerraformPathContext(ctx, tfExec)

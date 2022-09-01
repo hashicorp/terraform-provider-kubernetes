@@ -12,12 +12,30 @@ ifneq ($(PWD),$(PROVIDER_DIR))
 $(error "Makefile must be run from the provider directory")
 endif
 
+# For changelog generation, default the last release to the last tag on
+# any branch, and this release to just be the current branch we're on.
+LAST_RELEASE?=$$(git describe --tags $$(git rev-list --tags --max-count=1))
+THIS_RELEASE?=$$(git rev-parse --abbrev-ref HEAD)
+
 default: build
 
 all: build depscheck fmtcheck test testacc test-compile tests-lint tests-lint-fix tools vet website-lint website-lint-fix
 
 build: fmtcheck
 	go install
+
+# expected to be invoked by make changelog LAST_RELEASE=gitref THIS_RELEASE=gitref
+changelog:
+	@echo "Generating changelog for $(THIS_RELEASE) from $(LAST_RELEASE)..."
+	@echo
+	@changelog-build -last-release $(LAST_RELEASE) \
+		-entries-dir .changelog/ \
+		-changelog-template .changelog/changelog.tmpl \
+		-note-template .changelog/note.tmpl \
+		-this-release $(THIS_RELEASE)
+
+changelog-entry:
+	@changelog-entry -dir .changelog/
 
 depscheck:
 	@echo "==> Checking source code with 'git diff'..."
@@ -147,4 +165,4 @@ website-lint-fix: tools
 	@echo "==> Fixing website terraform blocks code with terrafmt..."
 	@terrafmt fmt ./website --pattern '*.markdown'
 
-.PHONY: build test testacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix website-lint website-lint-fix
+.PHONY: build test testacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix website-lint website-lint-fix changelog changelog-entry

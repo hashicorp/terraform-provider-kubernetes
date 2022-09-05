@@ -126,7 +126,11 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMet
 		prefix = metaPrefix[0]
 	}
 
-	configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
+	configAnnotations, annotationsSet := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
+	if !annotationsSet {
+		configAnnotations = map[string]interface{}{}
+	}
+
 	ignoreAnnotations := providerMetadata.(kubeClientsets).IgnoreAnnotations
 	annotations := removeInternalKeys(meta.Annotations, configAnnotations)
 	m["annotations"] = removeKeys(annotations, configAnnotations, ignoreAnnotations)
@@ -134,7 +138,10 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMet
 		m["generate_name"] = meta.GenerateName
 	}
 
-	configLabels := d.Get(prefix + "metadata.0.labels").(map[string]interface{})
+	configLabels, labelsSet := d.Get(prefix + "metadata.0.labels").(map[string]interface{})
+	if !labelsSet {
+		configLabels = map[string]interface{}{}
+	}
 	ignoreLabels := providerMetadata.(kubeClientsets).IgnoreLabels
 	labels := removeInternalKeys(meta.Labels, configLabels)
 	m["labels"] = removeKeys(labels, configLabels, ignoreLabels)

@@ -17,11 +17,26 @@ func resourceKubernetesEnv() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
-			"name": {
-				Type:        schema.TypeString,
-				Description: "Name of Resource Environment",
-				Required:    true,
-				Elem:        schema.TypeString,
+			"metadata": {
+				Type:     schema.TypeList,
+				Required: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:        schema.TypeString,
+							Description: "The name of the resource.",
+							Required:    true,
+							ForceNew:    true,
+						},
+						"namespace": {
+							Type:        schema.TypeString,
+							Description: "The namespace of the resource.",
+							Optional:    true,
+							ForceNew:    true,
+						},
+					},
+				},
 			},
 			"api_version": {
 				Type:        schema.TypeString,
@@ -58,9 +73,18 @@ func resourceKubernetesEnv() *schema.Resource {
 	}
 }
 
-func resourceKubernetesEnvCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return nil
+func resourceKubernetesEnvCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	d.SetId(buildIdWithVersionKind(metadata,
+		d.Get("api_version").(string),
+		d.Get("kind").(string)))
+	diag := resourceKubernetesLabelsUpdate(ctx, d, m)
+	if diag.HasError() {
+		d.SetId("")
+	}
+	return diag
 }
+
 func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }

@@ -1,15 +1,18 @@
 package kubernetes
 
 import (
+	"context"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceKubernetesEnv() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesRoleCreate,
-		ReadContext:   resourceKubernetesRoleRead,
-		UpdateContext: resourceKubernetesRoleUpdate,
-		DeleteContext: resourceKubernetesRoleDelete,
+		CreateContext: resourceKubernetesEnvCreate,
+		ReadContext:   resourceKubernetesEnvRead,
+		UpdateContext: resourceKubernetesEnvUpdate,
+		DeleteContext: resourceKubernetesEnvDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -53,4 +56,17 @@ func resourceKubernetesEnv() *schema.Resource {
 			},
 		},
 	}
+}
+
+func resourceKubernetesEnvCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	return nil
+}
+func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	return nil
+}
+func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	return nil
+}
+func resourceKubernetesEnvDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	return nil
 }

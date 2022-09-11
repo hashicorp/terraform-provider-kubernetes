@@ -35,6 +35,7 @@ func TestAccKubernetesLabels_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "kind", "ConfigMap"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
 				),
 			},
 			{
@@ -46,6 +47,7 @@ func TestAccKubernetesLabels_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "labels.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "labels.test1", "one"),
 					resource.TestCheckResourceAttr(resourceName, "labels.test2", "two"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
 				),
 			},
 			{
@@ -57,6 +59,7 @@ func TestAccKubernetesLabels_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "labels.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "labels.test1", "one"),
 					resource.TestCheckResourceAttr(resourceName, "labels.test3", "three"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
 				),
 			},
 			{
@@ -66,6 +69,7 @@ func TestAccKubernetesLabels_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "kind", "ConfigMap"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
 				),
 			},
 		},
@@ -103,6 +107,7 @@ func testAccKubernetesLabels_empty(name string) string {
       name = %q
     }
     labels = {}
+	field_manager = "tftest"
   }
 `, name)
 }
@@ -118,6 +123,7 @@ func testAccKubernetesLabels_basic(name string) string {
       "test1" = "one"
       "test2" = "two"
     }
+	field_manager = "tftest"
   }
 `, name)
 }
@@ -133,6 +139,7 @@ func testAccKubernetesLabels_modified(name string) string {
       "test1" = "one"
       "test3" = "three"
     }
+	field_manager = "tftest"
   }
 `, name)
 }

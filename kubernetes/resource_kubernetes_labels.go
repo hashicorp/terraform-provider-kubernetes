@@ -69,6 +69,12 @@ func resourceKubernetesLabels() *schema.Resource {
 				Description: "Force overwriting labels that were created or edited outside of Terraform.",
 				Optional:    true,
 			},
+			"field_manager": {
+				Type:        schema.TypeString,
+				Description: "Set the name of the field manager for the specified labels.",
+				Optional:    true,
+				Default:     defaultFieldManagerName,
+			},
 		},
 	}
 }
@@ -261,7 +267,7 @@ func resourceKubernetesLabelsUpdate(ctx context.Context, d *schema.ResourceData,
 		types.ApplyPatchType,
 		patchbytes,
 		v1.PatchOptions{
-			FieldManager: defaultFieldManagerName,
+			FieldManager: d.Get("field_manager").(string),
 			Force:        ptrToBool(d.Get("force").(bool)),
 		},
 	)

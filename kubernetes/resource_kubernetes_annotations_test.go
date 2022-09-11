@@ -32,6 +32,7 @@ func TestAccKubernetesAnnotations_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "kind", "ConfigMap"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "annotations.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
 				),
 			},
 			{
@@ -43,6 +44,7 @@ func TestAccKubernetesAnnotations_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "annotations.test1", "one"),
 					resource.TestCheckResourceAttr(resourceName, "annotations.test2", "two"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
 				),
 			},
 			{
@@ -54,6 +56,7 @@ func TestAccKubernetesAnnotations_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "annotations.test1", "one"),
 					resource.TestCheckResourceAttr(resourceName, "annotations.test3", "three"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
 				),
 			},
 			{
@@ -63,6 +66,7 @@ func TestAccKubernetesAnnotations_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "kind", "ConfigMap"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "annotations.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
 				),
 			},
 		},
@@ -77,6 +81,7 @@ func testAccKubernetesAnnotations_empty(name string) string {
       name = %q
     }
     annotations = {}
+	field_manager = "tftest"
   }
 `, name)
 }
@@ -92,6 +97,7 @@ func testAccKubernetesAnnotations_basic(name string) string {
       "test1" = "one"
       "test2" = "two"
     }
+	field_manager = "tftest"
   }
 `, name)
 }
@@ -107,6 +113,7 @@ func testAccKubernetesAnnotations_modified(name string) string {
       "test1" = "one"
       "test3" = "three"
     }
+	field_manager = "tftest"
   }
 `, name)
 }

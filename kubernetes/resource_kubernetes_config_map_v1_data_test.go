@@ -30,6 +30,7 @@ func TestAccKubernetesConfigMapV1Data_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
 				),
 			},
 			{
@@ -39,6 +40,7 @@ func TestAccKubernetesConfigMapV1Data_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "data.test1", "one"),
 					resource.TestCheckResourceAttr(resourceName, "data.test2", "two"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
 				),
 			},
 			{
@@ -48,6 +50,7 @@ func TestAccKubernetesConfigMapV1Data_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "data.test1", "one"),
 					resource.TestCheckResourceAttr(resourceName, "data.test3", "three"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
 				),
 			},
 			{
@@ -55,6 +58,7 @@ func TestAccKubernetesConfigMapV1Data_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
 				),
 			},
 		},
@@ -67,6 +71,7 @@ func testAccKubernetesConfigMapV1Data_empty(name string) string {
       name = %q
     }
     data = {}
+	field_manager = "tftest"
   }
 `, name)
 }
@@ -80,6 +85,7 @@ func testAccKubernetesConfigMapV1Data_basic(name string) string {
       "test1" = "one"
       "test2" = "two"
     }
+	field_manager = "tftest"
   }
 `, name)
 }
@@ -93,6 +99,7 @@ func testAccKubernetesConfigMapV1Data_modified(name string) string {
       "test1" = "one"
       "test3" = "three"
     }
+	field_manager = "tftest"
   }
 `, name)
 }

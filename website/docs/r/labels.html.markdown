@@ -35,6 +35,7 @@ The following arguments are supported:
 * `metadata` - (Required) Standard metadata of the resource to be labelled. 
 * `labels` - (Required) A map of labels to apply to the resource.
 * `force` - (Optional) Force management of labels if there is a conflict.
+* `field_manager` - (Optional) The name of the [field manager](https://kubernetes.io/docs/reference/using-api/server-side-apply/#field-management). Defaults to `Terraform`.
 
 ## Nested Blocks
 

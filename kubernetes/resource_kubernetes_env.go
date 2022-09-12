@@ -17,6 +17,15 @@ import (
 	"k8s.io/client-go/restmapper"
 )
 
+// TODO:
+/*
+* add force
+* add read function
+* add delete function
+* add support for cronjobs
+* add tests
+ */
+
 func resourceKubernetesEnv() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceKubernetesEnvCreate,
@@ -83,6 +92,11 @@ func resourceKubernetesEnv() *schema.Resource {
 				},
 			},
 			// TODO: Add 'force' to schema
+			"force": {
+				Type:        schema.TypeBool,
+				Description: "Force overwriting environments that were created or edited outside of Terraform.",
+				Optional:    true,
+			},
 		},
 	}
 }
@@ -127,7 +141,6 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 	gv, err := k8sschema.ParseGroupVersion(apiVersion)
 	if err != nil {
 		return diag.FromErr(err)
-
 	}
 	mapping, err := restMapper.RESTMapping(gv.WithKind(kind).GroupKind(), gv.Version)
 	if err != nil {
@@ -210,7 +223,7 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 		patchbytes,
 		v1.PatchOptions{
 			FieldManager: defaultFieldManagerName,
-			//Force:        ptrToBool(d.Get("force").(bool)),
+			Force:        ptrToBool(d.Get("force").(bool)),
 		},
 	)
 	if err != nil {

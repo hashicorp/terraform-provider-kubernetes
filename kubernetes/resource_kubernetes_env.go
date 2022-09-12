@@ -2,10 +2,12 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-provider-kubernetes/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
@@ -19,7 +21,6 @@ import (
 
 // TODO:
 /*
-* add force
 * add read function
 * add delete function
 * add support for cronjobs
@@ -114,8 +115,142 @@ func resourceKubernetesEnvCreate(ctx context.Context, d *schema.ResourceData, m 
 }
 
 func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	conn, err := m.(KubeClientsets).DynamicClient()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	gvk, name, namespace, err := util.ParseResourceID(d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	// figure out which resource client to use
+	dc, err := m.(KubeClientsets).DiscoveryClient()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	agr, err := restmapper.GetAPIGroupResources(dc)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	restMapper := restmapper.NewDiscoveryRESTMapper(agr)
+	mapping, err := restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	// determine if the resource is namespaced or not
+	var r dynamic.ResourceInterface
+	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
+		if namespace == "" {
+			namespace = "default"
+		}
+		r = conn.Resource(mapping.Resource).Namespace(namespace)
+	} else {
+		r = conn.Resource(mapping.Resource)
+	}
+
+	// get the resource environments
+	res, err := r.Get(ctx, name, v1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return diag.Diagnostics{{
+				Severity: diag.Warning,
+				Summary:  "Resource deleted",
+				Detail:   fmt.Sprintf("The underlying resource %q has been deleted. You should recreate the underlying resource, or remove it from your configuration.", name),
+			}}
+		}
+		return diag.FromErr(err)
+	}
+
+	configuredEnvs := d.Get("env").(map[string]interface{})
+
+	// strip out envs not managed by Terraform
+	managedEnvs, err := getManagedEnvs(res.GetManagedFields(), defaultFieldManagerName, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	envs := res.GetEnvs(fmt.Sprintf("k:{\"name\":\"%s\"}", d.Get("container")))
+	for k := range envs {
+		_, managed := managedEnvs[k]
+		_, configured := configuredEnvs[k]
+		if !managed && !configured {
+			delete(envs, k)
+		}
+	}
+
+	d.Set("env", envs)
 	return nil
 }
+
+/*
+  - apiVersion: apps/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:spec:
+        f:template:
+          f:spec:
+            f:containers:
+              k:{"name":"nginx"}:
+                .: {}
+                f:env:
+                  k:{"name":"NGINX_HOST"}:
+                    .: {}
+                    f:name: {}
+                    f:value: {}
+                  k:{"name":"NGINX_PORT"}:
+                    .: {}
+                    f:name: {}
+                    f:value: {}
+                f:name: {}
+*/
+
+func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *schema.ResourceData) (map[string]interface{}, error) {
+	var envs map[string]interface{}
+	for _, m := range managedFields {
+		if m.Manager != manager {
+			continue
+		}
+		var mm map[string]interface{}
+		err := json.Unmarshal(m.FieldsV1.Raw, &mm)
+		if err != nil {
+			return nil, err
+		}
+		spec1 := mm["f:spec"].(map[string]interface{})
+		template := spec1["f:template"].(map[string]interface{})
+		spec2 := template["f:spec"].(map[string]interface{})
+		container := spec2["containers"].(map[string]interface{})
+		containerVal := fmt.Sprintf("k:{\"name\":\"%s\"}", d.Get("container"))
+		k := container[containerVal].(map[string]interface{})
+		if e, ok := k["f:env"].(map[string]interface{}); ok {
+			envs = e
+		}
+
+		/*
+					patchobj := map[string]interface{}{
+				"apiVersion": apiVersion,
+				"kind":       kind,
+				"metadata":   patchmeta,
+				"spec": map[string]interface{}{
+					"template": map[string]interface{}{
+						"spec": map[string]interface{}{
+							"containers": []interface{}{
+								map[string]interface{}{
+									"name": d.Get("container").(string),
+									"env":  d.Get("env"),
+								},
+							},
+						},
+					},
+				},
+			}
+
+		*/
+	}
+	return envs, nil
+}
+
 func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	conn, err := m.(KubeClientsets).DynamicClient()
 	if err != nil {
@@ -239,6 +374,7 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 
 	return nil
 }
+
 func resourceKubernetesEnvDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	return nil
 }

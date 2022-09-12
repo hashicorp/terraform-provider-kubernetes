@@ -396,6 +396,11 @@ func (u *Unstructured) GetLabels() map[string]string {
 	return m
 }
 
+func (u *Unstructured) GetEnvs(k string) map[string]string {
+	m, _, _ := NestedStringMap(u.Object, "metadata", "managedFields", "fieldsV1", "f:spec", "f:template", "f:spec", "f:containers", k, "f:env")
+	return m
+}
+
 func (u *Unstructured) SetLabels(labels map[string]string) {
 	if labels == nil {
 		RemoveNestedField(u.Object, "metadata", "labels")

@@ -21,8 +21,7 @@ import (
 
 // TODO:
 /*
-* add read function
-* add delete function
+* add field_manager attribute
 * add support for cronjobs
 * add tests
  */
@@ -92,11 +91,16 @@ func resourceKubernetesEnv() *schema.Resource {
 					},
 				},
 			},
-			// TODO: Add 'force' to schema
 			"force": {
 				Type:        schema.TypeBool,
 				Description: "Force overwriting environments that were created or edited outside of Terraform.",
 				Optional:    true,
+			},
+			"field_manager": {
+				Type:        schema.TypeString,
+				Description: "Set the name of the field manager for the specified labels.",
+				Optional:    true,
+				Default:     defaultFieldManagerName,
 			},
 		},
 	}
@@ -164,21 +168,19 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
-	configuredEnvs := d.Get("env").(map[string]interface{})
-
-	// strip out envs not managed by Terraform
-	managedEnvs, err := getManagedEnvs(res.GetManagedFields(), defaultFieldManagerName, d)
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	// // strip out envs not managed by Terraform
+	// managedEnvs, err := getManagedEnvs(res.GetManagedFields(), defaultFieldManagerName, d)
+	// if err != nil {
+	// 	return diag.FromErr(err)
+	// }
 	envs := res.GetEnvs(fmt.Sprintf("k:{\"name\":\"%s\"}", d.Get("container")))
-	for k := range envs {
-		_, managed := managedEnvs[k]
-		_, configured := configuredEnvs[k]
-		if !managed && !configured {
-			delete(envs, k)
-		}
-	}
+	// for i, k := range envs {
+	// 	_, managed := managedEnvs[k]
+	// 	_, configured := configuredEnvs[k]
+	// 	if !managed && !configured {
+	// 		delete(envs, k)
+	// 	}
+	// }
 
 	d.Set("env", envs)
 	return nil
@@ -357,7 +359,7 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 		types.ApplyPatchType,
 		patchbytes,
 		v1.PatchOptions{
-			FieldManager: defaultFieldManagerName,
+			FieldManager: d.Get("field_manager").(string),
 			Force:        ptrToBool(d.Get("force").(bool)),
 		},
 	)
@@ -376,5 +378,6 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 }
 
 func resourceKubernetesEnvDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	return nil
+	d.SetId("")
+	return resourceKubernetesEnvUpdate(ctx, d, m)
 }

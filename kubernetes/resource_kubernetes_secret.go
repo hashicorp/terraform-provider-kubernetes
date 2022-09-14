@@ -135,7 +135,7 @@ func resourceKubernetesSecretCreate(ctx context.Context, d *schema.ResourceData,
 	d.SetId(buildId(out.ObjectMeta))
 
 	if out.Type == corev1.SecretTypeServiceAccountToken && d.Get("wait_for_service_account_token").(bool) {
-		log.Printf("[DEBUG] Waiting for service token account creation")
+		log.Printf("[DEBUG] Waiting for secret service account token to be created")
 
 		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
 			secret, err := conn.CoreV1().Secrets(out.Namespace).Get(ctx, out.Name, metav1.GetOptions{})
@@ -146,12 +146,12 @@ func resourceKubernetesSecretCreate(ctx context.Context, d *schema.ResourceData,
 
 			log.Printf("[INFO] Received secret: %#v", secret.Name)
 			if _, ok := secret.Data["token"]; ok {
-				log.Println("[INFO] Secret service token account created")
+				log.Println("[INFO] Secret service account token created")
 				return nil
 			}
 
 			return resource.RetryableError(fmt.Errorf(
-				"Waiting for secret %q to create a service token account", d.Id()))
+				"Waiting for secret %q to create service account token", d.Id()))
 		})
 		if err != nil {
 			lastWarnings, wErr := getLastWarningsForObject(ctx, conn, out.ObjectMeta, "Secret", 3)

@@ -49,7 +49,7 @@ func TestAccKubernetesSecret_basic(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_service_account_token"},
 			},
 			{
 				Config: testAccKubernetesSecretConfig_basic(name),
@@ -157,7 +157,7 @@ func TestAccKubernetesSecret_immutable(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_service_account_token"},
 			},
 			// changing the data for the immutable secret will force recreate
 			{
@@ -213,7 +213,7 @@ func TestAccKuberNetesSecret_dotInName(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_service_account_token"},
 			},
 		},
 	})
@@ -247,7 +247,7 @@ func TestAccKubernetesSecret_generatedName(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_service_account_token"},
 			},
 		},
 	})

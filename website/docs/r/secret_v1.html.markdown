@@ -133,7 +133,7 @@ The following arguments are supported:
 
 ### Timeouts
 
-`kubernetes_secret` provides the following configuration options:
+`kubernetes_secret_v1` provides the following configuration options:
 
 - `create` - Default `1 minute`
 

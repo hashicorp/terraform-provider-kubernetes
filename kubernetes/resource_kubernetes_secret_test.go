@@ -290,6 +290,28 @@ func TestAccKubernetesSecret_binaryData(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesSecret_service_account_token(t *testing.T) {
+	var conf api.Secret
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_secret.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesSecretDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesSecretConfig_service_account_token(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretExists(resourceName, &conf),
+					resource.TestCheckResourceAttrSet(resourceName, "data.token"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckSecretData(m *api.Secret, expected map[string]string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(m.Data) == 0 {
@@ -571,4 +593,23 @@ func testAccKubernetesSecretConfig_immutable(name string, immutable bool, data s
   }
 }
 `, name, immutable, data)
+}
+
+func testAccKubernetesSecretConfig_service_account_token(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
+  metadata {
+    name      = "%s"
+  }
+}
+
+resource "kubernetes_secret" "test" {
+  metadata {
+    annotations = {
+      "kubernetes.io/service-account.name" = kubernetes_service_account.test.metadata[0].name
+    }
+    name = "%s-token"
+  }
+  type = "kubernetes.io/service-account-token"
+}
+`, name, name)
 }

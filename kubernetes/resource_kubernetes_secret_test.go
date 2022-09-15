@@ -49,7 +49,7 @@ func TestAccKubernetesSecret_basic(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_service_account_token"},
 			},
 			{
 				Config: testAccKubernetesSecretConfig_basic(name),
@@ -157,7 +157,7 @@ func TestAccKubernetesSecret_immutable(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_service_account_token"},
 			},
 			// changing the data for the immutable secret will force recreate
 			{
@@ -213,7 +213,7 @@ func TestAccKuberNetesSecret_dotInName(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_service_account_token"},
 			},
 		},
 	})
@@ -247,7 +247,7 @@ func TestAccKubernetesSecret_generatedName(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_service_account_token"},
 			},
 		},
 	})
@@ -284,6 +284,28 @@ func TestAccKubernetesSecret_binaryData(t *testing.T) {
 					testAccCheckKubernetesSecretExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "binary_data.%", "2"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesSecret_service_account_token(t *testing.T) {
+	var conf api.Secret
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_secret.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesSecretDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesSecretConfig_service_account_token(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretExists(resourceName, &conf),
+					resource.TestCheckResourceAttrSet(resourceName, "data.token"),
 				),
 			},
 		},
@@ -571,4 +593,23 @@ func testAccKubernetesSecretConfig_immutable(name string, immutable bool, data s
   }
 }
 `, name, immutable, data)
+}
+
+func testAccKubernetesSecretConfig_service_account_token(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
+  metadata {
+    name      = "%s"
+  }
+}
+
+resource "kubernetes_secret" "test" {
+  metadata {
+    annotations = {
+      "kubernetes.io/service-account.name" = kubernetes_service_account.test.metadata[0].name
+    }
+    name = "%s-token"
+  }
+  type = "kubernetes.io/service-account-token"
+}
+`, name, name)
 }

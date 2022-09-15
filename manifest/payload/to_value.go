@@ -12,13 +12,13 @@ import (
 // ToTFValue converts a Kubernetes dynamic client unstructured value
 // into a Terraform specific tftypes.Value type object
 // Arguments:
-//  * in : the actual raw unstructured value to be converted
-//  * st : the expected type of the converted value
-//  * th : type hints (optional, describes ambigous encodings such as
-//         IntOrString values in more detail).
-//         Pass in empty map when not using hints.
-//  * at : attribute path which recursively tracks the conversion.
-//         Pass in empty tftypes.AttributePath{}
+//   - in : the actual raw unstructured value to be converted
+//   - st : the expected type of the converted value
+//   - th : type hints (optional, describes ambigous encodings such as
+//     IntOrString values in more detail).
+//     Pass in empty map when not using hints.
+//   - at : attribute path which recursively tracks the conversion.
+//     Pass in empty tftypes.AttributePath{}
 func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
 	if st == nil {
 		return tftypes.Value{}, at.NewErrorf("[%s] type cannot be nil", at.String())

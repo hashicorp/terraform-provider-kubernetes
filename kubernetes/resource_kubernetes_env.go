@@ -168,46 +168,32 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
-	// // strip out envs not managed by Terraform
-	// managedEnvs, err := getManagedEnvs(res.GetManagedFields(), defaultFieldManagerName, d)
-	// if err != nil {
-	// 	return diag.FromErr(err)
-	// }
+	// store names of environment variables into map
+	configuredEnvs := make(map[string]interface{})
+	envList := d.Get("env").([]interface{})
+	for _, e := range envList {
+		configuredEnvs[e.(map[string]interface{})["name"].(string)] = ""
+	}
+
+	// strip out envs not managed by Terraform
+	managedEnvs, err := getManagedEnvs(res.GetManagedFields(), defaultFieldManagerName, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	envs := res.GetEnvs(fmt.Sprintf("k:{\"name\":\"%s\"}", d.Get("container")))
-	// for i, k := range envs {
-	// 	_, managed := managedEnvs[k]
-	// 	_, configured := configuredEnvs[k]
-	// 	if !managed && !configured {
-	// 		delete(envs, k)
-	// 	}
-	// }
+	for _, k := range envs {
+		_, managed := managedEnvs[fmt.Sprintf("k:{\"name\":\"%s\"}", k)]
+		_, configured := configuredEnvs[k]
+		if !managed && !configured {
+			delete(envs, k)
+		}
+	}
 
 	d.Set("env", envs)
 	return nil
 }
 
-/*
-  - apiVersion: apps/v1
-    fieldsType: FieldsV1
-    fieldsV1:
-      f:spec:
-        f:template:
-          f:spec:
-            f:containers:
-              k:{"name":"nginx"}:
-                .: {}
-                f:env:
-                  k:{"name":"NGINX_HOST"}:
-                    .: {}
-                    f:name: {}
-                    f:value: {}
-                  k:{"name":"NGINX_PORT"}:
-                    .: {}
-                    f:name: {}
-                    f:value: {}
-                f:name: {}
-*/
-
+// getManagedEnvs reads the field manager metadata to discover which environment variables we're managing
 func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *schema.ResourceData) (map[string]interface{}, error) {
 	var envs map[string]interface{}
 	for _, m := range managedFields {
@@ -222,34 +208,14 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 		spec1 := mm["f:spec"].(map[string]interface{})
 		template := spec1["f:template"].(map[string]interface{})
 		spec2 := template["f:spec"].(map[string]interface{})
-		container := spec2["containers"].(map[string]interface{})
+		container := spec2["f:containers"].(map[string]interface{})
 		containerVal := fmt.Sprintf("k:{\"name\":\"%s\"}", d.Get("container"))
 		k := container[containerVal].(map[string]interface{})
 		if e, ok := k["f:env"].(map[string]interface{}); ok {
 			envs = e
 		}
-
-		/*
-					patchobj := map[string]interface{}{
-				"apiVersion": apiVersion,
-				"kind":       kind,
-				"metadata":   patchmeta,
-				"spec": map[string]interface{}{
-					"template": map[string]interface{}{
-						"spec": map[string]interface{}{
-							"containers": []interface{}{
-								map[string]interface{}{
-									"name": d.Get("container").(string),
-									"env":  d.Get("env"),
-								},
-							},
-						},
-					},
-				},
-			}
-
-		*/
 	}
+
 	return envs, nil
 }
 
@@ -307,22 +273,6 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 		return diag.Errorf("The resource %q does not exist", name)
 	}
 
-	// Apply the Patch
-	/*
-		---
-		apiVersion: apps/v1
-		kind: Deployment
-		metadata:
-		   name: nginx-deployment
-		spec:
-		  template:
-			spec:
-			  containers:
-			  - name: nginx
-				env:
-				- name: NGINX_PORT
-				  value: "9999"
-	*/
 	patchmeta := map[string]interface{}{
 		"name": name,
 	}

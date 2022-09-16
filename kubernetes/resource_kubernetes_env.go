@@ -21,7 +21,6 @@ import (
 
 // TODO:
 /*
-* add field_manager attribute
 * add support for cronjobs
 * add tests
  */
@@ -180,17 +179,34 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	envs := res.GetEnvs(fmt.Sprintf("k:{\"name\":\"%s\"}", d.Get("container")))
-	for _, k := range envs {
-		_, managed := managedEnvs[fmt.Sprintf("k:{\"name\":\"%s\"}", k)]
-		_, configured := configuredEnvs[k]
-		if !managed && !configured {
-			delete(envs, k)
-		}
+	responseEnvs, err := getResponseEnvs(res, d.Get("container").(string))
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
-	d.Set("env", envs)
+	env := []interface{}{}
+	for _, e := range responseEnvs {
+		envName := e.(map[string]interface{})["name"].(string)
+		_, managed := managedEnvs[fmt.Sprintf(`k:{"name":%q}`, envName)]
+		_, configured := configuredEnvs[envName]
+		if !managed && !configured {
+			continue
+		}
+		env = append(env, e)
+	}
+	d.Set("env", env)
 	return nil
+}
+
+func getResponseEnvs(u *unstructured.Unstructured, containerName string) ([]interface{}, error) {
+	containers, _, _ := unstructured.NestedSlice(u.Object, "spec", "template", "spec", "containers")
+	for _, c := range containers {
+		container := c.(map[string]interface{})
+		if container["name"].(string) == containerName {
+			return container["env"].([]interface{}), nil
+		}
+	}
+	return nil, fmt.Errorf("could not find container with name %q", containerName)
 }
 
 // getManagedEnvs reads the field manager metadata to discover which environment variables we're managing
@@ -205,17 +221,16 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 		if err != nil {
 			return nil, err
 		}
-		spec1 := mm["f:spec"].(map[string]interface{})
-		template := spec1["f:template"].(map[string]interface{})
-		spec2 := template["f:spec"].(map[string]interface{})
-		container := spec2["f:containers"].(map[string]interface{})
-		containerVal := fmt.Sprintf("k:{\"name\":\"%s\"}", d.Get("container"))
-		k := container[containerVal].(map[string]interface{})
+		spec := mm["f:spec"].(map[string]interface{})
+		template := spec["f:template"].(map[string]interface{})
+		templateSpec := template["f:spec"].(map[string]interface{})
+		containers := templateSpec["f:containers"].(map[string]interface{})
+		containerName := fmt.Sprintf(`k:{"name":%q}`, d.Get("container").(string))
+		k := containers[containerName].(map[string]interface{})
 		if e, ok := k["f:env"].(map[string]interface{}); ok {
 			envs = e
 		}
 	}
-
 	return envs, nil
 }
 

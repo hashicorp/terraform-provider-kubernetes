@@ -295,6 +295,11 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 		patchmeta["namespace"] = namespace
 	}
 
+	env := d.Get("env")
+	if d.Id() == "" {
+		env = []map[string]interface{}{}
+	}
+
 	patchobj := map[string]interface{}{
 		"apiVersion": apiVersion,
 		"kind":       kind,
@@ -305,7 +310,7 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 					"containers": []interface{}{
 						map[string]interface{}{
 							"name": d.Get("container").(string),
-							"env":  d.Get("env"),
+							"env":  env,
 						},
 					},
 				},
@@ -339,7 +344,12 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 		return diag.FromErr(err)
 	}
 
-	return nil
+	if d.Id() == "" {
+		// don't try to read if we're deleting
+		return nil
+	}
+
+	return resourceKubernetesEnvRead(ctx, d, m)
 }
 
 func resourceKubernetesEnvDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

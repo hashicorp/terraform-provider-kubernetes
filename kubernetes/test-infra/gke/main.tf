@@ -17,9 +17,6 @@ variable "enable_alpha" {
 data "google_compute_zones" "available" {
 }
 
-data "google_client_config" "default" {
-}
-
 data "google_container_engine_versions" "supported" {
   location       = data.google_compute_zones.available.names[0]
   version_prefix = var.kubernetes_version
@@ -35,6 +32,7 @@ resource "google_service_account" "default" {
 }
 
 resource "google_container_cluster" "primary" {
+  provider           = google-beta
   name               = "tf-acc-test-${random_id.cluster_name.hex}"
   location           = data.google_compute_zones.available.names[0]
   node_version       = data.google_container_engine_versions.supported.latest_node_version
@@ -44,6 +42,10 @@ resource "google_container_cluster" "primary" {
   // Creating an alpha cluster enables all alpha features by default.
   // Ref: https://cloud.google.com/kubernetes-engine/docs/concepts/feature-gates
   enable_kubernetes_alpha = var.enable_alpha
+
+  service_external_ips_config {
+    enabled = true
+  }
 
   node_locations = [
     data.google_compute_zones.available.names[1],
@@ -76,10 +78,10 @@ locals {
     preferences = {
       colors = true
     }
-    current-context = "tf-k8s-gcp-test"
+    current-context = google_container_cluster.primary.name
     contexts = [
       {
-        name = "tf-k8s-gcp-test"
+        name = google_container_cluster.primary.name
         context = {
           cluster   = google_container_cluster.primary.name
           user      = google_service_account.default.email
@@ -100,14 +102,11 @@ locals {
       {
         name = google_service_account.default.email
         user = {
-          auth-provider = {
-            name = "gcp"
-            config = {
-              cmd-args   = "config config-helper --format=json --access-token-file=${path.cwd}/gcptoken"
-              cmd-path   = "gcloud"
-              expiry-key = "{.credential.token_expiry}"
-              token-key  = "{.credential.access_token}"
-            }
+          exec = {
+            apiVersion         = "client.authentication.k8s.io/v1beta1"
+            command            = "gke-gcloud-auth-plugin"
+            interactiveMode    = "Never"
+            provideClusterInfo = true
           }
         }
       }
@@ -118,11 +117,6 @@ locals {
 resource "local_file" "kubeconfig" {
   content  = yamlencode(local.kubeconfig)
   filename = "${path.module}/kubeconfig"
-}
-
-resource "local_file" "gcptoken" {
-  content  = data.google_client_config.default.access_token
-  filename = "${path.module}/gcptoken"
 }
 
 output "google_zone" {

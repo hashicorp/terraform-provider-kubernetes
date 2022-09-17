@@ -22,6 +22,7 @@ func TestAccKubernetesCertificateSigningRequest_basic(t *testing.T) {
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
 		},
 		IDRefreshName:     "kubernetes_certificate_signing_request.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestDestroy,
 		Steps: []resource.TestStep{
@@ -41,6 +42,7 @@ func TestAccKubernetesCertificateSigningRequest_generateName(t *testing.T) {
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
 		},
 		IDRefreshName:     "kubernetes_certificate_signing_request.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestDestroy,
 		Steps: []resource.TestStep{

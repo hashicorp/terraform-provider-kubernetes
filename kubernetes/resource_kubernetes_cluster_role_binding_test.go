@@ -19,6 +19,7 @@ func TestAccKubernetesClusterRoleBinding_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_cluster_role_binding.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
 		Steps: []resource.TestStep{
@@ -126,6 +127,7 @@ func TestAccKubernetesClusterRoleBinding_serviceaccount_subject(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_cluster_role_binding.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
 		Steps: []resource.TestStep{
@@ -158,6 +160,7 @@ func TestAccKubernetesClusterRoleBinding_group_subject(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_cluster_role_binding.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
 		Steps: []resource.TestStep{
@@ -195,6 +198,7 @@ func TestAccKubernetesClusterRoleBinding_UpdatePatchOperationsOrderWithRemovals(
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_cluster_role_binding.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
 		Steps: []resource.TestStep{

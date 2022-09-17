@@ -3,6 +3,8 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"testing"
@@ -22,6 +24,7 @@ func TestAccKubernetesConfigMap_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesConfigMapDestroy,
 		Steps: []resource.TestStep{
@@ -112,15 +115,21 @@ func TestAccKubernetesConfigMap_binaryData(t *testing.T) {
 	var conf api.ConfigMap
 	prefix := "tf-acc-test-gen-"
 	resourceName := "kubernetes_config_map.test"
+	baseDir := "."
+	cwd, _ := os.Getwd()
+	if filepath.Base(cwd) != "kubernetes" { // running from test binary
+		baseDir = "kubernetes"
+	}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesConfigMapDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesConfigMapConfig_binaryData(prefix),
+				Config: testAccKubernetesConfigMapConfig_binaryData(prefix, baseDir),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "binary_data.%", "1"),
@@ -129,7 +138,7 @@ func TestAccKubernetesConfigMap_binaryData(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesConfigMapConfig_binaryData2(prefix),
+				Config: testAccKubernetesConfigMapConfig_binaryData2(prefix, baseDir),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "binary_data.%", "3"),
@@ -150,6 +159,7 @@ func TestAccKubernetesConfigMap_generatedName(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesConfigMapDestroy,
 		Steps: []resource.TestStep{
@@ -354,32 +364,32 @@ func testAccKubernetesConfigMapConfig_generatedName(prefix string) string {
 `, prefix)
 }
 
-func testAccKubernetesConfigMapConfig_binaryData(prefix string) string {
+func testAccKubernetesConfigMapConfig_binaryData(prefix string, bd string) string {
 	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     generate_name = "%s"
   }
 
   binary_data = {
-    one = "${filebase64("./test-fixtures/binary.data")}"
+    one = "${filebase64("%s/test-fixtures/binary.data")}"
   }
 
   data = {
     two = "second"
   }
 }
-`, prefix)
+`, prefix, bd)
 }
 
-func testAccKubernetesConfigMapConfig_binaryData2(prefix string) string {
+func testAccKubernetesConfigMapConfig_binaryData2(prefix string, bd string) string {
 	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     generate_name = "%s"
   }
 
   binary_data = {
-    one = "${filebase64("./test-fixtures/binary.data")}"
-    two = "${filebase64("./test-fixtures/binary2.data")}"
+    one = "${filebase64("%s/test-fixtures/binary.data")}"
+    two = "${filebase64("%s/test-fixtures/binary2.data")}"
     raw = "${base64encode("Raw data should come back as is in the pod")}"
   }
 
@@ -387,5 +397,5 @@ func testAccKubernetesConfigMapConfig_binaryData2(prefix string) string {
     three = "third"
   }
 }
-`, prefix)
+`, prefix, bd, bd)
 }

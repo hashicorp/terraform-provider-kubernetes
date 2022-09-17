@@ -78,6 +78,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: gke-cluster
+          retention-days: 1
           path: |
             ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig
             ${{ github.workspace }}/kubernetes/test-infra/gke/terraform.tfstate
@@ -108,6 +109,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: test-binary
+          retention-days: 1
           path: |
             ${{ github.workspace }}/kubernetes.test
 

@@ -8,83 +8,160 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 )
 
-// TODO
 func TestAccKubernetesEnv_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	namespace := "default"
-	index := 0
 	resourceName := "kubernetes_env.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createEnv(name, namespace, index)
+			createEnv(name, namespace)
 		},
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
-			return nil //destroyEnv(name, namespace)
+			return destroyEnv(name, namespace)
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesLabels_empty(name),
+				Config: testAccKubernetesEnv_empty(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "v1"),
-					resource.TestCheckResourceAttr(resourceName, "kind", "ConfigMap"),
+					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "labels.%", "0"),
 				),
 			},
 			{
-				Config: testAccKubernetesLabels_basic(name),
+				Config: testAccKubernetesEnv_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "v1"),
-					resource.TestCheckResourceAttr(resourceName, "kind", "ConfigMap"),
+					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "labels.%", "2"),
-					resource.TestCheckResourceAttr(resourceName, "labels.test1", "one"),
-					resource.TestCheckResourceAttr(resourceName, "labels.test2", "two"),
+					resource.TestCheckResourceAttr(resourceName, "env.0.name", "NGINX_HOST"),
+					resource.TestCheckResourceAttr(resourceName, "env.0.value", "foobar.com"),
+					resource.TestCheckResourceAttr(resourceName, "env.1.name", "NGINX_PORT"),
+					resource.TestCheckResourceAttr(resourceName, "env.1.value", "90"),
 				),
 			},
 			{
-				Config: testAccKubernetesLabels_modified(name),
+				Config: testAccKubernetesEnv_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "v1"),
-					resource.TestCheckResourceAttr(resourceName, "kind", "ConfigMap"),
+					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "labels.%", "2"),
-					resource.TestCheckResourceAttr(resourceName, "labels.test1", "one"),
-					resource.TestCheckResourceAttr(resourceName, "labels.test3", "three"),
+					resource.TestCheckResourceAttr(resourceName, "env.0.name", "NGINX_HOST"),
+					resource.TestCheckResourceAttr(resourceName, "env.0.value", "hashicorp.com"),
+					resource.TestCheckResourceAttr(resourceName, "env.1.name", "NGINX_PORT"),
+					resource.TestCheckResourceAttr(resourceName, "env.1.value", "90"),
 				),
 			},
 			{
-				Config: testAccKubernetesLabels_empty(name),
+				Config: testAccKubernetesEnv_empty(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "v1"),
-					resource.TestCheckResourceAttr(resourceName, "kind", "ConfigMap"),
+					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "labels.%", "0"),
 				),
 			},
 		},
 	})
 }
 
-func createEnv(name, value string, index int) error {
+func createEnv(name, namespace string) error {
 	conn, err := testAccProvider.Meta().(kubeClientsets).MainClientset()
 	if err != nil {
 		return err
 	}
 	ctx := context.Background()
-	var deploy v1.Deployment
-	dep, err := conn.AppsV1().Deployments("testEnv").Create(ctx, &deploy, metav1.CreateOptions{})
-	env := v1.Container().Env[index]
-	env.Name = &name
-	env.Value = &value
+	var deploy appsv1.Deployment = appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: v1.PodTemplateSpec{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Name: "nginx",
+						},
+					},
+				},
+			},
+		},
+	}
+	deploy.SetName(name)
+	_, err = conn.AppsV1().Deployments(namespace).Create(ctx, &deploy, metav1.CreateOptions{})
 
-	//_, err = conn.
+	return err
+}
+
+func destroyEnv(name, namespace string) error {
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	err = conn.AppsV1().Deployments(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	return err
+}
+
+func testAccKubernetesEnv_empty(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_env" "test" {
+	container = "nginx"
+    api_version = "v1"
+    kind        = "Deployment"
+    metadata {
+      name = %q
+    }
+    env{
+		name = ""
+		value = ""
+	}
+  }
+`, name)
+}
+
+func testAccKubernetesEnv_basic(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_env" "test" {
+		container = "nginx"
+		api_version = "v1"
+		kind        = "Deployment"
+		metadata {
+		  name = %q
+		}
+		env{
+			name = "NGINX_HOST"
+			value = "foobar.com"
+		}
+
+		env{
+			name = "NGINX_PORT"
+			value = "90
+		}
+	  }
+	`, name)
+}
+
+func testAccKubernetesEnv_modified(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_env" "test" {
+		container = "nginx"
+		api_version = "v1"
+		kind        = "Deployment"
+		metadata {
+		  name = %q
+		}
+		env{
+			name = "NGINX_HOST"
+			value = "hashicorp.com"
+		}
+
+		env{
+			name = "NGINX_PORT"
+			value = "90
+		}
+	  }
+	`, name)
 }

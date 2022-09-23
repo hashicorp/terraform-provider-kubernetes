@@ -21,79 +21,91 @@ func TestAccKubernetesEnv_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createEnv(name, namespace)
+			createEnv(t, name, namespace)
 		},
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
+			err := confirmExistingEnvs(name, namespace)
+			if err != nil {
+				return err
+			}
 			return destroyEnv(name, namespace)
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesEnv_empty(name),
+				Config: testAccKubernetesEnv_basic(name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "api_version", "v1"),
-					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-				),
-			},
-			{
-				Config: testAccKubernetesEnv_basic(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "api_version", "v1"),
+					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "env.0.name", "NGINX_HOST"),
 					resource.TestCheckResourceAttr(resourceName, "env.0.value", "foobar.com"),
 					resource.TestCheckResourceAttr(resourceName, "env.1.name", "NGINX_PORT"),
 					resource.TestCheckResourceAttr(resourceName, "env.1.value", "90"),
+					resource.TestCheckResourceAttr(resourceName, "env.#", "2"),
 				),
 			},
 			{
-				Config: testAccKubernetesEnv_modified(name),
+				Config: testAccKubernetesEnv_modified(name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "api_version", "v1"),
+					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "env.0.name", "NGINX_HOST"),
 					resource.TestCheckResourceAttr(resourceName, "env.0.value", "hashicorp.com"),
-					resource.TestCheckResourceAttr(resourceName, "env.1.name", "NGINX_PORT"),
-					resource.TestCheckResourceAttr(resourceName, "env.1.value", "90"),
-				),
-			},
-			{
-				Config: testAccKubernetesEnv_empty(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "api_version", "v1"),
-					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "env.#", "1"),
 				),
 			},
 		},
 	})
 }
 
-func createEnv(name, namespace string) error {
+func createEnv(t *testing.T, name, namespace string) error {
 	conn, err := testAccProvider.Meta().(kubeClientsets).MainClientset()
 	if err != nil {
 		return err
 	}
 	ctx := context.Background()
 	var deploy appsv1.Deployment = appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
 		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "terraform",
+				},
+			},
 			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "terraform",
+					},
+				},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
 						{
-							Name: "nginx",
+							Name:  "nginx",
+							Image: "nginx",
+							Env: []v1.EnvVar{
+								{
+									Name:  "TEST",
+									Value: "123",
+								},
+							},
 						},
 					},
 				},
 			},
 		},
 	}
-	deploy.SetName(name)
 	_, err = conn.AppsV1().Deployments(namespace).Create(ctx, &deploy, metav1.CreateOptions{})
+	if err != nil {
+		t.Error("could not create test deployment")
+		t.Fatal(err)
+	}
 
 	return err
 }
@@ -108,60 +120,58 @@ func destroyEnv(name, namespace string) error {
 	return err
 }
 
-func testAccKubernetesEnv_empty(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_env" "test" {
-	container = "nginx"
-    api_version = "v1"
-    kind        = "Deployment"
-    metadata {
-      name = %q
-    }
-    env{
-		name = ""
-		value = ""
+func confirmExistingEnvs(name, namespace string) error {
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
 	}
-  }
-`, name)
+	ctx := context.Background()
+	deploy, err := conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	env := deploy.Spec.Template.Spec.Containers[0].Env
+	if len(env) == 0 {
+		return fmt.Errorf("environment variables not managed by terraform were removed")
+	}
+	return err
 }
 
-func testAccKubernetesEnv_basic(name string) string {
+func testAccKubernetesEnv_basic(name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_env" "test" {
 		container = "nginx"
-		api_version = "v1"
+		api_version = "apps/v1"
 		kind        = "Deployment"
 		metadata {
-		  name = %q
+		  name      = %q
+		  namespace = %q
 		}
-		env{
+		env {
 			name = "NGINX_HOST"
 			value = "foobar.com"
 		}
 
-		env{
+		env {
 			name = "NGINX_PORT"
-			value = "90
+			value = "90"
 		}
 	  }
-	`, name)
+	`, name, namespace)
 }
 
-func testAccKubernetesEnv_modified(name string) string {
+func testAccKubernetesEnv_modified(name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_env" "test" {
 		container = "nginx"
-		api_version = "v1"
+		api_version = "apps/v1"
 		kind        = "Deployment"
 		metadata {
-		  name = %q
+		  name      = %q
+		  namespace = %q
 		}
-		env{
+		env {
 			name = "NGINX_HOST"
 			value = "hashicorp.com"
 		}
-
-		env{
-			name = "NGINX_PORT"
-			value = "90
-		}
 	  }
-	`, name)
+	`, name, namespace)
 }

@@ -1263,5 +1263,5 @@ func getReplicaCount() int {
 		}
 		fmt.Printf("Failed to parse value of TF_ACC_KUBERNETES_RC_REPLICAS env var: %s", err)
 	}
-	return 500 // historical default value
+	return 50 // historical default value
 }

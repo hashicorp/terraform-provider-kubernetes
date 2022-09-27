@@ -103,7 +103,7 @@ jobs:
         id: generate
         run: |
           make test-compile
-          ./kubernetes.test -test.list '${{ github.event.inputs.runTests }}' | go run scripts/batchacc.go -sort -depth 3 | tee groups.json
+          ./kubernetes.test -test.list '${{ github.event.inputs.runTests }}' | go run tools/batchacc.go -sort -depth 3 | tee groups.json
           echo "::set-output name=test-case-matrix::$(cat groups.json)"
       - name: "Persist test binary"
         uses: actions/upload-artifact@v3

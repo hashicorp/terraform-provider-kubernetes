@@ -333,8 +333,8 @@ func testAccKubernetesPodConfigWithPodAffinityWithRequiredDuringSchedulingIgnore
       name  = "containername"
       resources {
         limits = {
-          cpu    = "50m"
-          memory = "50M"
+          cpu    = "200m"
+          memory = "1024M"
         }
       }
     }
@@ -375,8 +375,8 @@ func testAccKubernetesPodConfigWithPodAffinityWithPreferredDuringSchedulingIgnor
       name  = "containername"
       resources {
         limits = {
-          cpu    = "50m"
-          memory = "50M"
+          cpu    = "200m"
+          memory = "1024M"
         }
       }
     }
@@ -413,8 +413,8 @@ func testAccKubernetesPodConfigWithPodAntiAffinityWithRequiredDuringSchedulingIg
       name  = "containername"
       resources {
         limits = {
-          cpu    = "50m"
-          memory = "50M"
+          cpu    = "200m"
+          memory = "1024M"
         }
       }
 
@@ -455,8 +455,8 @@ func testAccKubernetesPodConfigWithPodAntiAffinityWithPreferredDuringSchedulingI
       name  = "containername"
       resources {
         limits = {
-          cpu    = "50m"
-          memory = "50M"
+          cpu    = "200m"
+          memory = "1024M"
         }
       }
     }

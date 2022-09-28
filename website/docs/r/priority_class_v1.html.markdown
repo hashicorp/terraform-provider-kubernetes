@@ -52,6 +52,7 @@ The following arguments are supported:
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this resource quota that can be used by clients to determine when resource quota has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
 * `uid` - The unique in time and space value for this resource quota. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
+* `preemption_policy` - PreemptionPolicy is the Policy for preempting pods with lower priority. One of Never, PreemptLowerPriority. Defaults to PreemptLowerPriority if unset."
 
 ## Import
 

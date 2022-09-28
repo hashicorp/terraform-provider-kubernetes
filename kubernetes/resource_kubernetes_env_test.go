@@ -16,6 +16,8 @@ import (
 func TestAccKubernetesEnv_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	namespace := "default"
+	secretName := acctest.RandomWithPrefix("tf-acc-test")
+	configMapName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_env.test"
 
 	resource.Test(t, resource.TestCase{
@@ -34,7 +36,7 @@ func TestAccKubernetesEnv_basic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesEnv_basic(name, namespace),
+				Config: testAccKubernetesEnv_basic(secretName, configMapName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
@@ -43,18 +45,26 @@ func TestAccKubernetesEnv_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "env.0.value", "foobar.com"),
 					resource.TestCheckResourceAttr(resourceName, "env.1.name", "NGINX_PORT"),
 					resource.TestCheckResourceAttr(resourceName, "env.1.value", "90"),
-					resource.TestCheckResourceAttr(resourceName, "env.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "env.2.value_from.0.secret_key_ref.0.name", secretName),
+					resource.TestCheckResourceAttr(resourceName, "env.2.value_from.0.secret_key_ref.0.key", "one"),
+					resource.TestCheckResourceAttr(resourceName, "env.3.value_from.0.config_map_key_ref.0.name", configMapName),
+					resource.TestCheckResourceAttr(resourceName, "env.3.value_from.0.config_map_key_ref.0.key", "one"),
+					resource.TestCheckResourceAttr(resourceName, "env.#", "4"),
 				),
 			},
 			{
-				Config: testAccKubernetesEnv_modified(name, namespace),
+				Config: testAccKubernetesEnv_modified(secretName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "env.0.name", "NGINX_HOST"),
 					resource.TestCheckResourceAttr(resourceName, "env.0.value", "hashicorp.com"),
-					resource.TestCheckResourceAttr(resourceName, "env.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "env.1.value_from.0.secret_key_ref.0.name", secretName),
+					resource.TestCheckResourceAttr(resourceName, "env.1.value_from.0.secret_key_ref.0.key", "two"),
+					resource.TestCheckResourceAttr(resourceName, "env.2.value_from.0.config_map_key_ref.0.name", configMapName),
+					resource.TestCheckResourceAttr(resourceName, "env.2.value_from.0.config_map_key_ref.0.key", "three"),
+					resource.TestCheckResourceAttr(resourceName, "env.#", "3"),
 				),
 			},
 		},
@@ -137,8 +147,28 @@ func confirmExistingEnvs(name, namespace string) error {
 	return err
 }
 
-func testAccKubernetesEnv_basic(name, namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_env" "test" {
+func testAccKubernetesEnv_basic(secretName, configMapName, name, namespace string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+		metadata {
+		  name = "%s"
+		}
+	  
+		data = {
+		  one = "first"
+		}
+	  }
+
+	  resource "kubernetes_config_map" "test" {
+		metadata {
+		  name = "%s"
+		}
+	  
+		data = {
+		  one = "ONE"
+		}
+	  }
+	
+	resource "kubernetes_env" "test" {
 		container = "nginx"
 		api_version = "apps/v1"
 		kind        = "Deployment"
@@ -155,12 +185,45 @@ func testAccKubernetesEnv_basic(name, namespace string) string {
 			name = "NGINX_PORT"
 			value = "90"
 		}
+
+		env {
+			name = "EXPORTED_VARIABLE_FROM_SECRET"
+			value_from {
+			  	secret_key_ref {
+					name     = "${kubernetes_secret.test.metadata.0.name}"
+					key      = "one"
+					optional = true
+			  	}
+			}
+		}
+
+		env {
+			name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
+			value_from {
+			  config_map_key_ref {
+					name     = "${kubernetes_config_map.test.metadata.0.name}"
+					key      = "one"
+					optional = true
+				}
+			}
+		}
+
 	  }
-	`, name, namespace)
+	`, secretName, configMapName, name, namespace)
 }
 
-func testAccKubernetesEnv_modified(name, namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_env" "test" {
+func testAccKubernetesEnv_modified(secretName, name, namespace string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+		metadata {
+		  name = "%s"
+		}
+	  
+		data = {
+		  one = "first"
+		}
+	  }
+	
+	resource "kubernetes_env" "test" {
 		container = "nginx"
 		api_version = "apps/v1"
 		kind        = "Deployment"
@@ -172,6 +235,30 @@ func testAccKubernetesEnv_modified(name, namespace string) string {
 			name = "NGINX_HOST"
 			value = "hashicorp.com"
 		}
-	  }
-	`, name, namespace)
+
+		env {
+			name = "EXPORTED_VARIABLE_FROM_SECRET"
+	
+			value_from {
+			  secret_key_ref {
+				name     = "${kubernetes_secret.test.metadata.0.name}"
+				key      = "two"
+				optional = true
+			  }
+			}
+		}	
+		
+
+		env {
+			name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
+			value_from {
+				config_map_key_ref {
+					name     = "${kubernetes_config_map.test.metadata.0.name}"
+					key      = "three"
+					optional = true
+			  	}
+			}
+		}
+	}
+	`, secretName, name, namespace)
 }

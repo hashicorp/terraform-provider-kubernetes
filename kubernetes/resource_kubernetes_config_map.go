@@ -22,6 +22,29 @@ func resourceKubernetesConfigMap() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
+		CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+			if diff.Id() == "" {
+				return nil
+			}
+
+			// ForceNew if immutable has been set to true
+			// and there are any changes to data, binary_data, or immutable
+			immutable, _ := diff.GetChange("immutable")
+			if immutable.(bool) {
+				immutableFields := []string{
+					"data",
+					"binary_data",
+					"immutable",
+				}
+				for _, f := range immutableFields {
+					if diff.HasChange(f) {
+						diff.ForceNew(f)
+					}
+				}
+			}
+
+			return nil
+		},
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("config map", true),
@@ -51,17 +74,14 @@ func resourceKubernetesConfigMapCreate(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	var im *bool
-	if im, ok := d.GetOkExists("immutable"); ok {
-		im = ptrToBool(im.(bool))
-	}
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	cfgMap := api.ConfigMap{
 		ObjectMeta: metadata,
 		BinaryData: expandBase64MapToByteMap(d.Get("binary_data").(map[string]interface{})),
 		Data:       expandStringMap(d.Get("data").(map[string]interface{})),
-		Immutable:  im,
+		Immutable:  ptrToBool(d.Get("immutable").(bool)),
 	}
+
 	log.Printf("[INFO] Creating new config map: %#v", cfgMap)
 	out, err := conn.CoreV1().ConfigMaps(metadata.Namespace).Create(ctx, &cfgMap, metav1.CreateOptions{})
 	if err != nil {

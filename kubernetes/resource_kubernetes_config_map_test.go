@@ -41,6 +41,7 @@ func TestAccKubernetesConfigMap_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "immutable", "false"),
 				),
 			},
 			{
@@ -170,6 +171,57 @@ func TestAccKubernetesConfigMap_generatedName(t *testing.T) {
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccKubernetesConfigMap_immutable(t *testing.T) {
+	var conf api.ConfigMap
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_config_map.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesConfigMapDestroy,
+		Steps: []resource.TestStep{
+			// create config_map with immutable set to true
+			{
+				Config: testAccKubernetesConfigMapConfig_immutable(name, true, "second"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "data.one", "first"),
+					resource.TestCheckResourceAttr(resourceName, "data.two", "second"),
+					resource.TestCheckResourceAttr(resourceName, "immutable", "true"),
+				),
+			},
+			// change the immutable variable to false
+			{
+				Config: testAccKubernetesConfigMapConfig_immutable(name, false, "second"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "immutable", "false"),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "data.one", "first"),
+					resource.TestCheckResourceAttr(resourceName, "data.two", "second"),
+				),
+			},
+			// update data while immutable is false
+			{
+				Config: testAccKubernetesConfigMapConfig_immutable(name, false, "third"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "immutable", "false"),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "data.one", "first"),
+					resource.TestCheckResourceAttr(resourceName, "data.two", "third"),
+				),
 			},
 		},
 	})
@@ -388,4 +440,31 @@ func testAccKubernetesConfigMapConfig_binaryData2(prefix string) string {
   }
 }
 `, prefix)
+}
+
+func testAccKubernetesConfigMapConfig_immutable(name string, immutable bool, data string) string {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
+  metadata {
+    annotations = {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels = {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  immutable = %t
+
+  data = {
+    one = "first"
+    two = "%s"
+  }
+}
+`, name, immutable, data)
 }

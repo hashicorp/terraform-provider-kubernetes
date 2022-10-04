@@ -1,0 +1,8 @@
+```release-note:enhancement
+r/kubernetes_horizontal_pod_autoscaler_v2: make attribute `spec.behavior` computed
+r/kubernetes_horizontal_pod_autoscaler_v2: make attribute `spec.behavior.scale_up` computed
+r/kubernetes_horizontal_pod_autoscaler_v2: make attribute `spec.behavior.scale_down` computed
+r/kubernetes_horizontal_pod_autoscaler_v2beta2: make attribute `spec.behavior` computed
+r/kubernetes_horizontal_pod_autoscaler_v2beta2: make attribute `spec.behavior.scale_up` computed
+r/kubernetes_horizontal_pod_autoscaler_v2beta2: make attribute `spec.behavior.scale_down` computed
+```

@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	api "k8s.io/api/autoscaling/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
@@ -92,12 +92,12 @@ func resourceKubernetesHorizontalPodAutoscalerV1Create(ctx context.Context, d *s
 		return diag.FromErr(err)
 	}
 
-	svc := api.HorizontalPodAutoscaler{
+	hpa := autoscalingv1.HorizontalPodAutoscaler{
 		ObjectMeta: metadata,
 		Spec:       *spec,
 	}
-	log.Printf("[INFO] Creating new horizontal pod autoscaler: %#v", svc)
-	out, err := conn.AutoscalingV1().HorizontalPodAutoscalers(metadata.Namespace).Create(ctx, &svc, metav1.CreateOptions{})
+	log.Printf("[INFO] Creating new horizontal pod autoscaler: %#v", hpa)
+	out, err := conn.AutoscalingV1().HorizontalPodAutoscalers(metadata.Namespace).Create(ctx, &hpa, metav1.CreateOptions{})
 	if err != nil {
 		return diag.FromErr(err)
 	}

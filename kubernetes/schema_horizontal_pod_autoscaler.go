@@ -7,6 +7,96 @@ import (
 	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 )
 
+func horizontalPodAutoscalerSchemaV2() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"metadata": namespacedMetadataSchema("horizontal pod autoscaler", true),
+		"spec": {
+			Type:        schema.TypeList,
+			Description: "Behaviour of the autoscaler. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
+			Required:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"max_replicas": {
+						Type:        schema.TypeInt,
+						Description: "Upper limit for the number of pods that can be set by the autoscaler.",
+						Required:    true,
+					},
+					"metric": {
+						Type:        schema.TypeList,
+						Computed:    true,
+						Optional:    true,
+						Description: "The specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used). The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods. Ergo, metrics used must decrease as the pod count is increased, and vice-versa. See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization.",
+						Elem:        metricSpecFields(),
+					},
+					"min_replicas": {
+						Type:        schema.TypeInt,
+						Description: "Lower limit for the number of pods that can be set by the autoscaler, defaults to `1`.",
+						Optional:    true,
+						Default:     1,
+					},
+					"behavior": {
+						Type:        schema.TypeList,
+						Description: "Behavior configures the scaling behavior of the target in both Up and Down directions (`scale_up` and `scale_down` fields respectively).",
+						Optional:    true,
+						Computed:    true,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"scale_up": {
+									Type:        schema.TypeList,
+									Description: "Scaling policy for scaling Up",
+									Optional:    true,
+									Computed:    true,
+									Elem:        scalingRulesSpecFields(),
+								},
+								"scale_down": {
+									Type:        schema.TypeList,
+									Description: "Scaling policy for scaling Down",
+									Optional:    true,
+									Computed:    true,
+									Elem:        scalingRulesSpecFields(),
+								},
+							},
+						},
+					},
+					"scale_target_ref": {
+						Type:        schema.TypeList,
+						Description: "Reference to scaled resource. e.g. Replication Controller",
+						Required:    true,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"api_version": {
+									Type:        schema.TypeString,
+									Description: "API version of the referent",
+									Optional:    true,
+								},
+								"kind": {
+									Type:        schema.TypeString,
+									Description: "Kind of the referent. e.g. `ReplicationController`. More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#types-kinds",
+									Required:    true,
+								},
+								"name": {
+									Type:        schema.TypeString,
+									Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+									Required:    true,
+								},
+							},
+						},
+					},
+					"target_cpu_utilization_percentage": {
+						Type:        schema.TypeInt,
+						Description: "Target average CPU utilization (represented as a percentage of requested CPU) over all the pods. If not specified the default autoscaling policy will be used.",
+						Optional:    true,
+						Computed:    true,
+					},
+				},
+			},
+		},
+	}
+}
+
 func metricTargetFields() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{

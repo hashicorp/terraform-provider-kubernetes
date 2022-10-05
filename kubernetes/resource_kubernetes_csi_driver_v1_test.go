@@ -24,6 +24,7 @@ func TestAccKubernetesCSIDriverV1_basic(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCSIDriverV1Destroy,
 		Steps: []resource.TestStep{

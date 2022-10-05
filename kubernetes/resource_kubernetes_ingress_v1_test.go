@@ -23,6 +23,7 @@ func TestAccKubernetesIngressV1_serviceBackend(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
 		IDRefreshName:     "kubernetes_ingress_v1.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
@@ -77,6 +78,7 @@ func TestAccKubernetesIngressV1_resourceBackend(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
 		IDRefreshName:     "kubernetes_ingress_v1.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
@@ -121,6 +123,7 @@ func TestAccKubernetesIngressV1_TLS(t *testing.T) {
 		IDRefreshName:     "kubernetes_ingress_v1.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressV1Config_TLS(name),
@@ -211,6 +214,7 @@ func TestAccKubernetesIngressV1_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 			skipIfNotRunningInGke(t)
 		},
 		IDRefreshName:     "kubernetes_ingress_v1.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
@@ -235,6 +239,7 @@ func TestAccKubernetesIngressV1_hostOnlyRule(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
 		IDRefreshName:     "kubernetes_ingress_v1.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
@@ -268,6 +273,7 @@ func TestAccKubernetesIngressV1_multipleRulesDifferentHosts(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
 		IDRefreshName:     "kubernetes_ingress_v1.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{

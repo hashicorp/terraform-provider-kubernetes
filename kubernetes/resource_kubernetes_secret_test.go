@@ -3,6 +3,8 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"testing"
@@ -22,6 +24,7 @@ func TestAccKubernetesSecret_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesSecretDestroy,
 		Steps: []resource.TestStep{
@@ -140,6 +143,7 @@ func TestAccKubernetesSecret_immutable(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesSecretDestroy,
 		Steps: []resource.TestStep{
@@ -227,6 +231,7 @@ func TestAccKubernetesSecret_generatedName(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesSecretDestroy,
 		Steps: []resource.TestStep{
@@ -257,29 +262,35 @@ func TestAccKubernetesSecret_binaryData(t *testing.T) {
 	var conf api.Secret
 	prefix := "tf-acc-test-gen-"
 	resourceName := "kubernetes_secret.test"
+	baseDir := "."
+	cwd, _ := os.Getwd()
+	if filepath.Base(cwd) != "kubernetes" { // running from test binary
+		baseDir = "kubernetes"
+	}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesSecretDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesSecretConfig_binaryData(prefix),
+				Config: testAccKubernetesSecretConfig_binaryData(prefix, baseDir),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesSecretExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "binary_data.%", "1"),
 				),
 			},
 			{
-				Config: testAccKubernetesSecretConfig_binaryData2(prefix),
+				Config: testAccKubernetesSecretConfig_binaryData2(prefix, baseDir),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesSecretExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "binary_data.%", "2"),
 				),
 			},
 			{
-				Config: testAccKubernetesSecretConfig_binaryDataCombined(prefix),
+				Config: testAccKubernetesSecretConfig_binaryDataCombined(prefix, baseDir),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesSecretExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
@@ -523,34 +534,34 @@ func testAccKubernetesSecretConfig_generatedName(prefix string) string {
 `, prefix)
 }
 
-func testAccKubernetesSecretConfig_binaryData(prefix string) string {
+func testAccKubernetesSecretConfig_binaryData(prefix string, bd string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     generate_name = "%s"
   }
 
   binary_data = {
-    one = filebase64("./test-fixtures/binary.data")
+    one = filebase64("%s/test-fixtures/binary.data")
   }
 }
-`, prefix)
+`, prefix, bd)
 }
 
-func testAccKubernetesSecretConfig_binaryData2(prefix string) string {
+func testAccKubernetesSecretConfig_binaryData2(prefix string, bd string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     generate_name = "%s"
   }
 
   binary_data = {
-    one = filebase64("./test-fixtures/binary.data")
-    two = filebase64("./test-fixtures/binary2.data")
+    one = filebase64("%s/test-fixtures/binary.data")
+    two = filebase64("%s/test-fixtures/binary2.data")
   }
 }
-`, prefix)
+`, prefix, bd, bd)
 }
 
-func testAccKubernetesSecretConfig_binaryDataCombined(prefix string) string {
+func testAccKubernetesSecretConfig_binaryDataCombined(prefix string, bd string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     generate_name = "%s"
@@ -562,11 +573,11 @@ func testAccKubernetesSecretConfig_binaryDataCombined(prefix string) string {
   }
 
   binary_data = {
-    one = filebase64("./test-fixtures/binary.data")
-    two = filebase64("./test-fixtures/binary2.data")
+    one = filebase64("%s/test-fixtures/binary.data")
+    two = filebase64("%s/test-fixtures/binary2.data")
   }
 }
-`, prefix)
+`, prefix, bd, bd)
 }
 
 func testAccKubernetesSecretConfig_immutable(name string, immutable bool, data string) string {

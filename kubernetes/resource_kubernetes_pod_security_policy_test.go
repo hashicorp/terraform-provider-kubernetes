@@ -18,8 +18,12 @@ func TestAccKubernetesPodSecurityPolicy_basic(t *testing.T) {
 	resourceName := "kubernetes_pod_security_policy.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.25.0")
+		},
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodSecurityPolicyDestroy,
 		Steps: []resource.TestStep{

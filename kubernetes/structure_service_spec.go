@@ -5,7 +5,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/version"
 )
 
 // Flatteners
@@ -284,7 +283,7 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 
 // Patch Ops
 
-func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *version.Info) (PatchOperations, error) {
+func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, kv *gversion.Version) (PatchOperations, error) {
 	ops := make([]PatchOperation, 0, 0)
 
 	if d.HasChange(keyPrefix + "allocate_load_balancer_node_ports") {
@@ -360,12 +359,8 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, v *v
 		})
 	}
 	if d.HasChange(keyPrefix + "external_ips") {
-		k8sVersion, err := gversion.NewVersion(v.String())
-		if err != nil {
-			return nil, err
-		}
-		v1_8_0, _ := gversion.NewVersion("1.8.0")
-		if k8sVersion.LessThan(v1_8_0) {
+		version, _ := gversion.NewVersion("1.8.0")
+		if kv.LessThan(version) {
 			// If we haven't done this the deprecated field would have priority
 			ops = append(ops, &ReplaceOperation{
 				Path:  pathPrefix + "deprecatedPublicIPs",

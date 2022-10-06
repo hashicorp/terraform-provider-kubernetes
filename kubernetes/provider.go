@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/go-cty/cty"
+	gversion "github.com/hashicorp/go-version"
 	"github.com/mitchellh/go-homedir"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -633,4 +634,27 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 	log.Printf("[INFO] Using %s/v1beta1", group)
 	useadmissionregistrationv1beta1 = ptrToBool(true)
 	return true, nil
+}
+
+func getServerVersion(connection *kubernetes.Clientset) (*gversion.Version, error) {
+	sv, err := connection.ServerVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	return gversion.NewVersion(sv.String())
+}
+
+func serverVersionGreaterThanOrEqual(connection *kubernetes.Clientset, version string) (bool, error) {
+	sv, err := getServerVersion(connection)
+	if err != nil {
+		return false, err
+	}
+	// server version that we need to compare with
+	cv, err := gversion.NewVersion(version)
+	if err != nil {
+		return false, err
+	}
+
+	return sv.GreaterThanOrEqual(cv), nil
 }

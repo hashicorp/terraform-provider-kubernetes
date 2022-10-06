@@ -19,6 +19,7 @@ func TestAccKubernetesStatefulSet_minimal(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_stateful_set.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{
@@ -219,7 +220,6 @@ func TestAccKubernetesStatefulSet_Update(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.type", "OnDelete"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.rolling_update.#", "0"),
-					resource.TestCheckNoResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.rolling_update"),
 					resource.TestCheckNoResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.rolling_update.0.partition"),
 				),
 			},
@@ -230,7 +230,6 @@ func TestAccKubernetesStatefulSet_Update(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.type", "OnDelete"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.rolling_update.#", "0"),
-					resource.TestCheckNoResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.rolling_update"),
 					resource.TestCheckNoResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.rolling_update.0.partition"),
 				),
 			},

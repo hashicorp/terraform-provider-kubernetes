@@ -27,8 +27,8 @@ resource "kubernetes_job" "demo" {
       spec {
         container {
           name    = "pi"
-          image   = "perl"
-          command = ["perl", "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+          image   = "alpine"
+          command = ["sh", "-c", "sleep 10"]
         }
         restart_policy = "Never"
       }

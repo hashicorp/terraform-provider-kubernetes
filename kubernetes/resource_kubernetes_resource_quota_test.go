@@ -22,6 +22,7 @@ func TestAccKubernetesResourceQuota_basic(t *testing.T) {
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaDestroy,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesResourceQuotaConfig_basic(name),
@@ -101,6 +102,7 @@ func TestAccKubernetesResourceQuota_generatedName(t *testing.T) {
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaDestroy,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesResourceQuotaConfig_generatedName(prefix),
@@ -137,6 +139,7 @@ func TestAccKubernetesResourceQuota_withScopes(t *testing.T) {
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaDestroy,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesResourceQuotaConfig_withScopes(name),
@@ -190,6 +193,7 @@ func TestAccKubernetesResourceQuota_scopeSelector(t *testing.T) {
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaDestroy,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesResourceQuotaConfigScopeSelector(name),

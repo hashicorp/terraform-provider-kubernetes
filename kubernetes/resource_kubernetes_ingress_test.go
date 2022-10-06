@@ -22,6 +22,7 @@ func TestAccKubernetesIngress_basic(t *testing.T) {
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
 		},
 		IDRefreshName:     "kubernetes_ingress.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{
@@ -76,6 +77,7 @@ func TestAccKubernetesIngress_TLS(t *testing.T) {
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
 		},
 		IDRefreshName:     "kubernetes_ingress.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{
@@ -168,6 +170,7 @@ func TestAccKubernetesIngress_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 			skipIfNotRunningInGke(t)
 		},
 		IDRefreshName:     "kubernetes_ingress.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{

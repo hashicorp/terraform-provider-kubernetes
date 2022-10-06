@@ -231,6 +231,9 @@ func resourceKubernetesJobDelete(ctx context.Context, d *schema.ResourceData, me
 	log.Printf("[INFO] Deleting job: %#v", name)
 	err = conn.BatchV1().Jobs(namespace).Delete(ctx, name, deleteOptions)
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.Errorf("Failed to delete Job! API error: %s", err)
 	}
 

@@ -1246,7 +1246,10 @@ func TestAccKubernetesPod_topologySpreadConstraint(t *testing.T) {
 	imageName := "nginx:1.7.9"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.17.0")
+		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
 		Steps: []resource.TestStep{
@@ -1467,6 +1470,9 @@ func testAccKubernetesPodConfigWithInitContainer(podName, image string) string {
 	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
     name = "%s"
+    labels = {
+      "app.kubernetes.io/name" = "acctest"
+    }
   }
 
   spec {
@@ -1487,7 +1493,7 @@ func testAccKubernetesPodConfigWithInitContainer(podName, image string) string {
     init_container {
       name    = "initcontainer"
       image   = "%s"
-      command = ["sh", "-c", "until nslookup init-service.default.svc.cluster.local; do echo waiting for init-service; sleep 2; done"]
+      command = ["sh", "-c", "until nslookup %s-init-service.default.svc.cluster.local; do echo waiting for init-service; sleep 2; done"]
 
       resources {
         requests = {
@@ -1501,17 +1507,20 @@ func testAccKubernetesPodConfigWithInitContainer(podName, image string) string {
 
 resource "kubernetes_service" "test" {
   metadata {
-    name = "init-service"
+    name = "%s-init-service"
   }
 
   spec {
+    selector = {
+      "app.kubernetes.io/name" = "acctest"
+    }
     port {
       port        = 8080
       target_port = 80
     }
   }
 }
-`, podName, image, image)
+`, podName, image, image, podName, podName)
 }
 
 func testAccKubernetesPodConfigWithSecurityContext(podName, imageName string) string {

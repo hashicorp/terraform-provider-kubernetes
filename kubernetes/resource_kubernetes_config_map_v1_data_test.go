@@ -20,6 +20,7 @@ func TestAccKubernetesConfigMapV1Data_basic(t *testing.T) {
 			createConfigMap(name, namespace)
 		},
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
 			return destroyConfigMap(name, namespace)

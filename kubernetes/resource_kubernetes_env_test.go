@@ -53,7 +53,7 @@ func TestAccKubernetesEnv_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesEnv_modified(secretName, name, namespace),
+				Config: testAccKubernetesEnv_modified(secretName, configMapName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
@@ -212,7 +212,7 @@ func testAccKubernetesEnv_basic(secretName, configMapName, name, namespace strin
 	`, secretName, configMapName, name, namespace)
 }
 
-func testAccKubernetesEnv_modified(secretName, name, namespace string) string {
+func testAccKubernetesEnv_modified(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
 		metadata {
 		  name = "%s"
@@ -220,6 +220,16 @@ func testAccKubernetesEnv_modified(secretName, name, namespace string) string {
 	  
 		data = {
 		  one = "first"
+		}
+	  }
+
+	  resource "kubernetes_config_map" "test" {
+		metadata {
+		  name = "%s"
+		}
+	  
+		data = {
+		  one = "ONE"
 		}
 	  }
 	
@@ -260,5 +270,5 @@ func testAccKubernetesEnv_modified(secretName, name, namespace string) string {
 			}
 		}
 	}
-	`, secretName, name, namespace)
+	`, secretName, configMapName, name, namespace)
 }

@@ -1,3 +1,17 @@
+## 2.14.0 (October 6, 2022)
+
+ENHANCEMENT:
+
+* Added "preemption_policy" attribute to the priority_class resource. [[GH-1846](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1846)]
+* new attribute: Add immutable attribute to resource_config_map [[GH-1849](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1849)]
+* resource/kubernetes_secret: Add a new attribute `wait_for_service_account_token` and corresponding `create` timeout
+resource/kubernetes_secret_v1: Add a new attribute `wait_for_service_account_token` and corresponding `create` timeout [[GH-1833](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1833)]
+
+DOCS:
+
+* r/kubernetes_service: make `spec.port` block optional [[GH-1856](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1856)]
+* r/kubernetes_service_v1: make `spec.port` block optional [[GH-1856](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1856)]
+
 ## 2.13.1 (August 29, 2022)
 
 BUG FIXES:

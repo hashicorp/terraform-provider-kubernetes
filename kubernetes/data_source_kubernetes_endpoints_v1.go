@@ -5,12 +5,12 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesEndpoint() *schema.Resource {
+func dataSourceKubernetesEndpointV1() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKubernetesEndpointRead,
+		ReadContext: dataSourceKubernetesEndpointV1Read,
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("endpoints", true),
 			"subset": {
@@ -24,8 +24,8 @@ func dataSourceKubernetesEndpoint() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesEndpointRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	om := meta_v1.ObjectMeta{
+func dataSourceKubernetesEndpointV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	om := metav1.ObjectMeta{
 		Namespace: d.Get("metadata.0.namespace").(string),
 		Name:      d.Get("metadata.0.name").(string),
 	}

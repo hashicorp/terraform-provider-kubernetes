@@ -6,8 +6,12 @@ resource "random_string" "rand" {
 
 locals {
   cluster_name    = "test-cluster-${random_string.rand.result}"
-  cluster_version = var.cluster_version
-  region          = var.region
+  cidr            = "10.0.0.0/16"
+  az_count        = min(var.az_span, length(data.aws_availability_zones.available.names))
+  azs             = slice(data.aws_availability_zones.available.names, 0, local.az_count)
+  private_subnets = [for i, z in local.azs : cidrsubnet(local.cidr, 8, i)]
+  public_subnets  = [for i, z in local.azs : cidrsubnet(local.cidr, 8, i + local.az_count)]
+  node_count      = var.nodes_per_az * local.az_count
 
   tags = {
     team        = "terraform-kubernetes-providers"
@@ -15,16 +19,16 @@ locals {
   }
 }
 
-provider "aws" {
-  region = local.region
+data "aws_availability_zones" "available" {
+  state = "available"
 }
 
 module "eks" {
-  source = "terraform-aws-modules/eks/aws"
+  source  = "terraform-aws-modules/eks/aws"
   version = "~> 18.11"
 
   cluster_name                    = local.cluster_name
-  cluster_version                 = local.cluster_version
+  cluster_version                 = var.cluster_version
   cluster_endpoint_private_access = true
   cluster_endpoint_public_access  = true
 
@@ -34,8 +38,8 @@ module "eks" {
   eks_managed_node_group_defaults = {
     instance_types = [var.instance_type]
     min_size       = 1
-    max_size       = var.node_count
-    desired_size   = var.node_count
+    max_size       = local.node_count
+    desired_size   = local.node_count
   }
 
   eks_managed_node_groups = {
@@ -53,13 +57,13 @@ module "vpc" {
   version = "~> 3.0"
 
   name = local.cluster_name
-  cidr = "10.0.0.0/16"
+  cidr = local.cidr
 
-  azs             = ["${local.region}a", "${local.region}b"]
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
-  public_subnets  = ["10.0.4.0/24", "10.0.5.0/24"]
+  azs             = local.azs
+  private_subnets = local.private_subnets
+  public_subnets  = local.public_subnets
 
-  create_egress_only_igw  = true
+  create_egress_only_igw = true
 
   enable_nat_gateway   = true
   single_nat_gateway   = true
@@ -77,10 +81,6 @@ module "vpc" {
   }
 
   tags = local.tags
-}
-
-data "aws_eks_cluster_auth" "this" {
-  name = module.eks.cluster_id
 }
 
 locals {
@@ -105,12 +105,9 @@ locals {
     users = [{
       name = "terraform"
       user = {
-        token = data.aws_eks_cluster_auth.this.token
-      }
-      user = {
         exec = {
-          apiVersion = "client.authentication.k8s.io/v1alpha1"
-          command = "aws"
+          apiVersion = "client.authentication.k8s.io/v1beta1"
+          command    = "aws"
           args = [
             "eks", "get-token", "--cluster-name", local.cluster_name
           ]
@@ -121,6 +118,6 @@ locals {
 }
 
 resource "local_file" "kubeconfig" {
-  content = local.kubeconfig
+  content  = local.kubeconfig
   filename = "${path.module}/kubeconfig"
 }

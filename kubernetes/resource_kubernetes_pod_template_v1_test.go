@@ -12,7 +12,7 @@ import (
 	api "k8s.io/api/core/v1"
 )
 
-func TestAccKubernetesPodTemplate_basic(t *testing.T) {
+func TestAccKubernetesPodTemplateV1_basic(t *testing.T) {
 	var conf1 api.PodTemplate
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
@@ -20,7 +20,7 @@ func TestAccKubernetesPodTemplate_basic(t *testing.T) {
 	configMapName := acctest.RandomWithPrefix("tf-acc-test")
 
 	imageName1 := nginxImageVersion
-	resourceName := "kubernetes_pod_template.test"
+	resourceName := "kubernetes_pod_template_v1.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -28,9 +28,9 @@ func TestAccKubernetesPodTemplate_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodTemplateConfigBasic(secretName, configMapName, podName, imageName1),
+				Config: testAccKubernetesPodTemplateV1ConfigBasic(secretName, configMapName, podName, imageName1),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodTemplateExists(resourceName, &conf1),
+					testAccCheckKubernetesPodTemplateV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.app", "pod_label"),
@@ -67,7 +67,7 @@ func TestAccKubernetesPodTemplate_basic(t *testing.T) {
 	})
 }
 
-func testAccKubernetesPodTemplateConfigBasic(secretName, configMapName, podName, imageName string) string {
+func testAccKubernetesPodTemplateV1ConfigBasic(secretName, configMapName, podName, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
@@ -110,7 +110,7 @@ resource "kubernetes_config_map" "test_from" {
   }
 }
 
-resource "kubernetes_pod_template" "test" {
+resource "kubernetes_pod_template_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -184,7 +184,7 @@ resource "kubernetes_pod_template" "test" {
 `, secretName, secretName, configMapName, configMapName, podName, imageName)
 }
 
-func testAccCheckKubernetesPodTemplateExists(n string, obj *api.PodTemplate) resource.TestCheckFunc {
+func testAccCheckKubernetesPodTemplateV1Exists(n string, obj *api.PodTemplate) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {

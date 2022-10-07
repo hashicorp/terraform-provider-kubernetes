@@ -1,0 +1,3 @@
+```release-note:feature
+New resource: `kubernetes_pod_template_v1`
+```

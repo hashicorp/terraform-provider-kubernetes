@@ -8,18 +8,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	api "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesPodTemplate() *schema.Resource {
+func resourceKubernetesPodTemplateV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesPodTemplateCreate,
-		ReadContext:   resourceKubernetesPodTemplateRead,
-		UpdateContext: resourceKubernetesPodTemplateUpdate,
-		DeleteContext: resourceKubernetesPodTemplateDelete,
+		CreateContext: resourceKubernetesPodTemplateV1Create,
+		ReadContext:   resourceKubernetesPodTemplateV1Read,
+		UpdateContext: resourceKubernetesPodTemplateV1Update,
+		DeleteContext: resourceKubernetesPodTemplateV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -58,7 +58,7 @@ func resourceKubernetesPodTemplateSchemaV1() map[string]*schema.Schema {
 	}
 }
 
-func resourceKubernetesPodTemplateCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPodTemplateV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -70,7 +70,7 @@ func resourceKubernetesPodTemplateCreate(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	pod := api.PodTemplate{
+	pod := corev1.PodTemplate{
 		ObjectMeta: metadata,
 		Template:   *template,
 	}
@@ -93,10 +93,10 @@ func resourceKubernetesPodTemplateCreate(ctx context.Context, d *schema.Resource
 
 	log.Printf("[INFO] Pod template %s created", out.Name)
 
-	return resourceKubernetesPodTemplateRead(ctx, d, meta)
+	return resourceKubernetesPodTemplateV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesPodTemplateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPodTemplateV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -129,11 +129,11 @@ func resourceKubernetesPodTemplateUpdate(ctx context.Context, d *schema.Resource
 	log.Printf("[INFO] Submitted updated pod template: %#v", out)
 
 	d.SetId(buildId(out.ObjectMeta))
-	return resourceKubernetesPodTemplateRead(ctx, d, meta)
+	return resourceKubernetesPodTemplateV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesPodTemplateRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesPodTemplateExists(ctx, d, meta)
+func resourceKubernetesPodTemplateV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesPodTemplateV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -177,7 +177,7 @@ func resourceKubernetesPodTemplateRead(ctx context.Context, d *schema.ResourceDa
 
 }
 
-func resourceKubernetesPodTemplateDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPodTemplateV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -212,7 +212,7 @@ func resourceKubernetesPodTemplateDelete(ctx context.Context, d *schema.Resource
 	return nil
 }
 
-func resourceKubernetesPodTemplateExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesPodTemplateV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

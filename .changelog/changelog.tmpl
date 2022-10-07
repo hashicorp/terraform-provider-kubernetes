@@ -22,10 +22,10 @@ FEATURES:
 {{ end -}}
 {{- end -}}
 
-{{- if .NotesByType.improvement }}
-IMPROVEMENTS:
+{{- if .NotesByType.enhancement }}
+ENHANCEMENT:
 
-{{range .NotesByType.improvement -}}
+{{range .NotesByType.enhancement -}}
 * {{ template "note" . }}
 {{ end -}}
 {{- end -}}
@@ -42,6 +42,14 @@ DEPRECATIONS:
 BUG FIXES:
 
 {{range .NotesByType.bug -}}
+* {{ template "note" . }}
+{{ end -}}
+{{- end -}}
+
+{{- if .NotesByType.doc }}
+DOCS:
+
+{{range .NotesByType.doc -}}
 * {{ template "note" . }}
 {{ end -}}
 {{- end -}}

@@ -149,126 +149,126 @@ func confirmExistingEnvs(name, namespace string) error {
 
 func testAccKubernetesEnv_basic(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
-		metadata {
-		  name = "%s"
-		}
-	  
-		data = {
-		  one = "first"
-		}
-	  }
+  metadata {
+    name = "%s"
+  }
 
-	  resource "kubernetes_config_map" "test" {
-		metadata {
-		  name = "%s"
-		}
-	  
-		data = {
-		  one = "ONE"
-		}
-	  }
-	
-	resource "kubernetes_env" "test" {
-		container = "nginx"
-		api_version = "apps/v1"
-		kind        = "Deployment"
-		metadata {
-		  name      = %q
-		  namespace = %q
-		}
-		env {
-			name = "NGINX_HOST"
-			value = "foobar.com"
-		}
+  data = {
+    one = "first"
+  }
+}
 
-		env {
-			name = "NGINX_PORT"
-			value = "90"
-		}
+resource "kubernetes_config_map" "test" {
+  metadata {
+    name = "%s"
+  }
 
-		env {
-			name = "EXPORTED_VARIABLE_FROM_SECRET"
-			value_from {
-			  	secret_key_ref {
-					name     = "${kubernetes_secret.test.metadata.0.name}"
-					key      = "one"
-					optional = true
-			  	}
-			}
-		}
+  data = {
+    one = "ONE"
+  }
+}
 
-		env {
-			name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
-			value_from {
-			  config_map_key_ref {
-					name     = "${kubernetes_config_map.test.metadata.0.name}"
-					key      = "one"
-					optional = true
-				}
-			}
-		}
+resource "kubernetes_env" "test" {
+  container   = "nginx"
+  api_version = "apps/v1"
+  kind        = "Deployment"
+  metadata {
+    name      = %q
+    namespace = %q
+  }
+  env {
+    name  = "NGINX_HOST"
+    value = "foobar.com"
+  }
 
-	  }
+  env {
+    name  = "NGINX_PORT"
+    value = "90"
+  }
+
+  env {
+    name = "EXPORTED_VARIABLE_FROM_SECRET"
+    value_from {
+      secret_key_ref {
+        name     = "${kubernetes_secret.test.metadata.0.name}"
+        key      = "one"
+        optional = true
+      }
+    }
+  }
+
+  env {
+    name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
+    value_from {
+      config_map_key_ref {
+        name     = "${kubernetes_config_map.test.metadata.0.name}"
+        key      = "one"
+        optional = true
+      }
+    }
+  }
+
+}
 	`, secretName, configMapName, name, namespace)
 }
 
 func testAccKubernetesEnv_modified(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
-		metadata {
-		  name = "%s"
-		}
-	  
-		data = {
-		  one = "first"
-		}
-	  }
+  metadata {
+    name = "%s"
+  }
 
-	  resource "kubernetes_config_map" "test" {
-		metadata {
-		  name = "%s"
-		}
-	  
-		data = {
-		  one = "ONE"
-		}
-	  }
-	
-	resource "kubernetes_env" "test" {
-		container = "nginx"
-		api_version = "apps/v1"
-		kind        = "Deployment"
-		metadata {
-		  name      = %q
-		  namespace = %q
-		}
-		env {
-			name = "NGINX_HOST"
-			value = "hashicorp.com"
-		}
+  data = {
+    one = "first"
+  }
+}
 
-		env {
-			name = "EXPORTED_VARIABLE_FROM_SECRET"
-	
-			value_from {
-			  secret_key_ref {
-				name     = "${kubernetes_secret.test.metadata.0.name}"
-				key      = "two"
-				optional = true
-			  }
-			}
-		}	
-		
+resource "kubernetes_config_map" "test" {
+  metadata {
+    name = "%s"
+  }
 
-		env {
-			name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
-			value_from {
-				config_map_key_ref {
-					name     = "${kubernetes_config_map.test.metadata.0.name}"
-					key      = "three"
-					optional = true
-			  	}
-			}
-		}
-	}
+  data = {
+    one = "ONE"
+  }
+}
+
+resource "kubernetes_env" "test" {
+  container   = "nginx"
+  api_version = "apps/v1"
+  kind        = "Deployment"
+  metadata {
+    name      = %q
+    namespace = %q
+  }
+  env {
+    name  = "NGINX_HOST"
+    value = "hashicorp.com"
+  }
+
+  env {
+    name = "EXPORTED_VARIABLE_FROM_SECRET"
+
+    value_from {
+      secret_key_ref {
+        name     = "${kubernetes_secret.test.metadata.0.name}"
+        key      = "two"
+        optional = true
+      }
+    }
+  }
+
+
+  env {
+    name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
+    value_from {
+      config_map_key_ref {
+        name     = "${kubernetes_config_map.test.metadata.0.name}"
+        key      = "three"
+        optional = true
+      }
+    }
+  }
+}
 	`, secretName, configMapName, name, namespace)
 }

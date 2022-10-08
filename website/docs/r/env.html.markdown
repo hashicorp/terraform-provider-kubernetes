@@ -9,8 +9,7 @@ description: |-
 
 # kubernetes_env
 
-The resource provides mechanisms to inject containers with environment variables 
-that are managed specifically by Terraform.
+This resource provides a way to manage environment variables on existing Kubernetes resources that were created outside of Terraform.
 Environment variables can be used to store fine-grained information such as port numbers and host names.
 
 

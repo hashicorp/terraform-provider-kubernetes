@@ -18,6 +18,7 @@ func TestAccKubernetesDefaultServiceAccount_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceAccountDestroy,
 		Steps: []resource.TestStep{
@@ -52,16 +53,18 @@ func TestAccKubernetesDefaultServiceAccount_basic(t *testing.T) {
 
 func TestAccKubernetesDefaultServiceAccount_secrets(t *testing.T) {
 	var conf api.ServiceAccount
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	namespace := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_default_service_account.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceAccountDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDefaultServiceAccountConfig_secrets(namespace),
+				Config: testAccKubernetesDefaultServiceAccountConfig_secrets(namespace, name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceAccountExists("kubernetes_default_service_account.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_default_service_account.test", "metadata.0.name", "default"),
@@ -71,10 +74,10 @@ func TestAccKubernetesDefaultServiceAccount_secrets(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_default_service_account.test", "secret.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_default_service_account.test", "image_pull_secret.#", "1"),
 					testAccCheckServiceAccountImagePullSecrets(&conf, []*regexp.Regexp{
-						regexp.MustCompile("^two$"),
+						regexp.MustCompile("^" + name + "-two$"),
 					}),
 					testAccCheckServiceAccountSecrets(&conf, []*regexp.Regexp{
-						regexp.MustCompile("^one$"),
+						regexp.MustCompile("^" + name + "one$"),
 						regexp.MustCompile("^default-token-[a-z0-9]+$"),
 					}),
 				),
@@ -91,6 +94,7 @@ func TestAccKubernetesDefaultServiceAccount_automountServiceAccountToken(t *test
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceAccountDestroy,
 		Steps: []resource.TestStep{
@@ -141,7 +145,7 @@ resource "kubernetes_default_service_account" "test" {
 `, namespace)
 }
 
-func testAccKubernetesDefaultServiceAccountConfig_secrets(namespace string) string {
+func testAccKubernetesDefaultServiceAccountConfig_secrets(namespace string, name string) string {
 	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = "%s"
@@ -164,18 +168,18 @@ resource "kubernetes_default_service_account" "test" {
 
 resource "kubernetes_secret" "one" {
   metadata {
-    name      = "one"
+    name      = "%s-one"
     namespace = kubernetes_namespace.test.metadata.0.name
   }
 }
 
 resource "kubernetes_secret" "two" {
   metadata {
-    name      = "two"
+    name      = "%s-two"
     namespace = kubernetes_namespace.test.metadata.0.name
   }
 }
-`, namespace)
+`, namespace, name, name)
 }
 
 func testAccKubernetesDefaultServiceAccountConfig_automountServiceAccountToken(namespace string) string {

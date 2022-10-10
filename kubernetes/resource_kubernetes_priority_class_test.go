@@ -20,6 +20,7 @@ func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPriorityClassDestroy,
 		Steps: []resource.TestStep{
@@ -38,6 +39,7 @@ func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_priority_class.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_priority_class.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "value", "100"),
+					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "preemption_policy", "Never"),
 				),
 			},
 			{
@@ -62,6 +64,7 @@ func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_priority_class.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_priority_class.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "value", "100"),
+					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "preemption_policy", "Never"),
 				),
 			},
 			{
@@ -77,6 +80,7 @@ func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "value", "100"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "description", "Foobar"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "global_default", "true"),
+					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "preemption_policy", "Never"),
 				),
 			},
 		},
@@ -90,6 +94,7 @@ func TestAccKubernetesPriorityClass_generatedName(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_priority_class.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPriorityClassDestroy,
 		Steps: []resource.TestStep{
@@ -178,6 +183,7 @@ func testAccKubernetesPriorityClassConfig_basic(name string) string {
   }
 
   value = 100
+  preemption_policy = "Never"
 }
 `, name)
 }
@@ -200,6 +206,7 @@ func testAccKubernetesPriorityClassConfig_metaModified(name string) string {
   }
 
   value = 100
+  preemption_policy = "Never"
 }
 `, name)
 }
@@ -213,6 +220,7 @@ func testAccKubernetesPriorityClassConfig_modified(name string) string {
   value          = 100
   description    = "Foobar"
   global_default = true
+  preemption_policy = "Never"
 }
 `, name)
 }

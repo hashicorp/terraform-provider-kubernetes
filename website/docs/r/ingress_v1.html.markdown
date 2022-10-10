@@ -172,7 +172,7 @@ resource "kubernetes_ingress_v1" "example" {
           path = "/*"
           backend {
             service {
-              name = kubernetes_service.example.metadata.0.name
+              name = kubernetes_service_v1.example.metadata.0.name
               port {
                 number = 80
               }

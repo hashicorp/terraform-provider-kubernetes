@@ -1,16 +1,19 @@
 name: Acceptance Tests (EKS)
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
     inputs:
-      region: 
-        description: The AWS region 
+      region:
+        description: The AWS region
         default: us-east-1
+      azSpan:
+        description: The number of AZs to spread cluster nodes across
+        default: 2
       clusterVersion:
         description: The EKS cluster version
         default: 1.23
-      nodeCount:
-        description: The number of cluster nodes to provision 
+      nodesPerAz:
+        description: The number of cluster nodes in each AZ
         default: 2
       instanceType:
         description: The type of EC2 instance to use for cluster nodes
@@ -19,8 +22,15 @@ on:
         description: The regex passed to the -run option of `go test`
         default: ".*"
       terraformVersion:
-        description: Terraform version 
-        default: 1.2.8
+        description: Terraform version
+        default: 1.3.1
+
+env:
+  AWS_REGION: ${{ github.event.inputs.region }}
+  TF_VAR_az_span: ${{ github.event.inputs.azSpan }}
+  TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion }}
+  TF_VAR_nodes_per_az: ${{ github.event.inputs.nodesPerAz }}
+  TF_VAR_instance_type: ${{ github.event.inputs.instanceType }}
 
 jobs:
   acceptance_tests:
@@ -50,12 +60,7 @@ jobs:
         with:
           terraform_version: ${{ github.event.inputs.terraformVersion }}
       - name: Provision EKS Cluster
-        working-directory: ./kubernetes/test-infra/eks
-        env:
-          TF_VAR_region: ${{ github.event.inputs.region }}
-          TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion }}
-          TF_VAR_node_count: ${{ github.event.inputs.nodeCount }}
-          TF_VAR_instance_type: ${{ github.event.inputs.instanceType }}
+        working-directory: ${{ github.workspace }}/kubernetes/test-infra/eks
         run: |
           terraform init
           terraform apply --auto-approve
@@ -64,10 +69,10 @@ jobs:
           TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion }}
           TESTARGS: -run '${{ github.event.inputs.runTests }}'
           KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/eks/kubeconfig
-        run: | 
+        run: |
           make testacc
       - name: Destroy EKS cluster
         if: always() # we should destroy the cluster even if the tests fail
-        working-directory: ./kubernetes/test-infra/eks
+        working-directory: ${{ github.workspace }}/kubernetes/test-infra/eks
         run: |
           terraform destroy --auto-approve

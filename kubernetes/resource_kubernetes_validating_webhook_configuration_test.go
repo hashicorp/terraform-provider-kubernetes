@@ -22,6 +22,7 @@ func TestAccKubernetesValidatingWebhookConfiguration_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotAdmissionRegistrationV1(t) },
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesValdiatingWebhookConfigurationDestroy,
 		Steps: []resource.TestStep{

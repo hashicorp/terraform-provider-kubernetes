@@ -21,6 +21,7 @@ func TestAccKubernetesPodDisruptionBudgetV1_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDisruptionBudgetV1Destroy,
 		Steps: []resource.TestStep{

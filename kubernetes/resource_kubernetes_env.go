@@ -296,31 +296,7 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 		env = append(env, e)
 	}
 
-	// envs := []interface{}{
-	// 	map[string]interface{}{
-	// 		"name": "NGINX_HOST",
-	// 		"value": "foobar.com"},
-	// 	map[string]interface{}{
-	// 		"name": "NGINX_PORT",
-	// 		"value": "90"},
-	// 	map[string]interface{}{
-	// 		"name": "EXPORTED_VARIABLE_FROM_SECRET",
-	// 		"valueFrom": map[string]interface{}{
-	// 			"secretKeyRef": map[string]interface{}{
-	// 				"key": "one",
-	// 				"name": "tf-acc-test-4092216009068675976",
-	// 				"optional": true
-	// 			}}},
-	// 	map[string]interface{}{
-	// 		"name": "EXPORTED_VARIABLE_FROM_CONFIG_MAP",
-	// 		"valueFrom": map[string]interface{}{
-	// 			"configMapKeyRef": map[string]interface{}{
-	// 				"key": "one",
-	// 				"name": "tf-acc-test-271185184630974840",
-	// 				"optional": true}}}}
-
-	env, _ = flattenEnv(env)
-	// panic(fmt.Sprintf("%#v", env))
+	env = flattenEnv(env)
 	d.Set("env", env)
 	return nil
 }
@@ -423,8 +399,7 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 	}
 
 	env := d.Get("env")
-	env, _ = expandEnv(env.([]interface{}))
-	// panic(fmt.Sprintf("%#v", env))
+	env = expandEnv(env.([]interface{}))
 	if d.Id() == "" {
 		env = []map[string]interface{}{}
 	}

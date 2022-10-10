@@ -9,10 +9,6 @@ description: |-
 
 # kubernetes_env
 
-This resource provides a way to manage environment variables on existing Kubernetes resources that were created outside of Terraform.
-Environment variables can be used to store fine-grained information such as port numbers and host names.
-
-
 ## Example Usage
 
 ```hcl
@@ -41,9 +37,9 @@ resource "kubernetes_env" "example" {
 
 The following arguments are supported:
 
-* `api_version` - (Required) The apiVersion of the resource to be labelled.
-* `kind` - (Required) The kind of the resource to be labelled.
-* `metadata` - (Required) Standard metadata of the resource to be labelled. 
+* `api_version` - (Required) The apiVersion of the resource to add environment variables to.
+* `kind` - (Required) The kind of the resource to add environment variables to.
+* `metadata` - (Required) Standard metadata of the resource to add environment variables to. 
 * `container` - (Required) Name of the container for which we are updating the environment variables.
 * `env` - (Required) Value block with custom values used to represent environment variables
 * `force` - (Optional) Force management of environment variables if there is a conflict.
@@ -54,8 +50,8 @@ The following arguments are supported:
 
 #### Arguments
 
-* `name` - (Required) Name of the resource to be labelled.
-* `namespace` - (Optional) Namespace of the resource to be labelled.
+* `name` - (Required) Name of the resource to add environment variables to.
+* `namespace` - (Optional) Namespace of the resource to add environment variables to.
 
 ### `env`
 

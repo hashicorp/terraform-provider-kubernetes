@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/terraform-provider-kubernetes/util"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -70,10 +71,11 @@ func resourceKubernetesAnnotations() *schema.Resource {
 				Optional:    true,
 			},
 			"field_manager": {
-				Type:        schema.TypeString,
-				Description: "Set the name of the field manager for the specified labels.",
-				Optional:    true,
-				Default:     defaultFieldManagerName,
+				Type:         schema.TypeString,
+				Description:  "Set the name of the field manager for the specified labels.",
+				Optional:     true,
+				Default:      defaultFieldManagerName,
+				ValidateFunc: validation.StringIsNotWhiteSpace,
 			},
 		},
 	}

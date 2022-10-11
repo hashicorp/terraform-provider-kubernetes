@@ -31,6 +31,7 @@ The following arguments are supported:
 * `metadata` - (Required) Standard metadata of the ConfigMap. 
 * `data` - (Required) A map of data to apply to the ConfigMap.
 * `force` - (Optional) Force management of the configured data if there is a conflict.
+* `field_manager` - (Optional) The name of the [field manager](https://kubernetes.io/docs/reference/using-api/server-side-apply/#field-management). Defaults to `Terraform`.
 
 ## Nested Blocks
 

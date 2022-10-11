@@ -3,14 +3,12 @@ subcategory: "core/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_env"
 description: |-
-  The resource provides mechanisms to inject containers with environment variables 
-  that are managed specifically by Terraform.
+  This resource provides a way to manage environment variables in resources that were created outside of Terraform.
 ---
 
 # kubernetes_env
 
-The resource provides mechanisms to inject containers with environment variables 
-that are managed specifically by Terraform.
+This resource provides a way to manage environment variables in resources that were created outside of Terraform. This resource provides functionality similar to the `kubectl set env` command. 
 
 ## Example Usage
 

@@ -9,6 +9,9 @@ description: |-
 
 # kubernetes_env
 
+The resource provides mechanisms to inject containers with environment variables 
+that are managed specifically by Terraform.
+
 ## Example Usage
 
 ```hcl
@@ -43,6 +46,7 @@ The following arguments are supported:
 * `container` - (Required) Name of the container for which we are updating the environment variables.
 * `env` - (Required) Value block with custom values used to represent environment variables
 * `force` - (Optional) Force management of environment variables if there is a conflict.
+* `field_manager` - (Optional) The name of the [field manager](https://kubernetes.io/docs/reference/using-api/server-side-apply/#field-management). Defaults to `Terraform`.
 
 ## Nested Blocks
 

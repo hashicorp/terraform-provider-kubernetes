@@ -8,14 +8,13 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
 
 	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
 )
 
-func TestDataSourceKubernetesResource_ConfigMap(t *testing.T) {
+func TestDataSourceKubernetesResourceStatus_Deployment(t *testing.T) {
 	ctx := context.Background()
 
 	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
@@ -35,7 +34,7 @@ func TestDataSourceKubernetesResource_ConfigMap(t *testing.T) {
 	defer func() {
 		tf.Destroy(ctx)
 		tf.Close()
-		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "configmaps", namespace, name)
+		k8shelper.AssertNamespacedResourceDoesNotExist(t, "apps/v1", "deployments", namespace, name)
 	}()
 
 	tfvars := TFVARS{
@@ -47,7 +46,8 @@ func TestDataSourceKubernetesResource_ConfigMap(t *testing.T) {
 	tf.Init(ctx)
 	tf.Apply(ctx)
 
-	k8shelper.AssertNamespacedResourceExists(t, "v1", "deployments", namespace, name)
+
+	k8shelper.AssertNamespacedResourceExists(t, "apps/v1", "deployments", namespace, name)
 
 	state, err := tf.State(ctx)
 	if err != nil {
@@ -65,7 +65,7 @@ func TestDataSourceKubernetesResource_ConfigMap(t *testing.T) {
 	defer func() {
 		step2.Destroy(ctx)
 		step2.Close()
-		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "deployments", namespace, name2)
+		k8shelper.AssertNamespacedResourceDoesNotExist(t, "apps/v1", "deployments", namespace, name)
 	}()
 
 	tfconfig = loadTerraformConfig(t, "datasource-resource-status/step2.tf", tfvars)
@@ -77,7 +77,7 @@ func TestDataSourceKubernetesResource_ConfigMap(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to retrieve terraform state: %q", err)
 	}
-	tfstate := tfstatehelper.NewHelper(s2)
+	tfstate = tfstatehelper.NewHelper(s2)
 
 	// check that the data source has the status field defined
 	tfstate.AssertAttributeNotEmpty(t, "data.kubernetes_resource.test_deploy.object.status")

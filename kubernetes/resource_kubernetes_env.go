@@ -404,26 +404,56 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 		env = []map[string]interface{}{}
 	}
 
-	patchobj := map[string]interface{}{
-		"apiVersion": apiVersion,
-		"kind":       kind,
-		"metadata":   patchmeta,
-		"spec": map[string]interface{}{
-			"template": map[string]interface{}{
-				"spec": map[string]interface{}{
-					"containers": []interface{}{
-						map[string]interface{}{
-							"name": d.Get("container").(string),
-							"env":  env,
+	var patchObj map[string]interface{}
+	if kind == "Deployment" {
+		patchObj = map[string]interface{}{
+			"apiVersion": apiVersion,
+			"kind":       kind,
+			"metadata":   patchmeta,
+			"spec": map[string]interface{}{
+				"template": map[string]interface{}{
+					"spec": map[string]interface{}{
+						"containers": []interface{}{
+							map[string]interface{}{
+								"name": d.Get("container").(string),
+								"env":  env,
+							},
 						},
 					},
 				},
 			},
-		},
+		}
+	} else if kind == "CronJob" {
+		// patch for CronJob
+		patchObj = map[string]interface{}{
+			"apiVersion": apiVersion,
+			"kind":       kind,
+			"metadata":   patchmeta,
+			"spec": map[string]interface{}{
+				"jobTemplate": map[string]interface{}{
+					"spec": map[string]interface{}{
+						"template": map[string]interface{}{
+							"spec": map[string]interface{}{
+								"containers": []interface{}{
+									map[string]interface{}{
+										"name": d.Get("container").(string),
+										"env":  env,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	} else {
+		return diag.Errorf("The REST resource %q does not exist", kind)
 	}
 
+	// structure for a Deployment kind
+
 	patch := unstructured.Unstructured{}
-	patch.Object = patchobj
+	patch.Object = patchObj
 	patchbytes, err := patch.MarshalJSON()
 	if err != nil {
 		return diag.FromErr(err)

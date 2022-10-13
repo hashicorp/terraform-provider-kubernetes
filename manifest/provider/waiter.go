@@ -342,30 +342,30 @@ func (w *ConditionsWaiter) Wait(ctx context.Context) error {
 			return fmt.Errorf("resource was deleted")
 		}
 
-		status := res.Object["status"].(map[string]interface{})
-		conditions := status["conditions"].([]interface{})
-		conditionsMet := true
-		for _, c := range w.conditions {
-			var condition map[string]tftypes.Value
-			c.As(&condition)
-			var conditionType, conditionStatus string
-			condition["type"].As(&conditionType)
-			condition["status"].As(&conditionStatus)
-			conditionMet := false
-			for _, cc := range conditions {
-				ccc := cc.(map[string]interface{})
-				if ccc["type"].(string) == conditionType {
-					conditionMet = ccc["status"].(string) == conditionStatus
+		if status, ok := res.Object["status"].(map[string]interface{}); ok {
+			if conditions := status["conditions"].([]interface{}); ok && len(conditions) > 0 {
+				conditionsMet := true
+				for _, c := range w.conditions {
+					var condition map[string]tftypes.Value
+					c.As(&condition)
+					var conditionType, conditionStatus string
+					condition["type"].As(&conditionType)
+					condition["status"].As(&conditionStatus)
+					conditionMet := false
+					for _, cc := range conditions {
+						ccc := cc.(map[string]interface{})
+						if ccc["type"].(string) == conditionType {
+							conditionMet = ccc["status"].(string) == conditionStatus
+							break
+						}
+					}
+					conditionsMet = conditionsMet && conditionMet
+				}
+				if conditionsMet {
 					break
 				}
 			}
-			conditionsMet = conditionsMet && conditionMet
 		}
-
-		if conditionsMet {
-			break
-		}
-
 		time.Sleep(waiterSleepTime) // lintignore:R018
 	}
 

@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -77,6 +78,50 @@ func createEnv(t *testing.T, name, namespace string) error {
 		return err
 	}
 	ctx := context.Background()
+
+	var failJobLimit int32 = 5
+	var startingDeadlineSeconds int64 = 2
+	var successfulJobsLimit int32 = 2
+	var boLimit int32 = 2
+	var ttl int32 = 2
+	var cronjob batchv1.CronJob = batchv1.CronJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: batchv1.CronJobSpec{
+			StartingDeadlineSeconds:    &startingDeadlineSeconds,
+			FailedJobsHistoryLimit:     &failJobLimit,
+			SuccessfulJobsHistoryLimit: &successfulJobsLimit,
+			ConcurrencyPolicy:          "Replace",
+			Schedule:                   "1 0 * * *",
+			JobTemplate: batchv1.JobTemplateSpec{
+				Spec: batchv1.JobSpec{
+					BackoffLimit:            &boLimit,
+					TTLSecondsAfterFinished: &ttl,
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							RestartPolicy: "Never",
+							Containers: []v1.Container{
+								{
+									Name:    "hello",
+									Image:   "busybox",
+									Command: []string{"/bin/sh", "-c", "date; echo Goodbye from the Kubernetes cluster"},
+									Env: []v1.EnvVar{
+										{
+											Name:  "kubernetes",
+											Value: "80",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	var deploy appsv1.Deployment = appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -117,6 +162,12 @@ func createEnv(t *testing.T, name, namespace string) error {
 		t.Fatal(err)
 	}
 
+	_, err = conn.BatchV1().CronJobs(namespace).Create(ctx, &cronjob, metav1.CreateOptions{})
+	if err != nil {
+		t.Error("could not create test cronjob")
+		t.Fatal(err)
+	}
+
 	return err
 }
 
@@ -126,6 +177,12 @@ func destroyEnv(name, namespace string) error {
 		return err
 	}
 	ctx := context.Background()
+
+	err = conn.BatchV1().CronJobs(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+
 	err = conn.AppsV1().Deployments(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	return err
 }
@@ -136,12 +193,17 @@ func confirmExistingEnvs(name, namespace string) error {
 		return err
 	}
 	ctx := context.Background()
+	cronjob, err := conn.BatchV1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
 	deploy, err := conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-	env := deploy.Spec.Template.Spec.Containers[0].Env
-	if len(env) == 0 {
+	cronjobEnv := cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	deployEnv := deploy.Spec.Template.Spec.Containers[0].Env
+	if len(deployEnv) == 0 || len(cronjobEnv) == 0 {
 		return fmt.Errorf("environment variables not managed by terraform were removed")
 	}
 	return err

@@ -280,7 +280,7 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	responseEnvs, err := getResponseEnvs(res, d.Get("container").(string))
+	responseEnvs, err := getResponseEnvs(res, d.Get("container").(string), d.Get("kind").(string))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -301,8 +301,14 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 	return nil
 }
 
-func getResponseEnvs(u *unstructured.Unstructured, containerName string) ([]interface{}, error) {
-	containers, _, _ := unstructured.NestedSlice(u.Object, "spec", "template", "spec", "containers")
+func getResponseEnvs(u *unstructured.Unstructured, containerName string, kind string) ([]interface{}, error) {
+	var containers []interface{}
+	if kind == "Deployment" {
+		containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "template", "spec", "containers")
+	} else if kind == "CronJob" {
+		containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "jobTemplate", "spec", "template", "spec", "containers")
+	}
+
 	for _, c := range containers {
 		container := c.(map[string]interface{})
 		if container["name"].(string) == containerName {
@@ -315,6 +321,7 @@ func getResponseEnvs(u *unstructured.Unstructured, containerName string) ([]inte
 // getManagedEnvs reads the field manager metadata to discover which environment variables we're managing
 func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *schema.ResourceData) (map[string]interface{}, error) {
 	var envs map[string]interface{}
+	kind := d.Get("kind").(string)
 	for _, m := range managedFields {
 		if m.Manager != manager {
 			continue
@@ -324,14 +331,28 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 		if err != nil {
 			return nil, err
 		}
-		spec := mm["f:spec"].(map[string]interface{})
-		template := spec["f:template"].(map[string]interface{})
-		templateSpec := template["f:spec"].(map[string]interface{})
-		containers := templateSpec["f:containers"].(map[string]interface{})
-		containerName := fmt.Sprintf(`k:{"name":%q}`, d.Get("container").(string))
-		k := containers[containerName].(map[string]interface{})
-		if e, ok := k["f:env"].(map[string]interface{}); ok {
-			envs = e
+		if "Deployment" == kind {
+			spec := mm["f:spec"].(map[string]interface{})
+			template := spec["f:template"].(map[string]interface{})
+			templateSpec := template["f:spec"].(map[string]interface{})
+			containers := templateSpec["f:containers"].(map[string]interface{})
+			containerName := fmt.Sprintf(`k:{"name":%q}`, d.Get("container").(string))
+			k := containers[containerName].(map[string]interface{})
+			if e, ok := k["f:env"].(map[string]interface{}); ok {
+				envs = e
+			}
+		} else if "CronJob" == kind {
+			spec := mm["f:spec"].(map[string]interface{})
+			jobTemplate := spec["f:jobTemplate"].(map[string]interface{})
+			jobTemplateSpec := jobTemplate["f:spec"].(map[string]interface{})
+			template := jobTemplateSpec["f:template"].(map[string]interface{})
+			templateSpec := template["f:spec"].(map[string]interface{})
+			containers := templateSpec["f:containers"].(map[string]interface{})
+			containerName := fmt.Sprintf(`k:{"name":%q}`, d.Get("container").(string))
+			k := containers[containerName].(map[string]interface{})
+			if e, ok := k["f:env"].(map[string]interface{}); ok {
+				envs = e
+			}
 		}
 	}
 	return envs, nil

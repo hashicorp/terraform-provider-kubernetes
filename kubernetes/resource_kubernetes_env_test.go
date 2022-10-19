@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesEnv_ConfigMapBasic(t *testing.T) {
+func TestAccKubernetesEnv_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	namespace := "default"
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
@@ -37,7 +37,7 @@ func TestAccKubernetesEnv_ConfigMapBasic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesEnv_ConfigMapBasic(secretName, configMapName, name, namespace),
+				Config: testAccKubernetesEnv_basic(secretName, configMapName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
@@ -54,7 +54,7 @@ func TestAccKubernetesEnv_ConfigMapBasic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesEnv_ConfigMapModified(secretName, configMapName, name, namespace),
+				Config: testAccKubernetesEnv_modified(secretName, configMapName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
@@ -82,16 +82,16 @@ func TestAccKubernetesEnv_CronJobBasic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createEnv(t, name, namespace)
+			createCronJobEnv(t, name, namespace)
 		},
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
-			err := confirmExistingEnvs(name, namespace)
+			err := confirmExistingCronJobEnvs(name, namespace)
 			if err != nil {
 				return err
 			}
-			return destroyEnv(name, namespace)
+			return destroyCronJobEnv(name, namespace)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -131,6 +131,56 @@ func TestAccKubernetesEnv_CronJobBasic(t *testing.T) {
 }
 
 func createEnv(t *testing.T, name, namespace string) error {
+	conn, err := testAccProvider.Meta().(kubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+
+	var deploy appsv1.Deployment = appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "terraform",
+				},
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "terraform",
+					},
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Name:  "nginx",
+							Image: "nginx",
+							Env: []v1.EnvVar{
+								{
+									Name:  "TEST",
+									Value: "123",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	_, err = conn.AppsV1().Deployments(namespace).Create(ctx, &deploy, metav1.CreateOptions{})
+	if err != nil {
+		t.Error("could not create test deployment")
+		t.Fatal(err)
+	}
+
+	return err
+}
+
+func createCronJobEnv(t *testing.T, name, namespace string) error {
 	conn, err := testAccProvider.Meta().(kubeClientsets).MainClientset()
 	if err != nil {
 		return err
@@ -180,46 +230,6 @@ func createEnv(t *testing.T, name, namespace string) error {
 		},
 	}
 
-	var deploy appsv1.Deployment = appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "terraform",
-				},
-			},
-			Template: v1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": "terraform",
-					},
-				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						{
-							Name:  "nginx",
-							Image: "nginx",
-							Env: []v1.EnvVar{
-								{
-									Name:  "TEST",
-									Value: "123",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	_, err = conn.AppsV1().Deployments(namespace).Create(ctx, &deploy, metav1.CreateOptions{})
-	if err != nil {
-		t.Error("could not create test deployment")
-		t.Fatal(err)
-	}
-
 	_, err = conn.BatchV1().CronJobs(namespace).Create(ctx, &cronjob, metav1.CreateOptions{})
 	if err != nil {
 		t.Error("could not create test cronjob")
@@ -235,13 +245,17 @@ func destroyEnv(name, namespace string) error {
 		return err
 	}
 	ctx := context.Background()
+	err = conn.AppsV1().Deployments(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	return err
+}
 
-	err = conn.BatchV1().CronJobs(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+func destroyCronJobEnv(name, namespace string) error {
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
 		return err
 	}
-
-	err = conn.AppsV1().Deployments(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	ctx := context.Background()
+	err = conn.BatchV1().CronJobs(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	return err
 }
 
@@ -251,23 +265,36 @@ func confirmExistingEnvs(name, namespace string) error {
 		return err
 	}
 	ctx := context.Background()
-	cronjob, err := conn.BatchV1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
 	deploy, err := conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-	cronjobEnv := cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
 	deployEnv := deploy.Spec.Template.Spec.Containers[0].Env
-	if len(deployEnv) == 0 || len(cronjobEnv) == 0 {
+	if len(deployEnv) == 0 {
 		return fmt.Errorf("environment variables not managed by terraform were removed")
 	}
 	return err
 }
 
-func testAccKubernetesEnv_ConfigMapBasic(secretName, configMapName, name, namespace string) string {
+func confirmExistingCronJobEnvs(name, namespace string) error {
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	cronjob, err := conn.BatchV1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	cronjobEnv := cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Env
+	if len(cronjobEnv) == 0 {
+		return fmt.Errorf("environment variables not managed by terraform were removed")
+	}
+	return err
+}
+
+func testAccKubernetesEnv_basic(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
@@ -332,7 +359,7 @@ resource "kubernetes_env" "test" {
 	`, secretName, configMapName, name, namespace)
 }
 
-func testAccKubernetesEnv_ConfigMapModified(secretName, configMapName, name, namespace string) string {
+func testAccKubernetesEnv_modified(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"

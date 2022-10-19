@@ -336,12 +336,18 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 			return nil, err
 		}
 
-		spec, _, err := unstructured.NestedMap(u.Object, "spec", "template", "spec")
-		containers := spec["containers"].([]interface{})
+		spec, _, err := unstructured.NestedMap(u.Object, "f:spec", "f:template", "f:spec")
+		var containers []interface{}
 		if "CronJob" == kind {
-			spec, _, _ = unstructured.NestedMap(u.Object, "f:spec", "f:jobTemplate", "f:spec", "f:template", "f:spec")
-			containers = spec["f:containers"].([]interface{})
+			spec, _, err = unstructured.NestedMap(u.Object, "f:spec", "f:jobTemplate", "f:spec", "f:template", "f:spec")
 		}
+
+		if err == nil {
+			return nil, err
+			//panic(fmt.Sprintf("There is no spec here"))
+		}
+
+		containers = spec["f:containers"].([]interface{})
 		containerName := fmt.Sprintf(`k:{"name":%q}`, d.Get("container").(string))
 
 		for _, c := range containers {

@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesEnv_basic(t *testing.T) {
+func TestAccKubernetesEnv_Deploymentbasic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	namespace := "default"
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
@@ -37,7 +37,7 @@ func TestAccKubernetesEnv_basic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesEnv_basic(secretName, configMapName, name, namespace),
+				Config: testAccKubernetesEnv_Deploymentbasic(secretName, configMapName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
@@ -294,7 +294,7 @@ func confirmExistingCronJobEnvs(name, namespace string) error {
 	return err
 }
 
-func testAccKubernetesEnv_basic(secretName, configMapName, name, namespace string) string {
+func testAccKubernetesEnv_Deploymentbasic(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"

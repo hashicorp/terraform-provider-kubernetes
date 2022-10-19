@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesEnv_Deploymentbasic(t *testing.T) {
+func TestAccKubernetesEnv_DeploymentBasic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	namespace := "default"
 	secretName := acctest.RandomWithPrefix("tf-acc-test")

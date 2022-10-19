@@ -279,7 +279,8 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 	}
 
 	// strip out envs not managed by Terraform
-	managedEnvs, err := getManagedEnvs(res.GetManagedFields(), defaultFieldManagerName, d, res)
+	fieldManagerName := d.Get("field_manager").(string)
+	managedEnvs, err := getManagedEnvs(res.GetManagedFields(), fieldManagerName, d, res)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -337,30 +338,19 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 		}
 
 		spec, _, err := unstructured.NestedMap(u.Object, "f:spec", "f:template", "f:spec")
-		var containers []interface{}
 		if "CronJob" == kind {
 			spec, _, err = unstructured.NestedMap(u.Object, "f:spec", "f:jobTemplate", "f:spec", "f:template", "f:spec")
 		}
-
 		if err == nil {
 			return nil, err
-			//panic(fmt.Sprintf("There is no spec here"))
 		}
 
-		containers = spec["f:containers"].([]interface{})
+		containers := spec["f:containers"].(map[string]interface{})
 		containerName := fmt.Sprintf(`k:{"name":%q}`, d.Get("container").(string))
-
-		for _, c := range containers {
-			container := c.(map[string]interface{})
-			if container["name"].(string) == containerName {
-				k := container["f:env"].(map[string]interface{})
-				if e, ok := k["f:env"].(map[string]interface{}); ok {
-					envs = e
-				}
-				break
-			}
+		k := containers[containerName].(map[string]interface{})
+		if e, ok := k["f:env"].(map[string]interface{}); ok {
+			envs = e
 		}
-
 	}
 	return envs, nil
 }
@@ -432,12 +422,7 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 		env = []map[string]interface{}{}
 	}
 
-	patchObj := map[string]interface{}{
-		"apiVersion": apiVersion,
-		"kind":       kind,
-		"metadata":   patchmeta,
-	}
-	patchObj["spec"] = map[string]interface{}{
+	spec := map[string]interface{}{
 		"template": map[string]interface{}{
 			"spec": map[string]interface{}{
 				"containers": []interface{}{
@@ -451,7 +436,7 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 	}
 	if kind == "CronJob" {
 		// patch for CronJob
-		patchObj["spec"] = map[string]interface{}{
+		spec = map[string]interface{}{
 			"jobTemplate": map[string]interface{}{
 				"spec": map[string]interface{}{
 					"template": map[string]interface{}{
@@ -467,6 +452,12 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 				},
 			},
 		}
+	}
+	patchObj := map[string]interface{}{
+		"apiVersion": apiVersion,
+		"kind":       kind,
+		"metadata":   patchmeta,
+		"spec":       spec,
 	}
 
 	// structure for a Deployment kind

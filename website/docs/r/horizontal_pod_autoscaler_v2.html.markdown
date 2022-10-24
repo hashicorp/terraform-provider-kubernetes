@@ -142,7 +142,7 @@ The following arguments are supported:
 * `min_replicas` - (Optional) Lower limit for the number of pods that can be set by the autoscaler, defaults to `1`.
 * `scale_target_ref` - (Required) Reference to scaled resource. e.g. Replication Controller
 * `metric` - (Optional) A metric on which to scale.
-* `behavior` - (Optional) Behavior configures the scaling behavior of the target in both Up and Down directions (scale_up and scale_down fields respectively)
+* `behavior` - (Optional) Behavior configures the scaling behavior of the target in both Up and Down directions (`scale_up` and `scale_down` fields respectively)
 
 ### `metric`
 

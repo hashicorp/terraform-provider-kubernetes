@@ -100,7 +100,8 @@ func resourceKubernetesConfigMapV1DataRead(ctx context.Context, d *schema.Resour
 	configuredData := d.Get("data").(map[string]interface{})
 
 	// strip out the data not managed by Terraform
-	managedConfigMapData, err := getManagedConfigMapData(res.GetManagedFields(), defaultFieldManagerName)
+	fieldManagerName := d.Get("field_manager").(string)
+	managedConfigMapData, err := getManagedConfigMapData(res.GetManagedFields(), fieldManagerName)
 	if err != nil {
 		return diag.FromErr(err)
 	}

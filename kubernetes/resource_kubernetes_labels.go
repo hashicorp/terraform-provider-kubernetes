@@ -146,7 +146,8 @@ func resourceKubernetesLabelsRead(ctx context.Context, d *schema.ResourceData, m
 	configuredLabels := d.Get("labels").(map[string]interface{})
 
 	// strip out the labels not managed by Terraform
-	managedLabels, err := getManagedLabels(res.GetManagedFields(), defaultFieldManagerName)
+	fieldManagerName := d.Get("field_manager").(string)
+	managedLabels, err := getManagedLabels(res.GetManagedFields(), fieldManagerName)
 	if err != nil {
 		return diag.FromErr(err)
 	}

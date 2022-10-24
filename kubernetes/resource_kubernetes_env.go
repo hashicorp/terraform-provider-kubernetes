@@ -59,13 +59,13 @@ func resourceKubernetesEnv() *schema.Resource {
 			},
 			"api_version": {
 				Type:        schema.TypeString,
-				Description: "API Version of Field Manager",
+				Description: "Resource API version",
 				Required:    true,
 			},
 			"kind": {
 				Type:         schema.TypeString,
-				Description:  "Type of resource being used",
-				ValidateFunc: validation.StringInSlice([]string{"cronjob", "deployment", "pod", "daemonset", "replicationcontroller", "statefulset", "replicaset"}, true),
+				Description:  "Resource Kind",
+				ValidateFunc: validation.StringInSlice([]string{"CronJob", "Deployment", "Pod", "DaemonSet", "replicationcontroller", "StatefulSet", "ReplicaSet"}, true),
 				Required:     true,
 			},
 			"env": {

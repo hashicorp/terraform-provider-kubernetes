@@ -146,7 +146,8 @@ func resourceKubernetesAnnotationsRead(ctx context.Context, d *schema.ResourceDa
 	configuredAnnotations := d.Get("annotations").(map[string]interface{})
 
 	// strip out the annotations not managed by Terraform
-	managedAnnotations, err := getManagedAnnotations(res.GetManagedFields(), defaultFieldManagerName)
+	fieldManagerName := d.Get("field_manager").(string)
+	managedAnnotations, err := getManagedAnnotations(res.GetManagedFields(), fieldManagerName)
 	if err != nil {
 		return diag.FromErr(err)
 	}

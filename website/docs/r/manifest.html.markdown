@@ -8,7 +8,7 @@ description: |-
 
 # kubernetes_manifest
 
-Represents one Kubernetes resource by supplying a `manifest` attribute. The manifest value is the HCL representation of a Kubernetes YAML manifest. To convert an existing manifest from YAML to HCL, you can use the Terrafrom built-in function [`yamldecode()`](https://www.terraform.io/docs/configuration/functions/yamldecode.html) or [tfk8s](https://github.com/jrhouston/tfk8s).
+Represents one Kubernetes resource by supplying a `manifest` attribute. The manifest value is the HCL representation of a Kubernetes YAML manifest. To convert an existing manifest from YAML to HCL, you can use the Terraform built-in function [`yamldecode()`](https://www.terraform.io/docs/configuration/functions/yamldecode.html) or [tfk8s](https://github.com/jrhouston/tfk8s).
 
 Once applied, the `object` attribute contains the state of the resource as returned by the Kubernetes API, including all default values.
 

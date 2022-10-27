@@ -56,7 +56,7 @@ resource "kubernetes_manifest" "cluster-role-binding-injector" {
         "app.kubernetes.io/managed-by" = "Terraform"
         "app.kubernetes.io/name"       = "vault-agent-injector"
       }
-      "name"      = "${var.name}-vault-agent-injector-binding"
+      "name" = "${var.name}-vault-agent-injector-binding"
     }
     "roleRef" = {
       "apiGroup" = "rbac.authorization.k8s.io"

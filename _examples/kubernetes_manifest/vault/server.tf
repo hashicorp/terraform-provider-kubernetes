@@ -32,7 +32,7 @@ resource "kubernetes_manifest" "cluster-role-binding-server" {
         "app.kubernetes.io/managed-by" = "Terraform"
         "app.kubernetes.io/name"       = "vault"
       }
-      "name"      = "${var.name}-vault-server-binding"
+      "name" = "${var.name}-vault-server-binding"
     }
     "roleRef" = {
       "apiGroup" = "rbac.authorization.k8s.io"

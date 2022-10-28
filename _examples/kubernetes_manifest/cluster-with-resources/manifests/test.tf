@@ -5,9 +5,9 @@ resource "kubernetes_manifest" "test-cfm" {
 
   manifest = {
     "apiVersion" = "v1"
-    "kind" = "ConfigMap"
+    "kind"       = "ConfigMap"
     "metadata" = {
-      "name" = "test-cf"
+      "name"      = "test-cf"
       "namespace" = "default"
       "labels" = {
         "parent_cluster" = var.cluster_name

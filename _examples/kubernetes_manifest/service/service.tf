@@ -23,13 +23,13 @@ resource "kubernetes_manifest" "service-injector" {
     "spec" = {
       "ports" = [
         {
-          "name" = "http"
+          "name"       = "http"
           "port"       = 80
           "targetPort" = 8080
           "protocol"   = "TCP"
         },
         {
-          "name" = "https"
+          "name"       = "https"
           "port"       = 443
           "targetPort" = "https"
           "protocol"   = "TCP"

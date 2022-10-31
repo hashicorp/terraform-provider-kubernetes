@@ -3,7 +3,7 @@ subcategory: "core/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_endpoints_v1"
 description: |-
-An Endpoints resource is an abstraction, linked to a Service, which defines the list of endpoints that actually implement the service.
+    An Endpoints resource is an abstraction, linked to a Service, which defines the list of endpoints that actually implement the service.
 ---
 
 # kubernetes_endpoints_v1

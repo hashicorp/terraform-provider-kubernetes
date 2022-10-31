@@ -14,7 +14,7 @@ An Endpoints resource is an abstraction, linked to a Service, which defines the 
 ## Example Usage
 
 ```hcl
-data "kubernetes_endpoints" "api_endpoints" {
+data "kubernetes_endpoints_v1" "api_endpoints" {
   metadata {
     name      = "kubernetes"
     namespace = "default"

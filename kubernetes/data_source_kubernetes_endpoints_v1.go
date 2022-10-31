@@ -8,9 +8,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesEndpointV1() *schema.Resource {
+func dataSourceKubernetesEndpointsV1() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKubernetesEndpointV1Read,
+		ReadContext: dataSourceKubernetesEndpointsV1Read,
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("endpoints", true),
 			"subset": {
@@ -24,7 +24,7 @@ func dataSourceKubernetesEndpointV1() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesEndpointV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKubernetesEndpointsV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	om := metav1.ObjectMeta{
 		Namespace: d.Get("metadata.0.namespace").(string),
 		Name:      d.Get("metadata.0.name").(string),

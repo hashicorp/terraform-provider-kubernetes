@@ -307,12 +307,12 @@ func testAccKubernetesHorizontalPodAutoscalerV2Config_basic(name string) string 
           type           = "Pods"
           value          = 1
         }
-        
+
         policy {
           period_seconds = 310
           type           = "Percent"
           value          = 100
-        } 
+        }
       }
 
       scale_up {

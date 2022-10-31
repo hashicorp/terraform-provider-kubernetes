@@ -418,7 +418,7 @@ resource "kubernetes_secret" "test" {
   metadata {
     name = "dot.test"
   }
-  }  
+}
 `
 
 func testAccKubernetesSecretConfig_emptyData(name string) string {
@@ -568,8 +568,8 @@ func testAccKubernetesSecretConfig_binaryDataCombined(prefix string, bd string) 
   }
 
   data = {
-	  "HOST" = "127.0.0.1"
-	  "PORT" = "80"
+    "HOST" = "127.0.0.1"
+    "PORT" = "80"
   }
 
   binary_data = {
@@ -598,7 +598,7 @@ func testAccKubernetesSecretConfig_immutable(name string, immutable bool, data s
   }
 
   immutable = %t
-  
+
   data = {
     SECRET = %q
   }
@@ -609,7 +609,7 @@ func testAccKubernetesSecretConfig_immutable(name string, immutable bool, data s
 func testAccKubernetesSecretConfig_service_account_token(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
-    name      = "%s"
+    name = "%s"
   }
 }
 

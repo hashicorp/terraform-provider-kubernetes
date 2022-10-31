@@ -68,39 +68,39 @@ func TestAccKubernetesConfigMapV1Data_basic(t *testing.T) {
 
 func testAccKubernetesConfigMapV1Data_empty(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_config_map_v1_data" "test" {
-    metadata {
-      name = %q
-    }
-    data = {}
-	field_manager = "tftest"
+  metadata {
+    name = %q
   }
+  data          = {}
+  field_manager = "tftest"
+}
 `, name)
 }
 
 func testAccKubernetesConfigMapV1Data_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_config_map_v1_data" "test" {
-    metadata {
-      name = %q
-    }
-    data = {
-      "test1" = "one"
-      "test2" = "two"
-    }
-	field_manager = "tftest"
+  metadata {
+    name = %q
   }
+  data = {
+    "test1" = "one"
+    "test2" = "two"
+  }
+  field_manager = "tftest"
+}
 `, name)
 }
 
 func testAccKubernetesConfigMapV1Data_modified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_config_map_v1_data" "test" {
-    metadata {
-      name = %q
-    }
-    data = {
-      "test1" = "one"
-      "test3" = "three"
-    }
-	field_manager = "tftest"
+  metadata {
+    name = %q
   }
+  data = {
+    "test1" = "one"
+    "test3" = "three"
+  }
+  field_manager = "tftest"
+}
 `, name)
 }

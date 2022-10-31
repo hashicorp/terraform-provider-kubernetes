@@ -395,13 +395,13 @@ func testAccKubernetesStorageClassConfig_allowedTopologies(name, provisioner str
   storage_provisioner = "%s"
   allowed_topologies {
     match_label_expressions {
-    key = "failure-domain.beta.kubernetes.io/zone"
-    values = [
-      "us-west1-a",
-      "us-west1-b"
-    ]
+      key = "failure-domain.beta.kubernetes.io/zone"
+      values = [
+        "us-west1-a",
+        "us-west1-b"
+      ]
+    }
   }
- }
 }
 `, name, provisioner)
 }

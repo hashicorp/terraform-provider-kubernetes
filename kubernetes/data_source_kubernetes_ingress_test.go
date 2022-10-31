@@ -93,7 +93,7 @@ func testAccKubernetesDataSourceIngressConfig_basic(name string) string {
 func testAccKubernetesDataSourceIngressConfig_read() string {
 	return fmt.Sprintf(`data "kubernetes_ingress" "test" {
   metadata {
-    name = "${kubernetes_ingress.test.metadata.0.name}"
+    name      = "${kubernetes_ingress.test.metadata.0.name}"
     namespace = "${kubernetes_ingress.test.metadata.0.namespace}"
   }
 }

@@ -474,13 +474,13 @@ func testAccKubernetesResourceQuotaConfigScopeSelector(name string) string {
       pods            = 4
     }
 
-	scope_selector {
-	  match_expression {
+    scope_selector {
+      match_expression {
         scope_name = "PriorityClass"
-		operator   = "In"
-		values     = ["medium"]
-	  }
-	}
+        operator   = "In"
+        values     = ["medium"]
+      }
+    }
   }
 }
 `, name)
@@ -509,13 +509,13 @@ func testAccKubernetesResourceQuotaConfigScopeSelectorModified(name string) stri
       pods            = 4
     }
 
-	scope_selector {
-	  match_expression {
+    scope_selector {
+      match_expression {
         scope_name = "PriorityClass"
-		operator   = "NotIn"
-		values     = ["large"]
-	  }
-	}
+        operator   = "NotIn"
+        values     = ["large"]
+      }
+    }
   }
 }
 `, name)

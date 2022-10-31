@@ -1072,8 +1072,8 @@ func testAccKubernetesServiceConfig_loadBalancer_annotations_aws_modified(name s
     annotations = {
       "service.beta.kubernetes.io/aws-load-balancer-backend-protocol"                  = "http"
       "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"           = "60"
-    "service.beta.kubernetes.io/aws-load-balancer-ssl-ports"                         = "*"
-    "service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled" = "true"
+      "service.beta.kubernetes.io/aws-load-balancer-ssl-ports"                         = "*"
+      "service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled" = "true"
     }
   }
 
@@ -1105,7 +1105,7 @@ func testAccKubernetesServiceConfig_headless(name string) string {
   }
   spec {
     cluster_ip = "None"
-    selector   = {
+    selector = {
       App = "MyApp"
     }
     port {

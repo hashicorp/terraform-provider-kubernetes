@@ -178,12 +178,12 @@ func testAccKubernetesCronJobConfig_basic(name, imageName string) string {
     name = "%s"
   }
   spec {
-    concurrency_policy = "Replace"
-    failed_jobs_history_limit = 5
-    schedule = "1 0 * * *"
-    starting_deadline_seconds = 10
+    concurrency_policy            = "Replace"
+    failed_jobs_history_limit     = 5
+    schedule                      = "1 0 * * *"
+    starting_deadline_seconds     = 10
     successful_jobs_history_limit = 10
-    suspend = true
+    suspend                       = true
     job_template {
       metadata {}
       spec {
@@ -192,8 +192,8 @@ func testAccKubernetesCronJobConfig_basic(name, imageName string) string {
           metadata {}
           spec {
             container {
-              name = "hello"
-              image = "%s"
+              name    = "hello"
+              image   = "%s"
               command = ["echo", "'hello'"]
             }
           }
@@ -223,8 +223,8 @@ func testAccKubernetesCronJobConfig_modified(name, imageName string) string {
           }
           spec {
             container {
-              name = "hello"
-              image = "%s"
+              name    = "hello"
+              image   = "%s"
               command = ["echo", "'hello'"]
             }
           }
@@ -241,7 +241,7 @@ func testAccKubernetesCronJobConfig_extra(name, imageName string) string {
     name = "%s"
   }
   spec {
-    schedule = "1 0 * * *"
+    schedule                      = "1 0 * * *"
     concurrency_policy            = "Forbid"
     successful_jobs_history_limit = 10
     failed_jobs_history_limit     = 10
@@ -254,8 +254,8 @@ func testAccKubernetesCronJobConfig_extra(name, imageName string) string {
           metadata {}
           spec {
             container {
-              name = "hello"
-              image = "%s"
+              name    = "hello"
+              image   = "%s"
               command = ["echo", "'hello'"]
             }
           }
@@ -272,7 +272,7 @@ func testAccKubernetesCronJobConfig_extraModified(name, imageName string) string
     name = "%s"
   }
   spec {
-    schedule = "1 0 * * *"
+    schedule                      = "1 0 * * *"
     concurrency_policy            = "Forbid"
     successful_jobs_history_limit = 2
     failed_jobs_history_limit     = 2
@@ -285,8 +285,8 @@ func testAccKubernetesCronJobConfig_extraModified(name, imageName string) string
           metadata {}
           spec {
             container {
-              name = "hello"
-              image = "%s"
+              name    = "hello"
+              image   = "%s"
               command = ["echo", "'hello'"]
             }
           }

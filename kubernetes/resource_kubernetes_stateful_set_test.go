@@ -447,7 +447,7 @@ func testAccKubernetesStatefulSetConfigBasic(name string) string {
 
       spec {
         container {
-          name = "ss-test"
+          name  = "ss-test"
           image = "nginx:1.19"
 
           port {

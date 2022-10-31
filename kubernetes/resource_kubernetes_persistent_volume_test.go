@@ -1296,9 +1296,9 @@ func testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeKindOmitted(n
     access_modes = ["ReadWriteOnce"]
     persistent_volume_source {
       azure_disk {
-        caching_mode = "None"
+        caching_mode  = "None"
         data_disk_uri = %[2]q
-        disk_name = %[1]q
+        disk_name     = %[1]q
       }
     }
   }
@@ -1317,10 +1317,10 @@ func testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeKind(name, da
     access_modes = ["ReadWriteOnce"]
     persistent_volume_source {
       azure_disk {
-        caching_mode = "None"
+        caching_mode  = "None"
         data_disk_uri = %[2]q
-        disk_name = %[1]q
-    kind      = %[3]q
+        disk_name     = %[1]q
+        kind          = %[3]q
       }
     }
   }
@@ -1369,9 +1369,9 @@ func testAccKubernetesPersistentVolumeConfig_azure_PersistentVolumeAzureFile(nam
     access_modes = ["ReadWriteOnce"]
     persistent_volume_source {
       azure_file {
-        secret_name      = %[2]q
-        share_name       = %[1]q
-        read_only        = false
+        secret_name = %[2]q
+        share_name  = %[1]q
+        read_only   = false
       }
     }
   }
@@ -1436,16 +1436,16 @@ resource "azurerm_storage_account" "test" {
   account_tier             = "Standard"
   account_replication_type = "LRS"
   account_kind             = "StorageV2"
-	# needed for Azure File kubernetes cifs mount
-	enable_https_traffic_only = false
+  # needed for Azure File kubernetes cifs mount
+  enable_https_traffic_only = false
   tags = {
     environment = "terraform-provider-kubernetes-test"
   }
 }
 resource "azurerm_storage_share" "test" {
-  name                  = %[1]q
-  storage_account_name  = azurerm_storage_account.test.name
-  quota                 = 1
+  name                 = %[1]q
+  storage_account_name = azurerm_storage_account.test.name
+  quota                = 1
 }
 `, name, location)
 }
@@ -1844,7 +1844,7 @@ func testAccKubernetesPersistentVolumeConfig_hostPath_mountOptions(name string) 
     capacity = {
       storage = "1Gi"
     }
-    access_modes = ["ReadWriteMany"]
+    access_modes  = ["ReadWriteMany"]
     mount_options = ["foo"]
     persistent_volume_source {
       host_path {
@@ -1864,7 +1864,7 @@ func testAccKubernetesPersistentVolumeConfig_hostPath_basic(name string) string 
     capacity = {
       storage = "1Gi"
     }
-    access_modes = ["ReadWriteMany"]
+    access_modes  = ["ReadWriteMany"]
     mount_options = ["foo"]
 
     persistent_volume_source {
@@ -1885,10 +1885,10 @@ func testAccKubernetesPersistentVolumeConfig_hostPath_claimRef_noNamespace(name 
     capacity = {
       storage = "1Gi"
     }
-    access_modes = ["ReadWriteMany"]
+    access_modes  = ["ReadWriteMany"]
     mount_options = ["foo"]
     claim_ref {
-       name = "%s"
+      name = "%s"
     }
 
     persistent_volume_source {
@@ -1914,11 +1914,11 @@ resource "kubernetes_persistent_volume" "test" {
     capacity = {
       storage = "1Gi"
     }
-    access_modes = ["ReadWriteMany"]
+    access_modes  = ["ReadWriteMany"]
     mount_options = ["foo"]
     claim_ref {
-       name = "%s"
-       namespace = kubernetes_namespace.test.metadata.0.name
+      name      = "%s"
+      namespace = kubernetes_namespace.test.metadata.0.name
     }
 
     persistent_volume_source {
@@ -1945,11 +1945,11 @@ resource "kubernetes_persistent_volume" "test" {
     capacity = {
       storage = "1Gi"
     }
-    access_modes = ["ReadWriteMany"]
+    access_modes  = ["ReadWriteMany"]
     mount_options = ["foo"]
     claim_ref {
-       name = "%s"
-       namespace = "%s"
+      name      = "%s"
+      namespace = "%s"
     }
 
     persistent_volume_source {
@@ -1962,12 +1962,12 @@ resource "kubernetes_persistent_volume" "test" {
 
 resource "kubernetes_persistent_volume_claim" "test" {
   metadata {
-    name = "%s"
+    name      = "%s"
     namespace = "%s"
   }
 
   spec {
-    access_modes       = ["ReadWriteOnce"]
+    access_modes = ["ReadWriteOnce"]
 
     resources {
       requests = {

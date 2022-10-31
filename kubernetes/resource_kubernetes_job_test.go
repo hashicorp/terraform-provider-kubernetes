@@ -296,15 +296,15 @@ func testAccKubernetesJobConfig_basic(name, imageName string) string {
   }
   spec {
     active_deadline_seconds = 120
-    backoff_limit = 10
-    completions = 10
-    parallelism = 2
+    backoff_limit           = 10
+    completions             = 10
+    parallelism             = 2
     template {
       metadata {}
       spec {
         container {
-          name = "hello"
-          image = "%s"
+          name    = "hello"
+          image   = "%s"
           command = ["echo", "'hello'"]
         }
       }
@@ -322,16 +322,16 @@ func testAccKubernetesJobConfig_updateMutableFields(name, imageName, activeDeadl
   }
   spec {
     active_deadline_seconds = %s
-    backoff_limit = %s
-    completions = 10
-    manual_selector = %s
-    parallelism = %s
+    backoff_limit           = %s
+    completions             = 10
+    manual_selector         = %s
+    parallelism             = %s
     template {
       metadata {}
       spec {
         container {
-          name = "hello"
-          image = "%s"
+          name    = "hello"
+          image   = "%s"
           command = ["echo", "'hello'"]
         }
       }
@@ -353,8 +353,8 @@ func testAccKubernetesJobConfig_updateImmutableFields(name, imageName, completio
       metadata {}
       spec {
         container {
-          name = "newname"
-          image = "%s"
+          name    = "newname"
+          image   = "%s"
           command = ["echo", "'hello'"]
         }
       }
@@ -371,16 +371,16 @@ func testAccKubernetesJobConfig_ttl_seconds_after_finished(name, imageName strin
     name = "%s"
   }
   spec {
-    backoff_limit = 10
-    completions = 10
-    parallelism = 2
+    backoff_limit              = 10
+    completions                = 10
+    parallelism                = 2
     ttl_seconds_after_finished = "60"
     template {
       metadata {}
       spec {
         container {
-          name = "hello"
-          image = "%s"
+          name    = "hello"
+          image   = "%s"
           command = ["echo", "'hello'"]
         }
       }
@@ -401,8 +401,8 @@ func testAccKubernetesJobConfig_wait_for_completion(name, imageName string) stri
       }
       spec {
         container {
-          name = "wait-test"
-          image = "%s"
+          name    = "wait-test"
+          image   = "%s"
           command = ["sleep", "10"]
         }
       }
@@ -438,8 +438,8 @@ func testAccKubernetesJobConfig_modified(name, imageName string) string {
       }
       spec {
         container {
-          name = "hello"
-          image = "%s"
+          name    = "hello"
+          image   = "%s"
           command = ["echo", "'hello'"]
         }
       }

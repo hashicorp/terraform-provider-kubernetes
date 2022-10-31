@@ -182,7 +182,7 @@ func testAccKubernetesPriorityClassConfig_basic(name string) string {
     name = "%s"
   }
 
-  value = 100
+  value             = 100
   preemption_policy = "Never"
 }
 `, name)
@@ -205,7 +205,7 @@ func testAccKubernetesPriorityClassConfig_metaModified(name string) string {
     name = "%s"
   }
 
-  value = 100
+  value             = 100
   preemption_policy = "Never"
 }
 `, name)
@@ -217,9 +217,9 @@ func testAccKubernetesPriorityClassConfig_modified(name string) string {
     name = "%s"
   }
 
-  value          = 100
-  description    = "Foobar"
-  global_default = true
+  value             = 100
+  description       = "Foobar"
+  global_default    = true
   preemption_policy = "Never"
 }
 `, name)

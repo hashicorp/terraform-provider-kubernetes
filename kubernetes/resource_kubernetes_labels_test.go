@@ -102,45 +102,45 @@ func destroyConfigMap(name, namespace string) error {
 
 func testAccKubernetesLabels_empty(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_labels" "test" {
-    api_version = "v1"
-    kind        = "ConfigMap"
-    metadata {
-      name = %q
-    }
-    labels = {}
-	field_manager = "tftest"
+  api_version = "v1"
+  kind        = "ConfigMap"
+  metadata {
+    name = %q
   }
+  labels        = {}
+  field_manager = "tftest"
+}
 `, name)
 }
 
 func testAccKubernetesLabels_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_labels" "test" {
-    api_version = "v1"
-    kind        = "ConfigMap"
-    metadata {
-      name = %q
-    }
-    labels = {
-      "test1" = "one"
-      "test2" = "two"
-    }
-	field_manager = "tftest"
+  api_version = "v1"
+  kind        = "ConfigMap"
+  metadata {
+    name = %q
   }
+  labels = {
+    "test1" = "one"
+    "test2" = "two"
+  }
+  field_manager = "tftest"
+}
 `, name)
 }
 
 func testAccKubernetesLabels_modified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_labels" "test" {
-    api_version = "v1"
-    kind        = "ConfigMap"
-    metadata {
-      name = %q
-    }
-    labels = {
-      "test1" = "one"
-      "test3" = "three"
-    }
-	field_manager = "tftest"
+  api_version = "v1"
+  kind        = "ConfigMap"
+  metadata {
+    name = %q
   }
+  labels = {
+    "test1" = "one"
+    "test3" = "three"
+  }
+  field_manager = "tftest"
+}
 `, name)
 }

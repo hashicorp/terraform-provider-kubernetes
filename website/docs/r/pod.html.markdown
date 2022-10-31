@@ -710,6 +710,17 @@ The `option` block supports the following:
 * `limits` - (Optional) Describes the maximum amount of compute resources allowed. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/compute-resources)/
 * `requests` - (Optional) Describes the minimum amount of compute resources required.
 
+`resources` is a computed attribute and thus if it is not configured in terraform code, the value will be computed from the returned Kubernetes object. That causes a situation when removing `resources` from terraform code does not update the Kubernetes object. In order to delete `resources` from the Kubernetes object, configure an empty attribute in your code.
+
+Please, look at the example below:
+
+```hcl
+resources {
+    limits = {}
+    requests = {}
+}
+```
+
 ### `resource_field_ref`
 
 #### Arguments

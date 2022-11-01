@@ -1410,7 +1410,7 @@ resource "kubernetes_pod" "test" {
   }
 
   spec {
-	automount_service_account_token = false
+    automount_service_account_token = false
 
     container {
       image = "%s"
@@ -1476,19 +1476,19 @@ func testAccKubernetesPodConfigWithInitContainer(podName, image string) string {
   }
 
   spec {
-  automount_service_account_token = false
-   container {
-     name  = "container"
-     image = "%s"
-     command = ["sh", "-c", "echo The app is running! && sleep 3600"]
+    automount_service_account_token = false
+    container {
+      name    = "container"
+      image   = "%s"
+      command = ["sh", "-c", "echo The app is running! && sleep 3600"]
 
-     resources {
-       requests = {
-         memory = "64Mi"
-         cpu    = "50m"
-       }
-     }
-   }
+      resources {
+        requests = {
+          memory = "64Mi"
+          cpu    = "50m"
+        }
+      }
+    }
 
     init_container {
       name    = "initcontainer"
@@ -1831,9 +1831,9 @@ resource "kubernetes_pod" "test" {
   }
 
   spec {
-	automount_service_account_token = false
-	
-	container {
+    automount_service_account_token = false
+
+    container {
       image = "%s"
       name  = "containername"
 
@@ -1877,7 +1877,7 @@ resource "kubernetes_pod" "test" {
   }
 
   spec {
-	automount_service_account_token = false
+    automount_service_account_token = false
 
     container {
       image = "%s"
@@ -1931,8 +1931,8 @@ resource "kubernetes_pod" "test" {
   }
 
   spec {
-	restart_policy = "Never"
-	automount_service_account_token = false
+    restart_policy                  = "Never"
+    automount_service_account_token = false
 
     container {
       image = "%s"
@@ -2014,88 +2014,88 @@ resource "kubernetes_pod" "test" {
 
 func testAccKubernetesPodCSIVolume(imageName, podName, secretName, volumeName string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test-secret" {
-	metadata {
-		name = %[3]q
-	}
-  
-	data = {
-		secret = "test-secret"
-	}
+  metadata {
+    name = %[3]q
+  }
+
+  data = {
+    secret = "test-secret"
+  }
 }
-	
+
 resource "kubernetes_pod" "test" {
-	metadata {
-        labels = {
-          "label" = "web"
-        }
-		name = %[1]q
+  metadata {
+    labels = {
+      "label" = "web"
+    }
+    name = %[1]q
+  }
+  spec {
+    container {
+      image   = %[2]q
+      name    = %[1]q
+      command = ["sleep", "36000"]
+      volume_mount {
+        name       = %[4]q
+        mount_path = "/volume"
+        read_only  = true
       }
-      spec {
-        container {
-          image   = %[2]q
-          name    = %[1]q
-		  command = ["sleep", "36000"]
-          volume_mount {
-            name       = %[4]q
-            mount_path = "/volume"
-            read_only  = true
-          }
+    }
+    restart_policy = "Never"
+    volume {
+      name = %[4]q
+      csi {
+        driver    = "hostpath.csi.k8s.io"
+        read_only = true
+        volume_attributes = {
+          "secretProviderClass" = "secret-provider"
         }
-        restart_policy = "Never"
-        volume {
-			name = %[4]q
-			csi {
-			  driver    = "hostpath.csi.k8s.io"
-			  read_only = true
-			  volume_attributes = {
-				"secretProviderClass" = "secret-provider"
-			  }
-			  node_publish_secret_ref {
-				name = %[3]q
-			  }
-			}
-		  }
+        node_publish_secret_ref {
+          name = %[3]q
+        }
       }
-    }`, podName, imageName, secretName, volumeName)
+    }
+  }
+}`, podName, imageName, secretName, volumeName)
 }
 
 func testAccKubernetesPodProjectedVolume(cfgMapName, cfgMap2Name, secretName, podName, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
-    metadata {
-      name = "%s"
-    }
+  metadata {
+    name = "%s"
+  }
 
-    binary_data = {
-      raw = "${base64encode("Raw data should come back as is in the pod")}"
-    }
+  binary_data = {
+    raw = "${base64encode("Raw data should come back as is in the pod")}"
+  }
 
-    data = {
-      one = "first"
-    }
+  data = {
+    one = "first"
+  }
 }
 
 resource "kubernetes_config_map" "test2" {
-    metadata {
-      name = "%s"
-    }
+  metadata {
+    name = "%s"
+  }
 
-    binary_data = {
-      raw = "${base64encode("Raw data should come back as is in the pod")}"
-    }
+  binary_data = {
+    raw = "${base64encode("Raw data should come back as is in the pod")}"
+  }
 
-    data = {
-      one = "first"
-    }
+  data = {
+    one = "first"
+  }
 }
 
 resource "kubernetes_secret" "test" {
-    metadata {
-      name = "%s"
-    }
+  metadata {
+    name = "%s"
+  }
 
-    data = {
-      one = "first"
-    }
+  data = {
+    one = "first"
+  }
 }
 
 resource "kubernetes_pod" "test" {
@@ -2108,14 +2108,14 @@ resource "kubernetes_pod" "test" {
   }
 
   spec {
-	restart_policy = "Never"
-	automount_service_account_token = false
+    restart_policy                  = "Never"
+    automount_service_account_token = false
 
     container {
       image = "%s"
       name  = "containername"
 
-    command = ["sleep", "3600"]
+      command = ["sleep", "3600"]
 
       lifecycle {
         post_start {
@@ -2142,27 +2142,27 @@ resource "kubernetes_pod" "test" {
               key  = "raw"
               path = "raw.txt"
             }
-      }
-    }
-    sources {
-      config_map {
+          }
+        }
+        sources {
+          config_map {
             name = "${kubernetes_config_map.test2.metadata.0.name}"
             items {
               key  = "raw"
               path = "raw-again.txt"
             }
-      }
-    }
-    sources {
+          }
+        }
+        sources {
           secret {
             name = "${kubernetes_secret.test.metadata.0.name}"
             items {
               key  = "one"
               path = "secret.txt"
             }
-      }
-    }
-    sources {
+          }
+        }
+        sources {
           downward_api {
             items {
               path = "labels"
@@ -2174,10 +2174,10 @@ resource "kubernetes_pod" "test" {
               path = "cpu_limit"
               resource_field_ref {
                 container_name = "containername"
-                resource = "limits.cpu"
+                resource       = "limits.cpu"
               }
             }
-      }
+          }
         }
       }
     }
@@ -2203,15 +2203,15 @@ func testAccKubernetesPodConfigWithResourceRequirements(podName, imageName strin
 
       resources {
         limits = {
-          cpu    = "0.5"
-		  memory = "512Mi"
-		  "ephemeral-storage" = "512Mi"
+          cpu                 = "0.5"
+          memory              = "512Mi"
+          "ephemeral-storage" = "512Mi"
         }
 
         requests = {
-          cpu    = "250m"
-		  memory = "50Mi"
-		  "ephemeral-storage" = "128Mi"
+          cpu                 = "250m"
+          memory              = "50Mi"
+          "ephemeral-storage" = "128Mi"
         }
       }
     }
@@ -2231,7 +2231,7 @@ func testAccKubernetesPodConfigWithEmptyDirVolumes(podName, imageName string) st
   }
 
   spec {
-	automount_service_account_token = false
+    automount_service_account_token = false
 
     container {
       image = "%s"
@@ -2266,7 +2266,7 @@ func testAccKubernetesPodConfigWithEmptyDirVolumesSizeLimit(podName, imageName s
   }
 
   spec {
-	automount_service_account_token = false
+    automount_service_account_token = false
 
     container {
       image = "%s"
@@ -2544,7 +2544,7 @@ resource "kubernetes_pod" "test" {
   }
 
   spec {
-	automount_service_account_token = false
+    automount_service_account_token = false
 
     readiness_gate {
       condition_type = "haha"
@@ -2610,8 +2610,8 @@ func testAccKubernetesPodConfigMinimal(name, imageName string) string {
   }
   spec {
     container {
-        image = "%s"
-        name  = "containername"
+      image = "%s"
+      name  = "containername"
     }
   }
 }
@@ -2639,7 +2639,7 @@ func testAccKubernetesPodConfigEmptyBlocks(name, imageName string) string {
       }
       env_from {
         secret_ref {}
-        }
+      }
       env_from {}
     }
     volume {
@@ -2674,7 +2674,7 @@ resource "kubernetes_persistent_volume" "test" {
     capacity = {
       storage = "1Gi"
     }
-    access_modes = ["ReadWriteOnce"]
+    access_modes       = ["ReadWriteOnce"]
     storage_class_name = kubernetes_storage_class.test.metadata.0.name
     persistent_volume_source {
       host_path {
@@ -2691,9 +2691,9 @@ resource "kubernetes_persistent_volume_claim" "test" {
     name = "test"
   }
   spec {
-    access_modes = ["ReadWriteOnce"]
+    access_modes       = ["ReadWriteOnce"]
     storage_class_name = kubernetes_storage_class.test.metadata.0.name
-    volume_name = kubernetes_persistent_volume.test.metadata.0.name
+    volume_name        = kubernetes_persistent_volume.test.metadata.0.name
     resources {
       requests = {
         storage = "1G"
@@ -2709,12 +2709,12 @@ resource "kubernetes_pod" "test" {
   spec {
     %s
     container {
-      name = "default"
-      image = "%s"
+      name    = "default"
+      image   = "%s"
       command = ["sleep", "3600s"]
       volume_mount {
         mount_path = "/etc/test"
-        name = "pvc"
+        name       = "pvc"
       }
     }
     volume {

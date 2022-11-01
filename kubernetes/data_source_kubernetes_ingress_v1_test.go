@@ -73,11 +73,11 @@ func testAccKubernetesDataSourceIngressV1Config_basic(name string) string {
   spec {
     default_backend {
       service {
-		name = "app1"
+        name = "app1"
         port {
-		  number = 443
-		}
-	  }
+          number = 443
+        }
+      }
     }
     rule {
       host = "server.domain.com"
@@ -85,14 +85,14 @@ func testAccKubernetesDataSourceIngressV1Config_basic(name string) string {
         path {
           backend {
             service {
-			  name = "app2"
-			  port {
-			    number = 80
-			  }
-			} 
+              name = "app2"
+              port {
+                number = 80
+              }
+            }
           }
-          path = "/.*"
-		  path_type = "Prefix"
+          path      = "/.*"
+          path_type = "Prefix"
         }
       }
     }
@@ -104,7 +104,7 @@ func testAccKubernetesDataSourceIngressV1Config_basic(name string) string {
 func testAccKubernetesDataSourceIngressV1Config_read() string {
 	return fmt.Sprintf(`data "kubernetes_ingress_v1" "test" {
   metadata {
-    name = "${kubernetes_ingress_v1.test.metadata.0.name}"
+    name      = "${kubernetes_ingress_v1.test.metadata.0.name}"
     namespace = "${kubernetes_ingress_v1.test.metadata.0.namespace}"
   }
 }

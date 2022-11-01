@@ -263,7 +263,7 @@ func testAccKubernetesIngressConfig_basic(name string) string {
     name = "%s"
   }
   spec {
-	ingress_class_name = "ingress-class"
+    ingress_class_name = "ingress-class"
     backend {
       service_name = "app1"
       service_port = 443
@@ -290,7 +290,7 @@ func testAccKubernetesIngressConfig_modified(name string) string {
     name = "%s"
   }
   spec {
-	ingress_class_name = "other-ingress-class"
+    ingress_class_name = "other-ingress-class"
     backend {
       service_name = "svc"
       service_port = 8443
@@ -341,12 +341,12 @@ func testAccKubernetesIngressConfig_internalKey(name string) string {
     name = "%s"
     annotations = {
       "kubernetes.io/ingress-anno" = "one"
-      TestAnnotationTwo = "two"
+      TestAnnotationTwo            = "two"
     }
     labels = {
       "kubernetes.io/ingress-label" = "one"
-      TestLabelTwo = "two"
-      TestLabelThree = "three"
+      TestLabelTwo                  = "two"
+      TestLabelThree                = "three"
     }
   }
   spec {
@@ -370,7 +370,7 @@ func testAccKubernetesIngressConfig_internalKey_removed(name string) string {
       TestAnnotationTwo = "two"
     }
     labels = {
-      TestLabelTwo = "two"
+      TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
   }
@@ -398,9 +398,9 @@ func testAccKubernetesIngressConfig_waitForLoadBalancer(name string) string {
       app = %q
     }
     port {
-      port = 8000
+      port        = 8000
       target_port = 80
-      protocol = "TCP"
+      protocol    = "TCP"
     }
   }
 }
@@ -423,12 +423,12 @@ resource "kubernetes_deployment" "test" {
       }
       spec {
         container {
-          name = "test"
+          name  = "test"
           image = "gcr.io/google-samples/hello-app:2.0"
           env {
-            name = "PORT"
+            name  = "PORT"
             value = "80"
-          }  
+          }
         }
       }
     }
@@ -437,7 +437,7 @@ resource "kubernetes_deployment" "test" {
 
 resource "kubernetes_ingress" "test" {
   depends_on = [
-    kubernetes_service.test, 
+    kubernetes_service.test,
     kubernetes_deployment.test
   ]
   metadata {
@@ -461,22 +461,22 @@ func testAccKubernetesIngressConfig_stateUpgradev0(provider, name string) string
   }
   spec {
     port {
-      port = 80
+      port        = 80
       target_port = 80
-      protocol = "TCP"
+      protocol    = "TCP"
     }
     type = "NodePort"
   }
 }
 
 resource "kubernetes_ingress" "test" {
-  provider = "%s"
+  provider               = "%s"
   wait_for_load_balancer = false
   metadata {
     name = "%s"
     annotations = {
-      "kubernetes.io/ingress.class" = "alb"
-      "alb.ingress.kubernetes.io/scheme" = "internet-facing"
+      "kubernetes.io/ingress.class"           = "alb"
+      "alb.ingress.kubernetes.io/scheme"      = "internet-facing"
       "alb.ingress.kubernetes.io/target-type" = "ip"
     }
   }

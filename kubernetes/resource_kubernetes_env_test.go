@@ -422,127 +422,127 @@ resource "kubernetes_env" "test" {
 
 func testAccKubernetesEnv_CronJobBasic(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
-		metadata {
-		  name = "%s"
-		}
-	  
-		data = {
-		  one = "first"
-		}
-	  }
-	  
-	  resource "kubernetes_config_map" "test" {
-		metadata {
-		  name = "%s"
-		}
-	  
-		data = {
-		  one = "ONE"
-		}
-	  }
+  metadata {
+    name = "%s"
+  }
 
-	resource "kubernetes_env" "demo" {
-		container = "hello"
-		api_version = "batch/v1"
-		kind        = "CronJob"
-		metadata {
-		name      = "%s"
-		namespace = "%s"
-		}
-			env {
-				name = "TEST"
-				value = "123"
-			}
+  data = {
+    one = "first"
+  }
+}
 
-			env {
-				name = "EXPORTED_VARIABLE_FROM_SECRET"
-			
-				value_from {
-				  secret_key_ref {
-					name     = "${kubernetes_secret.test.metadata.0.name}"
-					key      = "one"
-					optional = true
-				  }
-				}
-			  }
-			
-			
-			  env {
-				name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
-				value_from {
-				  config_map_key_ref {
-					name     = "${kubernetes_config_map.test.metadata.0.name}"
-					key      = "one"
-					optional = true
-				  }
-				}
-			  }
-	}
+resource "kubernetes_config_map" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  data = {
+    one = "ONE"
+  }
+}
+
+resource "kubernetes_env" "demo" {
+  container   = "hello"
+  api_version = "batch/v1"
+  kind        = "CronJob"
+  metadata {
+    name      = "%s"
+    namespace = "%s"
+  }
+  env {
+    name  = "TEST"
+    value = "123"
+  }
+
+  env {
+    name = "EXPORTED_VARIABLE_FROM_SECRET"
+
+    value_from {
+      secret_key_ref {
+        name     = "${kubernetes_secret.test.metadata.0.name}"
+        key      = "one"
+        optional = true
+      }
+    }
+  }
+
+
+  env {
+    name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
+    value_from {
+      config_map_key_ref {
+        name     = "${kubernetes_config_map.test.metadata.0.name}"
+        key      = "one"
+        optional = true
+      }
+    }
+  }
+}
 	`, secretName, configMapName, name, namespace)
 }
 
 func testAccKubernetesEnv_CronJobModified(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
-		metadata {
-		  name = "%s"
-		}
-	  
-		data = {
-		  one = "first"
-		}
-	  }
-	  
-	  resource "kubernetes_config_map" "test" {
-		metadata {
-		  name = "%s"
-		}
-	  
-		data = {
-		  one = "ONE"
-		}
-	  }
+  metadata {
+    name = "%s"
+  }
 
-	resource "kubernetes_env" "demo" {
-		container = "hello"
-		api_version = "batch/v1"
-		kind        = "CronJob"
-		metadata {
-		name      = "%s"
-		namespace = "%s"
-		}
-			env {
-				name = "TEST"
-				value = "123"
-			}
+  data = {
+    one = "first"
+  }
+}
 
-			env {
-				name = "website"
-				value = "hashicorp.com"
-			}
+resource "kubernetes_config_map" "test" {
+  metadata {
+    name = "%s"
+  }
 
-			env {
-				name = "EXPORTED_VARIABLE_FROM_SECRET"
-			
-				value_from {
-				  secret_key_ref {
-					name     = "${kubernetes_secret.test.metadata.0.name}"
-					key      = "two"
-					optional = true
-				  }
-				}
-			  }
-			
-			
-			  env {
-				name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
-				value_from {
-				  config_map_key_ref {
-					name     = "${kubernetes_config_map.test.metadata.0.name}"
-					key      = "three"
-					optional = true
-				  }
-				}
-			  }
-	}
+  data = {
+    one = "ONE"
+  }
+}
+
+resource "kubernetes_env" "demo" {
+  container   = "hello"
+  api_version = "batch/v1"
+  kind        = "CronJob"
+  metadata {
+    name      = "%s"
+    namespace = "%s"
+  }
+  env {
+    name  = "TEST"
+    value = "123"
+  }
+
+  env {
+    name  = "website"
+    value = "hashicorp.com"
+  }
+
+  env {
+    name = "EXPORTED_VARIABLE_FROM_SECRET"
+
+    value_from {
+      secret_key_ref {
+        name     = "${kubernetes_secret.test.metadata.0.name}"
+        key      = "two"
+        optional = true
+      }
+    }
+  }
+
+
+  env {
+    name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
+    value_from {
+      config_map_key_ref {
+        name     = "${kubernetes_config_map.test.metadata.0.name}"
+        key      = "three"
+        optional = true
+      }
+    }
+  }
+}
 	`, secretName, configMapName, name, namespace)
 }

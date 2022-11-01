@@ -356,10 +356,10 @@ func testAccKubernetesPodSecurityPolicyConfig_specModified(name string) string {
       "persistentVolumeClaim",
     ]
 
-	allowed_host_paths {
-		path_prefix = "/"
-		read_only   = true
-	}
+    allowed_host_paths {
+      path_prefix = "/"
+      read_only   = true
+    }
 
     allowed_unsafe_sysctls = [
       "kernel.msg*"

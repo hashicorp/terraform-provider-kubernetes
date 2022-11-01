@@ -1206,13 +1206,13 @@ func testAccKubernetesDeploymentConfig_minimal(name, imageName string) string {
     replicas = 2
     selector {
       match_labels = {
-        TestLabelOne   = "one"
+        TestLabelOne = "one"
       }
     }
     template {
       metadata {
         labels = {
-          TestLabelOne   = "one"
+          TestLabelOne = "one"
         }
       }
       spec {
@@ -1314,7 +1314,7 @@ resource "kubernetes_deployment" "test" {
       TestLabelThree = "three"
     }
     namespace = kubernetes_namespace.test.metadata.0.name
-    name = "%s"
+    name      = "%s"
   }
   spec {
     replicas = 1
@@ -1409,12 +1409,12 @@ resource "kubernetes_deployment" "test" {
 
 resource "kubernetes_service" "test" {
   metadata {
-    name = "%s-init-service"
+    name      = "%s-init-service"
     namespace = kubernetes_namespace.test.metadata.0.name
     labels = {
-          TestLabelOne   = "one"
-          TestLabelTwo   = "two"
-          TestLabelThree = "three"
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
     }
   }
   spec {
@@ -1427,7 +1427,7 @@ resource "kubernetes_service" "test" {
 
 resource "kubernetes_secret" "test" {
   metadata {
-    name = "%s-test"
+    name      = "%s-test"
     namespace = kubernetes_namespace.test.metadata.0.name
   }
   data = {
@@ -1438,7 +1438,7 @@ resource "kubernetes_secret" "test" {
 
 resource "kubernetes_config_map" "test" {
   metadata {
-    name = "%s-test"
+    name      = "%s-test"
     namespace = kubernetes_namespace.test.metadata.0.name
   }
   data = {
@@ -2028,8 +2028,8 @@ func testAccKubernetesDeploymentConfigWithContainerSecurityContextRunAsGroup(dep
         }
 
         container {
-          name  = "container2"
-          image = "%s"
+          name    = "container2"
+          image   = "%s"
           command = ["sh", "-c", "echo The app is running! && sleep 3600"]
           security_context {
             run_as_group = 200
@@ -2283,14 +2283,14 @@ func testAccKubernetesDeploymentConfigWithResourceRequirements(deploymentName, i
 
           resources {
             limits = {
-              cpu    = "0.5"
-              memory = "512Mi"
+              cpu          = "0.5"
+              memory       = "512Mi"
               "nvidia/gpu" = "1"
             }
 
             requests = {
-              cpu    = "250m"
-              memory = "50Mi"
+              cpu          = "250m"
+              memory       = "50Mi"
               "nvidia/gpu" = "1"
             }
           }
@@ -2392,7 +2392,7 @@ func testAccKubernetesDeploymentConfigWithEmptyDirVolumesModified(deploymentName
           name = "cache-volume"
 
           empty_dir {
-            medium = "Memory"
+            medium     = "Memory"
             size_limit = "128Mi"
           }
         }
@@ -2698,13 +2698,13 @@ func testAccKubernetesDeploymentConfigLocal(provider, name, imageName string) st
             }
           }
           env {
-           name = "LIMITS_MEM"
+            name = "LIMITS_MEM"
             value_from {
               resource_field_ref {
                 container_name = "containername"
                 resource       = "requests.memory"
               }
-            } 
+            }
           }
         }
       }

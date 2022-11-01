@@ -76,45 +76,45 @@ func TestAccKubernetesAnnotations_basic(t *testing.T) {
 
 func testAccKubernetesAnnotations_empty(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_annotations" "test" {
-    api_version = "v1"
-    kind        = "ConfigMap"
-    metadata {
-      name = %q
-    }
-    annotations = {}
-	field_manager = "tftest"
+  api_version = "v1"
+  kind        = "ConfigMap"
+  metadata {
+    name = %q
   }
+  annotations   = {}
+  field_manager = "tftest"
+}
 `, name)
 }
 
 func testAccKubernetesAnnotations_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_annotations" "test" {
-    api_version = "v1"
-    kind        = "ConfigMap"
-    metadata {
-      name = %q
-    }
-    annotations = {
-      "test1" = "one"
-      "test2" = "two"
-    }
-	field_manager = "tftest"
+  api_version = "v1"
+  kind        = "ConfigMap"
+  metadata {
+    name = %q
   }
+  annotations = {
+    "test1" = "one"
+    "test2" = "two"
+  }
+  field_manager = "tftest"
+}
 `, name)
 }
 
 func testAccKubernetesAnnotations_modified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_annotations" "test" {
-    api_version = "v1"
-    kind        = "ConfigMap"
-    metadata {
-      name = %q
-    }
-    annotations = {
-      "test1" = "one"
-      "test3" = "three"
-    }
-	field_manager = "tftest"
+  api_version = "v1"
+  kind        = "ConfigMap"
+  metadata {
+    name = %q
   }
+  annotations = {
+    "test1" = "one"
+    "test3" = "three"
+  }
+  field_manager = "tftest"
+}
 `, name)
 }

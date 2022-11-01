@@ -52,7 +52,7 @@ func testAccKubernetesDataSourceConfigMapConfig_basic(name string) string {
     }
 
     labels = {
-      TestLabelOne   = "one"
+      TestLabelOne = "one"
     }
 
     name = "%s"

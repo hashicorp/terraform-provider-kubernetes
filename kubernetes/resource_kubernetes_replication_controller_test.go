@@ -553,7 +553,7 @@ func testAccKubernetesReplicationControllerConfig_basic(name, imageName string, 
   }
 
   spec {
-    replicas = %d # This is intentionally high to exercise the waiter
+    replicas = "%d" # This is intentionally high to exercise the waiter
 
     selector = {
       TestLabelOne   = "one"
@@ -604,7 +604,7 @@ func testAccKubernetesReplicationControllerConfig_initContainer(name, image stri
   }
 
   spec {
-    replicas = %d # This is intentionally high to exercise the waiter
+    replicas = "%d" # This is intentionally high to exercise the waiter
     selector = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"

@@ -93,8 +93,8 @@ func testAccKubernetesDataSourceServiceConfig_basic(name string) string {
     }
   }
   spec {
-	ip_families = ["IPv4"]
-	ip_family_policy = "SingleStack"
+    ip_families      = ["IPv4"]
+    ip_family_policy = "SingleStack"
     port {
       port         = 8080
       target_port  = 80

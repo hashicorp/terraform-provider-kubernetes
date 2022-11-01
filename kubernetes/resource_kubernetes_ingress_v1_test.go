@@ -427,21 +427,21 @@ func testAccKubernetesIngressV1Config_resourceBackend(name string) string {
     default_backend {
       resource {
         api_group = "k8s.example.com"
-        kind = "StorageBucket"
-        name = "static-assets"
+        kind      = "StorageBucket"
+        name      = "static-assets"
       }
     }
     rule {
       host = "server.domain.com"
       http {
         path {
-          path = "/icons"
+          path      = "/icons"
           path_type = "ImplementationSpecific"
           backend {
             resource {
               api_group = "k8s.example.com"
-              kind = "StorageBucket"
-              name = "icon-assets"
+              kind      = "StorageBucket"
+              name      = "icon-assets"
             }
           }
         }
@@ -520,12 +520,12 @@ func testAccKubernetesIngressV1Config_internalKey(name string) string {
     name = "%s"
     annotations = {
       "kubernetes.io/ingress-anno" = "one"
-      TestAnnotationTwo = "two"
+      TestAnnotationTwo            = "two"
     }
     labels = {
       "kubernetes.io/ingress-label" = "one"
-      TestLabelTwo = "two"
-      TestLabelThree = "three"
+      TestLabelTwo                  = "two"
+      TestLabelThree                = "three"
     }
   }
   spec {
@@ -553,7 +553,7 @@ func testAccKubernetesIngressV1Config_internalKey_removed(name string) string {
       TestAnnotationTwo = "two"
     }
     labels = {
-      TestLabelTwo = "two"
+      TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
   }
@@ -585,9 +585,9 @@ func testAccKubernetesIngressV1Config_waitForLoadBalancer(name string) string {
       app = %q
     }
     port {
-      port = 8000
+      port        = 8000
       target_port = 80
-      protocol = "TCP"
+      protocol    = "TCP"
     }
   }
 }
@@ -610,12 +610,12 @@ resource "kubernetes_deployment" "test" {
       }
       spec {
         container {
-          name = "test"
+          name  = "test"
           image = "gcr.io/google-samples/hello-app:2.0"
           env {
-            name = "PORT"
+            name  = "PORT"
             value = "80"
-          }  
+          }
         }
       }
     }
@@ -624,7 +624,7 @@ resource "kubernetes_deployment" "test" {
 
 resource "kubernetes_ingress_v1" "test" {
   depends_on = [
-    kubernetes_service.test, 
+    kubernetes_service.test,
     kubernetes_deployment.test
   ]
   metadata {

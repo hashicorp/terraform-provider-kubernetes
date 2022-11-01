@@ -1,3 +1,16 @@
+## 2.15.0 (October 31, 2022)
+
+ENHANCEMENT:
+
+* Add new resource resource_kubernetes_env [[GH-1838](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1838)]
+* Add "field_manager" attribute to kubernetes_labels, kubernetes_annotations, kubernetes_config_map_v1_data [[GH-1831](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1831)]
+* r/kubernetes_horizontal_pod_autoscaler_v2: make attribute `spec.behavior.scale_down` computed [[GH-1853](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1853)]
+* r/kubernetes_horizontal_pod_autoscaler_v2: make attribute `spec.behavior.scale_up` computed [[GH-1853](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1853)]
+* r/kubernetes_horizontal_pod_autoscaler_v2: make attribute `spec.behavior` computed [[GH-1853](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1853)]
+* r/kubernetes_horizontal_pod_autoscaler_v2beta2: make attribute `spec.behavior.scale_down` computed [[GH-1853](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1853)]
+* r/kubernetes_horizontal_pod_autoscaler_v2beta2: make attribute `spec.behavior.scale_up` computed [[GH-1853](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1853)]
+* r/kubernetes_horizontal_pod_autoscaler_v2beta2: make attribute `spec.behavior` computed [[GH-1853](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1853)]
+
 ## 2.14.0 (October 6, 2022)
 
 ENHANCEMENT:

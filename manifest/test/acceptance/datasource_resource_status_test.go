@@ -46,7 +46,6 @@ func TestDataSourceKubernetesResourceStatus_Deployment(t *testing.T) {
 	tf.Init(ctx)
 	tf.Apply(ctx)
 
-
 	k8shelper.AssertNamespacedResourceExists(t, "apps/v1", "deployments", namespace, name)
 
 	state, err := tf.State(ctx)

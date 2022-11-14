@@ -119,6 +119,9 @@ func resourceKubernetesNamespaceDelete(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[INFO] Deleting namespace: %#v", name)
 	err = conn.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

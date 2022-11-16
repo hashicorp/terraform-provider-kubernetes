@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -120,6 +121,40 @@ func TestAccKubernetesRoleBinding_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "subject.2.api_group", "rbac.authorization.k8s.io"),
 					resource.TestCheckResourceAttr(resourceName, "subject.2.name", "system:masters"),
 					resource.TestCheckResourceAttr(resourceName, "subject.2.kind", "Group"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesRoleBinding_generatedName(t *testing.T) {
+	var conf api.RoleBinding
+	prefix := "tf-acc-test-gen:"
+	resourceName := "kubernetes_role_binding.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_role_binding.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesRoleBindingDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesRoleBindingConfig_generateName(prefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesRoleBindingExists("kubernetes_role_binding.test", &conf),
+					resource.TestMatchResourceAttr("kubernetes_role_binding.test", "metadata.0.name", regexp.MustCompile("^"+prefix)),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "role_ref.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "role_ref.0.api_group", "rbac.authorization.k8s.io"),
+					resource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "Role"),
+					resource.TestCheckResourceAttr(resourceName, "role_ref.0.name", "admin"),
+					resource.TestCheckResourceAttr(resourceName, "subject.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", "rbac.authorization.k8s.io"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.name", "notauser"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.kind", "User"),
 				),
 			},
 		},
@@ -355,6 +390,27 @@ func testAccKubernetesRoleBindingConfig_basic(name string) string {
   }
 }
 `, name)
+}
+
+func testAccKubernetesRoleBindingConfig_generateName(prefixName string) string {
+	return fmt.Sprintf(`resource "kubernetes_role_binding" "test" {
+  metadata {
+    generate_name = "%s"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, prefixName)
 }
 
 func testAccKubernetesRoleBindingConfig_modified(name string) string {

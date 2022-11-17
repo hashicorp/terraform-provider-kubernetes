@@ -284,6 +284,16 @@ func skipIfNotRunningInEks(t *testing.T) {
 	}
 }
 
+func skipIfRunningInEks(t *testing.T) {
+	isInEks, err := isRunningInEks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isInEks {
+		t.Skip("This test cannot be run in EKS cluster")
+	}
+}
+
 func skipIfNotRunningInMinikube(t *testing.T) {
 	isInMinikube, err := isRunningInMinikube()
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	api "k8s.io/api/core/v1"
+	nodev1 "k8s.io/api/node/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -1329,6 +1330,70 @@ func TestAccKubernetesPod_topologySpreadConstraint(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestAccKubernetesPod_runtimeClassName(t *testing.T) {
+	var conf1 api.Pod
+
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod_v1.test"
+	runtimeHandler := fmt.Sprintf("runc-%s", name)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfRunningInEks(t)
+			createRuncRuntimeClass(runtimeHandler)
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy: func(s *terraform.State) error {
+			err := deleteRuntimeClass(runtimeHandler)
+			if err != nil {
+				return err
+			}
+			return testAccCheckKubernetesPodDestroy(s)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodConfigRuntimeClassName(name, busyboxImageVersion, runtimeHandler),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists(resourceName, &conf1),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.runtime_class_name", runtimeHandler),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
+func createRuncRuntimeClass(rn string) error {
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+	_, err = conn.NodeV1().RuntimeClasses().Create(context.Background(), &nodev1.RuntimeClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: rn,
+		},
+		Handler: "runc",
+	}, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func deleteRuntimeClass(rn string) error {
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+	return conn.NodeV1().RuntimeClasses().Delete(context.Background(), rn, metav1.DeleteOptions{})
 }
 
 func testAccCheckCSIDriverExists(csiDriverName string) error {
@@ -2809,4 +2874,20 @@ func testAccKubernetesPodTopologySpreadConstraintConfig(podName, imageName strin
   }
 }
 `, podName, imageName)
+}
+
+func testAccKubernetesPodConfigRuntimeClassName(name, imageName, runtimeHandler string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    runtime_class_name = "%s"
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+}
+`, name, runtimeHandler, imageName)
 }

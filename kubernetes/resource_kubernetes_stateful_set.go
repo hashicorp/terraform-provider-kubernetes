@@ -215,7 +215,7 @@ func resourceKubernetesStatefulSetUpdate(ctx context.Context, d *schema.Resource
 
 	if d.Get("wait_for_rollout").(bool) {
 		log.Printf("[INFO] Waiting for StatefulSet %s to rollout", d.Id())
-		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
+		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
 			retryUntilStatefulSetRolloutComplete(ctx, conn, namespace, name))
 		if err != nil {
 			return diag.FromErr(err)

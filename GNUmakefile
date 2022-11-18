@@ -88,7 +88,7 @@ tests-lint: tools
 	@echo "==> Checking acceptance test terraform blocks code with terrafmt..."
 	@terrafmt diff -f ./kubernetes --check --pattern '*_test.go' --quiet || (echo; \
 		echo "Unexpected differences in acceptance test HCL formatting."; \
-		echo "To see the full differences, run: terrafmt diff ./kubnernetes --pattern '*_test.go'"; \
+		echo "To see the full differences, run: terrafmt diff ./kubernetes --pattern '*_test.go'"; \
 		echo "To automatically fix the formatting, run 'make tests-lint-fix' and commit the changes."; \
 		exit 1)
 

@@ -1,4 +1,4 @@
-## 2.16.0 (UNRELEASED)
+## 2.16.0 (November 18, 2022)
 
 FEATURES:
 

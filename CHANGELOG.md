@@ -1,3 +1,35 @@
+## 2.16.0 (November 18, 2022)
+
+FEATURES:
+
+* New data source: `kubernetes_endpoints_v1` [[GH-1805](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1805)]
+
+ENHANCEMENT:
+
+* Add a new optional attribute `runtime_class_name` to `pod.spec`. That affects all resources and data sources that use `pod.spec` directly or as a template. [[GH-1895](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1895)]
+* Add a new optional attribute `fs_group_change_policy` to `pod.spec.security_context`. That affects all resources and data sources that use `pod.spec` directly or as a template. [[GH-1892](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1892)]
+* The kubernetes status field is now available in the `kubernetes_resource` datasource [[GH-1802](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1802)]
+* `r/kubernetes_pod_v1`: changing values of `spec.container.resources.limits` or `spec.container.resources.requests` will force resource recreation. [[GH-1889](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1889)]
+* `r/kubernetes_pod`: changing values of `spec.container.resources.limits` or `spec.container.resources.requests` will force resource recreation. [[GH-1889](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1889)]
+
+BUG FIXES:
+
+* Fix an issue when changing values of `spec.container.resources.limits` or `spec.container.resources.requests` does not update appropriate Kubernetes resources. Affected resources: `kubernetes_pod`, `kubernetes_pod_v1`. [[GH-1889](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1889)]
+* Fix an issue when empty values of `spec.container.resources.limits` or `spec.container.resources.requests` produce continuous diff output during `plan` although no real changes were made. Affected resources: `kubernetes_pod`, `kubernetes_pod_v1`, `kubernetes_daemonset`, `kubernetes_daemon_set_v1`, `kubernetes_deployment`, `kubernetes_deployment_v1`. [[GH-1889](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1889)]
+* Fix an issue with timeouts for `StatefulSet`, `Deployment`, and `DaemonSet` resources when in some cases changes of `Update` or `Create` timeout doesn't affect related actions. [[GH-1902](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1902)]
+
+DOCS:
+
+* `resource/kubernetes_service_account_v1`: mark attribute `default_secret_name` as deprecated [[GH-1883](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1883)]
+* `resource/kubernetes_service_account`: mark attribute `default_secret_name` as deprecated [[GH-1883](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1883)]
+
+Thanks to all our contributors! :tada:
+
+## Community Contributors :raised_hands:
+- @Dudesons made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1805
+- @St0rmingBr4in made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1802
+- @kylecarbs made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1895
+
 ## 2.15.0 (October 31, 2022)
 
 ENHANCEMENT:

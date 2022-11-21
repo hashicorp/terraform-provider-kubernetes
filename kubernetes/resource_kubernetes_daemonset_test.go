@@ -304,6 +304,69 @@ func TestAccKubernetesDaemonSet_with_container_security_context_seccomp_profile(
 	})
 }
 
+func TestAccKubernetesDaemonSet_with_resource_requirements(t *testing.T) {
+	var conf appsv1.DaemonSet
+
+	daemonSetName := acctest.RandomWithPrefix("tf-acc-test")
+	imageName := nginxImageVersion
+	resourceName := "kubernetes_daemon_set_v1.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDaemonSetConfigWithResourceRequirements(daemonSetName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.memory", "50Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.cpu", "250m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.cpu", "500m"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
+					"wait_for_rollout",
+				},
+			},
+			{
+				Config: testAccKubernetesDaemonSetConfigWithEmptyResourceRequirements(daemonSetName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.#", "0"),
+				),
+			},
+			{
+				Config: testAccKubernetesDaemonSetConfigWithResourceRequirementsLimitsOnly(daemonSetName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.cpu", "500m"),
+				),
+			},
+			{
+				Config: testAccKubernetesDaemonSetConfigWithResourceRequirementsRequestsOnly(daemonSetName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.cpu", "500m"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesDaemonsetForceNew(old, new *appsv1.DaemonSet, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {
@@ -815,6 +878,183 @@ func testAccKubernetesDaemonSetConfigWithContainerSecurityContextSeccompProfileL
             seccomp_profile {
               type              = "Localhost"
               localhost_profile = ""
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, deploymentName, imageName)
+}
+
+func testAccKubernetesDaemonSetConfigWithResourceRequirements(deploymentName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_daemon_set_v1" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+
+          resources {
+            limits = {
+              cpu          = "0.5"
+              memory       = "512Mi"
+              "nvidia/gpu" = "1"
+            }
+
+            requests = {
+              cpu          = "250m"
+              memory       = "50Mi"
+              "nvidia/gpu" = "1"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, deploymentName, imageName)
+}
+
+func testAccKubernetesDaemonSetConfigWithEmptyResourceRequirements(deploymentName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_daemon_set_v1" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+
+          resources {
+            limits   = {}
+            requests = {}
+          }
+        }
+      }
+    }
+  }
+}
+`, deploymentName, imageName)
+}
+
+func testAccKubernetesDaemonSetConfigWithResourceRequirementsLimitsOnly(deploymentName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_daemon_set_v1" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+
+          resources {
+            limits = {
+              cpu    = "500m"
+              memory = "512Mi"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, deploymentName, imageName)
+}
+
+func testAccKubernetesDaemonSetConfigWithResourceRequirementsRequestsOnly(deploymentName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_daemon_set_v1" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+
+          resources {
+            requests = {
+              cpu    = "500m"
+              memory = "512Mi"
             }
           }
         }

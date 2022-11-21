@@ -159,7 +159,7 @@ func resourceKubernetesDaemonSetCreate(ctx context.Context, d *schema.ResourceDa
 	}
 
 	if d.Get("wait_for_rollout").(bool) {
-		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
+		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
 			waitForDaemonSetReplicasFunc(ctx, conn, metadata.Namespace, metadata.Name))
 		if err != nil {
 			return diag.FromErr(err)

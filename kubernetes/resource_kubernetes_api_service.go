@@ -201,6 +201,9 @@ func resourceKubernetesAPIServiceDelete(ctx context.Context, d *schema.ResourceD
 	log.Printf("[INFO] Deleting API service: %#v", name)
 	err = conn.ApiregistrationV1().APIServices().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

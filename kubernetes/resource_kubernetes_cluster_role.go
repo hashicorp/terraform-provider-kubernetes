@@ -169,6 +169,9 @@ func resourceKubernetesClusterRoleDelete(ctx context.Context, d *schema.Resource
 	log.Printf("[INFO] Deleting cluster role: %#v", name)
 	err = conn.RbacV1().ClusterRoles().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

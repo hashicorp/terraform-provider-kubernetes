@@ -284,6 +284,9 @@ func resourceKubernetesDaemonSetDelete(ctx context.Context, d *schema.ResourceDa
 
 	err = conn.AppsV1().DaemonSets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

@@ -190,6 +190,9 @@ func resourceKubernetesConfigMapDelete(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[INFO] Deleting config map: %#v", name)
 	err = conn.CoreV1().ConfigMaps(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

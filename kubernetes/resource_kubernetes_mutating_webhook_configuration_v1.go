@@ -243,6 +243,9 @@ func resourceKubernetesMutatingWebhookConfigurationV1Delete(ctx context.Context,
 	log.Printf("[INFO] Deleting MutatingWebhookConfiguration: %#v", name)
 	err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

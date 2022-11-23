@@ -186,6 +186,9 @@ func resourceKubernetesPodDisruptionBudgetV1Delete(ctx context.Context, d *schem
 	log.Printf("[INFO] Deleting pod disruption budget %#v", name)
 	err = conn.PolicyV1().PodDisruptionBudgets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}

@@ -348,15 +348,11 @@ func flattenContainerPorts(in []v1.ContainerPort) []interface{} {
 	return att
 }
 
-func flattenContainerResourceRequirements(in v1.ResourceRequirements) ([]interface{}, error) {
+func flattenContainerResourceRequirements(in v1.ResourceRequirements) []interface{} {
 	att := make(map[string]interface{})
-	if len(in.Limits) > 0 {
-		att["limits"] = flattenResourceList(in.Limits)
-	}
-	if len(in.Requests) > 0 {
-		att["requests"] = flattenResourceList(in.Requests)
-	}
-	return []interface{}{att}, nil
+	att["limits"] = flattenResourceList(in.Limits)
+	att["requests"] = flattenResourceList(in.Requests)
+	return []interface{}{att}
 }
 
 func flattenContainers(in []v1.Container, serviceAccountRegex string) ([]interface{}, error) {
@@ -379,12 +375,7 @@ func flattenContainers(in []v1.Container, serviceAccountRegex string) ([]interfa
 		c["stdin_once"] = v.StdinOnce
 		c["tty"] = v.TTY
 		c["working_dir"] = v.WorkingDir
-		res, err := flattenContainerResourceRequirements(v.Resources)
-		if err != nil {
-			return nil, err
-		}
-
-		c["resources"] = res
+		c["resources"] = flattenContainerResourceRequirements(v.Resources)
 		if v.LivenessProbe != nil {
 			c["liveness_probe"] = flattenProbe(v.LivenessProbe)
 		}

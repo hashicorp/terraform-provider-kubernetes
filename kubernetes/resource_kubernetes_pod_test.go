@@ -542,6 +542,42 @@ func TestAccKubernetesPod_with_container_liveness_probe_using_tcp(t *testing.T) 
 	})
 }
 
+func TestAccKubernetesPod_with_container_liveness_probe_using_grpc(t *testing.T) {
+	var conf api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	imageName := "gcr.io/google_containers/liveness"
+	resourceName := "kubernetes_pod.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.24.0")
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodConfigWithLivenessProbeUsingGRPC(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.args.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.grpc.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.grpc.0.port", "8888"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.grpc.0.service", "EchoService"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
 func TestAccKubernetesPod_with_container_lifecycle(t *testing.T) {
 	var conf api.Pod
 
@@ -1887,6 +1923,37 @@ func testAccKubernetesPodConfigWithLivenessProbeUsingTCP(podName, imageName stri
 
         initial_delay_seconds = 3
         period_seconds        = 3
+      }
+    }
+  }
+}
+`, podName, imageName)
+}
+
+func testAccKubernetesPodConfigWithLivenessProbeUsingGRPC(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+      args  = ["/server"]
+
+      liveness_probe {
+        grpc {
+          port    = 8888
+		  service = "EchoService"
+        }
+
+        initial_delay_seconds = 30
+        period_seconds        = 30
       }
     }
   }

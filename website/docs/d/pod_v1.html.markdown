@@ -180,6 +180,13 @@ The `option` block supports the following:
 
 * `command` - Command is the command line to execute inside the container, the working directory for the command is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
 
+### `grpc`
+
+#### Arguments
+
+* `port` - Number of the port to access on the container. Number must be in the range 1 to 65535.
+* `service` - Name of the service to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is not specified, the default behavior is defined by gRPC.
+
 ### `image_pull_secrets`
 
 #### Attributes
@@ -206,6 +213,7 @@ The `option` block supports the following:
 
 * `exec` -  exec specifies the action to take.
 * `failure_threshold` -  Minimum consecutive failures for the probe to be considered failed after having succeeded.
+* `grpc` -  GRPC specifies an action involving a GRPC port.
 * `http_get` -  Specifies the http request to perform.
 * `initial_delay_seconds` -  Number of seconds after the container has started before liveness probes are initiated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/pod-states#container-probes)
 * `period_seconds` -  How often (in seconds) to perform the probe
@@ -290,6 +298,7 @@ The `option` block supports the following:
 
 * `exec` -  exec specifies the action to take.
 * `failure_threshold` -  Minimum consecutive failures for the probe to be considered failed after having succeeded.
+* `grpc` -  GRPC specifies an action involving a GRPC port.
 * `http_get` -  Specifies the http request to perform.
 * `initial_delay_seconds` -  Number of seconds after the container has started before liveness probes are initiated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/pod-states#container-probes)
 * `period_seconds` -  How often (in seconds) to perform the probe

@@ -660,6 +660,26 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 
 func probeSchema() *schema.Resource {
 	h := lifecycleHandlerFields()
+	h["grpc"] = &schema.Schema{
+		Type:        schema.TypeList,
+		Optional:    true,
+		Description: "GRPC specifies an action involving a GRPC port.",
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"port": {
+					Type:         schema.TypeInt,
+					Required:     true,
+					ValidateFunc: validatePortNum,
+					Description:  "Number of the port to access on the container. Number must be in the range 1 to 65535.",
+				},
+				"service": {
+					Type:        schema.TypeString,
+					Optional:    true,
+					Description: "Name of the service to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is not specified, the default behavior is defined by gRPC.",
+				},
+			},
+		},
+	}
 	h["failure_threshold"] = &schema.Schema{
 		Type:         schema.TypeInt,
 		Optional:     true,

@@ -170,9 +170,6 @@ func resourceKubernetesRoleUpdate(ctx context.Context, d *schema.ResourceData, m
 func resourceKubernetesRoleDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
-			return nil
-		}
 		return diag.FromErr(err)
 	}
 
@@ -184,6 +181,9 @@ func resourceKubernetesRoleDelete(ctx context.Context, d *schema.ResourceData, m
 	log.Printf("[INFO] Deleting role: %#v", name)
 	err = conn.RbacV1().Roles(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

@@ -281,9 +281,6 @@ func resourceKubernetesValidatingWebhookConfigurationV1Update(ctx context.Contex
 func resourceKubernetesValidatingWebhookConfigurationV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
-			return nil
-		}
 		return diag.FromErr(err)
 	}
 
@@ -300,6 +297,9 @@ func resourceKubernetesValidatingWebhookConfigurationV1Delete(ctx context.Contex
 		err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(ctx, name, metav1.DeleteOptions{})
 	}
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

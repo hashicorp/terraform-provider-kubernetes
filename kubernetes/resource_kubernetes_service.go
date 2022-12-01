@@ -470,9 +470,6 @@ func resourceKubernetesServiceUpdate(ctx context.Context, d *schema.ResourceData
 func resourceKubernetesServiceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
-			return nil
-		}
 		return diag.FromErr(err)
 	}
 
@@ -484,6 +481,9 @@ func resourceKubernetesServiceDelete(ctx context.Context, d *schema.ResourceData
 	log.Printf("[INFO] Deleting service: %#v", name)
 	err = conn.CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

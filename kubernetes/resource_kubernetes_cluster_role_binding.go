@@ -155,6 +155,9 @@ func resourceKubernetesClusterRoleBindingDelete(ctx context.Context, d *schema.R
 	log.Printf("[INFO] Deleting ClusterRoleBinding: %#v", name)
 	err = conn.RbacV1().ClusterRoleBindings().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] ClusterRoleBinding %s deleted", name)

@@ -146,6 +146,9 @@ func resourceKubernetesEndpointsDelete(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[INFO] Deleting endpoints: %#v", name)
 	err = conn.CoreV1().Endpoints(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.Errorf("Failed to delete endpoints because: %s", err)
 	}
 	log.Printf("[INFO] Endpoints %s deleted", name)

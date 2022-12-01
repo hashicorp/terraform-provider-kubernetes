@@ -139,6 +139,9 @@ func resourceKubernetesHorizontalPodAutoscalerV2Beta2Delete(ctx context.Context,
 	log.Printf("[INFO] Deleting horizontal pod autoscaler: %#v", name)
 	err = conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

@@ -90,7 +90,7 @@ Another option is to use an oauth token, such as this example from a GKE cluster
 data "google_client_config" "default" {}
 data "google_container_cluster" "my_cluster" {
   name = "my-cluster"
-  zone = "us-east1-a"
+  location = "us-east1-a"
 }
 
 provider "kubernetes" {

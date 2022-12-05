@@ -1,3 +1,56 @@
+## 2.16.1 (December 5, 2022)
+
+ENHANCEMENTS:
+
+* Add additional validation on the delete operation to make it idempotent. [[GH-1914](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1914)], [[GH-1919](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1919)], [[GH-1898](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1898)]
+
+This affects the following resources:
+  - `kubernetes_api_service`
+  - `kubernetes_api_service_v1`
+  - `kubernetes_cluster_role`
+  - `kubernetes_cluster_role_v1`
+  - `kubernetes_cluster_role_binding`
+  - `kubernetes_cluster_role_binding_v1`
+  - `kubernetes_config_map`
+  - `kubernetes_config_map_v1`
+  - `kubernetes_daemonset`
+  - `kubernetes_daemon_set_v1`
+  - `kubernetes_deployment`
+  - `kubernetes_deployment_v1`
+  - `kubernetes_endpoints`
+  - `kubernetes_endpoints_v1`
+  - `kubernetes_horizontal_pod_autoscaler`
+  - `kubernetes_horizontal_pod_autoscaler_v1`
+  - `kubernetes_horizontal_pod_autoscaler_v2beta2`
+  - `kubernetes_horizontal_pod_autoscaler_v2`
+  - `kubernetes_mutating_webhook_configuration`
+  - `kubernetes_mutating_webhook_configuration_v1`
+  - `kubernetes_network_policy`
+  - `kubernetes_network_policy_v1`
+  - `kubernetes_persistent_volume_claim`
+  - `kubernetes_persistent_volume_claim_v1`
+  - `kubernetes_pod`
+  - `kubernetes_pod_v1`
+  - `kubernetes_pod_disruption_budget`
+  - `kubernetes_pod_disruption_budget_v1`
+  - `kubernetes_pod_security_policy`
+  - `kubernetes_pod_security_policy_v1beta1` 
+  - `kubernetes_priority_class`
+  - `kubernetes_replication_controller`
+  - `kubernetes_resource_quota`
+  - `kubernetes_role`
+  - `kubernetes_role_binding`
+  - `kubernetes_secret`
+  - `kubernetes_namespace`
+  - `kubernetes_service`
+  - `kubernetes_service_account`
+  - `kubernetes_stateful_set`
+  - `kubernetes_storage_class`
+  - `kubernetes_validating_webhook_configuration`
+  - `kubernetes_validating_webhook_configuration_v1 `
+
+Special thanks to @sheneska for making these changes as part of her internship @hashicorp! 🚀
+
 ## 2.16.0 (November 18, 2022)
 
 FEATURES:

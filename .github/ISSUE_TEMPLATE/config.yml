@@ -1,5 +1,0 @@
-blank_issues_enabled: false
-contact_links:
-  - name: Kubernetes Provider for Terraform Roadmap
-    url: https://github.com/hashicorp/terraform-provider-kubernetes/blob/master/_about/ROADMAP.md
-    about: Each quarter the team highlights our areas of focus for our work and upcoming research.

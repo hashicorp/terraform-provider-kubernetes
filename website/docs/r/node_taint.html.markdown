@@ -12,8 +12,6 @@ description: |-
 
 ## Example Usage
 ```hcl
-data "kubernetes_all_nodes" "example" {}
-
 resource "kubernetes_node_taint" "example" {
   metadata {
     name = "my-node.my-cluster.k8s.local"

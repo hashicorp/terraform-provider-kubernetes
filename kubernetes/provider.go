@@ -211,7 +211,6 @@ func Provider() *schema.Provider {
 			"kubernetes_namespace":                  dataSourceKubernetesNamespace(),
 			"kubernetes_namespace_v1":               dataSourceKubernetesNamespace(),
 			"kubernetes_all_namespaces":             dataSourceKubernetesAllNamespaces(),
-			"kubernetes_all_nodes":                  dataSourceKubernetesAllNodes(),
 			"kubernetes_secret":                     dataSourceKubernetesSecret(),
 			"kubernetes_secret_v1":                  dataSourceKubernetesSecret(),
 			"kubernetes_endpoints_v1":               dataSourceKubernetesEndpointsV1(),
@@ -223,6 +222,7 @@ func Provider() *schema.Provider {
 			"kubernetes_service_account_v1":         dataSourceKubernetesServiceAccount(),
 			"kubernetes_persistent_volume_claim":    dataSourceKubernetesPersistentVolumeClaim(),
 			"kubernetes_persistent_volume_claim_v1": dataSourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_nodes":                      dataSourceKubernetesNodes(),
 
 			// networking
 			"kubernetes_ingress":    dataSourceKubernetesIngress(),

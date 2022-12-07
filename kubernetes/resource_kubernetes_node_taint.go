@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubernetes/pkg/apis/core/helper"
 	"k8s.io/kubernetes/pkg/util/taints"
@@ -128,6 +129,12 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 
 	node, err := nodeApi.Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
+		if d.Id() == "" {
+			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+				// The node is gone. it is ok to remove the taint resource
+				return nil
+			}
+		}
 		return diag.FromErr(err)
 	}
 

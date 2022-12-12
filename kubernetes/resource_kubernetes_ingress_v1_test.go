@@ -414,6 +414,9 @@ func testAccKubernetesIngressV1Config_serviceBackend(name string) string {
       }
     }
   }
+  timeouts {
+    create = "45m"
+  }
 }`, name)
 }
 
@@ -641,6 +644,9 @@ resource "kubernetes_ingress_v1" "test" {
     }
   }
   wait_for_load_balancer = true
+  timeouts {
+    create = "45m"
+  }
 }`, name, name, name, name, name, name, name)
 }
 

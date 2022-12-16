@@ -593,6 +593,12 @@ func testAccKubernetesIngressV1Config_waitForLoadBalancer(name string) string {
       protocol    = "TCP"
     }
   }
+  lifecycle {
+    ignore_changes = [
+      metadata[0].annotations["cloud.google.com/neg"],
+      metadata[0].annotations["cloud.google.com/neg-status"],
+    ]
+  }
 }
 
 resource "kubernetes_deployment" "test" {

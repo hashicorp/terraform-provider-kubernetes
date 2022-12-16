@@ -250,7 +250,7 @@ func skipIfNotRunningInGke(t *testing.T) {
 		t.Skip("The Kubernetes endpoint must come from GKE for this test to run - skipping")
 	}
 	for _, ev := range []string{"GOOGLE_PROJECT", "GOOGLE_REGION", "GOOGLE_ZONE"} {
-		if os.Getenv("ev") == "" {
+		if os.Getenv(ev) == "" {
 			t.Skipf("%s must be set for GoogleCloud tests", ev)
 		}
 	}

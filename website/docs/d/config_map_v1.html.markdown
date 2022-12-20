@@ -46,4 +46,4 @@ The following arguments are supported:
 ## Attribute Reference
 
 * `data` - A map of the config map data.
-* `binary_data` - A map of preserved non-UTF8 data. For more info see [Kubernetes API reference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#configmap-v1-core).
+* `binary_data` - A map of preserved non-UTF8 data. For more info see [Kubernetes API reference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#configmap-v1-core).

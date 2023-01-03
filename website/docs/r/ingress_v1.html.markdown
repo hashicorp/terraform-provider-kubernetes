@@ -307,8 +307,7 @@ The following arguments are supported:
 
 ## Timeouts
 
-The following [Timeout](https://developer.hashicorp.com/terraform/plugin/sdkv2/resources/retries-and-customizable-timeouts) 
-configuration options are available for the `kubernetes_ingress_v1` resource:
+The following [Timeout](https://developer.hashicorp.com/terraform/language/resources/syntax#operation-timeouts) configuration options are available for the `kubernetes_ingress_v1` resource:
 
 * `create` - ingress load balancer creation timeout (default `20 minutes`).
 * `delete` - ingress load balancer deletion timeout (default `20 minutes`).

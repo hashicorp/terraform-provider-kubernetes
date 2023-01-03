@@ -54,6 +54,7 @@ func resourceKubernetesIngressV1Schema() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: docIngressSpec["ingressClassName"],
 						Optional:    true,
+						Computed:    true,
 					},
 					"default_backend": backendSpecFieldsV1(defaultBackendDescriptionV1),
 					"rule": {

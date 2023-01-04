@@ -414,6 +414,9 @@ func testAccKubernetesIngressV1Config_serviceBackend(name string) string {
       }
     }
   }
+  timeouts {
+    create = "45m"
+  }
 }`, name)
 }
 
@@ -586,9 +589,15 @@ func testAccKubernetesIngressV1Config_waitForLoadBalancer(name string) string {
     }
     port {
       port        = 8000
-      target_port = 80
+      target_port = 8080
       protocol    = "TCP"
     }
+  }
+  lifecycle {
+    ignore_changes = [
+      metadata[0].annotations["cloud.google.com/neg"],
+      metadata[0].annotations["cloud.google.com/neg-status"],
+    ]
   }
 }
 
@@ -612,9 +621,10 @@ resource "kubernetes_deployment" "test" {
         container {
           name  = "test"
           image = "gcr.io/google-samples/hello-app:2.0"
+
           env {
             name  = "PORT"
-            value = "80"
+            value = "8080"
           }
         }
       }
@@ -641,6 +651,9 @@ resource "kubernetes_ingress_v1" "test" {
     }
   }
   wait_for_load_balancer = true
+  timeouts {
+    create = "45m"
+  }
 }`, name, name, name, name, name, name, name)
 }
 

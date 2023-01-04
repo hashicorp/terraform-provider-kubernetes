@@ -589,7 +589,7 @@ func testAccKubernetesIngressV1Config_waitForLoadBalancer(name string) string {
     }
     port {
       port        = 8000
-      target_port = 80
+      target_port = 8080
       protocol    = "TCP"
     }
   }
@@ -621,9 +621,10 @@ resource "kubernetes_deployment" "test" {
         container {
           name  = "test"
           image = "gcr.io/google-samples/hello-app:2.0"
+
           env {
             name  = "PORT"
-            value = "80"
+            value = "8080"
           }
         }
       }

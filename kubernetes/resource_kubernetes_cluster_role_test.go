@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -59,6 +60,34 @@ func TestAccKubernetesClusterRole_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "rule.2.non_resource_urls.0", "/metrics"),
 					resource.TestCheckResourceAttr(resourceName, "rule.2.verbs.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "rule.2.verbs.0", "get"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesClusterRole_generatedName(t *testing.T) {
+	var conf api.ClusterRole
+	prefix := "tf-acc-test-gen:"
+	resourceName := "kubernetes_cluster_role.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_cluster_role.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesClusterRoleConfig_generateName(prefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesClusterRoleExists("kubernetes_cluster_role.test", &conf),
+					resource.TestMatchResourceAttr(resourceName, "metadata.0.name", regexp.MustCompile("^"+prefix)),
+					resource.TestCheckResourceAttr(resourceName, "rule.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.0", "pods"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.0", "get"),
 				),
 			},
 		},
@@ -322,6 +351,21 @@ func testAccKubernetesClusterRoleConfig_basic(name string) string {
   }
 }
 `, name)
+}
+
+func testAccKubernetesClusterRoleConfig_generateName(prefixName string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
+  metadata {
+    generate_name = "%s"
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["pods"]
+    verbs      = ["get"]
+  }
+}
+`, prefixName)
 }
 
 func testAccKubernetesClusterRoleConfig_modified(name string) string {

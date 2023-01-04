@@ -166,6 +166,9 @@ func resourceKubernetesRoleBindingDelete(ctx context.Context, d *schema.Resource
 	log.Printf("[INFO] Deleting RoleBinding: %#v", name)
 	err = conn.RbacV1().RoleBindings(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] RoleBinding %s deleted", name)

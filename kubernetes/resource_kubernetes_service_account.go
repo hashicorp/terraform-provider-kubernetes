@@ -397,6 +397,9 @@ func resourceKubernetesServiceAccountDelete(ctx context.Context, d *schema.Resou
 	log.Printf("[INFO] Deleting service account: %#v", name)
 	err = conn.CoreV1().ServiceAccounts(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

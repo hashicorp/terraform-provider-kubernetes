@@ -310,8 +310,8 @@ Please, look at the example below:
 
 ```hcl
 resources {
-    limits = {}
-    requests = {}
+  limits   = {}
+  requests = {}
 }
 ```
 

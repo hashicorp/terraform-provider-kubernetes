@@ -384,7 +384,7 @@ func testAccKubernetesClusterRoleBindingConfig_basic(name string) string {
 func testAccKubernetesClusterRoleBindingConfig_generateName(namePrefix string) string {
 	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
-	generate_name = "%s"
+    generate_name = "%s"
   }
 
   role_ref {

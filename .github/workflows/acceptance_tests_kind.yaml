@@ -1,7 +1,7 @@
 name: Acceptance Tests (kind)
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
     inputs:
       kindVersion:
         description: The kind version
@@ -10,8 +10,8 @@ on:
         description: The regex passed to the -run option of `go test`
         default: ".*"
       terraformVersion:
-        description: Terraform version 
-        default: 1.1.8
+        description: Terraform version
+        default: 1.3.6
 
 jobs:
   acceptance_tests:
@@ -40,5 +40,5 @@ jobs:
           TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion }}
           TESTARGS: -run '${{ github.event.inputs.runTests }}'
           KUBE_CONFIG_PATH: "~/.kube/config"
-        run: | 
+        run: |
           make testacc

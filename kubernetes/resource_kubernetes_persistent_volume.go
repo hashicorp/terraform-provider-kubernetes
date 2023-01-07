@@ -319,9 +319,6 @@ func resourceKubernetesPersistentVolumeUpdate(ctx context.Context, d *schema.Res
 func resourceKubernetesPersistentVolumeDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		if statusErr, ok := err.(*k8serrors.StatusError); ok && k8serrors.IsNotFound(statusErr) {
-			return nil
-		}
 		return diag.FromErr(err)
 	}
 
@@ -329,6 +326,9 @@ func resourceKubernetesPersistentVolumeDelete(ctx context.Context, d *schema.Res
 	log.Printf("[INFO] Deleting persistent volume: %#v", name)
 	err = conn.CoreV1().PersistentVolumes().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*k8serrors.StatusError); ok && k8serrors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

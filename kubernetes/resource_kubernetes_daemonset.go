@@ -50,7 +50,7 @@ func resourceKubernetesDaemonSetSchemaV1() map[string]*schema.Schema {
 		"metadata": namespacedMetadataSchema("daemonset", true),
 		"spec": {
 			Type:        schema.TypeList,
-			Description: "Spec defines the specification of the desired behavior of the daemonset. More info: https://v1-9.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.9/#daemonset-v1-apps",
+			Description: "Spec defines the specification of the desired behavior of the daemonset. More information: https://v1-9.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.9/#daemonset-v1-apps",
 			Required:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{

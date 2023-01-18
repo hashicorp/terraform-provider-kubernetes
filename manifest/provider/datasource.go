@@ -166,7 +166,8 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 		return resp, nil
 	}
 
-	nobj, err := payload.ToTFValue(res.Object, objectType, th, tftypes.NewAttributePath())
+	nobj, err := payload.ToTFValue(res.Items[0].Object, objectType, th, tftypes.NewAttributePath())
+
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,

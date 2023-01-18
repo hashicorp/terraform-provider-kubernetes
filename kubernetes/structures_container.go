@@ -122,6 +122,15 @@ func flattenTCPSocket(in *v1.TCPSocketAction) []interface{} {
 	return []interface{}{att}
 }
 
+func flattenGRPC(in *v1.GRPCAction) []interface{} {
+	att := make(map[string]interface{})
+	att["port"] = in.Port
+	if in.Service != nil {
+		att["service"] = *in.Service
+	}
+	return []interface{}{att}
+}
+
 func flattenExec(in *v1.ExecAction) []interface{} {
 	att := make(map[string]interface{})
 	if len(in.Command) > 0 {
@@ -160,6 +169,9 @@ func flattenProbe(in *v1.Probe) []interface{} {
 	}
 	if in.TCPSocket != nil {
 		att["tcp_socket"] = flattenTCPSocket(in.TCPSocket)
+	}
+	if in.GRPC != nil {
+		att["grpc"] = flattenGRPC(in.GRPC)
 	}
 
 	return []interface{}{att}
@@ -656,6 +668,21 @@ func expandTCPSocket(l []interface{}) *v1.TCPSocketAction {
 	return &obj
 }
 
+func expandGRPC(l []interface{}) *v1.GRPCAction {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.GRPCAction{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := v1.GRPCAction{}
+	if v, ok := in["port"].(int); ok {
+		obj.Port = int32(v)
+	}
+	if v, ok := in["service"].(string); ok {
+		obj.Service = ptrToString(v)
+	}
+	return &obj
+}
+
 func expandHTTPGet(l []interface{}) *v1.HTTPGetAction {
 	if len(l) == 0 || l[0] == nil {
 		return &v1.HTTPGetAction{}
@@ -696,6 +723,9 @@ func expandProbe(l []interface{}) *v1.Probe {
 	}
 	if v, ok := in["tcp_socket"].([]interface{}); ok && len(v) > 0 {
 		obj.TCPSocket = expandTCPSocket(v)
+	}
+	if v, ok := in["grpc"].([]interface{}); ok && len(v) > 0 {
+		obj.GRPC = expandGRPC(v)
 	}
 	if v, ok := in["failure_threshold"].(int); ok {
 		obj.FailureThreshold = int32(v)

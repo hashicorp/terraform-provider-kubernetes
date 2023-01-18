@@ -38,8 +38,25 @@ func dataSourceKubernetesNodes() *schema.Resource {
 				Type:        schema.TypeList,
 				Description: "List of nodes in a cluster.",
 				Computed:    true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"metadata": metadataSchema("node", false),
+						"spec": {
+							Type:     schema.TypeList,
+							Required: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: nodeSpecFields(),
+							},
+						},
+						"status": {
+							Type:     schema.TypeList,
+							Computed: true,
+							Elem: &schema.Resource{
+								Schema: nodeStatusFields(),
+							},
+						},
+					},
 				},
 			},
 		},
@@ -69,20 +86,25 @@ func dataSourceKubernetesNodesRead(ctx context.Context, d *schema.ResourceData, 
 	log.Printf("[INFO] Listing nodes")
 	nodesRaw, err := conn.CoreV1().Nodes().List(ctx, listOptions)
 	if err != nil {
-		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}
-	nodes := make([]string, len(nodesRaw.Items))
+	nodes := make([]interface{}, len(nodesRaw.Items))
 	for i, v := range nodesRaw.Items {
-		nodes[i] = v.Name
+		log.Printf("[INFO] Received node: %s", v.Name)
+		prefix := fmt.Sprintf("nodes.%d.", i)
+		n := map[string]interface{}{
+			"metadata": flattenMetadata(v.ObjectMeta, d, meta, prefix),
+			"spec":     flattenNodeSpec(v.Spec),
+			"status":   flattenNodeStatus(v.Status),
+		}
+		nodes[i] = n
 	}
-	log.Printf("[INFO] Received nodes: %#v", nodes)
 	if err := d.Set("nodes", nodes); err != nil {
 		return diag.FromErr(err)
 	}
 	idsum := sha256.New()
 	for _, v := range nodes {
-		if _, err := idsum.Write([]byte(v)); err != nil {
+		if _, err := idsum.Write([]byte(fmt.Sprintf("%#v", v))); err != nil {
 			return diag.FromErr(err)
 		}
 	}

@@ -91,11 +91,11 @@ func testAccKubernetesNodeTaintExists(n string) resource.TestCheckFunc {
 
 func testAccKubernetesNodeTaintConfig_basic() string {
 	return fmt.Sprintf(`
-data "kubernetes_all_nodes" "test" {}
+data "kubernetes_nodes" "test" {}
 
 resource "kubernetes_node_taint" "test" {
 	metadata {
-		name = data.kubernetes_all_nodes.test.nodes.0
+		name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
 	}
 	taint {
 		key = "%s"

@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -11,6 +12,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/kubernetes/pkg/apis/core/helper"
 	"k8s.io/kubernetes/pkg/util/taints"
 )
@@ -48,25 +51,7 @@ func resourceKubernetesNodeTaint() *schema.Resource {
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"key": {
-							Type:        schema.TypeString,
-							Description: "The taint key",
-							Required:    true,
-							ForceNew:    true,
-						},
-						"value": {
-							Type:        schema.TypeString,
-							Description: "The taint value",
-							Required:    true,
-						},
-						"effect": {
-							Type:        schema.TypeString,
-							Description: "The taint effect",
-							Required:    true,
-							ForceNew:    true,
-						},
-					},
+					Schema: nodeTaintFields(),
 				},
 			},
 		},
@@ -113,7 +98,7 @@ func resourceKubernetesNodeTaintRead(ctx context.Context, d *schema.ResourceData
 		d.SetId("")
 		return nil
 	}
-	d.Set("taint", flattenNodeTaints(idTaint))
+	d.Set("taint", flattenNodeTaints(*idTaint))
 	return nil
 }
 
@@ -162,8 +147,21 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 			return diag.Errorf("Node %s already has taint %+v", nodeName, newTaint)
 		}
 	}
-
-	if _, err := nodeApi.Update(ctx, newNode, metav1.UpdateOptions{}); err != nil {
+	// Patch object to prevent conflicts
+	var oldData, newData []byte
+	oldData, err = json.Marshal(node)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	newData, err = json.Marshal(newNode)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	patch, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, newNode)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if _, err := nodeApi.Patch(ctx, nodeName, types.StrategicMergePatchType, patch, metav1.PatchOptions{}); err != nil {
 		return diag.FromErr(err)
 	}
 	// Don't update id or read if deleting
@@ -217,18 +215,6 @@ func removeTaint(node *v1.Node, delTaint *v1.Taint) (*v1.Node, bool) {
 	newNode := node.DeepCopy()
 	newNode.Spec.Taints = newTaints
 	return newNode, deleted
-}
-
-func flattenNodeTaints(in ...*v1.Taint) []interface{} {
-	out := make([]interface{}, len(in), len(in))
-	for i, taint := range in {
-		m := make(map[string]interface{})
-		m["key"] = taint.Key
-		m["value"] = taint.Value
-		m["effect"] = taint.Effect
-		out[i] = m
-	}
-	return out
 }
 
 func hasTaint(taints []v1.Taint, taint *v1.Taint) bool {

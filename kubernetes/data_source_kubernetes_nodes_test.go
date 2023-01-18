@@ -5,33 +5,40 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	kuberesource "k8s.io/apimachinery/pkg/api/resource"
 )
 
+func checkParsableQuantity(value string) error {
+	if _, err := kuberesource.ParseQuantity(value); err != nil {
+		return err
+	}
+	return nil
+}
+
 func TestAccKubernetesDataSourceNodes_basic(t *testing.T) {
-	rxPosNum := regexp.MustCompile("^[1-9][0-9]*$")
 	nodeName := regexp.MustCompile(`^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$`)
-	nodeLen := regexp.MustCompile(`^.{2,63}$`)
+	oneOrMore := regexp.MustCompile(`^[1-9][0-9]*$`)
+	checkFuncs := resource.ComposeAggregateTestCheckFunc(
+		resource.TestMatchResourceAttr("data.kubernetes_nodes.test", "nodes.#", oneOrMore),
+		resource.TestMatchResourceAttr("data.kubernetes_nodes.test", "nodes.0.metadata.0.labels.%", oneOrMore),
+		resource.TestCheckResourceAttrSet("data.kubernetes_nodes.test", "nodes.0.metadata.0.resource_version"),
+		resource.TestMatchResourceAttr("data.kubernetes_nodes.test", "nodes.0.metadata.0.name", nodeName),
+		resource.TestMatchResourceAttr("data.kubernetes_nodes.test", "nodes.0.spec.0.%", oneOrMore),
+		resource.TestCheckResourceAttrWith("data.kubernetes_nodes.test", "nodes.0.status.0.capacity.cpu", checkParsableQuantity),
+		resource.TestCheckResourceAttrWith("data.kubernetes_nodes.test", "nodes.0.status.0.capacity.memory", checkParsableQuantity),
+		resource.TestCheckResourceAttrSet("data.kubernetes_nodes.test", "nodes.0.status.0.node_info.0.architecture"),
+	)
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDataSourceNodesConfig_basic(),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestMatchResourceAttr("data.kubernetes_nodes.test", "nodes.#", rxPosNum),
-					resource.TestCheckResourceAttrSet("data.kubernetes_nodes.test", "nodes.0"),
-					resource.TestMatchResourceAttr("data.kubernetes_nodes.test", "nodes.0", nodeName),
-					resource.TestMatchResourceAttr("data.kubernetes_nodes.test", "nodes.0", nodeLen),
-				),
+				Check:  checkFuncs,
 			},
 			{
 				Config: testAccKubernetesDataSourceNodesConfig_labels(),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestMatchResourceAttr("data.kubernetes_nodes.test", "nodes.#", rxPosNum),
-					resource.TestCheckResourceAttrSet("data.kubernetes_nodes.test", "nodes.0"),
-					resource.TestMatchResourceAttr("data.kubernetes_nodes.test", "nodes.0", nodeName),
-					resource.TestMatchResourceAttr("data.kubernetes_nodes.test", "nodes.0", nodeLen),
-				),
+				Check:  checkFuncs,
 			},
 		},
 	})

@@ -276,6 +276,9 @@ func resourceKubernetesReplicationControllerDelete(ctx context.Context, d *schem
 
 	err = conn.CoreV1().ReplicationControllers(namespace).Delete(ctx, name, deleteOptions)
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

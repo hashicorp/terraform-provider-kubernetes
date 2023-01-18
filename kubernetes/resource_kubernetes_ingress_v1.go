@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	networking "k8s.io/api/networking/v1"
@@ -25,6 +26,10 @@ func resourceKubernetesIngressV1() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: resourceKubernetesIngressV1Schema(),
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(20 * time.Minute),
+			Delete: schema.DefaultTimeout(20 * time.Minute),
+		},
 	}
 }
 
@@ -49,6 +54,7 @@ func resourceKubernetesIngressV1Schema() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: docIngressSpec["ingressClassName"],
 						Optional:    true,
+						Computed:    true,
 					},
 					"default_backend": backendSpecFieldsV1(defaultBackendDescriptionV1),
 					"rule": {

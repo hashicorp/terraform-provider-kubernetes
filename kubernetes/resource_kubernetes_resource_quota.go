@@ -265,6 +265,9 @@ func resourceKubernetesResourceQuotaDelete(ctx context.Context, d *schema.Resour
 	log.Printf("[INFO] Deleting resource quota: %#v", name)
 	err = conn.CoreV1().ResourceQuotas(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

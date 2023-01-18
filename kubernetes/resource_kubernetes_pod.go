@@ -207,6 +207,9 @@ func resourceKubernetesPodDelete(ctx context.Context, d *schema.ResourceData, me
 	log.Printf("[INFO] Deleting pod: %#v", name)
 	err = conn.CoreV1().Pods(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

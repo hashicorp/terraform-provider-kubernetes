@@ -226,6 +226,9 @@ func resourceKubernetesStorageClassDelete(ctx context.Context, d *schema.Resourc
 	log.Printf("[INFO] Deleting storage class: %#v", name)
 	err = conn.StorageV1().StorageClasses().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

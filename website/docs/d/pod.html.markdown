@@ -300,7 +300,7 @@ The `option` block supports the following:
 * `failure_threshold` -  Minimum consecutive failures for the probe to be considered failed after having succeeded.
 * `grpc` -  GRPC specifies an action involving a GRPC port.
 * `http_get` -  Specifies the http request to perform.
-* `initial_delay_seconds` -  Number of seconds after the container has started before liveness probes are initiated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/pod-states#container-probes)
+* `initial_delay_seconds` -  Number of seconds after the container has started before readiness probes are initiated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/pod-states#container-probes)
 * `period_seconds` -  How often (in seconds) to perform the probe
 * `success_threshold` -  Minimum consecutive successes for the probe to be considered successful after having failed.
 * `tcp_socket` -  TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported
@@ -319,8 +319,8 @@ Please, look at the example below:
 
 ```hcl
 resources {
-    limits = {}
-    requests = {}
+  limits   = {}
+  requests = {}
 }
 ```
 

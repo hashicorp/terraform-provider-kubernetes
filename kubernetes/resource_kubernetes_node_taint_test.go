@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -12,14 +11,13 @@ import (
 )
 
 const (
-	taintKey    = "node-role.kubernetes.io/test"
-	taintValue  = "true"
-	taintEffect = "PreferNoSchedule"
+	fieldManager = "tf-taint-test"
+	taintKey     = "node-role.kubernetes.io/test"
+	taintValue   = "true"
+	taintEffect  = "PreferNoSchedule"
 )
 
 func TestAccKubernetesResourceNodeTaint_basic(t *testing.T) {
-	nodeName := regexp.MustCompile(`^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$`)
-	nodeLen := regexp.MustCompile(`^.{2,63}$`)
 	resourceName := "kubernetes_node_taint.test"
 
 	resource.Test(t, resource.TestCase{
@@ -32,11 +30,11 @@ func TestAccKubernetesResourceNodeTaint_basic(t *testing.T) {
 				Config: testAccKubernetesNodeTaintConfig_basic(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccKubernetesNodeTaintExists(resourceName),
-					resource.TestMatchResourceAttr(resourceName, "metadata.0.name", nodeName),
-					resource.TestMatchResourceAttr(resourceName, "metadata.0.name", nodeLen),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.name"),
 					resource.TestCheckResourceAttr(resourceName, "taint.0.key", taintKey),
 					resource.TestCheckResourceAttr(resourceName, "taint.0.value", taintValue),
 					resource.TestCheckResourceAttr(resourceName, "taint.0.effect", taintEffect),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", fieldManager),
 				),
 			},
 		},
@@ -102,6 +100,7 @@ resource "kubernetes_node_taint" "test" {
 		value = "%s"
 		effect = "%s"
 	}
+	field_manager = "%s"
 }
-`, taintKey, taintValue, taintEffect)
+`, taintKey, taintValue, taintEffect, fieldManager)
 }

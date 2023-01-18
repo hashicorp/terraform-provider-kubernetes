@@ -2,18 +2,18 @@ package kubernetes
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/kubernetes/pkg/apis/core/helper"
 	"k8s.io/kubernetes/pkg/util/taints"
 )
@@ -45,6 +45,18 @@ func resourceKubernetesNodeTaint() *schema.Resource {
 						},
 					},
 				},
+			},
+			"field_manager": {
+				Type:         schema.TypeString,
+				Description:  "Set the name of the field manager for the node taint",
+				Optional:     true,
+				Default:      defaultFieldManagerName,
+				ValidateFunc: validation.StringIsNotWhiteSpace,
+			},
+			"force": {
+				Type:        schema.TypeBool,
+				Description: "Force overwriting annotations that were created or edited outside of Terraform.",
+				Optional:    true,
 			},
 			"taint": {
 				Type:     schema.TypeList,
@@ -147,21 +159,35 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 			return diag.Errorf("Node %s already has taint %+v", nodeName, newTaint)
 		}
 	}
-	// Patch object to prevent conflicts
-	var oldData, newData []byte
-	oldData, err = json.Marshal(node)
+	patchObj := map[string]interface{}{
+		"apiVersion": "v1",
+		"kind":       "Node",
+		"metadata": map[string]interface{}{
+			"name": nodeName,
+		},
+		"spec": map[string]interface{}{
+			"taints": flattenNodeTaints(newNode.Spec.Taints...),
+		},
+	}
+	patch := unstructured.Unstructured{
+		Object: patchObj,
+	}
+	patchBytes, err := patch.MarshalJSON()
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	newData, err = json.Marshal(newNode)
-	if err != nil {
-		return diag.FromErr(err)
+	patchOpts := metav1.PatchOptions{
+		FieldManager: d.Get("field_manager").(string),
+		Force:        ptrToBool(d.Get("force").(bool)),
 	}
-	patch, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, newNode)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if _, err := nodeApi.Patch(ctx, nodeName, types.StrategicMergePatchType, patch, metav1.PatchOptions{}); err != nil {
+	if _, err := nodeApi.Patch(ctx, nodeName, types.ApplyPatchType, patchBytes, patchOpts); err != nil {
+		if errors.IsConflict(err) {
+			return diag.Diagnostics{{
+				Severity: diag.Error,
+				Summary:  "Field manager conflict",
+				Detail:   fmt.Sprintf(`Another client is managing a field Terraform tried to update. Set "force" to true to override: %v`, err),
+			}}
+		}
 		return diag.FromErr(err)
 	}
 	// Don't update id or read if deleting

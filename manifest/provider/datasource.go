@@ -16,8 +16,34 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// ReadDataSource function
 func (s *RawProviderServer) ReadDataSource(ctx context.Context, req *tfprotov5.ReadDataSourceRequest) (*tfprotov5.ReadDataSourceResponse, error) {
+	switch req.TypeName {
+	case "kubernetes_resource":
+		return s.ReadSingularDataSource(ctx, req)
+	case "kubernetes_resources":
+		return s.ReadPluralDataSource(ctx, req)
+	}
+
+	resp := &tfprotov5.ReadDataSourceResponse{}
+	resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+		Severity: tfprotov5.DiagnosticSeverityError,
+		Summary:  fmt.Sprintf("Unknown Data Source: %s", req.TypeName),
+	})
+	return resp, nil
+}
+
+func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfprotov5.ReadDataSourceRequest) (*tfprotov5.ReadDataSourceResponse, error) {
+
+	resp := &tfprotov5.ReadDataSourceResponse{}
+	resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+		Severity: tfprotov5.DiagnosticSeverityError,
+		Summary:  "Not implemented yet",
+	})
+	return resp, nil
+}
+
+// ReadDataSource function
+func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfprotov5.ReadDataSourceRequest) (*tfprotov5.ReadDataSourceResponse, error) {
 	s.logger.Trace("[ReadDataSource][Request]\n%s\n", dump(*req))
 
 	resp := &tfprotov5.ReadDataSourceResponse{}
@@ -29,6 +55,7 @@ func (s *RawProviderServer) ReadDataSource(ctx context.Context, req *tfprotov5.R
 	}
 
 	rt, err := GetDataSourceType(req.TypeName)
+
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,

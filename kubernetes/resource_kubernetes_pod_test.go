@@ -1949,7 +1949,7 @@ func testAccKubernetesPodConfigWithLivenessProbeUsingGRPC(podName, imageName str
       liveness_probe {
         grpc {
           port    = 8888
-		  service = "EchoService"
+          service = "EchoService"
         }
 
         initial_delay_seconds = 30

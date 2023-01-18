@@ -34,11 +34,180 @@ func (s *RawProviderServer) ReadDataSource(ctx context.Context, req *tfprotov5.R
 
 func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfprotov5.ReadDataSourceRequest) (*tfprotov5.ReadDataSourceResponse, error) {
 
+	s.logger.Trace("[ReadDataSource][Request]\n%s\n", dump(*req))
+
 	resp := &tfprotov5.ReadDataSourceResponse{}
-	resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-		Severity: tfprotov5.DiagnosticSeverityError,
-		Summary:  "Not implemented yet",
-	})
+
+	execDiag := s.canExecute()
+	if len(execDiag) > 0 {
+		resp.Diagnostics = append(resp.Diagnostics, execDiag...)
+		return resp, nil
+	}
+
+	rt, err := GetDataSourceType(req.TypeName)
+
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to determine data source type",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+
+	config, err := req.Config.Unmarshal(rt)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to unmarshal data source configuration",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+
+	var dsConfig map[string]tftypes.Value
+	err = config.As(&dsConfig)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to extract attributes from data source configuration",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+
+	rm, err := s.getRestMapper()
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to get RESTMapper client",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+
+	client, err := s.getDynamicClient()
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "failed to get Dynamic client",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+
+	var apiVersion, kind string
+	dsConfig["api_version"].As(&apiVersion)
+	dsConfig["kind"].As(&kind)
+
+	gvr, err := getGVR(apiVersion, kind, rm)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to determine resource GroupVersion",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+
+	gvk := gvr.GroupVersion().WithKind(kind)
+	ns, err := IsResourceNamespaced(gvk, rm)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed determine if resource is namespaced",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+	rcl := client.Resource(gvr)
+
+	objectType, th, err := s.TFTypeFromOpenAPI(ctx, gvk, true)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to save resource state",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+
+	var labelSelector, fieldSelector string
+	dsConfig["label_selector"].As(&labelSelector)
+	dsConfig["field_selector"].As(&fieldSelector)
+	listOptions := metav1.ListOptions{
+		LabelSelector: labelSelector,
+		FieldSelector: fieldSelector,
+		//TODO: add Limit
+	}
+
+	var res *unstructured.UnstructuredList
+
+	if ns {
+		var namespace string
+		dsConfig["namespace"].As(&namespace)
+		if namespace == "" {
+			namespace = "default"
+		}
+		res, err = rcl.Namespace(namespace).List(ctx, listOptions)
+	} else {
+		res, err = rcl.List(ctx, listOptions)
+	}
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return resp, nil
+		}
+		d := tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  fmt.Sprintf("Failed to get data source"),
+			Detail:   err.Error(),
+		}
+		resp.Diagnostics = append(resp.Diagnostics, &d)
+		return resp, nil
+	}
+
+	nobj, err := payload.ToTFValue(res.Object, objectType, th, tftypes.NewAttributePath())
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to convert API response to Terraform value type",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+
+	nobj, err = morph.DeepUnknown(objectType, nobj, tftypes.NewAttributePath())
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to save resource state",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+	rawState := make(map[string]tftypes.Value)
+	err = config.As(&rawState)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to save resource state",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+	rawState["object"] = morph.UnknownToNull(nobj)
+
+	v := tftypes.NewValue(rt, rawState)
+	state, err := tfprotov5.NewDynamicValue(v.Type(), v)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to save resource state",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+	resp.State = &state
 	return resp, nil
 }
 

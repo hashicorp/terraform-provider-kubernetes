@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"math/big"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -135,10 +136,13 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 	var labelSelector, fieldSelector string
 	dsConfig["label_selector"].As(&labelSelector)
 	dsConfig["field_selector"].As(&fieldSelector)
+	var limit big.Float
+	dsConfig["limit"].As(&limit)
+	lim, _ := limit.Int64()
 	listOptions := metav1.ListOptions{
 		LabelSelector: labelSelector,
 		FieldSelector: fieldSelector,
-		//TODO: add Limit
+		Limit:         lim,
 	}
 
 	var res *unstructured.UnstructuredList
@@ -166,26 +170,32 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 		return resp, nil
 	}
 
-	nobj, err := payload.ToTFValue(res.Items[0].Object, objectType, th, tftypes.NewAttributePath())
-
-	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to convert API response to Terraform value type",
-			Detail:   err.Error(),
-		})
-		return resp, nil
+	listObjects := []tftypes.Value{}
+	for _, item := range res.Items {
+		nobj, err := payload.ToTFValue(item.Object, objectType, th, tftypes.NewAttributePath())
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Failed to convert API response to Terraform value type",
+				Detail:   err.Error(),
+			})
+			return resp, nil
+		}
+		nobj, err = morph.DeepUnknown(objectType, nobj, tftypes.NewAttributePath())
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Failed to save resource state",
+				Detail:   err.Error(),
+			})
+			return resp, nil
+		}
+		listObjects = append(listObjects, nobj)
 	}
 
-	nobj, err = morph.DeepUnknown(objectType, nobj, tftypes.NewAttributePath())
-	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to save resource state",
-			Detail:   err.Error(),
-		})
-		return resp, nil
-	}
+	listType := tftypes.List{ElementType: listObjects[0].Type()}
+	list := tftypes.NewValue(listType, listObjects)
+
 	rawState := make(map[string]tftypes.Value)
 	err = config.As(&rawState)
 	if err != nil {
@@ -196,7 +206,7 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 		})
 		return resp, nil
 	}
-	rawState["object"] = morph.UnknownToNull(nobj)
+	rawState["objects"] = morph.UnknownToNull(list)
 
 	v := tftypes.NewValue(rt, rawState)
 	state, err := tfprotov5.NewDynamicValue(v.Type(), v)

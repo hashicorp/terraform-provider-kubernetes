@@ -284,7 +284,7 @@ func GetProviderDataSourceSchema() map[string]*tfprotov5.Schema {
 						Description: "The resource kind.",
 					},
 					{
-						Name:        "object",
+						Name:        "objects",
 						Type:        tftypes.DynamicPseudoType,
 						Optional:    true,
 						Computed:    true,

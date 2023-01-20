@@ -83,3 +83,38 @@ func TestDataSourceKubernetesResource_ConfigMap(t *testing.T) {
 		"kubernetes_manifest.test_config2.object.data.TEST": "hello world",
 	})
 }
+
+func TestDataSourceKubernetesResources_Namespaces(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
+	namespace := randName()
+	namespace2 := randName()
+	namespace3 := randName()
+	namespace4 := "terraform"
+
+	k8shelper.CreateNamespace(t, namespace)
+	defer k8shelper.DeleteResource(t, namespace, kubernetes.NewGroupVersionResource("v1", "namespaces"))
+
+	// STEP 1: Create a ConfigMap to use as a data source
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
+
+	tfvars := TFVARS{
+		"label_selector": "kubernetes.io/metadata.name=terraform",
+		"limit":          2,
+	}
+	tfconfig := loadTerraformConfig(t, "datasource/step1.tf", tfvars)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
+	tf.Apply(ctx)
+
+	// check the data source
+	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
+		"length(data.kubernetes_resources.example.objects)": 1,
+	})
+}

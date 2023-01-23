@@ -1,3 +1,27 @@
+## 2.17.0 (January 23, 2023)
+
+ENHANCEMENT:
+
+* Add a new optional attribute `grpc` to `pod.spec.container.liveness_probe`, `pod.spec.container.readiness_probe`, and `pod.spec.container.startup_probe`. That affects all resources and data sources that use mentioned `pod.spec.container` probes directly or as a template. [[GH-1915](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1915)]
+* `resource/kubernetes_cluster_role_binding_v1`: add attribute `generate_name` to produce a unique random name [[GH-1899](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1899)]
+* `resource/kubernetes_cluster_role_binding`: add attribute `generate_name` to produce a unique random name [[GH-1899](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1899)]
+* `resource/kubernetes_cluster_role_v1`: add attribute `generate_name` to produce a unique random name [[GH-1899](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1899)]
+* `resource/kubernetes_cluster_role`: add attribute `generate_name` to produce a unique random name [[GH-1899](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1899)]
+* `resource/kubernetes_ingress_v1`: add create and delete timeouts [[GH-1936](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1936)]
+* `resource/kubernetes_ingress_v1`: make the attribute `spec.ingress_class_name` computed [[GH-1947](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1947)]
+* `resource/kubernetes_persistent_volume_v1`: add additional validation on the delete operation to make it idempotent [[GH-1935](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1935)]
+* `resource/kubernetes_persistent_volume`: add additional validation on the delete operation to make it idempotent [[GH-1935](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1935)]
+* `resource/kubernetes_role_binding_v1`: add attribute `generate_name` to produce a unique random name [[GH-1899](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1899)]
+* `resource/kubernetes_role_binding`: add attribute `generate_name` to produce a unique random name [[GH-1899](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1899)]
+
+## Community Contributors :raised_hands:
+- @AmandaHassoun made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1944
+- @shihai1991 made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1922
+- @Tensho made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1936
+- @multani made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1899
+- @sherifabdlnaby made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1935
+- @dgnemo made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1915
+
 ## 2.16.1 (December 5, 2022)
 
 ENHANCEMENTS:

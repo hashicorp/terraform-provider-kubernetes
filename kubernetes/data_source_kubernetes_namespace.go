@@ -2,11 +2,12 @@ package kubernetes
 
 import (
 	"context"
+	"log"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"log"
 )
 
 func dataSourceKubernetesNamespace() *schema.Resource {
@@ -51,7 +52,7 @@ func dataSourceKubernetesNamespaceRead(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received namespace: %#v", namespace)
-	err = d.Set("metadata", flattenMetadata(namespace.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(namespace.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -7,6 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	v1 "k8s.io/api/core/v1"
 	api "k8s.io/api/scheduling/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,6 +45,17 @@ func resourceKubernetesPriorityClass() *schema.Resource {
 				Required:    true,
 				ForceNew:    true,
 			},
+			"preemption_policy": {
+				Type:        schema.TypeString,
+				Description: "PreemptionPolicy is the Policy for preempting pods with lower priority. One of Never, PreemptLowerPriority. Defaults to PreemptLowerPriority if unset.",
+				Optional:    true,
+				ForceNew:    true,
+				Default:     v1.PreemptLowerPriority,
+				ValidateFunc: validation.StringInSlice([]string{
+					string(v1.PreemptNever),
+					string(v1.PreemptLowerPriority),
+				}, false),
+			},
 		},
 	}
 }
@@ -57,12 +70,14 @@ func resourceKubernetesPriorityClassCreate(ctx context.Context, d *schema.Resour
 	value := d.Get("value").(int)
 	description := d.Get("description").(string)
 	globalDefault := d.Get("global_default").(bool)
+	preemptionPolicy := d.Get("preemption_policy").(string)
 
 	priorityClass := api.PriorityClass{
-		ObjectMeta:    metadata,
-		Description:   description,
-		GlobalDefault: globalDefault,
-		Value:         int32(value),
+		ObjectMeta:       metadata,
+		Description:      description,
+		GlobalDefault:    globalDefault,
+		Value:            int32(value),
+		PreemptionPolicy: (*v1.PreemptionPolicy)(&preemptionPolicy),
 	}
 
 	log.Printf("[INFO] Creating new priority class: %#v", priorityClass)
@@ -100,7 +115,7 @@ func resourceKubernetesPriorityClassRead(ctx context.Context, d *schema.Resource
 	}
 	log.Printf("[INFO] Received priority class: %#v", priorityClass)
 
-	err = d.Set("metadata", flattenMetadata(priorityClass.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(priorityClass.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -116,6 +131,11 @@ func resourceKubernetesPriorityClassRead(ctx context.Context, d *schema.Resource
 	}
 
 	err = d.Set("global_default", priorityClass.GlobalDefault)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("preemption_policy", priorityClass.PreemptionPolicy)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -149,6 +169,14 @@ func resourceKubernetesPriorityClassUpdate(ctx context.Context, d *schema.Resour
 		})
 	}
 
+	if d.HasChange("preemption_policy") {
+		preemptionPolicy := d.Get("preemption_policy").(string)
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/preemptionPolicy",
+			Value: preemptionPolicy,
+		})
+	}
+
 	data, err := ops.MarshalJSON()
 	if err != nil {
 		return diag.Errorf("Failed to marshal update operations: %s", err)
@@ -175,6 +203,9 @@ func resourceKubernetesPriorityClassDelete(ctx context.Context, d *schema.Resour
 	log.Printf("[INFO] Deleting priority class: %#v", name)
 	err = conn.SchedulingV1().PriorityClasses().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

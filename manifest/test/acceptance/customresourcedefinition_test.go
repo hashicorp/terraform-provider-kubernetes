@@ -1,26 +1,37 @@
+//go:build acceptance
 // +build acceptance
 
 package acceptance
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
 )
 
 func TestKubernetesManifest_CustomResourceDefinition(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
 	kind := strings.Title(randString(8))
 	plural := strings.ToLower(kind) + "s"
 	group := "terraform.io"
 	version := "v1"
 	name := fmt.Sprintf("%s.%s", plural, group)
 
-	tf := tfhelper.RequireNewWorkingDir(t)
-	tf.SetReattachInfo(reattachInfo)
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
 	defer func() {
-		tf.RequireDestroy(t)
+		tf.Destroy(ctx)
 		tf.Close()
 		k8shelper.AssertResourceDoesNotExist(t, "apiextensions.k8s.io/v1", "customresourcedefinitions", name)
 	}()
@@ -32,13 +43,17 @@ func TestKubernetesManifest_CustomResourceDefinition(t *testing.T) {
 		"cr_version": version,
 	}
 	tfconfig := loadTerraformConfig(t, "CustomResourceDefinition/customresourcedefinition.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfig)
-	tf.RequireInit(t)
-	tf.RequireApply(t)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
+	tf.Apply(ctx)
 
 	k8shelper.AssertResourceExists(t, "apiextensions.k8s.io/v1", "customresourcedefinitions", name)
 
-	tfstate := tfstatehelper.NewHelper(tf.RequireState(t))
+	s, err := tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	tfstate := tfstatehelper.NewHelper(s)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
 		"kubernetes_manifest.test.object.metadata.name":           name,
 		"kubernetes_manifest.test.object.spec.group":              group,
@@ -57,6 +72,30 @@ func TestKubernetesManifest_CustomResourceDefinition(t *testing.T) {
 					},
 					"refs": map[string]interface{}{
 						"type": "number",
+					},
+					"otherData": map[string]interface{}{
+						"type": "string",
+					},
+					"stuff": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type": "object",
+							"properties": map[string]interface{}{
+								"foo": map[string]interface{}{
+									"type": "string",
+								},
+							},
+						},
+					},
+					"limits": map[string]interface{}{
+						"type": "object",
+						"additionalProperties": map[string]interface{}{
+							"x-kubernetes-int-or-string": true,
+							"anyOf": []interface{}{
+								map[string]interface{}{"type": "integer"},
+								map[string]interface{}{"type": "string"},
+							},
+						},
 					},
 				},
 			},

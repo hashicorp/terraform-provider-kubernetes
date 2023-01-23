@@ -179,7 +179,7 @@ func resourceKubernetesPersistentVolumeClaimRead(ctx context.Context, d *schema.
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received persistent volume claim: %#v", claim)
-	err = d.Set("metadata", flattenMetadata(claim.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(claim.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -233,6 +233,9 @@ func resourceKubernetesPersistentVolumeClaimUpdate(ctx context.Context, d *schem
 func resourceKubernetesPersistentVolumeClaimDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

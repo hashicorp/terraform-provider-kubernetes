@@ -1,4 +1,5 @@
 ---
+subcategory: "storage/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_storage_class"
 description: |-

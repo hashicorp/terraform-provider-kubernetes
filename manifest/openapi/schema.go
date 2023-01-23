@@ -1,6 +1,7 @@
 package openapi
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest"
 	"github.com/mitchellh/hashstructure"
 )
 
@@ -30,11 +32,6 @@ func resolveSchemaRef(ref *openapi3.SchemaRef, defs map[string]*openapi3.SchemaR
 
 	// These are exceptional situations that require non-standard types.
 	switch sid {
-	case "io.k8s.apimachinery.pkg.util.intstr.IntOrString":
-		t := openapi3.Schema{
-			Type: "",
-		}
-		return &t, nil
 	case "io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps":
 		t := openapi3.Schema{
 			Type: "",
@@ -45,23 +42,12 @@ func resolveSchemaRef(ref *openapi3.SchemaRef, defs map[string]*openapi3.SchemaR
 			Type: "",
 		}
 		return &t, nil
-	case "io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinitionSpec":
-		t, err := resolveSchemaRef(nref, defs)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve schema: %s", err)
-		}
-		vs := t.Properties["versions"]
-		if vs.Value.AdditionalProperties == nil && vs.Value.Items != nil {
-			vs.Value.AdditionalProperties = vs.Value.Items
-			vs.Value.Items = nil
-		}
-		return t, nil
 	}
 
 	return resolveSchemaRef(nref, defs)
 }
 
-func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync.Map, defs map[string]*openapi3.SchemaRef) (tftypes.Type, error) {
+func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync.Map, defs map[string]*openapi3.SchemaRef, ap tftypes.AttributePath, th map[string]string) (tftypes.Type, error) {
 	if stackdepth == 0 {
 		// this is a hack to overcome the inability to express recursion in tftypes
 		return nil, errors.New("recursion runaway while generating type from OpenAPI spec")
@@ -75,8 +61,22 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 
 	var t tftypes.Type
 
+	// Check if attribute type is tagged as 'x-kubernetes-preserve-unknown-fields' in OpenAPI.
+	// If so, we add a type hint to indicate this and return DynamicPseudoType for this attribute,
+	// since we have no further structural information about it.
+	if xpufJSON, ok := elem.Extensions[manifest.PreserveUnknownFieldsLabel]; ok {
+		var xpuf bool
+		v, err := xpufJSON.(json.RawMessage).MarshalJSON()
+		if err == nil {
+			err = json.Unmarshal(v, &xpuf)
+			if err == nil && xpuf {
+				th[ap.String()] = manifest.PreserveUnknownFieldsLabel
+			}
+		}
+	}
+
 	// check if type is in cache
-	// HACK: this is temporarily disable to diagnose a cache corruption issue.
+	// HACK: this is temporarily disabled to diagnose a cache corruption issue.
 	// if herr == nil {
 	// 	if t, ok := typeCache.Load(h); ok {
 	// 		return t.(tftypes.Type), nil
@@ -84,6 +84,9 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 	// }
 	switch elem.Type {
 	case "string":
+		if elem.Format == "int-or-string" {
+			th[ap.String()] = "io.k8s.apimachinery.pkg.util.intstr.IntOrString"
+		}
 		return tftypes.String, nil
 
 	case "boolean":
@@ -96,6 +99,18 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 		return tftypes.Number, nil
 
 	case "":
+		if xv, ok := elem.Extensions["x-kubernetes-int-or-string"]; ok {
+			xb, err := xv.(json.RawMessage).MarshalJSON()
+			if err != nil {
+				return tftypes.DynamicPseudoType, nil
+			}
+			var x bool
+			err = json.Unmarshal(xb, &x)
+			if err == nil && x {
+				th[ap.String()] = "io.k8s.apimachinery.pkg.util.intstr.IntOrString"
+				return tftypes.String, nil
+			}
+		}
 		return tftypes.DynamicPseudoType, nil
 
 	case "array":
@@ -105,11 +120,16 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve schema for items: %s", err)
 			}
-			et, err := getTypeFromSchema(it, stackdepth-1, typeCache, defs)
+			aap := ap.WithElementKeyInt(-1)
+			et, err := getTypeFromSchema(it, stackdepth-1, typeCache, defs, *aap, th)
 			if err != nil {
 				return nil, err
 			}
-			t = tftypes.List{ElementType: et}
+			if !isTypeFullyKnown(et) {
+				t = tftypes.Tuple{ElementTypes: []tftypes.Type{et}}
+			} else {
+				t = tftypes.List{ElementType: et}
+			}
 			if herr == nil {
 				typeCache.Store(h, t)
 			}
@@ -119,7 +139,8 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve schema for items: %s", err)
 			}
-			et, err := getTypeFromSchema(it, stackdepth-1, typeCache, defs)
+			aap := ap.WithElementKeyInt(-1)
+			et, err := getTypeFromSchema(it, stackdepth-1, typeCache, defs, *aap, th)
 			if err != nil {
 				return nil, err
 			}
@@ -138,7 +159,8 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 				if err != nil {
 					return nil, fmt.Errorf("failed to resolve schema: %s", err)
 				}
-				pType, err := getTypeFromSchema(schema, stackdepth-1, typeCache, defs)
+				aap := ap.WithAttributeName(p)
+				pType, err := getTypeFromSchema(schema, stackdepth-1, typeCache, defs, *aap, th)
 				if err != nil {
 					return nil, err
 				}
@@ -156,11 +178,12 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve schema: %s", err)
 			}
-			pt, err := getTypeFromSchema(s, stackdepth-1, typeCache, defs)
+			aap := ap.WithElementKeyString("#")
+			pt, err := getTypeFromSchema(s, stackdepth-1, typeCache, defs, *aap, th)
 			if err != nil {
 				return nil, err
 			}
-			t = tftypes.Map{AttributeType: pt}
+			t = tftypes.Map{ElementType: pt}
 			if herr == nil {
 				typeCache.Store(h, t)
 			}
@@ -178,4 +201,31 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 	}
 
 	return nil, fmt.Errorf("unknown type: %s", elem.Type)
+}
+
+func isTypeFullyKnown(t tftypes.Type) bool {
+	if t.Is(tftypes.DynamicPseudoType) {
+		return false
+	}
+	switch {
+	case t.Is(tftypes.Object{}):
+		for _, att := range t.(tftypes.Object).AttributeTypes {
+			if !isTypeFullyKnown(att) {
+				return false
+			}
+		}
+	case t.Is(tftypes.Tuple{}):
+		for _, ett := range t.(tftypes.Tuple).ElementTypes {
+			if !isTypeFullyKnown(ett) {
+				return false
+			}
+		}
+	case t.Is(tftypes.List{}):
+		return isTypeFullyKnown(t.(tftypes.List).ElementType)
+	case t.Is(tftypes.Set{}):
+		return isTypeFullyKnown(t.(tftypes.Set).ElementType)
+	case t.Is(tftypes.Map{}):
+		return isTypeFullyKnown(t.(tftypes.Map).ElementType)
+	}
+	return true
 }

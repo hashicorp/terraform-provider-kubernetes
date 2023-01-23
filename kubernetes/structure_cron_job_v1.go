@@ -6,7 +6,7 @@ import (
 	batch "k8s.io/api/batch/v1"
 )
 
-func flattenCronJobSpecV1(in batch.CronJobSpec, d *schema.ResourceData) ([]interface{}, error) {
+func flattenCronJobSpecV1(in batch.CronJobSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
 	att["concurrency_policy"] = in.ConcurrencyPolicy
@@ -17,7 +17,7 @@ func flattenCronJobSpecV1(in batch.CronJobSpec, d *schema.ResourceData) ([]inter
 
 	att["schedule"] = in.Schedule
 
-	jobTemplate, err := flattenJobTemplateV1(in.JobTemplate, d)
+	jobTemplate, err := flattenJobTemplateV1(in.JobTemplate, d, meta)
 	if err != nil {
 		return nil, err
 	}
@@ -36,13 +36,12 @@ func flattenCronJobSpecV1(in batch.CronJobSpec, d *schema.ResourceData) ([]inter
 	return []interface{}{att}, nil
 }
 
-func flattenJobTemplateV1(in batch.JobTemplateSpec, d *schema.ResourceData) ([]interface{}, error) {
+func flattenJobTemplateV1(in batch.JobTemplateSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
-	meta := flattenMetadata(in.ObjectMeta, d)
-	att["metadata"] = meta
+	att["metadata"] = flattenMetadata(in.ObjectMeta, d, meta)
 
-	jobSpec, err := flattenJobSpec(in.Spec, d, "spec.0.job_template.0.spec.0.template.0.")
+	jobSpec, err := flattenJobSpec(in.Spec, d, meta, "spec.0.job_template.0.spec.0.template.0.")
 	if err != nil {
 		return nil, err
 	}

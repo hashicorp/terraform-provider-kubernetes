@@ -1,4 +1,5 @@
 ---
+subcategory: "policy/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_pod_disruption_budget_v1"
 description: |-

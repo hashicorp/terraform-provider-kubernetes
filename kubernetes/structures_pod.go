@@ -5,6 +5,7 @@ import (
 	"log"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
@@ -93,6 +94,9 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	if len(in.NodeSelector) > 0 {
 		att["node_selector"] = in.NodeSelector
 	}
+	if in.RuntimeClassName != nil {
+		att["runtime_class_name"] = *in.RuntimeClassName
+	}
 	if in.PriorityClassName != "" {
 		att["priority_class_name"] = in.PriorityClassName
 	}
@@ -134,7 +138,7 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 			if err != nil {
 				return []interface{}{att}, err
 			}
-			if nameMatchesDefaultToken {
+			if nameMatchesDefaultToken || strings.HasPrefix(volume.Name, "kube-api-access") {
 				in.Volumes = removeVolumeFromPodSpec(i, in.Volumes)
 				break
 			}
@@ -208,6 +212,12 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	if in.RunAsUser != nil {
 		att["run_as_user"] = strconv.Itoa(int(*in.RunAsUser))
 	}
+	if in.SeccompProfile != nil {
+		att["seccomp_profile"] = flattenSeccompProfile(in.SeccompProfile)
+	}
+	if in.FSGroupChangePolicy != nil {
+		att["fs_group_change_policy"] = *in.FSGroupChangePolicy
+	}
 	if len(in.SupplementalGroups) > 0 {
 		att["supplemental_groups"] = newInt64Set(schema.HashSchema(&schema.Schema{
 			Type: schema.TypeInt,
@@ -226,6 +236,17 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	return []interface{}{}
 }
 
+func flattenSeccompProfile(in *v1.SeccompProfile) []interface{} {
+	att := make(map[string]interface{})
+	if in.Type != "" {
+		att["type"] = in.Type
+		if in.Type == "Localhost" {
+			att["localhost_profile"] = in.LocalhostProfile
+		}
+	}
+	return []interface{}{att}
+}
+
 func flattenSeLinuxOptions(in *v1.SELinuxOptions) []interface{} {
 	att := make(map[string]interface{})
 	if in.User != "" {
@@ -234,7 +255,7 @@ func flattenSeLinuxOptions(in *v1.SELinuxOptions) []interface{} {
 	if in.Role != "" {
 		att["role"] = in.Role
 	}
-	if in.User != "" {
+	if in.Type != "" {
 		att["type"] = in.Type
 	}
 	if in.Level != "" {
@@ -366,6 +387,9 @@ func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
 		}
 		if v.CephFS != nil {
 			obj["ceph_fs"] = flattenCephFSVolumeSource(v.CephFS)
+		}
+		if v.CSI != nil {
+			obj["csi"] = flattenCSIVolumeSource(v.CSI)
 		}
 		if v.FC != nil {
 			obj["fc"] = flattenFCVolumeSource(v.FC)
@@ -733,6 +757,10 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.NodeSelector = nodeSelectors
 	}
 
+	if v, ok := in["runtime_class_name"].(string); ok && v != "" {
+		obj.RuntimeClassName = ptrToString(v)
+	}
+
 	if v, ok := in["priority_class_name"].(string); ok {
 		obj.PriorityClassName = v
 	}
@@ -868,6 +896,9 @@ func expandPodSecurityContext(l []interface{}) (*v1.PodSecurityContext, error) {
 		}
 		obj.RunAsUser = ptrToInt64(int64(i))
 	}
+	if v, ok := in["seccomp_profile"].([]interface{}); ok && len(v) > 0 {
+		obj.SeccompProfile = expandSeccompProfile(v)
+	}
 	if v, ok := in["se_linux_options"].([]interface{}); ok && len(v) > 0 {
 		obj.SELinuxOptions = expandSeLinuxOptions(v)
 	}
@@ -877,7 +908,10 @@ func expandPodSecurityContext(l []interface{}) (*v1.PodSecurityContext, error) {
 	if v, ok := in["sysctl"].([]interface{}); ok && len(v) > 0 {
 		obj.Sysctls = expandSysctls(v)
 	}
-
+	if v, ok := in["fs_group_change_policy"].(string); ok && v != "" {
+		policy := v1.PodFSGroupChangePolicy(v)
+		obj.FSGroupChangePolicy = &policy
+	}
 	return obj, nil
 }
 
@@ -897,6 +931,23 @@ func expandSysctls(l []interface{}) []v1.Sysctl {
 
 	}
 	return sysctls
+}
+
+func expandSeccompProfile(l []interface{}) *v1.SeccompProfile {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.SeccompProfile{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.SeccompProfile{}
+	if v, ok := in["type"].(string); ok {
+		obj.Type = v1.SeccompProfileType(v)
+		if v == "Localhost" {
+			if lp, ok := in["localhost_profile"].(string); ok {
+				obj.LocalhostProfile = &lp
+			}
+		}
+	}
+	return obj
 }
 
 func expandSeLinuxOptions(l []interface{}) *v1.SELinuxOptions {
@@ -1424,6 +1475,9 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 		}
 		if v, ok := m["ceph_fs"].([]interface{}); ok && len(v) > 0 {
 			vl[i].CephFS = expandCephFSVolumeSource(v)
+		}
+		if v, ok := m["csi"].([]interface{}); ok && len(v) > 0 {
+			vl[i].CSI = expandCSIVolumeSource(v)
 		}
 		if v, ok := m["fc"].([]interface{}); ok && len(v) > 0 {
 			vl[i].FC = expandFCVolumeSource(v)

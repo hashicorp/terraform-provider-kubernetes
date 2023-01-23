@@ -43,14 +43,6 @@ func init() {
 		},
 	}
 	testAccExternalProviders = map[string]resource.ExternalProvider{
-		"kubernetes-local": {
-			VersionConstraint: "9.9.9",
-			Source:            "localhost/test/kubernetes",
-		},
-		"kubernetes-released": {
-			VersionConstraint: "~> 1.13.2",
-			Source:            "hashicorp/kubernetes",
-		},
 		"aws": {
 			Source: "hashicorp/aws",
 		},
@@ -257,8 +249,10 @@ func skipIfNotRunningInGke(t *testing.T) {
 	if !isInGke {
 		t.Skip("The Kubernetes endpoint must come from GKE for this test to run - skipping")
 	}
-	if os.Getenv("GOOGLE_PROJECT") == "" || os.Getenv("GOOGLE_REGION") == "" || os.Getenv("GOOGLE_ZONE") == "" {
-		t.Fatal("GOOGLE_PROJECT, GOOGLE_REGION, and GOOGLE_ZONE must be set for GoogleCloud tests")
+	for _, ev := range []string{"GOOGLE_PROJECT", "GOOGLE_REGION", "GOOGLE_ZONE"} {
+		if os.Getenv(ev) == "" {
+			t.Skipf("%s must be set for GoogleCloud tests", ev)
+		}
 	}
 }
 
@@ -285,8 +279,18 @@ func skipIfNotRunningInEks(t *testing.T) {
 	if !isInEks {
 		t.Skip("The Kubernetes endpoint must come from EKS for this test to run - skipping")
 	}
-	if os.Getenv("AWS_DEFAULT_REGION") == "" || os.Getenv("AWS_ZONE") == "" || os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-		t.Fatal("AWS_DEFAULT_REGION, AWS_ZONE, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set for AWS tests")
+	if os.Getenv("AWS_DEFAULT_REGION") == "" || os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
+		t.Fatal("AWS_DEFAULT_REGION, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set for AWS tests")
+	}
+}
+
+func skipIfRunningInEks(t *testing.T) {
+	isInEks, err := isRunningInEks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isInEks {
+		t.Skip("This test cannot be run in EKS cluster")
 	}
 }
 
@@ -435,20 +439,4 @@ type currentEnv struct {
 	ClusterCACertData string
 	Insecure          string
 	Token             string
-}
-
-func requiredProviders() string {
-	return fmt.Sprintf(`terraform {
-  required_providers {
-    kubernetes-local = {
-      source  = "localhost/test/kubernetes"
-      version = "9.9.9"
-    }
-    kubernetes-released = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 1.13.2"
-    }
-  }
-}
-`)
 }

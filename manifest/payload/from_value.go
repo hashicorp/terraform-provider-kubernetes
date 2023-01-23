@@ -2,13 +2,15 @@ package payload
 
 import (
 	"math/big"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
 )
 
 // FromTFValue converts a Terraform specific tftypes.Value type object
 // into a Kubernetes dynamic client specific unstructured object
-func FromTFValue(in tftypes.Value, ap *tftypes.AttributePath) (interface{}, error) {
+func FromTFValue(in tftypes.Value, th map[string]string, ap *tftypes.AttributePath) (interface{}, error) {
 	var err error
 	if !in.IsKnown() {
 		return nil, ap.NewErrorf("[%s] cannot convert unknown value to Unstructured", ap.String())
@@ -37,16 +39,21 @@ func FromTFValue(in tftypes.Value, ap *tftypes.AttributePath) (interface{}, erro
 			}
 			return inv, nil
 		}
-		fnv, acc := nv.Float64()
-		if acc != big.Exact {
-			return nil, ap.NewErrorf("[%s] inexact float approximation when converting number value", ap.String())
-		}
+		fnv, _ := nv.Float64()
 		return fnv, err
 	case in.Type().Is(tftypes.String):
 		var sv string
 		err = in.As(&sv)
 		if err != nil {
 			return nil, ap.NewErrorf("[%s] cannot extract contents of attribute: %s", ap.String(), err)
+		}
+		tp := morph.ValueToTypePath(ap)
+		ot, ok := th[tp.String()]
+		if ok && ot == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" {
+			n, err := strconv.Atoi(sv)
+			if err == nil {
+				return n, nil
+			}
 		}
 		return sv, nil
 	case in.Type().Is(tftypes.List{}) || in.Type().Is(tftypes.Tuple{}):
@@ -60,8 +67,8 @@ func FromTFValue(in tftypes.Value, ap *tftypes.AttributePath) (interface{}, erro
 			return lv, nil
 		}
 		for k, le := range l {
-			nextAp := ap.WithElementKeyInt(int64(k))
-			ne, err := FromTFValue(le, nextAp)
+			nextAp := ap.WithElementKeyInt(k)
+			ne, err := FromTFValue(le, th, nextAp)
 			if err != nil {
 				return nil, nextAp.NewErrorf("[%s] cannot convert list element to Unstructured: %s", nextAp.String(), err)
 			}
@@ -88,7 +95,7 @@ func FromTFValue(in tftypes.Value, ap *tftypes.AttributePath) (interface{}, erro
 			case in.Type().Is(tftypes.Object{}):
 				nextAp = ap.WithAttributeName(k)
 			}
-			ne, err := FromTFValue(me, nextAp)
+			ne, err := FromTFValue(me, th, nextAp)
 			if err != nil {
 				return nil, nextAp.NewErrorf("[%s]: cannot convert map element to Unstructured: %s", nextAp.String(), err.Error())
 			}

@@ -21,6 +21,9 @@ type FieldInfo struct {
 }
 
 func AppendFields(fields []FieldInfo, parentIndex []int, t reflect.Type) []FieldInfo {
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
 	// For each field
 	numField := t.NumField()
 iteration:
@@ -32,11 +35,14 @@ iteration:
 
 		// See whether this is an embedded field
 		if f.Anonymous {
-			if f.Tag.Get("json") == "-" {
+			jsonTag := f.Tag.Get("json")
+			if jsonTag == "-" {
 				continue
 			}
-			fields = AppendFields(fields, index, f.Type)
-			continue iteration
+			if jsonTag == "" {
+				fields = AppendFields(fields, index, f.Type)
+				continue iteration
+			}
 		}
 
 		// Ignore certain types

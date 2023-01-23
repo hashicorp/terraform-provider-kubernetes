@@ -418,7 +418,7 @@ func resourceKubernetesPodSecurityPolicyRead(ctx context.Context, d *schema.Reso
 	}
 
 	log.Printf("[INFO] Received PodSecurityPolicy: %#v", psp)
-	err = d.Set("metadata", flattenMetadata(psp.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(psp.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -476,6 +476,9 @@ func resourceKubernetesPodSecurityPolicyDelete(ctx context.Context, d *schema.Re
 	log.Printf("[INFO] Deleting PodSecurityPolicy: %#v", name)
 	err = conn.PolicyV1beta1().PodSecurityPolicies().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] PodSecurityPolicy %s deleted", name)

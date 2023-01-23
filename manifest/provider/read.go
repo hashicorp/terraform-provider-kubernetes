@@ -17,6 +17,9 @@ import (
 func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.ReadResourceRequest) (*tfprotov5.ReadResourceResponse, error) {
 	resp := &tfprotov5.ReadResourceResponse{}
 
+	// loop private state back in - ATM it's not needed here
+	resp.Private = req.Private
+
 	execDiag := s.canExecute()
 	if len(execDiag) > 0 {
 		resp.Diagnostics = append(resp.Diagnostics, execDiag...)
@@ -71,7 +74,36 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 		})
 		return resp, nil
 	}
-	cu, err := payload.FromTFValue(co, tftypes.NewAttributePath())
+	rm, err := s.getRestMapper()
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to get RESTMapper client",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+	gvk, err := GVKFromTftypesObject(&co, rm)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Failed to determine GroupVersionResource for manifest",
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+
+	objectType, th, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
+	if err != nil {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  fmt.Sprintf("Failed to determine resource type from GVK: %s", gvk),
+			Detail:   err.Error(),
+		})
+		return resp, nil
+	}
+
+	cu, err := payload.FromTFValue(co, th, tftypes.NewAttributePath())
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -82,15 +114,6 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 	}
 	s.logger.Trace("[ReadResource]", "[unstructured.FromTFValue]", dump(cu))
 
-	rm, err := s.getRestMapper()
-	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to get RESTMapper client",
-			Detail:   err.Error(),
-		})
-		return resp, nil
-	}
 	client, err := s.getDynamicClient()
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
@@ -134,18 +157,8 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 		return resp, nil
 	}
 
-	gvk, err := GVKFromTftypesObject(&co, rm)
-	if err != nil {
-		return resp, fmt.Errorf("failed to determine resource GVR: %s", err)
-	}
-
-	objectType, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
-	if err != nil {
-		return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
-	}
-
 	fo := RemoveServerSideFields(ro.Object)
-	nobj, err := payload.ToTFValue(fo, objectType, tftypes.NewAttributePath())
+	nobj, err := payload.ToTFValue(fo, objectType, th, tftypes.NewAttributePath())
 	if err != nil {
 		return resp, err
 	}

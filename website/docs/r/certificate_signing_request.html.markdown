@@ -1,4 +1,5 @@
 ---
+subcategory: "certificates/v1beta1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_certificate_signing_request"
 description: |-

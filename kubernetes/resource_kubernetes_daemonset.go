@@ -159,7 +159,7 @@ func resourceKubernetesDaemonSetCreate(ctx context.Context, d *schema.ResourceDa
 	}
 
 	if d.Get("wait_for_rollout").(bool) {
-		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
+		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
 			waitForDaemonSetReplicasFunc(ctx, conn, metadata.Namespace, metadata.Name))
 		if err != nil {
 			return diag.FromErr(err)
@@ -251,12 +251,12 @@ func resourceKubernetesDaemonSetRead(ctx context.Context, d *schema.ResourceData
 	}
 	log.Printf("[INFO] Received daemonset: %#v", daemonset)
 
-	err = d.Set("metadata", flattenMetadata(daemonset.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(daemonset.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	spec, err := flattenDaemonSetSpec(daemonset.Spec, d)
+	spec, err := flattenDaemonSetSpec(daemonset.Spec, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -284,6 +284,9 @@ func resourceKubernetesDaemonSetDelete(ctx context.Context, d *schema.ResourceDa
 
 	err = conn.AppsV1().DaemonSets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

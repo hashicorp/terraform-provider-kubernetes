@@ -1,5 +1,6 @@
 ---
 layout: "kubernetes"
+subcategory: "autoscaling/v1"
 page_title: "Kubernetes: kubernetes_horizontal_pod_autoscaler"
 description: |-
   Horizontal Pod Autoscaler automatically scales the number of pods in a replication controller, deployment or replica set based on observed CPU utilization.
@@ -228,22 +229,22 @@ The following arguments are supported:
 
 #### Quantities
 
-See [here](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#quantity-resource-core) for documentation on quantities.
+See [here](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) for documentation on resource management for pods and containers.
 
 ### `described_object`
 
 #### Arguments
 
-* `api_version` - (Optional) API version of the referent
-* `kind` - (Required) Kind of the referent. e.g. `ReplicationController`. For more info see https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+* `api_version` - (Optional) API version of the referent. This argument is optional for the `v1` API version referents and mandatory for the rest.
+* `kind` - (Required) Kind of the referent. e.g. `ReplicationController`. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#types-kinds)
 * `name` - (Required) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 
 ### `scale_target_ref`
 
 #### Arguments
 
-* `api_version` - (Optional) API version of the referent
-* `kind` - (Required) Kind of the referent. e.g. `ReplicationController`. For more info see https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+* `api_version` - (Optional) API version of the referent. This argument is optional for the `v1` API version referents and mandatory for the rest.
+* `kind` - (Required) Kind of the referent. e.g. `ReplicationController`. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#types-kinds)
 * `name` - (Required) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 
 ### `behavior`

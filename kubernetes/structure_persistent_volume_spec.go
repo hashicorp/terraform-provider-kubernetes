@@ -367,7 +367,7 @@ func flattenPersistentVolumeSource(in v1.PersistentVolumeSource) []interface{} {
 		att["photon_persistent_disk"] = flattenPhotonPersistentDiskVolumeSource(in.PhotonPersistentDisk)
 	}
 	if in.CSI != nil {
-		att["csi"] = flattenCSIVolumeSource(in.CSI)
+		att["csi"] = flattenCSIPersistentVolumeSource(in.CSI)
 	}
 	return []interface{}{att}
 }
@@ -423,7 +423,7 @@ func flattenPhotonPersistentDiskVolumeSource(in *v1.PhotonPersistentDiskVolumeSo
 	return []interface{}{att}
 }
 
-func flattenCSIVolumeSource(in *v1.CSIPersistentVolumeSource) []interface{} {
+func flattenCSIPersistentVolumeSource(in *v1.CSIPersistentVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["driver"] = in.Driver
 	att["volume_handle"] = in.VolumeHandle
@@ -445,6 +445,24 @@ func flattenCSIVolumeSource(in *v1.CSIPersistentVolumeSource) []interface{} {
 	}
 	if in.NodeStageSecretRef != nil {
 		att["node_stage_secret_ref"] = flattenSecretReference(in.NodeStageSecretRef)
+	}
+	return []interface{}{att}
+}
+
+func flattenCSIVolumeSource(in *v1.CSIVolumeSource) []interface{} {
+	att := make(map[string]interface{})
+	att["driver"] = in.Driver
+	if in.ReadOnly != nil {
+		att["read_only"] = *in.ReadOnly
+	}
+	if in.FSType != nil {
+		att["fs_type"] = *in.FSType
+	}
+	if len(in.VolumeAttributes) > 0 {
+		att["volume_attributes"] = in.VolumeAttributes
+	}
+	if in.NodePublishSecretRef != nil {
+		att["node_publish_secret_ref"] = flattenLocalObjectReference(in.NodePublishSecretRef)
 	}
 	return []interface{}{att}
 }
@@ -1090,6 +1108,29 @@ func expandCSIPersistentDiskVolumeSource(l []interface{}) *v1.CSIPersistentVolum
 	}
 	if v, ok := in["controller_expand_secret_ref"].([]interface{}); ok && len(v) > 0 {
 		obj.ControllerExpandSecretRef = expandSecretReference(v)
+	}
+	return obj
+}
+
+func expandCSIVolumeSource(l []interface{}) *v1.CSIVolumeSource {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.CSIVolumeSource{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.CSIVolumeSource{
+		Driver: in["driver"].(string),
+	}
+	if v, ok := in["read_only"].(bool); ok {
+		obj.ReadOnly = &v
+	}
+	if v, ok := in["fs_type"].(string); ok {
+		obj.FSType = &v
+	}
+	if v, ok := in["volume_attributes"].(map[string]interface{}); ok {
+		obj.VolumeAttributes = expandStringMap(v)
+	}
+	if v, ok := in["node_publish_secret_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.NodePublishSecretRef = expandLocalObjectReference(v)
 	}
 	return obj
 }

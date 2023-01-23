@@ -517,6 +517,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			return response, nil
 		}
 		execCfg := clientcmdapi.ExecConfig{}
+		execCfg.InteractiveMode = clientcmdapi.IfAvailableExecInteractiveMode
 		if len(execBlock) > 0 {
 			var execObj map[string]tftypes.Value
 			err := execBlock[0].As(&execObj)

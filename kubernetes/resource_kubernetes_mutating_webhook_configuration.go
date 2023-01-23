@@ -109,8 +109,7 @@ func resourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 						"rule": {
 							Type:        schema.TypeList,
 							Description: webhookDoc["rules"],
-							Required:    true,
-							MinItems:    1,
+							Optional:    true,
 							Elem: &schema.Resource{
 								Schema: ruleWithOperationsFields(),
 							},
@@ -214,7 +213,7 @@ func resourceKubernetesMutatingWebhookConfigurationRead(ctx context.Context, d *
 		return diag.FromErr(err)
 	}
 
-	err = d.Set("metadata", flattenMetadata(cfg.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(cfg.ObjectMeta, d, meta))
 	if err != nil {
 		return nil
 	}
@@ -292,6 +291,9 @@ func resourceKubernetesMutatingWebhookConfigurationUpdate(ctx context.Context, d
 func resourceKubernetesMutatingWebhookConfigurationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

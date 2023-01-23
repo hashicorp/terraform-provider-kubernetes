@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
-func handlerFields() map[string]*schema.Schema {
+func lifecycleHandlerFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"exec": {
 			Type:        schema.TypeList,
@@ -98,12 +98,13 @@ func handlerFields() map[string]*schema.Schema {
 	}
 }
 
-func resourcesFieldV1() map[string]*schema.Schema {
+func resourcesFieldV1(isUpdatable bool) map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"limits": {
 			Type:        schema.TypeMap,
 			Optional:    true,
 			Computed:    true,
+			ForceNew:    !isUpdatable,
 			Description: "Describes the maximum amount of compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
@@ -114,6 +115,7 @@ func resourcesFieldV1() map[string]*schema.Schema {
 			Type:        schema.TypeMap,
 			Optional:    true,
 			Computed:    true,
+			ForceNew:    !isUpdatable,
 			Description: "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/",
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
@@ -158,6 +160,30 @@ func resourcesFieldV0() map[string]*schema.Schema {
 					},
 				},
 			},
+		},
+	}
+}
+
+func seccompProfileField(isUpdatable bool) map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"localhost_profile": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			ForceNew:    !isUpdatable,
+			Default:     "",
+			Description: "Localhost Profile indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work.",
+		},
+		"type": {
+			Type:     schema.TypeString,
+			Optional: true,
+			ForceNew: !isUpdatable,
+			Default:  string(api.SeccompProfileTypeUnconfined),
+			ValidateFunc: validation.StringInSlice([]string{
+				string(api.SeccompProfileTypeLocalhost),
+				string(api.SeccompProfileTypeRuntimeDefault),
+				string(api.SeccompProfileTypeUnconfined),
+			}, false),
+			Description: "Type indicates which kind of seccomp profile will be applied. Valid options are: Localhost, RuntimeDefault, Unconfined.",
 		},
 	}
 }
@@ -463,7 +489,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						Elem: &schema.Resource{
-							Schema: handlerFields(),
+							Schema: lifecycleHandlerFields(),
 						},
 					},
 					"pre_stop": {
@@ -472,7 +498,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						Elem: &schema.Resource{
-							Schema: handlerFields(),
+							Schema: lifecycleHandlerFields(),
 						},
 					},
 				},
@@ -555,7 +581,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Computed:    true,
 			Description: "Compute Resources required by this container. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#resources",
 			Elem: &schema.Resource{
-				Schema: resourcesFieldV1(),
+				Schema: resourcesFieldV1(isUpdatable),
 			},
 		},
 		"security_context": {
@@ -633,7 +659,27 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 }
 
 func probeSchema() *schema.Resource {
-	h := handlerFields()
+	h := lifecycleHandlerFields()
+	h["grpc"] = &schema.Schema{
+		Type:        schema.TypeList,
+		Optional:    true,
+		Description: "GRPC specifies an action involving a GRPC port.",
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"port": {
+					Type:         schema.TypeInt,
+					Required:     true,
+					ValidateFunc: validatePortNum,
+					Description:  "Number of the port to access on the container. Number must be in the range 1 to 65535.",
+				},
+				"service": {
+					Type:        schema.TypeString,
+					Optional:    true,
+					Description: "Name of the service to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is not specified, the default behavior is defined by gRPC.",
+				},
+			},
+		},
+	}
 	h["failure_threshold"] = &schema.Schema{
 		Type:         schema.TypeInt,
 		Optional:     true,
@@ -740,6 +786,15 @@ func securityContextSchema(isUpdatable bool) *schema.Resource {
 			Optional:     true,
 			ForceNew:     !isUpdatable,
 			ValidateFunc: validateTypeStringNullableInt,
+		},
+		"seccomp_profile": {
+			Type:        schema.TypeList,
+			Description: "The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows.",
+			Optional:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: seccompProfileField(isUpdatable),
+			},
 		},
 		"se_linux_options": {
 			Type:        schema.TypeList,

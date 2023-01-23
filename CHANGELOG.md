@@ -1,3 +1,289 @@
+## 2.17.0 (January 23, 2023)
+
+ENHANCEMENT:
+
+* Add a new optional attribute `grpc` to `pod.spec.container.liveness_probe`, `pod.spec.container.readiness_probe`, and `pod.spec.container.startup_probe`. That affects all resources and data sources that use mentioned `pod.spec.container` probes directly or as a template. [[GH-1915](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1915)]
+* `resource/kubernetes_cluster_role_binding_v1`: add attribute `generate_name` to produce a unique random name [[GH-1899](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1899)]
+* `resource/kubernetes_cluster_role_binding`: add attribute `generate_name` to produce a unique random name [[GH-1899](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1899)]
+* `resource/kubernetes_cluster_role_v1`: add attribute `generate_name` to produce a unique random name [[GH-1899](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1899)]
+* `resource/kubernetes_cluster_role`: add attribute `generate_name` to produce a unique random name [[GH-1899](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1899)]
+* `resource/kubernetes_ingress_v1`: add create and delete timeouts [[GH-1936](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1936)]
+* `resource/kubernetes_ingress_v1`: make the attribute `spec.ingress_class_name` computed [[GH-1947](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1947)]
+* `resource/kubernetes_persistent_volume_v1`: add additional validation on the delete operation to make it idempotent [[GH-1935](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1935)]
+* `resource/kubernetes_persistent_volume`: add additional validation on the delete operation to make it idempotent [[GH-1935](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1935)]
+* `resource/kubernetes_role_binding_v1`: add attribute `generate_name` to produce a unique random name [[GH-1899](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1899)]
+* `resource/kubernetes_role_binding`: add attribute `generate_name` to produce a unique random name [[GH-1899](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1899)]
+
+## Community Contributors :raised_hands:
+- @AmandaHassoun made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1944
+- @shihai1991 made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1922
+- @Tensho made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1936
+- @multani made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1899
+- @sherifabdlnaby made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1935
+- @dgnemo made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1915
+
+## 2.16.1 (December 5, 2022)
+
+ENHANCEMENTS:
+
+* Add additional validation on the delete operation to make it idempotent. [[GH-1914](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1914)], [[GH-1919](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1919)], [[GH-1898](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1898)]
+
+This affects the following resources:
+  - `kubernetes_api_service`
+  - `kubernetes_api_service_v1`
+  - `kubernetes_cluster_role`
+  - `kubernetes_cluster_role_v1`
+  - `kubernetes_cluster_role_binding`
+  - `kubernetes_cluster_role_binding_v1`
+  - `kubernetes_config_map`
+  - `kubernetes_config_map_v1`
+  - `kubernetes_daemonset`
+  - `kubernetes_daemon_set_v1`
+  - `kubernetes_deployment`
+  - `kubernetes_deployment_v1`
+  - `kubernetes_endpoints`
+  - `kubernetes_endpoints_v1`
+  - `kubernetes_horizontal_pod_autoscaler`
+  - `kubernetes_horizontal_pod_autoscaler_v1`
+  - `kubernetes_horizontal_pod_autoscaler_v2beta2`
+  - `kubernetes_horizontal_pod_autoscaler_v2`
+  - `kubernetes_mutating_webhook_configuration`
+  - `kubernetes_mutating_webhook_configuration_v1`
+  - `kubernetes_network_policy`
+  - `kubernetes_network_policy_v1`
+  - `kubernetes_persistent_volume_claim`
+  - `kubernetes_persistent_volume_claim_v1`
+  - `kubernetes_pod`
+  - `kubernetes_pod_v1`
+  - `kubernetes_pod_disruption_budget`
+  - `kubernetes_pod_disruption_budget_v1`
+  - `kubernetes_pod_security_policy`
+  - `kubernetes_pod_security_policy_v1beta1` 
+  - `kubernetes_priority_class`
+  - `kubernetes_replication_controller`
+  - `kubernetes_resource_quota`
+  - `kubernetes_role`
+  - `kubernetes_role_binding`
+  - `kubernetes_secret`
+  - `kubernetes_namespace`
+  - `kubernetes_service`
+  - `kubernetes_service_account`
+  - `kubernetes_stateful_set`
+  - `kubernetes_storage_class`
+  - `kubernetes_validating_webhook_configuration`
+  - `kubernetes_validating_webhook_configuration_v1 `
+
+Special thanks to @sheneska for making these changes as part of her internship @hashicorp! 🚀
+
+## 2.16.0 (November 18, 2022)
+
+FEATURES:
+
+* New data source: `kubernetes_endpoints_v1` [[GH-1805](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1805)]
+
+ENHANCEMENT:
+
+* Add a new optional attribute `runtime_class_name` to `pod.spec`. That affects all resources and data sources that use `pod.spec` directly or as a template. [[GH-1895](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1895)]
+* Add a new optional attribute `fs_group_change_policy` to `pod.spec.security_context`. That affects all resources and data sources that use `pod.spec` directly or as a template. [[GH-1892](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1892)]
+* The kubernetes status field is now available in the `kubernetes_resource` datasource [[GH-1802](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1802)]
+* `r/kubernetes_pod_v1`: changing values of `spec.container.resources.limits` or `spec.container.resources.requests` will force resource recreation. [[GH-1889](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1889)]
+* `r/kubernetes_pod`: changing values of `spec.container.resources.limits` or `spec.container.resources.requests` will force resource recreation. [[GH-1889](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1889)]
+
+BUG FIXES:
+
+* Fix an issue when changing values of `spec.container.resources.limits` or `spec.container.resources.requests` does not update appropriate Kubernetes resources. Affected resources: `kubernetes_pod`, `kubernetes_pod_v1`. [[GH-1889](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1889)]
+* Fix an issue when empty values of `spec.container.resources.limits` or `spec.container.resources.requests` produce continuous diff output during `plan` although no real changes were made. Affected resources: `kubernetes_pod`, `kubernetes_pod_v1`, `kubernetes_daemonset`, `kubernetes_daemon_set_v1`, `kubernetes_deployment`, `kubernetes_deployment_v1`. [[GH-1889](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1889)]
+* Fix an issue with timeouts for `StatefulSet`, `Deployment`, and `DaemonSet` resources when in some cases changes of `Update` or `Create` timeout doesn't affect related actions. [[GH-1902](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1902)]
+
+DOCS:
+
+* `resource/kubernetes_service_account_v1`: mark attribute `default_secret_name` as deprecated [[GH-1883](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1883)]
+* `resource/kubernetes_service_account`: mark attribute `default_secret_name` as deprecated [[GH-1883](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1883)]
+
+Thanks to all our contributors! :tada:
+
+## Community Contributors :raised_hands:
+- @Dudesons made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1805
+- @St0rmingBr4in made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1802
+- @kylecarbs made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1895
+
+## 2.15.0 (October 31, 2022)
+
+ENHANCEMENT:
+
+* Add new resource resource_kubernetes_env [[GH-1838](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1838)]
+* Add "field_manager" attribute to kubernetes_labels, kubernetes_annotations, kubernetes_config_map_v1_data [[GH-1831](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1831)]
+* r/kubernetes_horizontal_pod_autoscaler_v2: make attribute `spec.behavior.scale_down` computed [[GH-1853](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1853)]
+* r/kubernetes_horizontal_pod_autoscaler_v2: make attribute `spec.behavior.scale_up` computed [[GH-1853](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1853)]
+* r/kubernetes_horizontal_pod_autoscaler_v2: make attribute `spec.behavior` computed [[GH-1853](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1853)]
+* r/kubernetes_horizontal_pod_autoscaler_v2beta2: make attribute `spec.behavior.scale_down` computed [[GH-1853](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1853)]
+* r/kubernetes_horizontal_pod_autoscaler_v2beta2: make attribute `spec.behavior.scale_up` computed [[GH-1853](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1853)]
+* r/kubernetes_horizontal_pod_autoscaler_v2beta2: make attribute `spec.behavior` computed [[GH-1853](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1853)]
+
+## 2.14.0 (October 6, 2022)
+
+ENHANCEMENT:
+
+* Added "preemption_policy" attribute to the priority_class resource. [[GH-1846](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1846)]
+* new attribute: Add immutable attribute to resource_config_map [[GH-1849](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1849)]
+* resource/kubernetes_secret: Add a new attribute `wait_for_service_account_token` and corresponding `create` timeout
+resource/kubernetes_secret_v1: Add a new attribute `wait_for_service_account_token` and corresponding `create` timeout [[GH-1833](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1833)]
+
+DOCS:
+
+* r/kubernetes_service: make `spec.port` block optional [[GH-1856](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1856)]
+* r/kubernetes_service_v1: make `spec.port` block optional [[GH-1856](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1856)]
+
+## 2.13.1 (August 29, 2022)
+
+BUG FIXES:
+
+* [TK-78009] Fix propagation of non-fatal Diagnostics in the type morphing logic
+
+## 2.13.0 (August 23, 2022)
+
+BUG FIXES:
+
+* Starting from Kubernetes 1.24.0 service account token is not automatically generated, thus it has to create separately. The following resources were updated to handle this change: `d/kubernetes_service_account`, `r/kubernetes_default_service_account`, `r/kubernetes_service_account`. For Kubernetes clusters running v1.24+ `default_secret_name` will be empty. A warning message will be printed once any of the above resources are in use. (#1792)
+
+IMPROVEMENTS:
+
+* `r/kubernetes_manifest`: Better error messages from OpenAPI schema transformations (#1780)
+* Update documentation and correct some errors (#1768, #1786)
+* Update acceptance tests infrastructure code for GKE and AKE and related GitHub Actions
+
+## 2.12.1 (July 6, 2022)
+
+IMPROVEMENTS:
+
+* Update documentation and correct some errors (#1759)
+
+BUG FIXES:
+
+* Fix type morphing of nested tuples that causes `Failed to morph` errors (#1756)
+* Fix an issue when provider crashes intermittently in version `v2.12.0` (#1762)
+
+## 2.12.0 (June 30, 2022)
+
+NEW:
+
+* Attribute `ignore_annotations` of `provider` (#746)
+* Attribute `ignore_labels` of `provider` (#746)
+* Attribute `condition` to `wait` block of `kubernetes_manifest` (#1595)
+* Attribute `allocate_load_balancer_node_ports` of `kubernetes_service(_v1)` (#1683)
+* Attribute `cluster_ips` of `kubernetes_service(_v1)` (#1683)
+* Attribute `internal_traffic_policy` of `kubernetes_service(_v1)` (#1683)
+* Attribute `load_balancer_class` of `kubernetes_service(_v1)` (#1683)
+* Attribute `session_affinity_config` of `kubernetes_service(_v1)` (#1683)
+
+IMPROVEMENTS:
+
+* Update documentation and correct some errors (#1706, #1708)
+* Fix security scan alerts (#1727, #1730, #1731)
+* Attribute `topology_key` of `kubernetes_deployment(_v1)` marked as `Required` (#1736)
+
+BUG FIXES:
+
+* Fix `kubernetes_default_service_account` doesn't set the `automount_service_account_token` to `false` (#1247)
+* Fix an issue when the imported `kubernetes_manifest` resource is replaced instead of getting updated (#1712)
+* Fix provider crash when `image_pull_secret` of `kubernetes_service_account(_v1)` is `null`
+
+## 2.11.0 (April 27, 2022)
+
+NEW:
+
+* Add a new resource `kubernetes_horizontal_pod_autoscaler_v2` (#1674)
+
+IMPROVEMENTS:
+
+* Add `ip_families` and `ip_family_policy` attributes to `kubernetes_service` (#1662)
+* Handle `x-kubernetes-preserve-unknown-fields` type annotation from OpenAPI: changes to attributes of this type trigger whole resource recreation. (#1646)
+* Upgrade terraform-plugin-mux to v0.6.0 (#1686)
+* Add GitHub action for EKS acceptance tests (#1656)
+* Add github action for acceptance tests using kind (#1691)
+
+BUG FIXES:
+
+* Fix conversion of big.Float to float64 in `kubernetes_manifest` (#1661)
+* Fix identification of `int-or-string` type attributes to include 3rd party types defined by aggregated APIs (#1640)
+* Fix not handling multiple `cluster_role_selectors` of `kubernetes_cluster_role(_v1)` (#1360)
+
+## 2.10.0 (April 7, 2022)
+
+NEW:
+
+* Resource `kubernetes_labels` (#692)
+* Resource `kubernetes_annotations` (#692)
+* Resource `kubernetes_config_map_v1_data` (#723)
+* Block `wait` with attribute `rollout` of `kubernetes_manifest` (#1549)
+* Data source and resource attributes `app_protocol` of `kubernetes_service` (#1554)
+* Attribute `container_resource` of resource `kubernetes_horizontal_pod_autoscaler_v2beta2` (#1637)
+
+IMPROVEMENTS:
+
+* Deprecate `wait_for` attribute in favor of `wait` block in `kubernetes_manifest` (#1549)
+* Make attribute `rule` optional of `kubernetes_validating_webhook_configuration(_v1)` and `kubernetes_mutating_webhook_configuration(_v1)` (#1618, #1643)
+* Update documentation and correct some errors (#1622, #1628, #1657, #1681)
+
+BUG FIXES:
+
+* Fix crash when multiple `match_expression` are used in `kubernetes_resource_quota` (#1561)
+* Fix issue when in some circumstances changes of `seLinuxOptions.Type` doesn't reflect in the state file (#1650)
+* Ignore service account volumes with `kube-api-access` prefix (#1663)
+
+## 2.9.0 (March 17, 2022)
+
+IMPROVEMENTS:
+
+* Add attribute `csi` to pod spec (#1092)
+* Add `kubernetes_resource` data source (#1548)
+* `kubernetes_manifest` resource force the re-creation of the resource when either `apiVersion` or `kind` attributes change (#1593)
+* Make attribute `http` of resource `kubernetes_ingress_v1` optional (#1613)
+* Add a new attribute `seccomp_profile` to pod and container spec (#1617)
+* Add additional check to resource `kubernetes_job_v1` when attributes `wait_for_completion` and `ttl_seconds_after_finished` are used together (#1619)
+* Update documentation examples and correct some errors (#1597, #1611, #1612, #1626)
+
+BUG FIXES:
+
+* Fix logic of `wait_for_rollout` attribute of `kubernetes_deployment` (#1405)
+* Fix fail when the provider cannot determine `default_secret_name` (#1634)
+
+## 2.8.0 (February 09, 2022)
+
+IMPROVEMENTS:
+
+* Add mutating_webhook_configuration_v1 data source (#1423)
+* Remove enabling experiment section (#1564)
+* Update kubernetes dependencies (#1574)
+* Update terraform-plugin-go and terraform-plugin-sdk (#1551)
+
+BUG FIXES:
+
+* Fix `panic: lists must only contain one type of element` errors on `kubernetes_manifest`
+* Attribute `backend.service.port.name` in `kubernetes_ingress_v1` should be type String  (#1541)
+
+## 2.7.1 (December 06, 2021)
+
+BUG FIXES:
+* Fix type-morphing of Map into Map (#1521)
+
+## 2.7.0 (November 30, 2021)
+
+IMPROVEMENTS:
+* Add support for storage/v1
+* Add support for certificates/v1
+* Add support for networking/v1
+* Add support for policy/v1
+* Add `completion_mode` to job spec 
+* Improve performance of `kubernetes_manifest` by reducing amount of API calls
+
+BUG FIXES:
+* Fix crash when container env block is empty 
+* Fix invalid allowedHostPaths PodSecurityPolicy patch 
+* Fix handling of "null" values on fields of `kubernetes_manifest` (#1478)
+
+This release introduces version suffixes to the names of resources and datasources. See our [documentation page](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/guides/versioned-resources) for more details on this convention and the motivation behind it.   
+
 ## 2.6.1 (October 22, 2021)
 
 BUG FIXES:

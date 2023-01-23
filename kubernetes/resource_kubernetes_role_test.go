@@ -20,6 +20,7 @@ func TestAccKubernetesRole_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_role.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesRoleDestroy,
 		Steps: []resource.TestStep{
@@ -87,6 +88,7 @@ func TestAccKubernetesRole_generatedName(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_role.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesRoleDestroy,
 		Steps: []resource.TestStep{
@@ -95,9 +97,7 @@ func TestAccKubernetesRole_generatedName(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesRoleExists("kubernetes_role.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_role.test", "metadata.0.annotations.%", "0"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_role.test", "metadata.0.labels.%", "0"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_role.test", "metadata.0.generate_name", prefix),
 					resource.TestMatchResourceAttr("kubernetes_role.test", "metadata.0.name", regexp.MustCompile("^"+prefix)),
 					resource.TestCheckResourceAttrSet("kubernetes_role.test", "metadata.0.generation"),
@@ -115,6 +115,7 @@ func TestAccKubernetesRole_Bug(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_role.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesRoleDestroy,
 		Steps: []resource.TestStep{

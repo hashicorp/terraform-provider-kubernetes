@@ -46,11 +46,16 @@ func MakeUint64(x uint64) Int {
 // MakeBigInt returns a Starlark int for the specified big.Int.
 // The new Int value will contain a copy of x. The caller is safe to modify x.
 func MakeBigInt(x *big.Int) Int {
-	if n := x.BitLen(); n < 32 || n == 32 && x.Int64() == math.MinInt32 {
+	if isSmall(x) {
 		return makeSmallInt(x.Int64())
 	}
 	z := new(big.Int).Set(x)
 	return makeBigInt(z)
+}
+
+func isSmall(x *big.Int) bool {
+	n := x.BitLen()
+	return n < 32 || n == 32 && x.Int64() == math.MinInt32
 }
 
 var (
@@ -199,6 +204,13 @@ func (x Int) CompareSameType(op syntax.Token, v Value, depth int) (bool, error) 
 func (i Int) Float() Float {
 	iSmall, iBig := i.get()
 	if iBig != nil {
+		// Fast path for hardware int-to-float conversions.
+		if iBig.IsUint64() {
+			return Float(iBig.Uint64())
+		} else if iBig.IsInt64() {
+			return Float(iBig.Int64())
+		}
+
 		f, _ := new(big.Float).SetInt(iBig).Float64()
 		return Float(f)
 	}
@@ -424,7 +436,9 @@ func NumberToInt(x Value) (Int, error) {
 // finiteFloatToInt converts f to an Int, truncating towards zero.
 // f must be finite.
 func finiteFloatToInt(f Float) Int {
-	if math.MinInt64 <= f && f <= math.MaxInt64 {
+	// We avoid '<= MaxInt64' so that both constants are exactly representable as floats.
+	// See https://github.com/google/starlark-go/issues/375.
+	if math.MinInt64 <= f && f < math.MaxInt64+1 {
 		// small values
 		return MakeInt64(int64(f))
 	}

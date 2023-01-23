@@ -25,7 +25,6 @@ func TestAccKubernetesDataSourceServiceAccount_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "secret.0.name", name+"-secret"),
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "image_pull_secret.0.name", name+"-image-pull-secret"),
 					resource.TestCheckResourceAttr("kubernetes_service_account.test", "automount_service_account_token", "true"),
-					resource.TestCheckResourceAttrSet("kubernetes_service_account.test", "default_secret_name"),
 				),
 			},
 			{
@@ -38,7 +37,36 @@ func TestAccKubernetesDataSourceServiceAccount_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("data.kubernetes_service_account.test", "secret.0.name", name+"-secret"),
 					resource.TestCheckResourceAttr("data.kubernetes_service_account.test", "image_pull_secret.0.name", name+"-image-pull-secret"),
 					resource.TestCheckResourceAttr("data.kubernetes_service_account.test", "automount_service_account_token", "true"),
-					resource.TestCheckResourceAttrSet("data.kubernetes_service_account.test", "default_secret_name"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDataSourceServiceAccount_default_secret(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.24.0")
+		},
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDataSourceServiceAccountConfig_default_secret(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("kubernetes_service_account.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_service_account.test", "secret.#", "1"),
+				),
+			},
+			{
+				Config: testAccKubernetesDataSourceServiceAccountConfig_default_secret(name) +
+					testAccKubernetesDataSourceServiceAccountConfig_default_secret_read(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.kubernetes_service_account.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("data.kubernetes_service_account.test", "secret.#", "2"),
+					resource.TestCheckResourceAttr("data.kubernetes_service_account.test", "default_secret_name", ""),
 				),
 			},
 		},
@@ -88,4 +116,47 @@ func testAccKubernetesDataSourceServiceAccountConfig_read() string {
   }
 }
 `)
+}
+
+func testAccKubernetesDataSourceServiceAccountConfig_default_secret(name string) string {
+	return fmt.Sprintf(`
+variable "token_name" {
+  default = "%s-token-test0"
+}
+
+resource "kubernetes_service_account" "test" {
+  metadata {
+    name = "%s"
+  }
+  secret {
+    name = var.token_name
+  }
+}
+
+resource "kubernetes_secret" "test" {
+  metadata {
+    name = var.token_name
+    annotations = {
+      "kubernetes.io/service-account.name" = "%s"
+    }
+  }
+  type = "kubernetes.io/service-account-token"
+  depends_on = [
+    kubernetes_service_account.test
+  ]
+}
+`, name, name, name)
+}
+
+func testAccKubernetesDataSourceServiceAccountConfig_default_secret_read(name string) string {
+	return fmt.Sprintf(`
+data "kubernetes_service_account" "test" {
+  metadata {
+    name = "%s"
+  }
+  depends_on = [
+    kubernetes_secret.test
+  ]
+}
+`, name)
 }

@@ -175,7 +175,7 @@ func resourceKubernetesPodRead(ctx context.Context, d *schema.ResourceData, meta
 	}
 	log.Printf("[INFO] Received pod: %#v", pod)
 
-	err = d.Set("metadata", flattenMetadata(pod.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(pod.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -207,6 +207,9 @@ func resourceKubernetesPodDelete(ctx context.Context, d *schema.ResourceData, me
 	log.Printf("[INFO] Deleting pod: %#v", name)
 	err = conn.CoreV1().Pods(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

@@ -21,6 +21,7 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_cron_job_v1.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
 		Steps: []resource.TestStep{
@@ -81,6 +82,7 @@ func TestAccKubernetesCronJobV1_extra(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_cron_job_v1.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
 		Steps: []resource.TestStep{
@@ -177,12 +179,12 @@ func testAccKubernetesCronJobV1Config_basic(name, imageName string) string {
     name = "%s"
   }
   spec {
-    concurrency_policy = "Replace"
-    failed_jobs_history_limit = 5
-    schedule = "1 0 * * *"
-    starting_deadline_seconds = 10
+    concurrency_policy            = "Replace"
+    failed_jobs_history_limit     = 5
+    schedule                      = "1 0 * * *"
+    starting_deadline_seconds     = 10
     successful_jobs_history_limit = 10
-    suspend = true
+    suspend                       = true
     job_template {
       metadata {}
       spec {
@@ -191,8 +193,8 @@ func testAccKubernetesCronJobV1Config_basic(name, imageName string) string {
           metadata {}
           spec {
             container {
-              name = "hello"
-              image = "%s"
+              name    = "hello"
+              image   = "%s"
               command = ["echo", "'hello'"]
             }
           }
@@ -222,8 +224,8 @@ func testAccKubernetesCronJobV1Config_modified(name, imageName string) string {
           }
           spec {
             container {
-              name = "hello"
-              image = "%s"
+              name    = "hello"
+              image   = "%s"
               command = ["echo", "'hello'"]
             }
           }
@@ -240,7 +242,7 @@ func testAccKubernetesCronJobV1Config_extra(name, imageName string) string {
     name = "%s"
   }
   spec {
-    schedule = "1 0 * * *"
+    schedule                      = "1 0 * * *"
     concurrency_policy            = "Forbid"
     successful_jobs_history_limit = 10
     failed_jobs_history_limit     = 10
@@ -253,8 +255,8 @@ func testAccKubernetesCronJobV1Config_extra(name, imageName string) string {
           metadata {}
           spec {
             container {
-              name = "hello"
-              image = "%s"
+              name    = "hello"
+              image   = "%s"
               command = ["echo", "'hello'"]
             }
           }
@@ -271,7 +273,7 @@ func testAccKubernetesCronJobV1Config_extraModified(name, imageName string) stri
     name = "%s"
   }
   spec {
-    schedule = "1 0 * * *"
+    schedule                      = "1 0 * * *"
     concurrency_policy            = "Forbid"
     successful_jobs_history_limit = 2
     failed_jobs_history_limit     = 2
@@ -284,8 +286,8 @@ func testAccKubernetesCronJobV1Config_extraModified(name, imageName string) stri
           metadata {}
           spec {
             container {
-              name = "hello"
-              image = "%s"
+              name    = "hello"
+              image   = "%s"
               command = ["echo", "'hello'"]
             }
           }

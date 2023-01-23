@@ -1,4 +1,5 @@
 ---
+subcategory: "extensions/v1beta1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_ingress"
 description: |-
@@ -20,7 +21,7 @@ resource "kubernetes_ingress" "example_ingress" {
 
   spec {
     backend {
-      service_name = "MyApp1"
+      service_name = "myapp-1"
       service_port = 8080
     }
 
@@ -28,7 +29,7 @@ resource "kubernetes_ingress" "example_ingress" {
       http {
         path {
           backend {
-            service_name = "MyApp1"
+            service_name = "myapp-1"
             service_port = 8080
           }
 
@@ -37,7 +38,7 @@ resource "kubernetes_ingress" "example_ingress" {
 
         path {
           backend {
-            service_name = "MyApp2"
+            service_name = "myapp-2"
             service_port = 8080
           }
 
@@ -52,11 +53,47 @@ resource "kubernetes_ingress" "example_ingress" {
   }
 }
 
+resource "kubernetes_service_v1" "example" {
+  metadata {
+    name = "myapp-1"
+  }
+  spec {
+    selector = {
+      app = kubernetes_pod.example.metadata.0.labels.app
+    }
+    session_affinity = "ClientIP"
+    port {
+      port        = 8080
+      target_port = 80
+    }
+
+    type = "NodePort"
+  }
+}
+
+resource "kubernetes_service_v1" "example2" {
+  metadata {
+    name = "myapp-2"
+  }
+  spec {
+    selector = {
+      app = kubernetes_pod.example2.metadata.0.labels.app
+    }
+    session_affinity = "ClientIP"
+    port {
+      port        = 8080
+      target_port = 80
+    }
+
+    type = "NodePort"
+  }
+}
+
 resource "kubernetes_pod" "example" {
   metadata {
     name = "terraform-example"
     labels = {
-      app = "MyApp1"
+      app = "myapp-1"
     }
   }
 
@@ -76,7 +113,7 @@ resource "kubernetes_pod" "example2" {
   metadata {
     name = "terraform-example2"
     labels = {
-      app = "MyApp2"
+      app = "myapp-2"
     }
   }
 
@@ -95,16 +132,16 @@ resource "kubernetes_pod" "example2" {
 
 ## Example using Nginx ingress controller
 
-```
+```hcl
 resource "kubernetes_service" "example" {
   metadata {
     name = "ingress-service"
   }
   spec {
     port {
-      port = 80
+      port        = 80
       target_port = 80
-      protocol = "TCP"
+      protocol    = "TCP"
     }
     type = "NodePort"
   }

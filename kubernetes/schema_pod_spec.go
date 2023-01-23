@@ -228,6 +228,13 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			ForceNew:    !isUpdatable,
 			Description: "NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node. More info: http://kubernetes.io/docs/user-guide/node-selection.",
 		},
+		"runtime_class_name": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    isComputed,
+			ForceNew:    !isUpdatable,
+			Description: "RuntimeClassName is a feature for selecting the container runtime configuration. The container runtime configuration is used to run a Pod's containers. More info: https://kubernetes.io/docs/concepts/containers/runtime-class",
+		},
 		"priority_class_name": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -283,6 +290,15 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						ValidateFunc: validateTypeStringNullableInt,
 						ForceNew:     !isUpdatable,
 					},
+					"seccomp_profile": {
+						Type:        schema.TypeList,
+						Description: "The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows.",
+						Optional:    true,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: seccompProfileField(isUpdatable),
+						},
+					},
 					"se_linux_options": {
 						Type:        schema.TypeList,
 						Description: "The SELinux context to be applied to all containers. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.",
@@ -291,6 +307,16 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						Elem: &schema.Resource{
 							Schema: seLinuxOptionsField(isUpdatable),
 						},
+					},
+					"fs_group_change_policy": {
+						Type:        schema.TypeString,
+						Description: "fsGroupChangePolicy defines behavior of changing ownership and permission of the volume before being exposed inside Pod. This field will only apply to volume types which support fsGroup based ownership(and permissions). It will have no effect on ephemeral volume types such as: secret, configmaps and emptydir.",
+						Optional:    true,
+						ValidateFunc: validation.StringInSlice([]string{
+							string(api.FSGroupChangeAlways),
+							string(api.FSGroupChangeOnRootMismatch),
+						}, false),
+						ForceNew: !isUpdatable,
 					},
 					"supplemental_groups": {
 						Type:        schema.TypeSet,
@@ -950,6 +976,51 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 										},
 									},
 								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	v["csi"] = &schema.Schema{
+		Type:        schema.TypeList,
+		Description: "Represents a CSI Volume. More info: http://kubernetes.io/docs/user-guide/volumes#csi",
+		Optional:    true,
+		MaxItems:    1,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"driver": {
+					Type:        schema.TypeString,
+					Description: "the name of the volume driver to use. More info: https://kubernetes.io/docs/concepts/storage/volumes/#csi",
+					Required:    true,
+				},
+				"volume_attributes": {
+					Type:        schema.TypeMap,
+					Description: "Attributes of the volume to publish.",
+					Optional:    true,
+				},
+				"fs_type": {
+					Type:        schema.TypeString,
+					Description: "Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified.",
+					Optional:    true,
+				},
+				"read_only": {
+					Type:        schema.TypeBool,
+					Description: "Whether to set the read-only property in VolumeMounts to \"true\". If omitted, the default is \"false\". More info: http://kubernetes.io/docs/user-guide/volumes#csi",
+					Optional:    true,
+				},
+				"node_publish_secret_ref": {
+					Type:        schema.TypeList,
+					Description: "A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodePublishVolume and NodeUnpublishVolume calls.",
+					Optional:    true,
+					MaxItems:    1,
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"name": {
+								Type:        schema.TypeString,
+								Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+								Optional:    true,
 							},
 						},
 					},

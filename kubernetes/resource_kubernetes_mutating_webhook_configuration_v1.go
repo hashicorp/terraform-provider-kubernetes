@@ -107,8 +107,7 @@ func resourceKubernetesMutatingWebhookConfigurationV1() *schema.Resource {
 						"rule": {
 							Type:        schema.TypeList,
 							Description: webhookDoc["rules"],
-							Required:    true,
-							MinItems:    1,
+							Optional:    true,
 							Elem: &schema.Resource{
 								Schema: ruleWithOperationsFields(),
 							},
@@ -183,7 +182,7 @@ func resourceKubernetesMutatingWebhookConfigurationV1Read(ctx context.Context, d
 		return diag.FromErr(err)
 	}
 
-	err = d.Set("metadata", flattenMetadata(cfg.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(cfg.ObjectMeta, d, meta))
 	if err != nil {
 		return nil
 	}
@@ -244,6 +243,9 @@ func resourceKubernetesMutatingWebhookConfigurationV1Delete(ctx context.Context,
 	log.Printf("[INFO] Deleting MutatingWebhookConfiguration: %#v", name)
 	err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

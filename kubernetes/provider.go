@@ -10,13 +10,17 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/hashicorp/go-cty/cty"
+	gversion "github.com/hashicorp/go-version"
 	"github.com/mitchellh/go-homedir"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -26,6 +30,8 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	aggregator "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
+
+const defaultFieldManagerName = "Terraform"
 
 func Provider() *schema.Provider {
 	p := &schema.Provider{
@@ -123,6 +129,17 @@ func Provider() *schema.Provider {
 						"api_version": {
 							Type:     schema.TypeString,
 							Required: true,
+							ValidateDiagFunc: func(val interface{}, key cty.Path) diag.Diagnostics {
+								apiVersion := val.(string)
+								if apiVersion == "client.authentication.k8s.io/v1alpha1" {
+									return diag.Diagnostics{{
+										Severity: diag.Warning,
+										Summary:  "v1alpha1 of the client authentication API is deprecated, use v1beta1 or above",
+										Detail:   "v1alpha1 of the client authentication API will be removed in Kubernetes client versions 1.24 and above. You may need to update your exec plugin to use the latest version.",
+									}}
+								}
+								return nil
+							},
 						},
 						"command": {
 							Type:     schema.TypeString,
@@ -167,6 +184,24 @@ func Provider() *schema.Provider {
 					},
 				},
 			},
+			"ignore_annotations": {
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type:         schema.TypeString,
+					ValidateFunc: validation.StringIsValidRegExp,
+				},
+				Optional:    true,
+				Description: "List of Kubernetes metadata annotations to ignore across all resources handled by this provider for situations where external systems are managing certain resource annotations. Each item is a regular expression.",
+			},
+			"ignore_labels": {
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type:         schema.TypeString,
+					ValidateFunc: validation.StringIsValidRegExp,
+				},
+				Optional:    true,
+				Description: "List of Kubernetes metadata labels to ignore across all resources handled by this provider for situations where external systems are managing certain resource labels. Each item is a regular expression.",
+			},
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -178,6 +213,7 @@ func Provider() *schema.Provider {
 			"kubernetes_all_namespaces":             dataSourceKubernetesAllNamespaces(),
 			"kubernetes_secret":                     dataSourceKubernetesSecret(),
 			"kubernetes_secret_v1":                  dataSourceKubernetesSecret(),
+			"kubernetes_endpoints_v1":               dataSourceKubernetesEndpointsV1(),
 			"kubernetes_service":                    dataSourceKubernetesService(),
 			"kubernetes_service_v1":                 dataSourceKubernetesService(),
 			"kubernetes_pod":                        dataSourceKubernetesPod(),
@@ -194,6 +230,9 @@ func Provider() *schema.Provider {
 			// storage
 			"kubernetes_storage_class":    dataSourceKubernetesStorageClass(),
 			"kubernetes_storage_class_v1": dataSourceKubernetesStorageClass(),
+
+			// admission control
+			"kubernetes_mutating_webhook_configuration_v1": dataSourceKubernetesMutatingWebhookConfiguration(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
@@ -208,12 +247,14 @@ func Provider() *schema.Provider {
 			"kubernetes_default_service_account_v1": resourceKubernetesDefaultServiceAccount(),
 			"kubernetes_config_map":                 resourceKubernetesConfigMap(),
 			"kubernetes_config_map_v1":              resourceKubernetesConfigMap(),
+			"kubernetes_config_map_v1_data":         resourceKubernetesConfigMapV1Data(),
 			"kubernetes_secret":                     resourceKubernetesSecret(),
 			"kubernetes_secret_v1":                  resourceKubernetesSecret(),
 			"kubernetes_pod":                        resourceKubernetesPod(),
 			"kubernetes_pod_v1":                     resourceKubernetesPod(),
 			"kubernetes_endpoints":                  resourceKubernetesEndpoints(),
 			"kubernetes_endpoints_v1":               resourceKubernetesEndpoints(),
+			"kubernetes_env":                        resourceKubernetesEnv(),
 			"kubernetes_limit_range":                resourceKubernetesLimitRange(),
 			"kubernetes_limit_range_v1":             resourceKubernetesLimitRange(),
 			"kubernetes_persistent_volume":          resourceKubernetesPersistentVolume(),
@@ -247,6 +288,7 @@ func Provider() *schema.Provider {
 			"kubernetes_horizontal_pod_autoscaler":         resourceKubernetesHorizontalPodAutoscaler(),
 			"kubernetes_horizontal_pod_autoscaler_v1":      resourceKubernetesHorizontalPodAutoscalerV1(),
 			"kubernetes_horizontal_pod_autoscaler_v2beta2": resourceKubernetesHorizontalPodAutoscalerV2Beta2(),
+			"kubernetes_horizontal_pod_autoscaler_v2":      resourceKubernetesHorizontalPodAutoscalerV2(),
 
 			// certificates
 			"kubernetes_certificate_signing_request":    resourceKubernetesCertificateSigningRequest(),
@@ -291,6 +333,10 @@ func Provider() *schema.Provider {
 			"kubernetes_storage_class_v1": resourceKubernetesStorageClass(),
 			"kubernetes_csi_driver":       resourceKubernetesCSIDriver(),
 			"kubernetes_csi_driver_v1":    resourceKubernetesCSIDriverV1(),
+
+			// provider helper resources
+			"kubernetes_labels":      resourceKubernetesLabels(),
+			"kubernetes_annotations": resourceKubernetesAnnotations(),
 		},
 	}
 
@@ -304,14 +350,21 @@ func Provider() *schema.Provider {
 type KubeClientsets interface {
 	MainClientset() (*kubernetes.Clientset, error)
 	AggregatorClientset() (*aggregator.Clientset, error)
+	DynamicClient() (dynamic.Interface, error)
+	DiscoveryClient() (discovery.DiscoveryInterface, error)
 }
 
 type kubeClientsets struct {
+	// TODO: this struct has become overloaded we should
+	// rename this or break it into smaller structs
 	config              *restclient.Config
 	mainClientset       *kubernetes.Clientset
 	aggregatorClientset *aggregator.Clientset
+	dynamicClient       dynamic.Interface
+	discoveryClient     discovery.DiscoveryInterface
 
-	configData *schema.ResourceData
+	IgnoreAnnotations []string
+	IgnoreLabels      []string
 }
 
 func (k kubeClientsets) MainClientset() (*kubernetes.Clientset, error) {
@@ -343,6 +396,36 @@ func (k kubeClientsets) AggregatorClientset() (*aggregator.Clientset, error) {
 	return k.aggregatorClientset, nil
 }
 
+func (k kubeClientsets) DynamicClient() (dynamic.Interface, error) {
+	if k.dynamicClient != nil {
+		return k.dynamicClient, nil
+	}
+
+	if k.config != nil {
+		kc, err := dynamic.NewForConfig(k.config)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to configure dynamic client: %s", err)
+		}
+		k.dynamicClient = kc
+	}
+	return k.dynamicClient, nil
+}
+
+func (k kubeClientsets) DiscoveryClient() (discovery.DiscoveryInterface, error) {
+	if k.discoveryClient != nil {
+		return k.discoveryClient, nil
+	}
+
+	if k.config != nil {
+		kc, err := discovery.NewDiscoveryClientForConfig(k.config)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to configure discovery client: %s", err)
+		}
+		k.discoveryClient = kc
+	}
+	return k.discoveryClient, nil
+}
+
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {
 	// Config initialization
 	cfg, err := initializeConfiguration(d)
@@ -366,11 +449,22 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		}
 	}
 
+	ignoreAnnotations := []string{}
+	ignoreLabels := []string{}
+
+	if v, ok := d.Get("ignore_annotations").([]interface{}); ok {
+		ignoreAnnotations = expandStringSlice(v)
+	}
+	if v, ok := d.Get("ignore_labels").([]interface{}); ok {
+		ignoreLabels = expandStringSlice(v)
+	}
+
 	m := kubeClientsets{
 		config:              cfg,
 		mainClientset:       nil,
 		aggregatorClientset: nil,
-		configData:          d,
+		IgnoreAnnotations:   ignoreAnnotations,
+		IgnoreLabels:        ignoreLabels,
 	}
 	return m, diag.Diagnostics{}
 }
@@ -478,6 +572,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	if v, ok := d.GetOk("exec"); ok {
 		exec := &clientcmdapi.ExecConfig{}
 		if spec, ok := v.([]interface{})[0].(map[string]interface{}); ok {
+			exec.InteractiveMode = clientcmdapi.IfAvailableExecInteractiveMode
 			exec.APIVersion = spec["api_version"].(string)
 			exec.Command = spec["command"].(string)
 			exec.Args = expandStringSlice(spec["args"].([]interface{}))
@@ -540,4 +635,27 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 	log.Printf("[INFO] Using %s/v1beta1", group)
 	useadmissionregistrationv1beta1 = ptrToBool(true)
 	return true, nil
+}
+
+func getServerVersion(connection *kubernetes.Clientset) (*gversion.Version, error) {
+	sv, err := connection.ServerVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	return gversion.NewVersion(sv.String())
+}
+
+func serverVersionGreaterThanOrEqual(connection *kubernetes.Clientset, version string) (bool, error) {
+	sv, err := getServerVersion(connection)
+	if err != nil {
+		return false, err
+	}
+	// server version that we need to compare with
+	cv, err := gversion.NewVersion(version)
+	if err != nil {
+		return false, err
+	}
+
+	return sv.GreaterThanOrEqual(cv), nil
 }

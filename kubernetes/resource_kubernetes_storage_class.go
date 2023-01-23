@@ -178,7 +178,7 @@ func resourceKubernetesStorageClassRead(ctx context.Context, d *schema.ResourceD
 
 	log.Printf("[INFO] Received storage class: %#v", storageClass)
 
-	err = d.Set("metadata", flattenMetadata(storageClass.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(storageClass.ObjectMeta, d, meta))
 	if err != nil {
 		diags = append(diags, diag.FromErr(err)[0])
 	}
@@ -235,6 +235,9 @@ func resourceKubernetesStorageClassDelete(ctx context.Context, d *schema.Resourc
 	log.Printf("[INFO] Deleting storage class: %#v", name)
 	err = conn.StorageV1().StorageClasses().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

@@ -13,7 +13,6 @@ resource "tls_private_key" "ca_key" {
 }
 
 resource "tls_self_signed_cert" "ca_cert" {
-  key_algorithm   = tls_private_key.ca_key.algorithm
   private_key_pem = tls_private_key.ca_key.private_key_pem
 
   is_ca_certificate = true
@@ -33,7 +32,6 @@ resource "tls_self_signed_cert" "ca_cert" {
 }
 
 resource "tls_cert_request" "svc_cert_req" {
-  key_algorithm   = tls_private_key.ca_key.algorithm
   private_key_pem = tls_private_key.ca_key.private_key_pem
 
   subject {
@@ -48,7 +46,6 @@ resource "tls_cert_request" "svc_cert_req" {
 
 resource "tls_locally_signed_cert" "svc_cert" {
   cert_request_pem   = tls_cert_request.svc_cert_req.cert_request_pem
-  ca_key_algorithm   = tls_private_key.ca_key.algorithm
   ca_private_key_pem = tls_private_key.ca_key.private_key_pem
   ca_cert_pem        = tls_self_signed_cert.ca_cert.cert_pem
 

@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func flattenDeploymentSpec(in appsv1.DeploymentSpec, d *schema.ResourceData) ([]interface{}, error) {
+func flattenDeploymentSpec(in appsv1.DeploymentSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	att["min_ready_seconds"] = in.MinReadySeconds
 
@@ -37,7 +37,7 @@ func flattenDeploymentSpec(in appsv1.DeploymentSpec, d *schema.ResourceData) ([]
 	}
 	template := make(map[string]interface{})
 	template["spec"] = podSpec
-	template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d, "spec.0.template.0.")
+	template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d, meta, "spec.0.template.0.")
 	att["template"] = []interface{}{template}
 
 	return []interface{}{att}, nil

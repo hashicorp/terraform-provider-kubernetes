@@ -1,4 +1,5 @@
 ---
+subcategory: "policy/v1beta1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_pod_security_policy"
 description: |-

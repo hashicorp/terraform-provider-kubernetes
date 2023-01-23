@@ -288,7 +288,7 @@ func resourceKubernetesNetworkPolicyRead(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received network policy: %#v", svc)
-	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -340,6 +340,9 @@ func resourceKubernetesNetworkPolicyUpdate(ctx context.Context, d *schema.Resour
 func resourceKubernetesNetworkPolicyDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

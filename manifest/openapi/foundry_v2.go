@@ -49,7 +49,7 @@ func NewFoundryFromSpecV2(spec []byte) (Foundry, error) {
 
 // Foundry is a mechanism to construct tftypes out of OpenAPI specifications
 type Foundry interface {
-	GetTypeByGVK(gvk schema.GroupVersionKind) (tftypes.Type, error)
+	GetTypeByGVK(gvk schema.GroupVersionKind) (tftypes.Type, map[string]string, error)
 }
 
 type foapiv2 struct {
@@ -62,26 +62,31 @@ type foapiv2 struct {
 
 // GetTypeByGVK looks up a type by its GVK in the Definitions sections of
 // the OpenAPI spec and returns its (nearest) tftypes.Type equivalent
-func (f *foapiv2) GetTypeByGVK(gvk schema.GroupVersionKind) (tftypes.Type, error) {
+func (f *foapiv2) GetTypeByGVK(gvk schema.GroupVersionKind) (tftypes.Type, map[string]string, error) {
 	f.gate.Lock()
 	defer f.gate.Unlock()
+
+	var hints map[string]string = make(map[string]string)
+	ap := tftypes.AttributePath{}
 
 	// ObjectMeta isn't discoverable via the index because it's not tagged with "x-kubernetes-group-version-kind" in OpenAPI spec
 	// as top-level resouces schemas are. But we need ObjectMeta as a separate type when backfilling into CRD schemas.
 	if gvk == ObjectMetaGVK {
-		return f.getTypeByID("io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta")
+		t, err := f.getTypeByID("io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta", hints, ap)
+		return t, hints, err
 	}
 
 	// the ID string that Swagger / OpenAPI uses to identify the resource
 	// e.g. "io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta"
 	id, ok := f.gkvIndex.Load(gvk)
 	if !ok {
-		return nil, fmt.Errorf("%v resource not found in OpenAPI index", gvk)
+		return nil, nil, fmt.Errorf("%v resource not found in OpenAPI index", gvk)
 	}
-	return f.getTypeByID(id.(string))
+	t, err := f.getTypeByID(id.(string), hints, ap)
+	return t, hints, err
 }
 
-func (f *foapiv2) getTypeByID(id string) (tftypes.Type, error) {
+func (f *foapiv2) getTypeByID(id string, h map[string]string, ap tftypes.AttributePath) (tftypes.Type, error) {
 	swd, ok := f.swagger.Definitions[id]
 
 	if !ok {
@@ -97,7 +102,7 @@ func (f *foapiv2) getTypeByID(id string) (tftypes.Type, error) {
 		return nil, fmt.Errorf("failed to resolve schema: %s", err)
 	}
 
-	return getTypeFromSchema(sch, f.recursionDepth, &(f.typeCache), f.swagger.Definitions)
+	return getTypeFromSchema(sch, f.recursionDepth, &(f.typeCache), f.swagger.Definitions, ap, h)
 }
 
 // buildGvkIndex builds the reverse lookup index that associates each GVK

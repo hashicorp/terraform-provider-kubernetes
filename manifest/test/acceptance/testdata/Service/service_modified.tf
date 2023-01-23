@@ -13,13 +13,18 @@ resource "kubernetes_manifest" "test" {
       }
     }
     spec = {
-      ports = [{
-        name       = "https",
-        port       = 443,
-        targetPort = 8443,
-        # Protcol is required for serverside apply per https://github.com/kubernetes-sigs/structured-merge-diff/issues/130
-        protocol = "TCP"
-      }]
+      ports = [
+        {
+          name       = "http",
+          port       = 80,
+          targetPort = "http", # string value
+        },
+        {
+          name       = "https",
+          port       = 443,
+          targetPort = 8443, # numerical value
+        }
+      ]
       selector = {
         app = "test"
       }

@@ -159,7 +159,7 @@ func resourceKubernetesPodDisruptionBudgetRead(ctx context.Context, d *schema.Re
 	}
 
 	log.Printf("[INFO] Received pod disruption budget: %#v", pdb)
-	err = d.Set("metadata", flattenMetadata(pdb.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(pdb.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -186,6 +186,9 @@ func resourceKubernetesPodDisruptionBudgetDelete(ctx context.Context, d *schema.
 	log.Printf("[INFO] Deleting pod disruption budget %#v", name)
 	err = conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}

@@ -1,4 +1,5 @@
 ---
+subcategory: "networking/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_ingress_v1"
 description: |-
@@ -8,7 +9,6 @@ description: |-
 # kubernetes_ingress_v1
 
 Ingress is a collection of rules that allow inbound connections to reach the endpoints defined by a backend. An Ingress can be configured to give services externally-reachable urls, load balance traffic, terminate SSL, offer name based virtual hosting etc.
-
 
 ## Example Usage
 
@@ -21,7 +21,7 @@ resource "kubernetes_ingress_v1" "example_ingress" {
   spec {
     default_backend {
       service {
-        name = "MyApp1"
+        name = "myapp-1"
         port {
           number = 8080
         }
@@ -33,7 +33,7 @@ resource "kubernetes_ingress_v1" "example_ingress" {
         path {
           backend {
             service {
-              name = "MyApp1"
+              name = "myapp-1"
               port {
                 number = 8080
               }
@@ -46,7 +46,7 @@ resource "kubernetes_ingress_v1" "example_ingress" {
         path {
           backend {
             service {
-              name = "MyApp2"
+              name = "myapp-2"
               port {
                 number = 8080
               }
@@ -64,21 +64,57 @@ resource "kubernetes_ingress_v1" "example_ingress" {
   }
 }
 
+resource "kubernetes_service_v1" "example" {
+  metadata {
+    name = "myapp-1"
+  }
+  spec {
+    selector = {
+      app = kubernetes_pod_v1.example.metadata.0.labels.app
+    }
+    session_affinity = "ClientIP"
+    port {
+      port        = 8080
+      target_port = 80
+    }
+
+    type = "NodePort"
+  }
+}
+
+resource "kubernetes_service_v1" "example2" {
+  metadata {
+    name = "myapp-2"
+  }
+  spec {
+    selector = {
+      app = kubernetes_pod_v1.example2.metadata.0.labels.app
+    }
+    session_affinity = "ClientIP"
+    port {
+      port        = 8080
+      target_port = 80
+    }
+
+    type = "NodePort"
+  }
+}
+
 resource "kubernetes_pod_v1" "example" {
   metadata {
     name = "terraform-example"
     labels = {
-      app = "MyApp1"
+      app = "myapp-1"
     }
   }
 
   spec {
     container {
-      image = "nginx:1.7.9"
+      image = "nginx:1.21.6"
       name  = "example"
 
       port {
-        container_port = 8080
+        container_port = 80
       }
     }
   }
@@ -88,17 +124,17 @@ resource "kubernetes_pod_v1" "example2" {
   metadata {
     name = "terraform-example2"
     labels = {
-      app = "MyApp2"
+      app = "myapp-2"
     }
   }
 
   spec {
     container {
-      image = "nginx:1.7.9"
+      image = "nginx:1.21.6"
       name  = "example"
 
       port {
-        container_port = 8080
+        container_port = 80
       }
     }
   }
@@ -107,16 +143,16 @@ resource "kubernetes_pod_v1" "example2" {
 
 ## Example using Nginx ingress controller
 
-```
+```hcl
 resource "kubernetes_service_v1" "example" {
   metadata {
     name = "ingress-service"
   }
   spec {
     port {
-      port = 80
+      port        = 80
       target_port = 80
-      protocol = "TCP"
+      protocol    = "TCP"
     }
     type = "NodePort"
   }
@@ -126,18 +162,16 @@ resource "kubernetes_ingress_v1" "example" {
   wait_for_load_balancer = true
   metadata {
     name = "example"
-    annotations = {
-      "kubernetes.io/ingress.class" = "nginx"
-    }
   }
   spec {
+    ingress_class_name = "nginx"
     rule {
       http {
         path {
           path = "/*"
           backend {
             service {
-              name = kubernetes_service.example.metadata.0.name
+              name = kubernetes_service_v1.example.metadata.0.name
               port {
                 number = 80
               }
@@ -232,7 +266,7 @@ The following arguments are supported:
 #### Arguments
 
 * `host` - (Optional) Host is the fully qualified domain name of a network host, as defined by RFC 3986. Note the following deviations from the \"host\" part of the URI as defined in the RFC: 1. IPs are not allowed. Currently an IngressRuleValue can only apply to the IP in the Spec of the parent Ingress. 2. The : delimiter is not respected because ports are not allowed. Currently the port of an Ingress is implicitly :80 for http and :443 for https. Both these may change in the future. Incoming requests are matched against the host before the IngressRuleValue. If the host is unspecified, the Ingress routes all traffic based on the specified IngressRuleValue.
-* `http` - (Required) http is a list of http selectors pointing to backends. In the example: http:///? -> backend where parts of the url correspond to RFC 3986, this resource will be used to match against everything after the last '/' and before the first '?' or '#'. See `http` block attributes below.
+* `http` - (Optional) http is a list of http selectors pointing to backends. In the example: http:///? -> backend where parts of the url correspond to RFC 3986, this resource will be used to match against everything after the last '/' and before the first '?' or '#'. See `http` block attributes below.
 
 
 #### `http`
@@ -271,6 +305,12 @@ The following arguments are supported:
 * `ip` -  IP is set for load-balancer ingress points that are IP based (typically GCE or OpenStack load-balancers).
 * `hostname` - Hostname is set for load-balancer ingress points that are DNS based (typically AWS load-balancers).
 
+## Timeouts
+
+The following [Timeout](https://developer.hashicorp.com/terraform/language/resources/syntax#operation-timeouts) configuration options are available for the `kubernetes_ingress_v1` resource:
+
+* `create` - ingress load balancer creation timeout (default `20 minutes`).
+* `delete` - ingress load balancer deletion timeout (default `20 minutes`).
 
 ## Import
 

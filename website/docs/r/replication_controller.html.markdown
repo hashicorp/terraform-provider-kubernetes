@@ -1,4 +1,5 @@
 ---
+subcategory: "core/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_replication_controller"
 description: |-
@@ -38,13 +39,13 @@ resource "kubernetes_replication_controller" "example" {
 
       spec {
         container {
-          image = "nginx:1.7.8"
+          image = "nginx:1.21.6"
           name  = "example"
 
           liveness_probe {
             http_get {
-              path = "/nginx_status"
-              port = 8080
+              path = "/"
+              port = 80
 
               http_header {
                 name  = "X-Custom-Header"

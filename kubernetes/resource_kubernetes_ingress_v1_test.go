@@ -23,6 +23,7 @@ func TestAccKubernetesIngressV1_serviceBackend(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
 		IDRefreshName:     "kubernetes_ingress_v1.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
@@ -45,7 +46,7 @@ func TestAccKubernetesIngressV1_serviceBackend(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.path", "/.*"),
 					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.name", "app2"),
-					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.port.0.number", "80"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.port.0.name", "http"),
 				),
 			},
 			{
@@ -77,6 +78,7 @@ func TestAccKubernetesIngressV1_resourceBackend(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
 		IDRefreshName:     "kubernetes_ingress_v1.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
@@ -121,6 +123,7 @@ func TestAccKubernetesIngressV1_TLS(t *testing.T) {
 		IDRefreshName:     "kubernetes_ingress_v1.test",
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressV1Config_TLS(name),
@@ -211,6 +214,7 @@ func TestAccKubernetesIngressV1_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 			skipIfNotRunningInGke(t)
 		},
 		IDRefreshName:     "kubernetes_ingress_v1.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
@@ -225,19 +229,114 @@ func TestAccKubernetesIngressV1_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 	})
 }
 
-func testAccCheckKubernetesIngressV1ForceNew(old, new *networking.Ingress, wantNew bool) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if wantNew {
-			if old.ObjectMeta.UID == new.ObjectMeta.UID {
-				return fmt.Errorf("Expecting new resource for Ingress %s", old.ObjectMeta.UID)
-			}
-		} else {
-			if old.ObjectMeta.UID != new.ObjectMeta.UID {
-				return fmt.Errorf("Expecting Ingress UIDs to be the same: expected %s got %s", old.ObjectMeta.UID, new.ObjectMeta.UID)
-			}
-		}
-		return nil
-	}
+func TestAccKubernetesIngressV1_hostOnlyRule(t *testing.T) {
+	var conf networking.Ingress
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.22.0")
+		},
+		IDRefreshName:     "kubernetes_ingress_v1.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressV1Config_ruleHostOnly(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressV1Exists("kubernetes_ingress_v1.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress_v1.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress_v1.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress_v1.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.ingress_class_name", "ingress-class"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.default_backend.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.host", "server.domain.com"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesIngressV1_multipleRulesDifferentHosts(t *testing.T) {
+	var conf networking.Ingress
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.22.0")
+		},
+		IDRefreshName:     "kubernetes_ingress_v1.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressV1Config_multipleRulesDifferentHosts(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressV1Exists("kubernetes_ingress_v1.test", &conf),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress_v1.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress_v1.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_ingress_v1.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.ingress_class_name", "ingress-class"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.default_backend.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.host", "server.domain.com"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.path", "/app1/*"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.name", "app1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.0.http.0.path.0.backend.0.service.0.port.0.number", "8080"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.0.path.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.host", "server.example.com"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.0.path.0.path", "/app1/*"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.0.path.0.backend.0.service.0.name", "app1"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.0.path.0.backend.0.service.0.port.0.number", "8080"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.host", "server.example.com"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.0.path.1.path", "/app2/*"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.0.path.1.backend.0.service.0.name", "app2"),
+					resource.TestCheckResourceAttr("kubernetes_ingress_v1.test", "spec.0.rule.1.http.0.path.1.backend.0.service.0.port.0.number", "8080"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesIngressV1_defaultIngressClass(t *testing.T) {
+	var conf networking.Ingress
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	ingressClass := "default-ingress-class"
+	resourceName := "kubernetes_ingress_v1.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.22.0")
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressV1Config_defaultIngressClass(ingressClass, name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress_class_name", "default-ingress-class"),
+				),
+			},
+		},
+	})
 }
 
 func testAccCheckKubernetesIngressV1Destroy(s *terraform.State) error {
@@ -320,7 +419,7 @@ func testAccKubernetesIngressV1Config_serviceBackend(name string) string {
             service {
               name = "app2"
               port {
-                number = 80
+                name = "http"
               }
             }
           }
@@ -328,6 +427,9 @@ func testAccKubernetesIngressV1Config_serviceBackend(name string) string {
         }
       }
     }
+  }
+  timeouts {
+    create = "45m"
   }
 }`, name)
 }
@@ -342,21 +444,21 @@ func testAccKubernetesIngressV1Config_resourceBackend(name string) string {
     default_backend {
       resource {
         api_group = "k8s.example.com"
-        kind = "StorageBucket"
-        name = "static-assets"
+        kind      = "StorageBucket"
+        name      = "static-assets"
       }
     }
     rule {
       host = "server.domain.com"
       http {
         path {
-          path = "/icons"
+          path      = "/icons"
           path_type = "ImplementationSpecific"
           backend {
             resource {
               api_group = "k8s.example.com"
-              kind = "StorageBucket"
-              name = "icon-assets"
+              kind      = "StorageBucket"
+              name      = "icon-assets"
             }
           }
         }
@@ -435,12 +537,12 @@ func testAccKubernetesIngressV1Config_internalKey(name string) string {
     name = "%s"
     annotations = {
       "kubernetes.io/ingress-anno" = "one"
-      TestAnnotationTwo = "two"
+      TestAnnotationTwo            = "two"
     }
     labels = {
       "kubernetes.io/ingress-label" = "one"
-      TestLabelTwo = "two"
-      TestLabelThree = "three"
+      TestLabelTwo                  = "two"
+      TestLabelThree                = "three"
     }
   }
   spec {
@@ -468,7 +570,7 @@ func testAccKubernetesIngressV1Config_internalKey_removed(name string) string {
       TestAnnotationTwo = "two"
     }
     labels = {
-      TestLabelTwo = "two"
+      TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
   }
@@ -500,10 +602,16 @@ func testAccKubernetesIngressV1Config_waitForLoadBalancer(name string) string {
       app = %q
     }
     port {
-      port = 8000
-      target_port = 80
-      protocol = "TCP"
+      port        = 8000
+      target_port = 8080
+      protocol    = "TCP"
     }
+  }
+  lifecycle {
+    ignore_changes = [
+      metadata[0].annotations["cloud.google.com/neg"],
+      metadata[0].annotations["cloud.google.com/neg-status"],
+    ]
   }
 }
 
@@ -525,12 +633,13 @@ resource "kubernetes_deployment" "test" {
       }
       spec {
         container {
-          name = "test"
+          name  = "test"
           image = "gcr.io/google-samples/hello-app:2.0"
+
           env {
-            name = "PORT"
-            value = "80"
-          }  
+            name  = "PORT"
+            value = "8080"
+          }
         }
       }
     }
@@ -539,7 +648,7 @@ resource "kubernetes_deployment" "test" {
 
 resource "kubernetes_ingress_v1" "test" {
   depends_on = [
-    kubernetes_service.test, 
+    kubernetes_service.test,
     kubernetes_deployment.test
   ]
   metadata {
@@ -556,5 +665,118 @@ resource "kubernetes_ingress_v1" "test" {
     }
   }
   wait_for_load_balancer = true
+  timeouts {
+    create = "45m"
+  }
 }`, name, name, name, name, name, name, name)
+}
+
+func testAccKubernetesIngressV1Config_ruleHostOnly(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    ingress_class_name = "ingress-class"
+    rule {
+      host = "server.domain.com"
+    }
+  }
+}`, name)
+}
+
+func testAccKubernetesIngressV1Config_multipleRulesDifferentHosts(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    ingress_class_name = "ingress-class"
+    rule {
+      host = "server.domain.com"
+      http {
+        path {
+          backend {
+            service {
+              name = "app1"
+              port {
+                number = 8080
+              }
+            }
+          }
+          path = "/app1/*"
+        }
+      }
+    }
+    rule {
+      host = "server.example.com"
+      http {
+        path {
+          backend {
+            service {
+              name = "app1"
+              port {
+                number = 8080
+              }
+            }
+          }
+          path = "/app1/*"
+        }
+        path {
+          backend {
+            service {
+              name = "app2"
+              port {
+                number = 8080
+              }
+            }
+          }
+          path = "/app2/*"
+        }
+      }
+    }
+  }
+}`, name)
+}
+
+func testAccKubernetesIngressV1Config_defaultIngressClass(ingressClass, name string) string {
+	return fmt.Sprintf(`resource "kubernetes_ingress_class_v1" "test" {
+  metadata {
+    name = "%s"
+    labels = {
+      "app.kubernetes.io/component" = "controller"
+    }
+    annotations = {
+      "ingressclass.kubernetes.io/is-default-class" = "true"
+    }
+  }
+  spec {
+    controller = "k8s.io/ingress-nginx"
+  }
+}
+
+resource "kubernetes_ingress_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    rule {
+      host = "server.domain.com"
+      http {
+        path {
+          backend {
+            service {
+              name = "app1"
+              port {
+                number = 8080
+              }
+            }
+          }
+          path = "/app1/*"
+        }
+      }
+    }
+  }
+  depends_on = ["kubernetes_ingress_class_v1.test"]
+}`, ingressClass, name)
 }

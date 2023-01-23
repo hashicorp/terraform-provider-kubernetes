@@ -79,37 +79,38 @@ func IsResourceNamespaced(gvk schema.GroupVersionKind, m meta.RESTMapper) (bool,
 
 // TFTypeFromOpenAPI generates a tftypes.Type representation of a Kubernetes resource
 // designated by the supplied GroupVersionKind resource id
-func (ps *RawProviderServer) TFTypeFromOpenAPI(ctx context.Context, gvk schema.GroupVersionKind, status bool) (tftypes.Type, error) {
+func (ps *RawProviderServer) TFTypeFromOpenAPI(ctx context.Context, gvk schema.GroupVersionKind, status bool) (tftypes.Type, map[string]string, error) {
 	var tsch tftypes.Type
+	var hints map[string]string
 
 	oapi, err := ps.getOAPIv2Foundry()
 	if err != nil {
-		return nil, fmt.Errorf("cannot get OpenAPI foundry: %s", err)
+		return nil, hints, fmt.Errorf("cannot get OpenAPI foundry: %s", err)
 	}
 	// check if GVK is from a CRD
 	crdSchema, err := ps.lookUpGVKinCRDs(ctx, gvk)
 	if err != nil {
-		return nil, fmt.Errorf("failed to look up GVK [%s] among available CRDs: %s", gvk.String(), err)
+		return nil, hints, fmt.Errorf("failed to look up GVK [%s] among available CRDs: %s", gvk.String(), err)
 	}
 	if crdSchema != nil {
 		js, err := json.Marshal(openapi.SchemaToSpec("", crdSchema.(map[string]interface{})))
 		if err != nil {
-			return nil, fmt.Errorf("CRD schema fails to marshal into JSON: %s", err)
+			return nil, hints, fmt.Errorf("CRD schema fails to marshal into JSON: %s", err)
 		}
 		oapiv3, err := openapi.NewFoundryFromSpecV3(js)
 		if err != nil {
-			return nil, err
+			return nil, hints, err
 		}
-		tsch, err = oapiv3.GetTypeByGVK(gvk)
+		tsch, hints, err = oapiv3.GetTypeByGVK(gvk)
 		if err != nil {
-			return nil, fmt.Errorf("failed to generate tftypes for GVK [%s] from CRD schema: %s", gvk.String(), err)
+			return nil, hints, fmt.Errorf("failed to generate tftypes for GVK [%s] from CRD schema: %s", gvk.String(), err)
 		}
 	}
 	if tsch == nil {
 		// Not a CRD type - look GVK up in cluster OpenAPI spec
-		tsch, err = oapi.GetTypeByGVK(gvk)
+		tsch, hints, err = oapi.GetTypeByGVK(gvk)
 		if err != nil {
-			return nil, fmt.Errorf("cannot get resource type from OpenAPI (%s): %s", gvk.String(), err)
+			return nil, hints, fmt.Errorf("cannot get resource type from OpenAPI (%s): %s", gvk.String(), err)
 		}
 	}
 	// remove "status" attribute from resource type
@@ -129,16 +130,16 @@ func (ps *RawProviderServer) TFTypeFromOpenAPI(ctx context.Context, gvk schema.G
 		if _, ok := atts["kind"]; !ok {
 			atts["kind"] = tftypes.String
 		}
-		metaType, err := oapi.GetTypeByGVK(openapi.ObjectMetaGVK)
+		metaType, _, err := oapi.GetTypeByGVK(openapi.ObjectMetaGVK)
 		if err != nil {
-			return nil, fmt.Errorf("failed to generate tftypes for v1.ObjectMeta: %s", err)
+			return nil, hints, fmt.Errorf("failed to generate tftypes for v1.ObjectMeta: %s", err)
 		}
 		atts["metadata"] = metaType.(tftypes.Object)
 
 		tsch = tftypes.Object{AttributeTypes: atts}
 	}
 
-	return tsch, nil
+	return tsch, hints, nil
 }
 
 func mapRemoveNulls(in map[string]interface{}) map[string]interface{} {
@@ -259,4 +260,20 @@ func (ps *RawProviderServer) lookUpGVKinCRDs(ctx context.Context, gvk schema.Gro
 		}
 	}
 	return nil, nil
+}
+
+// privateStateSchema describes the structure of the private state payload that
+// Terraform can store along with the "regular" resource state state.
+var privateStateSchema tftypes.Object = tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+	"IsImported": tftypes.Bool,
+}}
+
+func getPrivateStateValue(p []byte) (ps map[string]tftypes.Value, err error) {
+	if p == nil {
+		err = errors.New("private state value is nil")
+		return
+	}
+	pv, err := tftypes.ValueFromMsgPack(p, privateStateSchema)
+	err = pv.As(&ps)
+	return
 }

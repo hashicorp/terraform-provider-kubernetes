@@ -4,13 +4,23 @@
 package acceptance
 
 import (
+	"context"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
 	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
 )
 
 func TestKubernetesManifest_FixListAttributeUpdate(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
 	name := randName()
 	namespace := randName()
 
@@ -22,22 +32,26 @@ func TestKubernetesManifest_FixListAttributeUpdate(t *testing.T) {
 		"name":      name,
 	}
 
-	tf := tfhelper.RequireNewWorkingDir(t)
-	tf.SetReattachInfo(reattachInfo)
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
 	defer func() {
-		tf.RequireDestroy(t)
+		tf.Destroy(ctx)
 		tf.Close()
 		k8shelper.AssertNamespacedResourceDoesNotExist(t, "apps/v1", "deployments", namespace, name)
 	}()
 
 	tfconfig1 := loadTerraformConfig(t, "FixListAttributeUpdate/step1.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfig1)
-	tf.RequireInit(t)
-	tf.RequireApply(t)
+	tf.SetConfig(ctx, tfconfig1)
+	tf.Init(ctx)
+	tf.Apply(ctx)
 
 	k8shelper.AssertNamespacedResourceExists(t, "apps/v1", "deployments", namespace, name)
 
-	tfstate := tfstatehelper.NewHelper(tf.RequireState(t))
+	s, err := tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	tfstate := tfstatehelper.NewHelper(s)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
 		"kubernetes_manifest.test.object.metadata.namespace":                    namespace,
 		"kubernetes_manifest.test.object.metadata.name":                         name,
@@ -48,10 +62,14 @@ func TestKubernetesManifest_FixListAttributeUpdate(t *testing.T) {
 	tfstate.AssertAttributeEmpty(t, "kubernetes_manifest.test.object.spec.template.spec.tolerations")
 
 	tfconfig2 := loadTerraformConfig(t, "FixListAttributeUpdate/step2.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfig2)
-	tf.RequireApply(t)
+	tf.SetConfig(ctx, tfconfig2)
+	tf.Apply(ctx)
 
-	tfstate = tfstatehelper.NewHelper(tf.RequireState(t))
+	s, err = tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	tfstate = tfstatehelper.NewHelper(s)
 
 	tfstate.AssertAttributeNotEmpty(t, "kubernetes_manifest.test.object.spec.template.spec.tolerations")
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{

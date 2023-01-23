@@ -1,3 +1,4 @@
+//go:build acceptance
 // +build acceptance
 
 package acceptance
@@ -16,6 +17,13 @@ import (
 )
 
 func TestKubernetesManifest_CustomResource_OAPIv3(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
 	kind := strings.Title(randString(8))
 	plural := strings.ToLower(kind) + "s"
 	group := "terraform.io"
@@ -36,10 +44,10 @@ func TestKubernetesManifest_CustomResource_OAPIv3(t *testing.T) {
 		"cr_version":    version,
 	}
 
-	step1 := tfhelper.RequireNewWorkingDir(t)
-	step1.SetReattachInfo(reattachInfo)
+	step1 := tfhelper.RequireNewWorkingDir(ctx, t)
+	step1.SetReattachInfo(ctx, reattachInfo)
 	defer func() {
-		step1.RequireDestroy(t)
+		step1.Destroy(ctx)
 		step1.Close()
 		k8shelper.AssertResourceDoesNotExist(t, "apiextensions.k8s.io/v1", "customresourcedefinitions", crd)
 	}()
@@ -47,33 +55,37 @@ func TestKubernetesManifest_CustomResource_OAPIv3(t *testing.T) {
 	// Step 1: Create a structural CRD with a fairly complex schema
 	// (inspired by the Prostgres Operator)
 	tfconfig := loadTerraformConfig(t, "CustomResourceOAPI3/custom_resource_definition.tf", tfvars)
-	step1.RequireSetConfig(t, string(tfconfig))
-	step1.RequireInit(t)
-	step1.RequireApply(t)
+	step1.SetConfig(ctx, string(tfconfig))
+	step1.Init(ctx)
+	step1.Apply(ctx)
 	k8shelper.AssertResourceExists(t, "apiextensions.k8s.io/v1", "customresourcedefinitions", crd)
 
 	// wait for API to finish ingesting the CRD
 	time.Sleep(5 * time.Second) //lintignore:R018
 
-	reattachInfo2, err := provider.ServeTest(context.Background(), hclog.Default())
+	reattachInfo2, err := provider.ServeTest(ctx, hclog.Default(), t)
 	if err != nil {
-		t.Errorf("Failed to create additional provider instance: %q", err)
+		t.Errorf("Failed to create provider instance: %q", err)
 	}
-	step2 := tfhelper.RequireNewWorkingDir(t)
-	step2.SetReattachInfo(reattachInfo2)
+	step2 := tfhelper.RequireNewWorkingDir(ctx, t)
+	step2.SetReattachInfo(ctx, reattachInfo2)
 	defer func() {
-		step2.RequireDestroy(t)
+		step2.Destroy(ctx)
 		step2.Close()
 		k8shelper.AssertResourceDoesNotExist(t, groupVersion, kind, name)
 	}()
 
 	// Step 2: create a CR of the type defined by the CRD above
 	tfconfig = loadTerraformConfig(t, "CustomResourceOAPI3/custom_resource.tf", tfvars)
-	step2.RequireSetConfig(t, string(tfconfig))
-	step2.RequireInit(t)
-	step2.RequireApply(t)
+	step2.SetConfig(ctx, string(tfconfig))
+	step2.Init(ctx)
+	step2.Apply(ctx)
 
-	tfstate := tfstatehelper.NewHelper(step2.RequireState(t))
+	s2, err := step2.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	tfstate := tfstatehelper.NewHelper(s2)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
 		"kubernetes_manifest.test_cr.object.metadata.name":           name,
 		"kubernetes_manifest.test_cr.object.metadata.namespace":      namespace,

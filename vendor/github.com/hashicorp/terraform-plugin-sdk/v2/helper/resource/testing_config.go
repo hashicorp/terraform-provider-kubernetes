@@ -1,25 +1,25 @@
 package resource
 
 import (
-	"errors"
+	"context"
 	"fmt"
-	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/internal/logging"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/internal/plugintest"
 )
 
-func testStepTaint(state *terraform.State, step TestStep) error {
+func testStepTaint(ctx context.Context, step TestStep, wd *plugintest.WorkingDir) error {
+	if len(step.Taint) == 0 {
+		return nil
+	}
+
+	logging.HelperResourceTrace(ctx, fmt.Sprintf("Using TestStep Taint: %v", step.Taint))
+
 	for _, p := range step.Taint {
-		m := state.RootModule()
-		if m == nil {
-			return errors.New("no state")
+		err := wd.Taint(ctx, p)
+		if err != nil {
+			return fmt.Errorf("error tainting resource: %s", err)
 		}
-		rs, ok := m.Resources[p]
-		if !ok {
-			return fmt.Errorf("resource %q not found in state", p)
-		}
-		log.Printf("[WARN] Test: Explicitly tainting resource %q", p)
-		rs.Taint()
 	}
 	return nil
 }

@@ -108,7 +108,7 @@ func expandStatefulSetSpecUpdateStrategy(s []interface{}) (*v1.StatefulSetUpdate
 	return ust, nil
 }
 
-func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData) ([]interface{}, error) {
+func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
 	if spec.PodManagementPolicy != "" {
@@ -126,12 +126,12 @@ func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData) ([]
 	if spec.ServiceName != "" {
 		att["service_name"] = spec.ServiceName
 	}
-	template, err := flattenPodTemplateSpec(spec.Template, d)
+	template, err := flattenPodTemplateSpec(spec.Template, d, meta)
 	if err != nil {
 		return []interface{}{att}, err
 	}
 	att["template"] = template
-	att["volume_claim_template"] = flattenPersistentVolumeClaim(spec.VolumeClaimTemplates, d)
+	att["volume_claim_template"] = flattenPersistentVolumeClaim(spec.VolumeClaimTemplates, d, meta)
 
 	// Only write update_strategy to state if the user has defined it,
 	// otherwise we get a perpetual diff.
@@ -143,14 +143,14 @@ func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData) ([]
 	return []interface{}{att}, nil
 }
 
-func flattenPodTemplateSpec(t corev1.PodTemplateSpec, d *schema.ResourceData, prefix ...string) ([]interface{}, error) {
+func flattenPodTemplateSpec(t corev1.PodTemplateSpec, d *schema.ResourceData, meta interface{}, prefix ...string) ([]interface{}, error) {
 	template := make(map[string]interface{})
 
 	metaPrefix := "spec.0.template.0."
 	if len(prefix) > 0 {
 		metaPrefix = prefix[0]
 	}
-	template["metadata"] = flattenMetadata(t.ObjectMeta, d, metaPrefix)
+	template["metadata"] = flattenMetadata(t.ObjectMeta, d, meta, metaPrefix)
 	spec, err := flattenPodSpec(t.Spec)
 	if err != nil {
 		return []interface{}{template}, err
@@ -160,12 +160,12 @@ func flattenPodTemplateSpec(t corev1.PodTemplateSpec, d *schema.ResourceData, pr
 	return []interface{}{template}, nil
 }
 
-func flattenPersistentVolumeClaim(in []corev1.PersistentVolumeClaim, d *schema.ResourceData) []interface{} {
+func flattenPersistentVolumeClaim(in []corev1.PersistentVolumeClaim, d *schema.ResourceData, meta interface{}) []interface{} {
 	pvcs := make([]interface{}, 0, len(in))
 
 	for i, pvc := range in {
 		p := make(map[string]interface{})
-		p["metadata"] = flattenMetadata(pvc.ObjectMeta, d, fmt.Sprintf("spec.0.volume_claim_template.%d.", i))
+		p["metadata"] = flattenMetadata(pvc.ObjectMeta, d, meta, fmt.Sprintf("spec.0.volume_claim_template.%d.", i))
 		p["spec"] = flattenPersistentVolumeClaimSpec(pvc.Spec)
 		pvcs = append(pvcs, p)
 	}

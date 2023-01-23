@@ -22,6 +22,7 @@ func TestAccKubernetesResourceQuota_basic(t *testing.T) {
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaDestroy,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesResourceQuotaConfig_basic(name),
@@ -29,12 +30,10 @@ func TestAccKubernetesResourceQuota_basic(t *testing.T) {
 					testAccCheckKubernetesResourceQuotaExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelThree", "three"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelFour", "four"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelThree": "three", "TestLabelFour": "four"}),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -58,12 +57,10 @@ func TestAccKubernetesResourceQuota_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelTwo", "two"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelThree", "three"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelTwo": "two", "TestLabelThree": "three"}),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -79,9 +76,7 @@ func TestAccKubernetesResourceQuota_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesResourceQuotaExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -107,15 +102,14 @@ func TestAccKubernetesResourceQuota_generatedName(t *testing.T) {
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaDestroy,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesResourceQuotaConfig_generatedName(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesResourceQuotaExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", prefix),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -145,15 +139,14 @@ func TestAccKubernetesResourceQuota_withScopes(t *testing.T) {
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaDestroy,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesResourceQuotaConfig_withScopes(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesResourceQuotaExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -175,9 +168,7 @@ func TestAccKubernetesResourceQuota_withScopes(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesResourceQuotaExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -202,6 +193,7 @@ func TestAccKubernetesResourceQuota_scopeSelector(t *testing.T) {
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaDestroy,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesResourceQuotaConfigScopeSelector(name),
@@ -250,6 +242,30 @@ func TestAccKubernetesResourceQuota_scopeSelector(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.scope_selector.0.match_expression.0.scope_name", "PriorityClass"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.scope_selector.0.match_expression.0.operator", "NotIn"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "spec.0.scope_selector.0.match_expression.0.values.*", "large"),
+				),
+			},
+			{
+				Config: testAccKubernetesResourceQuotaConfigMultipleMatchExpression(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesResourceQuotaExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "3"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelThree", "three"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelFour", "four"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.scope_selector.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.scope_selector.0.match_expression.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.scope_selector.0.match_expression.0.scope_name", "PriorityClass"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.scope_selector.0.match_expression.0.operator", "NotIn"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "spec.0.scope_selector.0.match_expression.0.values.*", "large"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.scope_selector.0.match_expression.1.scope_name", "PriorityClass"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.scope_selector.0.match_expression.1.operator", "In"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "spec.0.scope_selector.0.match_expression.1.values.*", "low"),
 				),
 			},
 		},
@@ -458,13 +474,13 @@ func testAccKubernetesResourceQuotaConfigScopeSelector(name string) string {
       pods            = 4
     }
 
-	scope_selector {
-	  match_expression {
+    scope_selector {
+      match_expression {
         scope_name = "PriorityClass"
-		operator   = "In"
-		values     = ["medium"]
-	  }
-	}
+        operator   = "In"
+        values     = ["medium"]
+      }
+    }
   }
 }
 `, name)
@@ -493,13 +509,54 @@ func testAccKubernetesResourceQuotaConfigScopeSelectorModified(name string) stri
       pods            = 4
     }
 
-	scope_selector {
-	  match_expression {
+    scope_selector {
+      match_expression {
         scope_name = "PriorityClass"
-		operator   = "NotIn"
-		values     = ["large"]
-	  }
-	}
+        operator   = "NotIn"
+        values     = ["large"]
+      }
+    }
+  }
+}
+`, name)
+}
+
+func testAccKubernetesResourceQuotaConfigMultipleMatchExpression(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_resource_quota" "test" {
+  metadata {
+    annotations = {
+      TestAnnotationOne = "one"
+    }
+
+    labels = {
+      TestLabelOne   = "one"
+      TestLabelThree = "three"
+      TestLabelFour  = "four"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    hard = {
+      "limits.cpu"    = 2
+      "limits.memory" = "2Gi"
+      pods            = 4
+    }
+
+    scope_selector {
+      match_expression {
+        scope_name = "PriorityClass"
+        operator   = "NotIn"
+        values     = ["large"]
+      }
+      match_expression {
+        scope_name = "PriorityClass"
+        operator   = "In"
+        values     = ["low"]
+      }
+    }
   }
 }
 `, name)

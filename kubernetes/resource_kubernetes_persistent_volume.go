@@ -274,7 +274,7 @@ func resourceKubernetesPersistentVolumeRead(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received persistent volume: %#v", volume)
-	err = d.Set("metadata", flattenMetadata(volume.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(volume.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -326,6 +326,9 @@ func resourceKubernetesPersistentVolumeDelete(ctx context.Context, d *schema.Res
 	log.Printf("[INFO] Deleting persistent volume: %#v", name)
 	err = conn.CoreV1().PersistentVolumes().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*k8serrors.StatusError); ok && k8serrors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

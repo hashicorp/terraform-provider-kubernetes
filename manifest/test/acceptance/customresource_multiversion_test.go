@@ -4,12 +4,23 @@
 package acceptance
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 )
 
 func TestKubernetesManifest_CustomResource_Multiversion(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
 	kind1 := strings.Title(randString(8))
 	plural1 := strings.ToLower(kind1) + "s"
 	group1 := "terraform.io"
@@ -38,19 +49,19 @@ func TestKubernetesManifest_CustomResource_Multiversion(t *testing.T) {
 		"cr_version2":    version2,
 	}
 
-	step1 := tfhelper.RequireNewWorkingDir(t)
-	step1.SetReattachInfo(reattachInfo)
+	step1 := tfhelper.RequireNewWorkingDir(ctx, t)
+	step1.SetReattachInfo(ctx, reattachInfo)
 	defer func() {
-		step1.RequireDestroy(t)
+		step1.Destroy(ctx)
 		step1.Close()
 		k8shelper.AssertResourceDoesNotExist(t, "apiextensions.k8s.io/v1", "customresourcedefinitions", crd1)
 		k8shelper.AssertResourceDoesNotExist(t, "apiextensions.k8s.io/v1", "customresourcedefinitions", crd2)
 	}()
 
 	tfconfig := loadTerraformConfig(t, "CustomResourceDefinition-multiversion/customresourcedefinition.tf", tfvars)
-	step1.RequireSetConfig(t, string(tfconfig))
-	step1.RequireInit(t)
-	step1.RequireApply(t)
+	step1.SetConfig(ctx, string(tfconfig))
+	step1.Init(ctx)
+	step1.Apply(ctx)
 	k8shelper.AssertResourceExists(t, "apiextensions.k8s.io/v1", "customresourcedefinitions", crd1)
 	k8shelper.AssertResourceExists(t, "apiextensions.k8s.io/v1", "customresourcedefinitions", crd2)
 

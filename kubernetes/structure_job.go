@@ -74,7 +74,7 @@ func expandJobSpec(j []interface{}) (batchv1.JobSpec, error) {
 		obj.ActiveDeadlineSeconds = ptrToInt64(int64(v))
 	}
 
-	if v, ok := in["backoff_limit"].(int); ok && v != 6 {
+	if v, ok := in["backoff_limit"].(int); ok && v >= 0 {
 		obj.BackoffLimit = ptrToInt32(int32(v))
 	}
 

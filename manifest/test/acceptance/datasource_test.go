@@ -95,14 +95,22 @@ func TestDataSourceKubernetesResources_Namespaces(t *testing.T) {
 	namespace := randName()
 	namespace2 := randName()
 	namespace3 := randName()
-	namespace4 := "terraform"
 
+	// STEP 1: Create Namespaces for use with label selector
 	k8shelper.CreateNamespace(t, namespace)
+	k8shelper.CreateNamespace(t, namespace2)
+	k8shelper.CreateNamespace(t, namespace3)
 	defer k8shelper.DeleteResource(t, namespace, kubernetes.NewGroupVersionResource("v1", "namespaces"))
+	defer k8shelper.DeleteResource(t, namespace2, kubernetes.NewGroupVersionResource("v1", "namespaces"))
+	defer k8shelper.DeleteResource(t, namespace3, kubernetes.NewGroupVersionResource("v1", "namespaces"))
 
-	// STEP 1: Create a ConfigMap to use as a data source
 	tf := tfhelper.RequireNewWorkingDir(ctx, t)
 	tf.SetReattachInfo(ctx, reattachInfo)
+
+	defer func() {
+		tf.Destroy(ctx)
+		tf.Close()
+	}()
 
 	tfvars := TFVARS{
 		"label_selector": "kubernetes.io/metadata.name=terraform",
@@ -113,8 +121,14 @@ func TestDataSourceKubernetesResources_Namespaces(t *testing.T) {
 	tf.Init(ctx)
 	tf.Apply(ctx)
 
+	tfState, err := tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	state := tfstatehelper.NewHelper(tfState)
+
 	// check the data source
-	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
-		"length(data.kubernetes_resources.example.objects)": 1,
+	state.AssertAttributeValues(t, tfstatehelper.AttributeValues{
+		"data.kubernetes_resources.example.objects": "TEST",
 	})
 }

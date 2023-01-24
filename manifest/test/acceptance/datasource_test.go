@@ -195,4 +195,8 @@ func TestDataSourceKubernetesResources_Namespaces(t *testing.T) {
 
 	// check the data source
 	state.AssertAttributeLen(t, "data.kubernetes_resources.example.objects", 2)
+
+	state.AssertAttributeValues(t, tfstatehelper.AttributeValues{
+		"data.kubernetes_resources.example.objects.1.metadata.labels": "hello world",
+	})
 }

@@ -93,42 +93,106 @@ func TestDataSourceKubernetesResources_Namespaces(t *testing.T) {
 	}
 
 	namespace := randName()
-	namespace2 := randName()
-	namespace3 := randName()
 
 	// STEP 1: Create Namespaces for use with label selector
 	k8shelper.CreateNamespace(t, namespace)
-	k8shelper.CreateNamespace(t, namespace2)
-	k8shelper.CreateNamespace(t, namespace3)
 	defer k8shelper.DeleteResource(t, namespace, kubernetes.NewGroupVersionResource("v1", "namespaces"))
-	defer k8shelper.DeleteResource(t, namespace2, kubernetes.NewGroupVersionResource("v1", "namespaces"))
-	defer k8shelper.DeleteResource(t, namespace3, kubernetes.NewGroupVersionResource("v1", "namespaces"))
 
-	tf := tfhelper.RequireNewWorkingDir(ctx, t)
-	tf.SetReattachInfo(ctx, reattachInfo)
+	// STEP 2: Create three ConfigMap to use as a data source
+	// First ConfigMap
+	configMap1 := tfhelper.RequireNewWorkingDir(ctx, t)
+	configMap1.SetReattachInfo(ctx, reattachInfo)
+	name := randName()
 
 	defer func() {
-		tf.Destroy(ctx)
-		tf.Close()
+		configMap1.Destroy(ctx)
+		configMap1.Close()
+		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "configmaps", namespace, name)
 	}()
 
-	tfvars := TFVARS{
-		"label_selector": "kubernetes.io/metadata.name=terraform",
+	cmVars1 := TFVARS{
+		"name":      name,
+		"namespace": namespace,
+	}
+	cmConfig1 := loadTerraformConfig(t, "datasource_plural/step1.tf", cmVars1)
+	configMap1.SetConfig(ctx, cmConfig1)
+	configMap1.Init(ctx)
+	configMap1.Apply(ctx)
+
+	k8shelper.AssertNamespacedResourceExists(t, "v1", "configmaps", namespace, name)
+
+	// Second ConfigMap
+	configMap2 := tfhelper.RequireNewWorkingDir(ctx, t)
+	configMap2.SetReattachInfo(ctx, reattachInfo)
+	name2 := randName()
+
+	defer func() {
+		configMap2.Destroy(ctx)
+		configMap2.Close()
+		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "configmaps", namespace, name2)
+	}()
+
+	cmVars2 := TFVARS{
+		"name":      name2,
+		"namespace": namespace,
+	}
+	cmConfig2 := loadTerraformConfig(t, "datasource_plural/step1.tf", cmVars2)
+	configMap2.SetConfig(ctx, cmConfig2)
+	configMap2.Init(ctx)
+	configMap2.Apply(ctx)
+
+	k8shelper.AssertNamespacedResourceExists(t, "v1", "configmaps", namespace, name2)
+
+	// Third ConfigMap
+	configMap3 := tfhelper.RequireNewWorkingDir(ctx, t)
+	configMap3.SetReattachInfo(ctx, reattachInfo)
+	name3 := randName()
+
+	defer func() {
+		configMap3.Destroy(ctx)
+		configMap3.Close()
+		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "configmaps", namespace, name3)
+	}()
+
+	cmVars3 := TFVARS{
+		"name":      name3,
+		"namespace": namespace,
+	}
+	cmConfig3 := loadTerraformConfig(t, "datasource_plural/step1.tf", cmVars3)
+	configMap3.SetConfig(ctx, cmConfig3)
+	configMap3.Init(ctx)
+	configMap3.Apply(ctx)
+
+	k8shelper.AssertNamespacedResourceExists(t, "v1", "configmaps", namespace, name3)
+
+	//TODO create 3 config maps
+	// filter
+
+	filter := tfhelper.RequireNewWorkingDir(ctx, t)
+	filter.SetReattachInfo(ctx, reattachInfo)
+
+	defer func() {
+		filter.Destroy(ctx)
+		filter.Close()
+	}()
+
+	// Step 3: filter using label_selector
+
+	filterVars := TFVARS{
+		"label_selector": "kubernetes.io/metadata.name!=terraform",
 		"limit":          2,
 	}
-	tfconfig := loadTerraformConfig(t, "datasource/step1.tf", tfvars)
-	tf.SetConfig(ctx, tfconfig)
-	tf.Init(ctx)
-	tf.Apply(ctx)
+	filterConfig := loadTerraformConfig(t, "datasource_plural/resources.tf", filterVars)
+	filter.SetConfig(ctx, filterConfig)
+	filter.Init(ctx)
+	filter.Apply(ctx)
 
-	tfState, err := tf.State(ctx)
+	tfState, err := filter.State(ctx)
 	if err != nil {
 		t.Fatalf("Failed to retrieve terraform state: %q", err)
 	}
 	state := tfstatehelper.NewHelper(tfState)
 
 	// check the data source
-	state.AssertAttributeValues(t, tfstatehelper.AttributeValues{
-		"data.kubernetes_resources.example.objects": "TEST",
-	})
+	state.AssertAttributeLen(t, "data.kubernetes_resources.example.objects", 2)
 }

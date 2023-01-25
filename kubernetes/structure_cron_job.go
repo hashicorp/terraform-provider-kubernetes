@@ -16,6 +16,8 @@ func flattenCronJobSpec(in v1beta1.CronJobSpec, d *schema.ResourceData, meta int
 
 	att["schedule"] = in.Schedule
 
+	att["timezone"] = in.TimeZone
+
 	jobTemplate, err := flattenJobTemplate(in.JobTemplate, d, meta)
 	if err != nil {
 		return nil, err
@@ -68,6 +70,10 @@ func expandCronJobSpec(j []interface{}) (v1beta1.CronJobSpec, error) {
 
 	if v, ok := in["schedule"].(string); ok && v != "" {
 		obj.Schedule = v
+	}
+
+	if v, ok := in["timezone"].(string); ok && v != "" {
+		obj.TimeZone = &v
 	}
 
 	jtSpec, err := expandJobTemplate(in["job_template"].([]interface{}))

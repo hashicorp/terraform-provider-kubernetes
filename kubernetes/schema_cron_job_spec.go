@@ -67,6 +67,11 @@ func cronJobSpecFields() map[string]*schema.Schema {
 			Default:     false,
 			Description: "This flag tells the controller to suspend subsequent executions, it does not apply to already started executions. Defaults to false.",
 		},
+		"timezone": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The time zone for the given schedule. If not specified, this will rely on the time zone of the kube-controller-manager process. ",
+		},
 	}
 
 	return s

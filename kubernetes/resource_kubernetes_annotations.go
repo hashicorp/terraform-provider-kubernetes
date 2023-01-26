@@ -168,20 +168,26 @@ func resourceKubernetesAnnotationsRead(ctx context.Context, d *schema.ResourceDa
 	}
 	d.Set("annotations", annotations)
 
+	kind := d.Get("kind").(string)
 	configuredTemplateAnnotations := d.Get("annotations").(map[string]interface{})
-	managedTemplateAnnotations, err := getTemplateManagedAnnotations(res.GetManagedFields(), fieldManagerName)
+	managedTemplateAnnotations, err := getTemplateManagedAnnotations(res.GetManagedFields(), fieldManagerName, kind)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	spec := res.Object["spec"].(map[string]interface{})
-	template := spec["template"].(map[string]interface{})
-	metadata := template["metadata"].(map[string]interface{})
-	templateAnnotations := metadata["annotations"].(map[string]interface{})
+	var templateAnnotations map[string]string
+	if kind == "CronJob" {
+		templateAnnotations, _, err = unstructured.NestedStringMap(res.Object, "spec", "jobTemplate", "spec", "template", "metadata", "annotations")
+	} else {
+		templateAnnotations, _, err = unstructured.NestedStringMap(res.Object, "spec", "template", "metadata", "annotations")
+	}
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	for k := range templateAnnotations {
 		_, managed := managedTemplateAnnotations["f:"+k]
 		_, configured := configuredTemplateAnnotations[k]
 		if !managed && !configured {
-			delete(annotations, k)
+			delete(templateAnnotations, k)
 		}
 	}
 	d.Set("template_annotations", templateAnnotations)
@@ -210,7 +216,7 @@ func getManagedAnnotations(managedFields []v1.ManagedFieldsEntry, manager string
 }
 
 // getTemplateManagedAnnotations reads the field manager metadata to discover which fields we're managing
-func getTemplateManagedAnnotations(managedFields []v1.ManagedFieldsEntry, manager string) (map[string]interface{}, error) {
+func getTemplateManagedAnnotations(managedFields []v1.ManagedFieldsEntry, manager string, kind string) (map[string]interface{}, error) {
 	var annotations map[string]interface{}
 	for _, m := range managedFields {
 		if m.Manager != manager {
@@ -222,6 +228,10 @@ func getTemplateManagedAnnotations(managedFields []v1.ManagedFieldsEntry, manage
 			return nil, err
 		}
 		spec := mm["f:spec"].(map[string]interface{})
+		if kind == "CronJob" {
+			jobTemplate := spec["f:jobTemplate"].(map[string]interface{})
+			spec = jobTemplate["f:spec"].(map[string]interface{})
+		}
 		template := spec["f:template"].(map[string]interface{})
 		metadata := template["f:metadata"].(map[string]interface{})
 		if l, ok := metadata["f:annotations"].(map[string]interface{}); ok {
@@ -310,12 +320,21 @@ func resourceKubernetesAnnotationsUpdate(ctx context.Context, d *schema.Resource
 		"metadata":   patchmeta,
 	}
 	if _, ok := d.GetOk("template_annotations"); ok {
-		patchobj["spec"] = map[string]interface{}{
+		spec := map[string]interface{}{
 			"template": map[string]interface{}{
 				"metadata": map[string]interface{}{
 					"annotations": templateAnnotations,
 				},
 			},
+		}
+		if kind == "CronJob" {
+			patchobj["spec"] = map[string]interface{}{
+				"jobTemplate": map[string]interface{}{
+					"spec": spec,
+				},
+			}
+		} else {
+			patchobj["spec"] = spec
 		}
 	}
 

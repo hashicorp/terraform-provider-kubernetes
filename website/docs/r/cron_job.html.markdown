@@ -26,6 +26,7 @@ resource "kubernetes_cron_job" "demo" {
     concurrency_policy            = "Replace"
     failed_jobs_history_limit     = 5
     schedule                      = "1 0 * * *"
+    timezone                      = "Etc/UTC"
     starting_deadline_seconds     = 10
     successful_jobs_history_limit = 10
     job_template {
@@ -88,6 +89,7 @@ The following arguments are supported:
 * `failed_jobs_history_limit` - (Optional) The number of failed finished jobs to retain. This is a pointer to distinguish between explicit zero and not specified. Defaults to 1.
 * `job_template` - (Required) Specifies the job that will be created when executing a CronJob.
 * `schedule` - (Required) The schedule in Cron format, see https://en.wikipedia.org/wiki/Cron.
+* `timezone` - (Optional) The time zone for the given schedule. If not specified, this will rely on the time zone of the kube-controller-manager process.
 * `starting_deadline_seconds` - (Optional) Deadline in seconds for starting the job if it misses scheduled time for any reason. Missed jobs executions will be counted as failed ones.
 * `successful_jobs_history_limit` - (Optional) The number of successful finished jobs to retain. This is a pointer to distinguish between explicit zero and not specified. Defaults to 3.
 * `suspend` - (Optional) This flag tells the controller to suspend subsequent executions, it does not apply to already started executions. Defaults to false.

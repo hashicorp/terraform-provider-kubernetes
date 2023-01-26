@@ -94,11 +94,10 @@ func TestDataSourceKubernetesResources(t *testing.T) {
 
 	namespace := randName()
 
-	// STEP 1: Create Namespaces for use with label selector
 	k8shelper.CreateNamespace(t, namespace)
 	defer k8shelper.DeleteResource(t, namespace, kubernetes.NewGroupVersionResource("v1", "namespaces"))
 
-	// STEP 2: Create set of ConfigMaps to filter
+	// STEP 1: Create set of ConfigMaps to filter
 	configMap1 := tfhelper.RequireNewWorkingDir(ctx, t)
 	configMap1.SetReattachInfo(ctx, reattachInfo)
 	name := randName()
@@ -121,8 +120,7 @@ func TestDataSourceKubernetesResources(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	//TODO create 3 config maps
-	// filter
+	// Step 2: filter using label_selector
 
 	filter := tfhelper.RequireNewWorkingDir(ctx, t)
 	filter.SetReattachInfo(ctx, reattachInfo)
@@ -131,8 +129,6 @@ func TestDataSourceKubernetesResources(t *testing.T) {
 		filter.Destroy(ctx)
 		filter.Close()
 	}()
-
-	// Step 3: filter using label_selector
 
 	filterVars := TFVARS{
 		"label_selector": "test=terraform",

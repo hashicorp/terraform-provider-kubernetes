@@ -193,8 +193,14 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 		listObjects = append(listObjects, nobj)
 	}
 
-	listType := tftypes.List{ElementType: listObjects[0].Type()}
-	list := tftypes.NewValue(listType, listObjects)
+	elementTypes := make([]tftypes.Type, len(listObjects))
+
+	for i, t := range listObjects {
+		elementTypes[i] = t.Type()
+	}
+
+	tupleType := tftypes.Tuple{ElementTypes: elementTypes}
+	tuple := tftypes.NewValue(tupleType, listObjects)
 
 	rawState := make(map[string]tftypes.Value)
 	err = config.As(&rawState)
@@ -206,7 +212,7 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 		})
 		return resp, nil
 	}
-	rawState["objects"] = morph.UnknownToNull(list)
+	rawState["objects"] = morph.UnknownToNull(tuple)
 
 	v := tftypes.NewValue(rt, rawState)
 	state, err := tfprotov5.NewDynamicValue(v.Type(), v)

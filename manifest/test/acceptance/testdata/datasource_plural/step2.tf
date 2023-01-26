@@ -1,7 +1,7 @@
 data "kubernetes_resources" "example"{
-    kind = "Namespace"
+    kind = "ConfigMap"
     api_version = "v1"
-    namespace = "test"
+    namespace = var.namespace
     label_selector = var.label_selector
     limit = var.limit
 }

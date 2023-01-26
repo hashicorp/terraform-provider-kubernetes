@@ -84,7 +84,7 @@ func TestDataSourceKubernetesResource_ConfigMap(t *testing.T) {
 	})
 }
 
-func TestDataSourceKubernetesResources_Namespaces(t *testing.T) {
+func TestDataSourceKubernetesResources(t *testing.T) {
 	ctx := context.Background()
 
 	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
@@ -98,8 +98,7 @@ func TestDataSourceKubernetesResources_Namespaces(t *testing.T) {
 	k8shelper.CreateNamespace(t, namespace)
 	defer k8shelper.DeleteResource(t, namespace, kubernetes.NewGroupVersionResource("v1", "namespaces"))
 
-	// STEP 2: Create three ConfigMap to use as a data source
-	// First ConfigMap
+	// STEP 2: Create set of ConfigMaps to filter
 	configMap1 := tfhelper.RequireNewWorkingDir(ctx, t)
 	configMap1.SetReattachInfo(ctx, reattachInfo)
 	name := randName()
@@ -107,63 +106,20 @@ func TestDataSourceKubernetesResources_Namespaces(t *testing.T) {
 	defer func() {
 		configMap1.Destroy(ctx)
 		configMap1.Close()
-		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "configmaps", namespace, name)
+
 	}()
 
 	cmVars1 := TFVARS{
-		"name":      name,
-		"namespace": namespace,
+		"name_prefix": name,
+		"namespace":   namespace,
 	}
 	cmConfig1 := loadTerraformConfig(t, "datasource_plural/step1.tf", cmVars1)
 	configMap1.SetConfig(ctx, cmConfig1)
 	configMap1.Init(ctx)
-	configMap1.Apply(ctx)
-
-	k8shelper.AssertNamespacedResourceExists(t, "v1", "configmaps", namespace, name)
-
-	// Second ConfigMap
-	configMap2 := tfhelper.RequireNewWorkingDir(ctx, t)
-	configMap2.SetReattachInfo(ctx, reattachInfo)
-	name2 := randName()
-
-	defer func() {
-		configMap2.Destroy(ctx)
-		configMap2.Close()
-		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "configmaps", namespace, name2)
-	}()
-
-	cmVars2 := TFVARS{
-		"name":      name2,
-		"namespace": namespace,
+	err = configMap1.Apply(ctx)
+	if err != nil {
+		t.Fatal(err.Error())
 	}
-	cmConfig2 := loadTerraformConfig(t, "datasource_plural/step1.tf", cmVars2)
-	configMap2.SetConfig(ctx, cmConfig2)
-	configMap2.Init(ctx)
-	configMap2.Apply(ctx)
-
-	k8shelper.AssertNamespacedResourceExists(t, "v1", "configmaps", namespace, name2)
-
-	// Third ConfigMap
-	configMap3 := tfhelper.RequireNewWorkingDir(ctx, t)
-	configMap3.SetReattachInfo(ctx, reattachInfo)
-	name3 := randName()
-
-	defer func() {
-		configMap3.Destroy(ctx)
-		configMap3.Close()
-		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "configmaps", namespace, name3)
-	}()
-
-	cmVars3 := TFVARS{
-		"name":      name3,
-		"namespace": namespace,
-	}
-	cmConfig3 := loadTerraformConfig(t, "datasource_plural/step1.tf", cmVars3)
-	configMap3.SetConfig(ctx, cmConfig3)
-	configMap3.Init(ctx)
-	configMap3.Apply(ctx)
-
-	k8shelper.AssertNamespacedResourceExists(t, "v1", "configmaps", namespace, name3)
 
 	//TODO create 3 config maps
 	// filter
@@ -179,13 +135,17 @@ func TestDataSourceKubernetesResources_Namespaces(t *testing.T) {
 	// Step 3: filter using label_selector
 
 	filterVars := TFVARS{
-		"label_selector": "kubernetes.io/metadata.name!=terraform",
-		"limit":          2,
+		"label_selector": "test=terraform",
+		"limit":          3,
+		"namespace":      namespace,
 	}
-	filterConfig := loadTerraformConfig(t, "datasource_plural/resources.tf", filterVars)
+	filterConfig := loadTerraformConfig(t, "datasource_plural/step2.tf", filterVars)
 	filter.SetConfig(ctx, filterConfig)
 	filter.Init(ctx)
-	filter.Apply(ctx)
+	err = filter.Apply(ctx)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
 	tfState, err := filter.State(ctx)
 	if err != nil {
@@ -194,9 +154,10 @@ func TestDataSourceKubernetesResources_Namespaces(t *testing.T) {
 	state := tfstatehelper.NewHelper(tfState)
 
 	// check the data source
-	state.AssertAttributeLen(t, "data.kubernetes_resources.example.objects", 2)
-
+	state.AssertAttributeLen(t, "data.kubernetes_resources.example.objects", 3)
 	state.AssertAttributeValues(t, tfstatehelper.AttributeValues{
-		"data.kubernetes_resources.example.objects.1.metadata.labels": "hello world",
+		"data.kubernetes_resources.example.objects.0.metadata.labels.test": "terraform",
+		"data.kubernetes_resources.example.objects.1.metadata.labels.test": "terraform",
+		"data.kubernetes_resources.example.objects.2.metadata.labels.test": "terraform",
 	})
 }

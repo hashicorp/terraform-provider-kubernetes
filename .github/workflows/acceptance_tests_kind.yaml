@@ -17,22 +17,17 @@ jobs:
   acceptance_tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Read go-version
-        id: go-version
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: ./.go-version
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
         with:
-          go-version: ${{ steps.go-version.outputs.content }}
+          go-version-file: 'go.mod'
       - name: Install Terraform
-        uses: hashicorp/setup-terraform@v1
+        uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
         with:
           terraform_version: ${{ github.event.inputs.terraformVersion }}
       - name: Setup kind
-        uses: engineerd/setup-kind@v0.5.0
+        uses: engineerd/setup-kind@aa272fe2a7309878ffc2a81c56cfe3ef108ae7d0 # v0.5.0
         with:
           version: v${{ github.event.inputs.kindVersion }}
       - name: Run Acceptance Test Suite

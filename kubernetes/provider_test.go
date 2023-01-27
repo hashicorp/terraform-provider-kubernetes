@@ -101,6 +101,20 @@ func TestProvider_configure_paths(t *testing.T) {
 	}
 }
 
+func TestProvider_env_kubeconfig(t *testing.T) {
+	ctx := context.TODO()
+	resetEnv := unsetEnv(t)
+	defer resetEnv()
+	os.Setenv("KUBECONFIG", "test-fixtures/kube-config.yaml")
+	os.Setenv("KUBE_CTX", "gcp")
+	rc := terraform.NewResourceConfigRaw(map[string]interface{}{})
+	p := Provider()
+	diags := p.Configure(ctx, rc)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+}
+
 func unsetEnv(t *testing.T) func() {
 	e := getEnv()
 

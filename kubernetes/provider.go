@@ -471,7 +471,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 
 func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error) {
 	overrides := &clientcmd.ConfigOverrides{}
-	loader := &clientcmd.ClientConfigLoadingRules{}
+	loader := clientcmd.NewDefaultClientConfigLoadingRules()
 
 	configPaths := []string{}
 
@@ -487,7 +487,10 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		configPaths = filepath.SplitList(v)
 	}
 
+	// use non-default loading rules if an explicit config was passed
+	// using provider-specific config vars
 	if len(configPaths) > 0 {
+		loader = &clientcmd.ClientConfigLoadingRules{}
 		expandedPaths := []string{}
 		for _, p := range configPaths {
 			path, err := homedir.Expand(p)
@@ -505,30 +508,29 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 			loader.Precedence = expandedPaths
 		}
 
-		ctxSuffix := "; default context"
-
-		kubectx, ctxOk := d.GetOk("config_context")
-		authInfo, authInfoOk := d.GetOk("config_context_auth_info")
-		cluster, clusterOk := d.GetOk("config_context_cluster")
-		if ctxOk || authInfoOk || clusterOk {
-			ctxSuffix = "; overriden context"
-			if ctxOk {
-				overrides.CurrentContext = kubectx.(string)
-				ctxSuffix += fmt.Sprintf("; config ctx: %s", overrides.CurrentContext)
-				log.Printf("[DEBUG] Using custom current context: %q", overrides.CurrentContext)
-			}
-
-			overrides.Context = clientcmdapi.Context{}
-			if authInfoOk {
-				overrides.Context.AuthInfo = authInfo.(string)
-				ctxSuffix += fmt.Sprintf("; auth_info: %s", overrides.Context.AuthInfo)
-			}
-			if clusterOk {
-				overrides.Context.Cluster = cluster.(string)
-				ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
-			}
-			log.Printf("[DEBUG] Using overidden context: %#v", overrides.Context)
+	}
+	ctxSuffix := "; default context"
+	kubectx, ctxOk := d.GetOk("config_context")
+	authInfo, authInfoOk := d.GetOk("config_context_auth_info")
+	cluster, clusterOk := d.GetOk("config_context_cluster")
+	if ctxOk || authInfoOk || clusterOk {
+		ctxSuffix = "; overriden context"
+		if ctxOk {
+			overrides.CurrentContext = kubectx.(string)
+			ctxSuffix += fmt.Sprintf("; config ctx: %s", overrides.CurrentContext)
+			log.Printf("[DEBUG] Using custom current context: %q", overrides.CurrentContext)
 		}
+
+		overrides.Context = clientcmdapi.Context{}
+		if authInfoOk {
+			overrides.Context.AuthInfo = authInfo.(string)
+			ctxSuffix += fmt.Sprintf("; auth_info: %s", overrides.Context.AuthInfo)
+		}
+		if clusterOk {
+			overrides.Context.Cluster = cluster.(string)
+			ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
+		}
+		log.Printf("[DEBUG] Using overidden context: %#v", overrides.Context)
 	}
 
 	// Overriding with static configuration

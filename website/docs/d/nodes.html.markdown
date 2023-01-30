@@ -12,20 +12,22 @@ This data source provides a mechanism for listing the names of nodes in a kubern
 
 By default, all nodes in the cluster are returned, but queries by node label are also supported.
 
-It can be used to check for the existance of a specific node or to lookup a node to apply a taint with the `kubernetes_node_taint` resource.
+It can be used to check for the existence of a specific node or to lookup a node to apply a taint with the `kubernetes_node_taint` resource.
 
 ## Example usage
 
 ### All nodes
+
 ```hcl
 data "kubernetes_nodes" "example" {}
 
 output "node-ids" {
-  value = [for node in data.kubernetes_nodes.example.nodes: node.spec.0.provider_id]
+  value = [for node in data.kubernetes_nodes.example.nodes : node.spec.0.provider_id]
 }
 ```
 
 ### By label
+
 ```hcl
 data "kubernetes_nodes" "example" {
   metadata {
@@ -36,7 +38,7 @@ data "kubernetes_nodes" "example" {
 }
 
 output "linux-node-names" {
-   value = [for node in data.kubernetes_nodes.example.nodes: node.metadata.0.name]
+  value = [for node in data.kubernetes_nodes.example.nodes : node.metadata.0.name]
 }
 ```
 
@@ -47,6 +49,7 @@ The following arguments are supported:
 * `metadata` - Metadata describing which nodes to return.
 
 ### Attributes
+
 * `metadata` - Metadata describing the node. See [metadata](#metadata) for more
   info.
 * `spec` - Defines the behavior of the node. See [spec](#spec) for more info.

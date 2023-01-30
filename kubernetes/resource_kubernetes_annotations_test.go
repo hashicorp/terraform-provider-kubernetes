@@ -221,6 +221,70 @@ func TestAccKubernetesAnnotations_template_deployment(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesAnnotations_template_only(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	namespace := "default"
+	resourceName := "kubernetes_annotations.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createDeployment(name, namespace)
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy: func(s *terraform.State) error {
+			return destroyDeployment(name, namespace)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesAnnotations_template_only(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
+					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "template_annotations.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "template_annotations.test", "test"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesAnnotations_resource_only(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	namespace := "default"
+	resourceName := "kubernetes_annotations.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createDeployment(name, namespace)
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy: func(s *terraform.State) error {
+			return destroyDeployment(name, namespace)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesAnnotations_resource_only(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
+					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "annotations.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "annotations.test", "test"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
+				),
+			},
+		},
+	})
+}
+
 func testAccKubernetesAnnotations_empty(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_annotations" "test" {
   api_version = "v1"
@@ -312,6 +376,36 @@ func testAccKubernetesAnnotations_template_modified(name string) string {
   template_annotations = {
     "test3" = "three"
     "test4" = "four"
+  }
+  field_manager = "tftest"
+}
+`, name)
+}
+
+func testAccKubernetesAnnotations_template_only(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_annotations" "test" {
+  api_version = "apps/v1"
+  kind        = "Deployment"
+  metadata {
+    name = %q
+  }
+  template_annotations = {
+	"test" = "test"
+  }
+  field_manager = "tftest"
+}
+`, name)
+}
+
+func testAccKubernetesAnnotations_resource_only(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_annotations" "test" {
+  api_version = "apps/v1"
+  kind        = "Deployment"
+  metadata {
+    name = %q
+  }
+  annotations = {
+	"test" = "test"
   }
   field_manager = "tftest"
 }

@@ -169,7 +169,7 @@ func resourceKubernetesAnnotationsRead(ctx context.Context, d *schema.ResourceDa
 	d.Set("annotations", annotations)
 
 	kind := d.Get("kind").(string)
-	configuredTemplateAnnotations := d.Get("annotations").(map[string]interface{})
+	configuredTemplateAnnotations := d.Get("template_annotations").(map[string]interface{})
 	managedTemplateAnnotations, err := getTemplateManagedAnnotations(res.GetManagedFields(), fieldManagerName, kind)
 	if err != nil {
 		return diag.FromErr(err)
@@ -207,7 +207,10 @@ func getManagedAnnotations(managedFields []v1.ManagedFieldsEntry, manager string
 		if err != nil {
 			return nil, err
 		}
-		metadata := mm["f:metadata"].(map[string]interface{})
+		var metadata map[string]interface{}
+		if mmm, ok := mm["f:metadata"].(map[string]interface{}); ok {
+			metadata = mmm
+		}
 		if l, ok := metadata["f:annotations"].(map[string]interface{}); ok {
 			annotations = l
 		}
@@ -227,13 +230,23 @@ func getTemplateManagedAnnotations(managedFields []v1.ManagedFieldsEntry, manage
 		if err != nil {
 			return nil, err
 		}
-		spec := mm["f:spec"].(map[string]interface{})
-		if kind == "CronJob" {
-			jobTemplate := spec["f:jobTemplate"].(map[string]interface{})
-			spec = jobTemplate["f:spec"].(map[string]interface{})
+		var spec map[string]interface{}
+		if s, ok := mm["f:spec"].(map[string]interface{}); ok {
+			spec = s
 		}
-		template := spec["f:template"].(map[string]interface{})
-		metadata := template["f:metadata"].(map[string]interface{})
+		if kind == "CronJob" {
+			if jt, ok := spec["f:jobTemplate"].(map[string]interface{}); ok {
+				spec = jt["f:spec"].(map[string]interface{})
+			}
+		}
+		var template map[string]interface{}
+		if t, ok := spec["f:template"].(map[string]interface{}); ok {
+			template = t
+		}
+		var metadata map[string]interface{}
+		if mmm, ok := template["f:metadata"].(map[string]interface{}); ok {
+			metadata = mmm
+		}
 		if l, ok := metadata["f:annotations"].(map[string]interface{}); ok {
 			annotations = l
 		}

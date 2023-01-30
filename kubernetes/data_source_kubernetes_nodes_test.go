@@ -53,11 +53,11 @@ data "kubernetes_nodes" "test" {}
 func testAccKubernetesDataSourceNodesConfig_labels() string {
 	return `
 data "kubernetes_nodes" "test" {
-	metadata {
-		labels = {
-			"kubernetes.io/os" = "linux"
-		}
-	}
+  metadata {
+    labels = {
+      "kubernetes.io/os" = "linux"
+    }
+  }
 }
 `
 }

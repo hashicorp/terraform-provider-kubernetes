@@ -92,15 +92,15 @@ func testAccKubernetesNodeTaintConfig_basic() string {
 data "kubernetes_nodes" "test" {}
 
 resource "kubernetes_node_taint" "test" {
-	metadata {
-		name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
-	}
-	taint {
-		key = "%s"
-		value = "%s"
-		effect = "%s"
-	}
-	field_manager = "%s"
+  metadata {
+    name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
+  }
+  taint {
+    key    = "%s"
+    value  = "%s"
+    effect = "%s"
+  }
+  field_manager = "%s"
 }
 `, taintKey, taintValue, taintEffect, fieldManager)
 }

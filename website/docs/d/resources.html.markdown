@@ -10,15 +10,13 @@ description: |-
 
 This data source is a generic way to query for a list of Kubernetes resources and filter them using a label or field selector.
 
-### Example: Get data from a ConfigMap
+### Example: Get a list of namespaces excluding "kube-system"
 
 ```hcl
-data "kubernetes_resources" "example"{
+data "kubernetes_resource" "example" {
   api_version    = "v1"
   kind           = "Namespace"
-  namespace      = "test"
-  label_selector = "kubernetes.io/metadata.name!=kube-system"
-  limit          = "2"
+  field_selector = "metadata.name!=kube-system"
 }
 ```
 

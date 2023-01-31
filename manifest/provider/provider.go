@@ -267,5 +267,55 @@ func GetProviderDataSourceSchema() map[string]*tfprotov5.Schema {
 				},
 			},
 		},
+		"kubernetes_resources": {
+			Version: 1,
+			Block: &tfprotov5.SchemaBlock{
+				Attributes: []*tfprotov5.SchemaAttribute{
+					{
+						Name:        "api_version",
+						Type:        tftypes.String,
+						Required:    true,
+						Description: "The resource apiVersion.",
+					},
+					{
+						Name:        "kind",
+						Type:        tftypes.String,
+						Required:    true,
+						Description: "The resource kind.",
+					},
+					{
+						Name:        "objects",
+						Type:        tftypes.DynamicPseudoType,
+						Optional:    true,
+						Computed:    true,
+						Description: "The response from the API server.",
+					},
+					{
+						Name:        "namespace",
+						Type:        tftypes.String,
+						Optional:    true,
+						Description: "The resource namespace.",
+					},
+					{
+						Name:        "field_selector",
+						Type:        tftypes.String,
+						Optional:    true,
+						Description: "A selector to restrict the list of returned objects by their fields.",
+					},
+					{
+						Name:        "label_selector",
+						Type:        tftypes.String,
+						Optional:    true,
+						Description: "A selector to restrict the list of returned objects by their labels.",
+					},
+					{
+						Name:        "limit",
+						Type:        tftypes.Number,
+						Optional:    true,
+						Description: "Limit is a maximum number of responses to return for a list call.",
+					},
+				},
+			},
+		},
 	}
 }

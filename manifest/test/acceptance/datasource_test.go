@@ -83,3 +83,77 @@ func TestDataSourceKubernetesResource_ConfigMap(t *testing.T) {
 		"kubernetes_manifest.test_config2.object.data.TEST": "hello world",
 	})
 }
+
+func TestDataSourceKubernetesResources(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
+	namespace := randName()
+
+	k8shelper.CreateNamespace(t, namespace)
+	defer k8shelper.DeleteResource(t, namespace, kubernetes.NewGroupVersionResource("v1", "namespaces"))
+
+	// STEP 1: Create set of ConfigMaps to filter
+	configMap1 := tfhelper.RequireNewWorkingDir(ctx, t)
+	configMap1.SetReattachInfo(ctx, reattachInfo)
+	name := randName()
+
+	defer func() {
+		configMap1.Destroy(ctx)
+		configMap1.Close()
+
+	}()
+
+	cmVars1 := TFVARS{
+		"name_prefix": name,
+		"namespace":   namespace,
+	}
+	cmConfig1 := loadTerraformConfig(t, "datasource_plural/step1.tf", cmVars1)
+	configMap1.SetConfig(ctx, cmConfig1)
+	configMap1.Init(ctx)
+	err = configMap1.Apply(ctx)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	// Step 2: filter using label_selector
+
+	filter := tfhelper.RequireNewWorkingDir(ctx, t)
+	filter.SetReattachInfo(ctx, reattachInfo)
+
+	defer func() {
+		filter.Destroy(ctx)
+		filter.Close()
+	}()
+
+	filterVars := TFVARS{
+		"label_selector": "test=terraform",
+		"limit":          3,
+		"namespace":      namespace,
+	}
+	filterConfig := loadTerraformConfig(t, "datasource_plural/step2.tf", filterVars)
+	filter.SetConfig(ctx, filterConfig)
+	filter.Init(ctx)
+	err = filter.Apply(ctx)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	tfState, err := filter.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	state := tfstatehelper.NewHelper(tfState)
+
+	// check the data source
+	state.AssertAttributeLen(t, "data.kubernetes_resources.example.objects", 3)
+	state.AssertAttributeValues(t, tfstatehelper.AttributeValues{
+		"data.kubernetes_resources.example.objects.0.metadata.labels.test": "terraform",
+		"data.kubernetes_resources.example.objects.1.metadata.labels.test": "terraform",
+		"data.kubernetes_resources.example.objects.2.metadata.labels.test": "terraform",
+	})
+}

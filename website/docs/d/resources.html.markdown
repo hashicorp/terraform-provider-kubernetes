@@ -3,26 +3,22 @@ subcategory: "manifest"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_resources"
 description: |-
-  This data source is a generic way to filter resources from the Kubernetes API. 
+  This data source is a generic way to query for a list of resources from the Kubernetes API and filter them. 
 ---
 
 # kubernetes_resource
 
-This data source is a generic way to filter resources from the Kubernetes API. 
+This data source is a generic way to query for a list of Kubernetes resources and filter them using a label or field selector.
 
 ### Example: Get data from a ConfigMap
 
 ```hcl
 data "kubernetes_resources" "example"{
-    kind = "Namespace"
-    api_version = "v1"
-    namespace = "test"
-    label_selector = "kubernetes.io/metadata.name!=kube-system"
-    limit = "2"
-}
-
-output "test" {
-  value = length(data.kubernetes_resources.example.objects)
+  api_version    = "v1"
+  kind           = "Namespace"
+  namespace      = "test"
+  label_selector = "kubernetes.io/metadata.name!=kube-system"
+  limit          = "2"
 }
 ```
 

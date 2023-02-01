@@ -125,11 +125,7 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 			if err != nil {
 				return nil, err
 			}
-			if !isTypeFullyKnown(et) {
-				t = tftypes.Tuple{ElementTypes: []tftypes.Type{et}}
-			} else {
-				t = tftypes.List{ElementType: et}
-			}
+			t = tftypes.List{ElementType: et}
 			if herr == nil {
 				typeCache.Store(h, t)
 			}

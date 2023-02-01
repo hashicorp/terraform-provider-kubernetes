@@ -1,3 +1,3 @@
-```release-note:feature
-New Attribute: Add timezone attribute to cron jobs
+```release-note:enhancement
+`resource/kubernete_kubernetes_cron_job`: new attribute `spec.timezone`
 ```

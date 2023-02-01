@@ -48,7 +48,7 @@ func resourceKubernetesCronJobSchemaV1() map[string]*schema.Schema {
 			Required:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: cronJobSpecFields(),
+				Schema: cronJobSpecFieldsV1Beta1(),
 			},
 		},
 	}
@@ -61,7 +61,7 @@ func resourceKubernetesCronJobCreate(ctx context.Context, d *schema.ResourceData
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	spec, err := expandCronJobSpec(d.Get("spec").([]interface{}))
+	spec, err := expandCronJobSpecV1Beta1(d.Get("spec").([]interface{}))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -96,7 +96,7 @@ func resourceKubernetesCronJobUpdate(ctx context.Context, d *schema.ResourceData
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	spec, err := expandCronJobSpec(d.Get("spec").([]interface{}))
+	spec, err := expandCronJobSpecV1Beta1(d.Get("spec").([]interface{}))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -173,7 +173,7 @@ func resourceKubernetesCronJobRead(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	jobSpec, err := flattenCronJobSpec(job.Spec, d, meta)
+	jobSpec, err := flattenCronJobSpecV1Beta1(job.Spec, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}

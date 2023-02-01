@@ -8,7 +8,7 @@ import (
 	"github.com/robfig/cron"
 )
 
-func cronJobSpecFields() map[string]*schema.Schema {
+func cronJobSpecFieldsV1() map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
 		"concurrency_policy": {
 			Type:         schema.TypeString,

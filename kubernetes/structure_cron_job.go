@@ -5,7 +5,7 @@ import (
 	"k8s.io/api/batch/v1beta1"
 )
 
-func flattenCronJobSpec(in v1beta1.CronJobSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
+func flattenCronJobSpecV1Beta1(in v1beta1.CronJobSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
 	att["concurrency_policy"] = in.ConcurrencyPolicy
@@ -15,8 +15,6 @@ func flattenCronJobSpec(in v1beta1.CronJobSpec, d *schema.ResourceData, meta int
 	}
 
 	att["schedule"] = in.Schedule
-
-	att["timezone"] = in.TimeZone
 
 	jobTemplate, err := flattenJobTemplate(in.JobTemplate, d, meta)
 	if err != nil {
@@ -51,7 +49,7 @@ func flattenJobTemplate(in v1beta1.JobTemplateSpec, d *schema.ResourceData, meta
 	return []interface{}{att}, nil
 }
 
-func expandCronJobSpec(j []interface{}) (v1beta1.CronJobSpec, error) {
+func expandCronJobSpecV1Beta1(j []interface{}) (v1beta1.CronJobSpec, error) {
 	obj := v1beta1.CronJobSpec{}
 
 	if len(j) == 0 || j[0] == nil {
@@ -70,10 +68,6 @@ func expandCronJobSpec(j []interface{}) (v1beta1.CronJobSpec, error) {
 
 	if v, ok := in["schedule"].(string); ok && v != "" {
 		obj.Schedule = v
-	}
-
-	if v, ok := in["timezone"].(string); ok && v != "" {
-		obj.TimeZone = &v
 	}
 
 	jtSpec, err := expandJobTemplate(in["job_template"].([]interface{}))

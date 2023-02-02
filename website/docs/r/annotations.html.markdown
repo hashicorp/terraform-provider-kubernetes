@@ -26,15 +26,38 @@ resource "kubernetes_annotations" "example" {
 }
 ```
 
+## Example Usage: Patching resources which contain a pod template, e.g Deployment, Job
+
+```hcl
+resource "kubernetes_annotations" "example" {
+  api_version = "apps/v1"
+  kind        = "Deployment"
+  metadata {
+    name = "my-config"
+  }
+  # These annotations will be applied to the Deployment resource itself
+  annotations = {
+    "owner" = "myteam"
+  }
+  # These annotations will be applied to the Pods created by the Deployment
+  template_annotations = {
+    "owner" = "myteam"
+  }
+}
+```
+
 ## Argument Reference
 
-The following arguments are supported:
+The following arguments are supported: 
+
+~> NOTE: At least one of `annotations` or `template_annotations` is required. 
 
 * `api_version` - (Required) The apiVersion of the resource to be annotated.
 * `kind` - (Required) The kind of the resource to be annotated.
 * `metadata` - (Required) Standard metadata of the resource to be annotated. 
-* `annotations` - (Required) A map of annotations to apply to the resource.
-* `force` - (Optional) Force management of annotations if there is a conflict.
+* `annotations` - (Optional) A map of annotations to apply to the resource.
+* `template_annotations` - (Optional) A map of annotations to apply to the pod template within the resource.
+* `force` - (Optional) Force management of annotations if there is a conflict. Defaults to `false`.
 * `field_manager` - (Optional) The name of the [field manager](https://kubernetes.io/docs/reference/using-api/server-side-apply/#field-management). Defaults to `Terraform`.
 
 ## Nested Blocks

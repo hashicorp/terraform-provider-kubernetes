@@ -57,7 +57,7 @@ The following arguments are supported:
 * `metadata` - (Required) Standard metadata of the resource to be annotated. 
 * `annotations` - (Optional) A map of annotations to apply to the resource.
 * `template_annotations` - (Optional) A map of annotations to apply to the pod template within the resource.
-* `force` - (Optional) Force management of annotations if there is a conflict.
+* `force` - (Optional) Force management of annotations if there is a conflict. Defaults to `false`.
 * `field_manager` - (Optional) The name of the [field manager](https://kubernetes.io/docs/reference/using-api/server-side-apply/#field-management). Defaults to `Terraform`.
 
 ## Nested Blocks

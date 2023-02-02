@@ -337,9 +337,9 @@ func testAccKubernetesAnnotations_template_empty(name string) string {
   metadata {
     name = %q
   }
-  annotations = {}
+  annotations          = {}
   template_annotations = {}
-  field_manager = "tftest"
+  field_manager        = "tftest"
 }
 `, name)
 }
@@ -355,7 +355,7 @@ func testAccKubernetesAnnotations_template_basic(name string) string {
     "test1" = "one"
   }
   template_annotations = {
-	"test2" = "two"
+    "test2" = "two"
   }
   field_manager = "tftest"
 }
@@ -390,7 +390,7 @@ func testAccKubernetesAnnotations_template_only(name string) string {
     name = %q
   }
   template_annotations = {
-	"test" = "test"
+    "test" = "test"
   }
   field_manager = "tftest"
 }
@@ -405,7 +405,7 @@ func testAccKubernetesAnnotations_resource_only(name string) string {
     name = %q
   }
   annotations = {
-	"test" = "test"
+    "test" = "test"
   }
   field_manager = "tftest"
 }
@@ -419,9 +419,9 @@ func testAccKubernetesAnnotations_template_deployment_empty(name string) string 
   metadata {
     name = %q
   }
-  annotations = {}
+  annotations          = {}
   template_annotations = {}
-  field_manager = "tftest"
+  field_manager        = "tftest"
 }
 `, name)
 }
@@ -437,7 +437,7 @@ func testAccKubernetesAnnotations_template_deployment_basic(name string) string 
     "test1" = "one"
   }
   template_annotations = {
-	"test2" = "two"
+    "test2" = "two"
   }
   field_manager = "tftest"
 }

@@ -222,6 +222,7 @@ func Provider() *schema.Provider {
 			"kubernetes_service_account_v1":         dataSourceKubernetesServiceAccount(),
 			"kubernetes_persistent_volume_claim":    dataSourceKubernetesPersistentVolumeClaim(),
 			"kubernetes_persistent_volume_claim_v1": dataSourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_nodes":                      dataSourceKubernetesNodes(),
 
 			// networking
 			"kubernetes_ingress":    dataSourceKubernetesIngress(),
@@ -257,6 +258,7 @@ func Provider() *schema.Provider {
 			"kubernetes_env":                        resourceKubernetesEnv(),
 			"kubernetes_limit_range":                resourceKubernetesLimitRange(),
 			"kubernetes_limit_range_v1":             resourceKubernetesLimitRange(),
+			"kubernetes_node_taint":                 resourceKubernetesNodeTaint(),
 			"kubernetes_persistent_volume":          resourceKubernetesPersistentVolume(),
 			"kubernetes_persistent_volume_v1":       resourceKubernetesPersistentVolume(),
 			"kubernetes_persistent_volume_claim":    resourceKubernetesPersistentVolumeClaim(),

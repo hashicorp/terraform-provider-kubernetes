@@ -1,0 +1,4 @@
+```release-note:feature
+New data source: `kubernetes_nodes`
+New resource: `kubernetes_node_taint`
+```

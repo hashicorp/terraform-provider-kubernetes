@@ -28,17 +28,12 @@ jobs:
           - 1.1.9
           - 1.0.11
     steps:
-      - uses: actions/checkout@v2
-      - name: Read go-version
-        id: go-version
-        uses: juliangruber/read-file-action@v1
-        with:
-          path: ./.go-version
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
         with:
-          go-version: ${{ steps.go-version.outputs.content }}
-      - uses: engineerd/setup-kind@v0.5.0
+          go-version-file: 'go.mod'
+      - uses: engineerd/setup-kind@aa272fe2a7309878ffc2a81c56cfe3ef108ae7d0 # v0.5.0
         with:
           version: v0.11.1
           image: kindest/node:${{ matrix.kubernetes_version }}

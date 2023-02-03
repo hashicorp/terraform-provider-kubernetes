@@ -952,6 +952,11 @@ k8s.io/kubectl/pkg/util/storage
 k8s.io/kubectl/pkg/util/templates
 k8s.io/kubectl/pkg/util/term
 k8s.io/kubectl/pkg/validation
+# k8s.io/kubernetes v1.25.5
+## explicit; go 1.19
+k8s.io/kubernetes/pkg/apis/core
+k8s.io/kubernetes/pkg/apis/core/helper
+k8s.io/kubernetes/pkg/util/taints
 # k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
 ## explicit; go 1.18
 k8s.io/utils/buffer

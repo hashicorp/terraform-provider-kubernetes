@@ -19,7 +19,10 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 	imageName := alpineImageVersion
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.25.0")
+		},
 		IDRefreshName:     "kubernetes_cron_job_v1.test",
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,

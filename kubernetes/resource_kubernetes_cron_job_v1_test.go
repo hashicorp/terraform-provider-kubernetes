@@ -185,7 +185,7 @@ func testAccKubernetesCronJobV1Config_basic(name, imageName string) string {
     concurrency_policy            = "Replace"
     failed_jobs_history_limit     = 5
     schedule                      = "1 0 * * *"
-    timezone 					  = "Etc/UTC"
+    timezone                      = "Etc/UTC"
     starting_deadline_seconds     = 10
     successful_jobs_history_limit = 10
     suspend                       = true
@@ -247,7 +247,7 @@ func testAccKubernetesCronJobV1Config_extra(name, imageName string) string {
   }
   spec {
     schedule                      = "1 0 * * *"
-    timezone 					  = "Etc/UTC"
+    timezone                      = "Etc/UTC"
     concurrency_policy            = "Forbid"
     successful_jobs_history_limit = 10
     failed_jobs_history_limit     = 10
@@ -279,7 +279,7 @@ func testAccKubernetesCronJobV1Config_extraModified(name, imageName string) stri
   }
   spec {
     schedule                      = "1 0 * * *"
-    timezone = "Etc/UTC"
+    timezone                      = "Etc/UTC"
     concurrency_policy            = "Forbid"
     successful_jobs_history_limit = 2
     failed_jobs_history_limit     = 2

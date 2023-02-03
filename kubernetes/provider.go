@@ -283,7 +283,7 @@ func Provider() *schema.Provider {
 			// batch
 			"kubernetes_job":         resourceKubernetesJob(),
 			"kubernetes_job_v1":      resourceKubernetesJob(),
-			"kubernetes_cron_job":    resourceKubernetesCronJob(),
+			"kubernetes_cron_job":    resourceKubernetesCronJobV1Beta1(),
 			"kubernetes_cron_job_v1": resourceKubernetesCronJobV1(),
 
 			// autoscaling

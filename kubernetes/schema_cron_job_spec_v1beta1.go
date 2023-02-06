@@ -1,15 +1,12 @@
 package kubernetes
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/robfig/cron"
 )
 
-func cronJobSpecFields() map[string]*schema.Schema {
-	s := map[string]*schema.Schema{
+func cronJobSpecFieldsV1Beta1() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
 		"concurrency_policy": {
 			Type:         schema.TypeString,
 			Optional:     true,
@@ -67,22 +64,5 @@ func cronJobSpecFields() map[string]*schema.Schema {
 			Default:     false,
 			Description: "This flag tells the controller to suspend subsequent executions, it does not apply to already started executions. Defaults to false.",
 		},
-	}
-
-	return s
-}
-
-func validateCronExpression() schema.SchemaValidateFunc {
-	return func(i interface{}, k string) (s []string, es []error) {
-		v, ok := i.(string)
-		if !ok {
-			es = append(es, fmt.Errorf("expected type of '%s' to be string", k))
-			return
-		}
-		_, err := cron.ParseStandard(v)
-		if err != nil {
-			es = append(es, fmt.Errorf("'%s' should be an valid Cron expression", k))
-		}
-		return
 	}
 }

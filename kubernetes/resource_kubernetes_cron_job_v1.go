@@ -36,7 +36,7 @@ func resourceKubernetesCronJobV1() *schema.Resource {
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
-					Schema: cronJobSpecFields(),
+					Schema: cronJobSpecFieldsV1(),
 				},
 			},
 		},

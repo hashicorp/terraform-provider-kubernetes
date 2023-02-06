@@ -9,7 +9,7 @@ import (
 )
 
 func cronJobSpecFieldsV1() map[string]*schema.Schema {
-	s := map[string]*schema.Schema{
+	return map[string]*schema.Schema{
 		"concurrency_policy": {
 			Type:         schema.TypeString,
 			Optional:     true,
@@ -73,8 +73,6 @@ func cronJobSpecFieldsV1() map[string]*schema.Schema {
 			Description: "The time zone for the given schedule. If not specified, this will rely on the time zone of the kube-controller-manager process. ",
 		},
 	}
-
-	return s
 }
 
 func validateCronExpression() schema.SchemaValidateFunc {

@@ -120,7 +120,7 @@ func resourceKubernetesCronJobV1Beta1Update(ctx context.Context, d *schema.Resou
 }
 
 func resourceKubernetesCronJobV1Beta1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesCronJobExists(ctx, d, meta)
+	exists, err := resourceKubernetesCronJobV1Beta1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -225,7 +225,7 @@ func resourceKubernetesCronJobV1Beta1Delete(ctx context.Context, d *schema.Resou
 	return nil
 }
 
-func resourceKubernetesCronJobExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesCronJobV1Beta1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

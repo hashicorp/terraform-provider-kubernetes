@@ -6,7 +6,7 @@ import (
 )
 
 func cronJobSpecFieldsV1Beta1() map[string]*schema.Schema {
-	s := map[string]*schema.Schema{
+	return map[string]*schema.Schema{
 		"concurrency_policy": {
 			Type:         schema.TypeString,
 			Optional:     true,
@@ -65,6 +65,4 @@ func cronJobSpecFieldsV1Beta1() map[string]*schema.Schema {
 			Description: "This flag tells the controller to suspend subsequent executions, it does not apply to already started executions. Defaults to false.",
 		},
 	}
-
-	return s
 }

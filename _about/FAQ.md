@@ -9,7 +9,7 @@ The HashiCorp Terraform Kubernetes provider team is :
 * John Houston, Engineer - [@jrhouston](https://github.com/jrhouston)
 * Sacha Rybolovlev, Engineer - [@arybolovlev](https://github.com/arybolovlev)
 * Mauricio Alvarez Leon, Engineer - [@BBBmau](https://github.com/BBBmau) 
-* Sheneska Williams, Engineer - [@sheneska]([https://github.com/sheneska]) 
+* Sheneska Williams, Engineer - [@sheneska](https://github.com/sheneska) 
 * Brandy Jackson, Engineering Manager - [@ibrandyjackson](https://github.com/ibrandyjackson)
 
 Our collaborators are:

@@ -52,6 +52,8 @@ For specific usage examples, see the guides for [AKS](https://github.com/hashico
 
 ## Authentication
 
+~> NOTE: The provider does not use the `KUBECONFIG` environment variable by default. See the attribute reference below for the environment variables that map to provider block attributes.
+
 The Kubernetes provider can get its configuration in two ways:
 
 1. _Explicitly_ by supplying attributes to the provider block. This includes:

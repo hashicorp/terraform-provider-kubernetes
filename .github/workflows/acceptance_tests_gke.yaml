@@ -123,7 +123,7 @@ jobs:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
           access_token_lifetime: "10800s"
       - name: "Set up Cloud SDK"
-        uses: google-github-actions/setup-gcloud@v1
+        uses: google-github-actions/setup-gcloud@62d4898025f6041e16b1068643bfc5a696863587 # v1.1.0
         with:
           install_components: "beta,gke-gcloud-auth-plugin"
       - name: "Initialize gcloud SDK"
@@ -174,7 +174,7 @@ jobs:
           terraform_version: ${{ github.event.inputs.terraformVersion }}
           terraform_wrapper: false
       - name: "Set up Cloud SDK"
-        uses: google-github-actions/setup-gcloud@v1
+        uses: google-github-actions/setup-gcloud@62d4898025f6041e16b1068643bfc5a696863587 # v1.1.0
         with:
           install_components: "beta,gke-gcloud-auth-plugin"
       - name: "Initialize gcloud SDK"

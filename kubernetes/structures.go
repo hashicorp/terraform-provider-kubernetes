@@ -126,14 +126,10 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMet
 		prefix = metaPrefix[0]
 	}
 
-	if prefix == "" {
-		configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
-		ignoreAnnotations := providerMetadata.(kubeClientsets).IgnoreAnnotations
-		annotations := removeInternalKeys(meta.Annotations, configAnnotations)
-		m["annotations"] = removeKeys(annotations, configAnnotations, ignoreAnnotations)
-	} else {
-		m["annotations"] = d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
-	}
+	configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
+	ignoreAnnotations := providerMetadata.(kubeClientsets).IgnoreAnnotations
+	annotations := removeInternalKeys(meta.Annotations, configAnnotations)
+	m["annotations"] = removeKeys(annotations, configAnnotations, ignoreAnnotations)
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}

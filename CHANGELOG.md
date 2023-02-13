@@ -1,3 +1,8 @@
+## 2.18.0 (Unreleased, 2023)
+
+## Community Contributors :raised_hands:
+- @AnisimoffNikita made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1519
+
 ## 2.17.0 (January 23, 2023)
 
 ENHANCEMENT:

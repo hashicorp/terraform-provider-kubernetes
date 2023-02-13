@@ -1,3 +1,7 @@
 ```release-note:feature
-Add kubernetes_resources data source
+New data source: `kubernetes_resources`.
+```
+
+```release-note:docs
+New data source: `kubernetes_resources`.
 ```

@@ -2,6 +2,6 @@
 New data source: `kubernetes_resources`.
 ```
 
-```release-note:docs
+```release-note:doc
 New data source: `kubernetes_resources`.
 ```

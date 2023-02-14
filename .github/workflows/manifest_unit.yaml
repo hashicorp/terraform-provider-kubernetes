@@ -1,16 +1,18 @@
-name: Unit tests
+name: Manifest unit tests
+
 on:
   push:
     branches:
-      - master
       - main
     paths:
-      - "**.go"
+      - "manifest/**/*.go"
   pull_request:
     branches:
-      - master
+      - main
     paths:
-      - "**.go"
+      - "manifest/**/*.go"
+  workflow_dispatch:
+
 jobs:
   unit_tests:
     runs-on: ubuntu-latest

@@ -1,3 +1,7 @@
 ```release-note:enhancement
-Add support for adding annotations to resources with pod templates
+`resource/kubernetes_annotations`: Add a new attribute `template_annotations` that allows adding annotations to resources with pod templates.
+```
+
+```release-note:doc
+`resource/kubernetes_annotations`: Add a new attribute `template_annotations`.
 ```

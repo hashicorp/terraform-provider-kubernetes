@@ -1,5 +1,37 @@
 ## 2.18.0 (Unreleased, 2023)
 
+FEATURES:
+
+* New data source: `data_source/kubernetes_nodes`. [[GH-1921](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1921)]
+* New data source: `data_source/kubernetes_resources`. [[GH-1967](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1967)]
+* New resource: `resource/kubernetes_node_taint`. [[GH-1921](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1921)]
+
+ENHANCEMENT:
+
+* `resource/kubernetes_annotations`: Add a new attribute `template_annotations` that allows adding annotations to resources with pod templates. [[GH-1972](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1972)]
+* `resource/kubernetes_cron_job_v1`: Add a new attribute `spec.timezone`. [[GH-1971](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1971)]
+
+BUG FIXES:
+
+* `resource/kubernetes_mutating_webhook_configuration`: Fix an issue when the delete operation may not be idempotent. [[GH-1999](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1999)]
+* `resource/kubernetes_network_policy_v1`: Fix an issue when the delete operation may not be idempotent. [[GH-1999](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1999)]
+* `resource/kubernetes_network_policy`: Fix an issue when the delete operation may not be idempotent. [[GH-1999](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1999)]
+* `resource/kubernetes_persistent_volume_claim_v1`: Fix an issue when the delete operation may not be idempotent. [[GH-1999](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1999)]
+* `resource/kubernetes_persistent_volume_claim`: Fix an issue when the delete operation may not be idempotent. [[GH-1999](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1999)]
+* `resource/kubernetes_storage_class_v1`: Fix an issue when changing the value of the attribute `allow_volume_expansion` does not alter Kubernetes resource. [[GH-1519](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1519)]
+* `resource/kubernetes_storage_class`: Fix an issue when changing the value of the attribute `allow_volume_expansion` does not alter Kubernetes resource. [[GH-1519](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1519)]
+
+DOCS:
+
+* New data source: `data_source/kubernetes_nodes`. [[GH-1921](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1921)]
+* New data source: `data_source/kubernetes_resources`. [[GH-1967](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1967)]
+* New resource: `resource/kubernetes_node_taint`. [[GH-1921](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1921)]
+* `provider`: Add a note regarding the `KUBECONFIG` environment variable. [[GH-1989](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1989)]
+* `resource/kubernetes_annotations`: Add a new attribute `template_annotations`. [[GH-1972](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1972)]
+* `resource/kubernetes_job_v1`: Add documentation for the attribute `spec.completion_mode`. [[GH-1997](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1997)]
+* `resource/kubernetes_job`: Add documentation for the attribute `spec.completion_mode`. [[GH-1997](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1997)]
+* `resource/resource_kubernetes_cron_job_v1`: Add a new attribute `spec.timezone`. [[GH-1971](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1971)]
+
 ## Community Contributors :raised_hands:
 - @AnisimoffNikita made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1519
 

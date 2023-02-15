@@ -34,6 +34,7 @@ DOCS:
 
 ## Community Contributors :raised_hands:
 - @AnisimoffNikita made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1519
+- @partcyborg made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1921
 
 ## 2.17.0 (January 23, 2023)
 

@@ -474,7 +474,6 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 		"volume": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			Computed:    true,
 			Description: "List of volumes that can be mounted by containers belonging to the pod. More info: http://kubernetes.io/docs/user-guide/volumes",
 			Elem:        volumeSchema(isUpdatable),
 		},

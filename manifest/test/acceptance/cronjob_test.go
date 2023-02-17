@@ -29,7 +29,7 @@ func TestKubernetesManifest_CronJob(t *testing.T) {
 	defer func() {
 		tf.Destroy(ctx)
 		tf.Close()
-		k8shelper.AssertNamespacedResourceDoesNotExist(t, "batch/v1beta1", "cronjobs", namespace, name)
+		k8shelper.AssertNamespacedResourceDoesNotExist(t, "batch/v1", "cronjobs", namespace, name)
 	}()
 
 	k8shelper.CreateNamespace(t, namespace)
@@ -44,7 +44,7 @@ func TestKubernetesManifest_CronJob(t *testing.T) {
 	tf.Init(ctx)
 	tf.Apply(ctx)
 
-	k8shelper.AssertNamespacedResourceExists(t, "batch/v1beta1", "cronjobs", namespace, name)
+	k8shelper.AssertNamespacedResourceExists(t, "batch/v1", "cronjobs", namespace, name)
 
 	s, err := tf.State(ctx)
 	if err != nil {

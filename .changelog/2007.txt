@@ -1,0 +1,3 @@
+```release-node:doc
+`resource/kubernetes_node_taint`: Support imports, throw warning if node doesn't exist.
+```

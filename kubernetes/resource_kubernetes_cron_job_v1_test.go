@@ -189,9 +189,9 @@ func testAccKubernetesCronJobV1Config_basic(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_cron_job_v1" "test" {
   metadata {
     name = "%s"
-	annotations = {
-		"hashicorp" = "terraform"
-	}
+    annotations = {
+      "hashicorp" = "terraform"
+    }
   }
   spec {
     concurrency_policy            = "Replace"
@@ -203,18 +203,18 @@ func testAccKubernetesCronJobV1Config_basic(name, imageName string) string {
     suspend                       = true
     job_template {
       metadata {
-		annotations = {
-			"cluster-autoscaler.kubernetes.io/safe-to-evict" = "false"
-		}
-	  }
+        annotations = {
+          "cluster-autoscaler.kubernetes.io/safe-to-evict" = "false"
+        }
+      }
       spec {
         backoff_limit = 2
         template {
           metadata {
-			annotations = {
-				"controller.kubernetes.io/pod-deletion-cost" = 10000
-			}
-		  }
+            annotations = {
+              "controller.kubernetes.io/pod-deletion-cost" = 10000
+            }
+          }
           spec {
             container {
               name    = "hello"

@@ -1,4 +1,10 @@
-## 2.18.0 (Unreleased, 2023)
+## 2.18.1 (February 21, 2023)
+
+HOTFIX:
+
+* kubernetes_manifest: fix crash when waiting on conditions that are not yet present [[GH-2008](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2008)]
+
+## 2.18.0 (February 15, 2023)
 
 FEATURES:
 

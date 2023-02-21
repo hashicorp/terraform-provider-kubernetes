@@ -343,7 +343,7 @@ func (w *ConditionsWaiter) Wait(ctx context.Context) error {
 		}
 
 		if status, ok := res.Object["status"].(map[string]interface{}); ok {
-			if conditions := status["conditions"].([]interface{}); ok && len(conditions) > 0 {
+			if conditions, ok := status["conditions"].([]interface{}); ok && len(conditions) > 0 {
 				conditionsMet := true
 				for _, c := range w.conditions {
 					var condition map[string]tftypes.Value

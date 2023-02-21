@@ -19,7 +19,10 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 	imageName := alpineImageVersion
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.25.0")
+		},
 		IDRefreshName:     "kubernetes_cron_job_v1.test",
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
@@ -35,10 +38,12 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "spec.0.schedule"),
+					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "spec.0.timezone"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.concurrency_policy", "Replace"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.failed_jobs_history_limit", "5"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.schedule", "1 0 * * *"),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.timezone", "Etc/UTC"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.starting_deadline_seconds", "10"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.successful_jobs_history_limit", "10"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.suspend", "true"),
@@ -62,6 +67,7 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.concurrency_policy", "Allow"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.failed_jobs_history_limit", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.schedule", "1 0 * * *"),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.timezone", ""),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.starting_deadline_seconds", "0"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.successful_jobs_history_limit", "3"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.suspend", "false"),
@@ -83,7 +89,10 @@ func TestAccKubernetesCronJobV1_extra(t *testing.T) {
 	imageName := alpineImageVersion
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.25.0")
+		},
 		IDRefreshName:     "kubernetes_cron_job_v1.test",
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
@@ -188,6 +197,7 @@ func testAccKubernetesCronJobV1Config_basic(name, imageName string) string {
     concurrency_policy            = "Replace"
     failed_jobs_history_limit     = 5
     schedule                      = "1 0 * * *"
+    timezone                      = "Etc/UTC"
     starting_deadline_seconds     = 10
     successful_jobs_history_limit = 10
     suspend                       = true
@@ -257,6 +267,7 @@ func testAccKubernetesCronJobV1Config_extra(name, imageName string) string {
   }
   spec {
     schedule                      = "1 0 * * *"
+    timezone                      = "Etc/UTC"
     concurrency_policy            = "Forbid"
     successful_jobs_history_limit = 10
     failed_jobs_history_limit     = 10
@@ -288,6 +299,7 @@ func testAccKubernetesCronJobV1Config_extraModified(name, imageName string) stri
   }
   spec {
     schedule                      = "1 0 * * *"
+    timezone                      = "Etc/UTC"
     concurrency_policy            = "Forbid"
     successful_jobs_history_limit = 2
     failed_jobs_history_limit     = 2

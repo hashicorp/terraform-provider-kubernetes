@@ -11,8 +11,16 @@ import (
 )
 
 // ValueToType transforms a value along a new type and returns a new value conforming to the given type
-func ValueToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tftypes.Value, []*tfprotov5.Diagnostic) {
-	var diags []*tfprotov5.Diagnostic
+func ValueToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (val tftypes.Value, diags []*tfprotov5.Diagnostic) {
+	defer func() {
+		if err := recover(); err != nil {
+			diags = append(diags, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
+				Detail:   err.(error).Error(),
+			})
+		}
+	}()
 	if t == nil {
 		diags = append(diags, &tfprotov5.Diagnostic{
 			Attribute: p,

@@ -154,6 +154,15 @@ func podAffinityTermFields() map[string]*schema.Schema {
 				Schema: labelSelectorFields(true),
 			},
 		},
+		"namespace_selector": {
+			Type:        schema.TypeList,
+			Description: "A label query over a set of namespaces.",
+			Optional:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: namespaceSelectorFields(true),
+			},
+		},
 		"namespaces": {
 			Type:        schema.TypeSet,
 			Description: "namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'",

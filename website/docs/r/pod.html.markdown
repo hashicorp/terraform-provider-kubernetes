@@ -314,6 +314,7 @@ The following arguments are supported:
 #### Arguments
 
 * `label_selector` - (Optional) A label query over a set of resources, in this case pods.
+* `namespace_selector` - (Optional) A label query over a set of namespaces.
 * `namespaces` - (Optional) Specifies which namespaces the `label_selector` applies to (matches against). Null or empty list means "this pod's namespace"
 * `topology_key` - (Optional) This pod should be co-located (affinity) or not co-located (anti-affinity) with the pods matching the `label_selector` in the specified namespaces, where co-located is defined as running on a node whose value of the label with key `topology_key` matches that of any node on which any of the selected pods is running. Empty `topology_key` is not allowed.
 

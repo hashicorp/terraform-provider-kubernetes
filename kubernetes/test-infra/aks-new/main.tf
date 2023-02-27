@@ -2,6 +2,14 @@ provider "azurerm" {
   features {}
 }
 
+
+# TODO:
+# Generate a random name for the aks cluster
+# Make variables for:
+# - location
+# - node count
+# - vm size
+
 resource "azurerm_resource_group" "test_group" {
   name     = "test-group"
   location = "West Europe"

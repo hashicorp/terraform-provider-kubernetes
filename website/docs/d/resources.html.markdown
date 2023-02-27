@@ -10,13 +10,31 @@ description: |-
 
 This data source is a generic way to query for a list of Kubernetes resources and filter them using a label or field selector.
 
-### Example: Get a list of namespaces excluding "kube-system"
+### Example: Get a list of namespaces excluding "kube-system" using `field_selector`
 
 ```hcl
 data "kubernetes_resources" "example" {
   api_version    = "v1"
   kind           = "Namespace"
   field_selector = "metadata.name!=kube-system"
+}
+
+output "test" {
+  value = length(data.kubernetes_resources.namespaces.objects)
+}
+```
+
+### Example: Get a list of namespaces excluding "kube-system" using `label_selector`
+
+```hcl
+data "kubernetes_resources" "example" {
+  api_version    = "v1"
+  kind           = "Namespace"
+  label_selector = "kubernetes.io/metadata.name!=kube-system"
+}
+
+output "test" {
+  value = length(data.kubernetes_resources.namespaces.objects)
 }
 ```
 

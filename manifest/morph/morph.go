@@ -22,13 +22,7 @@ func ValueToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (val
 		return tftypes.Value{}, diags
 	}
 	if v.IsNull() {
-		if err := tftypes.ValidateValue(t, nil); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, nil, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, nil), nil
@@ -89,13 +83,7 @@ func morphBoolToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 	}
 	switch {
 	case t.Is(tftypes.String):
-		if err := tftypes.ValidateValue(t, strconv.FormatBool(bnat)); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, strconv.FormatBool(bnat), p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, strconv.FormatBool(bnat)), nil
@@ -129,13 +117,7 @@ func morphNumberToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 	}
 	switch {
 	case t.Is(tftypes.String):
-		if err := tftypes.ValidateValue(t, vnat.String()); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, vnat.String(), p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, vnat.String()), nil
@@ -180,13 +162,7 @@ func morphStringToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			return tftypes.Value{}, diags
 		}
 		nv := new(big.Float).SetFloat64(fv)
-		if err := tftypes.ValidateValue(t, nv); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, nv, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, nv), nil
@@ -201,13 +177,7 @@ func morphStringToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			})
 			return tftypes.Value{}, diags
 		}
-		if err := tftypes.ValidateValue(t, bv); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, bv, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, bv), nil
@@ -258,13 +228,7 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 			}
 			nlvals[i] = nv
 		}
-		if err := tftypes.ValidateValue(t, nlvals); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, nlvals, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, nlvals), nil
@@ -298,13 +262,7 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 			}
 			tvals[i] = nv
 		}
-		if err := tftypes.ValidateValue(t, tvals); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, tvals, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, tvals), nil
@@ -329,13 +287,7 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 			}
 			svals[i] = nv
 		}
-		if err := tftypes.ValidateValue(t, svals); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, svals, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, svals), nil
@@ -407,13 +359,7 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 			lvals[i] = nv
 			eltypes[i] = nv.Type()
 		}
-		if err := tftypes.ValidateValue(tftypes.Tuple{ElementTypes: eltypes}, lvals); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(tftypes.Tuple{ElementTypes: eltypes}, lvals, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(tftypes.Tuple{ElementTypes: eltypes}, lvals), diags
@@ -438,13 +384,7 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 			}
 			lvals[i] = nv
 		}
-		if err := tftypes.ValidateValue(t, lvals); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, lvals, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, lvals), diags
@@ -469,13 +409,7 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 			}
 			svals[i] = nv
 		}
-		if err := tftypes.ValidateValue(t, svals); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, svals, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, svals), diags
@@ -526,13 +460,7 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			}
 			svals[i] = nv
 		}
-		if err := tftypes.ValidateValue(t, svals); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, svals, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, svals), diags
@@ -557,13 +485,7 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			}
 			lvals[i] = nv
 		}
-		if err := tftypes.ValidateValue(t, lvals); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, lvals, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, lvals), diags
@@ -597,13 +519,7 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			}
 			tvals[i] = nv
 		}
-		if err := tftypes.ValidateValue(t, tvals); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, tvals, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, tvals), diags
@@ -664,13 +580,7 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			}
 			ovals[k] = nv
 		}
-		if err := tftypes.ValidateValue(t, ovals); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, ovals, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, ovals), diags
@@ -695,13 +605,7 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			}
 			nmvals[k] = nv
 		}
-		if err := tftypes.ValidateValue(t, nmvals); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, nmvals, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, nmvals), diags
@@ -766,13 +670,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 		// tftypes.NewValue() fails if any of the attributes in the object don't have a corresponding value
 		for k := range t.(tftypes.Object).AttributeTypes {
 			if _, ok := ovals[k]; !ok {
-				if err := tftypes.ValidateValue(t.(tftypes.Object).AttributeTypes[k], nil); err != nil {
-					diags = append(diags, &tfprotov5.Diagnostic{
-						Attribute: p,
-						Severity:  tfprotov5.DiagnosticSeverityError,
-						Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-						Detail:    err.(error).Error(),
-					})
+				if diags := ValidateValue(t.(tftypes.Object).AttributeTypes[k], nil, p); diags != nil {
 					return tftypes.Value{}, diags
 				}
 				ovals[k] = tftypes.NewValue(t.(tftypes.Object).AttributeTypes[k], nil)
@@ -782,13 +680,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 		for k, v := range ovals {
 			otypes[k] = v.Type()
 		}
-		if err := tftypes.ValidateValue(tftypes.Object{AttributeTypes: otypes}, ovals); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(tftypes.Object{AttributeTypes: otypes}, ovals, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(tftypes.Object{AttributeTypes: otypes}, ovals), diags
@@ -813,13 +705,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			}
 			mvals[k] = nv
 		}
-		if err := tftypes.ValidateValue(t, mvals); err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Attribute: p,
-				Severity:  tfprotov5.DiagnosticSeverityError,
-				Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
-				Detail:    err.(error).Error(),
-			})
+		if diags := ValidateValue(t, mvals, p); diags != nil {
 			return tftypes.Value{}, diags
 		}
 		return tftypes.NewValue(t, mvals), diags
@@ -879,4 +765,18 @@ func attributePathSummary(p *tftypes.AttributePath) string {
 		}
 	}
 	return b.String()
+}
+
+func ValidateValue(t tftypes.Type, val interface{}, p *tftypes.AttributePath) []*tfprotov5.Diagnostic {
+	var diags []*tfprotov5.Diagnostic
+	if err := tftypes.ValidateValue(t, val); err != nil {
+		diags = append(diags, &tfprotov5.Diagnostic{
+			Attribute: p,
+			Severity:  tfprotov5.DiagnosticSeverityError,
+			Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
+			Detail:    err.(error).Error(),
+		})
+		return diags
+	}
+	return nil
 }

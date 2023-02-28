@@ -33,6 +33,7 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesCronJobV1Exists("kubernetes_cron_job_v1.test", &conf1),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "metadata.0.annotations.hashicorp", "terraform"),
 					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "metadata.0.uid"),
@@ -46,8 +47,10 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.starting_deadline_seconds", "10"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.successful_jobs_history_limit", "10"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.suspend", "true"),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.metadata.0.annotations.cluster-autoscaler.kubernetes.io/safe-to-evict", "false"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.backoff_limit", "2"),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.template.0.metadata.0.annotations.controller.kubernetes.io/pod-deletion-cost", "10000"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.template.0.spec.0.container.0.image", imageName),
 				),
@@ -186,6 +189,9 @@ func testAccKubernetesCronJobV1Config_basic(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_cron_job_v1" "test" {
   metadata {
     name = "%s"
+    annotations = {
+      "hashicorp" = "terraform"
+    }
   }
   spec {
     concurrency_policy            = "Replace"
@@ -196,11 +202,19 @@ func testAccKubernetesCronJobV1Config_basic(name, imageName string) string {
     successful_jobs_history_limit = 10
     suspend                       = true
     job_template {
-      metadata {}
+      metadata {
+        annotations = {
+          "cluster-autoscaler.kubernetes.io/safe-to-evict" = "false"
+        }
+      }
       spec {
         backoff_limit = 2
         template {
-          metadata {}
+          metadata {
+            annotations = {
+              "controller.kubernetes.io/pod-deletion-cost" = 10000
+            }
+          }
           spec {
             container {
               name    = "hello"

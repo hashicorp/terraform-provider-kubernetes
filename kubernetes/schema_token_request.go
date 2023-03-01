@@ -1,6 +1,9 @@
 package kubernetes
 
-import "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+import (
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	apiv1 "k8s.io/api/authentication/v1"
+)
 
 func tokenRequestSpecFields() map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
@@ -13,31 +16,36 @@ func tokenRequestSpecFields() map[string]*schema.Schema {
 			Type:        schema.TypeList,
 			Optional:    true,
 			MaxItems:    1,
-			Description: "Optional pod scheduling constraints.",
-			// Elem: &schema.Resource{
-			// 	Schema: (),
-			// },
+			Description: apiv1.TokenRequest{}.Spec.SwaggerDoc()["boundObjectRef"],
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"apiVersion": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: apiv1.TokenRequest{}.Spec.BoundObjectRef.SwaggerDoc()["apiVersion"],
+					},
+					"kind": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: apiv1.TokenRequest{}.Spec.BoundObjectRef.SwaggerDoc()["kind"],
+					},
+					"name": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: apiv1.TokenRequest{}.Spec.BoundObjectRef.SwaggerDoc()["name"],
+					},
+					"uid": {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: apiv1.TokenRequest{}.Spec.BoundObjectRef.SwaggerDoc()["uid"],
+					},
+				},
+			},
 		},
-		"expirationSeconds": {},
-	}
-	return s
-}
-
-func tokenRequestStatusFields() map[string]*schema.Schema {
-	s := map[string]*schema.Schema{
-		"expirationTimestamp": {
-			Type:        schema.TypeList,
-			MaxItems:    1,
+		"expirationSeconds": {
+			Type:        schema.TypeInt,
 			Optional:    true,
-			Description: "Optional pod scheduling constraints.",
-		},
-		"token": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Optional pod scheduling constraints.",
-			// Elem: &schema.Resource{
-			// 	Schema: (),
-			// },
+			Description: apiv1.TokenRequest{}.Spec.SwaggerDoc()["expirationSeconds"],
 		},
 	}
 	return s

@@ -2,9 +2,11 @@ package kubernetes
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	apiv1 "k8s.io/api/authentication/v1"
 )
 
 func resourceKubernetesTokenRequest() *schema.Resource {
@@ -15,31 +17,10 @@ func resourceKubernetesTokenRequest() *schema.Resource {
 		DeleteContext: resourceKubernetesTokenDelete,
 
 		Schema: map[string]*schema.Schema{
-			"api_version": {
-				Type:        schema.TypeString,
-				Description: "The apiVersion of the resource to annotate.",
-				Required:    true,
-				ForceNew:    true,
-			},
-			"kind": {
-				Type:        schema.TypeString,
-				Description: "The kind of the resource to annotate.",
-				Required:    true,
-				ForceNew:    true,
-			},
 			"metadata": namespacedMetadataSchema("token request", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: "Spec of TokenRequest API",
-				Required:    true,
-				MaxItems:    1,
-				Elem: &schema.Resource{
-					Schema: tokenRequestSpecFields(),
-				},
-			},
-			"status": {
-				Type:        schema.TypeList,
-				Description: "Spec of TokenRequest API",
+				Description: apiv1.TokenRequest{}.Spec.SwaggerDoc()["spec"],
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
@@ -51,19 +32,23 @@ func resourceKubernetesTokenRequest() *schema.Resource {
 }
 
 func resourceKubernetesTokenRequestCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	// conn, err := meta.(KubeClientsets).MainClientset()
-	// if err != nil {
-	// 	return diag.FromErr(err)
-	// }
+	_, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	// metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	// rules := expandRules(d.Get("rule").([]interface{}))
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	spec := expandTokenRequestSpec(d.Get("spec").([]interface{}))
 
-	// role := v1.Role{
-	// 	ObjectMeta: metadata,
-	// 	Rules:      *rules,
-	// }
-	// log.Printf("[INFO] Creating new role: %#v", role)
+	request := apiv1.TokenRequest{
+		ObjectMeta: metadata,
+		Spec:       *spec,
+	}
+
+	log.Printf("[INFO] Creating new TokenRequest: %#v", request)
+	// can't seem to find TokenRequest()
+	//out , err := conn.AuthenticationV1().TokenReviews().Create().
+
 	// out, err := conn.RbacV1().Roles(metadata.Namespace).Create(ctx, &role, metav1.CreateOptions{})
 	// if err != nil {
 	// 	return diag.FromErr(err)
@@ -72,7 +57,7 @@ func resourceKubernetesTokenRequestCreate(ctx context.Context, d *schema.Resourc
 	// log.Printf("[INFO] Submitted new role: %#v", out)
 	// d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesRoleRead(ctx, d, meta)
+	return resourceKubernetesTokenRequestRead(ctx, d, meta)
 }
 
 func resourceKubernetesTokenRequestRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

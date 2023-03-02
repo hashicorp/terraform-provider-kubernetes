@@ -7,6 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	apiv1 "k8s.io/api/authentication/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func resourceKubernetesTokenRequest() *schema.Resource {
@@ -32,7 +34,7 @@ func resourceKubernetesTokenRequest() *schema.Resource {
 }
 
 func resourceKubernetesTokenRequestCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	_, err := meta.(KubeClientsets).MainClientset()
+	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -46,16 +48,14 @@ func resourceKubernetesTokenRequestCreate(ctx context.Context, d *schema.Resourc
 	}
 
 	log.Printf("[INFO] Creating new TokenRequest: %#v", request)
-	// can't seem to find TokenRequest()
-	//out , err := conn.AuthenticationV1().TokenReviews().Create().
+	// TODO: ask how we would get the service account name, probably add an attribute to it.
+	out, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).CreateToken(ctx, "", &request, metav1.CreateOptions{})
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	// out, err := conn.RbacV1().Roles(metadata.Namespace).Create(ctx, &role, metav1.CreateOptions{})
-	// if err != nil {
-	// 	return diag.FromErr(err)
-	// }
-
-	// log.Printf("[INFO] Submitted new role: %#v", out)
-	// d.SetId(buildId(out.ObjectMeta))
+	log.Printf("[INFO] Submitted new TokenRequest: %#v", out)
+	d.SetId(buildId(out.ObjectMeta))
 
 	return resourceKubernetesTokenRequestRead(ctx, d, meta)
 }
@@ -137,26 +137,26 @@ func resourceKubernetesTokenRequestUpdate(ctx context.Context, d *schema.Resourc
 }
 
 func resourceKubernetesTokenDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	// conn, err := meta.(KubeClientsets).MainClientset()
-	// if err != nil {
-	// 	return diag.FromErr(err)
-	// }
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	// namespace, name, err := idParts(d.Id())
-	// if err != nil {
-	// 	return diag.FromErr(err)
-	// }
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	// log.Printf("[INFO] Deleting role: %#v", name)
-	// err = conn.RbacV1().Roles(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-	// if err != nil {
-	// 	if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
-	// 		return nil
-	// 	}
-	// 	return diag.FromErr(err)
-	// }
+	log.Printf("[INFO] Deleting Token: %#v", name)
+	err = conn.CoreV1().ServiceAccounts(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
+		return diag.FromErr(err)
+	}
 
-	// log.Printf("[INFO] Role %s deleted", name)
+	log.Printf("[INFO] Token %s deleted", name)
 
 	return nil
 }

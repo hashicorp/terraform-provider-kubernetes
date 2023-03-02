@@ -56,6 +56,7 @@ func tokenRequestSpecFields() map[string]*schema.Schema {
 		"expirationseconds": {
 			Type:        schema.TypeInt,
 			Optional:    true,
+			Default:     600,    // must be minimum of 10 minutes for expiration
 			Description: "test", //apiv1.TokenRequest{}.Spec.SwaggerDoc()["expirationSeconds"],
 		},
 	}

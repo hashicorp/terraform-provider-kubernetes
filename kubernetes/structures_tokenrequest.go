@@ -84,7 +84,7 @@ func expandBoundObjectReference(p []interface{}) (*v1.BoundObjectReference, erro
 	}
 
 	if v, ok := in["uid"]; ok {
-		obj.UID = v.(types.UID)
+		obj.UID = types.UID(v.(string))
 	}
 
 	return obj, nil

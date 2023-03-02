@@ -108,6 +108,10 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["security_context"] = flattenPodSecurityContext(in.SecurityContext)
 	}
 
+	if in.SchedulerName != "" {
+		att["scheduler_name"] = in.SchedulerName
+	}
+
 	if in.ServiceAccountName != "" {
 		att["service_account_name"] = in.ServiceAccountName
 	}
@@ -775,6 +779,10 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 			return obj, err
 		}
 		obj.SecurityContext = ctx
+	}
+
+	if v, ok := in["scheduler_name"].(string); ok {
+		obj.SchedulerName = v
 	}
 
 	if v, ok := in["service_account_name"].(string); ok {

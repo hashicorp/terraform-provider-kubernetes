@@ -17,9 +17,9 @@ func flattenTokenRequestSpec(in v1.TokenRequestSpec, d *schema.ResourceData, met
 	if err != nil {
 		return nil, err
 	}
-	att["boundObjectRef"] = bndObjRef
+	att["boundobjectref"] = bndObjRef
 
-	att["expirationSeconds"] = int(*in.ExpirationSeconds)
+	att["expirationseconds"] = int(*in.ExpirationSeconds)
 
 	return []interface{}{att}, nil
 }
@@ -27,7 +27,7 @@ func flattenTokenRequestSpec(in v1.TokenRequestSpec, d *schema.ResourceData, met
 func flattenBoundObjectReference(in v1.BoundObjectReference, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
-	att["apiVersion"] = in.APIVersion
+	att["apiversion"] = in.APIVersion
 
 	att["kind"] = in.Kind
 
@@ -47,17 +47,17 @@ func expandTokenRequestSpec(p []interface{}) *v1.TokenRequestSpec {
 	}
 	in := p[0].(map[string]interface{})
 
-	if v, ok := in["audiences"]; ok {
-		obj.Audiences = v.([]string)
+	if v, ok := in["audiences"].([]interface{}); ok && len(v) > 0 {
+		obj.Audiences = expandStringSlice(v)
 	}
 
-	bdObjRef, err := expandBoundObjectReference(in["boundObjectRef"].([]interface{}))
+	bdObjRef, err := expandBoundObjectReference(in["boundobjectref"].([]interface{}))
 	if err != nil {
 		return obj
 	}
 	obj.BoundObjectRef = bdObjRef
 
-	if v, ok := in["expirationSeconds"].(int); ok {
+	if v, ok := in["expirationseconds"].(int); ok {
 		obj.ExpirationSeconds = ptrToInt64(int64(v))
 	}
 
@@ -71,7 +71,7 @@ func expandBoundObjectReference(p []interface{}) (*v1.BoundObjectReference, erro
 	}
 	in := p[0].(map[string]interface{})
 
-	if v, ok := in["apiVersion"]; ok {
+	if v, ok := in["apiversion"]; ok {
 		obj.APIVersion = v.(string)
 	}
 

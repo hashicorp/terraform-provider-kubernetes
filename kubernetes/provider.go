@@ -341,7 +341,7 @@ func Provider() *schema.Provider {
 			"kubernetes_annotations": resourceKubernetesAnnotations(),
 
 			// authentication
-			"kubernetes_token_request": resourceKubernetesTokenRequest(),
+			"kubernetes_token_request_v1": resourceKubernetesTokenRequestV1(),
 		},
 	}
 

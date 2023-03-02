@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_manifest" "customresourcedefinition_cephrbdmirrors_ceph_rook_io" {
   manifest = {
     apiVersion = "apiextensions.k8s.io/v1"

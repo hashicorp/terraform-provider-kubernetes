@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 variable "namespace" {
   description = "The namespace where you want to deploy terraform-k8s"
   type        = string

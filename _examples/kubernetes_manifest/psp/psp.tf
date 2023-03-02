@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 
 # PodSecurityPolicy only works on Kubernetes 1.17+
 resource "kubernetes_manifest" "psp" {

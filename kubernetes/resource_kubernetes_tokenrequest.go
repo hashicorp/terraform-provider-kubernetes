@@ -19,6 +19,11 @@ func resourceKubernetesTokenRequest() *schema.Resource {
 		DeleteContext: resourceKubernetesTokenDelete,
 
 		Schema: map[string]*schema.Schema{
+			"serviceAcccount": {
+				Type:        schema.TypeString,
+				Description: "Service Account name that will receive the token request.",
+				Required:    true,
+			},
 			"metadata": namespacedMetadataSchema("token request", true),
 			"spec": {
 				Type:        schema.TypeList,
@@ -41,6 +46,7 @@ func resourceKubernetesTokenRequestCreate(ctx context.Context, d *schema.Resourc
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec := expandTokenRequestSpec(d.Get("spec").([]interface{}))
+	saName := d.Get("serviceAcccount").(string)
 
 	request := apiv1.TokenRequest{
 		ObjectMeta: metadata,
@@ -49,7 +55,7 @@ func resourceKubernetesTokenRequestCreate(ctx context.Context, d *schema.Resourc
 
 	log.Printf("[INFO] Creating new TokenRequest: %#v", request)
 	// TODO: ask how we would get the service account name, probably add an attribute to it.
-	out, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).CreateToken(ctx, "", &request, metav1.CreateOptions{})
+	out, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).CreateToken(ctx, saName, &request, metav1.CreateOptions{})
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -101,25 +107,25 @@ func resourceKubernetesTokenRequestRead(ctx context.Context, d *schema.ResourceD
 }
 
 func resourceKubernetesTokenRequestUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	// conn, err := meta.(KubeClientsets).MainClientset()
-	// if err != nil {
-	// 	return diag.FromErr(err)
-	// }
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	// namespace, name, err := idParts(d.Id())
-	// if err != nil {
-	// 	return diag.FromErr(err)
-	// }
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	// ops := patchMetadata("metadata.0.", "/metadata/", d)
-	// if d.HasChange("rule") {
-	// 	rules := expandRules(d.Get("rule").([]interface{}))
+	ops := patchMetadata("metadata.0.", "/metadata/", d)
+	if d.HasChange("rule") {
+		rules := expandRules(d.Get("rule").([]interface{}))
 
-	// 	ops = append(ops, &ReplaceOperation{
-	// 		Path:  "/rules",
-	// 		Value: rules,
-	// 	})
-	// }
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/rules",
+			Value: rules,
+		})
+	}
 
 	// data, err := ops.MarshalJSON()
 	// if err != nil {

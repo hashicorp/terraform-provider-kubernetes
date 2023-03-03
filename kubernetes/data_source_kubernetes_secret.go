@@ -16,7 +16,7 @@ func dataSourceKubernetesSecret() *schema.Resource {
 		ReadContext: dataSourceKubernetesSecretRead,
 
 		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("secret", false),
+			"metadata": namespacedMetadataSchema("secret", true),
 			"data": {
 				Type:        schema.TypeMap,
 				Description: "A map of the secret data.",

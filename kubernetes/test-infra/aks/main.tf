@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 locals {
   random_prefix = "${var.prefix}-${random_id.tf-k8s-acc.hex}"
 }

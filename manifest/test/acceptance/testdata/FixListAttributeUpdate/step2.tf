@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 # Reported in https://github.com/hashicorp/terraform-provider-kubernetes-alpha/issues/251
 #
 resource "kubernetes_manifest" "test" {

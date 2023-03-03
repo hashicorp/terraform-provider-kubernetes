@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_secret" "workspace-secret" {
   metadata {
     name      = var.workspace_secrets

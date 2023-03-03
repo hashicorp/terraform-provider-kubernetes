@@ -20,6 +20,8 @@ jobs:
 
     - name: Install copywrite
       uses: hashicorp/setup-copywrite@3ace06ad72e6ec679ea8572457b17dbc3960b8ce # v1.0.0
+      with:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Validate Header Compliance
       run: copywrite headers --plan

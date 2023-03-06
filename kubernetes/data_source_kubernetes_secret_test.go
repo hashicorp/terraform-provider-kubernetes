@@ -49,6 +49,56 @@ func TestAccKubernetesDataSourceSecret_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDataSourceSecret_GenerateName(t *testing.T) {
+	generate_name := "testing-name"
+	resourceName := "kubernetes_secret.test"
+	datasourceName := "data.kubernetes_secret.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDataSourceSecretConfig_generateName(generate_name),
+			},
+			{
+				Config: testAccKubernetesDataSourceSecretConfig_generateName(generate_name) +
+					testAccKubernetesDataSourceSecretConfig_readGenerateName(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.name", resourceName, "metadata.0.name"),
+					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.generation", resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.resource_version", resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.uid", resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttrPair(datasourceName, "data.%", resourceName, "data.%"),
+					resource.TestCheckResourceAttrPair(datasourceName, "data.one", resourceName, "data.one"),
+					resource.TestCheckResourceAttrPair(datasourceName, "data.two", resourceName, "data.two"),
+					resource.TestCheckResourceAttrPair(datasourceName, "type", resourceName, "type"),
+					resource.TestCheckResourceAttrPair(datasourceName, "immutable", resourceName, "immutable"),
+					resource.TestCheckResourceAttrPair(datasourceName, "binary_data.raw", resourceName, "binary_data.raw"),
+				),
+			},
+		},
+	})
+}
+
+func testAccKubernetesDataSourceSecretConfig_generateName(generate_name string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+  metadata {
+    generate_name = %q
+  }
+
+  data = {
+    one = "first"
+    two = "second"
+  }
+
+  binary_data = {
+    raw = "${base64encode("Raw data should come back as is in the pod")}"
+  }
+}
+`, generate_name)
+}
+
 func testAccKubernetesDataSourceSecretConfig_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
@@ -76,6 +126,19 @@ func testAccKubernetesDataSourceSecretConfig_basic(name string) string {
   }
 }
 `, name)
+}
+
+func testAccKubernetesDataSourceSecretConfig_readGenerateName() string {
+	return fmt.Sprintf(`data "kubernetes_secret" "test" {
+  metadata {
+    name = kubernetes_secret.test.metadata.0.name
+  }
+
+  binary_data = {
+    raw = ""
+  }
+}
+`)
 }
 
 func testAccKubernetesDataSourceSecretConfig_read() string {

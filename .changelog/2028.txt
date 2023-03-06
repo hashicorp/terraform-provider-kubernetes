@@ -1,0 +1,7 @@
+```release-note:bug
+`data_source/kubernetes_secret`: Fix an issue where data_source cannot read secret created with generate_name. 
+```
+
+```release-note:bug
+`data_source/kubernetes_secret_v1`: Fix an issue where data_source cannot read secret created with generate_name. 
+```

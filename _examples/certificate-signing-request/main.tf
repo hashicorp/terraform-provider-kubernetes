@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "tls_private_key" "example" {
   algorithm = "ECDSA"
   rsa_bits  = "4096"

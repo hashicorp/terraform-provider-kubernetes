@@ -13,11 +13,13 @@ func flattenTokenRequestSpec(in v1.TokenRequestSpec, d *schema.ResourceData, met
 
 	att["audiences"] = in.Audiences
 
-	bndObjRef, err := flattenBoundObjectReference(*in.BoundObjectRef, d, meta)
-	if err != nil {
-		return nil, err
+	if in.BoundObjectRef != nil {
+		bndObjRef, err := flattenBoundObjectReference(*in.BoundObjectRef, d, meta)
+		if err != nil {
+			return nil, err
+		}
+		att["boundobjectref"] = bndObjRef
 	}
-	att["boundobjectref"] = bndObjRef
 
 	att["expirationseconds"] = int(*in.ExpirationSeconds)
 
@@ -67,7 +69,7 @@ func expandTokenRequestSpec(p []interface{}) *v1.TokenRequestSpec {
 func expandBoundObjectReference(p []interface{}) (*v1.BoundObjectReference, error) {
 	obj := &v1.BoundObjectReference{}
 	if len(p) == 0 || p[0] == nil {
-		return obj, nil
+		return nil, nil
 	}
 	in := p[0].(map[string]interface{})
 

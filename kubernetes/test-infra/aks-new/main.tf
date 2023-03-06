@@ -19,7 +19,7 @@ variable "vm_size" {
 
 variable "kubernetes_version" {
   type = string
-  
+  default = "1.25.5"
 }
 
 resource "random_pet" "name" {}

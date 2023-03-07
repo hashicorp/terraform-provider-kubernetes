@@ -30,7 +30,7 @@ func resourceKubernetesTokenRequestV1() *schema.Resource {
 			},
 			"token": {
 				Type:        schema.TypeString,
-				Description: "Resulting status from the TokenRequest",
+				Description: "Token is the opaque bearer token.",
 				Computed:    true,
 			},
 		},

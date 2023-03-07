@@ -633,7 +633,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 		for k, v := range ovals {
 			otypes[k] = v.Type()
 		}
-		return newValue(tftypes.Object{AttributeTypes: otypes}, ovals, p)
+		return tftypes.NewValue(tftypes.Object{AttributeTypes: otypes}, ovals), diags
 	case t.Is(tftypes.Map{}):
 		var mvals map[string]tftypes.Value = make(map[string]tftypes.Value, len(vals))
 		for k, v := range vals {
@@ -655,7 +655,10 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			}
 			mvals[k] = nv
 		}
-		return newValue(t, mvals, p)
+		if diags := validateValue(t, mvals, p); diags != nil {
+			return tftypes.Value{}, diags
+		}
+		return tftypes.NewValue(t, mvals), diags
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, diags
 	}

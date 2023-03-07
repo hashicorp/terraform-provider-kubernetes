@@ -72,33 +72,33 @@ resource "kubernetes_service_account_v1" "test" {
 
 func testAccKubernetesTokenRequestConfig_basic() string {
 	return fmt.Sprintf(`resource "kubernetes_service_account_v1" "test" {
-		metadata {
-		  name = "test"
-	  
-		  annotations = {
-			TestAnnotationOne = "one"
-			TestAnnotationTwo = "two"
-		  }
-	  
-		  labels = {
-			TestLabelOne   = "one"
-			TestLabelTwo   = "two"
-			TestLabelThree = "three"
-		  }
-		}
-	  }
-	
-	resource "kubernetes_token_request_v1" "test" {
-		metadata {
-		  name = "test"
-		}
-		spec{
-		  audiences = [
-		  "api",
-		  "vault",
-		  "factors"
-		  ]
-		}
-	}
+  metadata {
+    name = "test"
+
+    annotations = {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels = {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+  }
+}
+
+resource "kubernetes_token_request_v1" "test" {
+  metadata {
+    name = "test"
+  }
+  spec {
+    audiences = [
+      "api",
+      "vault",
+      "factors"
+    ]
+  }
+}
 `)
 }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -1244,6 +1247,7 @@ func testAccKubernetesDeploymentConfig_minimal(name, imageName string) string {
         }
       }
       spec {
+        scheduler_name = "test"
         container {
           image = "%s"
           name  = "tf-acc-test"

@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource kubernetes_manifest wait_for_rollout {
   manifest = {
     apiVersion = "apps/v1"

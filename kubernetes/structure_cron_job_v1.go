@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -41,7 +44,7 @@ func flattenCronJobSpecV1(in batch.CronJobSpec, d *schema.ResourceData, meta int
 func flattenJobTemplateV1(in batch.JobTemplateSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
-	att["metadata"] = flattenMetadata(in.ObjectMeta, d, meta)
+	att["metadata"] = flattenMetadata(in.ObjectMeta, d, meta, "spec.0.job_template.0.")
 
 	jobSpec, err := flattenJobSpec(in.Spec, d, meta, "spec.0.job_template.0.spec.0.template.0.")
 	if err != nil {

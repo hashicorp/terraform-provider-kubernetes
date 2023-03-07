@@ -21,16 +21,16 @@ resource "kubernetes_service_account_v1" "test" {
 }
 
 resource "kubernetes_token_request_v1" "test" {
-    metadata {
-      name = "test"
-    }
-    spec{
-      audiences = [
+  metadata {
+    name = "test"
+  }
+  spec {
+    audiences = [
       "api",
       "vault",
       "factors"
-      ]
-    }
+    ]
+  }
 }
 
 output "tokenValue" {

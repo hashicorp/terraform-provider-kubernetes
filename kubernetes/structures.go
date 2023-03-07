@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -126,10 +129,15 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMet
 		prefix = metaPrefix[0]
 	}
 
-	configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
-	ignoreAnnotations := providerMetadata.(kubeClientsets).IgnoreAnnotations
-	annotations := removeInternalKeys(meta.Annotations, configAnnotations)
-	m["annotations"] = removeKeys(annotations, configAnnotations, ignoreAnnotations)
+	if prefix == "" {
+		configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
+		ignoreAnnotations := providerMetadata.(kubeClientsets).IgnoreAnnotations
+		annotations := removeInternalKeys(meta.Annotations, configAnnotations)
+		m["annotations"] = removeKeys(annotations, configAnnotations, ignoreAnnotations)
+	} else {
+		m["annotations"] = d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
+	}
+
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}

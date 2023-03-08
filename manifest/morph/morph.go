@@ -626,7 +626,10 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 		// tftypes.NewValue() fails if any of the attributes in the object don't have a corresponding value
 		for k := range t.(tftypes.Object).AttributeTypes {
 			if _, ok := ovals[k]; !ok {
-				ovals[k], _ = newValue(t.(tftypes.Object).AttributeTypes[k], nil, p)
+				ovals[k], diags = newValue(t.(tftypes.Object).AttributeTypes[k], nil, p)
+				if diags != nil {
+					return tftypes.Value{}, diags
+				}
 			}
 		}
 		otypes := make(map[string]tftypes.Type, len(ovals))
@@ -655,10 +658,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			}
 			mvals[k] = nv
 		}
-		if diags := validateValue(t, mvals, p); diags != nil {
-			return tftypes.Value{}, diags
-		}
-		return tftypes.NewValue(t, mvals), diags
+		return newValue(t, mvals, p)
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, diags
 	}

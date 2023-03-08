@@ -626,10 +626,12 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 		// tftypes.NewValue() fails if any of the attributes in the object don't have a corresponding value
 		for k := range t.(tftypes.Object).AttributeTypes {
 			if _, ok := ovals[k]; !ok {
-				ovals[k], diags = newValue(t.(tftypes.Object).AttributeTypes[k], nil, p)
-				if diags != nil {
+				nv, d := newValue(t.(tftypes.Object).AttributeTypes[k], nil, p)
+				if d != nil {
+					diags = append(diags, d...)
 					return tftypes.Value{}, diags
 				}
+				ovals[k] = nv
 			}
 		}
 		otypes := make(map[string]tftypes.Type, len(ovals))

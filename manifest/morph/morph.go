@@ -658,7 +658,10 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			}
 			mvals[k] = nv
 		}
-		return newValue(t, mvals, p)
+		if diags := validateValue(t, mvals, p); diags != nil {
+			return tftypes.Value{}, diags
+		}
+		return tftypes.NewValue(t, mvals), diags
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, diags
 	}

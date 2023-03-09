@@ -1,25 +1,8 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 provider "azurerm" {
   features {}
-}
-
-variable "location" {
-  type = string
-  default = "West Europe"
-}
-
-variable "node_count" {
-  type = number
-  default = 2
-}
-
-variable "vm_size" {
-  type = string
-  default = "Standard_A4_v2"
-}
-
-variable "kubernetes_version" {
-  type = string
-  default = "1.25.5"
 }
 
 resource "random_pet" "name" {}
@@ -40,7 +23,6 @@ resource "azurerm_kubernetes_cluster" "test" {
     name       = "default"
     node_count = var.node_count
     vm_size    = var.vm_size
-    //vm_size    = "Standard_A4_v2"
   }
 
   identity {
@@ -54,8 +36,7 @@ resource "local_file" "kubeconfig" {
 }
 
 output "kubeconfig" {
-  value = azurerm_kubernetes_cluster.test.kube_config_raw
-
+  value     = azurerm_kubernetes_cluster.test.kube_config_raw
   sensitive = true
 }
 

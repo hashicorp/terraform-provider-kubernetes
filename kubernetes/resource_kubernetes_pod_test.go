@@ -76,7 +76,6 @@ func TestAccKubernetesPod_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.scheduler_name", "test"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.env.0.value_from.0.secret_key_ref.0.name", secretName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.env.0.value_from.0.secret_key_ref.0.key", "one"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.env.0.value_from.0.secret_key_ref.0.optional", "true"),
@@ -94,6 +93,51 @@ func TestAccKubernetesPod_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.env_from.1.prefix", "FROM_S_"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.#", "0"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPod_scheduler(t *testing.T) {
+	var conf api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	schedulerName := acctest.RandomWithPrefix("hashi-scheduler")
+	clusterVersion := "1.26.2"
+	imageName := nginxImageVersion
+	resourceName := "kubernetes_pod_v1.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesCustomScheduler(schedulerName, clusterVersion),
+			},
+			{
+				Config: testAccKubernetesCustomScheduler(schedulerName, clusterVersion) +
+					testAccKubernetesPodConfigScheduler(podName, schedulerName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.app", "pod_label"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", podName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.scheduler_name", schedulerName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
 				),
 			},
 			{
@@ -1657,6 +1701,27 @@ resource "kubernetes_pod" "test" {
 `, secretName, secretName, configMapName, configMapName, podName, imageName)
 }
 
+func testAccKubernetesPodConfigScheduler(podName, schedulerName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+    name = "%s"
+  }
+
+  spec {
+    automount_service_account_token = false
+    scheduler_name                  = %q
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+}
+`, podName, schedulerName, imageName)
+}
+
 func testAccKubernetesPodConfigWithInitContainer(podName, image string) string {
 	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
   metadata {
@@ -3068,4 +3133,135 @@ func testAccKubernetesPodConfigRuntimeClassName(name, imageName, runtimeHandler 
   }
 }
 `, name, runtimeHandler, imageName)
+}
+
+func testAccKubernetesCustomScheduler(name, clusterVersion string) string {
+	// Source: https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/
+	return fmt.Sprintf(`variable "namespace" {
+  default = "kube-system"
+}
+
+variable "scheduler_name" {
+  default = %q
+}
+
+variable "cluster_version" {
+  default = %q
+}
+
+resource "kubernetes_service_account_v1" "scheduler" {
+  metadata {
+    name      = var.scheduler_name
+    namespace = var.namespace
+  }
+}
+
+resource "kubernetes_cluster_role_binding_v1" "kube_scheduler" {
+  metadata {
+    name = "${var.scheduler_name}-as-kube-scheduler"
+  }
+  subject {
+    kind      = "ServiceAccount"
+    name      = var.scheduler_name
+    namespace = var.namespace
+  }
+  role_ref {
+    kind      = "ClusterRole"
+    name      = "system:kube-scheduler"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+
+resource "kubernetes_cluster_role_binding_v1" "volume_scheduler" {
+  metadata {
+    name = "${var.scheduler_name}-as-volume-scheduler"
+  }
+  subject {
+    kind      = "ServiceAccount"
+    name      = var.scheduler_name
+    namespace = var.namespace
+  }
+  role_ref {
+    kind      = "ClusterRole"
+    name      = "system:volume-scheduler"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+
+resource "kubernetes_role_binding_v1" "authentication_reader" {
+  metadata {
+    name      = "${var.scheduler_name}-extension-apiserver-authentication-reader"
+    namespace = var.namespace
+  }
+  role_ref {
+    kind      = "Role"
+    name      = "extension-apiserver-authentication-reader"
+    api_group = "rbac.authorization.k8s.io"
+  }
+  subject {
+    kind      = "ServiceAccount"
+    name      = var.scheduler_name
+    namespace = var.namespace
+  }
+}
+
+resource "kubernetes_config_map_v1" "scheduler_config" {
+  metadata {
+    name      = "${var.scheduler_name}-config"
+    namespace = var.namespace
+  }
+  data = {
+    "scheduler-config.yaml" = templatefile("test-fixtures/kube-scheduler.tftpl", { scheduler_name = var.scheduler_name })
+  }
+}
+
+resource "kubernetes_pod_v1" "scheduler" {
+  metadata {
+    labels = {
+      component = "scheduler"
+      tier      = "control-plane"
+    }
+    name      = var.scheduler_name
+    namespace = var.namespace
+  }
+
+  spec {
+    service_account_name = kubernetes_service_account_v1.scheduler.metadata.0.name
+    container {
+      name = var.scheduler_name
+      command = [
+        "/usr/local/bin/kube-scheduler",
+        "--config=/etc/kubernetes/scheduler/scheduler-config.yaml"
+      ]
+      image = "registry.k8s.io/kube-scheduler:v${var.cluster_version}"
+      liveness_probe {
+        http_get {
+          path   = "/healthz"
+          port   = 10259
+          scheme = "HTTPS"
+        }
+        initial_delay_seconds = 15
+      }
+      resources {
+        requests = {
+          cpu = "0.1"
+        }
+      }
+      security_context {
+        privileged = false
+      }
+      volume_mount {
+        name       = "config-volume"
+        mount_path = "/etc/kubernetes/scheduler"
+      }
+    }
+    volume {
+      name = "config-volume"
+      config_map {
+        name = kubernetes_config_map_v1.scheduler_config.metadata.0.name
+      }
+    }
+  }
+}
+`, name, clusterVersion)
 }

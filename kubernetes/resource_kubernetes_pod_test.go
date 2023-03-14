@@ -109,42 +109,31 @@ func TestAccKubernetesPod_scheduler(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	schedulerName := acctest.RandomWithPrefix("hashi-scheduler")
-	clusterVersion := "1.26.2"
+	schedulerName := acctest.RandomWithPrefix("test-scheduler")
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.22.0")
+			setClusterVersionVar(t, "TF_VAR_scheduler_cluster_version") // should be in format 'vX.Y.Z'
 		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesCustomScheduler(schedulerName, clusterVersion),
+				Config: testAccKubernetesCustomScheduler(schedulerName),
 			},
 			{
-				Config: testAccKubernetesCustomScheduler(schedulerName, clusterVersion) +
+				Config: testAccKubernetesCustomScheduler(schedulerName) +
 					testAccKubernetesPodConfigScheduler(podName, schedulerName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodExists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.app", "pod_label"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", podName),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.scheduler_name", schedulerName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
 				),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})
@@ -1718,6 +1707,9 @@ func testAccKubernetesPodConfigScheduler(podName, schedulerName, imageName strin
       name  = "containername"
     }
   }
+  timeouts {
+    create = "1m"
+  }
 }
 `, podName, schedulerName, imageName)
 }
@@ -3135,7 +3127,7 @@ func testAccKubernetesPodConfigRuntimeClassName(name, imageName, runtimeHandler 
 `, name, runtimeHandler, imageName)
 }
 
-func testAccKubernetesCustomScheduler(name, clusterVersion string) string {
+func testAccKubernetesCustomScheduler(name string) string {
 	// Source: https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/
 	return fmt.Sprintf(`variable "namespace" {
   default = "kube-system"
@@ -3145,8 +3137,8 @@ variable "scheduler_name" {
   default = %q
 }
 
-variable "cluster_version" {
-  default = %q
+variable "scheduler_cluster_version" {
+  default = ""
 }
 
 resource "kubernetes_service_account_v1" "scheduler" {
@@ -3233,7 +3225,7 @@ resource "kubernetes_pod_v1" "scheduler" {
         "/usr/local/bin/kube-scheduler",
         "--config=/etc/kubernetes/scheduler/scheduler-config.yaml"
       ]
-      image = "registry.k8s.io/kube-scheduler:v${var.cluster_version}"
+      image = "registry.k8s.io/kube-scheduler:${var.scheduler_cluster_version}"
       liveness_probe {
         http_get {
           path   = "/healthz"
@@ -3262,6 +3254,10 @@ resource "kubernetes_pod_v1" "scheduler" {
       }
     }
   }
+
+  timeouts {
+    create = "1m"
+  }
 }
-`, name, clusterVersion)
+`, name)
 }

@@ -1,9 +1,9 @@
 ---
 layout: "kubernetes"
-subcategory: "authorization/v1"
+subcategory: "authentication/v1"
 page_title: "Kubernetes: kubernetes_token_request_v1"
 description: |-
-  A role contains rules that represent a set of permissions. Permissions are purely additive (there are no “deny” rules).
+  TokenRequest requests a token for a given service account.
 ---
 
 # kubernetes_token_request_v1
@@ -72,14 +72,14 @@ The following arguments are supported:
 #### Arguments
 
 * `audiences` - (Optional) Audiences are the intendend audiences of the token. A recipient of a token must identify themself with an identifier in the list of audiences of the token, and otherwise should reject the token. A token issued for multiple audiences may be used to authenticate against any of the audiences listed but implies a high degree of trust between the target audiences.
-* `expirationSeconds` - (Optional) ExpirationSeconds is the requested duration of validity of the request. The token issuer may return a token with a different validity duration so a client needs to check the 'expiration' field in a response.
-* `boundObjectRef` - (Optional) BoundObjectRef is a reference to an object that the token will be bound to. The token will only be valid for as long as the bound object exists. NOTE: The API server's TokenReview endpoint will validate the BoundObjectRef, but other audiences may not. Keep ExpirationSeconds small if you want prompt revocation.
+* `expiration_seconds` - (Optional) ExpirationSeconds is the requested duration of validity of the request. The token issuer may return a token with a different validity duration so a client needs to check the 'expiration' field in a response.
+* `bound_object_ref` - (Optional) BoundObjectRef is a reference to an object that the token will be bound to. The token will only be valid for as long as the bound object exists. NOTE: The API server's TokenReview endpoint will validate the BoundObjectRef, but other audiences may not. Keep ExpirationSeconds small if you want prompt revocation.
 
-### `boundObjectRef`
+### `bound_object_ref`
 
 #### Arguments
 
-* `apiversion` - (Optional) API version of the referent.
+* `api_version` - (Optional) API version of the referent.
 * `kind` - (Optional) Kind of the referent. Valid kinds are 'Pod' and 'Secret'.
 * `name` - (Optional) Name of the referent.
 * `uid` - (Optional) UID of the referent.

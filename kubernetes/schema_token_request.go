@@ -4,6 +4,8 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	apiv1 "k8s.io/api/authentication/v1"
 )
@@ -19,7 +21,7 @@ func tokenRequestSpecFields() map[string]*schema.Schema {
 				Type: schema.TypeString,
 			},
 		},
-		"boundobjectref": {
+		"bound_object_ref": {
 			Type:        schema.TypeList,
 			Optional:    true,
 			ForceNew:    true,
@@ -27,7 +29,7 @@ func tokenRequestSpecFields() map[string]*schema.Schema {
 			Description: apiv1.TokenRequest{}.Spec.SwaggerDoc()["boundObjectRef"],
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
-					"apiversion": {
+					"api_version": {
 						Type:        schema.TypeString,
 						Optional:    true,
 						Description: "API version of the referent.",
@@ -50,11 +52,20 @@ func tokenRequestSpecFields() map[string]*schema.Schema {
 				},
 			},
 		},
-		"expirationseconds": {
+		"expiration_seconds": {
 			Type:        schema.TypeInt,
 			Optional:    true,
-			Default:     600, // must be minimum of 10 minutes for expiration
-			Description: "ExpirationSeconds is the requested duration of validity of the request. The token issuer may return a token with a different validity duration so a client needs to check the 'expiration' field in a response.",
+			Description: "expiration_seconds is the requested duration of validity of the request. The token issuer may return a token with a different validity duration so a client needs to check the 'expiration' field in a response. The expiration can't be less than 10 minutes.",
+			ValidateFunc: func(value interface{}, key string) (ws []string, es []error) {
+				v := value.(int)
+				if v < 600 {
+					es = append(es, fmt.Errorf("%s can't be less than 600", key))
+				}
+				if v > 4294967296 {
+					es = append(es, fmt.Errorf("%s can't be greater than 4294967296", key))
+				}
+				return
+			},
 		},
 	}
 	return s

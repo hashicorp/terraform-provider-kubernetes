@@ -24,7 +24,11 @@ func flattenTokenRequestSpec(in v1.TokenRequestSpec, d *schema.ResourceData, met
 		att["boundobjectref"] = bndObjRef
 	}
 
-	att["expirationseconds"] = int(*in.ExpirationSeconds)
+	if int(*in.ExpirationSeconds) != 0 {
+		att["expirationseconds"] = int(*in.ExpirationSeconds)
+	} else {
+		att["expirationseconds"] = *in.ExpirationSeconds
+	}
 
 	return []interface{}{att}, nil
 }

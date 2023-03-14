@@ -3203,7 +3203,16 @@ resource "kubernetes_config_map_v1" "scheduler_config" {
     namespace = var.namespace
   }
   data = {
-    "scheduler-config.yaml" = templatefile("test-fixtures/kube-scheduler.tftpl", { scheduler_name = var.scheduler_name })
+    "scheduler-config.yaml" = yamlencode(
+      {
+        "apiVersion" : "kubescheduler.config.k8s.io/v1beta2",
+        "kind" : "KubeSchedulerConfiguration",
+        profiles : [{
+          "schedulerName" : var.scheduler_name
+        }],
+        "leaderElection" : { "leaderElect" : false }
+      }
+    )
   }
 }
 

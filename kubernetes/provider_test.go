@@ -222,7 +222,7 @@ func setClusterVersionVar(t *testing.T, varName string) {
 	if err != nil {
 		t.Skip(fmt.Sprint("Could not get cluster version"))
 	}
-	os.Setenv(varName, cv.Original())
+	os.Setenv(varName, fmt.Sprintf("v%s", cv.Core().Original()))
 }
 
 func skipIfClusterVersionLessThan(t *testing.T, vs string) {

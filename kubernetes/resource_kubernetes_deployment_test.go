@@ -1247,7 +1247,6 @@ func testAccKubernetesDeploymentConfig_minimal(name, imageName string) string {
         }
       }
       spec {
-        scheduler_name = "test"
         container {
           image = "%s"
           name  = "tf-acc-test"

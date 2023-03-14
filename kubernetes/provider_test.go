@@ -217,6 +217,14 @@ func getClusterVersion() (*gversion.Version, error) {
 	return gversion.NewVersion(serverVersion.String())
 }
 
+func setClusterVersionVar(t *testing.T, varName string) {
+	cv, err := getClusterVersion()
+	if err != nil {
+		t.Skip(fmt.Sprint("Could not get cluster version"))
+	}
+	os.Setenv(varName, fmt.Sprintf("v%s", cv.Core().Original()))
+}
+
 func skipIfClusterVersionLessThan(t *testing.T, vs string) {
 	if clusterVersionLessThan(vs) {
 		t.Skip(fmt.Sprintf("This test does not run on cluster versions below %v", vs))

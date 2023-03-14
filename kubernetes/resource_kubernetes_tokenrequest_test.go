@@ -13,7 +13,7 @@ import (
 
 func TestAccKubernetesTokenRequest_basic(t *testing.T) {
 	var conf api.ServiceAccount
-	resourceName := "kubernetes_service_account_v1.test"
+	resourceName := "kubernetes_service_account_v1.tokentest"
 	tokenName := "kubernetes_token_request_v1.test"
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -26,8 +26,8 @@ func TestAccKubernetesTokenRequest_basic(t *testing.T) {
 				Config: testAccKubernetesTokenRequestConfig_basic(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceAccountExists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", "test"),
-					resource.TestCheckResourceAttr(tokenName, "metadata.0.name", "test"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", "tokentest"),
+					resource.TestCheckResourceAttr(tokenName, "metadata.0.name", "tokentest"),
 					resource.TestCheckResourceAttr(tokenName, "spec.0.audiences.0", "api"),
 					resource.TestCheckResourceAttr(tokenName, "spec.0.audiences.1", "vault"),
 					resource.TestCheckResourceAttr(tokenName, "spec.0.audiences.2", "factors"),
@@ -39,21 +39,15 @@ func TestAccKubernetesTokenRequest_basic(t *testing.T) {
 }
 
 func testAccKubernetesTokenRequestConfig_basic() string {
-	return fmt.Sprintf(`resource "kubernetes_service_account_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account_v1" "tokentest" {
   metadata {
-    name = "test"
-  }
-}
-
-resource "kubernetes_service_account_v1" "test" {
-  metadata {
-    name = "test"
+    name = "tokentest"
   }
 }
 
 resource "kubernetes_token_request_v1" "test" {
   metadata {
-    name = kubernetes_service_account_v1.test.metadata.0.name
+    name = kubernetes_service_account_v1.tokentest.metadata.0.name
   }
   spec {
     audiences = [

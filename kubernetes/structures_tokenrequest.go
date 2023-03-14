@@ -24,11 +24,7 @@ func flattenTokenRequestSpec(in v1.TokenRequestSpec, d *schema.ResourceData, met
 		att["boundobjectref"] = bndObjRef
 	}
 
-	if int(*in.ExpirationSeconds) != 0 {
-		att["expirationseconds"] = int(*in.ExpirationSeconds)
-	} else {
-		att["expirationseconds"] = *in.ExpirationSeconds
-	}
+	att["expirationseconds"] = int(*in.ExpirationSeconds)
 
 	return []interface{}{att}, nil
 }
@@ -60,14 +56,16 @@ func expandTokenRequestSpec(p []interface{}) *v1.TokenRequestSpec {
 		obj.Audiences = expandStringSlice(v)
 	}
 
-	bdObjRef, err := expandBoundObjectReference(in["boundobjectref"].([]interface{}))
+	bdObjRef, err := expandBoundObjectReference(in["bound_object_ref"].([]interface{}))
 	if err != nil {
 		return obj
 	}
 	obj.BoundObjectRef = bdObjRef
 
-	if v, ok := in["expirationseconds"].(int); ok {
-		obj.ExpirationSeconds = ptrToInt64(int64(v))
+	if v, ok := in["expiration_seconds"].(int); ok {
+		if v != 0 {
+			obj.ExpirationSeconds = ptrToInt64(int64(v))
+		}
 	}
 
 	return obj
@@ -80,7 +78,7 @@ func expandBoundObjectReference(p []interface{}) (*v1.BoundObjectReference, erro
 	}
 	in := p[0].(map[string]interface{})
 
-	if v, ok := in["apiversion"]; ok {
+	if v, ok := in["api_version"]; ok {
 		obj.APIVersion = v.(string)
 	}
 

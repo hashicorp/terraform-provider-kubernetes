@@ -24,6 +24,10 @@ resource "kubernetes_manifest" "webhook-injector" {
           }
         }
         "name" = "vault.hashicorp.com"
+        "admissionReviewVersions" = [
+          "v1",
+        ]
+        "sideEffects" = "None"
         "rules" = [
           {
             "apiGroups" = [

@@ -23,7 +23,7 @@ on:
         default: ^TestAcc
       terraformVersion:
         description: Terraform version
-        default: 1.3.6
+        default: 1.4.0
 
 env:
   GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}

@@ -22,6 +22,9 @@ jobs:
   check:
     runs-on: ubuntu-latest
     strategy:
+      # Don't cancel all in-progress and queued jobs in the matrix if any job in the matrix fails.
+      # That will be helpful to catch any issues related to a particular Kubernetes version.
+      fail-fast: false
       matrix:
         terraform_version:
           - "1.0.11"

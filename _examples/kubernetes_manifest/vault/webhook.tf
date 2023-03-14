@@ -4,7 +4,7 @@
 resource "kubernetes_manifest" "webhook-injector" {
 
   manifest = {
-    "apiVersion" = "admissionregistration.k8s.io/v1beta1"
+    "apiVersion" = "admissionregistration.k8s.io/v1"
     "kind"       = "MutatingWebhookConfiguration"
     "metadata" = {
       "labels" = {

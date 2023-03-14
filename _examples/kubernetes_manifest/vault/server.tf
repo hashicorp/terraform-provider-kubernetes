@@ -27,7 +27,7 @@ resource "kubernetes_manifest" "service-account-vault" {
 resource "kubernetes_manifest" "cluster-role-binding-server" {
 
   manifest = {
-    "apiVersion" = "rbac.authorization.k8s.io/v1beta1"
+    "apiVersion" = "rbac.authorization.k8s.io/v1"
     "kind"       = "ClusterRoleBinding"
     "metadata" = {
       "labels" = {

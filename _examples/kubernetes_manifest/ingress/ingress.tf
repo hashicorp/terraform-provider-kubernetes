@@ -24,7 +24,6 @@ resource "kubernetes_manifest" "test-ingress" {
                   "service" = {
                     "name" = "test"
                     "port" = {
-                      "name"   = "web"
                       "number" = "80"
                     }
                   }

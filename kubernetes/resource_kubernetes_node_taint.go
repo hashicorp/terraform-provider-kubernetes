@@ -64,7 +64,6 @@ func resourceKubernetesNodeTaint() *schema.Resource {
 			"taint": {
 				Type:     schema.TypeList,
 				Required: true,
-				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: nodeTaintFields(),
 				},

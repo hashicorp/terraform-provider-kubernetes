@@ -4,7 +4,7 @@
 package kubernetes
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	apiv1 "k8s.io/api/authentication/v1"
@@ -56,15 +56,12 @@ func tokenRequestSpecFields() map[string]*schema.Schema {
 			Type:        schema.TypeInt,
 			Optional:    true,
 			Description: "expiration_seconds is the requested duration of validity of the request. The token issuer may return a token with a different validity duration so a client needs to check the 'expiration' field in a response. The expiration can't be less than 10 minutes.",
-			ValidateFunc: func(value interface{}, key string) (ws []string, es []error) {
+			ValidateFunc: func(value interface{}, key string) ([]string, []error) {
 				v := value.(int)
-				if v < 600 {
-					es = append(es, fmt.Errorf("%s can't be less than 600", key))
+				if v < 600 || v > 4294967296 {
+					return nil, []error{errors.New("must be between 600 and 4294967296 ")}
 				}
-				if v > 4294967296 {
-					es = append(es, fmt.Errorf("%s can't be greater than 4294967296", key))
-				}
-				return
+				return nil, nil
 			},
 		},
 	}

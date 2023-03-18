@@ -25,7 +25,7 @@ func resourceKubernetesTokenRequestV1() *schema.Resource {
 			"spec": {
 				Type:        schema.TypeList,
 				Description: apiv1.TokenRequest{}.Spec.SwaggerDoc()["spec"],
-				Required:    true,
+				Optional:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: tokenRequestSpecFields(),
@@ -62,6 +62,11 @@ func resourceKubernetesTokenRequestCreateV1(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 	d.Set("token", out.Status.Token)
+	s, err := flattenTokenRequestSpec(out.Spec, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	d.Set("spec", s)
 
 	log.Printf("[INFO] Submitted new TokenRequest: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))

@@ -22,7 +22,7 @@ resource "kubernetes_service_account_v1" "test" {
 
 resource "kubernetes_token_request_v1" "test" {
   metadata {
-    name = "test"
+    name = kubernetes_service_account_v1.test.metadata.0.name
   }
   spec {
     audiences = [

@@ -342,6 +342,9 @@ func Provider() *schema.Provider {
 			// provider helper resources
 			"kubernetes_labels":      resourceKubernetesLabels(),
 			"kubernetes_annotations": resourceKubernetesAnnotations(),
+
+			// authentication
+			"kubernetes_token_request_v1": resourceKubernetesTokenRequestV1(),
 		},
 	}
 

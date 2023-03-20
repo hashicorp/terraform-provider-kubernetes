@@ -27,6 +27,7 @@ func resourceKubernetesTokenRequestV1() *schema.Resource {
 				Description: apiv1.TokenRequest{}.Spec.SwaggerDoc()["spec"],
 				Optional:    true,
 				Computed:    true,
+				ForceNew:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: tokenRequestSpecFields(),

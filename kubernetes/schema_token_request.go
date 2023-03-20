@@ -34,21 +34,25 @@ func tokenRequestSpecFields() map[string]*schema.Schema {
 					"api_version": {
 						Type:        schema.TypeString,
 						Optional:    true,
+						ForceNew:    true,
 						Description: "API version of the referent.",
 					},
 					"kind": {
 						Type:        schema.TypeString,
 						Optional:    true,
+						ForceNew:    true,
 						Description: "Kind of the referent. Valid kinds are 'Pod' and 'Secret'.",
 					},
 					"name": {
 						Type:        schema.TypeString,
 						Optional:    true,
+						ForceNew:    true,
 						Description: "Name of the referent.",
 					},
 					"uid": {
 						Type:        schema.TypeString,
 						Optional:    true,
+						ForceNew:    true,
 						Description: "UID of the referent.",
 					},
 				},
@@ -57,6 +61,7 @@ func tokenRequestSpecFields() map[string]*schema.Schema {
 		"expiration_seconds": {
 			Type:        schema.TypeInt,
 			Computed:    true,
+			ForceNew:    true,
 			Optional:    true,
 			Description: "expiration_seconds is the requested duration of validity of the request. The token issuer may return a token with a different validity duration so a client needs to check the 'expiration' field in a response. The expiration can't be less than 10 minutes.",
 			ValidateFunc: func(value interface{}, key string) ([]string, []error) {

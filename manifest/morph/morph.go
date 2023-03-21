@@ -278,7 +278,7 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
 		Summary:   "Cannot transform List value into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n ...at attribute\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.List{}), attributePathSummary(p)),
+		Detail:    fmt.Sprintf("Required type %s, but got %s\n ...at attribute\n%s", typeNameNoPrefix(t), typeNameNoPrefix(v.Type()), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -391,7 +391,7 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
 		Summary:   "Cannot transform Tuple value into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n ...at attribute\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Tuple{}), attributePathSummary(p)),
+		Detail:    fmt.Sprintf("Required type %s, but got %s\n ...at attribute\n%s", typeNameNoPrefix(t), typeNameNoPrefix(v.Type()), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -492,7 +492,7 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
 		Summary:   "Cannot transform Set value into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Set{}), attributePathSummary(p)),
+		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(v.Type()), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -572,7 +572,7 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
 		Summary:   "Cannot transform Map value into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Map{}), attributePathSummary(p)),
+		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(v.Type()), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -668,7 +668,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
 		Summary:   "Failed to transform Object into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Object{}), attributePathSummary(p)),
+		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(v.Type()), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }

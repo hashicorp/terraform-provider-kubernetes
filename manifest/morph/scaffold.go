@@ -16,7 +16,7 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 		return tftypes.Value{}, fmt.Errorf("type cannot be nil")
 	}
 	if !v.IsKnown() {
-		return v, nil
+		return tftypes.NewValue(t, tftypes.UnknownValue), nil
 	}
 	switch {
 	case t.Is(tftypes.Object{}):

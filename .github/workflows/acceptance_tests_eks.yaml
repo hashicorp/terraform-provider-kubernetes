@@ -42,14 +42,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@67fbcbb121271f7775d2e7715933280b06314838 # v1.7.0
+        uses: hashicorp/doormat-action@566eb1d2575eea7bc17f80710ce8077124aa1ec0 # v1
         with:
-          aws-region: ${{ github.event.inputs.region }}
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          role-to-assume: ${{ secrets.AWS_ASSUME_ROLE_ARN }}
-          role-session-name: github-actions-tests-${{ github.run_number }}
-          role-duration-seconds: 14400
+          aws-role-arn: ${{ secrets.DOORMAT_AWS_ROLE_ARN }}
       - name: Install Terraform
         uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
         with:

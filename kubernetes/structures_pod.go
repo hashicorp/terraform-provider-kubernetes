@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -5,6 +8,7 @@ import (
 	"log"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
@@ -93,6 +97,9 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	if len(in.NodeSelector) > 0 {
 		att["node_selector"] = in.NodeSelector
 	}
+	if in.RuntimeClassName != nil {
+		att["runtime_class_name"] = *in.RuntimeClassName
+	}
 	if in.PriorityClassName != "" {
 		att["priority_class_name"] = in.PriorityClassName
 	}
@@ -102,6 +109,10 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 
 	if in.SecurityContext != nil {
 		att["security_context"] = flattenPodSecurityContext(in.SecurityContext)
+	}
+
+	if in.SchedulerName != "" {
+		att["scheduler_name"] = in.SchedulerName
 	}
 
 	if in.ServiceAccountName != "" {
@@ -134,7 +145,7 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 			if err != nil {
 				return []interface{}{att}, err
 			}
-			if nameMatchesDefaultToken {
+			if nameMatchesDefaultToken || strings.HasPrefix(volume.Name, "kube-api-access") {
 				in.Volumes = removeVolumeFromPodSpec(i, in.Volumes)
 				break
 			}
@@ -211,6 +222,9 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	if in.SeccompProfile != nil {
 		att["seccomp_profile"] = flattenSeccompProfile(in.SeccompProfile)
 	}
+	if in.FSGroupChangePolicy != nil {
+		att["fs_group_change_policy"] = *in.FSGroupChangePolicy
+	}
 	if len(in.SupplementalGroups) > 0 {
 		att["supplemental_groups"] = newInt64Set(schema.HashSchema(&schema.Schema{
 			Type: schema.TypeInt,
@@ -248,7 +262,7 @@ func flattenSeLinuxOptions(in *v1.SELinuxOptions) []interface{} {
 	if in.Role != "" {
 		att["role"] = in.Role
 	}
-	if in.User != "" {
+	if in.Type != "" {
 		att["type"] = in.Type
 	}
 	if in.Level != "" {
@@ -750,6 +764,10 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.NodeSelector = nodeSelectors
 	}
 
+	if v, ok := in["runtime_class_name"].(string); ok && v != "" {
+		obj.RuntimeClassName = ptrToString(v)
+	}
+
 	if v, ok := in["priority_class_name"].(string); ok {
 		obj.PriorityClassName = v
 	}
@@ -764,6 +782,10 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 			return obj, err
 		}
 		obj.SecurityContext = ctx
+	}
+
+	if v, ok := in["scheduler_name"].(string); ok {
+		obj.SchedulerName = v
 	}
 
 	if v, ok := in["service_account_name"].(string); ok {
@@ -897,7 +919,10 @@ func expandPodSecurityContext(l []interface{}) (*v1.PodSecurityContext, error) {
 	if v, ok := in["sysctl"].([]interface{}); ok && len(v) > 0 {
 		obj.Sysctls = expandSysctls(v)
 	}
-
+	if v, ok := in["fs_group_change_policy"].(string); ok && v != "" {
+		policy := v1.PodFSGroupChangePolicy(v)
+		obj.FSGroupChangePolicy = &policy
+	}
 	return obj, nil
 }
 

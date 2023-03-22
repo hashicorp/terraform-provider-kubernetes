@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 locals {
   random_prefix = "${var.prefix}-${random_id.tf-k8s-acc.hex}"
 }
@@ -78,13 +81,9 @@ resource "azurerm_kubernetes_cluster" "tf-k8s-acc" {
     vnet_subnet_id = azurerm_subnet.tf-k8s-acc.id
   }
 
-  service_principal {
-    client_id     = var.aks_client_id
-    client_secret = var.aks_client_secret
-  }
 
-  role_based_access_control {
-    enabled = true
+  identity {
+    type = "SystemAssigned"
   }
 
   network_profile {

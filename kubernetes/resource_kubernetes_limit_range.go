@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -131,7 +134,7 @@ func resourceKubernetesLimitRangeRead(ctx context.Context, d *schema.ResourceDat
 	}
 	log.Printf("[INFO] Received limit range: %#v", limitRange)
 
-	err = d.Set("metadata", flattenMetadata(limitRange.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(limitRange.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

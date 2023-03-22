@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -24,7 +27,7 @@ func resourceKubernetesRoleBinding() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchemaRBAC("roleBinding", false, true),
+			"metadata": metadataSchemaRBAC("roleBinding", true, true),
 			"role_ref": {
 				Type:        schema.TypeList,
 				Description: "RoleRef references the Role for this binding",
@@ -99,7 +102,7 @@ func resourceKubernetesRoleBindingRead(ctx context.Context, d *schema.ResourceDa
 	}
 
 	log.Printf("[INFO] Received RoleBinding: %#v", binding)
-	err = d.Set("metadata", flattenMetadata(binding.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(binding.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -166,6 +169,9 @@ func resourceKubernetesRoleBindingDelete(ctx context.Context, d *schema.Resource
 	log.Printf("[INFO] Deleting RoleBinding: %#v", name)
 	err = conn.RbacV1().RoleBindings(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] RoleBinding %s deleted", name)

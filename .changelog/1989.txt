@@ -1,0 +1,3 @@
+```release-note:doc
+`provider`: Add a note regarding the `KUBECONFIG` environment variable.
+```

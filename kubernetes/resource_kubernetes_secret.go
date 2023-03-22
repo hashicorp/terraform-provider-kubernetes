@@ -1,13 +1,19 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	api "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
@@ -69,10 +75,19 @@ func resourceKubernetesSecret() *schema.Resource {
 			"type": {
 				Type:        schema.TypeString,
 				Description: "Type of secret",
-				Default:     string(api.SecretTypeOpaque),
+				Default:     string(corev1.SecretTypeOpaque),
 				Optional:    true,
 				ForceNew:    true,
 			},
+			"wait_for_service_account_token": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Terraform will wait for the service account token to be created.",
+			},
+		},
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(1 * time.Minute),
 		},
 	}
 }
@@ -84,7 +99,7 @@ func resourceKubernetesSecretCreate(ctx context.Context, d *schema.ResourceData,
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	secret := api.Secret{
+	secret := corev1.Secret{
 		ObjectMeta: metadata,
 	}
 
@@ -106,7 +121,7 @@ func resourceKubernetesSecretCreate(ctx context.Context, d *schema.ResourceData,
 	}
 
 	if v, ok := d.GetOk("type"); ok {
-		secret.Type = api.SecretType(v.(string))
+		secret.Type = corev1.SecretType(v.(string))
 	}
 
 	if v, ok := d.GetOkExists("immutable"); ok {
@@ -121,6 +136,34 @@ func resourceKubernetesSecretCreate(ctx context.Context, d *schema.ResourceData,
 
 	log.Printf("[INFO] Submitting new secret: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
+
+	if out.Type == corev1.SecretTypeServiceAccountToken && d.Get("wait_for_service_account_token").(bool) {
+		log.Printf("[DEBUG] Waiting for secret service account token to be created")
+
+		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+			secret, err := conn.CoreV1().Secrets(out.Namespace).Get(ctx, out.Name, metav1.GetOptions{})
+			if err != nil {
+				log.Printf("[DEBUG] Received error: %#v", err)
+				return resource.NonRetryableError(err)
+			}
+
+			log.Printf("[INFO] Received secret: %#v", secret.Name)
+			if _, ok := secret.Data["token"]; ok {
+				log.Println("[INFO] Secret service account token created")
+				return nil
+			}
+
+			return resource.RetryableError(fmt.Errorf(
+				"Waiting for secret %q to create service account token", d.Id()))
+		})
+		if err != nil {
+			lastWarnings, wErr := getLastWarningsForObject(ctx, conn, out.ObjectMeta, "Secret", 3)
+			if wErr != nil {
+				return diag.FromErr(wErr)
+			}
+			return diag.Errorf("%s%s", err, stringifyEvents(lastWarnings))
+		}
+	}
 
 	return resourceKubernetesSecretRead(ctx, d, meta)
 }
@@ -150,8 +193,8 @@ func resourceKubernetesSecretRead(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Received secret: %#v", secret)
-	err = d.Set("metadata", flattenMetadata(secret.ObjectMeta, d))
+	log.Printf("[INFO] Received secret: %#v", secret.ObjectMeta)
+	err = d.Set("metadata", flattenMetadata(secret.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -240,7 +283,7 @@ func resourceKubernetesSecretUpdate(ctx context.Context, d *schema.ResourceData,
 		return diag.Errorf("Failed to update secret: %s", err)
 	}
 
-	log.Printf("[INFO] Submitting updated secret: %#v", out)
+	log.Printf("[INFO] Submitting updated secret: %#v", out.ObjectMeta)
 	d.SetId(buildId(out.ObjectMeta))
 
 	return resourceKubernetesSecretRead(ctx, d, meta)
@@ -260,6 +303,9 @@ func resourceKubernetesSecretDelete(ctx context.Context, d *schema.ResourceData,
 	log.Printf("[INFO] Deleting secret: %q", name)
 	err = conn.CoreV1().Secrets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

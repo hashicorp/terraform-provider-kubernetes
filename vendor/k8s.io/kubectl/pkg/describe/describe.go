@@ -33,7 +33,6 @@ import (
 	"unicode"
 
 	"github.com/fatih/camelcase"
-
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
@@ -46,13 +45,13 @@ import (
 	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
+	networkingv1alpha1 "k8s.io/api/networking/v1alpha1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	storagev1 "k8s.io/api/storage/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -214,6 +213,7 @@ func describerMap(clientConfig *rest.Config) (map[schema.GroupKind]ResourceDescr
 		{Group: networkingv1beta1.GroupName, Kind: "IngressClass"}:                &IngressClassDescriber{c},
 		{Group: networkingv1.GroupName, Kind: "Ingress"}:                          &IngressDescriber{c},
 		{Group: networkingv1.GroupName, Kind: "IngressClass"}:                     &IngressClassDescriber{c},
+		{Group: networkingv1alpha1.GroupName, Kind: "ClusterCIDR"}:                &ClusterCIDRDescriber{c},
 		{Group: batchv1.GroupName, Kind: "Job"}:                                   &JobDescriber{c},
 		{Group: batchv1.GroupName, Kind: "CronJob"}:                               &CronJobDescriber{c},
 		{Group: batchv1beta1.GroupName, Kind: "CronJob"}:                          &CronJobDescriber{c},
@@ -414,7 +414,7 @@ func (d *NamespaceDescriber) Describe(namespace, name string, describerSettings 
 			return newList, nil
 		})
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// Server does not support resource quotas.
 			// Not an error, will not show resource quotas information.
 			resourceQuotaList = nil
@@ -434,7 +434,7 @@ func (d *NamespaceDescriber) Describe(namespace, name string, describerSettings 
 			return newList, nil
 		})
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// Server does not support limit ranges.
 			// Not an error, will not show limit ranges information.
 			limitRangeList = nil
@@ -452,14 +452,31 @@ func describeNamespace(namespace *corev1.Namespace, resourceQuotaList *corev1.Re
 		printLabelsMultiline(w, "Labels", namespace.Labels)
 		printAnnotationsMultiline(w, "Annotations", namespace.Annotations)
 		w.Write(LEVEL_0, "Status:\t%s\n", string(namespace.Status.Phase))
+
+		if len(namespace.Status.Conditions) > 0 {
+			w.Write(LEVEL_0, "Conditions:\n")
+			w.Write(LEVEL_1, "Type\tStatus\tLastTransitionTime\tReason\tMessage\n")
+			w.Write(LEVEL_1, "----\t------\t------------------\t------\t-------\n")
+			for _, c := range namespace.Status.Conditions {
+				w.Write(LEVEL_1, "%v\t%v\t%s\t%v\t%v\n",
+					c.Type,
+					c.Status,
+					c.LastTransitionTime.Time.Format(time.RFC1123Z),
+					c.Reason,
+					c.Message)
+			}
+		}
+
 		if resourceQuotaList != nil {
 			w.Write(LEVEL_0, "\n")
 			DescribeResourceQuotas(resourceQuotaList, w)
 		}
+
 		if limitRangeList != nil {
 			w.Write(LEVEL_0, "\n")
 			DescribeLimitRanges(limitRangeList, w)
 		}
+
 		return nil
 	})
 }
@@ -748,7 +765,13 @@ func describePod(pod *corev1.Pod, events *corev1.EventList) (string, error) {
 			w.Write(LEVEL_0, "Priority:\t%d\n", *pod.Spec.Priority)
 		}
 		if len(pod.Spec.PriorityClassName) > 0 {
-			w.Write(LEVEL_0, "Priority Class Name:\t%s\n", stringOrNone(pod.Spec.PriorityClassName))
+			w.Write(LEVEL_0, "Priority Class Name:\t%s\n", pod.Spec.PriorityClassName)
+		}
+		if pod.Spec.RuntimeClassName != nil && len(*pod.Spec.RuntimeClassName) > 0 {
+			w.Write(LEVEL_0, "Runtime Class Name:\t%s\n", *pod.Spec.RuntimeClassName)
+		}
+		if len(pod.Spec.ServiceAccountName) > 0 {
+			w.Write(LEVEL_0, "Service Account:\t%s\n", pod.Spec.ServiceAccountName)
 		}
 		if pod.Spec.NodeName == "" {
 			w.Write(LEVEL_0, "Node:\t<none>\n")
@@ -824,6 +847,7 @@ func describePod(pod *corev1.Pod, events *corev1.EventList) (string, error) {
 		}
 		printLabelsMultiline(w, "Node-Selectors", pod.Spec.NodeSelector)
 		printPodTolerationsMultiline(w, "Tolerations", pod.Spec.Tolerations)
+		describeTopologySpreadConstraints(pod.Spec.TopologySpreadConstraints, w, "")
 		if events != nil {
 			DescribeEvents(events, w)
 		}
@@ -846,6 +870,32 @@ func describePodIPs(pod *corev1.Pod, w PrefixWriter, space string) {
 	w.Write(LEVEL_0, "%sIPs:\n", space)
 	for _, ipInfo := range pod.Status.PodIPs {
 		w.Write(LEVEL_1, "IP:\t%s\n", ipInfo.IP)
+	}
+}
+
+func describeTopologySpreadConstraints(tscs []corev1.TopologySpreadConstraint, w PrefixWriter, space string) {
+	if len(tscs) == 0 {
+		return
+	}
+
+	sort.Slice(tscs, func(i, j int) bool {
+		return tscs[i].TopologyKey < tscs[j].TopologyKey
+	})
+
+	w.Write(LEVEL_0, "%sTopology Spread Constraints:\t", space)
+	for i, tsc := range tscs {
+		if i != 0 {
+			w.Write(LEVEL_0, "%s", space)
+			w.Write(LEVEL_0, "%s", "\t")
+		}
+
+		w.Write(LEVEL_0, "%s:", tsc.TopologyKey)
+		w.Write(LEVEL_0, "%v", tsc.WhenUnsatisfiable)
+		w.Write(LEVEL_0, " when max skew %d is exceeded", tsc.MaxSkew)
+		if tsc.LabelSelector != nil {
+			w.Write(LEVEL_0, " for selector %s", metav1.FormatLabelSelector(tsc.LabelSelector))
+		}
+		w.Write(LEVEL_0, "\n")
 	}
 }
 
@@ -1399,7 +1449,6 @@ func printCSIPersistentVolumeAttributesMultilineIndent(w PrefixWriter, initialIn
 		} else {
 			w.Write(LEVEL_2, "%s\n", line)
 		}
-		i++
 	}
 }
 
@@ -1927,6 +1976,9 @@ func DescribeProbe(probe *corev1.Probe) string {
 		return fmt.Sprintf("http-get %s %s", url.String(), attrs)
 	case probe.TCPSocket != nil:
 		return fmt.Sprintf("tcp-socket %s:%s %s", probe.TCPSocket.Host, probe.TCPSocket.Port.String(), attrs)
+
+	case probe.GRPC != nil:
+		return fmt.Sprintf("grpc <pod>:%d %s %s", probe.GRPC.Port, *(probe.GRPC.Service), attrs)
 	}
 	return fmt.Sprintf("unknown %s", attrs)
 }
@@ -2092,6 +2144,7 @@ func DescribePodTemplate(template *corev1.PodTemplateSpec, w PrefixWriter) {
 	}
 	describeContainers("Containers", template.Spec.Containers, nil, nil, w, "  ")
 	describeVolumes(template.Spec.Volumes, w, "  ")
+	describeTopologySpreadConstraints(template.Spec.TopologySpreadConstraints, w, "  ")
 	if len(template.Spec.PriorityClassName) > 0 {
 		w.Write(LEVEL_1, "Priority Class Name:\t%s\n", template.Spec.PriorityClassName)
 	}
@@ -2216,7 +2269,11 @@ func describeJob(job *batchv1.Job, events *corev1.EventList) (string, error) {
 		if job.Spec.ActiveDeadlineSeconds != nil {
 			w.Write(LEVEL_0, "Active Deadline Seconds:\t%ds\n", *job.Spec.ActiveDeadlineSeconds)
 		}
-		w.Write(LEVEL_0, "Pods Statuses:\t%d Running / %d Succeeded / %d Failed\n", job.Status.Active, job.Status.Succeeded, job.Status.Failed)
+		if job.Status.Ready == nil {
+			w.Write(LEVEL_0, "Pods Statuses:\t%d Active / %d Succeeded / %d Failed\n", job.Status.Active, job.Status.Succeeded, job.Status.Failed)
+		} else {
+			w.Write(LEVEL_0, "Pods Statuses:\t%d Active (%d Ready) / %d Succeeded / %d Failed\n", job.Status.Active, *job.Status.Ready, job.Status.Succeeded, job.Status.Failed)
+		}
 		if job.Spec.CompletionMode != nil && *job.Spec.CompletionMode == batchv1.IndexedCompletion {
 			w.Write(LEVEL_0, "Completed Indexes:\t%s\n", capIndexesListOrNone(job.Status.CompletedIndexes, 50))
 		}
@@ -2605,24 +2662,21 @@ func (i *IngressDescriber) describeIngressV1(ing *networkingv1.Ingress, events *
 	return tabbedString(func(out io.Writer) error {
 		w := NewPrefixWriter(out)
 		w.Write(LEVEL_0, "Name:\t%v\n", ing.Name)
+		printLabelsMultiline(w, "Labels", ing.Labels)
 		w.Write(LEVEL_0, "Namespace:\t%v\n", ing.Namespace)
 		w.Write(LEVEL_0, "Address:\t%v\n", loadBalancerStatusStringer(ing.Status.LoadBalancer, true))
+		ingressClassName := "<none>"
+		if ing.Spec.IngressClassName != nil {
+			ingressClassName = *ing.Spec.IngressClassName
+		}
+		w.Write(LEVEL_0, "Ingress Class:\t%v\n", ingressClassName)
 		def := ing.Spec.DefaultBackend
 		ns := ing.Namespace
 		if def == nil {
-			// Ingresses that don't specify a default backend inherit the
-			// default backend in the kube-system namespace.
-			def = &networkingv1.IngressBackend{
-				Service: &networkingv1.IngressServiceBackend{
-					Name: "default-http-backend",
-					Port: networkingv1.ServiceBackendPort{
-						Number: 80,
-					},
-				},
-			}
-			ns = metav1.NamespaceSystem
+			w.Write(LEVEL_0, "Default backend:\t<default>\n")
+		} else {
+			w.Write(LEVEL_0, "Default backend:\t%s\n", i.describeBackendV1(ns, def))
 		}
-		w.Write(LEVEL_0, "Default backend:\t%s\n", i.describeBackendV1(ns, def))
 		if len(ing.Spec.TLS) != 0 {
 			describeIngressTLSV1(w, ing.Spec.TLS)
 		}
@@ -2660,20 +2714,21 @@ func (i *IngressDescriber) describeIngressV1beta1(ing *networkingv1beta1.Ingress
 	return tabbedString(func(out io.Writer) error {
 		w := NewPrefixWriter(out)
 		w.Write(LEVEL_0, "Name:\t%v\n", ing.Name)
+		printLabelsMultiline(w, "Labels", ing.Labels)
 		w.Write(LEVEL_0, "Namespace:\t%v\n", ing.Namespace)
 		w.Write(LEVEL_0, "Address:\t%v\n", loadBalancerStatusStringer(ing.Status.LoadBalancer, true))
+		ingressClassName := "<none>"
+		if ing.Spec.IngressClassName != nil {
+			ingressClassName = *ing.Spec.IngressClassName
+		}
+		w.Write(LEVEL_0, "Ingress Class:\t%v\n", ingressClassName)
 		def := ing.Spec.Backend
 		ns := ing.Namespace
 		if def == nil {
-			// Ingresses that don't specify a default backend inherit the
-			// default backend in the kube-system namespace.
-			def = &networkingv1beta1.IngressBackend{
-				ServiceName: "default-http-backend",
-				ServicePort: intstr.IntOrString{Type: intstr.Int, IntVal: 80},
-			}
-			ns = metav1.NamespaceSystem
+			w.Write(LEVEL_0, "Default backend:\t<default>\n")
+		} else {
+			w.Write(LEVEL_0, "Default backend:\t%s\n", i.describeBackendV1beta1(ns, def))
 		}
-		w.Write(LEVEL_0, "Default backend:\t%s (%s)\n", backendStringer(def), i.describeBackendV1beta1(ns, def))
 		if len(ing.Spec.TLS) != 0 {
 			describeIngressTLSV1beta1(w, ing.Spec.TLS)
 		}
@@ -2696,7 +2751,7 @@ func (i *IngressDescriber) describeIngressV1beta1(ing *networkingv1beta1.Ingress
 			}
 		}
 		if count == 0 {
-			w.Write(LEVEL_1, "%s\t%s \t%s (%s)\n", "*", "*", backendStringer(def), i.describeBackendV1beta1(ns, def))
+			w.Write(LEVEL_1, "%s\t%s \t<default>\n", "*", "*")
 		}
 		printAnnotationsMultiline(w, "Annotations", ing.Annotations)
 
@@ -2792,6 +2847,63 @@ func (i *IngressClassDescriber) describeIngressClassV1(ic *networkingv1.IngressC
 			w.Write(LEVEL_1, "Kind:\t%v\n", ic.Spec.Parameters.Kind)
 			w.Write(LEVEL_1, "Name:\t%v\n", ic.Spec.Parameters.Name)
 		}
+		if events != nil {
+			DescribeEvents(events, w)
+		}
+		return nil
+	})
+}
+
+// ClusterCIDRDescriber generates information about a ClusterCIDR.
+type ClusterCIDRDescriber struct {
+	client clientset.Interface
+}
+
+func (c *ClusterCIDRDescriber) Describe(namespace, name string, describerSettings DescriberSettings) (string, error) {
+	var events *corev1.EventList
+
+	ccV1alpha1, err := c.client.NetworkingV1alpha1().ClusterCIDRs().Get(context.TODO(), name, metav1.GetOptions{})
+	if err == nil {
+		if describerSettings.ShowEvents {
+			events, _ = searchEvents(c.client.CoreV1(), ccV1alpha1, describerSettings.ChunkSize)
+		}
+		return c.describeClusterCIDRV1alpha1(ccV1alpha1, events)
+	}
+	return "", err
+}
+
+func (c *ClusterCIDRDescriber) describeClusterCIDRV1alpha1(cc *networkingv1alpha1.ClusterCIDR, events *corev1.EventList) (string, error) {
+	return tabbedString(func(out io.Writer) error {
+		w := NewPrefixWriter(out)
+		w.Write(LEVEL_0, "Name:\t%v\n", cc.Name)
+		printLabelsMultiline(w, "Labels", cc.Labels)
+		printAnnotationsMultiline(w, "Annotations", cc.Annotations)
+
+		w.Write(LEVEL_0, "NodeSelector:\n")
+		if cc.Spec.NodeSelector != nil {
+			w.Write(LEVEL_1, "NodeSelector Terms:")
+			if len(cc.Spec.NodeSelector.NodeSelectorTerms) == 0 {
+				w.WriteLine("<none>")
+			} else {
+				w.WriteLine("")
+				for i, term := range cc.Spec.NodeSelector.NodeSelectorTerms {
+					printNodeSelectorTermsMultilineWithIndent(w, LEVEL_2, fmt.Sprintf("Term %v", i), "\t", term.MatchExpressions)
+				}
+			}
+		}
+
+		if cc.Spec.PerNodeHostBits != 0 {
+			w.Write(LEVEL_0, "PerNodeHostBits:\t%s\n", fmt.Sprint(cc.Spec.PerNodeHostBits))
+		}
+
+		if cc.Spec.IPv4 != "" {
+			w.Write(LEVEL_0, "IPv4:\t%s\n", cc.Spec.IPv4)
+		}
+
+		if cc.Spec.IPv6 != "" {
+			w.Write(LEVEL_0, "IPv6:\t%s\n", cc.Spec.IPv6)
+		}
+
 		if events != nil {
 			DescribeEvents(events, w)
 		}
@@ -3487,7 +3599,7 @@ func (d *NodeDescriber) Describe(namespace, name string, describerSettings Descr
 	}
 	nodeNonTerminatedPodsList, err := getPodsInChunks(d.CoreV1().Pods(namespace), initialOpts)
 	if err != nil {
-		if !errors.IsForbidden(err) {
+		if !apierrors.IsForbidden(err) {
 			return "", err
 		}
 		canViewPods = false
@@ -3499,8 +3611,17 @@ func (d *NodeDescriber) Describe(namespace, name string, describerSettings Descr
 			klog.Errorf("Unable to construct reference to '%#v': %v", node, err)
 		} else {
 			// TODO: We haven't decided the namespace for Node object yet.
-			ref.UID = types.UID(ref.Name)
+			// there are two UIDs for host events:
+			// controller use node.uid
+			// kubelet use node.name
+			// TODO: Uniform use of UID
 			events, _ = searchEvents(d.CoreV1(), ref, describerSettings.ChunkSize)
+
+			ref.UID = types.UID(ref.Name)
+			eventsInvName, _ := searchEvents(d.CoreV1(), ref, describerSettings.ChunkSize)
+
+			// Merge the results of two queries
+			events.Items = append(events.Items, eventsInvName.Items...)
 		}
 	}
 
@@ -3673,6 +3794,9 @@ func describeStatefulSet(ps *appsv1.StatefulSet, selector labels.Selector, event
 			ru := ps.Spec.UpdateStrategy.RollingUpdate
 			if ru.Partition != nil {
 				w.Write(LEVEL_1, "Partition:\t%d\n", *ru.Partition)
+				if ru.MaxUnavailable != nil {
+					w.Write(LEVEL_1, "MaxUnavailable:\t%s\n", ru.MaxUnavailable.String())
+				}
 			}
 		}
 
@@ -4138,13 +4262,16 @@ func DescribeEvents(el *corev1.EventList, w PrefixWriter) {
 	w.Write(LEVEL_1, "----\t------\t----\t----\t-------\n")
 	for _, e := range el.Items {
 		var interval string
-		if e.Count > 1 {
-			interval = fmt.Sprintf("%s (x%d over %s)", translateTimestampSince(e.LastTimestamp), e.Count, translateTimestampSince(e.FirstTimestamp))
+		firstTimestampSince := translateMicroTimestampSince(e.EventTime)
+		if e.EventTime.IsZero() {
+			firstTimestampSince = translateTimestampSince(e.FirstTimestamp)
+		}
+		if e.Series != nil {
+			interval = fmt.Sprintf("%s (x%d over %s)", translateMicroTimestampSince(e.Series.LastObservedTime), e.Series.Count, firstTimestampSince)
+		} else if e.Count > 1 {
+			interval = fmt.Sprintf("%s (x%d over %s)", translateTimestampSince(e.LastTimestamp), e.Count, firstTimestampSince)
 		} else {
-			interval = translateTimestampSince(e.FirstTimestamp)
-			if e.FirstTimestamp.IsZero() {
-				interval = translateMicroTimestampSince(e.EventTime)
-			}
+			interval = firstTimestampSince
 		}
 		source := e.Source.Component
 		if source == "" {
@@ -4735,6 +4862,7 @@ func describePriorityClass(pc *schedulingv1.PriorityClass, events *corev1.EventL
 		w.Write(LEVEL_0, "Name:\t%s\n", pc.Name)
 		w.Write(LEVEL_0, "Value:\t%v\n", pc.Value)
 		w.Write(LEVEL_0, "GlobalDefault:\t%v\n", pc.GlobalDefault)
+		w.Write(LEVEL_0, "PreemptionPolicy:\t%s\n", *pc.PreemptionPolicy)
 		w.Write(LEVEL_0, "Description:\t%s\n", pc.Description)
 
 		w.Write(LEVEL_0, "Annotations:\t%s\n", labels.FormatLabels(pc.Annotations))
@@ -4967,7 +5095,7 @@ func (d *Describers) DescribeObject(exact interface{}, extra ...interface{}) (st
 // Add adds one or more describer functions to the Describer. The passed function must
 // match the signature:
 //
-//     func(...) (string, error)
+//	func(...) (string, error)
 //
 // Any number of arguments may be provided.
 func (d *Describers) Add(fns ...interface{}) error {
@@ -5086,7 +5214,6 @@ func printLabelsMultilineWithIndent(w PrefixWriter, initialIndent, title, innerI
 			w.Write(LEVEL_0, "%s", innerIndent)
 		}
 		w.Write(LEVEL_0, "%s=%s\n", key, labels[key])
-		i++
 	}
 }
 
@@ -5320,7 +5447,6 @@ func printAnnotationsMultiline(w PrefixWriter, title string, annotations map[str
 		} else {
 			w.Write(LEVEL_0, "%s: %s\n", key, value)
 		}
-		i++
 	}
 }
 

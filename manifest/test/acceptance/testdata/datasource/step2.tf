@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 data "kubernetes_resource" "test_config" {
   api_version = "v1"
   kind = "ConfigMap"

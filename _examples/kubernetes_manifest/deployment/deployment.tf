@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_manifest" "test-deployment" {
 
   manifest = {
@@ -34,6 +37,18 @@ resource "kubernetes_manifest" "test-deployment" {
                   "protocol"      = "TCP"
                 },
               ]
+              "volumeMounts" = [
+                {
+                  "mountPath" = "/foobar/"
+                  "name"      = "vol-foobar"
+                },
+              ]
+            },
+          ],
+          "volumes" = [
+            {
+              "emptyDir" = {}
+              "name"     = "vol-foobar"
             },
           ]
         }

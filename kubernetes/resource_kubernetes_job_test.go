@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -20,9 +23,12 @@ func TestAccKubernetesJob_wait_for_completion(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
 		IDRefreshName: "kubernetes_job.test",
-		IDRefreshIgnore: []string{"spec.0.selector.0.match_expressions.#",
+		IDRefreshIgnore: []string{
+			"metadata.0.resource_version",
+			"spec.0.selector.0.match_expressions.#",
 			"spec.0.template.0.spec.0.container.0.resources.0.limits.#",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests.#"},
+			"spec.0.template.0.spec.0.container.0.resources.0.requests.#",
+		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesJobDestroy,
 		Steps: []resource.TestStep{
@@ -293,15 +299,15 @@ func testAccKubernetesJobConfig_basic(name, imageName string) string {
   }
   spec {
     active_deadline_seconds = 120
-    backoff_limit = 10
-    completions = 10
-    parallelism = 2
+    backoff_limit           = 10
+    completions             = 10
+    parallelism             = 2
     template {
       metadata {}
       spec {
         container {
-          name = "hello"
-          image = "%s"
+          name    = "hello"
+          image   = "%s"
           command = ["echo", "'hello'"]
         }
       }
@@ -319,16 +325,16 @@ func testAccKubernetesJobConfig_updateMutableFields(name, imageName, activeDeadl
   }
   spec {
     active_deadline_seconds = %s
-    backoff_limit = %s
-    completions = 10
-    manual_selector = %s
-    parallelism = %s
+    backoff_limit           = %s
+    completions             = 10
+    manual_selector         = %s
+    parallelism             = %s
     template {
       metadata {}
       spec {
         container {
-          name = "hello"
-          image = "%s"
+          name    = "hello"
+          image   = "%s"
           command = ["echo", "'hello'"]
         }
       }
@@ -350,8 +356,8 @@ func testAccKubernetesJobConfig_updateImmutableFields(name, imageName, completio
       metadata {}
       spec {
         container {
-          name = "newname"
-          image = "%s"
+          name    = "newname"
+          image   = "%s"
           command = ["echo", "'hello'"]
         }
       }
@@ -368,16 +374,16 @@ func testAccKubernetesJobConfig_ttl_seconds_after_finished(name, imageName strin
     name = "%s"
   }
   spec {
-    backoff_limit = 10
-    completions = 10
-    parallelism = 2
+    backoff_limit              = 10
+    completions                = 10
+    parallelism                = 2
     ttl_seconds_after_finished = "60"
     template {
       metadata {}
       spec {
         container {
-          name = "hello"
-          image = "%s"
+          name    = "hello"
+          image   = "%s"
           command = ["echo", "'hello'"]
         }
       }
@@ -398,8 +404,8 @@ func testAccKubernetesJobConfig_wait_for_completion(name, imageName string) stri
       }
       spec {
         container {
-          name = "wait-test"
-          image = "%s"
+          name    = "wait-test"
+          image   = "%s"
           command = ["sleep", "10"]
         }
       }
@@ -435,8 +441,8 @@ func testAccKubernetesJobConfig_modified(name, imageName string) string {
       }
       spec {
         container {
-          name = "hello"
-          image = "%s"
+          name    = "hello"
+          image   = "%s"
           command = ["echo", "'hello'"]
         }
       }

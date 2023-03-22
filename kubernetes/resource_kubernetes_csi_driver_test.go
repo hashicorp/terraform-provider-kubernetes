@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -23,6 +26,7 @@ func TestAccKubernetesCSIDriver_basic(t *testing.T) {
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
 		},
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCSIDriverDestroy,
 		Steps: []resource.TestStep{

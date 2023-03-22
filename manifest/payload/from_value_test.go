@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package payload
 
 import (
@@ -6,9 +9,15 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
 )
 
 func TestFromTFValue(t *testing.T) {
+	// this mimics how terraform-plugin-go decodes floats that terraform sends over msgpack without a precision marker
+	fv, _, err := big.ParseFloat("98.765", 10, 512, big.ToNearestEven)
+	if err != nil {
+		t.Fatalf("cannot create test float value out of string: %s", err)
+	}
 	samples := map[string]struct {
 		In  tftypes.Value
 		Th  map[string]string
@@ -18,9 +27,13 @@ func TestFromTFValue(t *testing.T) {
 			In:  tftypes.NewValue(tftypes.String, "hello"),
 			Out: "hello",
 		},
-		"float-primitive": {
-			In:  tftypes.NewValue(tftypes.Number, big.NewFloat(100.2)),
-			Out: 100.2,
+		"float-primitive-native-big": {
+			In:  tftypes.NewValue(tftypes.Number, big.NewFloat(98.765)),
+			Out: float64(98.765),
+		},
+		"float-primitive-from-string": {
+			In:  tftypes.NewValue(tftypes.Number, fv),
+			Out: float64(98.765),
 		},
 		"boolean-primitive": {
 			In:  tftypes.NewValue(tftypes.Bool, true),
@@ -167,7 +180,7 @@ func TestValueToTypePath(t *testing.T) {
 	}
 	for n, s := range samples {
 		t.Run(n, func(t *testing.T) {
-			p := valueToTypePath(s.In)
+			p := morph.ValueToTypePath(s.In)
 			if !p.Equal(s.Out) {
 				t.Logf("Expected %#v, received: %#v", s.Out, p)
 				t.Fail()

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:build acceptance
 // +build acceptance
 
@@ -31,10 +34,10 @@ func TestKubernetesManifest_EmptyBlocks(t *testing.T) {
 	name := fmt.Sprintf("%s.%s", plural, group)
 	namespace := "default"
 
-	tf := tfhelper.RequireNewWorkingDir(t)
-	tf.SetReattachInfo(reattachInfo)
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
 	defer func() {
-		tf.RequireDestroy(t)
+		tf.Destroy(ctx)
 		tf.Close()
 		k8shelper.AssertResourceDoesNotExist(t, "apiextensions.k8s.io/v1", "customresourcedefinitions", name)
 	}()
@@ -49,9 +52,9 @@ func TestKubernetesManifest_EmptyBlocks(t *testing.T) {
 		"cr_version":    version,
 	}
 	tfconfig := loadTerraformConfig(t, "EmptyBlock/step1.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfig)
-	tf.RequireInit(t)
-	tf.RequireApply(t)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
+	tf.Apply(ctx)
 
 	k8shelper.AssertResourceExists(t, "apiextensions.k8s.io/v1", "customresourcedefinitions", name)
 
@@ -62,20 +65,24 @@ func TestKubernetesManifest_EmptyBlocks(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to create additional provider instance: %q", err)
 	}
-	step2 := tfhelper.RequireNewWorkingDir(t)
-	step2.SetReattachInfo(reattachInfo2)
+	step2 := tfhelper.RequireNewWorkingDir(ctx, t)
+	step2.SetReattachInfo(ctx, reattachInfo2)
 	defer func() {
-		step2.RequireDestroy(t)
+		step2.Destroy(ctx)
 		step2.Close()
 		k8shelper.AssertResourceDoesNotExist(t, groupVersion, kind, name)
 	}()
 
 	tfconfig = loadTerraformConfig(t, "EmptyBlock/step2.tf", tfvars)
-	step2.RequireSetConfig(t, string(tfconfig))
-	step2.RequireInit(t)
-	step2.RequireApply(t)
+	step2.SetConfig(ctx, string(tfconfig))
+	step2.Init(ctx)
+	step2.Apply(ctx)
 
-	tfstate := tfstatehelper.NewHelper(step2.RequireState(t))
+	s2, err := step2.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	tfstate := tfstatehelper.NewHelper(s2)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
 		"kubernetes_manifest.test.object.kind":               kind,
 		"kubernetes_manifest.test.object.apiVersion":         groupVersion,

@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_manifest" "service-account-injector" {
 
   manifest = {
@@ -56,7 +59,7 @@ resource "kubernetes_manifest" "cluster-role-binding-injector" {
         "app.kubernetes.io/managed-by" = "Terraform"
         "app.kubernetes.io/name"       = "vault-agent-injector"
       }
-      "name"      = "${var.name}-vault-agent-injector-binding"
+      "name" = "${var.name}-vault-agent-injector-binding"
     }
     "roleRef" = {
       "apiGroup" = "rbac.authorization.k8s.io"

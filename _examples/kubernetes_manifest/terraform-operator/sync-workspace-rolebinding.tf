@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_role_binding" "tfc-role-binding" {
   metadata {
     name      = "${kubernetes_manifest.namespace.object.metadata.name}-sync-workspace"

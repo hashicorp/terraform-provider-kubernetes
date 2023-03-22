@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	networking "k8s.io/api/networking/v1"
@@ -25,6 +29,10 @@ func resourceKubernetesIngressV1() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: resourceKubernetesIngressV1Schema(),
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(20 * time.Minute),
+			Delete: schema.DefaultTimeout(20 * time.Minute),
+		},
 	}
 }
 
@@ -49,6 +57,7 @@ func resourceKubernetesIngressV1Schema() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: docIngressSpec["ingressClassName"],
 						Optional:    true,
+						Computed:    true,
 					},
 					"default_backend": backendSpecFieldsV1(defaultBackendDescriptionV1),
 					"rule": {
@@ -243,7 +252,7 @@ func resourceKubernetesIngressV1Read(ctx context.Context, d *schema.ResourceData
 		return diag.Errorf("Failed to read Ingress '%s' because: %s", buildId(ing.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Received ingress: %#v", ing)
-	err = d.Set("metadata", flattenMetadata(ing.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(ing.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

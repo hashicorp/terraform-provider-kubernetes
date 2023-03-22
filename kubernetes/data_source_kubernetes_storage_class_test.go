@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -156,7 +159,7 @@ func testAccKubernetesDataSourceStorageClassConfig_basic(name, provisioner strin
     type = "pd-ssd"
   }
 
- allowed_topologies {
+  allowed_topologies {
     match_label_expressions {
       key = "failure-domain.beta.kubernetes.io/zone"
       values = [

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -78,7 +81,7 @@ func resourceKubernetesNamespaceRead(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received namespace: %#v", namespace)
-	err = d.Set("metadata", flattenMetadata(namespace.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(namespace.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -119,6 +122,9 @@ func resourceKubernetesNamespaceDelete(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[INFO] Deleting namespace: %#v", name)
 	err = conn.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

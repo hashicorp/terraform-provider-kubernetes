@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -22,6 +25,7 @@ func TestAccKubernetesIngress_basic(t *testing.T) {
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
 		},
 		IDRefreshName:     "kubernetes_ingress.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{
@@ -76,6 +80,7 @@ func TestAccKubernetesIngress_TLS(t *testing.T) {
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
 		},
 		IDRefreshName:     "kubernetes_ingress.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{
@@ -168,6 +173,7 @@ func TestAccKubernetesIngress_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 			skipIfNotRunningInGke(t)
 		},
 		IDRefreshName:     "kubernetes_ingress.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
 		Steps: []resource.TestStep{
@@ -180,52 +186,6 @@ func TestAccKubernetesIngress_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 			},
 		},
 	})
-}
-
-func TestAccKubernetesIngress_stateUpgradeV0_loadBalancerIngress(t *testing.T) {
-	var conf1, conf2 api.Ingress
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
-			skipIfNotRunningInEks(t)
-		},
-		ExternalProviders: testAccExternalProviders,
-		IDRefreshName:     "kubernetes_ingress.test",
-		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: requiredProviders() + testAccKubernetesIngressConfig_stateUpgradev0("kubernetes-released", name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf1),
-				),
-			},
-			{
-				Config: requiredProviders() + testAccKubernetesIngressConfig_stateUpgradev0("kubernetes-local", name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressExists("kubernetes_ingress.test", &conf2),
-					testAccCheckKubernetesIngressForceNew(&conf1, &conf2, false),
-				),
-			},
-		},
-	})
-}
-
-func testAccCheckKubernetesIngressForceNew(old, new *api.Ingress, wantNew bool) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if wantNew {
-			if old.ObjectMeta.UID == new.ObjectMeta.UID {
-				return fmt.Errorf("Expecting new resource for Ingress %s", old.ObjectMeta.UID)
-			}
-		} else {
-			if old.ObjectMeta.UID != new.ObjectMeta.UID {
-				return fmt.Errorf("Expecting Ingress UIDs to be the same: expected %s got %s", old.ObjectMeta.UID, new.ObjectMeta.UID)
-			}
-		}
-		return nil
-	}
 }
 
 func testAccCheckKubernetesIngressDestroy(s *terraform.State) error {
@@ -291,7 +251,7 @@ func testAccKubernetesIngressConfig_basic(name string) string {
     name = "%s"
   }
   spec {
-	ingress_class_name = "ingress-class"
+    ingress_class_name = "ingress-class"
     backend {
       service_name = "app1"
       service_port = 443
@@ -318,7 +278,7 @@ func testAccKubernetesIngressConfig_modified(name string) string {
     name = "%s"
   }
   spec {
-	ingress_class_name = "other-ingress-class"
+    ingress_class_name = "other-ingress-class"
     backend {
       service_name = "svc"
       service_port = 8443
@@ -369,12 +329,12 @@ func testAccKubernetesIngressConfig_internalKey(name string) string {
     name = "%s"
     annotations = {
       "kubernetes.io/ingress-anno" = "one"
-      TestAnnotationTwo = "two"
+      TestAnnotationTwo            = "two"
     }
     labels = {
       "kubernetes.io/ingress-label" = "one"
-      TestLabelTwo = "two"
-      TestLabelThree = "three"
+      TestLabelTwo                  = "two"
+      TestLabelThree                = "three"
     }
   }
   spec {
@@ -398,7 +358,7 @@ func testAccKubernetesIngressConfig_internalKey_removed(name string) string {
       TestAnnotationTwo = "two"
     }
     labels = {
-      TestLabelTwo = "two"
+      TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
   }
@@ -426,9 +386,9 @@ func testAccKubernetesIngressConfig_waitForLoadBalancer(name string) string {
       app = %q
     }
     port {
-      port = 8000
+      port        = 8000
       target_port = 80
-      protocol = "TCP"
+      protocol    = "TCP"
     }
   }
 }
@@ -451,12 +411,12 @@ resource "kubernetes_deployment" "test" {
       }
       spec {
         container {
-          name = "test"
+          name  = "test"
           image = "gcr.io/google-samples/hello-app:2.0"
           env {
-            name = "PORT"
+            name  = "PORT"
             value = "80"
-          }  
+          }
         }
       }
     }
@@ -465,7 +425,7 @@ resource "kubernetes_deployment" "test" {
 
 resource "kubernetes_ingress" "test" {
   depends_on = [
-    kubernetes_service.test, 
+    kubernetes_service.test,
     kubernetes_deployment.test
   ]
   metadata {
@@ -479,48 +439,4 @@ resource "kubernetes_ingress" "test" {
   }
   wait_for_load_balancer = true
 }`, name, name, name, name, name, name, name)
-}
-
-func testAccKubernetesIngressConfig_stateUpgradev0(provider, name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
-  provider = "%s"
-  metadata {
-    name = "%s"
-  }
-  spec {
-    port {
-      port = 80
-      target_port = 80
-      protocol = "TCP"
-    }
-    type = "NodePort"
-  }
-}
-
-resource "kubernetes_ingress" "test" {
-  provider = "%s"
-  wait_for_load_balancer = false
-  metadata {
-    name = "%s"
-    annotations = {
-      "kubernetes.io/ingress.class" = "alb"
-      "alb.ingress.kubernetes.io/scheme" = "internet-facing"
-      "alb.ingress.kubernetes.io/target-type" = "ip"
-    }
-  }
-  spec {
-    rule {
-      http {
-        path {
-          path = "/*"
-          backend {
-            service_name = kubernetes_service.test.metadata.0.name
-            service_port = 80
-          }
-        }
-      }
-    }
-  }
-}
-`, provider, name, provider, name)
 }

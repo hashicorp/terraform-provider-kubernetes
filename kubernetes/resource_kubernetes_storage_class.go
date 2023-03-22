@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -178,7 +181,7 @@ func resourceKubernetesStorageClassRead(ctx context.Context, d *schema.ResourceD
 
 	log.Printf("[INFO] Received storage class: %#v", storageClass)
 
-	err = d.Set("metadata", flattenMetadata(storageClass.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(storageClass.ObjectMeta, d, meta))
 	if err != nil {
 		diags = append(diags, diag.FromErr(err)[0])
 	}
@@ -201,10 +204,19 @@ func resourceKubernetesStorageClassUpdate(ctx context.Context, d *schema.Resourc
 
 	name := d.Id()
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
+
+	if d.HasChange("allow_volume_expansion") {
+		newVal := d.Get("allow_volume_expansion").(bool)
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/allowVolumeExpansion",
+			Value: newVal,
+		})
+	}
 	data, err := ops.MarshalJSON()
 	if err != nil {
 		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
+
 	log.Printf("[INFO] Updating storage class %q: %v", name, string(data))
 	out, err := conn.StorageV1().StorageClasses().Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
@@ -226,6 +238,9 @@ func resourceKubernetesStorageClassDelete(ctx context.Context, d *schema.Resourc
 	log.Printf("[INFO] Deleting storage class: %#v", name)
 	err = conn.StorageV1().StorageClasses().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

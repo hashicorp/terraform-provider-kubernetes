@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package payload
 
 import (
@@ -6,18 +9,19 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
 )
 
 // ToTFValue converts a Kubernetes dynamic client unstructured value
 // into a Terraform specific tftypes.Value type object
 // Arguments:
-//  * in : the actual raw unstructured value to be converted
-//  * st : the expected type of the converted value
-//  * th : type hints (optional, describes ambigous encodings such as
-//         IntOrString values in more detail).
-//         Pass in empty map when not using hints.
-//  * at : attribute path which recursively tracks the conversion.
-//         Pass in empty tftypes.AttributePath{}
+//   - in : the actual raw unstructured value to be converted
+//   - st : the expected type of the converted value
+//   - th : type hints (optional, describes ambigous encodings such as
+//     IntOrString values in more detail).
+//     Pass in empty map when not using hints.
+//   - at : attribute path which recursively tracks the conversion.
+//     Pass in empty tftypes.AttributePath{}
 func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
 	if st == nil {
 		return tftypes.Value{}, at.NewErrorf("[%s] type cannot be nil", at.String())
@@ -51,7 +55,7 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
 			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(int64(in.(int)))), nil
 		case st.Is(tftypes.String):
-			ht, ok := th[valueToTypePath(at).String()]
+			ht, ok := th[morph.ValueToTypePath(at).String()]
 			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
 				return tftypes.NewValue(tftypes.String, strconv.FormatInt(int64(in.(int)), 10)), nil
 			}
@@ -64,11 +68,11 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
 			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(in.(int64))), nil
 		case st.Is(tftypes.String):
-			ht, ok := th[valueToTypePath(at).String()]
+			ht, ok := th[morph.ValueToTypePath(at).String()]
 			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
 				return tftypes.NewValue(tftypes.String, strconv.FormatInt(in.(int64), 10)), nil
 			}
-			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "in64" to "tftypes.String"`, at.String())
+			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "int64" to "tftypes.String"`, at.String())
 		default:
 			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "int64" to "%s"`, at.String(), st.String())
 		}
@@ -77,7 +81,7 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
 			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(int64(in.(int32)))), nil
 		case st.Is(tftypes.String):
-			ht, ok := th[valueToTypePath(at).String()]
+			ht, ok := th[morph.ValueToTypePath(at).String()]
 			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
 				return tftypes.NewValue(tftypes.String, strconv.FormatInt(int64(in.(int32)), 10)), nil
 			}
@@ -90,7 +94,7 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
 			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(int64(in.(int16)))), nil
 		case st.Is(tftypes.String):
-			ht, ok := th[valueToTypePath(at).String()]
+			ht, ok := th[morph.ValueToTypePath(at).String()]
 			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
 				return tftypes.NewValue(tftypes.String, strconv.FormatInt(int64(in.(int16)), 10)), nil
 			}

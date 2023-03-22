@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:build acceptance
 // +build acceptance
 
@@ -24,10 +27,10 @@ func TestKubernetesManifest_alreadyExists(t *testing.T) {
 	name := randName()
 	namespace := randName()
 
-	tf := tfhelper.RequireNewWorkingDir(t)
-	tf.SetReattachInfo(reattachInfo)
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
 	defer func() {
-		tf.RequireDestroy(t)
+		tf.Destroy(ctx)
 		tf.Close()
 		k8shelper.AssertNamespacedResourceDoesNotExist(t,
 			"v1", "configmaps", namespace, name)
@@ -41,19 +44,19 @@ func TestKubernetesManifest_alreadyExists(t *testing.T) {
 		"name":      name,
 	}
 	tfconfig := loadTerraformConfig(t, "alreadyExists/configmap.tf", tfvars)
-	tf.RequireSetConfig(t, tfconfig)
-	tf.RequireInit(t)
-	tf.RequireApply(t)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
+	tf.Apply(ctx)
 
 	k8shelper.AssertNamespacedResourceExists(t,
 		"v1", "configmaps", namespace, name)
 
 	// Make a new working dir and apply again
-	tf2 := tfhelper.RequireNewWorkingDir(t)
-	tf2.SetReattachInfo(reattachInfo)
+	tf2 := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf2.SetReattachInfo(ctx, reattachInfo)
 	tfconfigModified := loadTerraformConfig(t, "alreadyExists/configmap.tf", tfvars)
-	tf2.RequireSetConfig(t, tfconfigModified)
-	err = tf2.Apply()
+	tf2.SetConfig(ctx, tfconfigModified)
+	err = tf2.Apply(ctx)
 
 	if err == nil {
 		t.Fatal("Creating a resource that already exists should cause an error")

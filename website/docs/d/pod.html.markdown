@@ -67,6 +67,7 @@ The following arguments are supported:
 * `node_selector` - NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/node-selection).
 * `priority_class_name` - If specified, indicates the pod's priority. 'system-node-critical' and 'system-cluster-critical' are two special keywords which indicate the highest priorities with the formerer being the highest priority. Any other name must be defined by creating a PriorityClass object with that name. If not specified, the pod priority will be default or zero if there is no default.
 * `restart_policy` - Restart policy for all containers within the pod. One of Always, OnFailure, Never. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/pod-states#restartpolicy).
+* `runtime_class_name` - (Optional) RuntimeClassName is a feature for selecting the container runtime configuration. The container runtime configuration is used to run a Pod's containers. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/containers/runtime-class)
 * `security_context` - (SecurityContext holds pod-level security attributes and common container settings. Optional: Defaults to empty
 * `service_account_name` - ServiceAccountName is the name of the ServiceAccount to use to run this pod. For more info see https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/.
 * `share_process_namespace` - Share a single process namespace between all of the containers in a pod. When this is set containers will be able to view and signal processes from other containers in the same pod, and the first process in each container will not be assigned PID 1. HostPID and ShareProcessNamespace cannot both be set.
@@ -179,6 +180,13 @@ The `option` block supports the following:
 
 * `command` - Command is the command line to execute inside the container, the working directory for the command is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
 
+### `grpc`
+
+#### Arguments
+
+* `port` - Number of the port to access on the container. Number must be in the range 1 to 65535.
+* `service` - Name of the service to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is not specified, the default behavior is defined by gRPC.
+
 ### `image_pull_secrets`
 
 #### Attributes
@@ -206,6 +214,7 @@ The `option` block supports the following:
 * `exec` -  exec specifies the action to take.
 * `failure_threshold` -  Minimum consecutive failures for the probe to be considered failed after having succeeded.
 * `http_get` -  Specifies the http request to perform.
+* `grpc` -  GRPC specifies an action involving a GRPC port.
 * `initial_delay_seconds` -  Number of seconds after the container has started before liveness probes are initiated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/pod-states#container-probes)
 * `period_seconds` -  How often (in seconds) to perform the probe
 * `success_threshold` -  Minimum consecutive successes for the probe to be considered successful after having failed.
@@ -289,8 +298,9 @@ The `option` block supports the following:
 
 * `exec` -  exec specifies the action to take.
 * `failure_threshold` -  Minimum consecutive failures for the probe to be considered failed after having succeeded.
+* `grpc` -  GRPC specifies an action involving a GRPC port.
 * `http_get` -  Specifies the http request to perform.
-* `initial_delay_seconds` -  Number of seconds after the container has started before liveness probes are initiated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/pod-states#container-probes)
+* `initial_delay_seconds` -  Number of seconds after the container has started before readiness probes are initiated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/pod-states#container-probes)
 * `period_seconds` -  How often (in seconds) to perform the probe
 * `success_threshold` -  Minimum consecutive successes for the probe to be considered successful after having failed.
 * `tcp_socket` -  TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported
@@ -298,10 +308,21 @@ The `option` block supports the following:
 
 ### `resources`
 
-#### Attributes
+#### Arguments
 
-* `limits` -  Describes the maximum amount of compute resources allowed. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/compute-resources)/
-* `requests` -  Describes the minimum amount of compute resources required.
+* `limits` - (Optional) Describes the maximum amount of compute resources allowed. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/compute-resources)/
+* `requests` - (Optional) Describes the minimum amount of compute resources required.
+
+`resources` is a computed attribute and thus if it is not configured in terraform code, the value will be computed from the returned Kubernetes object. That causes a situation when removing `resources` from terraform code does not update the Kubernetes object. In order to delete `resources` from the Kubernetes object, configure an empty attribute in your code.
+
+Please, look at the example below:
+
+```hcl
+resources {
+  limits   = {}
+  requests = {}
+}
+```
 
 ### `requests`
 
@@ -384,6 +405,7 @@ The `items` block supports the following:
 * `run_as_user` -  The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 * `seccomp_profile` - The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows.
 * `se_linux_options` -  The SELinux context to be applied to the container. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
+* `fs_group_change_policy` - Defines behavior of changing ownership and permission of the volume before being exposed inside Pod. This field will only apply to volume types which support fsGroup based ownership(and permissions). It will have no effect on ephemeral volume types such as: secret, configmaps and emptydir. Valid values are "OnRootMismatch" and "Always". If not specified, "Always" is used. Note that this field cannot be set when spec.os.name is windows.
 
 ### `capabilities`
 

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -179,7 +182,7 @@ func resourceKubernetesPersistentVolumeClaimRead(ctx context.Context, d *schema.
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received persistent volume claim: %#v", claim)
-	err = d.Set("metadata", flattenMetadata(claim.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(claim.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -244,6 +247,9 @@ func resourceKubernetesPersistentVolumeClaimDelete(ctx context.Context, d *schem
 	log.Printf("[INFO] Deleting persistent volume claim: %#v", name)
 	err = conn.CoreV1().PersistentVolumeClaims(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

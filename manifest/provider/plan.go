@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -6,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/payload"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -98,15 +102,44 @@ func (s *RawProviderServer) getFieldManagerConfig(v map[string]tftypes.Value) (s
 	return fieldManagerName, forceConflicts, nil
 }
 
+func isImportedFlagFromPrivate(p []byte) (f bool, d []*tfprotov5.Diagnostic) {
+	if p == nil || len(p) == 0 {
+		return
+	}
+	ps, err := getPrivateStateValue(p)
+	if err != nil {
+		d = append(d, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Unexpected format for private state",
+			Detail:   err.Error(),
+		})
+	}
+	err = ps["IsImported"].As(&f)
+	if err != nil {
+		d = append(d, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  "Unexpected format for import flag in private state",
+			Detail:   err.Error(),
+		})
+	}
+	return
+}
+
 // PlanResourceChange function
 func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfprotov5.PlanResourceChangeRequest) (*tfprotov5.PlanResourceChangeResponse, error) {
 	resp := &tfprotov5.PlanResourceChangeResponse{}
 
-	resp.RequiresReplace = append(resp.RequiresReplace,
-		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("apiVersion"),
-		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("kind"),
-		tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("metadata").WithAttributeName("name"),
-	)
+	isImported, d := isImportedFlagFromPrivate(req.PriorPrivate)
+	resp.Diagnostics = append(resp.Diagnostics, d...)
+	if !isImported {
+		resp.RequiresReplace = append(resp.RequiresReplace,
+			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("apiVersion"),
+			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("kind"),
+			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("metadata").WithAttributeName("name"),
+		)
+	} else {
+		resp.PlannedPrivate = req.PriorPrivate
+	}
 
 	execDiag := s.canExecute()
 	if len(execDiag) > 0 {
@@ -225,13 +258,11 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 
 	ppMan, ok := proposedVal["manifest"]
 	if !ok {
-		matp := tftypes.NewAttributePath()
-		matp = matp.WithAttributeName("manifest")
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity:  tfprotov5.DiagnosticSeverityError,
 			Summary:   "Invalid proposed state during planning",
 			Detail:    "Missing 'manifest' attribute",
-			Attribute: matp,
+			Attribute: tftypes.NewAttributePath().WithAttributeName("manifest"),
 		})
 		return resp, nil
 	}
@@ -270,14 +301,14 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		})
 		return resp, nil
 	}
-	if ns {
+	if ns && !isImported {
 		resp.RequiresReplace = append(resp.RequiresReplace,
 			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("metadata").WithAttributeName("namespace"),
 		)
 	}
 
 	// Request a complete type for the resource from the OpenAPI spec
-	objectType, _, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
+	objectType, hints, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
 	if err != nil {
 		return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
 	}
@@ -323,23 +354,25 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	s.logger.Debug("[PlanUpdateResource]", "OAPI type", dump(so))
 
 	// Transform the input manifest to adhere to the type model from the OpenAPI spec
-	morphedManifest, err := morph.ValueToType(ppMan, objectType, tftypes.NewAttributePath())
-	if err != nil {
+	morphedManifest, d := morph.ValueToType(ppMan, objectType, tftypes.NewAttributePath().WithAttributeName("object"))
+	if len(d) > 0 {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to morph manifest to OAPI type",
-			Detail:   err.Error(),
+			Summary:  "Manifest configuration incompatible with resource schema",
+			Detail:   "Detailed descriptions of errors will follow below.",
 		})
+		resp.Diagnostics = append(resp.Diagnostics, d...)
 		return resp, nil
 	}
 	s.logger.Debug("[PlanResourceChange]", "morphed manifest", dump(morphedManifest))
 
-	completePropMan, err := morph.DeepUnknown(objectType, morphedManifest, tftypes.NewAttributePath())
+	completePropMan, err := morph.DeepUnknown(objectType, morphedManifest, tftypes.NewAttributePath().WithAttributeName("object"))
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to backfill manifest from OAPI type",
-			Detail:   err.Error(),
+			Severity:  tfprotov5.DiagnosticSeverityError,
+			Summary:   "Failed to backfill manifest from OpenAPI type",
+			Detail:    fmt.Sprintf("This usually happens when the provider cannot fully process the schema retrieved from cluster. Please report this to the provider maintainers.\nError: %s", err.Error()),
+			Attribute: tftypes.NewAttributePath().WithAttributeName("object"),
 		})
 		return resp, nil
 	}
@@ -356,13 +389,11 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 			return v, nil
 		})
 		if err != nil {
-			oatp := tftypes.NewAttributePath()
-			oatp = oatp.WithAttributeName("object")
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 				Severity:  tfprotov5.DiagnosticSeverityError,
 				Summary:   "Failed to set computed attributes in new resource state",
 				Detail:    err.Error(),
-				Attribute: oatp,
+				Attribute: tftypes.NewAttributePath().WithAttributeName("object"),
 			})
 			return resp, nil
 		}
@@ -371,25 +402,21 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		// plan for Update
 		priorObj, ok := priorVal["object"]
 		if !ok {
-			oatp := tftypes.NewAttributePath()
-			oatp = oatp.WithAttributeName("object")
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 				Severity:  tfprotov5.DiagnosticSeverityError,
 				Summary:   "Invalid prior state during planning",
 				Detail:    "Missing 'object' attribute",
-				Attribute: oatp,
+				Attribute: tftypes.NewAttributePath().WithAttributeName("object"),
 			})
 			return resp, nil
 		}
 		priorMan, ok := priorVal["manifest"]
 		if !ok {
-			oatp := tftypes.NewAttributePath()
-			oatp = oatp.WithAttributeName("manifest")
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 				Severity:  tfprotov5.DiagnosticSeverityError,
 				Summary:   "Invalid prior state during planning",
 				Detail:    "Missing 'manifest' attribute",
-				Attribute: oatp,
+				Attribute: tftypes.NewAttributePath().WithAttributeName("manifest"),
 			})
 			return resp, nil
 		}
@@ -403,6 +430,13 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 				}
 				nowCfg, restPath, err := tftypes.WalkAttributePath(ppMan, ap)
 				hasChanged = err == nil && len(restPath.Steps()) == 0 && wasCfg.(tftypes.Value).IsKnown() && !wasCfg.(tftypes.Value).Equal(nowCfg.(tftypes.Value))
+				if hasChanged {
+					h, ok := hints[morph.ValueToTypePath(ap).String()]
+					if ok && h == manifest.PreserveUnknownFieldsLabel {
+						apm := append(tftypes.NewAttributePath().WithAttributeName("manifest").Steps(), ap.Steps()...)
+						resp.RequiresReplace = append(resp.RequiresReplace, tftypes.NewAttributePathWithSteps(apm))
+					}
+				}
 				if isComputed {
 					if hasChanged {
 						return tftypes.NewValue(v.Type(), tftypes.UnknownValue), nil
@@ -439,13 +473,11 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 			return priorAtrVal.(tftypes.Value), nil
 		})
 		if err != nil {
-			oatp := tftypes.NewAttributePath()
-			oatp = oatp.WithAttributeName("object")
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 				Severity:  tfprotov5.DiagnosticSeverityError,
 				Summary:   "Failed to update proposed state from prior state",
 				Detail:    err.Error(),
-				Attribute: oatp,
+				Attribute: tftypes.NewAttributePath().WithAttributeName("object"),
 			})
 			return resp, nil
 		}

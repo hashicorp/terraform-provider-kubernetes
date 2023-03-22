@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -52,7 +55,7 @@ func testAccKubernetesDataSourceConfigMapConfig_basic(name string) string {
     }
 
     labels = {
-      TestLabelOne   = "one"
+      TestLabelOne = "one"
     }
 
     name = "%s"

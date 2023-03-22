@@ -9,6 +9,7 @@
 //
 //      NoneType        -- NoneType
 //      Bool            -- bool
+//      Bytes           -- bytes
 //      Int             -- int
 //      Float           -- float
 //      String          -- string
@@ -794,6 +795,14 @@ func (d *Dict) Freeze()                                         { d.ht.freeze() 
 func (d *Dict) Truth() Bool                                     { return d.Len() > 0 }
 func (d *Dict) Hash() (uint32, error)                           { return 0, fmt.Errorf("unhashable type: dict") }
 
+func (x *Dict) Union(y *Dict) *Dict {
+	z := new(Dict)
+	z.ht.init(x.Len()) // a lower bound
+	z.ht.addAll(&x.ht) // can't fail
+	z.ht.addAll(&y.ht) // can't fail
+	return z
+}
+
 func (d *Dict) Attr(name string) (Value, error) { return builtinAttr(d, name, dictMethods) }
 func (d *Dict) AttrNames() []string             { return builtinAttrNames(dictMethods) }
 
@@ -815,8 +824,8 @@ func dictsEqual(x, y *Dict, depth int) (bool, error) {
 	if x.Len() != y.Len() {
 		return false, nil
 	}
-	for _, xitem := range x.Items() {
-		key, xval := xitem[0], xitem[1]
+	for e := x.ht.head; e != nil; e = e.next {
+		key, xval := e.key, e.value
 
 		if yval, found, _ := y.Get(key); !found {
 			return false, nil
@@ -1184,8 +1193,8 @@ func writeValue(out *strings.Builder, x Value, path []Value) {
 			out.WriteString("...") // dict contains itself
 		} else {
 			sep := ""
-			for _, item := range x.Items() {
-				k, v := item[0], item[1]
+			for e := x.ht.head; e != nil; e = e.next {
+				k, v := e.key, e.value
 				out.WriteString(sep)
 				writeValue(out, k, path)
 				out.WriteString(": ")
@@ -1219,14 +1228,16 @@ func pathContains(path []Value, x Value) bool {
 	return false
 }
 
-const maxdepth = 10
+// CompareLimit is the depth limit on recursive comparison operations such as == and <.
+// Comparison of data structures deeper than this limit may fail.
+var CompareLimit = 10
 
 // Equal reports whether two Starlark values are equal.
 func Equal(x, y Value) (bool, error) {
 	if x, ok := x.(String); ok {
 		return x == y, nil // fast path for an important special case
 	}
-	return EqualDepth(x, y, maxdepth)
+	return EqualDepth(x, y, CompareLimit)
 }
 
 // EqualDepth reports whether two Starlark values are equal.
@@ -1245,7 +1256,7 @@ func EqualDepth(x, y Value, depth int) (bool, error) {
 // Recursive comparisons by implementations of Value.CompareSameType
 // should use CompareDepth to prevent infinite recursion.
 func Compare(op syntax.Token, x, y Value) (bool, error) {
-	return CompareDepth(op, x, y, maxdepth)
+	return CompareDepth(op, x, y, CompareLimit)
 }
 
 // CompareDepth compares two Starlark values.

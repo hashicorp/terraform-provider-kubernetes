@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -260,4 +263,20 @@ func (ps *RawProviderServer) lookUpGVKinCRDs(ctx context.Context, gvk schema.Gro
 		}
 	}
 	return nil, nil
+}
+
+// privateStateSchema describes the structure of the private state payload that
+// Terraform can store along with the "regular" resource state state.
+var privateStateSchema tftypes.Object = tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+	"IsImported": tftypes.Bool,
+}}
+
+func getPrivateStateValue(p []byte) (ps map[string]tftypes.Value, err error) {
+	if p == nil {
+		err = errors.New("private state value is nil")
+		return
+	}
+	pv, err := tftypes.ValueFromMsgPack(p, privateStateSchema)
+	err = pv.As(&ps)
+	return
 }

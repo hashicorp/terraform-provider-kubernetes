@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -20,6 +23,7 @@ func TestAccKubernetesValidatingWebhookConfigurationV1_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesValdiatingWebhookConfigurationV1Destroy,
 		Steps: []resource.TestStep{
@@ -108,6 +112,31 @@ func TestAccKubernetesValidatingWebhookConfigurationV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "webhook.0.timeout_seconds", "5"),
 				),
 			},
+			{
+				Config: testAccKubernetesValidatingWebhookConfigurationV1Config_without_rules(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.0", "v1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.1", "v1beta1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.0.service.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.0.service.0.name", "example-service"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.0.service.0.namespace", "example-namespace"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.0.service.0.port", "443"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.failure_policy", "Ignore"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.match_policy", "Exact"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.namespace_selector.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.object_selector.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.side_effects", "NoneOnDryRun"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.timeout_seconds", "5"),
+				),
+			},
 		},
 	})
 }
@@ -164,7 +193,8 @@ func testAccCheckKubernetesValidatingWebhookConfigurationV1Exists(n string) reso
 }
 
 func testAccKubernetesValidatingWebhookConfigurationV1Config_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_validating_webhook_configuration_v1" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_validating_webhook_configuration_v1" "test" {
   metadata {
     name = %q
   }
@@ -200,7 +230,8 @@ func testAccKubernetesValidatingWebhookConfigurationV1Config_basic(name string) 
 }
 
 func testAccKubernetesValidatingWebhookConfigurationV1Config_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_validating_webhook_configuration_v1" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_validating_webhook_configuration_v1" "test" {
   metadata {
     name = %q
   }
@@ -254,15 +285,18 @@ func testAccKubernetesValidatingWebhookConfigurationV1Config_modified(name strin
 `, name, name)
 }
 
-func testAccKubernetesValidatingWebhookConfigurationV1Config_regression(provider, name string) string {
-	return fmt.Sprintf(`resource "kubernetes_validating_webhook_configuration_v1" "test" {
-  provider = %s
+func testAccKubernetesValidatingWebhookConfigurationV1Config_without_rules(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_validating_webhook_configuration_v1" "test" {
   metadata {
     name = %q
   }
 
   webhook {
     name = %q
+
+    failure_policy = "Ignore"
+    match_policy   = "Exact"
 
     admission_review_versions = [
       "v1",
@@ -274,19 +308,19 @@ func testAccKubernetesValidatingWebhookConfigurationV1Config_regression(provider
         namespace = "example-namespace"
         name      = "example-service"
       }
+
+      ca_bundle = "test"
     }
 
-    rule {
-      api_groups   = ["apps"]
-      api_versions = ["v1"]
-      operations   = ["CREATE"]
-      resources    = ["pods"]
-      scope        = "Namespaced"
+    object_selector {
+      match_labels = {
+        app = "test"
+      }
     }
 
-    side_effects    = "None"
-    timeout_seconds = 10
+    side_effects    = "NoneOnDryRun"
+    timeout_seconds = 5
   }
 }
-`, provider, name, name)
+`, name, name)
 }

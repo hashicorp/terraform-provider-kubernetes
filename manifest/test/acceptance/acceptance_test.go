@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:build acceptance
 // +build acceptance
 
 package acceptance
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -12,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	tftest "github.com/hashicorp/terraform-plugin-test/v2"
+	tftest "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/plugintest"
 	"k8s.io/client-go/rest"
 
 	kuberneteshelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
@@ -30,10 +34,12 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
+	ctx := context.Background()
+
 	// disables client-go resource deprecation warnings - they polute the test log
 	rest.SetDefaultWarningHandler(rest.NoWarnings{})
 
-	tfhelper = tftest.AutoInitProviderHelper(sourceDir)
+	tfhelper = tftest.AutoInitProviderHelper(ctx, sourceDir)
 	defer tfhelper.Close()
 
 	k8shelper = kuberneteshelper.NewHelper()

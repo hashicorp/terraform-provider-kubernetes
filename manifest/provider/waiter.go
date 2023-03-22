@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -17,7 +20,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/kubectl/pkg/polymorphichelpers"
 )
+
+const waiterSleepTime = 1 * time.Second
 
 func (s *RawProviderServer) waitForCompletion(ctx context.Context, waitForBlock tftypes.Value, rs dynamic.ResourceInterface, rname string, rtype tftypes.Type, th map[string]string) error {
 	if waitForBlock.IsNull() || !waitForBlock.IsKnown() {
@@ -42,6 +48,31 @@ func NewResourceWaiter(resource dynamic.ResourceInterface, resourceName string, 
 	err := waitForBlock.As(&waitForBlockVal)
 	if err != nil {
 		return nil, err
+	}
+
+	if v, ok := waitForBlockVal["rollout"]; ok {
+		var rollout bool
+		v.As(&rollout)
+		if rollout {
+			return &RolloutWaiter{
+				resource,
+				resourceName,
+				hl,
+			}, nil
+		}
+	}
+
+	if v, ok := waitForBlockVal["condition"]; ok {
+		var conditionsBlocks []tftypes.Value
+		v.As(&conditionsBlocks)
+		if len(conditionsBlocks) > 0 {
+			return &ConditionsWaiter{
+				resource,
+				resourceName,
+				conditionsBlocks,
+				hl,
+			}, nil
+		}
 	}
 
 	fields, ok := waitForBlockVal["fields"]
@@ -181,11 +212,12 @@ func (w *FieldWaiter) Wait(ctx context.Context) error {
 		}(obj)
 
 		if done {
+			w.logger.Info("[ApplyResourceChange][Wait] Done waiting.\n")
 			return err
 		}
 
 		// TODO: implement with exponential back-off.
-		time.Sleep(1 * time.Second) // lintignore:R018
+		time.Sleep(waiterSleepTime) // lintignore:R018
 	}
 }
 
@@ -235,4 +267,111 @@ func FieldPathToTftypesPath(fieldPath string) (*tftypes.AttributePath, error) {
 	}
 
 	return path, nil
+}
+
+// RolloutWaiter will wait for a resource that has a StatusViewer to
+// finish rolling out
+type RolloutWaiter struct {
+	resource     dynamic.ResourceInterface
+	resourceName string
+	logger       hclog.Logger
+}
+
+// Wait uses StatusViewer to determine if the rollout is done
+func (w *RolloutWaiter) Wait(ctx context.Context) error {
+	w.logger.Info("[ApplyResourceChange][Wait] Waiting until rollout complete...\n")
+	for {
+		if deadline, ok := ctx.Deadline(); ok {
+			if time.Now().After(deadline) {
+				return context.DeadlineExceeded
+			}
+		}
+
+		res, err := w.resource.Get(ctx, w.resourceName, v1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if errors.IsGone(err) {
+			return fmt.Errorf("resource was deleted")
+		}
+
+		gk := res.GetObjectKind().GroupVersionKind().GroupKind()
+		statusViewer, err := polymorphichelpers.StatusViewerFor(gk)
+		if err != nil {
+			return fmt.Errorf("error getting resource status: %v", err)
+		}
+
+		_, done, err := statusViewer.Status(res, 0)
+		if err != nil {
+			return fmt.Errorf("error getting resource status: %v", err)
+		}
+
+		if done {
+			break
+		}
+
+		time.Sleep(waiterSleepTime) // lintignore:R018
+	}
+
+	w.logger.Info("[ApplyResourceChange][Wait] Rollout complete\n")
+	return nil
+}
+
+// ConditionsWaiter will wait for the specified conditions on
+// the resource to be met
+type ConditionsWaiter struct {
+	resource     dynamic.ResourceInterface
+	resourceName string
+	conditions   []tftypes.Value
+	logger       hclog.Logger
+}
+
+// Wait checks all the configured conditions have been met
+func (w *ConditionsWaiter) Wait(ctx context.Context) error {
+	w.logger.Info("[ApplyResourceChange][Wait] Waiting for conditions...\n")
+
+	for {
+		if deadline, ok := ctx.Deadline(); ok {
+			if time.Now().After(deadline) {
+				return context.DeadlineExceeded
+			}
+		}
+
+		res, err := w.resource.Get(ctx, w.resourceName, v1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if errors.IsGone(err) {
+			return fmt.Errorf("resource was deleted")
+		}
+
+		if status, ok := res.Object["status"].(map[string]interface{}); ok {
+			if conditions, ok := status["conditions"].([]interface{}); ok && len(conditions) > 0 {
+				conditionsMet := true
+				for _, c := range w.conditions {
+					var condition map[string]tftypes.Value
+					c.As(&condition)
+					var conditionType, conditionStatus string
+					condition["type"].As(&conditionType)
+					condition["status"].As(&conditionStatus)
+					conditionMet := false
+					for _, cc := range conditions {
+						ccc := cc.(map[string]interface{})
+						if ccc["type"].(string) == conditionType {
+							conditionMet = ccc["status"].(string) == conditionStatus
+							break
+						}
+					}
+					conditionsMet = conditionsMet && conditionMet
+				}
+				if conditionsMet {
+					break
+				}
+			}
+		}
+		time.Sleep(waiterSleepTime) // lintignore:R018
+	}
+
+	w.logger.Info("[ApplyResourceChange][Wait] All conditions met.\n")
+	return nil
 }

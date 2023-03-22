@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -14,6 +17,7 @@ func TestIsInternalKey(t *testing.T) {
 		{"anyKey", false},
 		{"any.hostname.io", false},
 		{"any.hostname.com/with/path", false},
+		{"service.beta.kubernetes.io/aws-load-balancer-backend-protocol", false},
 		{"app.kubernetes.io", false},
 		{"kubernetes.io", true},
 		{"kubectl.kubernetes.io", true},

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -21,6 +24,7 @@ func TestAccKubernetesPodDisruptionBudgetV1_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDisruptionBudgetV1Destroy,
 		Steps: []resource.TestStep{
@@ -30,12 +34,10 @@ func TestAccKubernetesPodDisruptionBudgetV1_basic(t *testing.T) {
 					testAccCheckKubernetesPodDisruptionBudgetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget_v1.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget_v1.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget_v1.test", "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget_v1.test", "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget_v1.test", "metadata.0.labels.TestLabelThree", "three"),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget_v1.test", "metadata.0.labels.TestLabelFour", "four"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelThree": "three", "TestLabelFour": "four"}),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget_v1.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_pod_disruption_budget_v1.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod_disruption_budget_v1.test", "metadata.0.resource_version"),
@@ -60,12 +62,10 @@ func TestAccKubernetesPodDisruptionBudgetV1_basic(t *testing.T) {
 					testAccCheckKubernetesPodDisruptionBudgetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget_v1.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget_v1.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget_v1.test", "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget_v1.test", "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget_v1.test", "metadata.0.labels.TestLabelThree", "three"),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget_v1.test", "metadata.0.labels.TestLabelFour", "four"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelThree": "three", "TestLabelFour": "four"}),
 					resource.TestCheckResourceAttr("kubernetes_pod_disruption_budget_v1.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_pod_disruption_budget_v1.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod_disruption_budget_v1.test", "metadata.0.resource_version"),

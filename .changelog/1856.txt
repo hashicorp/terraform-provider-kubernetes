@@ -1,0 +1,7 @@
+```release-note:doc
+r/kubernetes_service: make `spec.port` block optional
+```
+
+```release-note:doc
+r/kubernetes_service_v1: make `spec.port` block optional
+```

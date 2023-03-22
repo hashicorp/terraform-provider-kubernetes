@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -7,7 +10,7 @@ import (
 )
 
 func resourceKubernetesCronJobV0() *schema.Resource {
-	schemaV1 := resourceKubernetesCronJobSchemaV1()
+	schemaV1 := resourceKubernetesCronJobSchemaV1Beta1()
 	schemaV0 := patchJobTemplatePodSpecWithResourcesFieldV0(schemaV1)
 	return &schema.Resource{Schema: schemaV0}
 }

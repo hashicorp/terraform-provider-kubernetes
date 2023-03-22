@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -200,12 +203,12 @@ func resourceKubernetesJobRead(ctx context.Context, d *schema.ResourceData, meta
 		}
 	}
 
-	err = d.Set("metadata", flattenMetadata(job.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(job.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	jobSpec, err := flattenJobSpec(job.Spec, d)
+	jobSpec, err := flattenJobSpec(job.Spec, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -231,6 +234,9 @@ func resourceKubernetesJobDelete(ctx context.Context, d *schema.ResourceData, me
 	log.Printf("[INFO] Deleting job: %#v", name)
 	err = conn.BatchV1().Jobs(namespace).Delete(ctx, name, deleteOptions)
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.Errorf("Failed to delete Job! API error: %s", err)
 	}
 

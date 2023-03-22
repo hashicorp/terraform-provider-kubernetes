@@ -1,15 +1,23 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 variable "kubernetes_version" {
   default = ""
 }
 
 variable "workers_count" {
-  default = "3"
+  default = "2"
+}
+
+variable "node_machine_type" {
+  default = "e2-standard-2"
+}
+
+variable "enable_alpha" {
+  default = false
 }
 
 data "google_compute_zones" "available" {
-}
-
-data "google_client_config" "default" {
 }
 
 data "google_container_engine_versions" "supported" {
@@ -27,27 +35,42 @@ resource "google_service_account" "default" {
 }
 
 resource "google_container_cluster" "primary" {
+  provider           = google-beta
   name               = "tf-acc-test-${random_id.cluster_name.hex}"
   location           = data.google_compute_zones.available.names[0]
-  initial_node_count = var.workers_count
   node_version       = data.google_container_engine_versions.supported.latest_node_version
   min_master_version = data.google_container_engine_versions.supported.latest_master_version
+
+  // Alpha features are disabled by default and can be enabled by GKE for a particular GKE control plane version.
+  // Creating an alpha cluster enables all alpha features by default.
+  // Ref: https://cloud.google.com/kubernetes-engine/docs/concepts/feature-gates
+  enable_kubernetes_alpha = var.enable_alpha
+
+  service_external_ips_config {
+    enabled = true
+  }
 
   node_locations = [
     data.google_compute_zones.available.names[1],
   ]
 
-  node_config {
-    machine_type    = "n1-standard-4"
-    service_account = google_service_account.default.email
-
-    oauth_scopes = [
-      "https://www.googleapis.com/auth/cloud-platform",
-      "https://www.googleapis.com/auth/compute",
-      "https://www.googleapis.com/auth/devstorage.read_only",
-      "https://www.googleapis.com/auth/logging.write",
-      "https://www.googleapis.com/auth/monitoring",
-    ]
+  node_pool {
+    initial_node_count = var.workers_count
+    management {
+      auto_repair  = var.enable_alpha ? false : true
+      auto_upgrade = var.enable_alpha ? false : true
+    }
+    node_config {
+      machine_type    = var.node_machine_type
+      service_account = google_service_account.default.email
+      oauth_scopes = [
+        "https://www.googleapis.com/auth/cloud-platform",
+        "https://www.googleapis.com/auth/compute",
+        "https://www.googleapis.com/auth/devstorage.read_only",
+        "https://www.googleapis.com/auth/logging.write",
+        "https://www.googleapis.com/auth/monitoring",
+      ]
+    }
   }
 }
 
@@ -58,10 +81,10 @@ locals {
     preferences = {
       colors = true
     }
-    current-context = "tf-k8s-gcp-test"
+    current-context = google_container_cluster.primary.name
     contexts = [
       {
-        name = "tf-k8s-gcp-test"
+        name = google_container_cluster.primary.name
         context = {
           cluster   = google_container_cluster.primary.name
           user      = google_service_account.default.email
@@ -82,14 +105,11 @@ locals {
       {
         name = google_service_account.default.email
         user = {
-          auth-provider = {
-            name = "gcp"
-            config = {
-              cmd-args = "config config-helper --format=json --access-token-file=${path.cwd}/gcptoken"
-              cmd-path = "gcloud"
-              expiry-key = "{.credential.token_expiry}"
-              token-key = "{.credential.access_token}"
-            }
+          exec = {
+            apiVersion         = "client.authentication.k8s.io/v1beta1"
+            command            = "gke-gcloud-auth-plugin"
+            interactiveMode    = "Never"
+            provideClusterInfo = true
           }
         }
       }
@@ -100,11 +120,6 @@ locals {
 resource "local_file" "kubeconfig" {
   content  = yamlencode(local.kubeconfig)
   filename = "${path.module}/kubeconfig"
-}
-
-resource "local_file" "gcptoken" {
-  content  = data.google_client_config.default.access_token
-  filename = "${path.module}/gcptoken"
 }
 
 output "google_zone" {
@@ -119,3 +134,6 @@ output "kubeconfig_path" {
   value = local_file.kubeconfig.filename
 }
 
+output "cluster_name" {
+  value = google_container_cluster.primary.name
+}

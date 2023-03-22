@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 variable "prefix" {
   description = "A prefix used for all resources in this example"
   default     = "tf-k8s-acc"
@@ -20,14 +23,6 @@ variable "workers_count" {
 variable "workers_type" {
   type    = string
   default = "Standard_DS4_v2"
-}
-
-variable "aks_client_id" {
-  description = "The Client ID for the Service Principal to use for this Managed Kubernetes Cluster"
-}
-
-variable "aks_client_secret" {
-  description = "The Client Secret for the Service Principal to use for this Managed Kubernetes Cluster"
 }
 
 # Uncomment to enable SSH access to nodes

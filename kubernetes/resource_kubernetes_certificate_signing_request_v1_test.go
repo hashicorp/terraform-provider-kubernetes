@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -22,6 +25,7 @@ func TestAccKubernetesCertificateSigningRequestV1_basic(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
 		IDRefreshName:     "kubernetes_certificate_signing_request_v1.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestV1Destroy,
 		Steps: []resource.TestStep{
@@ -46,6 +50,7 @@ func TestAccKubernetesCertificateSigningRequestV1_generateName(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
 		IDRefreshName:     "kubernetes_certificate_signing_request_v1.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestV1Destroy,
 		Steps: []resource.TestStep{

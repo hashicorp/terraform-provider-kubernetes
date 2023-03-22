@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -136,7 +139,7 @@ func resourceKubernetesIngressClassRead(ctx context.Context, d *schema.ResourceD
 		return diag.Errorf("Failed to read Ingress Class '%s' because: %s", buildId(ing.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Received Ingress Class: %#v", ing)
-	err = d.Set("metadata", flattenMetadata(ing.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(ing.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

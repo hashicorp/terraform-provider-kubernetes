@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -165,7 +168,12 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 
 		gvk, err := GVKFromTftypesObject(&obj, m)
 		if err != nil {
-			return resp, fmt.Errorf("failed to determine resource GVK: %s", err)
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Failed to determine the type of the resource",
+				Detail:   fmt.Sprintf(`This can happen when the "apiVersion" or "kind" fields are not present in the manifest, or when the corresponding "kind" or "apiVersion" could not be found on the Kubernetes cluster.\nError: %s`, err),
+			})
+			return resp, nil
 		}
 
 		tsch, th, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
@@ -195,9 +203,15 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 				}
 				return v, ap.NewError(err)
 			}
-			nv, err := morph.ValueToType(ppMan.(tftypes.Value), v.Type(), tftypes.NewAttributePath())
-			if err != nil {
-				return v, ap.NewError(err)
+			nv, d := morph.ValueToType(ppMan.(tftypes.Value), v.Type(), tftypes.NewAttributePath())
+			if len(d) > 0 {
+				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityError,
+					Summary:  "Manifest configuration is incompatible with resource schema",
+					Detail:   "Detailed descriptions of errors will follow below.",
+				})
+				resp.Diagnostics = append(resp.Diagnostics, d...)
+				return v, nil
 			}
 			return nv, nil
 		})
@@ -407,9 +421,21 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
 		}
 
-		wf, ok := plannedStateVal["wait_for"]
-		if ok {
-			err = s.waitForCompletion(ctxDeadline, wf, rs, rname, wt, th)
+		var waitConfig tftypes.Value
+		if w, ok := plannedStateVal["wait"]; ok && !w.IsNull() {
+			s.logger.Trace("[ApplyResourceChange][Wait] Using waiter config from `wait` block")
+			var waitBlocks []tftypes.Value
+			w.As(&waitBlocks)
+			if len(waitBlocks) > 0 {
+				waitConfig = waitBlocks[0]
+			}
+		}
+		if wf, ok := plannedStateVal["wait_for"]; ok && !wf.IsNull() {
+			s.logger.Trace("[ApplyResourceChange][Wait] Using waiter config from deprecated `wait_for` attribute")
+			waitConfig = wf
+		}
+		if !waitConfig.IsNull() {
+			err = s.waitForCompletion(ctxDeadline, waitConfig, rs, rname, wt, th)
 			if err != nil {
 				if err == context.DeadlineExceeded {
 					resp.Diagnostics = append(resp.Diagnostics,

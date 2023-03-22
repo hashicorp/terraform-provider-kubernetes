@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -20,6 +23,7 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_network_policy.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesNetworkPolicyDestroy,
 		Steps: []resource.TestStep{
@@ -29,12 +33,10 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 					testAccCheckKubernetesNetworkPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.TestLabelThree", "three"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.TestLabelFour", "four"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelThree": "three", "TestLabelFour": "four"}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.resource_version"),
@@ -58,12 +60,10 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.TestLabelTwo", "two"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.TestLabelThree", "three"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelTwo": "two", "TestLabelThree": "three"}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.resource_version"),
@@ -80,9 +80,7 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesNetworkPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "0"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.%", "0"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.resource_version"),
@@ -114,9 +112,7 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesNetworkPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "0"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.%", "0"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.resource_version"),
@@ -129,7 +125,7 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_expressions.0.values.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_expressions.0.values.1", "webfront"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_expressions.0.values.0", "api"),
-					resource.TestCheckNoResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_labels"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_labels.%", "0"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.0.port", "http"),
@@ -138,8 +134,8 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.1.protocol", "UDP"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.namespace_selector.#", "1"),
-					resource.TestCheckNoResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.0.match_expressions"),
-					resource.TestCheckNoResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.namespace_selector.0.match_labels"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.0.match_expressions.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.namespace_selector.0.match_labels.%", "0"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.#", "0"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.0", "Ingress"),
@@ -150,17 +146,15 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesNetworkPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "0"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.%", "0"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.#", "1"),
-					resource.TestCheckNoResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_expressions"),
-					resource.TestCheckNoResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_labels"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_expressions.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.pod_selector.0.match_labels.%", "0"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.ports.0.port", "http"),
@@ -170,8 +164,8 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.namespace_selector.#", "0"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.#", "1"),
-					resource.TestCheckNoResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.0.match_expressions"),
-					resource.TestCheckNoResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.0.match_labels"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.0.match_expressions.#", "0"),
+					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.ingress.0.from.0.pod_selector.0.match_labels.%", "0"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "spec.0.policy_types.0", "Ingress"),
 				),
@@ -181,9 +175,7 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesNetworkPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "0"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.%", "0"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.resource_version"),
@@ -222,9 +214,7 @@ func TestAccKubernetesNetworkPolicy_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesNetworkPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "0"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.%", "0"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.resource_version"),
@@ -281,6 +271,7 @@ func TestAccKubernetesNetworkPolicy_withEgressAtCreation(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_network_policy.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesNetworkPolicyDestroy,
 		Steps: []resource.TestStep{
@@ -289,9 +280,7 @@ func TestAccKubernetesNetworkPolicy_withEgressAtCreation(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesNetworkPolicyExists("kubernetes_network_policy.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.annotations.%", "0"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.labels.%", "0"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_network_policy.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_network_policy.test", "metadata.0.resource_version"),

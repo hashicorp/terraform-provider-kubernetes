@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -228,6 +231,13 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			ForceNew:    !isUpdatable,
 			Description: "NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node. More info: http://kubernetes.io/docs/user-guide/node-selection.",
 		},
+		"runtime_class_name": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    isComputed,
+			ForceNew:    !isUpdatable,
+			Description: "RuntimeClassName is a feature for selecting the container runtime configuration. The container runtime configuration is used to run a Pod's containers. More info: https://kubernetes.io/docs/concepts/containers/runtime-class",
+		},
 		"priority_class_name": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -301,6 +311,16 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 							Schema: seLinuxOptionsField(isUpdatable),
 						},
 					},
+					"fs_group_change_policy": {
+						Type:        schema.TypeString,
+						Description: "fsGroupChangePolicy defines behavior of changing ownership and permission of the volume before being exposed inside Pod. This field will only apply to volume types which support fsGroup based ownership(and permissions). It will have no effect on ephemeral volume types such as: secret, configmaps and emptydir.",
+						Optional:    true,
+						ValidateFunc: validation.StringInSlice([]string{
+							string(api.FSGroupChangeAlways),
+							string(api.FSGroupChangeOnRootMismatch),
+						}, false),
+						ForceNew: !isUpdatable,
+					},
 					"supplemental_groups": {
 						Type:        schema.TypeSet,
 						Description: "A list of groups applied to the first process run in each container, in addition to the container's primary GID. If unspecified, no groups will be added to any container.",
@@ -333,6 +353,13 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 					},
 				},
 			},
+		},
+		"scheduler_name": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			ForceNew:    !isUpdatable,
+			Description: "If specified, the pod will be dispatched by specified scheduler. If not specified, the pod will be dispatched by default scheduler.",
 		},
 		"service_account_name": {
 			Type:        schema.TypeString,
@@ -457,7 +484,6 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 		"volume": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			Computed:    true,
 			Description: "List of volumes that can be mounted by containers belonging to the pod. More info: http://kubernetes.io/docs/user-guide/volumes",
 			Elem:        volumeSchema(isUpdatable),
 		},

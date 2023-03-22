@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -118,7 +121,7 @@ func resourceKubernetesRoleRead(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	log.Printf("[INFO] Received role: %#v", role)
-	err = d.Set("metadata", flattenMetadata(role.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(role.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -181,6 +184,9 @@ func resourceKubernetesRoleDelete(ctx context.Context, d *schema.ResourceData, m
 	log.Printf("[INFO] Deleting role: %#v", name)
 	err = conn.RbacV1().Roles(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

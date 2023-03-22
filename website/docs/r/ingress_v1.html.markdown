@@ -10,7 +10,6 @@ description: |-
 
 Ingress is a collection of rules that allow inbound connections to reach the endpoints defined by a backend. An Ingress can be configured to give services externally-reachable urls, load balance traffic, terminate SSL, offer name based virtual hosting etc.
 
-
 ## Example Usage
 
 ```hcl
@@ -163,18 +162,16 @@ resource "kubernetes_ingress_v1" "example" {
   wait_for_load_balancer = true
   metadata {
     name = "example"
-    annotations = {
-      "kubernetes.io/ingress.class" = "nginx"
-    }
   }
   spec {
+    ingress_class_name = "nginx"
     rule {
       http {
         path {
           path = "/*"
           backend {
             service {
-              name = kubernetes_service.example.metadata.0.name
+              name = kubernetes_service_v1.example.metadata.0.name
               port {
                 number = 80
               }
@@ -308,6 +305,12 @@ The following arguments are supported:
 * `ip` -  IP is set for load-balancer ingress points that are IP based (typically GCE or OpenStack load-balancers).
 * `hostname` - Hostname is set for load-balancer ingress points that are DNS based (typically AWS load-balancers).
 
+## Timeouts
+
+The following [Timeout](https://developer.hashicorp.com/terraform/language/resources/syntax#operation-timeouts) configuration options are available for the `kubernetes_ingress_v1` resource:
+
+* `create` - ingress load balancer creation timeout (default `20 minutes`).
+* `delete` - ingress load balancer deletion timeout (default `20 minutes`).
 
 ## Import
 

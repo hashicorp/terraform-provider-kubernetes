@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -168,6 +171,28 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 				Name:            "proxy_url",
 				Type:            tftypes.String,
 				Description:     "URL to the proxy to be used for all API requests",
+				Required:        false,
+				Optional:        true,
+				Computed:        false,
+				Sensitive:       false,
+				DescriptionKind: 0,
+				Deprecated:      false,
+			},
+			{
+				Name:            "ignore_annotations",
+				Type:            tftypes.List{ElementType: tftypes.String},
+				Description:     "List of Kubernetes metadata annotations to ignore across all resources handled by this provider for situations where external systems are managing certain resource annotations. Each item is a regular expression.",
+				Required:        false,
+				Optional:        true,
+				Computed:        false,
+				Sensitive:       false,
+				DescriptionKind: 0,
+				Deprecated:      false,
+			},
+			{
+				Name:            "ignore_labels",
+				Type:            tftypes.List{ElementType: tftypes.String},
+				Description:     "List of Kubernetes metadata labels to ignore across all resources handled by this provider for situations where external systems are managing certain resource labels. Each item is a regular expression.",
 				Required:        false,
 				Optional:        true,
 				Computed:        false,

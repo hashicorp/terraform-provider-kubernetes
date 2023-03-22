@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -19,6 +22,7 @@ func TestAccKubernetesStatefulSet_minimal(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_stateful_set.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{
@@ -41,8 +45,11 @@ func TestAccKubernetesStatefulSet_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
 		IDRefreshName: "kubernetes_stateful_set.test",
-		IDRefreshIgnore: []string{"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests"},
+		IDRefreshIgnore: []string{
+			"metadata.0.resource_version",
+			"spec.0.template.0.spec.0.container.0.resources.0.limits",
+			"spec.0.template.0.spec.0.container.0.resources.0.requests",
+		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{
@@ -111,8 +118,11 @@ func TestAccKubernetesStatefulSet_basic_idempotency(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
 		IDRefreshName: "kubernetes_stateful_set.test",
-		IDRefreshIgnore: []string{"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests"},
+		IDRefreshIgnore: []string{
+			"metadata.0.resource_version",
+			"spec.0.template.0.spec.0.container.0.resources.0.limits",
+			"spec.0.template.0.spec.0.container.0.resources.0.requests",
+		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{
@@ -140,8 +150,11 @@ func TestAccKubernetesStatefulSet_Update(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
 		IDRefreshName: "kubernetes_stateful_set.test",
-		IDRefreshIgnore: []string{"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests"},
+		IDRefreshIgnore: []string{
+			"metadata.0.resource_version",
+			"spec.0.template.0.spec.0.container.0.resources.0.limits",
+			"spec.0.template.0.spec.0.container.0.resources.0.requests",
+		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
 		Steps: []resource.TestStep{
@@ -210,7 +223,6 @@ func TestAccKubernetesStatefulSet_Update(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.type", "OnDelete"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.rolling_update.#", "0"),
-					resource.TestCheckNoResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.rolling_update"),
 					resource.TestCheckNoResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.rolling_update.0.partition"),
 				),
 			},
@@ -221,7 +233,6 @@ func TestAccKubernetesStatefulSet_Update(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.type", "OnDelete"),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.rolling_update.#", "0"),
-					resource.TestCheckNoResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.rolling_update"),
 					resource.TestCheckNoResourceAttr("kubernetes_stateful_set.test", "spec.0.update_strategy.0.rolling_update.0.partition"),
 				),
 			},
@@ -282,33 +293,6 @@ func TestAccKubernetesStatefulSet_waitForRollout(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetExists("kubernetes_stateful_set.test", &conf2),
 					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "wait_for_rollout", "false"),
-					testAccCheckKubernetesStatefulSetForceNew(&conf1, &conf2, false),
-				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesStatefulSet_regression(t *testing.T) {
-	var conf1, conf2 api.StatefulSet
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_stateful_set.test",
-		ExternalProviders: testAccExternalProviders,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: requiredProviders() + testAccKubernetesStatefulSetConfig_beforeUpdate(name, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStatefulSetExists("kubernetes_stateful_set.test", &conf1),
-				),
-			},
-			{
-				Config: requiredProviders() + testAccKubernetesStatefulSetConfig_afterUpdate(name, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStatefulSetExists("kubernetes_stateful_set.test", &conf2),
 					testAccCheckKubernetesStatefulSetForceNew(&conf1, &conf2, false),
 				),
 			},
@@ -466,7 +450,7 @@ func testAccKubernetesStatefulSetConfigBasic(name string) string {
 
       spec {
         container {
-          name = "ss-test"
+          name  = "ss-test"
           image = "nginx:1.19"
 
           port {
@@ -1107,89 +1091,4 @@ resource "kubernetes_stateful_set" "test" {
   wait_for_rollout = %s
 }
 `, name, imageName, waitForRollout)
-}
-
-func testAccKubernetesStatefulSetConfig_beforeUpdate(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_stateful_set" "test" {
-  provider = kubernetes-released
-  metadata {
-    name = "%s"
-  }
-  spec {
-    update_strategy {
-      type = "RollingUpdate"
-    }
-    selector {
-      match_labels = {
-        app = "ss-test"
-      }
-    }
-    service_name = "ss-test-service"
-    template {
-      metadata {
-        labels = {
-          app = "ss-test"
-        }
-      }
-      spec {
-        container {
-          name  = "ss-test"
-          image = "%s"
-          resources {
-            limits {
-              memory = "512M"
-              cpu = "1"
-            }
-            requests {
-              memory = "256M"
-              cpu = "50m"
-            }
-          }
-        }
-      }
-    }
-  }
-}
-`, name, imageName)
-}
-
-func testAccKubernetesStatefulSetConfig_afterUpdate(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_stateful_set" "test" {
-  provider = kubernetes-local
-  metadata {
-    name = "%s"
-  }
-  spec {
-    selector {
-      match_labels = {
-        app = "ss-test"
-      }
-    }
-    service_name = "ss-test-service"
-    template {
-      metadata {
-        labels = {
-          app = "ss-test"
-        }
-      }
-      spec {
-        container {
-          name  = "ss-test"
-          image = "%s"
-          resources {
-            limits = {
-              memory = "512M"
-              cpu = "1"
-            }
-            requests = {
-              memory = "256M"
-              cpu = "50m"
-            }
-          }
-        }
-      }
-    }
-  }
-}
-`, name, imageName)
 }

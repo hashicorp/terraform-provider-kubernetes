@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 locals {
     # This local gets a value of 1 when the 'kubernetes_version' input variable requests a 1.20.x version, otherwise it is 0.
     # It's used to enable the module and resources specific to 1.20.x as a workaround for not being able 

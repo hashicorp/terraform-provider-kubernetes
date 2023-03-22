@@ -142,17 +142,26 @@ The following arguments are supported:
 * `min_replicas` - (Optional) Lower limit for the number of pods that can be set by the autoscaler, defaults to `1`.
 * `scale_target_ref` - (Required) Reference to scaled resource. e.g. Replication Controller
 * `metric` - (Optional) A metric on which to scale.
-* `behavior` - (Optional) Behavior configures the scaling behavior of the target in both Up and Down directions (scale_up and scale_down fields respectively)
+* `behavior` - (Optional) Behavior configures the scaling behavior of the target in both Up and Down directions (`scale_up` and `scale_down` fields respectively)
 
 ### `metric`
 
 #### Arguments
 
-* `type` - (Required) The type of metric. It can be one of "Object", "Pods", "Resource", or "External".
+* `type` - (Required) The type of metric. It can be one of "Object", "Pods", "Resource", "External", or "ContainerResource".
 * `object` - (Optional) A metric describing a single kubernetes object (for example, hits-per-second on an Ingress object).
 * `pods` - (Optional) A metric describing each pod in the current scale target (for example, transactions-processed-per-second). The values will be averaged together before being compared to the target value.
 * `resource` - (Optional) A resource metric (such as those specified in requests and limits) known to Kubernetes describing each pod in the current scale target (e.g. CPU or memory). Such metrics are built in to Kubernetes, and have special scaling options on top of those available to normal per-pod metrics using the "pods" source.
 * `external` - (Optional) A global metric that is not associated with any Kubernetes object. It allows autoscaling based on information coming from components running outside of cluster (for example length of queue in cloud messaging service, or QPS from loadbalancer running outside of cluster).
+* `container_resource` - (Optional) A resource metric (such as those specified in requests and limits) known to Kubernetes describing a single container in each pod of the current scale target (e.g. CPU or memory). Such metrics are built in to Kubernetes, and have special scaling options on top of those available to normal per-pod metrics using the "pods" source.
+
+### Metric Type: `container_resource`
+
+#### Arguments
+
+* `container` - (Required) Name of the container in the pods of the scaling target.
+* `name` - (Required) Name of the resource in question.
+* `target` - (Required) The target for the given metric.
 
 ### Metric Type: `external`
 
@@ -201,22 +210,22 @@ The following arguments are supported:
 
 #### Quantities
 
-See [here](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#quantity-resource-core) for documentation on quantities.
+See [here](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) for documentation on resource management for pods and containers.
 
 ### `described_object`
 
 #### Arguments
 
-* `api_version` - (Optional) API version of the referent
-* `kind` - (Required) Kind of the referent. e.g. `ReplicationController`. For more info see https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+* `api_version` - (Optional) API version of the referent. This argument is optional for the `v1` API version referents and mandatory for the rest.
+* `kind` - (Required) Kind of the referent. e.g. `ReplicationController`. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#types-kinds)
 * `name` - (Required) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 
 ### `scale_target_ref`
 
 #### Arguments
 
-* `api_version` - (Optional) API version of the referent
-* `kind` - (Required) Kind of the referent. e.g. `ReplicationController`. For more info see https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+* `api_version` - (Optional) API version of the referent. This argument is optional for the `v1` API version referents and mandatory for the rest.
+* `kind` - (Required) Kind of the referent. e.g. `ReplicationController`. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#types-kinds)
 * `name` - (Required) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 
 ### `behavior`

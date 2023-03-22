@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -52,6 +55,12 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
+					"allocate_load_balancer_node_ports": {
+						Type:        schema.TypeBool,
+						Description: "Defines if `NodePorts` will be automatically allocated for services with type `LoadBalancer`. It may be set to `false` if the cluster load-balancer does not rely on `NodePorts`.  If the caller requests specific `NodePorts` (by specifying a value), those requests will be respected, regardless of this field. This field may only be set for services with type `LoadBalancer`. Default is `true`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-nodeport-allocation",
+						Optional:    true,
+						Default:     true,
+					},
 					"cluster_ip": {
 						Type:        schema.TypeString,
 						Description: "The IP address of the service. It is usually assigned randomly by the master. If an address is specified manually and is not in use by others, it will be allocated to the service; otherwise, creation of the service will fail. `None` can be specified for headless services when proxying is not required. Ignored if type is `ExternalName`. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",
@@ -62,6 +71,21 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 							validation.StringInSlice([]string{api.ClusterIPNone}, false),
 							validation.IsIPAddress,
 						),
+					},
+					"cluster_ips": {
+						Type:        schema.TypeList,
+						Description: "List of IP addresses assigned to this service, and are usually assigned randomly. If an address is specified manually and is not in use by others, it will be allocated to the service; otherwise creation of the service will fail. If this field is not specified, it will be initialized from the `clusterIP` field. If this field is specified, clients must ensure that `clusterIPs[0]` and `clusterIP` have the same value. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",
+						Optional:    true,
+						ForceNew:    true,
+						Computed:    true,
+						MaxItems:    2,
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+							ValidateFunc: validation.Any(
+								validation.StringInSlice([]string{api.ClusterIPNone}, false),
+								validation.IsIPAddress,
+							),
+						},
 					},
 					"external_ips": {
 						Type:        schema.TypeSet,
@@ -87,6 +111,47 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 							string(api.ServiceExternalTrafficPolicyTypeCluster),
 						}, false),
 					},
+					"ip_families": {
+						Type:        schema.TypeList,
+						Description: "IPFamilies is a list of IP families (e.g. IPv4, IPv6) assigned to this service. This field is usually assigned automatically based on cluster configuration and the ipFamilyPolicy field. If this field is specified manually, the requested family is available in the cluster, and ipFamilyPolicy allows it, it will be used; otherwise creation of the service will fail. This field is conditionally mutable: it allows for adding or removing a secondary IP family, but it does not allow changing the primary IP family of the Service.",
+						Optional:    true,
+						Computed:    true,
+						MaxItems:    2,
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+							ValidateFunc: validation.StringInSlice([]string{
+								string(api.IPv4Protocol),
+								string(api.IPv6Protocol),
+							}, false),
+						},
+					},
+					"ip_family_policy": {
+						Type:        schema.TypeString,
+						Description: "IPFamilyPolicy represents the dual-stack-ness requested or required by this Service. If there is no value provided, then this field will be set to SingleStack. Services can be 'SingleStack' (a single IP family), 'PreferDualStack' (two IP families on dual-stack configured clusters or a single IP family on single-stack clusters), or 'RequireDualStack' (two IP families on dual-stack configured clusters, otherwise fail). The ipFamilies and clusterIPs fields depend on the value of this field.",
+						Optional:    true,
+						Computed:    true,
+						ValidateFunc: validation.StringInSlice([]string{
+							string(api.IPFamilyPolicySingleStack),
+							string(api.IPFamilyPolicyPreferDualStack),
+							string(api.IPFamilyPolicyRequireDualStack),
+						}, false),
+					},
+					"internal_traffic_policy": {
+						Type:        schema.TypeString,
+						Description: "Specifies if the cluster internal traffic should be routed to all endpoints or node-local endpoints only. `Cluster` routes internal traffic to a Service to all endpoints. `Local` routes traffic to node-local endpoints only, traffic is dropped if no node-local endpoints are ready. The default value is `Cluster`.",
+						Optional:    true,
+						Computed:    true,
+						ValidateFunc: validation.StringInSlice([]string{
+							string(api.ServiceInternalTrafficPolicyCluster),
+							string(api.ServiceInternalTrafficPolicyLocal),
+						}, false),
+					},
+					"load_balancer_class": {
+						Type:        schema.TypeString,
+						Description: "The class of the load balancer implementation this Service belongs to. If specified, the value of this field must be a label-style identifier, with an optional prefix. This field can only be set when the Service type is `LoadBalancer`. If not set, the default load balancer implementation is used. This field can only be set when creating or updating a Service to type `LoadBalancer`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-class",
+						Optional:    true,
+						ForceNew:    true,
+					},
 					"load_balancer_ip": {
 						Type:         schema.TypeString,
 						Description:  "Only applies to `type = LoadBalancer`. LoadBalancer will get created with the IP specified in this field. This feature depends on whether the underlying cloud-provider supports specifying this field when a load balancer is created. This field will be ignored if the cloud-provider does not support the feature.",
@@ -109,6 +174,11 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 						MinItems:    1,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
+								"app_protocol": {
+									Type:        schema.TypeString,
+									Description: "The application protocol for this port. This field follows standard Kubernetes label syntax. Un-prefixed names are reserved for IANA standard service names (as per RFC-6335 and http://www.iana.org/assignments/service-names). Non-standard protocols should use prefixed names such as mycompany.com/my-custom-protocol.",
+									Optional:    true,
+								},
 								"name": {
 									Type:        schema.TypeString,
 									Description: "The name of this port within the service. All ports within the service must have unique names. Optional if only one ServicePort is defined on this service.",
@@ -167,6 +237,35 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 							string(api.ServiceAffinityClientIP),
 							string(api.ServiceAffinityNone),
 						}, false),
+					},
+					"session_affinity_config": {
+						Type:        schema.TypeList,
+						Description: "Contains the configurations of session affinity. More info: https://kubernetes.io/docs/concepts/services-networking/service/#proxy-mode-ipvs",
+						Optional:    true,
+						Computed:    true,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"client_ip": {
+									Type:        schema.TypeList,
+									Description: "Contains the configurations of Client IP based session affinity.",
+									Optional:    true,
+									Computed:    true,
+									MaxItems:    1,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"timeout_seconds": {
+												Type:         schema.TypeInt,
+												Description:  "Specifies the seconds of `ClientIP` type session sticky time. The value must be > 0 and <= 86400(for 1 day) if `ServiceAffinity` == `ClientIP`.",
+												Optional:     true,
+												Computed:     true,
+												ValidateFunc: validation.IntBetween(1, 86400),
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 					"type": {
 						Type:        schema.TypeString,
@@ -309,7 +408,7 @@ func resourceKubernetesServiceRead(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received service: %#v", svc)
-	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -346,7 +445,7 @@ func resourceKubernetesServiceUpdate(ctx context.Context, d *schema.ResourceData
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("spec") {
-		serverVersion, err := conn.ServerVersion()
+		serverVersion, err := getServerVersion(conn)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -385,6 +484,9 @@ func resourceKubernetesServiceDelete(ctx context.Context, d *schema.ResourceData
 	log.Printf("[INFO] Deleting service: %#v", name)
 	err = conn.CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package openapi
 
 import (
@@ -9,6 +12,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest"
 	"github.com/mitchellh/hashstructure"
 )
 
@@ -31,12 +35,6 @@ func resolveSchemaRef(ref *openapi3.SchemaRef, defs map[string]*openapi3.SchemaR
 
 	// These are exceptional situations that require non-standard types.
 	switch sid {
-	case "io.k8s.apimachinery.pkg.util.intstr.IntOrString":
-		t := openapi3.Schema{
-			Type:        "string",
-			Description: "io.k8s.apimachinery.pkg.util.intstr.IntOrString", // this value later carries over as the "type hint"
-		}
-		return &t, nil
 	case "io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps":
 		t := openapi3.Schema{
 			Type: "",
@@ -66,6 +64,20 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 
 	var t tftypes.Type
 
+	// Check if attribute type is tagged as 'x-kubernetes-preserve-unknown-fields' in OpenAPI.
+	// If so, we add a type hint to indicate this and return DynamicPseudoType for this attribute,
+	// since we have no further structural information about it.
+	if xpufJSON, ok := elem.Extensions[manifest.PreserveUnknownFieldsLabel]; ok {
+		var xpuf bool
+		v, err := xpufJSON.(json.RawMessage).MarshalJSON()
+		if err == nil {
+			err = json.Unmarshal(v, &xpuf)
+			if err == nil && xpuf {
+				th[ap.String()] = manifest.PreserveUnknownFieldsLabel
+			}
+		}
+	}
+
 	// check if type is in cache
 	// HACK: this is temporarily disabled to diagnose a cache corruption issue.
 	// if herr == nil {
@@ -75,8 +87,7 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 	// }
 	switch elem.Type {
 	case "string":
-		switch elem.Description {
-		case "io.k8s.apimachinery.pkg.util.intstr.IntOrString":
+		if elem.Format == "int-or-string" {
 			th[ap.String()] = "io.k8s.apimachinery.pkg.util.intstr.IntOrString"
 		}
 		return tftypes.String, nil

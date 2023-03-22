@@ -25,7 +25,7 @@ website/node_modules
 *.iml
 *.test
 *.iml
-
+.terraform.lock.hcl
 website/vendor
 
 # Test exclusions

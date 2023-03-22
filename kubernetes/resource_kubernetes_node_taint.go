@@ -74,7 +74,7 @@ func resourceKubernetesNodeTaint() *schema.Resource {
 
 func resourceKubernetesNodeTaintCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	d.SetId(nodeTaintToId(metadata.Name, d.Get("taint").([]interface{})))
+	d.SetId(fmt.Sprintf("%s-taints", &metadata.Name))
 	diag := resourceKubernetesNodeTaintUpdate(ctx, d, m)
 	if diag.HasError() {
 		d.SetId("")
@@ -196,7 +196,6 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 	if d.Id() == "" {
 		return nil
 	}
-	d.SetId(nodeTaintToId(nodeName, taints))
 	return resourceKubernetesNodeTaintRead(ctx, d, m)
 }
 
@@ -266,11 +265,6 @@ func expandNodeTaint(t map[string]interface{}) (*v1.Taint, error) {
 		Effect: taintEffect,
 	}
 	return taint, nil
-}
-
-func nodeTaintToId(nodeName string, taints []interface{}) string {
-	t := taints[0].(map[string]interface{})
-	return fmt.Sprintf("%s,%s=%s:%s", nodeName, t["key"], t["value"], t["effect"])
 }
 
 func idToNodeTaint(id string) (string, *v1.Taint, error) {

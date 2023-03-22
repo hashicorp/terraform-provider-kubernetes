@@ -74,7 +74,7 @@ func resourceKubernetesNodeTaint() *schema.Resource {
 
 func resourceKubernetesNodeTaintCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	d.SetId(fmt.Sprintf("%s-taints", &metadata.Name))
+	d.SetId(fmt.Sprintf("%v-taints", metadata.Name))
 	diag := resourceKubernetesNodeTaintUpdate(ctx, d, m)
 	if diag.HasError() {
 		d.SetId("")
@@ -137,28 +137,30 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
+	//////
 	taints := d.Get("taint").([]interface{})
-	newTaint, err := expandNodeTaint(taints[0].(map[string]interface{}))
+	newTaints, err := expandNodeTaints(taints)
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	//////
 	var newNode *v1.Node
 	if d.Id() == "" {
 		var removed bool
-		newNode, removed = removeTaint(node, newTaint)
+		newNode, removed = removeTaint(node, newTaints)
 		if !removed {
 			return diag.Diagnostics{{
 				Severity: diag.Warning,
 				Summary:  "Resource deleted",
-				Detail:   fmt.Sprintf("Node %s does not have taint %+v. You should re-create it, or remove this resource from your configuration", nodeName, newTaint),
+				Detail:   fmt.Sprintf("Node %s does not have taint %+v. You should re-create it, or remove this resource from your configuration", nodeName, newTaints),
 			}}
 		}
 	} else {
-		log.Printf("[INFO] adding taint %+v to node %s", newTaint, nodeName)
+		log.Printf("[INFO] adding taint %+v to node %s", newTaints, nodeName)
 		var updated bool
-		newNode, updated = addOrUpdateTaint(node, newTaint)
+		newNode, updated = addOrUpdateTaint(node, newTaints)
 		if !updated {
-			return diag.Errorf("Node %s already has taint %+v", nodeName, newTaint)
+			return diag.Errorf("Node %s already has taint %+v", nodeName, newTaints)
 		}
 	}
 	patchObj := map[string]interface{}{
@@ -253,18 +255,23 @@ func hasTaint(taints []v1.Taint, taint *v1.Taint) bool {
 	return false
 }
 
-func expandNodeTaint(t map[string]interface{}) (*v1.Taint, error) {
-	tt := expandStringMap(t)
-	taintEffect, ok := taintMap[tt["effect"]]
-	if !ok {
-		return nil, fmt.Errorf("Invalid taint effect '%s'", tt["effect"])
+func expandNodeTaints(t []interface{}) ([]v1.Taint, error) {
+	var taints []v1.Taint
+	for _, taint := range t {
+		tt := expandStringMap(taint.(map[string]interface{}))
+		taintEffect, ok := taintMap[tt["effect"]]
+		if !ok {
+			return nil, fmt.Errorf("Invalid taint effect '%s'", tt["effect"])
+		}
+
+		taint := &v1.Taint{
+			Key:    tt["key"],
+			Value:  tt["value"],
+			Effect: taintEffect,
+		}
+		taints = append(taints, *taint)
 	}
-	taint := &v1.Taint{
-		Key:    tt["key"],
-		Value:  tt["value"],
-		Effect: taintEffect,
-	}
-	return taint, nil
+	return taints, nil
 }
 
 func idToNodeTaint(id string) (string, *v1.Taint, error) {

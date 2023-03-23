@@ -1,5 +1,12 @@
 ## 2.19.0 (March 23, 2023)
 
+Generating changelog for release-v2.19.0 from v2.18.1...
+
+
+FEATURES:
+
+New Resource: `kubernetes_token_request_v1`. [[GH-2024](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2024)]
+
 BUG FIXES:
 
 * `data_source/kubernetes_secret_v1`: Fix an issue where data_source cannot read secret created with generate_name. [[GH-2028](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2028)]

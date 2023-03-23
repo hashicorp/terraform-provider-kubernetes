@@ -67,7 +67,7 @@ func tokenRequestSpecFields() map[string]*schema.Schema {
 			ValidateFunc: func(value interface{}, key string) ([]string, []error) {
 				v := value.(int)
 				if v < 600 {
-					return nil, []error{errors.New("must be between 600 and 4294967296 ")}
+					return nil, []error{errors.New("must be more than 600")}
 				}
 				return nil, nil
 			},

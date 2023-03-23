@@ -1,3 +1,21 @@
+## 2.19.0 (March 23, 2023)
+
+Generating changelog for release-v2.19.0 from v2.18.1...
+
+
+FEATURES:
+
+New Resource: `kubernetes_token_request_v1`. [[GH-2024](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2024)]
+
+BUG FIXES:
+
+* `data_source/kubernetes_secret_v1`: Fix an issue where data_source cannot read secret created with generate_name. [[GH-2028](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2028)]
+* `data_source/kubernetes_secret`: Fix an issue where data_source cannot read secret created with generate_name. [[GH-2028](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2028)]
+* `kubernetes/schema_pod_spec.go`: Fix unexpected volumes appearing on plan [[GH-2006](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2006)]
+* `resource/kubernetes_cron_job_v1`: Fix annotation logic to prevent internalkeys from being removed in templates [[GH-1983](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1983)]
+* `resource/kubernetes_manifest`: Fix a panic when constructing the diagnostic message about incompatible attribute types [[GH-2054](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2054)]
+* `resource/kubernetes_manifest`: Fix crash when manifest config contains unknown values of unknown type (DynamicPseudoType) [[GH-2055](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2055)]
+
 ## 2.18.1 (February 21, 2023)
 
 HOTFIX:

@@ -66,7 +66,7 @@ func tokenRequestSpecFields() map[string]*schema.Schema {
 			Description: "expiration_seconds is the requested duration of validity of the request. The token issuer may return a token with a different validity duration so a client needs to check the 'expiration' field in a response. The expiration can't be less than 10 minutes.",
 			ValidateFunc: func(value interface{}, key string) ([]string, []error) {
 				v := value.(int)
-				if v < 600 || v > 4294967296 {
+				if v < 600 {
 					return nil, []error{errors.New("must be between 600 and 4294967296 ")}
 				}
 				return nil, nil

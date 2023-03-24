@@ -88,10 +88,8 @@ func resourceKubernetesNodeTaintDelete(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceKubernetesNodeTaintRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	nodeName, idTaint, err := idToNodeTaint(d.Id())
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	meta := expandMetadata(d.Get("metadata").([]interface{}))
+	nodeName := meta.Name
 
 	conn, err := m.(KubeClientsets).MainClientset()
 	if err != nil {
@@ -108,11 +106,14 @@ func resourceKubernetesNodeTaintRead(ctx context.Context, d *schema.ResourceData
 		d.SetId("")
 		return nil
 	}
-	if !hasTaint(nodeTaints, idTaint) {
-		d.SetId("")
-		return nil
+
+	for _, taint := range nodeTaints {
+		if !hasTaint(nodeTaints, &taint) {
+			d.SetId("")
+			return nil
+		}
 	}
-	d.Set("taint", flattenNodeTaints(*idTaint))
+	d.Set("taint", flattenNodeTaints(nodeTaints...))
 	return nil
 }
 
@@ -145,24 +146,28 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 	}
 	//////
 	var newNode *v1.Node
-	if d.Id() == "" {
-		var removed bool
-		newNode, removed = removeTaint(node, newTaints)
-		if !removed {
-			return diag.Diagnostics{{
-				Severity: diag.Warning,
-				Summary:  "Resource deleted",
-				Detail:   fmt.Sprintf("Node %s does not have taint %+v. You should re-create it, or remove this resource from your configuration", nodeName, newTaints),
-			}}
-		}
-	} else {
-		log.Printf("[INFO] adding taint %+v to node %s", newTaints, nodeName)
-		var updated bool
-		newNode, updated = addOrUpdateTaint(node, newTaints)
-		if !updated {
-			return diag.Errorf("Node %s already has taint %+v", nodeName, newTaints)
+	for _, newTaint := range newTaints {
+
+		if d.Id() == "" {
+			var removed bool
+			newNode, removed = removeTaint(node, &newTaint)
+			if !removed {
+				return diag.Diagnostics{{
+					Severity: diag.Warning,
+					Summary:  "Resource deleted",
+					Detail:   fmt.Sprintf("Node %s does not have taint %+v. You should re-create it, or remove this resource from your configuration", nodeName, newTaints),
+				}}
+			}
+		} else {
+			log.Printf("[INFO] adding taint %+v to node %s", newTaints, nodeName)
+			var updated bool
+			newNode, updated = addOrUpdateTaint(node, &newTaint)
+			if !updated {
+				return diag.Errorf("Node %s already has taint %+v", nodeName, newTaints)
+			}
 		}
 	}
+	panic(fmt.Sprintf("%v", newNode.Spec.Taints))
 	patchObj := map[string]interface{}{
 		"apiVersion": "v1",
 		"kind":       "Node",

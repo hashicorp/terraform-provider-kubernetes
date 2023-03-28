@@ -260,3 +260,63 @@ func TestExpandContainerEnv(t *testing.T) {
 		}
 	}
 }
+
+func TestFlattenContainerVolumeMounts_mountPropogation(t *testing.T) {
+	bidimode := v1.MountPropagationBidirectional
+
+	cases := []struct {
+		Input    []v1.VolumeMount
+		Expected []interface{}
+	}{
+		{
+			[]v1.VolumeMount{
+				{
+					Name:      "cache",
+					MountPath: "/cache",
+					ReadOnly:  false,
+				},
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"mount_path":        "/cache",
+					"mount_propagation": "None",
+					"name":              "cache",
+					"read_only":         false,
+				},
+			},
+		},
+		{
+			[]v1.VolumeMount{
+				{
+					Name:             "cache",
+					MountPath:        "/cache",
+					MountPropagation: &bidimode,
+					ReadOnly:         true,
+				},
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"mount_path":        "/cache",
+					"mount_propagation": "Bidirectional",
+					"name":              "cache",
+					"read_only":         true,
+				},
+			},
+		},
+		{
+			[]v1.VolumeMount{},
+			[]interface{}{},
+		},
+	}
+
+	for _, tc := range cases {
+		output, err := flattenContainerVolumeMounts(tc.Input)
+		if err != nil {
+			t.Fatalf("Unexpected failure in flattener.\nInput: %#v, error: %#v", tc.Input, err)
+		}
+		if !reflect.DeepEqual(output, tc.Expected) {
+			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
+				tc.Expected, output)
+		}
+	}
+}

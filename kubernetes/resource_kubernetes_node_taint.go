@@ -164,9 +164,9 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 			var updated bool
 			newNode, updated = addOrUpdateTaint(node, &newTaint)
 			if !updated {
-				return diag.Errorf("Node %s already has taint %+v", nodeName, newTaints)
+				log.Printf("Node %s already has taint %+v", nodeName, newTaints)
 			}
-			taintList = append(taintList, newNode.Spec.Taints...)
+			taintList = append(taintList, newNode.Spec.Taints[0])
 		}
 	}
 	//panic(fmt.Sprintf("%v", newNode.Spec.Taints))

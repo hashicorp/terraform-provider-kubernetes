@@ -44,6 +44,35 @@ func TestAccKubernetesResourceNodeTaint_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesResourceNodeTaint_MultipleBasic(t *testing.T) {
+	resourceName := "kubernetes_node_taint.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccKubernetesNodeTaintDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesNodeTaintConfig_multipleBasic(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccKubernetesNodeTaintExists(resourceName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.name"),
+					resource.TestCheckResourceAttr(resourceName, "taint.0.key", taintKey+"-1"),
+					resource.TestCheckResourceAttr(resourceName, "taint.0.value", taintValue),
+					resource.TestCheckResourceAttr(resourceName, "taint.0.effect", taintEffect),
+					resource.TestCheckResourceAttr(resourceName, "taint.1.key", taintKey+"-2"),
+					resource.TestCheckResourceAttr(resourceName, "taint.1.value", taintValue),
+					resource.TestCheckResourceAttr(resourceName, "taint.1.effect", taintEffect),
+					resource.TestCheckResourceAttr(resourceName, "taint.2.key", taintKey+"-3"),
+					resource.TestCheckResourceAttr(resourceName, "taint.2.value", taintValue),
+					resource.TestCheckResourceAttr(resourceName, "taint.2.effect", taintEffect),
+				),
+			},
+		},
+	})
+}
+
 func testAccKubernetesCheckNodeTaint(rs *terraform.ResourceState) error {
 	nodeName, taint, err := idToNodeTaint(rs.Primary.ID)
 	if err != nil {
@@ -106,4 +135,32 @@ resource "kubernetes_node_taint" "test" {
   field_manager = "%s"
 }
 `, taintKey, taintValue, taintEffect, fieldManager)
+}
+
+func testAccKubernetesNodeTaintConfig_multipleBasic() string {
+	return fmt.Sprintf(`
+data "kubernetes_nodes" "test" {}
+
+resource "kubernetes_node_taint" "test" {
+  metadata {
+    name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
+  }
+  taint {
+    key    = "%s-1"
+    value  = "%s"
+    effect = "%s"
+  }
+  taint {
+    key    = "%s-2"
+    value  = "%s"
+    effect = "%s"
+  }
+  taint {
+    key    = "%s-3"
+    value  = "%s"
+    effect = "%s"
+  }
+  field_manager = "%s"
+}
+`, taintKey, taintValue, taintEffect, taintKey, taintValue, taintEffect, taintKey, taintValue, taintEffect, fieldManager)
 }

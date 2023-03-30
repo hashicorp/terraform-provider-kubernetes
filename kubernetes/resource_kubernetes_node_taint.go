@@ -138,20 +138,16 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	//////
 	taints := d.Get("taint").([]interface{})
 	newTaints, err := expandNodeTaints(taints)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	//////
-	var newNode *v1.Node
 	var taintList []v1.Taint
 	for _, newTaint := range newTaints {
-
 		if d.Id() == "" {
 			var removed bool
-			newNode, removed = removeTaint(node, &newTaint)
+			_, removed = removeTaint(node, &newTaint)
 			if !removed {
 				return diag.Diagnostics{{
 					Severity: diag.Warning,
@@ -160,16 +156,10 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 				}}
 			}
 		} else {
-			log.Printf("[INFO] adding taint %+v to node %s", newTaints, nodeName)
-			var updated bool
-			newNode, updated = addOrUpdateTaint(node, &newTaint)
-			if !updated {
-				log.Printf("Node %s already has taint %+v", nodeName, newTaints)
-			}
-			taintList = append(taintList, newNode.Spec.Taints[0])
+			addOrUpdateTaint(node, &newTaint)
+			taintList = append(taintList, newTaint)
 		}
 	}
-	//panic(fmt.Sprintf("%v", newNode.Spec.Taints))
 	patchObj := map[string]interface{}{
 		"apiVersion": "v1",
 		"kind":       "Node",
@@ -208,30 +198,24 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 	return resourceKubernetesNodeTaintRead(ctx, d, m)
 }
 
-func addOrUpdateTaint(node *v1.Node, taint *v1.Taint) (*v1.Node, bool) {
+func addOrUpdateTaint(node *v1.Node, taint *v1.Taint) {
 	nodeTaints := node.Spec.Taints
-	newTaints := []v1.Taint{}
 	updated := false
 	for i := range nodeTaints {
 		log.Printf("[INFO] Checking taint: %+v", nodeTaints[i])
 		if taint.MatchTaint(&nodeTaints[i]) {
 			if helper.Semantic.DeepEqual(*taint, nodeTaints[i]) {
-				return node, false
+				log.Printf("Node %s already has taint %+v", node, nodeTaints[i])
+				return
 			}
-			newTaints = append(newTaints, *taint)
 			updated = true
-			continue
+			log.Printf("[INFO] updated taint: %+v", taint)
+			break
 		}
-		newTaints = append(newTaints, nodeTaints[i])
 	}
 	if !updated {
-		newTaints = append(newTaints, *taint)
-		log.Printf("[INFO] appended taint: %+v", taint)
-		updated = true
+		log.Printf("[INFO] adding taint %+v to node %s", taint, node.Name)
 	}
-	newNode := node.DeepCopy()
-	newNode.Spec.Taints = newTaints
-	return newNode, updated
 }
 
 func removeTaint(node *v1.Node, delTaint *v1.Taint) (*v1.Node, bool) {

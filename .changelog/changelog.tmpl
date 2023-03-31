@@ -14,19 +14,20 @@ SECURITY:
 {{ end -}}
 {{- end -}}
 
-{{- if .NotesByType.feature }}
+{{- $features := combineTypes .NotesByType.feature (index .NotesByType "new-resource" ) (index .NotesByType "new-data-source") (index .NotesByType "new-guide") }}
+{{- if $features }}
 FEATURES:
 
-{{range .NotesByType.feature -}}
-* {{ template "note" . }}
+{{range $features | sort -}}
+{{ template "note" . }}
 {{ end -}}
 {{- end -}}
 
 {{- if .NotesByType.enhancement }}
-ENHANCEMENT:
+ENHANCEMENTS:
 
-{{range .NotesByType.enhancement -}}
-* {{ template "note" . }}
+{{range .NotesByType.enhancement | sort -}}
+{{ template "note" .}}
 {{ end -}}
 {{- end -}}
 

@@ -129,7 +129,7 @@ func resourceKubernetesPersistentVolumeClaimCreate(ctx context.Context, d *schem
 				return out, statusPhase, nil
 			},
 		}
-		_, err = stateConf.WaitForState()
+		_, err = stateConf.WaitForStateContext(ctx)
 		if err != nil {
 			var lastWarnings []api.Event
 			var wErr error

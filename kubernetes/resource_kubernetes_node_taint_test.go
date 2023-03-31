@@ -169,11 +169,11 @@ resource "kubernetes_node_taint" "test" {
     name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
   }
   taint {
-    key    = "%s"
-    value  = "%s"
-    effect = "%s"
+    key    = "%q"
+    value  = "%q"
+    effect = "%q"
   }
-  field_manager = "%s"
+  field_manager = "%q"
 }
 `, taintKey, taintValue, taintEffect, fieldManager)
 }
@@ -187,21 +187,21 @@ resource "kubernetes_node_taint" "test" {
     name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
   }
   taint {
-    key    = "%s-1"
-    value  = "%s"
-    effect = "%s"
+    key    = "%q-1"
+    value  = "%q"
+    effect = "%q"
   }
   taint {
-    key    = "%s-2"
-    value  = "%s"
-    effect = "%s"
+    key    = "%q-2"
+    value  = "%q"
+    effect = "%q"
   }
   taint {
-    key    = "%s-3"
-    value  = "%s"
-    effect = "%s"
+    key    = "%q-3"
+    value  = "%q"
+    effect = "%q"
   }
-  field_manager = "%s"
+  field_manager = "%q"
 }
 `, taintKey, taintValue, taintEffect, taintKey, taintValue, taintEffect, taintKey, taintValue, taintEffect, fieldManager)
 }
@@ -215,21 +215,21 @@ resource "kubernetes_node_taint" "test" {
     name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
   }
   taint {
-    key    = "%s-1"
-    value  = "%s"
-    effect = "%s"
+    key    = "%q-1"
+    value  = "%q"
+    effect = "%q"
   }
   taint {
-    key    = "%s-2"
-    value  = "%s"
-    effect = "%s"
+    key    = "%q-2"
+    value  = "%q"
+    effect = "%q"
   }
   taint {
-    key    = "%s-3"
-    value  = "%s"
-    effect = "%s"
+    key    = "%q-3"
+    value  = "%q"
+    effect = "%q"
   }
-  field_manager = "%s"
+  field_manager = "%q"
 }
 `, taintKey, taintValue, "NoSchedule", taintKey, taintValue, "NoSchedule", taintKey, taintValue, taintEffect, fieldManager)
 }
@@ -243,16 +243,16 @@ resource "kubernetes_node_taint" "test" {
     name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
   }
   taint {
-    key    = "%s-1"
-    value  = "%s"
-    effect = "%s"
+    key    = "%q-1"
+    value  = "%q"
+    effect = "%q"
   }
   taint {
-    key    = "%s-2"
-    value  = "%s"
-    effect = "%s"
+    key    = "%q-2"
+    value  = "%q"
+    effect = "%q"
   }
-  field_manager = "%s"
+  field_manager = "%q"
 }
 `, taintKey, taintValue, "NoSchedule", taintKey, taintValue, "NoSchedule", fieldManager)
 }
@@ -265,7 +265,7 @@ resource "kubernetes_node_taint" "test" {
   metadata {
     name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
   }
-  field_manager = "%s"
+  field_manager = "%q"
 }
 `, fieldManager)
 }

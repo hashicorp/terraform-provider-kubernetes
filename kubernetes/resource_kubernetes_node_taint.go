@@ -70,7 +70,7 @@ func resourceKubernetesNodeTaint() *schema.Resource {
 
 func resourceKubernetesNodeTaintCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	d.SetId(nodeTaintToId(fmt.Sprintf("%s", metadata.Name), d.Get("taint").([]interface{})))
+	d.SetId(nodeTaintToId(metadata.Name, d.Get("taint").([]interface{})))
 	diag := resourceKubernetesNodeTaintUpdate(ctx, d, m)
 	if diag.HasError() {
 		d.SetId("")

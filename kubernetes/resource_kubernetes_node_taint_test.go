@@ -169,11 +169,11 @@ resource "kubernetes_node_taint" "test" {
     name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
   }
   taint {
-    key    = "%q"
-    value  = "%q"
-    effect = "%q"
+    key    = %q
+    value  = %q
+    effect = %q
   }
-  field_manager = "%q"
+  field_manager = %q
 }
 `, taintKey, taintValue, taintEffect, fieldManager)
 }
@@ -187,23 +187,23 @@ resource "kubernetes_node_taint" "test" {
     name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
   }
   taint {
-    key    = "%q-1"
-    value  = "%q"
-    effect = "%q"
+    key    = %q
+    value  = %q
+    effect = %q
   }
   taint {
-    key    = "%q-2"
-    value  = "%q"
-    effect = "%q"
+    key    = %q
+    value  = %q
+    effect = %q
   }
   taint {
-    key    = "%q-3"
-    value  = "%q"
-    effect = "%q"
+    key    = %q
+    value  = %q
+    effect = %q
   }
-  field_manager = "%q"
+  field_manager = %q
 }
-`, taintKey, taintValue, taintEffect, taintKey, taintValue, taintEffect, taintKey, taintValue, taintEffect, fieldManager)
+`, taintKey+"-1", taintValue, taintEffect, taintKey+"-2", taintValue, taintEffect, taintKey+"-3", taintValue, taintEffect, fieldManager)
 }
 
 func testAccKubernetesNodeTaintConfig_updateTaint() string {
@@ -215,23 +215,23 @@ resource "kubernetes_node_taint" "test" {
     name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
   }
   taint {
-    key    = "%q-1"
-    value  = "%q"
-    effect = "%q"
+    key    = %q
+    value  = %q
+    effect = %q
   }
   taint {
-    key    = "%q-2"
-    value  = "%q"
-    effect = "%q"
+    key    = %q
+    value  = %q
+    effect = %q
   }
   taint {
-    key    = "%q-3"
-    value  = "%q"
-    effect = "%q"
+    key    = %q
+    value  = %q
+    effect = %q
   }
-  field_manager = "%q"
+  field_manager = %q
 }
-`, taintKey, taintValue, "NoSchedule", taintKey, taintValue, "NoSchedule", taintKey, taintValue, taintEffect, fieldManager)
+`, taintKey+"-1", taintValue, "NoSchedule", taintKey+"-2", taintValue, "NoSchedule", taintKey+"-3", taintValue, taintEffect, fieldManager)
 }
 
 func testAccKubernetesNodeTaintConfig_removeTaint() string {
@@ -243,18 +243,18 @@ resource "kubernetes_node_taint" "test" {
     name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
   }
   taint {
-    key    = "%q-1"
-    value  = "%q"
-    effect = "%q"
+    key    = %q
+    value  = %q
+    effect = %q
   }
   taint {
-    key    = "%q-2"
-    value  = "%q"
-    effect = "%q"
+    key    = %q
+    value  = %q
+    effect = %q
   }
-  field_manager = "%q"
+  field_manager = %q
 }
-`, taintKey, taintValue, "NoSchedule", taintKey, taintValue, "NoSchedule", fieldManager)
+`, taintKey+"-1", taintValue, "NoSchedule", taintKey+"-2", taintValue, "NoSchedule", fieldManager)
 }
 
 func testAccKubernetesNodeTaintConfig_removeAllTaints() string {
@@ -265,7 +265,7 @@ resource "kubernetes_node_taint" "test" {
   metadata {
     name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
   }
-  field_manager = "%q"
+  field_manager = %q
 }
 `, fieldManager)
 }

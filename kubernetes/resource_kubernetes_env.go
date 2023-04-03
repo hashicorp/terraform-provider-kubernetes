@@ -60,6 +60,11 @@ func resourceKubernetesEnv() *schema.Resource {
 				Description: "Name of the container for which we are updating the environment variables.",
 				Required:    true,
 			},
+			"initContainer": {
+				Type:        schema.TypeString,
+				Description: "Name of the container for which we are updating the environment variables.",
+				Optional:    true,
+			},
 			"api_version": {
 				Type:        schema.TypeString,
 				Description: "Resource API version",
@@ -434,6 +439,12 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 						"env":  env,
 					},
 				},
+				"initContainers": []interface{}{
+					map[string]interface{}{
+						"name": d.Get("container").(string),
+						"env":  env,
+					},
+				},
 			},
 		},
 	}
@@ -447,6 +458,12 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 							"containers": []interface{}{
 								map[string]interface{}{
 									"name": d.Get("container").(string),
+									"env":  env,
+								},
+							},
+							"initContainers": []interface{}{
+								map[string]interface{}{
+									"name": d.Get("initContainers").(string),
 									"env":  env,
 								},
 							},

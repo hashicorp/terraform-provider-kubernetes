@@ -344,6 +344,7 @@ func getResponseEnvs(u *unstructured.Unstructured, containerName string, kind st
 func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *schema.ResourceData, u *unstructured.Unstructured) (map[string]interface{}, error) {
 	var envs map[string]interface{}
 	kind := d.Get("kind").(string)
+	isInitContainer := d.Get("init_container").(bool)
 	for _, m := range managedFields {
 		if m.Manager != manager {
 			continue
@@ -362,11 +363,22 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 			return nil, err
 		}
 
-		containers := spec["f:containers"].(map[string]interface{})
-		containerName := fmt.Sprintf(`k:{"name":%q}`, d.Get("container").(string))
-		k := containers[containerName].(map[string]interface{})
-		if e, ok := k["f:env"].(map[string]interface{}); ok {
-			envs = e
+		if !isInitContainer {
+			containers := spec["f:containers"].(map[string]interface{})
+			containerName := fmt.Sprintf(`k:{"name":%q}`, d.Get("container").(string))
+
+			k := containers[containerName].(map[string]interface{})
+			if e, ok := k["f:env"].(map[string]interface{}); ok {
+				envs = e
+			}
+		} else {
+			containers := spec["f:initContainers"].(map[string]interface{})
+			containerName := fmt.Sprintf(`k:{"name":%q}`, d.Get("container").(string))
+
+			k := containers[containerName].(map[string]interface{})
+			if e, ok := k["f:env"].(map[string]interface{}); ok {
+				envs = e
+			}
 		}
 	}
 	return envs, nil

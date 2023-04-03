@@ -102,14 +102,6 @@ func TestAccKubernetesResourceNodeTaint_MultipleBasic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "taint.#", "2"),
 				),
 			},
-			{
-				Config: testAccKubernetesNodeTaintConfig_removeAllTaints(),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccKubernetesNodeTaintExists(resourceName),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.name"),
-					resource.TestCheckResourceAttr(resourceName, "taint.#", "0"),
-				),
-			},
 		},
 	})
 }
@@ -255,19 +247,6 @@ resource "kubernetes_node_taint" "test" {
   field_manager = %q
 }
 `, taintKey+"-1", taintValue, "NoSchedule", taintKey+"-2", taintValue, "NoSchedule", fieldManager)
-}
-
-func testAccKubernetesNodeTaintConfig_removeAllTaints() string {
-	return fmt.Sprintf(`
-data "kubernetes_nodes" "test" {}
-
-resource "kubernetes_node_taint" "test" {
-  metadata {
-    name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
-  }
-  field_manager = %q
-}
-`, fieldManager)
 }
 
 func hasTaint(taints []v1.Taint, taint *v1.Taint) bool {

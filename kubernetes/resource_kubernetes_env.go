@@ -61,9 +61,10 @@ func resourceKubernetesEnv() *schema.Resource {
 				Required:    true,
 			},
 			"initContainer": {
-				Type:        schema.TypeString,
-				Description: "Name of the container for which we are updating the environment variables.",
+				Type:        schema.TypeBool,
+				Description: "Specifies that the environment variables will be set for an initContainer",
 				Optional:    true,
+				Default:     false,
 			},
 			"api_version": {
 				Type:        schema.TypeString,
@@ -371,6 +372,7 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 
 	apiVersion := d.Get("api_version").(string)
 	kind := d.Get("kind").(string)
+	initContainer := d.Get("initContainer").(bool)
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	name := metadata.GetName()
 	namespace := metadata.GetNamespace()
@@ -430,49 +432,75 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 		env = []map[string]interface{}{}
 	}
 
-	spec := map[string]interface{}{
-		"template": map[string]interface{}{
-			"spec": map[string]interface{}{
-				"containers": []interface{}{
-					map[string]interface{}{
-						"name": d.Get("container").(string),
-						"env":  env,
-					},
-				},
-				"initContainers": []interface{}{
-					map[string]interface{}{
-						"name": d.Get("container").(string),
-						"env":  env,
-					},
-				},
-			},
-		},
-	}
-	if kind == "CronJob" {
-		// patch for CronJob
+	var spec map[string]interface{}
+	if !initContainer {
 		spec = map[string]interface{}{
-			"jobTemplate": map[string]interface{}{
+			"template": map[string]interface{}{
 				"spec": map[string]interface{}{
-					"template": map[string]interface{}{
-						"spec": map[string]interface{}{
-							"containers": []interface{}{
-								map[string]interface{}{
-									"name": d.Get("container").(string),
-									"env":  env,
-								},
-							},
-							"initContainers": []interface{}{
-								map[string]interface{}{
-									"name": d.Get("initContainers").(string),
-									"env":  env,
-								},
-							},
+					"containers": []interface{}{
+						map[string]interface{}{
+							"name": d.Get("container").(string),
+							"env":  env,
 						},
 					},
 				},
 			},
 		}
+
+		if kind == "CronJob" {
+			// patch for CronJob
+			spec = map[string]interface{}{
+				"jobTemplate": map[string]interface{}{
+					"spec": map[string]interface{}{
+						"template": map[string]interface{}{
+							"spec": map[string]interface{}{
+								"containers": []interface{}{
+									map[string]interface{}{
+										"name": d.Get("container").(string),
+										"env":  env,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		}
+	} else {
+		spec = map[string]interface{}{
+			"template": map[string]interface{}{
+				"spec": map[string]interface{}{
+					"initContainers": []interface{}{
+						map[string]interface{}{
+							"name": d.Get("container").(string),
+							"env":  env,
+						},
+					},
+				},
+			},
+		}
+
+		if kind == "CronJob" {
+			// patch for CronJob
+			spec = map[string]interface{}{
+				"jobTemplate": map[string]interface{}{
+					"spec": map[string]interface{}{
+						"template": map[string]interface{}{
+							"spec": map[string]interface{}{
+								"initContainers": []interface{}{
+									map[string]interface{}{
+										"name": d.Get("container").(string),
+										"env":  env,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		}
 	}
+
 	patchObj := map[string]interface{}{
 		"apiVersion": apiVersion,
 		"kind":       kind,

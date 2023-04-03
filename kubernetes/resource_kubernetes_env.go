@@ -293,7 +293,7 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	responseEnvs, err := getResponseEnvs(res, d.Get("container").(string), d.Get("kind").(string))
+	responseEnvs, err := getResponseEnvs(res, d.Get("container").(string), d.Get("kind").(string), d.Get("init_container").(bool))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -314,13 +314,21 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 	return nil
 }
 
-func getResponseEnvs(u *unstructured.Unstructured, containerName string, kind string) ([]interface{}, error) {
+func getResponseEnvs(u *unstructured.Unstructured, containerName string, kind string, isInitContainer bool) ([]interface{}, error) {
 	var containers []interface{}
 
-	containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "template", "spec", "containers")
+	if !isInitContainer {
+		containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "template", "spec", "containers")
 
-	if kind == "CronJob" {
-		containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "jobTemplate", "spec", "template", "spec", "containers")
+		if kind == "CronJob" {
+			containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "jobTemplate", "spec", "template", "spec", "containers")
+		}
+	} else {
+		containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "template", "spec", "initContainers")
+
+		if kind == "CronJob" {
+			containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "jobTemplate", "spec", "template", "spec", "initContainers")
+		}
 	}
 
 	for _, c := range containers {

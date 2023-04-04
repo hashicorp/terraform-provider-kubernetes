@@ -116,7 +116,6 @@ func nodeTaintFields() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "The taint key",
 			Required:    true,
-			ForceNew:    true,
 		},
 		"value": {
 			Type:        schema.TypeString,
@@ -127,7 +126,6 @@ func nodeTaintFields() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "The taint effect",
 			Required:    true,
-			ForceNew:    true,
 		},
 	}
 }

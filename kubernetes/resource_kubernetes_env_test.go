@@ -565,9 +565,8 @@ resource "kubernetes_config_map" "test" {
 }
 
 resource "kubernetes_env" "test" {
-  container   = "hello"
+  init_container   = "hello"
   api_version = "apps/v1"
-  init_container = true
   kind        = "Deployment"
   metadata {
     name      = %q
@@ -754,8 +753,7 @@ resource "kubernetes_config_map" "test" {
 }
 
 resource "kubernetes_env" "test" {
-  container   = "initcontainer"
-  init_container = true
+  init_container   = "hello"
   api_version = "apps/v1"
   kind        = "Deployment"
   metadata {

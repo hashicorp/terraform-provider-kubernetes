@@ -694,9 +694,9 @@ resource "kubernetes_config_map" "test" {
 }
 
 resource "kubernetes_env" "test" {
-  init_container   = "hello"
-  api_version = "apps/v1"
-  kind        = "Deployment"
+  init_container = "hello"
+  api_version    = "apps/v1"
+  kind           = "Deployment"
   metadata {
     name      = %q
     namespace = %q
@@ -882,9 +882,9 @@ resource "kubernetes_config_map" "test" {
 }
 
 resource "kubernetes_env" "demo" {
-  init_container   = "nginx"
-  api_version = "batch/v1"
-  kind        = "CronJob"
+  init_container = "nginx"
+  api_version    = "batch/v1"
+  kind           = "CronJob"
   metadata {
     name      = "%s"
     namespace = "%s"
@@ -948,9 +948,9 @@ resource "kubernetes_config_map" "test" {
 }
 
 resource "kubernetes_env" "test" {
-  init_container   = "hello"
-  api_version = "apps/v1"
-  kind        = "Deployment"
+  init_container = "hello"
+  api_version    = "apps/v1"
+  kind           = "Deployment"
   metadata {
     name      = %q
     namespace = %q
@@ -1013,9 +1013,9 @@ resource "kubernetes_config_map" "test" {
 }
 
 resource "kubernetes_env" "demo" {
-  init_container   = "nginx"
-  api_version = "batch/v1"
-  kind        = "CronJob"
+  init_container = "nginx"
+  api_version    = "batch/v1"
+  kind           = "CronJob"
   metadata {
     name      = "%s"
     namespace = "%s"

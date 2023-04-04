@@ -56,15 +56,16 @@ func resourceKubernetesEnv() *schema.Resource {
 				},
 			},
 			"container": {
-				Type:        schema.TypeString,
-				Description: "Name of the container for which we are updating the environment variables.",
-				Required:    true,
+				Type:         schema.TypeString,
+				Description:  "Name of the container for which we are updating the environment variables.",
+				Optional:     true,
+				ExactlyOneOf: []string{"container", "init_container"},
 			},
 			"init_container": {
-				Type:        schema.TypeBool,
-				Description: "Specifies that the environment variables will be set for an initcontainer",
-				Optional:    true,
-				Default:     false,
+				Type:         schema.TypeString,
+				Description:  "Name of the initContainer for which we are updating the environment variables.",
+				Optional:     true,
+				ExactlyOneOf: []string{"container", "init_container"},
 			},
 			"api_version": {
 				Type:        schema.TypeString,
@@ -287,13 +288,23 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 		configuredEnvs[e.(map[string]interface{})["name"].(string)] = ""
 	}
 
+	var container string
+	var isInitContainer bool
+	if c := d.Get("container").(string); c != "" {
+		container = c
+	} else {
+		container = d.Get("init_container").(string)
+		isInitContainer = true
+	}
+
 	// strip out envs not managed by Terraform
 	fieldManagerName := d.Get("field_manager").(string)
-	managedEnvs, err := getManagedEnvs(res.GetManagedFields(), fieldManagerName, d, res)
+	managedEnvs, err := getManagedEnvs(res.GetManagedFields(), fieldManagerName, d, res, isInitContainer)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	responseEnvs, err := getResponseEnvs(res, d.Get("container").(string), d.Get("kind").(string), d.Get("init_container").(bool))
+
+	responseEnvs, err := getResponseEnvs(res, container, d.Get("kind").(string), isInitContainer)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -317,18 +328,19 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 func getResponseEnvs(u *unstructured.Unstructured, containerName string, kind string, isInitContainer bool) ([]interface{}, error) {
 	var containers []interface{}
 
-	if !isInitContainer {
-		containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "template", "spec", "containers")
-
-		if kind == "CronJob" {
-			containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "jobTemplate", "spec", "template", "spec", "containers")
-		}
-	} else {
+	if isInitContainer {
 		containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "template", "spec", "initContainers")
 
 		if kind == "CronJob" {
 			containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "jobTemplate", "spec", "template", "spec", "initContainers")
 		}
+	} else {
+		containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "template", "spec", "containers")
+
+		if kind == "CronJob" {
+			containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "jobTemplate", "spec", "template", "spec", "containers")
+		}
+
 	}
 
 	for _, c := range containers {
@@ -341,10 +353,9 @@ func getResponseEnvs(u *unstructured.Unstructured, containerName string, kind st
 }
 
 // getManagedEnvs reads the field manager metadata to discover which environment variables we're managing
-func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *schema.ResourceData, u *unstructured.Unstructured) (map[string]interface{}, error) {
+func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *schema.ResourceData, u *unstructured.Unstructured, isInitContainer bool) (map[string]interface{}, error) {
 	var envs map[string]interface{}
 	kind := d.Get("kind").(string)
-	isInitContainer := d.Get("init_container").(bool)
 	for _, m := range managedFields {
 		if m.Manager != manager {
 			continue
@@ -363,7 +374,15 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 			return nil, err
 		}
 
-		if !isInitContainer {
+		if isInitContainer {
+			containers := spec["f:initContainers"].(map[string]interface{})
+			containerName := fmt.Sprintf(`k:{"name":%q}`, d.Get("init_container").(string))
+
+			k := containers[containerName].(map[string]interface{})
+			if e, ok := k["f:env"].(map[string]interface{}); ok {
+				envs = e
+			}
+		} else {
 			containers := spec["f:containers"].(map[string]interface{})
 			containerName := fmt.Sprintf(`k:{"name":%q}`, d.Get("container").(string))
 
@@ -371,14 +390,7 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 			if e, ok := k["f:env"].(map[string]interface{}); ok {
 				envs = e
 			}
-		} else {
-			containers := spec["f:initContainers"].(map[string]interface{})
-			containerName := fmt.Sprintf(`k:{"name":%q}`, d.Get("container").(string))
 
-			k := containers[containerName].(map[string]interface{})
-			if e, ok := k["f:env"].(map[string]interface{}); ok {
-				envs = e
-			}
 		}
 	}
 	return envs, nil
@@ -392,7 +404,6 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 
 	apiVersion := d.Get("api_version").(string)
 	kind := d.Get("kind").(string)
-	init_container := d.Get("init_container").(bool)
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	name := metadata.GetName()
 	namespace := metadata.GetNamespace()
@@ -453,13 +464,13 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 	}
 
 	var spec map[string]interface{}
-	if !init_container {
+	if container := d.Get("container").(string); container != "" {
 		spec = map[string]interface{}{
 			"template": map[string]interface{}{
 				"spec": map[string]interface{}{
 					"containers": []interface{}{
 						map[string]interface{}{
-							"name": d.Get("container").(string),
+							"name": container,
 							"env":  env,
 						},
 					},
@@ -476,7 +487,7 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 							"spec": map[string]interface{}{
 								"containers": []interface{}{
 									map[string]interface{}{
-										"name": d.Get("container").(string),
+										"name": container,
 										"env":  env,
 									},
 								},
@@ -492,7 +503,7 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 				"spec": map[string]interface{}{
 					"initContainers": []interface{}{
 						map[string]interface{}{
-							"name": d.Get("container").(string),
+							"name": d.Get("init_container").(string),
 							"env":  env,
 						},
 					},
@@ -509,7 +520,7 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 							"spec": map[string]interface{}{
 								"initContainers": []interface{}{
 									map[string]interface{}{
-										"name": d.Get("container").(string),
+										"name": d.Get("init_container").(string),
 										"env":  env,
 									},
 								},

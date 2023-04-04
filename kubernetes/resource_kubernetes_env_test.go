@@ -191,6 +191,64 @@ func TestAccKubernetesEnv_Deployment_initContainer(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesEnv_CronJob_initContainer(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	namespace := "default"
+	secretName := acctest.RandomWithPrefix("tf-acc-test")
+	configMapName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_env.demo"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createCronJobInitContainerEnv(t, name, namespace)
+		},
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy: func(s *terraform.State) error {
+			err := confirmExistingCronJobEnvs(name, namespace)
+			if err != nil {
+				return err
+			}
+			return destroyCronJobEnv(name, namespace)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesEnv_CronJob_initContainer(secretName, configMapName, name, namespace),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "api_version", "batch/v1"),
+					resource.TestCheckResourceAttr(resourceName, "kind", "CronJob"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "env.0.name", "TEST"),
+					resource.TestCheckResourceAttr(resourceName, "env.0.value", "123"),
+					resource.TestCheckResourceAttr(resourceName, "env.1.value_from.0.secret_key_ref.0.name", secretName),
+					resource.TestCheckResourceAttr(resourceName, "env.1.value_from.0.secret_key_ref.0.key", "one"),
+					resource.TestCheckResourceAttr(resourceName, "env.2.value_from.0.config_map_key_ref.0.name", configMapName),
+					resource.TestCheckResourceAttr(resourceName, "env.2.value_from.0.config_map_key_ref.0.key", "one"),
+					resource.TestCheckResourceAttr(resourceName, "env.#", "3"),
+				),
+			},
+			{
+				Config: testAccKubernetesEnv_CronJobModified_initContainer(secretName, configMapName, name, namespace),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "api_version", "batch/v1"),
+					resource.TestCheckResourceAttr(resourceName, "kind", "CronJob"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "env.0.name", "TEST"),
+					resource.TestCheckResourceAttr(resourceName, "env.0.value", "123"),
+					resource.TestCheckResourceAttr(resourceName, "env.1.name", "website"),
+					resource.TestCheckResourceAttr(resourceName, "env.1.value", "hashicorp.com"),
+					resource.TestCheckResourceAttr(resourceName, "env.2.value_from.0.secret_key_ref.0.name", secretName),
+					resource.TestCheckResourceAttr(resourceName, "env.2.value_from.0.secret_key_ref.0.key", "two"),
+					resource.TestCheckResourceAttr(resourceName, "env.3.value_from.0.config_map_key_ref.0.name", configMapName),
+					resource.TestCheckResourceAttr(resourceName, "env.3.value_from.0.config_map_key_ref.0.key", "three"),
+					resource.TestCheckResourceAttr(resourceName, "env.#", "4"),
+				),
+			},
+		},
+	})
+}
+
 func createInitContainerEnv(t *testing.T, name, namespace string) error {
 	conn, err := testAccProvider.Meta().(kubeClientsets).MainClientset()
 	if err != nil {
@@ -342,6 +400,77 @@ func createCronJobEnv(t *testing.T, name, namespace string) error {
 										{
 											Name:  "kubernetes",
 											Value: "80",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	_, err = conn.BatchV1().CronJobs(namespace).Create(ctx, &cronjob, metav1.CreateOptions{})
+	if err != nil {
+		t.Error("could not create test cronjob")
+		t.Fatal(err)
+	}
+
+	return err
+}
+
+func createCronJobInitContainerEnv(t *testing.T, name, namespace string) error {
+	conn, err := testAccProvider.Meta().(kubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+
+	var failJobLimit int32 = 5
+	var startingDeadlineSeconds int64 = 2
+	var successfulJobsLimit int32 = 2
+	var boLimit int32 = 2
+	var ttl int32 = 2
+	var cronjob batchv1.CronJob = batchv1.CronJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: batchv1.CronJobSpec{
+			StartingDeadlineSeconds:    &startingDeadlineSeconds,
+			FailedJobsHistoryLimit:     &failJobLimit,
+			SuccessfulJobsHistoryLimit: &successfulJobsLimit,
+			ConcurrencyPolicy:          "Replace",
+			Schedule:                   "1 0 * * *",
+			JobTemplate: batchv1.JobTemplateSpec{
+				Spec: batchv1.JobSpec{
+					BackoffLimit:            &boLimit,
+					TTLSecondsAfterFinished: &ttl,
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							RestartPolicy: "Never",
+							Containers: []v1.Container{
+								{
+									Name:    "hello",
+									Image:   "busybox",
+									Command: []string{"/bin/sh", "-c", "date; echo Goodbye from the Kubernetes cluster"},
+									Env: []v1.EnvVar{
+										{
+											Name:  "kubernetes",
+											Value: "80",
+										},
+									},
+								},
+							},
+							InitContainers: []v1.Container{
+								{
+									Name:  "nginx",
+									Image: "nginx",
+									Env: []v1.EnvVar{
+										{
+											Name:  "TEST",
+											Value: "123",
 										},
 									},
 								},
@@ -731,6 +860,72 @@ resource "kubernetes_env" "demo" {
 	`, secretName, configMapName, name, namespace)
 }
 
+func testAccKubernetesEnv_CronJobModified_initContainer(secretName, configMapName, name, namespace string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  data = {
+    one = "first"
+  }
+}
+
+resource "kubernetes_config_map" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  data = {
+    one = "ONE"
+  }
+}
+
+resource "kubernetes_env" "demo" {
+  init_container   = "nginx"
+  api_version = "batch/v1"
+  kind        = "CronJob"
+  metadata {
+    name      = "%s"
+    namespace = "%s"
+  }
+  env {
+    name  = "TEST"
+    value = "123"
+  }
+
+  env {
+    name  = "website"
+    value = "hashicorp.com"
+  }
+
+  env {
+    name = "EXPORTED_VARIABLE_FROM_SECRET"
+
+    value_from {
+      secret_key_ref {
+        name     = "${kubernetes_secret.test.metadata.0.name}"
+        key      = "two"
+        optional = true
+      }
+    }
+  }
+
+
+  env {
+    name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
+    value_from {
+      config_map_key_ref {
+        name     = "${kubernetes_config_map.test.metadata.0.name}"
+        key      = "three"
+        optional = true
+      }
+    }
+  }
+}
+	`, secretName, configMapName, name, namespace)
+}
+
 func testAccKubernetesEnv_Deployment_initContainer(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
@@ -792,6 +987,67 @@ resource "kubernetes_env" "test" {
     }
   }
 
+}
+	`, secretName, configMapName, name, namespace)
+}
+
+func testAccKubernetesEnv_CronJob_initContainer(secretName, configMapName, name, namespace string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  data = {
+    one = "first"
+  }
+}
+
+resource "kubernetes_config_map" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  data = {
+    one = "ONE"
+  }
+}
+
+resource "kubernetes_env" "demo" {
+  init_container   = "nginx"
+  api_version = "batch/v1"
+  kind        = "CronJob"
+  metadata {
+    name      = "%s"
+    namespace = "%s"
+  }
+  env {
+    name  = "TEST"
+    value = "123"
+  }
+
+  env {
+    name = "EXPORTED_VARIABLE_FROM_SECRET"
+
+    value_from {
+      secret_key_ref {
+        name     = "${kubernetes_secret.test.metadata.0.name}"
+        key      = "one"
+        optional = true
+      }
+    }
+  }
+
+
+  env {
+    name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
+    value_from {
+      config_map_key_ref {
+        name     = "${kubernetes_config_map.test.metadata.0.name}"
+        key      = "one"
+        optional = true
+      }
+    }
+  }
 }
 	`, secretName, configMapName, name, namespace)
 }

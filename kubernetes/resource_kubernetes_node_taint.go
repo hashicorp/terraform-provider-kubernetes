@@ -29,6 +29,24 @@ func resourceKubernetesNodeTaint() *schema.Resource {
 		ReadContext:   resourceKubernetesNodeTaintRead,
 		UpdateContext: resourceKubernetesNodeTaintUpdate,
 		DeleteContext: resourceKubernetesNodeTaintDelete,
+		CustomizeDiff: func(ctx context.Context, rd *schema.ResourceDiff, i interface{}) error {
+			if !rd.HasChange("taint") {
+				return nil
+			}
+			// check for duplicate taint keys
+			taintkeys := map[string]int{}
+			for _, t := range rd.Get("taint").([]interface{}) {
+				taint := t.(map[string]interface{})
+				key := taint["key"].(string)
+				taintkeys[key] = taintkeys[key] + 1
+			}
+			for k, v := range taintkeys {
+				if v > 1 {
+					return fmt.Errorf("taint: duplicate taint key %q: taint keys must be unique", k)
+				}
+			}
+			return nil
+		},
 		Schema: map[string]*schema.Schema{
 			"metadata": {
 				Type:     schema.TypeList,

@@ -15,6 +15,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utils "k8s.io/utils/pointer"
 )
 
 func TestAccKubernetesEnv_DeploymentBasic(t *testing.T) {
@@ -427,26 +428,26 @@ func createCronJobInitContainerEnv(t *testing.T, name, namespace string) error {
 	}
 	ctx := context.Background()
 
-	var failJobLimit int32 = 5
-	var startingDeadlineSeconds int64 = 2
-	var successfulJobsLimit int32 = 2
-	var boLimit int32 = 2
-	var ttl int32 = 2
+	var failJobLimit *int32 = utils.Int32(2)
+	var startingDeadlineSeconds *int64 = utils.Int64(2)
+	var successfulJobsLimit *int32 = utils.Int32(2)
+	var boLimit *int32 = utils.Int32(2)
+	var ttl *int32 = utils.Int32(2)
 	var cronjob batchv1.CronJob = batchv1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
 		Spec: batchv1.CronJobSpec{
-			StartingDeadlineSeconds:    &startingDeadlineSeconds,
-			FailedJobsHistoryLimit:     &failJobLimit,
-			SuccessfulJobsHistoryLimit: &successfulJobsLimit,
+			StartingDeadlineSeconds:    startingDeadlineSeconds,
+			FailedJobsHistoryLimit:     failJobLimit,
+			SuccessfulJobsHistoryLimit: successfulJobsLimit,
 			ConcurrencyPolicy:          "Replace",
 			Schedule:                   "1 0 * * *",
 			JobTemplate: batchv1.JobTemplateSpec{
 				Spec: batchv1.JobSpec{
-					BackoffLimit:            &boLimit,
-					TTLSecondsAfterFinished: &ttl,
+					BackoffLimit:            boLimit,
+					TTLSecondsAfterFinished: ttl,
 					Template: v1.PodTemplateSpec{
 						Spec: v1.PodSpec{
 							RestartPolicy: "Never",
@@ -694,9 +695,9 @@ resource "kubernetes_config_map" "test" {
 }
 
 resource "kubernetes_env" "test" {
-  init_container = "hello"
-  api_version    = "apps/v1"
-  kind           = "Deployment"
+  init_container   = "hello"
+  api_version = "apps/v1"
+  kind        = "Deployment"
   metadata {
     name      = %q
     namespace = %q
@@ -882,9 +883,9 @@ resource "kubernetes_config_map" "test" {
 }
 
 resource "kubernetes_env" "demo" {
-  init_container = "nginx"
-  api_version    = "batch/v1"
-  kind           = "CronJob"
+  init_container   = "nginx"
+  api_version = "batch/v1"
+  kind        = "CronJob"
   metadata {
     name      = "%s"
     namespace = "%s"
@@ -948,9 +949,9 @@ resource "kubernetes_config_map" "test" {
 }
 
 resource "kubernetes_env" "test" {
-  init_container = "hello"
-  api_version    = "apps/v1"
-  kind           = "Deployment"
+  init_container   = "hello"
+  api_version = "apps/v1"
+  kind        = "Deployment"
   metadata {
     name      = %q
     namespace = %q
@@ -1013,9 +1014,9 @@ resource "kubernetes_config_map" "test" {
 }
 
 resource "kubernetes_env" "demo" {
-  init_container = "nginx"
-  api_version    = "batch/v1"
-  kind           = "CronJob"
+  init_container   = "nginx"
+  api_version = "batch/v1"
+  kind        = "CronJob"
   metadata {
     name      = "%s"
     namespace = "%s"

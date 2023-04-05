@@ -327,21 +327,19 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 
 func getResponseEnvs(u *unstructured.Unstructured, containerName string, kind string, isInitContainer bool) ([]interface{}, error) {
 	var containers []interface{}
+	var initContainers []interface{}
 
-	if isInitContainer {
-		containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "template", "spec", "initContainers")
-
-		if kind == "CronJob" {
-			containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "jobTemplate", "spec", "template", "spec", "initContainers")
-		}
-	} else {
-		containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "template", "spec", "containers")
-
-		if kind == "CronJob" {
-			containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "jobTemplate", "spec", "template", "spec", "containers")
-		}
-
+	initContainers, _, _ = unstructured.NestedSlice(u.Object, "spec", "template", "spec", "initContainers")
+	if kind == "CronJob" {
+		initContainers, _, _ = unstructured.NestedSlice(u.Object, "spec", "jobTemplate", "spec", "template", "spec", "initContainers")
 	}
+
+	containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "template", "spec", "containers")
+	if kind == "CronJob" {
+		containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "jobTemplate", "spec", "template", "spec", "containers")
+	}
+
+	containers = append(containers, initContainers...)
 
 	for _, c := range containers {
 		container := c.(map[string]interface{})
@@ -374,23 +372,19 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 			return nil, err
 		}
 
+		var containers map[string]interface{}
+		var containerName string
 		if isInitContainer {
-			containers := spec["f:initContainers"].(map[string]interface{})
-			containerName := fmt.Sprintf(`k:{"name":%q}`, d.Get("init_container").(string))
-
-			k := containers[containerName].(map[string]interface{})
-			if e, ok := k["f:env"].(map[string]interface{}); ok {
-				envs = e
-			}
+			containers = spec["f:initContainers"].(map[string]interface{})
+			containerName = fmt.Sprintf(`k:{"name":%q}`, d.Get("init_container").(string))
 		} else {
-			containers := spec["f:containers"].(map[string]interface{})
-			containerName := fmt.Sprintf(`k:{"name":%q}`, d.Get("container").(string))
+			containers = spec["f:containers"].(map[string]interface{})
+			containerName = fmt.Sprintf(`k:{"name":%q}`, d.Get("container").(string))
+		}
 
-			k := containers[containerName].(map[string]interface{})
-			if e, ok := k["f:env"].(map[string]interface{}); ok {
-				envs = e
-			}
-
+		k := containers[containerName].(map[string]interface{})
+		if e, ok := k["f:env"].(map[string]interface{}); ok {
+			envs = e
 		}
 	}
 	return envs, nil

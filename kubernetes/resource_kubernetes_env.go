@@ -458,15 +458,14 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 	}
 
 	var spec map[string]interface{}
+	var containerSpec = map[string]interface{}{"env": env}
 	if container := d.Get("container").(string); container != "" {
+		containerSpec["name"] = container
 		spec = map[string]interface{}{
 			"template": map[string]interface{}{
 				"spec": map[string]interface{}{
 					"containers": []interface{}{
-						map[string]interface{}{
-							"name": container,
-							"env":  env,
-						},
+						containerSpec,
 					},
 				},
 			},
@@ -480,10 +479,7 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 						"template": map[string]interface{}{
 							"spec": map[string]interface{}{
 								"containers": []interface{}{
-									map[string]interface{}{
-										"name": container,
-										"env":  env,
-									},
+									containerSpec,
 								},
 							},
 						},
@@ -492,14 +488,12 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 			}
 		}
 	} else {
+		containerSpec["name"] = d.Get("init_container").(string)
 		spec = map[string]interface{}{
 			"template": map[string]interface{}{
 				"spec": map[string]interface{}{
 					"initContainers": []interface{}{
-						map[string]interface{}{
-							"name": d.Get("init_container").(string),
-							"env":  env,
-						},
+						containerSpec,
 					},
 				},
 			},
@@ -513,10 +507,7 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 						"template": map[string]interface{}{
 							"spec": map[string]interface{}{
 								"initContainers": []interface{}{
-									map[string]interface{}{
-										"name": d.Get("init_container").(string),
-										"env":  env,
-									},
+									containerSpec,
 								},
 							},
 						},

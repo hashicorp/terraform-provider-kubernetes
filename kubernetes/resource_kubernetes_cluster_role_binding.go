@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -24,7 +27,7 @@ func resourceKubernetesClusterRoleBinding() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchemaRBAC("clusterRoleBinding", false, false),
+			"metadata": metadataSchemaRBAC("clusterRoleBinding", true, false),
 			"role_ref": {
 				Type:        schema.TypeList,
 				Description: "RoleRef references the Cluster Role for this binding",
@@ -67,7 +70,7 @@ func resourceKubernetesClusterRoleBindingCreate(ctx context.Context, d *schema.R
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted new ClusterRoleBinding: %#v", binding)
-	d.SetId(metadata.Name)
+	d.SetId(binding.Name)
 
 	return resourceKubernetesClusterRoleBindingRead(ctx, d, meta)
 }
@@ -95,7 +98,7 @@ func resourceKubernetesClusterRoleBindingRead(ctx context.Context, d *schema.Res
 	}
 
 	log.Printf("[INFO] Received ClusterRoleBinding: %#v", binding)
-	err = d.Set("metadata", flattenMetadata(binding.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(binding.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -155,6 +158,9 @@ func resourceKubernetesClusterRoleBindingDelete(ctx context.Context, d *schema.R
 	log.Printf("[INFO] Deleting ClusterRoleBinding: %#v", name)
 	err = conn.RbacV1().ClusterRoleBindings().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] ClusterRoleBinding %s deleted", name)

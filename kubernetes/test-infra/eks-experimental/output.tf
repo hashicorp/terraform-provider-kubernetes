@@ -1,8 +1,6 @@
-output "kubeconfig_path" {
-  value = abspath(module.cluster.kubeconfig_filename)
-}
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
 
 output "cluster_name" {
-  value = module.vpc.cluster_name
+  value = local.cluster_name
 }
-

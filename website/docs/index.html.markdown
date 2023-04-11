@@ -52,6 +52,8 @@ For specific usage examples, see the guides for [AKS](https://github.com/hashico
 
 ## Authentication
 
+~> NOTE: The provider does not use the `KUBECONFIG` environment variable by default. See the attribute reference below for the environment variables that map to provider block attributes.
+
 The Kubernetes provider can get its configuration in two ways:
 
 1. _Explicitly_ by supplying attributes to the provider block. This includes:
@@ -119,7 +121,7 @@ provider "kubernetes" {
   host                   = var.cluster_endpoint
   cluster_ca_certificate = base64decode(var.cluster_ca_cert)
   exec {
-    api_version = "client.authentication.k8s.io/v1alpha1"
+    api_version = "client.authentication.k8s.io/v1beta1"
     args        = ["eks", "get-token", "--cluster-name", var.cluster_name]
     command     = "aws"
   }
@@ -130,6 +132,36 @@ provider "kubernetes" {
 
 For further reading, see these examples which demonstrate different approaches to keeping the cluster credentials up to date: [AKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/main/_examples/aks/README.md), [EKS](https://github.com/hashicorp/terraform-provider-kubernetes/blob/main/_examples/eks/README.md), and [GKE](https://github.com/hashicorp/terraform-provider-kubernetes/blob/main/_examples/gke/README.md).
 
+## Ignore Kubernetes annotations and labels
+
+In certain cases, external systems can add and modify resources annotations and labels for their own purposes. However, Terraform will remove them since they are not presented in the code. It also might be hard to update code accordingly to stay tuned with the changes that come outside. In order to address this `ignore_annotations` and `ignore_labels` attributes were introduced on the provider level. They allow Terraform to ignore certain annotations and labels across all resources.
+
+Both attributes support RegExp to match metadata objects more effectively.
+
+### Examples
+
+The following example demonstrates how to ignore particular annotation keys:
+
+```hcl
+provider "kubernetes" {
+  ignore_annotations = [
+    "cni\\.projectcalico\\.org\\/podIP",
+    "cni\\.projectcalico\\.org\\/podIPs",
+  ]
+}
+```
+
+Next example demonstrates how to ignore AWS load balancer annotations:
+
+```hcl
+provider "kubernetes" {
+  ignore_annotations = [
+    "^service\\.beta\\.kubernetes\\.io\\/aws-load-balancer.*",
+  ]
+}
+```
+
+Since dot `.`, forward slash `/`, and some other symbols have special meaning in RegExp, they should be escaped by adding a double backslash in front of them if you want to use them as they are.
 
 ## Argument Reference
 
@@ -148,8 +180,11 @@ The following arguments are supported:
 * `config_context_auth_info` - (Optional) Authentication info context of the kube config (name of the kubeconfig user, `--user` flag in `kubectl`). Can be sourced from `KUBE_CTX_AUTH_INFO`.
 * `config_context_cluster` - (Optional) Cluster context of the kube config (name of the kubeconfig cluster, `--cluster` flag in `kubectl`). Can be sourced from `KUBE_CTX_CLUSTER`.
 * `token` - (Optional) Token of your service account.  Can be sourced from `KUBE_TOKEN`.
+* `proxy_url` - (Optional) URL to the proxy to be used for all API requests. URLs with "http", "https", and "socks5" schemes are supported. Can be sourced from `KUBE_PROXY_URL`.
 * `exec` - (Optional) Configuration block to use an [exec-based credential plugin] (https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins), e.g. call an external command to receive user credentials.
     * `api_version` - (Required) API version to use when decoding the ExecCredentials resource, e.g. `client.authentication.k8s.io/v1beta1`.
     * `command` - (Required) Command to execute.
     * `args` - (Optional) List of arguments to pass when executing the plugin.
     * `env` - (Optional) Map of environment variables to set when executing the plugin.
+* `ignore_annotations` - (Optional) List of Kubernetes metadata annotations to ignore across all resources handled by this provider for situations where external systems are managing certain resource annotations. Each item is a regular expression.
+* `ignore_labels` - (Optional) List of Kubernetes metadata labels to ignore across all resources handled by this provider for situations where external systems are managing certain resource labels. Each item is a regular expression.

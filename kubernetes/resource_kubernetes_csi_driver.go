@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -25,7 +28,6 @@ func resourceKubernetesCSIDriver() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("csi driver", true),
 			"spec": {
@@ -109,7 +111,7 @@ func resourceKubernetesCSIDriverRead(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received CSIDriver: %#v", CSIDriver)
-	err = d.Set("metadata", flattenMetadata(CSIDriver.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(CSIDriver.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

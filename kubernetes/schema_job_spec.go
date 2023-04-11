@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -5,6 +8,9 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
+	batchv1 "k8s.io/api/batch/v1"
 )
 
 func jobMetadataSchema() *schema.Schema {
@@ -59,6 +65,17 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			ValidateFunc: validatePositiveInteger,
 			Description:  "Specifies the desired number of successfully finished pods the job should be run with. Setting to nil means that the success of any pod signals the success of all pods, and allows parallelism to have any positive value. Setting to 1 means that parallelism is limited to 1 and the success of that pod signals the success of the job. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
 		},
+		"completion_mode": {
+			Type:     schema.TypeString,
+			Optional: true,
+			ForceNew: true,
+			Computed: true,
+			ValidateFunc: validation.StringInSlice([]string{
+				string(batchv1.IndexedCompletion),
+				string(batchv1.NonIndexedCompletion),
+			}, false),
+			Description: "Specifies how Pod completions are tracked. It can be `NonIndexed` (default) or `Indexed`. For more information: https://kubernetes.io/docs/concepts/workloads/controllers/job/#completion-mode",
+		},
 		"manual_selector": {
 			Type:        schema.TypeBool,
 			Optional:    true,
@@ -70,7 +87,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			Optional:     true,
 			ForceNew:     false,
 			Default:      1,
-			ValidateFunc: validatePositiveInteger,
+			ValidateFunc: validateNonNegativeInteger,
 			Description:  "Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
 		},
 		// This field is immutable in Jobs.

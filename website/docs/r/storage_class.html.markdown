@@ -1,4 +1,5 @@
 ---
+subcategory: "storage/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_storage_class"
 description: |-
@@ -59,16 +60,14 @@ The following arguments are supported:
 * `name` - (Optional) Name of the storage class, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 
 ### `allowed_topologies`
-￼
+
 #### Arguments
-￼
 
 * `match_label_expressions` - (Optional) A list of topology selector requirements by labels. See [match_label_expressions](#match_label_expressions)
 
 ### `match_label_expressions`
-￼
+
 #### Arguments
-￼
 
 * `key` - (Optional) The label key that the selector applies to.
 * `values` - (Optional) An array of string values. One value must match the label to be selected.

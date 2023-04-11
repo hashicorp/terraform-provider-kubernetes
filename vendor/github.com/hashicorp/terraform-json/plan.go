@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/hashicorp/go-version"
 )
 
-// PlanFormatVersion is the version of the JSON plan format that is
-// supported by this package.
-const PlanFormatVersion = "0.1"
+// PlanFormatVersionConstraints defines the versions of the JSON plan format
+// that are supported by this package.
+var PlanFormatVersionConstraints = ">= 0.1, < 2.0"
 
 // ResourceMode is a string representation of the resource type found
 // in certain fields in the plan.
@@ -53,6 +55,19 @@ type Plan struct {
 
 	// The Terraform configuration used to make the plan.
 	Config *Config `json:"configuration,omitempty"`
+
+	// RelevantAttributes represents any resource instances and their
+	// attributes which may have contributed to the planned changes
+	RelevantAttributes []ResourceAttribute `json:"relevant_attributes,omitempty"`
+}
+
+// ResourceAttribute describes a full path to a resource attribute
+type ResourceAttribute struct {
+	// Resource describes resource instance address (e.g. null_resource.foo)
+	Resource string `json:"resource"`
+	// Attribute describes the attribute path using a lossy representation
+	// of cty.Path. (e.g. ["id"] or ["objects", 0, "val"]).
+	Attribute []json.RawMessage `json:"attribute"`
 }
 
 // Validate checks to ensure that the plan is present, and the
@@ -66,11 +81,31 @@ func (p *Plan) Validate() error {
 		return errors.New("unexpected plan input, format version is missing")
 	}
 
-	if PlanFormatVersion != p.FormatVersion {
-		return fmt.Errorf("unsupported plan format version: expected %q, got %q", PlanFormatVersion, p.FormatVersion)
+	constraint, err := version.NewConstraint(PlanFormatVersionConstraints)
+	if err != nil {
+		return fmt.Errorf("invalid version constraint: %w", err)
+	}
+
+	version, err := version.NewVersion(p.FormatVersion)
+	if err != nil {
+		return fmt.Errorf("invalid format version %q: %w", p.FormatVersion, err)
+	}
+
+	if !constraint.Check(version) {
+		return fmt.Errorf("unsupported plan format version: %q does not satisfy %q",
+			version, constraint)
 	}
 
 	return nil
+}
+
+func isStringInSlice(slice []string, s string) bool {
+	for _, el := range slice {
+		if el == s {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *Plan) UnmarshalJSON(b []byte) error {
@@ -150,6 +185,14 @@ type Change struct {
 	// If the value cannot be found in this map, then its value should
 	// be available within After, so long as the operation supports it.
 	AfterUnknown interface{} `json:"after_unknown,omitempty"`
+
+	// BeforeSensitive and AfterSensitive are object values with similar
+	// structure to Before and After, but with all sensitive leaf values
+	// replaced with true, and all non-sensitive leaf values omitted. These
+	// objects should be combined with Before and After to prevent accidental
+	// display of sensitive values in user interfaces.
+	BeforeSensitive interface{} `json:"before_sensitive,omitempty"`
+	AfterSensitive  interface{} `json:"after_sensitive,omitempty"`
 }
 
 // PlanVariable is a top-level variable in the Terraform plan.

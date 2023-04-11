@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/hashicorp/go-version"
+	"github.com/zclconf/go-cty/cty"
 )
 
-// StateFormatVersion is the version of the JSON state format that is
-// supported by this package.
-const StateFormatVersion = "0.1"
+// StateFormatVersionConstraints defines the versions of the JSON state format
+// that are supported by this package.
+var StateFormatVersionConstraints = ">= 0.1, < 2.0"
 
 // State is the top-level representation of a Terraform state.
 type State struct {
@@ -50,8 +53,19 @@ func (s *State) Validate() error {
 		return errors.New("unexpected state input, format version is missing")
 	}
 
-	if StateFormatVersion != s.FormatVersion {
-		return fmt.Errorf("unsupported state format version: expected %q, got %q", StateFormatVersion, s.FormatVersion)
+	constraint, err := version.NewConstraint(StateFormatVersionConstraints)
+	if err != nil {
+		return fmt.Errorf("invalid version constraint: %w", err)
+	}
+
+	version, err := version.NewVersion(s.FormatVersion)
+	if err != nil {
+		return fmt.Errorf("invalid format version %q: %w", s.FormatVersion, err)
+	}
+
+	if !constraint.Check(version) {
+		return fmt.Errorf("unsupported state format version: %q does not satisfy %q",
+			version, constraint)
 	}
 
 	return nil
@@ -127,8 +141,8 @@ type StateResource struct {
 	// provider offering "google_compute_instance".
 	ProviderName string `json:"provider_name,omitempty"`
 
-	//  The version of the resource type schema the "values" property
-	//  conforms to.
+	// The version of the resource type schema the "values" property
+	// conforms to.
 	SchemaVersion uint64 `json:"schema_version,"`
 
 	// The JSON representation of the attribute values of the resource,
@@ -136,6 +150,11 @@ type StateResource struct {
 	// values are omitted or set to null, making them indistinguishable
 	// from absent values.
 	AttributeValues map[string]interface{} `json:"values,omitempty"`
+
+	// The JSON representation of the sensitivity of the resource's
+	// attribute values. Only attributes which are sensitive
+	// are included in this structure.
+	SensitiveValues json.RawMessage `json:"sensitive_values,omitempty"`
 
 	// The addresses of the resources that this resource depends on.
 	DependsOn []string `json:"depends_on,omitempty"`
@@ -157,4 +176,31 @@ type StateOutput struct {
 
 	// The value of the output.
 	Value interface{} `json:"value,omitempty"`
+
+	// The type of the output.
+	Type cty.Type `json:"type,omitempty"`
+}
+
+// jsonStateOutput describes an output value in a middle-step internal
+// representation before marshalled into a more useful StateOutput with cty.Type.
+//
+// This avoid panic on marshalling cty.NilType (from cty upstream)
+// which the default Go marshaller cannot ignore because it's a
+// not nil-able struct.
+type jsonStateOutput struct {
+	Sensitive bool            `json:"sensitive"`
+	Value     interface{}     `json:"value,omitempty"`
+	Type      json.RawMessage `json:"type,omitempty"`
+}
+
+func (so *StateOutput) MarshalJSON() ([]byte, error) {
+	jsonSa := &jsonStateOutput{
+		Sensitive: so.Sensitive,
+		Value:     so.Value,
+	}
+	if so.Type != cty.NilType {
+		outputType, _ := so.Type.MarshalJSON()
+		jsonSa.Type = outputType
+	}
+	return json.Marshal(jsonSa)
 }

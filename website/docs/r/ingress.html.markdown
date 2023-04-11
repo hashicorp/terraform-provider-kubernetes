@@ -1,4 +1,5 @@
 ---
+subcategory: "extensions/v1beta1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_ingress"
 description: |-
@@ -20,7 +21,7 @@ resource "kubernetes_ingress" "example_ingress" {
 
   spec {
     backend {
-      service_name = "MyApp1"
+      service_name = "myapp-1"
       service_port = 8080
     }
 
@@ -28,7 +29,7 @@ resource "kubernetes_ingress" "example_ingress" {
       http {
         path {
           backend {
-            service_name = "MyApp1"
+            service_name = "myapp-1"
             service_port = 8080
           }
 
@@ -37,7 +38,7 @@ resource "kubernetes_ingress" "example_ingress" {
 
         path {
           backend {
-            service_name = "MyApp2"
+            service_name = "myapp-2"
             service_port = 8080
           }
 
@@ -52,11 +53,47 @@ resource "kubernetes_ingress" "example_ingress" {
   }
 }
 
+resource "kubernetes_service_v1" "example" {
+  metadata {
+    name = "myapp-1"
+  }
+  spec {
+    selector = {
+      app = kubernetes_pod.example.metadata.0.labels.app
+    }
+    session_affinity = "ClientIP"
+    port {
+      port        = 8080
+      target_port = 80
+    }
+
+    type = "NodePort"
+  }
+}
+
+resource "kubernetes_service_v1" "example2" {
+  metadata {
+    name = "myapp-2"
+  }
+  spec {
+    selector = {
+      app = kubernetes_pod.example2.metadata.0.labels.app
+    }
+    session_affinity = "ClientIP"
+    port {
+      port        = 8080
+      target_port = 80
+    }
+
+    type = "NodePort"
+  }
+}
+
 resource "kubernetes_pod" "example" {
   metadata {
     name = "terraform-example"
     labels = {
-      app = "MyApp1"
+      app = "myapp-1"
     }
   }
 
@@ -76,7 +113,7 @@ resource "kubernetes_pod" "example2" {
   metadata {
     name = "terraform-example2"
     labels = {
-      app = "MyApp2"
+      app = "myapp-2"
     }
   }
 
@@ -95,16 +132,16 @@ resource "kubernetes_pod" "example2" {
 
 ## Example using Nginx ingress controller
 
-```
+```hcl
 resource "kubernetes_service" "example" {
   metadata {
     name = "ingress-service"
   }
   spec {
     port {
-      port = 80
+      port        = 80
       target_port = 80
-      protocol = "TCP"
+      protocol    = "TCP"
     }
     type = "NodePort"
   }
@@ -186,6 +223,7 @@ The following arguments are supported:
 * `backend` - (Optional) Backend defines the referenced service endpoint to which the traffic will be forwarded. See `backend` block attributes below.
 * `rule` - (Optional) A list of host rules used to configure the Ingress. If unspecified, or no rule matches, all traffic is sent to the default backend. See `rule` block attributes below.
 * `tls` - (Optional) TLS configuration. Currently the Ingress only supports a single TLS port, 443. If multiple members of this list specify different hosts, they will be multiplexed on the same port according to the hostname specified through the SNI TLS extension, if the ingress controller fulfilling the ingress supports SNI. See `tls` block attributes below.
+* `ingress_class_name` - (Optional) The ingress class name references an IngressClass resource that contains additional configuration including the name of the controller that should implement the class.
 
 ### `backend`
 
@@ -199,7 +237,7 @@ The following arguments are supported:
 #### Arguments
 
 * `host` - (Optional) Host is the fully qualified domain name of a network host, as defined by RFC 3986. Note the following deviations from the \"host\" part of the URI as defined in the RFC: 1. IPs are not allowed. Currently an IngressRuleValue can only apply to the IP in the Spec of the parent Ingress. 2. The : delimiter is not respected because ports are not allowed. Currently the port of an Ingress is implicitly :80 for http and :443 for https. Both these may change in the future. Incoming requests are matched against the host before the IngressRuleValue. If the host is unspecified, the Ingress routes all traffic based on the specified IngressRuleValue.
-* `http` - (Required) http is a list of http selectors pointing to backends. In the example: http:///? -> backend where where parts of the url correspond to RFC 3986, this resource will be used to match against everything after the last '/' and before the first '?' or '#'. See `http` block attributes below.
+* `http` - (Required) http is a list of http selectors pointing to backends. In the example: http:///? -> backend where parts of the url correspond to RFC 3986, this resource will be used to match against everything after the last '/' and before the first '?' or '#'. See `http` block attributes below.
 
 
 #### `http`

@@ -7,8 +7,6 @@ WEBSITE_REPO := github.com/hashicorp/terraform-website
 PKG_NAME     := kubernetes
 OS_ARCH      := $(shell go env GOOS)_$(shell go env GOARCH)
 TF_PROV_DOCS := $(PWD)/kubernetes/test-infra/tfproviderdocs
-EXT_PROV_DIR := $(PWD)/kubernetes/test-infra/external-providers
-EXT_PROV_BIN := /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH)/terraform-provider-kubernetes_9.9.9_$(OS_ARCH)
 
 ifdef KUBE_CONFIG_PATHS
 KUBECONFIG1  := $(shell echo $(KUBE_CONFIG_PATHS) | cut -d\: -f1)
@@ -20,12 +18,30 @@ ifneq ($(PWD),$(PROVIDER_DIR))
 $(error "Makefile must be run from the provider directory")
 endif
 
+# For changelog generation, default the last release to the last tag on
+# any branch, and this release to just be the current branch we're on.
+LAST_RELEASE?=$$(git describe --tags $$(git rev-list --tags --max-count=1))
+THIS_RELEASE?=$$(git rev-parse --abbrev-ref HEAD)
+
 default: build
 
-all: build depscheck fmtcheck test test-update testacc test-compile tests-lint tests-lint-fix tools vet website-lint website-lint-fix
+all: build depscheck fmtcheck test testacc test-compile tests-lint tests-lint-fix tools vet website-lint website-lint-fix
 
 build: fmtcheck
 	go install
+
+# expected to be invoked by make changelog LAST_RELEASE=gitref THIS_RELEASE=gitref
+changelog:
+	@echo "Generating changelog for $(THIS_RELEASE) from $(LAST_RELEASE)..."
+	@echo
+	@changelog-build -last-release $(LAST_RELEASE) \
+		-entries-dir .changelog/ \
+		-changelog-template .changelog/changelog.tmpl \
+		-note-template .changelog/note.tmpl \
+		-this-release $(THIS_RELEASE)
+
+changelog-entry:
+	@changelog-entry -dir .changelog/
 
 depscheck:
 	@echo "==> Checking source code with 'git diff'..."
@@ -61,6 +77,7 @@ test: fmtcheck
 	go test $(TEST) || exit 1
 	echo $(TEST) | \
 		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
+	go test ./tools
 
 testacc: fmtcheck vet
 	@rm -rf kubernetes/testdata || true
@@ -72,6 +89,7 @@ testacc: fmtcheck vet
 	@ls $(EXT_PROV_BIN) || go build -o $(EXT_PROV_BIN)
 	@cd $(EXT_PROV_DIR) && TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform terraform init -upgrade
 	TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
+	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 3h
 
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \
@@ -85,7 +103,7 @@ tests-lint: tools
 	@echo "==> Checking acceptance test terraform blocks code with terrafmt..."
 	@terrafmt diff -f ./kubernetes --check --pattern '*_test.go' --quiet || (echo; \
 		echo "Unexpected differences in acceptance test HCL formatting."; \
-		echo "To see the full differences, run: terrafmt diff ./kubnernetes --pattern '*_test.go'"; \
+		echo "To see the full differences, run: terrafmt diff ./kubernetes --pattern '*_test.go'"; \
 		echo "To automatically fix the formatting, run 'make tests-lint-fix' and commit the changes."; \
 		exit 1)
 
@@ -94,24 +112,14 @@ tests-lint-fix: tools
 	@find ./kubernetes -name "*_test.go" -exec sed -i ':a;N;$$!ba;s/fmt.Sprintf(`\n/fmt.Sprintf(`/g' '{}' \; # remove newlines for terrafmt
 	@terrafmt fmt -f ./kubernetes --pattern '*_test.go'
 
-test-update: fmtcheck vet
-	rm -rf $(EXT_PROV_DIR)/.terraform $(EXT_PROV_DIR)/.terraform.lock.hcl || true
-	mkdir $(EXT_PROV_DIR)/.terraform
-	mkdir -p /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH) || true
-	go clean -cache
-	go build -o /tmp/.terraform.d/localhost/test/kubernetes/9.9.9/$(OS_ARCH)/terraform-provider-kubernetes_9.9.9_$(OS_ARCH)
-	cd $(EXT_PROV_DIR) && TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform terraform init -upgrade
-	TF_CLI_CONFIG_FILE=$(EXT_PROV_DIR)/.terraformrc TF_PLUGIN_CACHE_DIR=$(EXT_PROV_DIR)/.terraform TF_ACC=1 go test $(TEST) -v -run 'regression' $(TESTARGS)
-
 tools:
-	go install github.com/bflad/tfproviderdocs
-	go install github.com/client9/misspell/cmd/misspell
-	go install github.com/katbyte/terrafmt
-	go mod tidy
-	go mod vendor
-# TODO:
-# go install github.com/bflad/tfproviderlint/cmd/tfproviderlint
-# go install github.com/golangci/golangci-lint/cmd/golangci-lint
+	go install github.com/client9/misspell/cmd/misspell@v0.3.4
+	go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@v0.28.1
+	go install github.com/bflad/tfproviderdocs@v0.9.1
+	go install github.com/katbyte/terrafmt@v0.5.2
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.0
+	go install github.com/hashicorp/go-changelog/cmd/changelog-build@latest
+	go install github.com/hashicorp/go-changelog/cmd/changelog-entry@latest
 
 vet:
 	@echo "go vet ."
@@ -164,10 +172,8 @@ website-lint: tools
 	@echo "==> Running tfproviderdocs..."
 	@tfproviderdocs check -providers-schema-json $(TF_PROV_DOCS)/schema.json -provider-name kubernetes
 	@rm -f $(TF_PROV_DOCS)/schema.json $(TF_PROV_DOCS)/terraform-provider-kubernetes
-#	@echo "==> Checking for broken links..."
-#@scripts/markdown-link-check.sh "$(DOCKER)" "$(DOCKER_RUN_OPTS)" "$(DOCKER_VOLUME_OPTS)" "$(PROVIDER_DIR)"
-# TODO: enable this check when links have been fixed.
-# https://github.com/hashicorp/terraform-provider-kubernetes/issues/990
+	@echo "==> Checking for broken links..."
+	@scripts/markdown-link-check.sh "$(DOCKER)" "$(DOCKER_RUN_OPTS)" "$(DOCKER_VOLUME_OPTS)" "$(PROVIDER_DIR)"
 
 website-lint-fix: tools
 	@echo "==> Applying automatic website linter fixes..."
@@ -177,5 +183,4 @@ website-lint-fix: tools
 	@echo "==> Fixing website terraform blocks code with terrafmt..."
 	@terrafmt fmt ./website --pattern '*.markdown'
 
-.PHONY: build test testacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix website-lint website-lint-fix
-
+.PHONY: build test testacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix website-lint website-lint-fix changelog changelog-entry

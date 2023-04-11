@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -288,7 +291,7 @@ func resourceKubernetesNetworkPolicyRead(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received network policy: %#v", svc)
-	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(svc.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -350,6 +353,9 @@ func resourceKubernetesNetworkPolicyDelete(ctx context.Context, d *schema.Resour
 	log.Printf("[INFO] Deleting network policy: %#v", name)
 	err = conn.NetworkingV1().NetworkPolicies(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

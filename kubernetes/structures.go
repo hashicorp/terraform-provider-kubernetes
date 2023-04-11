@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"encoding/base64"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -24,6 +28,15 @@ func idParts(id string) (string, string, error) {
 
 func buildId(meta metav1.ObjectMeta) string {
 	return meta.Namespace + "/" + meta.Name
+}
+
+func buildIdWithVersionKind(meta metav1.ObjectMeta, apiVersion, kind string) string {
+	id := fmt.Sprintf("apiVersion=%v,kind=%v,name=%s",
+		apiVersion, kind, meta.Name)
+	if meta.Namespace != "" {
+		id += fmt.Sprintf(",namespace=%v", meta.Namespace)
+	}
+	return id
 }
 
 func expandMetadata(in []interface{}) metav1.ObjectMeta {
@@ -109,19 +122,30 @@ func expandStringSlice(s []interface{}) []string {
 	return result
 }
 
-func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, metaPrefix ...string) []interface{} {
+func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMetadata interface{}, metaPrefix ...string) []interface{} {
 	m := make(map[string]interface{})
 	prefix := ""
 	if len(metaPrefix) > 0 {
 		prefix = metaPrefix[0]
 	}
-	configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
-	m["annotations"] = removeInternalKeys(meta.Annotations, configAnnotations)
+
+	if prefix == "" {
+		configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
+		ignoreAnnotations := providerMetadata.(kubeClientsets).IgnoreAnnotations
+		annotations := removeInternalKeys(meta.Annotations, configAnnotations)
+		m["annotations"] = removeKeys(annotations, configAnnotations, ignoreAnnotations)
+	} else {
+		m["annotations"] = d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
+	}
+
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}
+
 	configLabels := d.Get(prefix + "metadata.0.labels").(map[string]interface{})
-	m["labels"] = removeInternalKeys(meta.Labels, configLabels)
+	ignoreLabels := providerMetadata.(kubeClientsets).IgnoreLabels
+	labels := removeInternalKeys(meta.Labels, configLabels)
+	m["labels"] = removeKeys(labels, configLabels, ignoreLabels)
 	m["name"] = meta.Name
 	m["resource_version"] = meta.ResourceVersion
 	m["uid"] = fmt.Sprintf("%v", meta.UID)
@@ -143,6 +167,17 @@ func removeInternalKeys(m map[string]string, d map[string]interface{}) map[strin
 	return m
 }
 
+// removeKeys removes given Kubernetes metadata(annotations and labels) keys.
+// In that case, they won't be available in the TF state file and will be ignored during apply/plan operations.
+func removeKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadataKeys []string) map[string]string {
+	for k := range m {
+		if ignoreKey(k, ignoreKubernetesMetadataKeys) && !isKeyInMap(k, d) {
+			delete(m, k)
+		}
+	}
+	return m
+}
+
 func isKeyInMap(key string, d map[string]interface{}) bool {
 	if d == nil {
 		return false
@@ -157,13 +192,39 @@ func isKeyInMap(key string, d map[string]interface{}) bool {
 
 func isInternalKey(annotationKey string) bool {
 	u, err := url.Parse("//" + annotationKey)
-	if err == nil && strings.HasSuffix(u.Hostname(), "kubernetes.io") {
+	if err != nil {
+		return false
+	}
+
+	// allow user specified application specific keys
+	if u.Hostname() == "app.kubernetes.io" {
+		return false
+	}
+
+	// allow AWS load balancer configuration annotations
+	if u.Hostname() == "service.beta.kubernetes.io" {
+		return false
+	}
+
+	// internal *.kubernetes.io keys
+	if strings.HasSuffix(u.Hostname(), "kubernetes.io") {
 		return true
 	}
 
 	// Specific to DaemonSet annotations, generated & controlled by the server.
 	if strings.Contains(annotationKey, "deprecated.daemonset.template.generation") {
 		return true
+	}
+	return false
+}
+
+// ignoreKey reports whether the Kubernetes metadata(annotations and labels) key contains
+// any match of the regular expression pattern from the expressions slice.
+func ignoreKey(key string, expressions []string) bool {
+	for _, e := range expressions {
+		if ok, _ := regexp.MatchString(e, key); ok {
+			return true
+		}
 	}
 
 	return false
@@ -293,6 +354,10 @@ func flattenResourceQuotaSpec(in api.ResourceQuotaSpec) []interface{} {
 	m["hard"] = flattenResourceList(in.Hard)
 	m["scopes"] = flattenResourceQuotaScopes(in.Scopes)
 
+	if in.ScopeSelector != nil {
+		m["scope_selector"] = flattenResourceQuotaScopeSelector(in.ScopeSelector)
+	}
+
 	out[0] = m
 	return out
 }
@@ -316,6 +381,10 @@ func expandResourceQuotaSpec(s []interface{}) (*api.ResourceQuotaSpec, error) {
 		out.Scopes = expandResourceQuotaScopes(v.(*schema.Set).List())
 	}
 
+	if v, ok := m["scope_selector"]; ok {
+		out.ScopeSelector = expandResourceQuotaScopeSelector(v.([]interface{}))
+	}
+
 	return out, nil
 }
 
@@ -331,6 +400,72 @@ func expandResourceQuotaScopes(s []interface{}) []api.ResourceQuotaScope {
 	out := make([]api.ResourceQuotaScope, len(s), len(s))
 	for i, scope := range s {
 		out[i] = api.ResourceQuotaScope(scope.(string))
+	}
+	return out
+}
+
+func expandResourceQuotaScopeSelector(s []interface{}) *api.ScopeSelector {
+	if len(s) < 1 {
+		return nil
+	}
+	m := s[0].(map[string]interface{})
+
+	att := &api.ScopeSelector{}
+
+	if v, ok := m["match_expression"].([]interface{}); ok {
+		att.MatchExpressions = expandResourceQuotaScopeSelectorMatchExpressions(v)
+	}
+
+	return att
+}
+
+func expandResourceQuotaScopeSelectorMatchExpressions(s []interface{}) []api.ScopedResourceSelectorRequirement {
+	out := make([]api.ScopedResourceSelectorRequirement, len(s), len(s))
+
+	for i, raw := range s {
+		matchExp := raw.(map[string]interface{})
+
+		if v, ok := matchExp["scope_name"].(string); ok {
+			out[i].ScopeName = api.ResourceQuotaScope(v)
+		}
+
+		if v, ok := matchExp["operator"].(string); ok {
+			out[i].Operator = api.ScopeSelectorOperator(v)
+		}
+
+		if v, ok := matchExp["values"].(*schema.Set); ok && v.Len() > 0 {
+			out[i].Values = sliceOfString(v.List())
+		}
+	}
+	return out
+}
+
+func flattenResourceQuotaScopeSelector(in *api.ScopeSelector) []interface{} {
+	out := make([]interface{}, 1)
+
+	m := make(map[string]interface{}, 0)
+	m["match_expression"] = flattenResourceQuotaScopeSelectorMatchExpressions(in.MatchExpressions)
+
+	out[0] = m
+	return out
+}
+
+func flattenResourceQuotaScopeSelectorMatchExpressions(in []api.ScopedResourceSelectorRequirement) []interface{} {
+	if len(in) == 0 {
+		return []interface{}{}
+	}
+	out := make([]interface{}, len(in))
+
+	for i, l := range in {
+		m := make(map[string]interface{}, 0)
+		m["operator"] = string(l.Operator)
+		m["scope_name"] = string(l.ScopeName)
+
+		if l.Values != nil && len(l.Values) > 0 {
+			m["values"] = newStringSet(schema.HashString, l.Values)
+		}
+
+		out[i] = m
 	}
 	return out
 }
@@ -500,13 +635,12 @@ func flattenLabelSelectorRequirementList(l []metav1.LabelSelectorRequirement) []
 }
 
 func flattenLocalObjectReferenceArray(in []api.LocalObjectReference) []interface{} {
-	att := make([]interface{}, len(in))
-	for i, v := range in {
-		m := map[string]interface{}{}
-		if v.Name != "" {
-			m["name"] = v.Name
+	att := []interface{}{}
+	for _, v := range in {
+		m := map[string]interface{}{
+			"name": v.Name,
 		}
-		att[i] = m
+		att = append(att, m)
 	}
 	return att
 }

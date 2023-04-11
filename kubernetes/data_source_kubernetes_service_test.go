@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -10,6 +13,8 @@ import (
 
 func TestAccKubernetesDataSourceService_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_service.test"
+	dataSourceName := "data.kubernetes_service.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -18,42 +23,58 @@ func TestAccKubernetesDataSourceService_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesDataSourceServiceConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("kubernetes_service.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_service.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_service.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_service.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.#", "1"),
-					resource.TestCheckResourceAttrSet("kubernetes_service.test", "spec.0.cluster_ip"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.name", ""),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.node_port", "0"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.port", "8080"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.protocol", "TCP"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.port.0.target_port", "80"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.session_affinity", "None"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.type", "ClusterIP"),
-					resource.TestCheckResourceAttr("kubernetes_service.test", "spec.0.health_check_node_port", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.allocate_load_balancer_node_ports"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.cluster_ip"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.cluster_ips.#"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.internal_traffic_policy", "Cluster"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ip_families.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ip_families.0", "IPv4"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ip_family_policy", "SingleStack"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.#", "1"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.cluster_ip"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.name", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.node_port", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.port", "8080"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.protocol", "TCP"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.target_port", "80"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.port.0.app_protocol", "http"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "None"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "ClusterIP"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.health_check_node_port", "0"),
 				),
 			},
 			{
 				Config: testAccKubernetesDataSourceServiceConfig_basic(name) +
 					testAccKubernetesDataSourceServiceConfig_read(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.kubernetes_service.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("data.kubernetes_service.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("data.kubernetes_service.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("data.kubernetes_service.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("data.kubernetes_service.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("data.kubernetes_service.test", "spec.0.port.#", "1"),
-					resource.TestCheckResourceAttrSet("data.kubernetes_service.test", "spec.0.cluster_ip"),
-					resource.TestCheckResourceAttr("data.kubernetes_service.test", "spec.0.port.0.name", ""),
-					resource.TestCheckResourceAttr("data.kubernetes_service.test", "spec.0.port.0.node_port", "0"),
-					resource.TestCheckResourceAttr("data.kubernetes_service.test", "spec.0.port.0.port", "8080"),
-					resource.TestCheckResourceAttr("data.kubernetes_service.test", "spec.0.port.0.protocol", "TCP"),
-					resource.TestCheckResourceAttr("data.kubernetes_service.test", "spec.0.port.0.target_port", "80"),
-					resource.TestCheckResourceAttr("data.kubernetes_service.test", "spec.0.session_affinity", "None"),
-					resource.TestCheckResourceAttr("data.kubernetes_service.test", "spec.0.type", "ClusterIP"),
-					resource.TestCheckResourceAttr("data.kubernetes_service.test", "spec.0.health_check_node_port", "0"),
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(dataSourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.allocate_load_balancer_node_ports", "true"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "spec.0.cluster_ip"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "spec.0.cluster_ips.#"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.internal_traffic_policy", "Cluster"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.ip_families.#", "1"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.ip_families.0", "IPv4"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.ip_family_policy", "SingleStack"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.port.#", "1"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "spec.0.cluster_ip"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.port.0.name", ""),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.port.0.node_port", "0"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.port.0.port", "8080"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.port.0.protocol", "TCP"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.port.0.target_port", "80"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.port.0.app_protocol", "http"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.session_affinity", "None"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.type", "ClusterIP"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.health_check_node_port", "0"),
 				),
 			},
 		},
@@ -75,9 +96,12 @@ func testAccKubernetesDataSourceServiceConfig_basic(name string) string {
     }
   }
   spec {
+    ip_families      = ["IPv4"]
+    ip_family_policy = "SingleStack"
     port {
-      port        = 8080
-      target_port = 80
+      port         = 8080
+      target_port  = 80
+      app_protocol = "http"
     }
   }
 }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -13,15 +16,17 @@ import (
 )
 
 func TestAccKubernetesCSIDriver_basic(t *testing.T) {
-	skipIfClusterVersionLessThan(t, "1.16.0")
-
 	var conf api.CSIDriver
 	resourceName := "kubernetes_csi_driver.test"
 	name := acctest.RandomWithPrefix("tf-acc-test")
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
+		},
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCSIDriverDestroy,
 		Steps: []resource.TestStep{

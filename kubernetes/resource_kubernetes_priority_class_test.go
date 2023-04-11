@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -20,6 +23,7 @@ func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPriorityClassDestroy,
 		Steps: []resource.TestStep{
@@ -29,17 +33,16 @@ func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 					testAccCheckKubernetesPriorityClassExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.labels.TestLabelThree", "three"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.labels.TestLabelFour", "four"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelThree": "three", "TestLabelFour": "four"}),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_priority_class.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_priority_class.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_priority_class.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "value", "100"),
+					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "preemption_policy", "Never"),
 				),
 			},
 			{
@@ -55,17 +58,16 @@ func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.labels.TestLabelTwo", "two"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.labels.TestLabelThree", "three"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelTwo": "two", "TestLabelThree": "three"}),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_priority_class.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_priority_class.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_priority_class.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "value", "100"),
+					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "preemption_policy", "Never"),
 				),
 			},
 			{
@@ -73,9 +75,7 @@ func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPriorityClassExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.%", "0"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.labels.%", "0"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_priority_class.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_priority_class.test", "metadata.0.resource_version"),
@@ -83,6 +83,7 @@ func TestAccKubernetesPriorityClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "value", "100"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "description", "Foobar"),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "global_default", "true"),
+					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "preemption_policy", "Never"),
 				),
 			},
 		},
@@ -96,6 +97,7 @@ func TestAccKubernetesPriorityClass_generatedName(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_priority_class.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPriorityClassDestroy,
 		Steps: []resource.TestStep{
@@ -104,9 +106,7 @@ func TestAccKubernetesPriorityClass_generatedName(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPriorityClassExists("kubernetes_priority_class.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.annotations.%", "0"),
-					//testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.labels.%", "0"),
-					//testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_priority_class.test", "metadata.0.generate_name", prefix),
 					resource.TestCheckResourceAttrSet("kubernetes_priority_class.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_priority_class.test", "metadata.0.resource_version"),
@@ -185,7 +185,8 @@ func testAccKubernetesPriorityClassConfig_basic(name string) string {
     name = "%s"
   }
 
-  value = 100
+  value             = 100
+  preemption_policy = "Never"
 }
 `, name)
 }
@@ -207,7 +208,8 @@ func testAccKubernetesPriorityClassConfig_metaModified(name string) string {
     name = "%s"
   }
 
-  value = 100
+  value             = 100
+  preemption_policy = "Never"
 }
 `, name)
 }
@@ -218,9 +220,10 @@ func testAccKubernetesPriorityClassConfig_modified(name string) string {
     name = "%s"
   }
 
-  value          = 100
-  description    = "Foobar"
-  global_default = true
+  value             = 100
+  description       = "Foobar"
+  global_default    = true
+  preemption_policy = "Never"
 }
 `, name)
 }

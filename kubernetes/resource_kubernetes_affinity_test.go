@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -33,7 +36,7 @@ func TestAccKubernetesPod_with_node_affinity_with_required_during_scheduling_ign
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.0.operator", keyName), "NotIn"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.0.values.0", keyName), "bar"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.0.values.1", keyName), "foo"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.1.key", keyName), "beta.kubernetes.io/os"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.1.key", keyName), "kubernetes.io/os"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.1.operator", keyName), "In"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.1.values.0", keyName), "linux"),
 				),
@@ -68,7 +71,7 @@ func TestAccKubernetesPod_with_node_affinity_with_preferred_during_scheduling_ig
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.0.values.0", keyName), "bar"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.0.values.1", keyName), "foo"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.1.%%", keyName), "3"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.1.key", keyName), "beta.kubernetes.io/os"),
+					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.1.key", keyName), "kubernetes.io/os"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.1.operator", keyName), "In"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.1.values.#", keyName), "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.1.values.0", keyName), "linux"),
@@ -239,7 +242,7 @@ func testAccKubernetesPodConfigWithNodeAffinityWithRequiredDuringSchedulingIgnor
               values   = ["foo", "bar"]
             }
             match_expressions {
-              key      = "beta.kubernetes.io/os"
+              key      = "kubernetes.io/os"
               operator = "In"
               values   = ["linux"]
             }
@@ -250,6 +253,12 @@ func testAccKubernetesPodConfigWithNodeAffinityWithRequiredDuringSchedulingIgnor
     container {
       image = "%s"
       name  = "containername"
+      resources {
+        limits = {
+          cpu    = "50m"
+          memory = "50M"
+        }
+      }
     }
   }
 }
@@ -276,7 +285,7 @@ func testAccKubernetesPodConfigWithNodeAffinityWithPreferredDuringSchedulingIgno
               values   = ["foo", "bar"]
             }
             match_expressions {
-              key      = "beta.kubernetes.io/os"
+              key      = "kubernetes.io/os"
               operator = "In"
               values   = ["linux"]
             }
@@ -287,6 +296,12 @@ func testAccKubernetesPodConfigWithNodeAffinityWithPreferredDuringSchedulingIgno
     container {
       image = "%s"
       name  = "containername"
+      resources {
+        limits = {
+          cpu    = "50m"
+          memory = "50M"
+        }
+      }
     }
   }
 }
@@ -319,6 +334,12 @@ func testAccKubernetesPodConfigWithPodAffinityWithRequiredDuringSchedulingIgnore
     container {
       image = "%s"
       name  = "containername"
+      resources {
+        limits = {
+          cpu    = "200m"
+          memory = "1024M"
+        }
+      }
     }
   }
 }
@@ -355,6 +376,12 @@ func testAccKubernetesPodConfigWithPodAffinityWithPreferredDuringSchedulingIgnor
     container {
       image = "%s"
       name  = "containername"
+      resources {
+        limits = {
+          cpu    = "200m"
+          memory = "1024M"
+        }
+      }
     }
   }
 }
@@ -387,6 +414,13 @@ func testAccKubernetesPodConfigWithPodAntiAffinityWithRequiredDuringSchedulingIg
     container {
       image = "%s"
       name  = "containername"
+      resources {
+        limits = {
+          cpu    = "200m"
+          memory = "1024M"
+        }
+      }
+
     }
   }
 }
@@ -422,6 +456,12 @@ func testAccKubernetesPodConfigWithPodAntiAffinityWithPreferredDuringSchedulingI
     container {
       image = "%s"
       name  = "containername"
+      resources {
+        limits = {
+          cpu    = "200m"
+          memory = "1024M"
+        }
+      }
     }
   }
 }

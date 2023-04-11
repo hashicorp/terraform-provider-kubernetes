@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 terraform {
   required_providers {
     google = {
@@ -13,8 +16,8 @@ data "google_compute_zones" "available" {
 }
 
 data "google_container_engine_versions" "supported" {
-  location           = local.google_zone
-  version_prefix     = var.kubernetes_version
+  location       = local.google_zone
+  version_prefix = var.kubernetes_version
 }
 
 resource "google_container_cluster" "default" {
@@ -24,7 +27,7 @@ resource "google_container_cluster" "default" {
   min_master_version = data.google_container_engine_versions.supported.latest_master_version
   # node version must match master version
   # https://www.terraform.io/docs/providers/google/r/container_cluster.html#node_version
-  node_version       = data.google_container_engine_versions.supported.latest_master_version
+  node_version = data.google_container_engine_versions.supported.latest_master_version
 
   node_locations = [
     data.google_compute_zones.available.names[1],

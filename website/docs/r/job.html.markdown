@@ -1,4 +1,5 @@
 ---
+subcategory: "batch/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_job"
 description: |-
@@ -26,14 +27,15 @@ resource "kubernetes_job" "demo" {
       spec {
         container {
           name    = "pi"
-          image   = "perl"
-          command = ["perl", "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+          image   = "alpine"
+          command = ["sh", "-c", "sleep 10"]
         }
         restart_policy = "Never"
       }
     }
     backoff_limit = 4
   }
+  wait_for_completion = false
 }
 ```
 
@@ -59,6 +61,10 @@ resource "kubernetes_job" "demo" {
     backoff_limit = 4
   }
   wait_for_completion = true
+  timeouts {
+    create = "2m"
+    update = "2m"
+  }
 }
 ```
 
@@ -66,8 +72,8 @@ resource "kubernetes_job" "demo" {
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard resource's metadata. For more info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
-* `spec` - (Required) Specification of the desired behavior of a job. For more info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
+* `metadata` - (Required) Standard resource's metadata. For more info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata
+* `spec` - (Required) Specification of the desired behavior of a job. For more info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 * `wait_for_completion` - 
 (Optional) If `true` blocks job `create` or `update` until the status of the job has a `Complete` or `Failed` condition. Defaults to `true`.
 
@@ -102,6 +108,7 @@ The following arguments are supported:
 * `active_deadline_seconds` - (Optional) Specifies the duration in seconds relative to the startTime that the job may be active before the system tries to terminate it; value must be positive integer.
 * `backoff_limit` - (Optional) Specifies the number of retries before marking this job failed. Defaults to 6
 * `completions` - (Optional) Specifies the desired number of successfully finished pods the job should be run with. Setting to nil means that the success of any pod signals the success of all pods, and allows parallelism to have any positive value. Setting to 1 means that parallelism is limited to 1 and the success of that pod signals the success of the job. For more info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
+* `completion_mode` - (Optional) Specifies how Pod completions are tracked. It can be `NonIndexed` (default) or `Indexed`. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/controllers/job/#completion-mode).
 * `manual_selector` - (Optional) Controls generation of pod labels and pod selectors. Leave `manualSelector` unset unless you are certain what you are doing. When false or unset, the system pick labels unique to this job and appends those labels to the pod template. When true, the user is responsible for picking unique labels and specifying the selector. Failure to pick a unique label may cause this and other jobs to not function correctly. However, You may see `manualSelector=true` in jobs that were created with the old `extensions/v1beta1` API. For more info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/#specifying-your-own-pod-selector
 * `parallelism` - (Optional) Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when `((.spec.completions - .status.successful) < .spec.parallelism)`, i.e. when the work left to do is less than max parallelism. For more info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
 * `selector` - (Optional) A label query over pods that should match the pod count. Normally, the system sets this field for you. For more info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
@@ -125,10 +132,10 @@ Please see the [Pod resource](pod.html#spec-1) for reference.
 
 ## Timeouts
 
-The following [Timeout](/docs/configuration/resources.html#operation-timeouts) configuration options are available for the `kubernetes_job` resource when used with `wait_for_completion = true`:
+The following [Timeout](/docs/language/resources/syntax.html#operation-timeouts) configuration options are available for the `kubernetes_job` resource when used with `wait_for_completion = true`:
 
-* `create` - (Default `1 minute`) Used for creating a new job and waiting for a successful job completion.
-* `update` - (Default `1 minute`) Used for updating an existing job and waiting for a successful job completion.
+* `create` - (Default `1m`) Used for creating a new job and waiting for a successful job completion.
+* `update` - (Default `1m`) Used for updating an existing job and waiting for a successful job completion.
 
 Note: 
 

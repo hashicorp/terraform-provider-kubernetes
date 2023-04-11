@@ -1,14 +1,35 @@
-terraform {
-  required_providers {
-    kubernetes = {
-      source = "hashicorp/kubernetes"
-      version = ">= 2.0.3"
-    }
-    helm = {
-      source  = "hashicorp/helm"
-      version = ">= 2.1.0"
-    }
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+data "aws_eks_cluster" "default" {
+  name = var.cluster_name
+}
+
+data "aws_eks_cluster_auth" "default" {
+  name = var.cluster_name
+}
+
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.default.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.default.certificate_authority[0].data)
+  token                  = data.aws_eks_cluster_auth.default.token
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = data.aws_eks_cluster.default.endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.default.certificate_authority[0].data)
+    token                  = data.aws_eks_cluster_auth.default.token
   }
+}
+
+resource "local_file" "kubeconfig" {
+  sensitive_content = templatefile("${path.module}/kubeconfig.tpl", {
+    cluster_name = var.cluster_name,
+    clusterca    = data.aws_eks_cluster.default.certificate_authority[0].data,
+    endpoint     = data.aws_eks_cluster.default.endpoint,
+  })
+  filename = "./kubeconfig-${var.cluster_name}"
 }
 
 resource "kubernetes_namespace" "test" {
@@ -17,53 +38,14 @@ resource "kubernetes_namespace" "test" {
   }
 }
 
-resource "kubernetes_deployment" "test" {
-  metadata {
-    name = "test"
-    namespace= kubernetes_namespace.test.metadata.0.name
-  }
-  spec {
-    replicas = 2
-    selector {
-      match_labels = {
-        app  = "test"
-      }
-    }
-    template {
-      metadata {
-        labels = {
-          app  = "test"
-        }
-      }
-      spec {
-        container {
-          image = "nginx:1.19.4"
-          name  = "nginx"
+resource "helm_release" "nginx_ingress" {
+  namespace = kubernetes_namespace.test.metadata.0.name
+  wait      = true
+  timeout   = 600
 
-          resources {
-            limits = {
-              memory = "512M"
-              cpu = "1"
-            }
-            requests = {
-              memory = "256M"
-              cpu = "50m"
-            }
-          }
-        }
-      }
-    }
-  }
-}
+  name = "ingress-nginx"
 
-resource helm_release nginx_ingress {
-  name       = "nginx-ingress-controller"
-
-  repository = "https://charts.bitnami.com/bitnami"
-  chart      = "nginx-ingress-controller"
-
-  set {
-    name  = "service.type"
-    value = "ClusterIP"
-  }
+  repository = "https://kubernetes.github.io/ingress-nginx"
+  chart      = "ingress-nginx"
+  version    = "v3.30.0"
 }

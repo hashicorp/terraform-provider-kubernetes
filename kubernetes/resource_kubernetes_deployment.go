@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -278,6 +281,17 @@ func resourceKubernetesDeploymentUpdate(ctx context.Context, d *schema.ResourceD
 			Value: spec,
 		})
 	}
+
+	if d.HasChange("spec.0.strategy") {
+		o, n := d.GetChange("spec.0.strategy.0.type")
+
+		if o.(string) == "RollingUpdate" && n.(string) == "Recreate" {
+			ops = append(ops, &RemoveOperation{
+				Path: "/spec/strategy/rollingUpdate",
+			})
+		}
+	}
+
 	data, err := ops.MarshalJSON()
 	if err != nil {
 		return diag.Errorf("Failed to marshal update operations: %s", err)
@@ -291,7 +305,7 @@ func resourceKubernetesDeploymentUpdate(ctx context.Context, d *schema.ResourceD
 
 	if d.Get("wait_for_rollout").(bool) {
 		log.Printf("[INFO] Waiting for deployment %s/%s to rollout", out.ObjectMeta.Namespace, out.ObjectMeta.Name)
-		err := resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
+		err := resource.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
 			waitForDeploymentReplicasFunc(ctx, conn, out.GetNamespace(), out.GetName()))
 		if err != nil {
 			return diag.FromErr(err)
@@ -328,12 +342,12 @@ func resourceKubernetesDeploymentRead(ctx context.Context, d *schema.ResourceDat
 	}
 	log.Printf("[INFO] Received deployment: %#v", deployment)
 
-	err = d.Set("metadata", flattenMetadata(deployment.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(deployment.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	spec, err := flattenDeploymentSpec(deployment.Spec, d)
+	spec, err := flattenDeploymentSpec(deployment.Spec, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -361,6 +375,9 @@ func resourceKubernetesDeploymentDelete(ctx context.Context, d *schema.ResourceD
 
 	err = conn.AppsV1().Deployments(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 
@@ -433,11 +450,14 @@ func waitForDeploymentReplicasFunc(ctx context.Context, conn *kubernetes.Clients
 			specReplicas = *dply.Spec.Replicas
 		}
 
-		if dply.Generation <= dply.Status.ObservedGeneration {
+		if dply.Generation > dply.Status.ObservedGeneration {
+			return resource.RetryableError(fmt.Errorf("Waiting for rollout to start"))
+		}
+
+		if dply.Generation == dply.Status.ObservedGeneration {
 			cond := GetDeploymentCondition(dply.Status, appsv1.DeploymentProgressing)
 			if cond != nil && cond.Reason == TimedOutReason {
-				err := fmt.Errorf("Deployment exceeded its progress deadline")
-				return resource.NonRetryableError(err)
+				return resource.NonRetryableError(fmt.Errorf("Deployment exceeded its progress deadline"))
 			}
 
 			if dply.Status.UpdatedReplicas < specReplicas {
@@ -455,9 +475,9 @@ func waitForDeploymentReplicasFunc(ctx context.Context, conn *kubernetes.Clients
 			if dply.Status.AvailableReplicas < dply.Status.UpdatedReplicas {
 				return resource.RetryableError(fmt.Errorf("Waiting for rollout to finish: %d of %d updated replicas are available...", dply.Status.AvailableReplicas, dply.Status.UpdatedReplicas))
 			}
-		} else if dply.Status.ObservedGeneration == 0 {
-			return resource.RetryableError(fmt.Errorf("Waiting for rollout to start"))
+			return nil
 		}
-		return nil
+
+		return resource.NonRetryableError(fmt.Errorf("Observed generation %d is not expected to be greater than generation %d", dply.Status.ObservedGeneration, dply.Generation))
 	}
 }

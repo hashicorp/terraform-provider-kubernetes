@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -48,8 +51,9 @@ func dataSourceKubernetesServiceAccount() *schema.Resource {
 				Computed:    true,
 			},
 			"default_secret_name": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:       schema.TypeString,
+				Computed:   true,
+				Deprecated: "Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, `default_secret_name` will be empty",
 			},
 		},
 	}
@@ -67,10 +71,7 @@ func dataSourceKubernetesServiceAccountRead(ctx context.Context, d *schema.Resou
 		return diag.Errorf("Unable to fetch service account from Kubernetes: %s", err)
 	}
 
-	defaultSecret, err := findDefaultServiceAccount(ctx, sa, conn)
-	if err != nil {
-		return diag.Errorf("Failed to discover the default service account token: %s", err)
-	}
+	defaultSecret, diagMsg := findDefaultServiceAccount(ctx, sa, conn)
 
 	err = d.Set("default_secret_name", defaultSecret)
 	if err != nil {
@@ -79,5 +80,7 @@ func dataSourceKubernetesServiceAccountRead(ctx context.Context, d *schema.Resou
 
 	d.SetId(buildId(sa.ObjectMeta))
 
-	return resourceKubernetesServiceAccountRead(ctx, d, meta)
+	diagMsg = append(diagMsg, resourceKubernetesServiceAccountRead(ctx, d, meta)...)
+
+	return diagMsg
 }

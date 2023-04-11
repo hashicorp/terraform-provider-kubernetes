@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -14,12 +17,14 @@ func TestIsInternalKey(t *testing.T) {
 		{"anyKey", false},
 		{"any.hostname.io", false},
 		{"any.hostname.com/with/path", false},
-		{"any.kubernetes.io", true},
+		{"service.beta.kubernetes.io/aws-load-balancer-backend-protocol", false},
+		{"app.kubernetes.io", false},
 		{"kubernetes.io", true},
+		{"kubectl.kubernetes.io", true},
 		{"pv.kubernetes.io/any/path", true},
 	}
-	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%s", tc.Key), func(t *testing.T) {
 			isInternal := isInternalKey(tc.Key)
 			if tc.Expected && isInternal != tc.Expected {
 				t.Fatalf("Expected %q to be internal", tc.Key)

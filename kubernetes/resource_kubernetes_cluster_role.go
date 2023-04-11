@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -24,7 +27,7 @@ func resourceKubernetesClusterRole() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchemaRBAC("clusterRole", false, false),
+			"metadata": metadataSchemaRBAC("clusterRole", true, false),
 			"rule": {
 				Type:        schema.TypeList,
 				Description: "List of PolicyRules for this ClusterRole",
@@ -142,7 +145,7 @@ func resourceKubernetesClusterRoleRead(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received cluster role: %#v", cRole)
-	err = d.Set("metadata", flattenMetadata(cRole.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(cRole.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -169,6 +172,9 @@ func resourceKubernetesClusterRoleDelete(ctx context.Context, d *schema.Resource
 	log.Printf("[INFO] Deleting cluster role: %#v", name)
 	err = conn.RbacV1().ClusterRoles().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 

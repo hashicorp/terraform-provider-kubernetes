@@ -1,4 +1,5 @@
 ---
+subcategory: "storage/v1beta1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_csi_driver"
 description: |-

@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 variable "minikube_host_ip" {}
 variable "minikube_target_ip" {}
 

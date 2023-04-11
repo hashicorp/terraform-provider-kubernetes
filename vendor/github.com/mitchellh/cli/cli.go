@@ -11,6 +11,7 @@ import (
 	"sync"
 	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/armon/go-radix"
 	"github.com/posener/complete"
 )
@@ -513,7 +514,7 @@ func (c *CLI) commandHelp(out io.Writer, command Command) {
 	}
 
 	// Parse it
-	t, err := template.New("root").Parse(tpl)
+	t, err := template.New("root").Funcs(sprig.TxtFuncMap()).Parse(tpl)
 	if err != nil {
 		t = template.Must(template.New("root").Parse(fmt.Sprintf(
 			"Internal error! Failed to parse command help template: %s\n", err)))
@@ -521,8 +522,9 @@ func (c *CLI) commandHelp(out io.Writer, command Command) {
 
 	// Template data
 	data := map[string]interface{}{
-		"Name": c.Name,
-		"Help": command.Help(),
+		"Name":           c.Name,
+		"SubcommandName": c.Subcommand(),
+		"Help":           command.Help(),
 	}
 
 	// Build subcommand list if we have it
@@ -678,12 +680,13 @@ func (c *CLI) processArgs() {
 				}
 
 				// Determine the argument we look to to end subcommands.
-				// We look at all arguments until one has a space. This
-				// disallows commands like: ./cli foo "bar baz". An argument
-				// with a space is always an argument.
+				// We look at all arguments until one is a flag or has a space.
+				// This disallows commands like: ./cli foo "bar baz". An
+				// argument with a space is always an argument. A blank
+				// argument is always an argument.
 				j := 0
 				for k, v := range c.Args[i:] {
-					if strings.ContainsRune(v, ' ') {
+					if strings.ContainsRune(v, ' ') || v == "" || v[0] == '-' {
 						break
 					}
 

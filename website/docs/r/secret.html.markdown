@@ -1,4 +1,5 @@
 ---
+subcategory: "core/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_secret"
 description: |-
@@ -58,26 +59,27 @@ resource "kubernetes_secret" "example" {
     name = "docker-cfg"
   }
 
-  data = {
-    ".dockerconfigjson" = <<DOCKER
-{
-  "auths": {
-    "${var.registry_server}": {
-      "auth": "${base64encode("${var.registry_username}:${var.registry_password}")}"
-    }
-  }
-}
-DOCKER
-  }
-
   type = "kubernetes.io/dockerconfigjson"
+
+  data = {
+    ".dockerconfigjson" = jsonencode({
+      auths = {
+        "${var.registry_server}" = {
+          "username" = var.registry_username
+          "password" = var.registry_password
+          "email"    = var.registry_email
+          "auth"     = base64encode("${var.registry_username}:${var.registry_password}")
+        }
+      }
+    })
+  }
 }
 ```
 
 This is equivalent to the following kubectl command:
 
 ```sh
-$ kubectl create secret docker-registry docker-cfg --docker-server=${registry_server} --docker-username=${registry_username} --docker-password=${registry_password}
+$ kubectl create secret docker-registry docker-cfg --docker-server=${registry_server} --docker-username=${registry_username} --docker-password=${registry_password} --docker-email=${registry_email}
 ```
 
 ## Example Usage (Service account token)
@@ -102,6 +104,8 @@ The following arguments are supported:
 * `binary_data` - (Optional) A map base64 encoded map of the secret data.
 * `metadata` - (Required) Standard secret's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 * `type` - (Optional) The secret type. Defaults to `Opaque`. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/c7151dd8dd7e487e96e5ce34c6a416bb3b037609/contributors/design-proposals/auth/secrets.md#proposed-design)
+* `immutable` - (Optional) Ensures that data stored in the Secret cannot be updated (only object metadata can be modified). If not set to true, the field can be modified at any time.
+* `wait_for_service_account_token` - (Optional) Terraform will wait for the service account token to be created. Defaults to `true`.
 
 ## Nested Blocks
 
@@ -126,6 +130,12 @@ The following arguments are supported:
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this secret that can be used by clients to determine when secret has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
 * `uid` - The unique in time and space value for this secret. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
+
+### Timeouts
+
+`kubernetes_secret` provides the following configuration options:
+
+- `create` - Default `1 minute`
 
 ## Import
 

@@ -365,7 +365,7 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 		}
 
 		spec, _, err := unstructured.NestedMap(u.Object, "f:spec", "f:template", "f:spec")
-		if "CronJob" == kind {
+		if kind == "CronJob" {
 			spec, _, err = unstructured.NestedMap(u.Object, "f:spec", "f:jobTemplate", "f:spec", "f:template", "f:spec")
 		}
 		if err == nil {
@@ -457,63 +457,40 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 		env = []map[string]interface{}{}
 	}
 
-	var spec map[string]interface{}
-	var containerSpec = map[string]interface{}{"env": env}
-	if container := d.Get("container").(string); container != "" {
-		containerSpec["name"] = container
-		spec = map[string]interface{}{
-			"template": map[string]interface{}{
-				"spec": map[string]interface{}{
-					"containers": []interface{}{
-						containerSpec,
-					},
+	containerSpec := map[string]interface{}{
+		"name": d.Get("container"),
+		"env":  env,
+	}
+	containersField := "containers"
+	if v := d.Get("init_container").(string); v != "" {
+		containerSpec["name"] = v
+		containersField = "initContainers"
+	}
+
+	spec := map[string]interface{}{
+		"template": map[string]interface{}{
+			"spec": map[string]interface{}{
+				containersField: []interface{}{
+					containerSpec,
 				},
 			},
-		}
+		},
+	}
 
-		if kind == "CronJob" {
-			// patch for CronJob
-			spec = map[string]interface{}{
-				"jobTemplate": map[string]interface{}{
-					"spec": map[string]interface{}{
-						"template": map[string]interface{}{
-							"spec": map[string]interface{}{
-								"containers": []interface{}{
-									containerSpec,
-								},
+	if kind == "CronJob" {
+		// CronJob nests under an additional jobTemplate field
+		spec = map[string]interface{}{
+			"jobTemplate": map[string]interface{}{
+				"spec": map[string]interface{}{
+					"template": map[string]interface{}{
+						"spec": map[string]interface{}{
+							containersField: []interface{}{
+								containerSpec,
 							},
 						},
 					},
 				},
-			}
-		}
-	} else {
-		containerSpec["name"] = d.Get("init_container").(string)
-		spec = map[string]interface{}{
-			"template": map[string]interface{}{
-				"spec": map[string]interface{}{
-					"initContainers": []interface{}{
-						containerSpec,
-					},
-				},
 			},
-		}
-
-		if kind == "CronJob" {
-			// patch for CronJob
-			spec = map[string]interface{}{
-				"jobTemplate": map[string]interface{}{
-					"spec": map[string]interface{}{
-						"template": map[string]interface{}{
-							"spec": map[string]interface{}{
-								"initContainers": []interface{}{
-									containerSpec,
-								},
-							},
-						},
-					},
-				},
-			}
 		}
 	}
 
@@ -523,9 +500,6 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 		"metadata":   patchmeta,
 		"spec":       spec,
 	}
-
-	// structure for a Deployment kind
-
 	patch := unstructured.Unstructured{}
 	patch.Object = patchObj
 	patchbytes, err := patch.MarshalJSON()

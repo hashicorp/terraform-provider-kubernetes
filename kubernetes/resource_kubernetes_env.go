@@ -289,22 +289,20 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 	}
 
 	var container string
-	var isInitContainer bool
 	if c := d.Get("container").(string); c != "" {
 		container = c
 	} else {
 		container = d.Get("init_container").(string)
-		isInitContainer = true
 	}
 
 	// strip out envs not managed by Terraform
 	fieldManagerName := d.Get("field_manager").(string)
-	managedEnvs, err := getManagedEnvs(res.GetManagedFields(), fieldManagerName, d, res, isInitContainer)
+	managedEnvs, err := getManagedEnvs(res.GetManagedFields(), fieldManagerName, d, res)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	responseEnvs, err := getResponseEnvs(res, container, d.Get("kind").(string), isInitContainer)
+	responseEnvs, err := getResponseEnvs(res, container, d.Get("kind").(string))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -325,7 +323,7 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 	return nil
 }
 
-func getResponseEnvs(u *unstructured.Unstructured, containerName string, kind string, isInitContainer bool) ([]interface{}, error) {
+func getResponseEnvs(u *unstructured.Unstructured, containerName string, kind string) ([]interface{}, error) {
 	var containers []interface{}
 	var initContainers []interface{}
 
@@ -351,7 +349,7 @@ func getResponseEnvs(u *unstructured.Unstructured, containerName string, kind st
 }
 
 // getManagedEnvs reads the field manager metadata to discover which environment variables we're managing
-func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *schema.ResourceData, u *unstructured.Unstructured, isInitContainer bool) (map[string]interface{}, error) {
+func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *schema.ResourceData, u *unstructured.Unstructured) (map[string]interface{}, error) {
 	var envs map[string]interface{}
 	kind := d.Get("kind").(string)
 	for _, m := range managedFields {
@@ -372,17 +370,15 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 			return nil, err
 		}
 
-		var containers map[string]interface{}
-		var containerName string
-		if isInitContainer {
-			containers = spec["f:initContainers"].(map[string]interface{})
-			containerName = fmt.Sprintf(`k:{"name":%q}`, d.Get("init_container").(string))
-		} else {
-			containers = spec["f:containers"].(map[string]interface{})
-			containerName = fmt.Sprintf(`k:{"name":%q}`, d.Get("container").(string))
+		fieldManagerKey := "f:containers"
+		containerName := d.Get("container").(string)
+		if v := d.Get("init_container").(string); v != "" {
+			containerName = v
+			fieldManagerKey = "f:initContainers"
 		}
-
-		k := containers[containerName].(map[string]interface{})
+		containers := spec[fieldManagerKey].(map[string]interface{})
+		containerKey := fmt.Sprintf(`k:{"name":%q}`, containerName)
+		k := containers[containerKey].(map[string]interface{})
 		if e, ok := k["f:env"].(map[string]interface{}); ok {
 			envs = e
 		}

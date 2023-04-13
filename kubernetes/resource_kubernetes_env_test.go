@@ -28,7 +28,9 @@ func TestAccKubernetesEnv_DeploymentBasic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createEnv(t, name, namespace)
+			if err := createEnv(t, name, namespace); err != nil {
+				t.Fatal(err)
+			}
 		},
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
@@ -41,7 +43,7 @@ func TestAccKubernetesEnv_DeploymentBasic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesEnv_Deployment_initContainer(secretName, configMapName, name, namespace),
+				Config: testAccKubernetesEnv_DeploymentBasic(secretName, configMapName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
@@ -58,7 +60,7 @@ func TestAccKubernetesEnv_DeploymentBasic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesEnv_modified_initContainer(secretName, configMapName, name, namespace),
+				Config: testAccKubernetesEnv_DeploymentBasic_modified(secretName, configMapName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
@@ -547,7 +549,7 @@ func confirmExistingCronJobEnvs(name, namespace string) error {
 	return err
 }
 
-func testAccKubernetesEnv_Deploymentbasic(secretName, configMapName, name, namespace string) string {
+func testAccKubernetesEnv_DeploymentBasic(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
@@ -612,7 +614,7 @@ resource "kubernetes_env" "test" {
 	`, secretName, configMapName, name, namespace)
 }
 
-func testAccKubernetesEnv_modified(secretName, configMapName, name, namespace string) string {
+func testAccKubernetesEnv_DeploymentBasic_modified(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"

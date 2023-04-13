@@ -457,14 +457,16 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 		env = []map[string]interface{}{}
 	}
 
-	containerSpec := map[string]interface{}{
-		"name": d.Get("container"),
-		"env":  env,
-	}
 	containersField := "containers"
+	containerName := d.Get("container")
 	if v := d.Get("init_container").(string); v != "" {
-		containerSpec["name"] = v
 		containersField = "initContainers"
+		containerName = v
+	}
+
+	containerSpec := map[string]interface{}{
+		"name": containerName,
+		"env":  env,
 	}
 
 	spec := map[string]interface{}{

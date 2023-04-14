@@ -6,6 +6,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -84,7 +85,7 @@ func resourceKubernetesNodeTaint() *schema.Resource {
 
 func resourceKubernetesNodeTaintCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	d.SetId(nodeTaintToId(metadata.Name, d.Get("taint").([]interface{})))
+	d.SetId(metadata.Name)
 	diag := resourceKubernetesNodeTaintUpdate(ctx, d, m)
 	if diag.HasError() {
 		d.SetId("")
@@ -98,8 +99,7 @@ func resourceKubernetesNodeTaintDelete(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceKubernetesNodeTaintRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	meta := expandMetadata(d.Get("metadata").([]interface{}))
-	nodeName := meta.Name
+	nodeName := nodeNameFromId(d.Id())
 
 	conn, err := m.(KubeClientsets).MainClientset()
 	if err != nil {
@@ -125,6 +125,10 @@ func resourceKubernetesNodeTaintRead(ctx context.Context, d *schema.ResourceData
 		return nil
 	}
 
+	metadata := map[string]interface{}{
+		"name": nodeName,
+	}
+	d.Set("metadata", []interface{}{metadata})
 	d.Set("taint", flattenNodeTaints(nodeTaints...))
 	return nil
 }
@@ -196,10 +200,7 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 	return resourceKubernetesNodeTaintRead(ctx, d, m)
 }
 
-func nodeTaintToId(id string, taints []interface{}) string {
-	for _, t := range taints {
-		taint := t.(map[string]interface{})
-		id += fmt.Sprintf(",%s=%s:%s", taint["key"], taint["value"], taint["effect"])
-	}
-	return id
+// Get node name from ID. Supports the earlier single-taint version where the ID was different
+func nodeNameFromId(id string) string {
+	return strings.Split(id, ",")[0]
 }

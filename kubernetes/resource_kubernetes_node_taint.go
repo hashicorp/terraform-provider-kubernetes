@@ -181,7 +181,7 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 		return nil
 	}
 
-	d.SetId(nodeTaintToId(node.ObjectMeta.Name, d.Get("taint").([]interface{})))
+	d.SetId(nodeTaintToId(node.Name, d.Get("taint").([]interface{})))
 	return resourceKubernetesNodeTaintRead(ctx, d, m)
 }
 

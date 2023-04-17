@@ -56,9 +56,18 @@ func resourceKubernetesEnv() *schema.Resource {
 				},
 			},
 			"container": {
-				Type:        schema.TypeString,
-				Description: "Name of the container for which we are updating the environment variables.",
-				Required:    true,
+				Type:         schema.TypeString,
+				Description:  "Name of the container for which we are updating the environment variables.",
+				Optional:     true,
+				ValidateFunc: validation.StringIsNotWhiteSpace,
+				ExactlyOneOf: []string{"container", "init_container"},
+			},
+			"init_container": {
+				Type:         schema.TypeString,
+				Description:  "Name of the initContainer for which we are updating the environment variables.",
+				Optional:     true,
+				ValidateFunc: validation.StringIsNotWhiteSpace,
+				ExactlyOneOf: []string{"container", "init_container"},
 			},
 			"api_version": {
 				Type:        schema.TypeString,
@@ -281,13 +290,21 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 		configuredEnvs[e.(map[string]interface{})["name"].(string)] = ""
 	}
 
+	var container string
+	if c := d.Get("container").(string); c != "" {
+		container = c
+	} else {
+		container = d.Get("init_container").(string)
+	}
+
 	// strip out envs not managed by Terraform
 	fieldManagerName := d.Get("field_manager").(string)
 	managedEnvs, err := getManagedEnvs(res.GetManagedFields(), fieldManagerName, d, res)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	responseEnvs, err := getResponseEnvs(res, d.Get("container").(string), d.Get("kind").(string))
+
+	responseEnvs, err := getResponseEnvs(res, container, d.Get("kind").(string))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -310,12 +327,19 @@ func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m in
 
 func getResponseEnvs(u *unstructured.Unstructured, containerName string, kind string) ([]interface{}, error) {
 	var containers []interface{}
+	var initContainers []interface{}
+
+	initContainers, _, _ = unstructured.NestedSlice(u.Object, "spec", "template", "spec", "initContainers")
+	if kind == "CronJob" {
+		initContainers, _, _ = unstructured.NestedSlice(u.Object, "spec", "jobTemplate", "spec", "template", "spec", "initContainers")
+	}
 
 	containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "template", "spec", "containers")
-
 	if kind == "CronJob" {
 		containers, _, _ = unstructured.NestedSlice(u.Object, "spec", "jobTemplate", "spec", "template", "spec", "containers")
 	}
+
+	containers = append(containers, initContainers...)
 
 	for _, c := range containers {
 		container := c.(map[string]interface{})
@@ -341,16 +365,22 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 		}
 
 		spec, _, err := unstructured.NestedMap(u.Object, "f:spec", "f:template", "f:spec")
-		if "CronJob" == kind {
+		if kind == "CronJob" {
 			spec, _, err = unstructured.NestedMap(u.Object, "f:spec", "f:jobTemplate", "f:spec", "f:template", "f:spec")
 		}
 		if err == nil {
 			return nil, err
 		}
 
-		containers := spec["f:containers"].(map[string]interface{})
-		containerName := fmt.Sprintf(`k:{"name":%q}`, d.Get("container").(string))
-		k := containers[containerName].(map[string]interface{})
+		fieldManagerKey := "f:containers"
+		containerName := d.Get("container").(string)
+		if v := d.Get("init_container").(string); v != "" {
+			containerName = v
+			fieldManagerKey = "f:initContainers"
+		}
+		containers := spec[fieldManagerKey].(map[string]interface{})
+		containerKey := fmt.Sprintf(`k:{"name":%q}`, containerName)
+		k := containers[containerKey].(map[string]interface{})
 		if e, ok := k["f:env"].(map[string]interface{}); ok {
 			envs = e
 		}
@@ -425,30 +455,37 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 		env = []map[string]interface{}{}
 	}
 
+	containersField := "containers"
+	containerName := d.Get("container")
+	if v := d.Get("init_container").(string); v != "" {
+		containersField = "initContainers"
+		containerName = v
+	}
+
+	containerSpec := map[string]interface{}{
+		"name": containerName,
+		"env":  env,
+	}
+
 	spec := map[string]interface{}{
 		"template": map[string]interface{}{
 			"spec": map[string]interface{}{
-				"containers": []interface{}{
-					map[string]interface{}{
-						"name": d.Get("container").(string),
-						"env":  env,
-					},
+				containersField: []interface{}{
+					containerSpec,
 				},
 			},
 		},
 	}
+
 	if kind == "CronJob" {
-		// patch for CronJob
+		// CronJob nests under an additional jobTemplate field
 		spec = map[string]interface{}{
 			"jobTemplate": map[string]interface{}{
 				"spec": map[string]interface{}{
 					"template": map[string]interface{}{
 						"spec": map[string]interface{}{
-							"containers": []interface{}{
-								map[string]interface{}{
-									"name": d.Get("container").(string),
-									"env":  env,
-								},
+							containersField: []interface{}{
+								containerSpec,
 							},
 						},
 					},
@@ -456,15 +493,13 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 			},
 		}
 	}
+
 	patchObj := map[string]interface{}{
 		"apiVersion": apiVersion,
 		"kind":       kind,
 		"metadata":   patchmeta,
 		"spec":       spec,
 	}
-
-	// structure for a Deployment kind
-
 	patch := unstructured.Unstructured{}
 	patch.Object = patchObj
 	patchbytes, err := patch.MarshalJSON()

@@ -59,12 +59,14 @@ func resourceKubernetesEnv() *schema.Resource {
 				Type:         schema.TypeString,
 				Description:  "Name of the container for which we are updating the environment variables.",
 				Optional:     true,
+				ValidateFunc: validation.StringIsNotWhiteSpace,
 				ExactlyOneOf: []string{"container", "init_container"},
 			},
 			"init_container": {
 				Type:         schema.TypeString,
 				Description:  "Name of the initContainer for which we are updating the environment variables.",
 				Optional:     true,
+				ValidateFunc: validation.StringIsNotWhiteSpace,
 				ExactlyOneOf: []string{"container", "init_container"},
 			},
 			"api_version": {

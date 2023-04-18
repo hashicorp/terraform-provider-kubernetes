@@ -44,7 +44,7 @@ func testAccKubernetesruntime_class_v1(name string) string {
 		metadata {
 		  name = %q
 		}
-		handler = "runc" 
+		handler = "myclass" 
 	}
 	`, name)
 }

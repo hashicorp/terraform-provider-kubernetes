@@ -15,10 +15,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesruntime_class_basic(t *testing.T) {
+func TestAccKubernetesruntime_class_v1_basic(t *testing.T) {
 	var conf nodev1.RuntimeClass
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_runtime_class.test"
+	resourceName := "kubernetes_runtime_class_v1.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -29,15 +29,24 @@ func TestAccKubernetesruntime_class_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			//creating a run time class
 			{
-				Config: testAccKubernetesSecretConfig_immutable(rcName, true, "password"),
+				Config: testAccKubernetesruntime_class_v1(rcName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesruntime_classExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rcName),
-					resource.TestCheckResourceAttr(resourceName, "immutable", "true"),
 				),
 			},
 		},
 	})
+}
+
+func testAccKubernetesruntime_class_v1(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_runtime_class_v1" "test" {
+		metadata {
+		  name = %q
+		}
+		handler = "runc" 
+	}
+	`, name)
 }
 
 func testAccCheckKubernetesruntime_classExists(n string, obj *nodev1.RuntimeClass) resource.TestCheckFunc {

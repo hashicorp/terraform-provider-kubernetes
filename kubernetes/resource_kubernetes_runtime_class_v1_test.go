@@ -41,11 +41,11 @@ func TestAccKubernetesruntime_class_v1_basic(t *testing.T) {
 
 func testAccKubernetesruntime_class_v1(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_runtime_class_v1" "test" {
-		metadata {
-		  name = %q
-		}
-		handler = "myclass" 
-	}
+  metadata {
+    name = %q
+  }
+  handler = "myclass"
+}
 	`, name)
 }
 

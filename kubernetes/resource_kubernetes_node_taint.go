@@ -10,18 +10,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 )
-
-var taintMap = map[string]v1.TaintEffect{
-	"NoExecute":        v1.TaintEffectNoExecute,
-	"NoSchedule":       v1.TaintEffectNoSchedule,
-	"PreferNoSchedule": v1.TaintEffectPreferNoSchedule,
-}
 
 func resourceKubernetesNodeTaint() *schema.Resource {
 	return &schema.Resource{
@@ -172,7 +165,8 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 		FieldManager: d.Get("field_manager").(string),
 		Force:        ptrToBool(d.Get("force").(bool)),
 	}
-	if _, err := nodeApi.Patch(ctx, nodeName, types.ApplyPatchType, patchBytes, patchOpts); err != nil {
+	node, err := nodeApi.Patch(ctx, nodeName, types.ApplyPatchType, patchBytes, patchOpts)
+	if err != nil {
 		if errors.IsConflict(err) {
 			return diag.Diagnostics{{
 				Severity: diag.Error,
@@ -186,11 +180,12 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 	if d.Id() == "" {
 		return nil
 	}
+
+	d.SetId(nodeTaintToId(node.Name, d.Get("taint").([]interface{})))
 	return resourceKubernetesNodeTaintRead(ctx, d, m)
 }
 
-func nodeTaintToId(nodeName string, taints []interface{}) string {
-	var id string = fmt.Sprintf("%s", nodeName)
+func nodeTaintToId(id string, taints []interface{}) string {
 	for _, t := range taints {
 		taint := t.(map[string]interface{})
 		id += fmt.Sprintf(",%s=%s:%s", taint["key"], taint["value"], taint["effect"])

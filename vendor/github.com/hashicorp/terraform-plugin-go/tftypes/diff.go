@@ -122,8 +122,10 @@ func (val1 Value) Diff(val2 Value) ([]ValueDiff, error) {
 			return true, nil
 		}
 
-		// convert from an interface{} to a Value
-		value2 := value2I.(Value)
+		value2, ok := value2I.(Value)
+		if !ok {
+			return false, fmt.Errorf("unexpected type %T in Diff", value2I)
+		}
 
 		// if they're both unknown, no need to continue
 		if !value1.IsKnown() && !value2.IsKnown() {

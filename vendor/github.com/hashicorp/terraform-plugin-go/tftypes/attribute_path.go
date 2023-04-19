@@ -324,17 +324,17 @@ func builtinAttributePathStepper(in interface{}) (AttributePathStepper, bool) {
 type mapStringInterfaceAttributePathStepper map[string]interface{}
 
 func (m mapStringInterfaceAttributePathStepper) ApplyTerraform5AttributePathStep(step AttributePathStep) (interface{}, error) {
-	_, isAttributeName := step.(AttributeName)
-	_, isElementKeyString := step.(ElementKeyString)
+	attributeName, isAttributeName := step.(AttributeName)
+	elementKeyString, isElementKeyString := step.(ElementKeyString)
 	if !isAttributeName && !isElementKeyString {
 		return nil, ErrInvalidStep
 	}
 	var stepValue string
 	if isAttributeName {
-		stepValue = string(step.(AttributeName))
+		stepValue = string(attributeName)
 	}
 	if isElementKeyString {
-		stepValue = string(step.(ElementKeyString))
+		stepValue = string(elementKeyString)
 	}
 	v, ok := m[stepValue]
 	if !ok {

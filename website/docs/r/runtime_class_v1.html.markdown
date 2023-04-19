@@ -19,7 +19,7 @@ The following arguments are supported:
 
 * `metadata` - (Required) Standard role's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 * `handler` - (Required) Specifies the underlying runtime and configuration that the CRI implementation will use to handle pods of this class
-[Kubernetes reference] (https://kubernetes.io/docs/concepts/containers/runtime-class/)
+[Kubernetes reference](https://kubernetes.io/docs/concepts/containers/runtime-class/)
 
 ## Nested Blocks
 

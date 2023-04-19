@@ -5,21 +5,15 @@ package kubernetes
 
 import (
 	"context"
-	//"fmt"
 	"log"
 	"regexp"
 
-	// "time"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	//"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	nodev1 "k8s.io/api/node/v1"
 
-	// api "k8s.io/api/core/v1"
-	// "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
@@ -38,14 +32,7 @@ func resourceKubernetesRuntimeClassV1() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("runtimeclass", true),
-			// "overhead": {
-			// 	Type:        schema.TypeMap,
-			// 	Description: "Represents the esource overhead associated with running a pod for a given RuntimeClass",
-			// },
-			// "scheduling": {
-			// 	Type:        schema.TypeMap,
-			// 	Description: "Holds the scheduling constraints to ensure that pods running with this RuntimeClass are scheduled to nodes that support it",
-			// },
+
 			"handler": {
 				Type:         schema.TypeString,
 				Description:  "Specifies the underlying runtime and configuration that the CRI implementation will use to handle pods of this class",
@@ -64,12 +51,11 @@ func resourceKubernetesRuntimeClassV1Create(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 
-	//converting metadata for resource -> HCL for TF
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
 	runtimeClass := nodev1.RuntimeClass{
 		ObjectMeta: metadata,
-		Handler:    d.Get("handler").(string), //returns the string from handler
+		Handler:    d.Get("handler").(string),
 	}
 
 	out, err := conn.NodeV1().RuntimeClasses().Create(ctx, &runtimeClass, metav1.CreateOptions{})
@@ -78,9 +64,9 @@ func resourceKubernetesRuntimeClassV1Create(ctx context.Context, d *schema.Resou
 	}
 
 	log.Printf("[INFO] New runtime class created: %#v", out)
-	d.SetId(out.Name) //id of resource used in the state file, not a namespace refers to its name of the resource
+	d.SetId(out.Name)
 
-	return resourceKubernetesRuntimeClassV1Read(ctx, d, meta) //create & read goes hand in hand basically
+	return resourceKubernetesRuntimeClassV1Read(ctx, d, meta)
 }
 
 func resourceKubernetesRuntimeClassV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -100,14 +86,14 @@ func resourceKubernetesRuntimeClassV1Read(ctx context.Context, d *schema.Resourc
 
 	name := d.Id()
 
-	log.Printf("[INFO] Reading Run Time Class %s", name)
+	log.Printf("[INFO] Reading runtime class %s", name)
 	rc, err := conn.NodeV1().RuntimeClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Received Run Time Class: %#v", rc)
+	log.Printf("[INFO] Received runtime class: %#v", rc)
 	err = d.Set("metadata", flattenMetadata(rc.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
@@ -136,14 +122,14 @@ func resourceKubernetesRuntimeClassV1Update(ctx context.Context, d *schema.Resou
 		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 
-	log.Printf("[INFO] Updating run time class %s: %#v", d.Id(), patch)
+	log.Printf("[INFO] Updating runtime class %s: %#v", d.Id(), patch)
 
 	out, err := conn.NodeV1().RuntimeClasses().Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return diag.Errorf("Failed to update run time class! API error: %s", err)
+		return diag.Errorf("Failed to update runtime class! API error: %s", err)
 	}
 
-	log.Printf("[INFO] Submitted updated run time class: %#v", out)
+	log.Printf("[INFO] Submitted updated runtime class: %#v", out)
 	d.SetId(out.Name)
 
 	return resourceKubernetesRuntimeClassV1Read(ctx, d, meta)
@@ -157,7 +143,7 @@ func resourceKubernetesRuntimeClassV1Delete(ctx context.Context, d *schema.Resou
 
 	name := d.Id()
 
-	log.Printf("[INFO] RunTimeClass: %#v", name)
+	log.Printf("[INFO] Deleting runtime class: %#v", name)
 	err = conn.NodeV1().RuntimeClasses().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
@@ -165,12 +151,11 @@ func resourceKubernetesRuntimeClassV1Delete(ctx context.Context, d *schema.Resou
 		}
 		return diag.FromErr(err)
 	}
-	log.Printf("[INFO] RunTimeClass %s deleted", name)
+	log.Printf("[INFO] runtime class %s deleted", name)
 
 	return nil
 }
 
-// trying to get resource, if we get an error then we know it doesnt exists
 func resourceKubernetesRuntimeClassV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
@@ -179,7 +164,7 @@ func resourceKubernetesRuntimeClassV1Exists(ctx context.Context, d *schema.Resou
 
 	name := d.Id()
 
-	log.Printf("[INFO] Checking Run Time Class %s", name)
+	log.Printf("[INFO] Checking runtime class %s", name)
 	_, err = conn.NodeV1().RuntimeClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {

@@ -1,7 +1,16 @@
+## 2.20.0 (April 20, 2023)
+
+ENHANCEMENTS:
+
+`kubernetes/resource_kubernetes_env.go`: add support for initContainers [[GH-2067](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2067)]
+`kubernetes/resource_kubernetes_node_taint.go`: Remove MaxItems from taint attribute [[GH-2046](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2046)]
+
+BUG FIXES:
+
+* Fix diff after import when importing resources containing volume_mount [[GH-2061](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2061)]
+* `resource/kubernetes_node_taint`: Fix an issue when updating taint does not update the ID in the state file. [[GH-2077](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2077)]
+
 ## 2.19.0 (March 23, 2023)
-
-Generating changelog for release-v2.19.0 from v2.18.1...
-
 
 FEATURES:
 

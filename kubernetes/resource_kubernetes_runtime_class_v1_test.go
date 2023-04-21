@@ -25,9 +25,8 @@ func TestAccKubernetesruntime_class_v1_basic(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		//CheckDestroy:      testAccCheckKubernetesRuntimeClassDestroy,
+		CheckDestroy:      testAccCheckKubernetesRuntimeClassV1Destroy,
 		Steps: []resource.TestStep{
-			//creating a run time class
 			{
 				Config: testAccKubernetesruntime_class_v1_basic(rcName),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -44,31 +43,31 @@ func TestAccKubernetesruntime_class_v1_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesruntime_class_v1_addAnnotations(rcName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesruntime_class_v1Exists("kubernetes_runtime_class_v1.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_runtime_class_v1.test", "metadata.0.annotations.%", "2"),
-					resource.TestCheckResourceAttr("kubernetes_runtime_class_v1.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_runtime_class_v1.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
-					resource.TestCheckResourceAttr("kubernetes_runtime_class_v1.test", "metadata.0.labels.%", "0"),
-					resource.TestCheckResourceAttr("kubernetes_runtime_class_v1.test", "metadata.0.name", rcName),
-					resource.TestCheckResourceAttrSet("kubernetes_runtime_class_v1.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kkubernetes_runtime_class_v1.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_runtime_class_v1.test", "metadata.0.uid"),
+					testAccCheckKubernetesruntime_class_v1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rcName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 				),
 			},
 			{
 				Config: testAccKubernetesruntime_class_v1_addLabels(rcName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesruntime_class_v1Exists("kubernetes_runtime_class_v1.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_runtime_class_v1.test", "metadata.0.annotations.%", "2"),
-					resource.TestCheckResourceAttr("kubernetes_runtime_class_v1.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_runtime_class_v1.test", "metadata.0.annotations.Different", "1234"),
-					resource.TestCheckResourceAttr("kubernetes_runtime_class_v1.test", "metadata.0.labels.%", "2"),
-					resource.TestCheckResourceAttr("kubernetes_runtime_class_v1.test", "metadata.0.labels.TestLabelOne", "one"),
-					resource.TestCheckResourceAttr("kubernetes_runtime_class_v1.test", "metadata.0.labels.TestLabelThree", "three"),
-					resource.TestCheckResourceAttr("kubernetes_runtime_class_v1.test", "metadata.0.name", rcName),
-					resource.TestCheckResourceAttrSet("kubernetes_runtime_class_v1.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_runtime_class_v1.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_runtime_class_v1.test", "metadata.0.uid"),
+					testAccCheckKubernetesruntime_class_v1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelOne", "one"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelTwo", "two"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rcName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 				),
 			},
 		},
@@ -94,12 +93,13 @@ func testAccKubernetesruntime_class_v1_addAnnotations(name string) string {
     }
     name = %q
   }
+  handler = "newclass"
 }
 `, name)
 }
 
 func testAccKubernetesruntime_class_v1_addLabels(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_runtime_class_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -109,13 +109,36 @@ func testAccKubernetesruntime_class_v1_addLabels(name string) string {
     labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
-      TestLabelThree = "three"
     }
-
     name = %q
   }
+  handler = "my-class"
 }
 `, name)
+}
+
+func testAccCheckKubernetesRuntimeClassV1Destroy(s *terraform.State) error {
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+
+	if err != nil {
+		return err
+	}
+	ctx := context.TODO()
+
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "kubernetes_runtime_class_v1" {
+			continue
+		}
+
+		resp, err := conn.NodeV1().RuntimeClasses().Get(ctx, rs.Primary.ID, metav1.GetOptions{})
+		if err == nil {
+			if resp.Name == rs.Primary.ID {
+				return fmt.Errorf("Runtime Class still exists: %s", rs.Primary.ID)
+			}
+		}
+	}
+
+	return nil
 }
 
 func testAccCheckKubernetesruntime_class_v1Exists(n string, obj *nodev1.RuntimeClass) resource.TestCheckFunc {

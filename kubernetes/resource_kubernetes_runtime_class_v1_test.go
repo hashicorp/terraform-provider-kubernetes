@@ -32,6 +32,7 @@ func TestAccKubernetesruntime_class_v1_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesruntime_class_v1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rcName),
+					resource.TestCheckResourceAttr(resourceName, "handler", "myclass"),
 				),
 			},
 			{
@@ -49,6 +50,7 @@ func TestAccKubernetesruntime_class_v1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rcName),
+					resource.TestCheckResourceAttr(resourceName, "handler", "newclass"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
@@ -65,6 +67,7 @@ func TestAccKubernetesruntime_class_v1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelTwo", "two"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rcName),
+					resource.TestCheckResourceAttr(resourceName, "handler", "my-class"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
@@ -107,8 +110,8 @@ func testAccKubernetesruntime_class_v1_addLabels(name string) string {
     }
 
     labels = {
-      TestLabelOne   = "one"
-      TestLabelTwo   = "two"
+      TestLabelOne = "one"
+      TestLabelTwo = "two"
     }
     name = %q
   }

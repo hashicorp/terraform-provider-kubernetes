@@ -58,10 +58,10 @@ func resourceKubernetesEndpointSliceCreate(ctx context.Context, d *schema.Resour
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	endpoint_slice := api.EndpointSlice{
-		ObjectMeta: metadata,
-		AddressType: api.AddressType(d.Get("address_type")),
-		Endpoints:,
-		Ports:,
+		ObjectMeta:  metadata,
+		AddressType: api.AddressType(d.Get("address_type").(string)),
+		Endpoints:   expandEndpointSliceEndpoints(d.Get("endpoints").(*schema.Set)),
+		Ports:       expandEndpointSlicePorts(d.Get("ports").(*schema.Set)),
 	}
 
 	log.Printf("[INFO] Creating new endpoint_slice: %#v", endpoint_slice)

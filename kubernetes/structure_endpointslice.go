@@ -50,44 +50,65 @@ func expandEndpointSlicePorts(in *schema.Set) []api.EndpointPort {
 		r := api.EndpointPort{}
 		portCfg := port.(map[string]interface{})
 		if v, ok := portCfg["name"].(string); ok {
-			r.Name = v
+			r.Name = ptrToString(v)
 		}
-		if v, ok := portCfg["port"].(int); ok {
-			r.Port = int32(v)
+		if v, ok := portCfg["port"].(int32); ok {
+			r.Port = &v
 		}
-		if v, ok := portCfg["protocol"].(string); ok {
-			r.Protocol = api.Protocol(v)
+		if v, ok := portCfg["protocol"].(v1.Protocol); ok {
+			r.Protocol = &v
+		}
+		if v, ok := portCfg["app_protocol"].(string); ok {
+			r.AppProtocol = ptrToString(v)
 		}
 		ports[i] = r
 	}
 	return ports
 }
 
-func flattenEndpointsAddresses(in []api.EndpointAddress) *schema.Set {
+func flattenEndpointSliceEndpoints(in []api.Endpoint) *schema.Set {
 	att := make([]interface{}, len(in), len(in))
-	for i, n := range in {
+	for i, e := range in {
 		m := make(map[string]interface{})
-		if n.Hostname != "" {
-			m["hostname"] = n.Hostname
+		if *e.Hostname != "" {
+			m["hostname"] = e.Hostname
 		}
-		m["ip"] = n.IP
-		if n.NodeName != nil {
-			m["node_name"] = *n.NodeName
+		if *e.NodeName != "" {
+			m["node_name"] = e.NodeName
+		}
+		if *e.Zone != "" {
+			m["zone"] = e.Zone
+		}
+		if len(e.Addresses) != 0 {
+			m["addresses"] = e.Addresses
+		}
+		if e.TargetRef != nil {
+			m["target_ref"] = e.TargetRef
+		}
+		if &e.Conditions != nil {
+			m["hostname"] = e.Hostname
 		}
 		att[i] = m
 	}
 	return schema.NewSet(hashEndpointsSubsetAddress(), att)
 }
 
-func flattenEndpointsPorts(in []api.EndpointPort) *schema.Set {
+func flattenEndpointSlicePorts(in []api.EndpointPort) *schema.Set {
 	att := make([]interface{}, len(in), len(in))
-	for i, n := range in {
+	for i, e := range in {
 		m := make(map[string]interface{})
-		if n.Name != "" {
-			m["name"] = n.Name
+		if *e.Name != "" {
+			m["name"] = e.Name
 		}
-		m["port"] = int(n.Port)
-		m["protocol"] = string(n.Protocol)
+		if e.Port != nil {
+			m["port"] = int(*e.Port)
+		}
+		if e.Protocol != nil {
+			m["protocol"] = string(*e.Protocol)
+		}
+		if e.AppProtocol != nil {
+			m["app_protocol"] = string(*e.AppProtocol)
+		}
 		att[i] = m
 	}
 	return schema.NewSet(hashEndpointsSubsetPort(), att)

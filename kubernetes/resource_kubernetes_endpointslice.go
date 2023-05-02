@@ -7,24 +7,23 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	api "k8s.io/api/core/v1"
+	api "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesNamespace() *schema.Resource {
+func resourceKubernetesEndpointSlice() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesNamespaceCreate,
-		ReadContext:   resourceKubernetesNamespaceRead,
-		UpdateContext: resourceKubernetesNamespaceUpdate,
-		DeleteContext: resourceKubernetesNamespaceDelete,
+		CreateContext: resourceKubernetesEndpointSliceCreate,
+		ReadContext:   resourceKubernetesEndpointSliceRead,
+		UpdateContext: resourceKubernetesEndpointSliceUpdate,
+		DeleteContext: resourceKubernetesEndpointSliceDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -35,87 +34,49 @@ func resourceKubernetesNamespace() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "addressType specifies the type of address carried by this EndpointSlice. All addresses in this slice must be the same type.",
 				Required:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:        schema.TypeString,
-							Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
-							Optional:    true,
-						},
-					},
-				},
 			},
 			"endpoints": {
 				Type:        schema.TypeList,
 				Description: "A list of references to secrets in the same namespace to use for pulling any images in pods that reference this Service Account. More info: http://kubernetes.io/docs/user-guide/secrets#manually-specifying-an-imagepullsecret",
 				Required:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"addresses": {
-							Type:        schema.TypeList,
-							Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
-							Required:    true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"conditions": {
-							Type:        schema.TypeList,
-							Description: "A list of references to secrets in the same namespace to use for pulling any images in pods that reference this Service Account. More info: http://kubernetes.io/docs/user-guide/secrets#manually-specifying-an-imagepullsecret",
-							Required:    true,
-							MaxItems:    1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"ready": {
-										Type:        schema.TypeBool,
-										Description: "Specification of the desired behavior of the job",
-										Optional:    true,
-									},
-									"serving": {
-										Type:        schema.TypeBool,
-										Description: "Specification of the desired behavior of the job",
-										Optional:    true,
-									},
-									"terminating": {
-										Type:        schema.TypeBool,
-										Description: "Specification of the desired behavior of the job",
-										Optional:    true,
-									},
-								},
-							},
-						},
-					},
-				},
+				Elem:        schemaEndpointSliceSubsetEndpoints(),
 			},
-		},
-		Timeouts: &schema.ResourceTimeout{
-			Delete: schema.DefaultTimeout(5 * time.Minute),
+			"ports": {
+				Type:     schema.TypeList,
+				Required: true,
+				Elem:     schemaEndpointSliceSubsetPorts(),
+			},
 		},
 	}
 }
 
-func resourceKubernetesNamespaceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesEndpointSliceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	namespace := api.Namespace{
+	endpoint_slice := api.EndpointSlice{
 		ObjectMeta: metadata,
+		AddressType: api.AddressType(d.Get("address_type")),
+		Endpoints:,
+		Ports:,
 	}
-	log.Printf("[INFO] Creating new namespace: %#v", namespace)
-	out, err := conn.CoreV1().Namespaces().Create(ctx, &namespace, metav1.CreateOptions{})
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	log.Printf("[INFO] Submitted new namespace: %#v", out)
-	d.SetId(out.Name)
 
-	return resourceKubernetesNamespaceRead(ctx, d, meta)
+	log.Printf("[INFO] Creating new endpoint_slice: %#v", endpoint_slice)
+	out, err := conn.DiscoveryV1().EndpointSlices(metadata.Namespace).Create(ctx, &endpoint_slice, metav1.CreateOptions{})
+	if err != nil {
+		return diag.Errorf("Failed to create endpoint_slice because: %s", err)
+	}
+
+	log.Printf("[INFO] Submitted new endpoint_slice: %#v", out)
+	d.SetId(buildId(out.ObjectMeta))
+
+	return resourceKubernetesEndpointSliceRead(ctx, d, meta)
 }
 
-func resourceKubernetesNamespaceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesEndpointSliceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	exists, err := resourceKubernetesNamespaceExists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
@@ -145,7 +106,7 @@ func resourceKubernetesNamespaceRead(ctx context.Context, d *schema.ResourceData
 	return nil
 }
 
-func resourceKubernetesNamespaceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesEndpointSliceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -168,7 +129,7 @@ func resourceKubernetesNamespaceUpdate(ctx context.Context, d *schema.ResourceDa
 	return resourceKubernetesNamespaceRead(ctx, d, meta)
 }
 
-func resourceKubernetesNamespaceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesEndpointSliceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -213,21 +174,21 @@ func resourceKubernetesNamespaceDelete(ctx context.Context, d *schema.ResourceDa
 	return nil
 }
 
-func resourceKubernetesNamespaceExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return false, err
-	}
+// func resourceKubernetesNamespaceExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+// 	conn, err := meta.(KubeClientsets).MainClientset()
+// 	if err != nil {
+// 		return false, err
+// 	}
 
-	name := d.Id()
-	log.Printf("[INFO] Checking namespace %s", name)
-	_, err = conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-	}
-	log.Printf("[INFO] Namespace %s exists", name)
-	return true, err
-}
+// 	name := d.Id()
+// 	log.Printf("[INFO] Checking namespace %s", name)
+// 	_, err = conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+// 	if err != nil {
+// 		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+// 			return false, nil
+// 		}
+// 		log.Printf("[DEBUG] Received error: %#v", err)
+// 	}
+// 	log.Printf("[INFO] Namespace %s exists", name)
+// 	return true, err
+// }

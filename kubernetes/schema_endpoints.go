@@ -7,90 +7,86 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func schemaEndpointsSubset() *schema.Resource {
+func schemaEndpointSliceSubsetEndpoints() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
-			"address": {
-				Type:        schema.TypeSet,
-				Description: "IP address which offers the related ports that are marked as ready. These endpoints should be considered safe for load balancers and clients to utilize.",
-				Optional:    true,
-				MinItems:    1,
-				Elem:        schemaEndpointsSubsetAddress(),
-				Set:         hashEndpointsSubsetAddress(),
-			},
-			"not_ready_address": {
-				Type:        schema.TypeSet,
-				Description: "IP address which offers the related ports but is not currently marked as ready because it have not yet finished starting, have recently failed a readiness check, or have recently failed a liveness check.",
-				Optional:    true,
-				MinItems:    1,
-				Elem:        schemaEndpointsSubsetAddress(),
-				Set:         hashEndpointsSubsetAddress(),
-			},
-			"port": {
-				Type:        schema.TypeSet,
-				Description: "Port number available on the related IP addresses.",
-				Optional:    true,
-				MinItems:    1,
-				Elem:        schemaEndpointsSubsetPort(),
-				Set:         hashEndpointsSubsetPort(),
-			},
-		},
-	}
-}
-
-func hashEndpointsSubset() schema.SchemaSetFunc {
-	return schema.HashResource(schemaEndpointsSubset())
-}
-
-func schemaEndpointsSubsetAddress() *schema.Resource {
-	return &schema.Resource{
-		Schema: map[string]*schema.Schema{
-			"ip": {
-				Type:        schema.TypeString,
-				Description: "The IP of this endpoint. May not be loopback (127.0.0.0/8), link-local (169.254.0.0/16), or link-local multicast ((224.0.0.0/24).",
+			"addresses": {
+				Type:        schema.TypeList,
+				Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
 				Required:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
-			"hostname": {
+			"conditions": {
+				Type:        schema.TypeList,
+				Description: "A list of references to secrets in the same namespace to use for pulling any images in pods that reference this Service Account. More info: http://kubernetes.io/docs/user-guide/secrets#manually-specifying-an-imagepullsecret",
+				Required:    true,
+				MaxItems:    1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"ready": {
+							Type:        schema.TypeBool,
+							Description: "Specification of the desired behavior of the job",
+							Optional:    true,
+						},
+						"serving": {
+							Type:        schema.TypeBool,
+							Description: "Specification of the desired behavior of the job",
+							Optional:    true,
+						},
+						"terminating": {
+							Type:        schema.TypeBool,
+							Description: "Specification of the desired behavior of the job",
+							Optional:    true,
+						},
+					},
+				},
+			},
+			"host_name": {
 				Type:        schema.TypeString,
-				Description: "The Hostname of this endpoint.",
+				Description: "Host name of this endpoint.",
 				Optional:    true,
 			},
 			"node_name": {
 				Type:        schema.TypeString,
-				Description: "Node hosting this endpoint. This can be used to determine endpoints local to a node.",
+				Description: "Node name of this endpoint",
+				Optional:    true,
+			},
+			"target_ref": {},
+			"zone": {
+				Type:        schema.TypeString,
+				Description: "zone is the name of the Zone this endpoint exists in.",
 				Optional:    true,
 			},
 		},
 	}
 }
 
-func hashEndpointsSubsetAddress() schema.SchemaSetFunc {
-	return schema.HashResource(schemaEndpointsSubsetAddress())
-}
-
-func schemaEndpointsSubsetPort() *schema.Resource {
+func schemaEndpointSliceSubsetPorts() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
-			"name": {
-				Type:        schema.TypeString,
-				Description: "The name of this port within the endpoint. Must be a DNS_LABEL. Optional if only one Port is defined on this endpoint.",
-				Optional:    true,
-			},
 			"port": {
 				Type:        schema.TypeInt,
-				Description: "The port that will be exposed by this endpoint.",
+				Description: "port represents the port number of the endpoint.",
 				Required:    true,
 			},
 			"protocol": {
 				Type:        schema.TypeString,
-				Description: "The IP protocol for this port. Supports `TCP` and `UDP`. Default is `TCP`.",
+				Description: "protocol represents the IP protocol for this port. Must be UDP, TCP, or SCTP. Default is TCP.",
 				Optional:    true,
 				Default:     "TCP",
 			},
+			"name": {
+				Type:        schema.TypeString,
+				Description: "name represents the name of this port. All ports in an EndpointSlice must have a unique name.",
+				Optional:    true,
+			},
+			"app_protocol": {
+				Type:        schema.TypeString,
+				Description: "The application protocol for this port. This is used as a hint for implementations to offer richer behavior for protocols that they understand. This field follows standard Kubernetes label syntax.",
+				Optional:    true,
+			},
 		},
 	}
-}
-
-func hashEndpointsSubsetPort() schema.SchemaSetFunc {
-	return schema.HashResource(schemaEndpointsSubsetPort())
 }

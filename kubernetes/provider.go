@@ -67,7 +67,7 @@ func Provider() *schema.Provider {
 				Optional:      true,
 				DefaultFunc:   schema.EnvDefaultFunc("KUBE_INSECURE", nil),
 				Description:   "Whether server should be accessed without verifying the TLS certificate.",
-				ConflictsWith: []string{"cluster_ca_certificate", "client_key", "client_certificate", "exec"},
+				ConflictsWith: []string{"client_key", "client_certificate", "exec"},
 			},
 			"client_certificate": {
 				Type:          schema.TypeString,
@@ -75,7 +75,7 @@ func Provider() *schema.Provider {
 				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CLIENT_CERT_DATA", nil),
 				Description:   "PEM-encoded client certificate for TLS authentication.",
 				ConflictsWith: []string{"config_path", "config_paths", "username", "password", "insecure"},
-				RequiredWith:  []string{"client_key", "cluster_ca_certificate", "host"},
+				RequiredWith:  []string{"client_key", "host"},
 			},
 			"client_key": {
 				Type:          schema.TypeString,
@@ -83,7 +83,7 @@ func Provider() *schema.Provider {
 				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CLIENT_KEY_DATA", nil),
 				Description:   "PEM-encoded client certificate key for TLS authentication.",
 				ConflictsWith: []string{"config_path", "config_paths", "username", "password", "exec", "insecure"},
-				RequiredWith:  []string{"client_certificate", "cluster_ca_certificate", "host"},
+				RequiredWith:  []string{"client_certificate", "host"},
 			},
 			"cluster_ca_certificate": {
 				Type:          schema.TypeString,
@@ -91,7 +91,6 @@ func Provider() *schema.Provider {
 				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CLUSTER_CA_CERT_DATA", nil),
 				Description:   "PEM-encoded root certificates bundle for TLS authentication.",
 				ConflictsWith: []string{"config_path", "config_paths", "insecure"},
-				RequiredWith:  []string{"host"},
 			},
 			"config_paths": {
 				Type:        schema.TypeList,

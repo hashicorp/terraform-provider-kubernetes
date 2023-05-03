@@ -91,14 +91,14 @@ func resourceKubernetesEndpointSliceRead(ctx context.Context, d *schema.Resource
 	}
 
 	name := d.Id()
-	log.Printf("[INFO] Reading namespace %s", name)
-	namespace, err := conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	log.Printf("[INFO] Reading endpoint slice %s", name)
+	endpoint, err := conn.DiscoveryV1().EndpointSlices(metadata.Namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		log.Printf("[DEBUG] Received error: %#v", err)
-		return diag.FromErr(err)
+		return diag.Errorf("Failed to read endpoint_slice because: %s", err)
 	}
-	log.Printf("[INFO] Received namespace: %#v", namespace)
-	err = d.Set("metadata", flattenMetadata(namespace.ObjectMeta, d, meta))
+	log.Printf("[INFO] Received endpoint slice: %#v", endpoint)
+	err = d.Set("metadata", flattenMetadata(endpoint.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

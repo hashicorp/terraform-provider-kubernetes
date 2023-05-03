@@ -90,7 +90,7 @@ func flattenEndpointSliceEndpoints(in []api.Endpoint) *schema.Set {
 		}
 		att[i] = m
 	}
-	return schema.NewSet(hashEndpointsSubsetAddress(), att)
+	return schema.NewSet(hashEndpointSliceEndpoints(), att)
 }
 
 func flattenEndpointSlicePorts(in []api.EndpointPort) *schema.Set {
@@ -111,5 +111,5 @@ func flattenEndpointSlicePorts(in []api.EndpointPort) *schema.Set {
 		}
 		att[i] = m
 	}
-	return schema.NewSet(hashEndpointsSubsetPort(), att)
+	return schema.NewSet(hashEndpointSlicePorts(), att)
 }

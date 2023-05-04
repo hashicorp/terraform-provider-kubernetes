@@ -98,7 +98,26 @@ func resourceKubernetesEndpointSliceRead(ctx context.Context, d *schema.Resource
 		return diag.Errorf("Failed to read endpoint_slice because: %s", err)
 	}
 	log.Printf("[INFO] Received endpoint slice: %#v", endpoint)
+
+	address_type := d.Get("address_type").(string)
+	log.Printf("[DEBUG] Default address type is %q", address_type)
+	d.Set("address_type", address_type)
+
 	err = d.Set("metadata", flattenMetadata(endpoint.ObjectMeta, d, meta))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	flattened := flattenEndpointSliceEndpoints(endpoint.Endpoints)
+	log.Printf("[DEBUG] Flattened EndpointSlice Endpoints: %#v", flattened)
+	err = d.Set("endpoints", flattened)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	flattened = flattenEndpointSlicePorts(endpoint.Ports)
+	log.Printf("[DEBUG] Flattened EndpointSlice Ports: %#v", flattened)
+	err = d.Set("endpoints", flattened)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -112,19 +131,30 @@ func resourceKubernetesEndpointSliceUpdate(ctx context.Context, d *schema.Resour
 		return diag.FromErr(err)
 	}
 
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return diag.Errorf("Failed to update endpointSlice because: %s", err)
+	}
+
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
+	if d.HasChange("subset") {
+		subsets := expandEndpointsSubsets(d.Get("subset").(*schema.Set))
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/subsets",
+			Value: subsets,
+		})
+	}
 	data, err := ops.MarshalJSON()
 	if err != nil {
 		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
-
-	log.Printf("[INFO] Updating namespace: %s", ops)
-	out, err := conn.CoreV1().Namespaces().Patch(ctx, d.Id(), pkgApi.JSONPatchType, data, metav1.PatchOptions{})
+	log.Printf("[INFO] Updating endpoints %q: %v", name, string(data))
+	out, err := conn.CoreV1().Endpoints(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return diag.FromErr(err)
+		return diag.Errorf("Failed to update endpoints: %s", err)
 	}
-	log.Printf("[INFO] Submitted updated namespace: %#v", out)
-	d.SetId(out.Name)
+	log.Printf("[INFO] Submitted updated endpoints: %#v", out)
+	d.SetId(buildId(out.ObjectMeta))
 
 	return resourceKubernetesNamespaceRead(ctx, d, meta)
 }

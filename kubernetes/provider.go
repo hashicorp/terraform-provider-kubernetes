@@ -67,7 +67,7 @@ func Provider() *schema.Provider {
 				Optional:      true,
 				DefaultFunc:   schema.EnvDefaultFunc("KUBE_INSECURE", nil),
 				Description:   "Whether server should be accessed without verifying the TLS certificate.",
-				ConflictsWith: []string{"client_ca_certificate"},
+				ConflictsWith: []string{"cluster_ca_certificate"},
 			},
 			"client_certificate": {
 				Type:          schema.TypeString,

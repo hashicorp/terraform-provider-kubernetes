@@ -90,7 +90,7 @@ func Provider() *schema.Provider {
 				Optional:      true,
 				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CLUSTER_CA_CERT_DATA", nil),
 				Description:   "PEM-encoded root certificates bundle for TLS authentication.",
-				ConflictsWith: []string{"config_path", "config_paths", "insecure"},
+				ConflictsWith: []string{"insecure"},
 			},
 			"config_paths": {
 				Type:        schema.TypeList,

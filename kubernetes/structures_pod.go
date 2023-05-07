@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions
@@ -368,6 +369,9 @@ func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
 		if v.Projected != nil {
 			obj["projected"] = flattenProjectedVolumeSource(v.Projected)
 		}
+		if v.Ephemeral != nil {
+			obj["ephemeral"] = flattenEphemeralVolumeSource(v.Ephemeral)
+		}
 		if v.GCEPersistentDisk != nil {
 			obj["gce_persistent_disk"] = flattenGCEPersistentDiskVolumeSource(v.GCEPersistentDisk)
 		}
@@ -575,6 +579,28 @@ func flattenProjectedVolumeSource(in *v1.ProjectedVolumeSource) []interface{} {
 		att["sources"] = sources
 	}
 	return []interface{}{att}
+}
+
+func flattenEphemeralVolumeSource(in *v1.EphemeralVolumeSource) []interface{} {
+	att := make(map[string]interface{})
+	if in.VolumeClaimTemplate != nil {
+		att["volume_claim_template"] = flattenVolumeClaimTemplate(in.VolumeClaimTemplate)
+	}
+	return []interface{}{att}
+}
+
+func flattenVolumeClaimTemplate(in *v1.PersistentVolumeClaimTemplate) []interface{} {
+	tpl := make(map[string]interface{})
+	tpl["metadata"] = flattenVolumeClaimTemplateMetadata(in.ObjectMeta)
+	tpl["spec"] = flattenPersistentVolumeClaimSpec(in.Spec)
+	return []interface{}{tpl}
+}
+
+func flattenVolumeClaimTemplateMetadata(in metav1.ObjectMeta) []interface{} {
+	meta := make(map[string]interface{})
+	meta["labels"] = in.Labels
+	meta["annotations"] = in.Annotations
+	return []interface{}{meta}
 }
 
 func flattenSecretProjection(in *v1.SecretProjection) []interface{} {
@@ -1344,6 +1370,46 @@ func expandProjectedServiceAccountToken(sat map[string]interface{}) (*v1.Service
 	return s, nil
 }
 
+func expandEphemeralVolumeSource(l []interface{}) (*v1.EphemeralVolumeSource, error) {
+	obj := &v1.EphemeralVolumeSource{}
+	if len(l) == 0 || l[0] == nil {
+		return obj, nil
+	}
+	in := l[0].(map[string]interface{})
+
+	if v, ok := in["volume_claim_template"].([]interface{}); ok && len(v) > 0 {
+		tpl, err := expandPersistentVolumeClaimTemplate(v)
+		if err != nil {
+			return obj, fmt.Errorf("Ephemeral volume: failed to parse 'volume_claim_template' value: %s", err)
+		}
+		obj.VolumeClaimTemplate = tpl
+	}
+
+	return obj, nil
+}
+
+func expandPersistentVolumeClaimTemplate(l []interface{}) (*v1.PersistentVolumeClaimTemplate, error) {
+	obj := &v1.PersistentVolumeClaimTemplate{}
+	if len(l) == 0 || l[0] == nil {
+		return obj, nil
+	}
+	in := l[0].(map[string]interface{})
+
+	if v, ok := in["metadata"].([]interface{}); ok && len(v) > 0 {
+		obj.ObjectMeta = expandMetadata(v)
+	}
+
+	if v, ok := in["spec"].([]interface{}); ok && len(v) > 0 {
+		spec, err := expandPersistentVolumeClaimSpec(v)
+		if err != nil {
+			return obj, fmt.Errorf("Ephemeral volume claim template: failed to parse 'spec' value: %s", err)
+		}
+		obj.Spec = *spec
+	}
+
+	return obj, nil
+}
+
 func expandTolerations(tolerations []interface{}) ([]*v1.Toleration, error) {
 	if len(tolerations) == 0 {
 		return []*v1.Toleration{}, nil
@@ -1459,6 +1525,13 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 				return vl, err
 			}
 			vl[i].Projected = pj
+		}
+		if value, ok := m["ephemeral"].([]interface{}); ok && len(value) > 0 {
+			var err error
+			vl[i].Ephemeral, err = expandEphemeralVolumeSource(value)
+			if err != nil {
+				return vl, err
+			}
 		}
 		if v, ok := m["gce_persistent_disk"].([]interface{}); ok && len(v) > 0 {
 			vl[i].GCEPersistentDisk = expandGCEPersistentDiskVolumeSource(v)

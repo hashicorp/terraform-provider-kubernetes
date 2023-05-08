@@ -5,17 +5,14 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
 func resourceKubernetesEndpointSlice() *schema.Resource {
@@ -29,7 +26,7 @@ func resourceKubernetesEndpointSlice() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("EndpointSlice", true),
+			"metadata": metadataSchema("endpointSlice", true),
 			"address_type": {
 				Type:        schema.TypeString,
 				Description: "addressType specifies the type of address carried by this EndpointSlice. All addresses in this slice must be the same type.",
@@ -137,23 +134,23 @@ func resourceKubernetesEndpointSliceUpdate(ctx context.Context, d *schema.Resour
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
-	if d.HasChange("subset") {
-		subsets := expandEndpointsSubsets(d.Get("subset").(*schema.Set))
+	if d.HasChange("endpoints") {
+		endpoints := expandEndpointSliceEndpoints(d.Get("endpoints").(*schema.Set))
 		ops = append(ops, &ReplaceOperation{
-			Path:  "/subsets",
-			Value: subsets,
+			Path:  "/endpoints",
+			Value: endpoints,
 		})
 	}
 	data, err := ops.MarshalJSON()
 	if err != nil {
 		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
-	log.Printf("[INFO] Updating endpoints %q: %v", name, string(data))
-	out, err := conn.CoreV1().Endpoints(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
+	log.Printf("[INFO] Updating endpointSlice %q: %v", name, string(data))
+	out, err := conn.DiscoveryV1().EndpointSlices(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return diag.Errorf("Failed to update endpoints: %s", err)
+		return diag.Errorf("Failed to update endpointSlice: %s", err)
 	}
-	log.Printf("[INFO] Submitted updated endpoints: %#v", out)
+	log.Printf("[INFO] Submitted updated endpointSlice: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
 	return resourceKubernetesNamespaceRead(ctx, d, meta)
@@ -165,60 +162,20 @@ func resourceKubernetesEndpointSliceDelete(ctx context.Context, d *schema.Resour
 		return diag.FromErr(err)
 	}
 
-	name := d.Id()
-	log.Printf("[INFO] Deleting namespace: %#v", name)
-	err = conn.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return diag.Errorf("Failed to delete endpointSlice because: %s", err)
+	}
+	log.Printf("[INFO] Deleting endpointSlice: %#v", name)
+	err = conn.DiscoveryV1().EndpointSlices(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return nil
 		}
-		return diag.FromErr(err)
+		return diag.Errorf("Failed to delete endpoints because: %s", err)
 	}
-
-	stateConf := &resource.StateChangeConf{
-		Target:  []string{},
-		Pending: []string{"Terminating"},
-		Timeout: d.Timeout(schema.TimeoutDelete),
-		Refresh: func() (interface{}, string, error) {
-			out, err := conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
-			if err != nil {
-				if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
-					return nil, "", nil
-				}
-				log.Printf("[ERROR] Received error: %#v", err)
-				return out, "Error", err
-			}
-
-			statusPhase := fmt.Sprintf("%v", out.Status.Phase)
-			log.Printf("[DEBUG] Namespace %s status received: %#v", out.Name, statusPhase)
-			return out, statusPhase, nil
-		},
-	}
-	_, err = stateConf.WaitForStateContext(ctx)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	log.Printf("[INFO] Namespace %s deleted", name)
-
+	log.Printf("[INFO] EndpointSlice %s deleted", name)
 	d.SetId("")
+
 	return nil
 }
-
-// func resourceKubernetesNamespaceExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
-// 	conn, err := meta.(KubeClientsets).MainClientset()
-// 	if err != nil {
-// 		return false, err
-// 	}
-
-// 	name := d.Id()
-// 	log.Printf("[INFO] Checking namespace %s", name)
-// 	_, err = conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
-// 	if err != nil {
-// 		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
-// 			return false, nil
-// 		}
-// 		log.Printf("[DEBUG] Received error: %#v", err)
-// 	}
-// 	log.Printf("[INFO] Namespace %s exists", name)
-// 	return true, err
-// }

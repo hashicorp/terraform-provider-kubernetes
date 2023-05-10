@@ -1,0 +1,7 @@
+```release-note:bug
+`resource/kubernetes_storage_class`: Fix an issue when changing the value of the attribute `allow_volume_expansion` does not alter Kubernetes resource.
+```
+
+```release-note:bug
+`resource/kubernetes_storage_class_v1`: Fix an issue when changing the value of the attribute `allow_volume_expansion` does not alter Kubernetes resource.
+```

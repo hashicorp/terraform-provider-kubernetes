@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -8,8 +11,8 @@ import (
 	"github.com/robfig/cron"
 )
 
-func cronJobSpecFields() map[string]*schema.Schema {
-	s := map[string]*schema.Schema{
+func cronJobSpecFieldsV1() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
 		"concurrency_policy": {
 			Type:         schema.TypeString,
 			Optional:     true,
@@ -67,9 +70,12 @@ func cronJobSpecFields() map[string]*schema.Schema {
 			Default:     false,
 			Description: "This flag tells the controller to suspend subsequent executions, it does not apply to already started executions. Defaults to false.",
 		},
+		"timezone": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The time zone for the given schedule. If not specified, this will rely on the time zone of the kube-controller-manager process. ",
+		},
 	}
-
-	return s
 }
 
 func validateCronExpression() schema.SchemaValidateFunc {

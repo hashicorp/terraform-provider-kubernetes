@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:build acceptance
 // +build acceptance
 
@@ -30,7 +33,7 @@ func TestKubernetesManifest_HPA(t *testing.T) {
 		tf.Destroy(ctx)
 		tf.Close()
 		k8shelper.AssertNamespacedResourceDoesNotExist(t,
-			"autoscaling/v2beta2", "horizontalpodautoscalers", namespace, name)
+			"autoscaling/v2", "horizontalpodautoscalers", namespace, name)
 	}()
 
 	k8shelper.CreateNamespace(t, namespace)
@@ -46,7 +49,7 @@ func TestKubernetesManifest_HPA(t *testing.T) {
 	tf.Apply(ctx)
 
 	k8shelper.AssertNamespacedResourceExists(t,
-		"autoscaling/v2beta2", "horizontalpodautoscalers", namespace, name)
+		"autoscaling/v2", "horizontalpodautoscalers", namespace, name)
 
 	s, err := tf.State(ctx)
 	if err != nil {

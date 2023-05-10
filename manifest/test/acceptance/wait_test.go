@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:build acceptance
 // +build acceptance
 
@@ -5,6 +8,7 @@ package acceptance
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -184,4 +188,38 @@ func TestKubernetesManifest_WaitCondition_Pod(t *testing.T) {
 		"kubernetes_manifest.test.wait.0.condition.1.type":   "ContainersReady",
 		"kubernetes_manifest.test.wait.0.condition.1.status": "True",
 	})
+}
+
+func TestKubernetesManifest_Wait_InvalidCondition(t *testing.T) {
+	// NOTE: this tests that specifying a condition for a resource that
+	// will never have one does not crash the provider
+
+	ctx := context.Background()
+
+	name := randName()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
+	defer func() {
+		tf.Destroy(ctx)
+		tf.Close()
+		k8shelper.AssertResourceDoesNotExist(t, "v1", "namespaces", name)
+	}()
+
+	tfvars := TFVARS{
+		"name": name,
+	}
+	tfconfig := loadTerraformConfig(t, "Wait/wait_for_condition_invalid.tf", tfvars)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
+
+	err = tf.Apply(ctx)
+	if err == nil || !strings.Contains(err.Error(), "Terraform timed out waiting on the operation to complete") {
+		t.Fatalf("Waiter should have timed out")
+	}
 }

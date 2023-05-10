@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -97,6 +100,40 @@ func TestAccKubernetesPod_basic(t *testing.T) {
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPod_scheduler(t *testing.T) {
+	var conf api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	schedulerName := acctest.RandomWithPrefix("test-scheduler")
+	imageName := nginxImageVersion
+	resourceName := "kubernetes_pod_v1.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.22.0")
+			setClusterVersionVar(t, "TF_VAR_scheduler_cluster_version") // should be in format 'vX.Y.Z'
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesCustomScheduler(schedulerName),
+			},
+			{
+				Config: testAccKubernetesCustomScheduler(schedulerName) +
+					testAccKubernetesPodConfigScheduler(podName, schedulerName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", podName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.scheduler_name", schedulerName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
+				),
 			},
 		},
 	})
@@ -1599,7 +1636,6 @@ resource "kubernetes_pod" "test" {
 
   spec {
     automount_service_account_token = false
-
     container {
       image = "%s"
       name  = "containername"
@@ -1652,6 +1688,30 @@ resource "kubernetes_pod" "test" {
   }
 }
 `, secretName, secretName, configMapName, configMapName, podName, imageName)
+}
+
+func testAccKubernetesPodConfigScheduler(podName, schedulerName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+    name = "%s"
+  }
+
+  spec {
+    automount_service_account_token = false
+    scheduler_name                  = %q
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+  timeouts {
+    create = "1m"
+  }
+}
+`, podName, schedulerName, imageName)
 }
 
 func testAccKubernetesPodConfigWithInitContainer(podName, image string) string {
@@ -3065,4 +3125,148 @@ func testAccKubernetesPodConfigRuntimeClassName(name, imageName, runtimeHandler 
   }
 }
 `, name, runtimeHandler, imageName)
+}
+
+func testAccKubernetesCustomScheduler(name string) string {
+	// Source: https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers/
+	return fmt.Sprintf(`variable "namespace" {
+  default = "kube-system"
+}
+
+variable "scheduler_name" {
+  default = %q
+}
+
+variable "scheduler_cluster_version" {
+  default = ""
+}
+
+resource "kubernetes_service_account_v1" "scheduler" {
+  metadata {
+    name      = var.scheduler_name
+    namespace = var.namespace
+  }
+}
+
+resource "kubernetes_cluster_role_binding_v1" "kube_scheduler" {
+  metadata {
+    name = "${var.scheduler_name}-as-kube-scheduler"
+  }
+  subject {
+    kind      = "ServiceAccount"
+    name      = var.scheduler_name
+    namespace = var.namespace
+  }
+  role_ref {
+    kind      = "ClusterRole"
+    name      = "system:kube-scheduler"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+
+resource "kubernetes_cluster_role_binding_v1" "volume_scheduler" {
+  metadata {
+    name = "${var.scheduler_name}-as-volume-scheduler"
+  }
+  subject {
+    kind      = "ServiceAccount"
+    name      = var.scheduler_name
+    namespace = var.namespace
+  }
+  role_ref {
+    kind      = "ClusterRole"
+    name      = "system:volume-scheduler"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+
+resource "kubernetes_role_binding_v1" "authentication_reader" {
+  metadata {
+    name      = "${var.scheduler_name}-extension-apiserver-authentication-reader"
+    namespace = var.namespace
+  }
+  role_ref {
+    kind      = "Role"
+    name      = "extension-apiserver-authentication-reader"
+    api_group = "rbac.authorization.k8s.io"
+  }
+  subject {
+    kind      = "ServiceAccount"
+    name      = var.scheduler_name
+    namespace = var.namespace
+  }
+}
+
+resource "kubernetes_config_map_v1" "scheduler_config" {
+  metadata {
+    name      = "${var.scheduler_name}-config"
+    namespace = var.namespace
+  }
+  data = {
+    "scheduler-config.yaml" = yamlencode(
+      {
+        "apiVersion" : "kubescheduler.config.k8s.io/v1beta2",
+        "kind" : "KubeSchedulerConfiguration",
+        profiles : [{
+          "schedulerName" : var.scheduler_name
+        }],
+        "leaderElection" : { "leaderElect" : false }
+      }
+    )
+  }
+}
+
+resource "kubernetes_pod_v1" "scheduler" {
+  metadata {
+    labels = {
+      component = "scheduler"
+      tier      = "control-plane"
+    }
+    name      = var.scheduler_name
+    namespace = var.namespace
+  }
+
+  spec {
+    service_account_name = kubernetes_service_account_v1.scheduler.metadata.0.name
+    container {
+      name = var.scheduler_name
+      command = [
+        "/usr/local/bin/kube-scheduler",
+        "--config=/etc/kubernetes/scheduler/scheduler-config.yaml"
+      ]
+      image = "registry.k8s.io/kube-scheduler:${var.scheduler_cluster_version}"
+      liveness_probe {
+        http_get {
+          path   = "/healthz"
+          port   = 10259
+          scheme = "HTTPS"
+        }
+        initial_delay_seconds = 15
+      }
+      resources {
+        requests = {
+          cpu = "0.1"
+        }
+      }
+      security_context {
+        privileged = false
+      }
+      volume_mount {
+        name       = "config-volume"
+        mount_path = "/etc/kubernetes/scheduler"
+      }
+    }
+    volume {
+      name = "config-volume"
+      config_map {
+        name = kubernetes_config_map_v1.scheduler_config.metadata.0.name
+      }
+    }
+  }
+
+  timeouts {
+    create = "1m"
+  }
+}
+`, name)
 }

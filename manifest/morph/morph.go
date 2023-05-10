@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package morph
 
 import (
@@ -23,7 +26,7 @@ func ValueToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tft
 		return tftypes.Value{}, diags
 	}
 	if v.IsNull() {
-		return tftypes.NewValue(t, nil), nil
+		return newValue(t, nil, p)
 	}
 	switch {
 	case v.Type().Is(tftypes.String):
@@ -81,7 +84,7 @@ func morphBoolToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 	}
 	switch {
 	case t.Is(tftypes.String):
-		return tftypes.NewValue(t, strconv.FormatBool(bnat)), nil
+		return newValue(t, strconv.FormatBool(bnat), p)
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, diags
 	}
@@ -112,7 +115,7 @@ func morphNumberToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 	}
 	switch {
 	case t.Is(tftypes.String):
-		return tftypes.NewValue(t, vnat.String()), nil
+		return newValue(t, vnat.String(), p)
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, diags
 	}
@@ -154,7 +157,7 @@ func morphStringToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			return tftypes.Value{}, diags
 		}
 		nv := new(big.Float).SetFloat64(fv)
-		return tftypes.NewValue(t, nv), nil
+		return newValue(t, nv, p)
 	case t.Is(tftypes.Bool):
 		bv, err := strconv.ParseBool(vnat)
 		if err != nil {
@@ -166,7 +169,7 @@ func morphStringToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			})
 			return tftypes.Value{}, diags
 		}
-		return tftypes.NewValue(t, bv), nil
+		return newValue(t, bv, p)
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, diags
 	}
@@ -214,7 +217,7 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 			}
 			nlvals[i] = nv
 		}
-		return tftypes.NewValue(t, nlvals), nil
+		return newValue(t, nlvals, p)
 	case t.Is(tftypes.Tuple{}):
 		if len(t.(tftypes.Tuple).ElementTypes) != len(lvals) {
 			diags = append(diags, &tfprotov5.Diagnostic{
@@ -245,7 +248,7 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 			}
 			tvals[i] = nv
 		}
-		return tftypes.NewValue(t, tvals), nil
+		return newValue(t, tvals, p)
 	case t.Is(tftypes.Set{}):
 		var svals []tftypes.Value = make([]tftypes.Value, len(lvals))
 		for i, v := range lvals {
@@ -267,7 +270,7 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 			}
 			svals[i] = nv
 		}
-		return tftypes.NewValue(t, svals), nil
+		return newValue(t, svals, p)
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, diags
 	}
@@ -275,7 +278,7 @@ func morphListToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
 		Summary:   "Cannot transform List value into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n ...at attribute\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.List{}), attributePathSummary(p)),
+		Detail:    fmt.Sprintf("Required type %s, but got %s\n ...at attribute\n%s", typeNameNoPrefix(t), typeNameNoPrefix(v.Type()), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -336,7 +339,7 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 			lvals[i] = nv
 			eltypes[i] = nv.Type()
 		}
-		return tftypes.NewValue(tftypes.Tuple{ElementTypes: eltypes}, lvals), diags
+		return newValue(tftypes.Tuple{ElementTypes: eltypes}, lvals, p)
 	case t.Is(tftypes.List{}):
 		var lvals []tftypes.Value = make([]tftypes.Value, len(tvals))
 		for i, v := range tvals {
@@ -358,7 +361,7 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 			}
 			lvals[i] = nv
 		}
-		return tftypes.NewValue(t, lvals), diags
+		return newValue(t, lvals, p)
 	case t.Is(tftypes.Set{}):
 		var svals []tftypes.Value = make([]tftypes.Value, len(tvals))
 		for i, v := range tvals {
@@ -380,7 +383,7 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 			}
 			svals[i] = nv
 		}
-		return tftypes.NewValue(t, svals), diags
+		return newValue(t, svals, p)
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, diags
 	}
@@ -388,7 +391,7 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
 		Summary:   "Cannot transform Tuple value into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n ...at attribute\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Tuple{}), attributePathSummary(p)),
+		Detail:    fmt.Sprintf("Required type %s, but got %s\n ...at attribute\n%s", typeNameNoPrefix(t), typeNameNoPrefix(v.Type()), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -428,7 +431,7 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			}
 			svals[i] = nv
 		}
-		return tftypes.NewValue(t, svals), diags
+		return newValue(t, svals, p)
 	case t.Is(tftypes.List{}):
 		var lvals []tftypes.Value = make([]tftypes.Value, len(svals))
 		for i, v := range svals {
@@ -450,7 +453,7 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			}
 			lvals[i] = nv
 		}
-		return tftypes.NewValue(t, lvals), diags
+		return newValue(t, lvals, p)
 	case t.Is(tftypes.Tuple{}):
 		if len(t.(tftypes.Tuple).ElementTypes) != len(svals) {
 			diags = append(diags, &tfprotov5.Diagnostic{
@@ -481,7 +484,7 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			}
 			tvals[i] = nv
 		}
-		return tftypes.NewValue(t, tvals), diags
+		return newValue(t, tvals, p)
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, diags
 	}
@@ -489,7 +492,7 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
 		Summary:   "Cannot transform Set value into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Set{}), attributePathSummary(p)),
+		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(v.Type()), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -539,7 +542,7 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			}
 			ovals[k] = nv
 		}
-		return tftypes.NewValue(t, ovals), diags
+		return newValue(t, ovals, p)
 	case t.Is(tftypes.Map{}):
 		var nmvals map[string]tftypes.Value = make(map[string]tftypes.Value, len(mvals))
 		for k, v := range mvals {
@@ -561,7 +564,7 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			}
 			nmvals[k] = nv
 		}
-		return tftypes.NewValue(t, nmvals), diags
+		return newValue(t, nmvals, p)
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, diags
 	}
@@ -569,7 +572,7 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
 		Summary:   "Cannot transform Map value into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Map{}), attributePathSummary(p)),
+		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(v.Type()), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -623,7 +626,12 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 		// tftypes.NewValue() fails if any of the attributes in the object don't have a corresponding value
 		for k := range t.(tftypes.Object).AttributeTypes {
 			if _, ok := ovals[k]; !ok {
-				ovals[k] = tftypes.NewValue(t.(tftypes.Object).AttributeTypes[k], nil)
+				nv, d := newValue(t.(tftypes.Object).AttributeTypes[k], nil, p)
+				if d != nil {
+					diags = append(diags, d...)
+					return tftypes.Value{}, diags
+				}
+				ovals[k] = nv
 			}
 		}
 		otypes := make(map[string]tftypes.Type, len(ovals))
@@ -652,7 +660,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			}
 			mvals[k] = nv
 		}
-		return tftypes.NewValue(t, mvals), diags
+		return newValue(t, mvals, p)
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, diags
 	}
@@ -660,7 +668,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 		Attribute: p,
 		Severity:  tfprotov5.DiagnosticSeverityError,
 		Summary:   "Failed to transform Object into unsupported type",
-		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(tftypes.Object{}), attributePathSummary(p)),
+		Detail:    fmt.Sprintf("Required type %s, but got %s\n...at attribute:\n%s", typeNameNoPrefix(t), typeNameNoPrefix(v.Type()), attributePathSummary(p)),
 	})
 	return tftypes.Value{}, diags
 }
@@ -709,4 +717,25 @@ func attributePathSummary(p *tftypes.AttributePath) string {
 		}
 	}
 	return b.String()
+}
+
+func validateValue(t tftypes.Type, val interface{}, p *tftypes.AttributePath) []*tfprotov5.Diagnostic {
+	var diags []*tfprotov5.Diagnostic
+	if err := tftypes.ValidateValue(t, val); err != nil {
+		diags = append(diags, &tfprotov5.Diagnostic{
+			Attribute: p,
+			Severity:  tfprotov5.DiagnosticSeverityError,
+			Summary:   "Provider encountered an error when trying to determine the Terraform type information for the configured manifest",
+			Detail:    err.(error).Error(),
+		})
+		return diags
+	}
+	return nil
+}
+
+func newValue(t tftypes.Type, val interface{}, p *tftypes.AttributePath) (tftypes.Value, []*tfprotov5.Diagnostic) {
+	if diags := validateValue(t, val, p); diags != nil {
+		return tftypes.Value{}, diags
+	}
+	return tftypes.NewValue(t, val), nil
 }

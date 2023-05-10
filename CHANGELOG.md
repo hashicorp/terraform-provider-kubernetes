@@ -1,3 +1,74 @@
+## 2.20.0 (April 20, 2023)
+
+ENHANCEMENTS:
+
+`kubernetes/resource_kubernetes_env.go`: add support for initContainers [[GH-2067](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2067)]
+`kubernetes/resource_kubernetes_node_taint.go`: Remove MaxItems from taint attribute [[GH-2046](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2046)]
+
+BUG FIXES:
+
+* Fix diff after import when importing resources containing volume_mount [[GH-2061](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2061)]
+* `resource/kubernetes_node_taint`: Fix an issue when updating taint does not update the ID in the state file. [[GH-2077](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2077)]
+
+## 2.19.0 (March 23, 2023)
+
+FEATURES:
+
+New Resource: `kubernetes_token_request_v1`. [[GH-2024](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2024)]
+
+BUG FIXES:
+
+* `data_source/kubernetes_secret_v1`: Fix an issue where data_source cannot read secret created with generate_name. [[GH-2028](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2028)]
+* `data_source/kubernetes_secret`: Fix an issue where data_source cannot read secret created with generate_name. [[GH-2028](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2028)]
+* `kubernetes/schema_pod_spec.go`: Fix unexpected volumes appearing on plan [[GH-2006](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2006)]
+* `resource/kubernetes_cron_job_v1`: Fix annotation logic to prevent internalkeys from being removed in templates [[GH-1983](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1983)]
+* `resource/kubernetes_manifest`: Fix a panic when constructing the diagnostic message about incompatible attribute types [[GH-2054](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2054)]
+* `resource/kubernetes_manifest`: Fix crash when manifest config contains unknown values of unknown type (DynamicPseudoType) [[GH-2055](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2055)]
+
+## 2.18.1 (February 21, 2023)
+
+HOTFIX:
+
+* kubernetes_manifest: fix crash when waiting on conditions that are not yet present [[GH-2008](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2008)]
+
+## 2.18.0 (February 15, 2023)
+
+FEATURES:
+
+* New data source: `data_source/kubernetes_nodes`. [[GH-1921](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1921)]
+* New data source: `data_source/kubernetes_resources`. [[GH-1967](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1967)]
+* New resource: `resource/kubernetes_node_taint`. [[GH-1921](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1921)]
+
+ENHANCEMENT:
+
+* `resource/kubernetes_annotations`: Add a new attribute `template_annotations` that allows adding annotations to resources with pod templates. [[GH-1972](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1972)]
+* `resource/kubernetes_cron_job_v1`: Add a new attribute `spec.timezone`. [[GH-1971](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1971)]
+
+BUG FIXES:
+
+* `resource/kubernetes_mutating_webhook_configuration`: Fix an issue when the delete operation may not be idempotent. [[GH-1999](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1999)]
+* `resource/kubernetes_network_policy_v1`: Fix an issue when the delete operation may not be idempotent. [[GH-1999](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1999)]
+* `resource/kubernetes_network_policy`: Fix an issue when the delete operation may not be idempotent. [[GH-1999](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1999)]
+* `resource/kubernetes_persistent_volume_claim_v1`: Fix an issue when the delete operation may not be idempotent. [[GH-1999](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1999)]
+* `resource/kubernetes_persistent_volume_claim`: Fix an issue when the delete operation may not be idempotent. [[GH-1999](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1999)]
+* `resource/kubernetes_storage_class_v1`: Fix an issue when changing the value of the attribute `allow_volume_expansion` does not alter Kubernetes resource. [[GH-1519](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1519)]
+* `resource/kubernetes_storage_class`: Fix an issue when changing the value of the attribute `allow_volume_expansion` does not alter Kubernetes resource. [[GH-1519](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1519)]
+
+DOCS:
+
+* New data source: `data_source/kubernetes_nodes`. [[GH-1921](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1921)]
+* New data source: `data_source/kubernetes_resources`. [[GH-1967](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1967)]
+* New resource: `resource/kubernetes_node_taint`. [[GH-1921](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1921)]
+* `provider`: Add a note regarding the `KUBECONFIG` environment variable. [[GH-1989](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1989)]
+* `resource/kubernetes_annotations`: Add a new attribute `template_annotations`. [[GH-1972](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1972)]
+* `resource/kubernetes_job_v1`: Add documentation for the attribute `spec.completion_mode`. [[GH-1997](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1997)]
+* `resource/kubernetes_job`: Add documentation for the attribute `spec.completion_mode`. [[GH-1997](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1997)]
+* `resource/resource_kubernetes_cron_job_v1`: Add a new attribute `spec.timezone`. [[GH-1971](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1971)]
+
+## Community Contributors :raised_hands:
+- @AnisimoffNikita made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1519
+- @partcyborg made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1921
+
 ## 2.17.0 (January 23, 2023)
 
 ENHANCEMENT:

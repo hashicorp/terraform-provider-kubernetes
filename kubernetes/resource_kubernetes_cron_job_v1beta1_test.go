@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -12,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesCronJob_basic(t *testing.T) {
+func TestAccKubernetesCronJobV1Beta1_basic(t *testing.T) {
 	var conf1, conf2 v1beta1.CronJob
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := alpineImageVersion
@@ -76,7 +79,7 @@ func TestAccKubernetesCronJob_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesCronJob_extra(t *testing.T) {
+func TestAccKubernetesCronJobV1Beta1_extra(t *testing.T) {
 	var conf v1beta1.CronJob
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := alpineImageVersion

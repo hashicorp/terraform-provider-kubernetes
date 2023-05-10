@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -19,7 +22,10 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 	imageName := alpineImageVersion
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.25.0")
+		},
 		IDRefreshName:     "kubernetes_cron_job_v1.test",
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
@@ -30,19 +36,24 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesCronJobV1Exists("kubernetes_cron_job_v1.test", &conf1),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "metadata.0.annotations.hashicorp", "terraform"),
 					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "spec.0.schedule"),
+					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "spec.0.timezone"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.concurrency_policy", "Replace"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.failed_jobs_history_limit", "5"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.schedule", "1 0 * * *"),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.timezone", "Etc/UTC"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.starting_deadline_seconds", "10"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.successful_jobs_history_limit", "10"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.suspend", "true"),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.metadata.0.annotations.cluster-autoscaler.kubernetes.io/safe-to-evict", "false"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.backoff_limit", "2"),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.template.0.metadata.0.annotations.controller.kubernetes.io/pod-deletion-cost", "10000"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.template.0.spec.0.container.0.image", imageName),
 				),
@@ -59,6 +70,7 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.concurrency_policy", "Allow"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.failed_jobs_history_limit", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.schedule", "1 0 * * *"),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.timezone", ""),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.starting_deadline_seconds", "0"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.successful_jobs_history_limit", "3"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.suspend", "false"),
@@ -80,7 +92,10 @@ func TestAccKubernetesCronJobV1_extra(t *testing.T) {
 	imageName := alpineImageVersion
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.25.0")
+		},
 		IDRefreshName:     "kubernetes_cron_job_v1.test",
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
@@ -177,20 +192,32 @@ func testAccKubernetesCronJobV1Config_basic(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_cron_job_v1" "test" {
   metadata {
     name = "%s"
+    annotations = {
+      "hashicorp" = "terraform"
+    }
   }
   spec {
     concurrency_policy            = "Replace"
     failed_jobs_history_limit     = 5
     schedule                      = "1 0 * * *"
+    timezone                      = "Etc/UTC"
     starting_deadline_seconds     = 10
     successful_jobs_history_limit = 10
     suspend                       = true
     job_template {
-      metadata {}
+      metadata {
+        annotations = {
+          "cluster-autoscaler.kubernetes.io/safe-to-evict" = "false"
+        }
+      }
       spec {
         backoff_limit = 2
         template {
-          metadata {}
+          metadata {
+            annotations = {
+              "controller.kubernetes.io/pod-deletion-cost" = 10000
+            }
+          }
           spec {
             container {
               name    = "hello"
@@ -243,6 +270,7 @@ func testAccKubernetesCronJobV1Config_extra(name, imageName string) string {
   }
   spec {
     schedule                      = "1 0 * * *"
+    timezone                      = "Etc/UTC"
     concurrency_policy            = "Forbid"
     successful_jobs_history_limit = 10
     failed_jobs_history_limit     = 10
@@ -274,6 +302,7 @@ func testAccKubernetesCronJobV1Config_extraModified(name, imageName string) stri
   }
   spec {
     schedule                      = "1 0 * * *"
+    timezone                      = "Etc/UTC"
     concurrency_policy            = "Forbid"
     successful_jobs_history_limit = 2
     failed_jobs_history_limit     = 2

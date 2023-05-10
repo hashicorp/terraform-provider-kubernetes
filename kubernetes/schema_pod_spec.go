@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -351,6 +354,13 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 				},
 			},
 		},
+		"scheduler_name": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			ForceNew:    !isUpdatable,
+			Description: "If specified, the pod will be dispatched by specified scheduler. If not specified, the pod will be dispatched by default scheduler.",
+		},
 		"service_account_name": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -474,7 +484,6 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 		"volume": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			Computed:    true,
 			Description: "List of volumes that can be mounted by containers belonging to the pod. More info: http://kubernetes.io/docs/user-guide/volumes",
 			Elem:        volumeSchema(isUpdatable),
 		},

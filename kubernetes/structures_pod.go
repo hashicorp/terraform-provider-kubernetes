@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -106,6 +109,10 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 
 	if in.SecurityContext != nil {
 		att["security_context"] = flattenPodSecurityContext(in.SecurityContext)
+	}
+
+	if in.SchedulerName != "" {
+		att["scheduler_name"] = in.SchedulerName
 	}
 
 	if in.ServiceAccountName != "" {
@@ -775,6 +782,10 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 			return obj, err
 		}
 		obj.SecurityContext = ctx
+	}
+
+	if v, ok := in["scheduler_name"].(string); ok {
+		obj.SchedulerName = v
 	}
 
 	if v, ok := in["service_account_name"].(string); ok {

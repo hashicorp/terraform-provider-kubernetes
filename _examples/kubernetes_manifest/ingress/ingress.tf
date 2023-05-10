@@ -1,7 +1,10 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_manifest" "test-ingress" {
 
   manifest = {
-    "apiVersion" = "networking.k8s.io/v1beta1"
+    "apiVersion" = "networking.k8s.io/v1"
     "kind"       = "Ingress"
     "metadata" = {
       "annotations" = {
@@ -18,10 +21,15 @@ resource "kubernetes_manifest" "test-ingress" {
             "paths" = [
               {
                 "backend" = {
-                  "serviceName" = "web"
-                  "servicePort" = 80
+                  "service" = {
+                    "name" = "test"
+                    "port" = {
+                      "number" = "80"
+                    }
+                  }
                 }
-                "path" = "/"
+                "path"     = "/"
+                "pathType" = "Prefix"
               },
             ]
           }

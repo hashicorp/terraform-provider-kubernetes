@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -71,7 +74,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 				string(batchv1.IndexedCompletion),
 				string(batchv1.NonIndexedCompletion),
 			}, false),
-			Description: "CompletionMode specifies how Pod completions are tracked.",
+			Description: "Specifies how Pod completions are tracked. It can be `NonIndexed` (default) or `Indexed`. For more information: https://kubernetes.io/docs/concepts/workloads/controllers/job/#completion-mode",
 		},
 		"manual_selector": {
 			Type:        schema.TypeBool,

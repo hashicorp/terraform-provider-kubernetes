@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -222,6 +225,7 @@ func Provider() *schema.Provider {
 			"kubernetes_service_account_v1":         dataSourceKubernetesServiceAccount(),
 			"kubernetes_persistent_volume_claim":    dataSourceKubernetesPersistentVolumeClaim(),
 			"kubernetes_persistent_volume_claim_v1": dataSourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_nodes":                      dataSourceKubernetesNodes(),
 
 			// networking
 			"kubernetes_ingress":    dataSourceKubernetesIngress(),
@@ -257,6 +261,7 @@ func Provider() *schema.Provider {
 			"kubernetes_env":                        resourceKubernetesEnv(),
 			"kubernetes_limit_range":                resourceKubernetesLimitRange(),
 			"kubernetes_limit_range_v1":             resourceKubernetesLimitRange(),
+			"kubernetes_node_taint":                 resourceKubernetesNodeTaint(),
 			"kubernetes_persistent_volume":          resourceKubernetesPersistentVolume(),
 			"kubernetes_persistent_volume_v1":       resourceKubernetesPersistentVolume(),
 			"kubernetes_persistent_volume_claim":    resourceKubernetesPersistentVolumeClaim(),
@@ -281,7 +286,7 @@ func Provider() *schema.Provider {
 			// batch
 			"kubernetes_job":         resourceKubernetesJob(),
 			"kubernetes_job_v1":      resourceKubernetesJob(),
-			"kubernetes_cron_job":    resourceKubernetesCronJob(),
+			"kubernetes_cron_job":    resourceKubernetesCronJobV1Beta1(),
 			"kubernetes_cron_job_v1": resourceKubernetesCronJobV1(),
 
 			// autoscaling
@@ -337,6 +342,12 @@ func Provider() *schema.Provider {
 			// provider helper resources
 			"kubernetes_labels":      resourceKubernetesLabels(),
 			"kubernetes_annotations": resourceKubernetesAnnotations(),
+
+			// authentication
+			"kubernetes_token_request_v1": resourceKubernetesTokenRequestV1(),
+
+			//node
+			"kubernetes_runtime_class_v1": resourceKubernetesRuntimeClassV1(),
 		},
 	}
 

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -177,20 +180,6 @@ func findDefaultServiceAccount(ctx context.Context, sa *api.ServiceAccount, conn
 	*/
 	ds := make([]string, 0)
 
-	sv, err := serverVersionGreaterThanOrEqual(conn, "1.24.0")
-	if err != nil {
-		return "", diag.FromErr(err)
-	}
-	if sv {
-		return "", diag.Diagnostics{
-			diag.Diagnostic{
-				Severity: diag.Warning,
-				Summary:  `"default_secret_name" is no longer applicable for Kubernetes v1.24.0 and above`,
-				Detail:   `Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, "default_secret_name" will be empty`,
-			},
-		}
-	}
-
 	for _, saSecret := range sa.Secrets {
 		if !strings.HasPrefix(saSecret.Name, fmt.Sprintf("%s-token-", sa.Name)) {
 			log.Printf("[DEBUG] Skipping %s as it doesn't have the right name", saSecret.Name)
@@ -314,20 +303,6 @@ func resourceKubernetesServiceAccountRead(ctx context.Context, d *schema.Resourc
 	err = d.Set("secret", secrets)
 	if err != nil {
 		return diag.FromErr(err)
-	}
-
-	sv, err := serverVersionGreaterThanOrEqual(conn, "1.24.0")
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if sv {
-		return diag.Diagnostics{
-			diag.Diagnostic{
-				Severity: diag.Warning,
-				Summary:  `"default_secret_name" is no longer applicable for Kubernetes v1.24.0 and above`,
-				Detail:   `Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, "default_secret_name" will be empty`,
-			},
-		}
 	}
 
 	return nil

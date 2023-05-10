@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 locals {
   server_shell_script = <<EOT
 sed -E "s/HOST_IP/$${HOST_IP?}/g" /vault/config/extraconfig-from-values.hcl > /tmp/storageconfig.hcl;
@@ -24,7 +27,7 @@ resource "kubernetes_manifest" "service-account-vault" {
 resource "kubernetes_manifest" "cluster-role-binding-server" {
 
   manifest = {
-    "apiVersion" = "rbac.authorization.k8s.io/v1beta1"
+    "apiVersion" = "rbac.authorization.k8s.io/v1"
     "kind"       = "ClusterRoleBinding"
     "metadata" = {
       "labels" = {

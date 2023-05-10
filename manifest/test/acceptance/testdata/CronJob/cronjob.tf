@@ -1,7 +1,10 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_manifest" "test" {
 
   manifest = {
-    apiVersion = "batch/v1beta1"
+    apiVersion = "batch/v1"
     kind       = "CronJob"
     metadata = {
       name      = var.name

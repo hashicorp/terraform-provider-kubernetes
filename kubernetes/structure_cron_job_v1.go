@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -16,6 +19,8 @@ func flattenCronJobSpecV1(in batch.CronJobSpec, d *schema.ResourceData, meta int
 	}
 
 	att["schedule"] = in.Schedule
+
+	att["timezone"] = in.TimeZone
 
 	jobTemplate, err := flattenJobTemplateV1(in.JobTemplate, d, meta)
 	if err != nil {
@@ -39,7 +44,7 @@ func flattenCronJobSpecV1(in batch.CronJobSpec, d *schema.ResourceData, meta int
 func flattenJobTemplateV1(in batch.JobTemplateSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
-	att["metadata"] = flattenMetadata(in.ObjectMeta, d, meta)
+	att["metadata"] = flattenMetadata(in.ObjectMeta, d, meta, "spec.0.job_template.0.")
 
 	jobSpec, err := flattenJobSpec(in.Spec, d, meta, "spec.0.job_template.0.spec.0.template.0.")
 	if err != nil {
@@ -69,6 +74,10 @@ func expandCronJobSpecV1(j []interface{}) (batch.CronJobSpec, error) {
 
 	if v, ok := in["schedule"].(string); ok && v != "" {
 		obj.Schedule = v
+	}
+
+	if v, ok := in["timezone"].(string); ok && v != "" {
+		obj.TimeZone = &v
 	}
 
 	jtSpec, err := expandJobTemplateV1(in["job_template"].([]interface{}))

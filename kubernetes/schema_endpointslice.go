@@ -53,7 +53,12 @@ func schemaEndpointSliceSubsetEndpoints() *schema.Resource {
 				Description: "Node name of this endpoint",
 				Optional:    true,
 			},
-			"target_ref": {},
+			"target_ref": {
+				Type:     schema.TypeList,
+				MaxItems: 1,
+				Optional: true,
+				Elem:     schemaObjectReference(),
+			},
 			"zone": {
 				Type:        schema.TypeString,
 				Description: "zone is the name of the Zone this endpoint exists in.",
@@ -83,6 +88,39 @@ func schemaEndpointSliceSubsetPorts() *schema.Resource {
 				Optional:    true,
 			},
 			"app_protocol": {
+				Type:        schema.TypeString,
+				Description: "The application protocol for this port. This is used as a hint for implementations to offer richer behavior for protocols that they understand. This field follows standard Kubernetes label syntax.",
+				Optional:    true,
+			},
+		},
+	}
+}
+
+func schemaObjectReference() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:        schema.TypeString,
+				Description: "port represents the port number of the endpoint.",
+				Required:    true,
+			},
+			"namespace": {
+				Type:        schema.TypeString,
+				Description: "protocol represents the IP protocol for this port. Must be UDP, TCP, or SCTP. Default is TCP.",
+				Optional:    true,
+				Default:     "TCP",
+			},
+			"resource_version": {
+				Type:        schema.TypeString,
+				Description: "name represents the name of this port. All ports in an EndpointSlice must have a unique name.",
+				Optional:    true,
+			},
+			"uid": {
+				Type:        schema.TypeString,
+				Description: "The application protocol for this port. This is used as a hint for implementations to offer richer behavior for protocols that they understand. This field follows standard Kubernetes label syntax.",
+				Optional:    true,
+			},
+			"field_path": {
 				Type:        schema.TypeString,
 				Description: "The application protocol for this port. This is used as a hint for implementations to offer richer behavior for protocols that they understand. This field follows standard Kubernetes label syntax.",
 				Optional:    true,

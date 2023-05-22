@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
 	api "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func expandEndpointSliceEndpoints(in *schema.Set) []api.Endpoint {
@@ -39,6 +40,32 @@ func expandEndpointSliceEndpoints(in *schema.Set) []api.Endpoint {
 		endpoints[i] = r
 	}
 	return endpoints
+}
+
+func expandObjectReference(l []interface{}) *v1.ObjectReference {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.ObjectReference{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.ObjectReference{}
+
+	if v, ok := in["name"].(string); ok {
+		obj.Name = v
+	}
+	if v, ok := in["namespace"].(string); ok {
+		obj.Namespace = v
+	}
+	if v, ok := in["resource_version"].(string); ok {
+		obj.ResourceVersion = v
+	}
+	if v, ok := in["uid"]; ok {
+		obj.UID = types.UID(v.(string))
+	}
+	if v, ok := in["field_path"].(string); ok {
+		obj.FieldPath = v
+	}
+
+	return obj
 }
 
 func expandEndpointSlicePorts(in *schema.Set) []api.EndpointPort {
@@ -112,4 +139,25 @@ func flattenEndpointSlicePorts(in []api.EndpointPort) *schema.Set {
 		att[i] = m
 	}
 	return schema.NewSet(hashEndpointSlicePorts(), att)
+}
+
+func flattenObjectReference(in *v1.ObjectReference) []interface{} {
+	att := make(map[string]interface{})
+	if in.Name != "" {
+		att["name"] = in.Name
+	}
+	if in.Name != "" {
+		att["namespace"] = in.Name
+	}
+	if in.FieldPath != "" {
+		att["field_path"] = in.Name
+	}
+	if in.ResourceVersion != "" {
+		att["resource_version"] = in.Name
+	}
+	if in.UID != "" {
+		att["uid"] = in.Name
+	}
+
+	return []interface{}{att}
 }

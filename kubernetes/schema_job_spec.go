@@ -52,6 +52,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 		"backoff_limit": {
 			Type:         schema.TypeInt,
 			Optional:     true,
+			Default:      6,
 			ForceNew:     false,
 			ValidateFunc: validateNonNegativeInteger,
 			Description:  "Specifies the number of retries before marking this job failed. Defaults to 6",

@@ -26,20 +26,20 @@ func resourceKubernetesEndpointSlice() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchema("endpointSlice", true),
+			"metadata": namespacedMetadataSchema("endpoints", true),
 			"address_type": {
 				Type:        schema.TypeString,
 				Description: "addressType specifies the type of address carried by this EndpointSlice. All addresses in this slice must be the same type.",
 				Required:    true,
 			},
 			"endpoints": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Description: "A list of references to secrets in the same namespace to use for pulling any images in pods that reference this Service Account. More info: http://kubernetes.io/docs/user-guide/secrets#manually-specifying-an-imagepullsecret",
 				Required:    true,
 				Elem:        schemaEndpointSliceSubsetEndpoints(),
 			},
 			"ports": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Required: true,
 				Elem:     schemaEndpointSliceSubsetPorts(),
 			},
@@ -68,20 +68,12 @@ func resourceKubernetesEndpointSliceCreate(ctx context.Context, d *schema.Resour
 	}
 
 	log.Printf("[INFO] Submitted new endpoint_slice: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(metadata.Name)
 
 	return resourceKubernetesEndpointSliceRead(ctx, d, meta)
 }
 
 func resourceKubernetesEndpointSliceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesNamespaceExists(ctx, d, meta)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if !exists {
-		d.SetId("")
-		return diag.Diagnostics{}
-	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -151,7 +143,7 @@ func resourceKubernetesEndpointSliceUpdate(ctx context.Context, d *schema.Resour
 		return diag.Errorf("Failed to update endpointSlice: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated endpointSlice: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(name)
 
 	return resourceKubernetesNamespaceRead(ctx, d, meta)
 }

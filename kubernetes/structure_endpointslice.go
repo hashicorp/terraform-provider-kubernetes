@@ -18,8 +18,8 @@ func expandEndpointSliceEndpoints(in *schema.Set) []api.Endpoint {
 	for i, endpoint := range in.List() {
 		r := api.Endpoint{}
 		endpointConfig := endpoint.(map[string]interface{})
-		if v, ok := endpointConfig["addresses"].([]string); ok {
-			r.Addresses = v
+		if v := endpointConfig["addresses"].([]interface{}); len(v) != 0 {
+			r.Addresses = expandStringSlice(v)
 		}
 		if v, ok := endpointConfig["conditions"].(api.EndpointConditions); ok {
 			r.Conditions = v
@@ -97,13 +97,13 @@ func flattenEndpointSliceEndpoints(in []api.Endpoint) *schema.Set {
 	att := make([]interface{}, len(in), len(in))
 	for i, e := range in {
 		m := make(map[string]interface{})
-		if *e.Hostname != "" {
+		if e.Hostname != nil {
 			m["hostname"] = e.Hostname
 		}
-		if *e.NodeName != "" {
+		if e.NodeName != nil {
 			m["node_name"] = e.NodeName
 		}
-		if *e.Zone != "" {
+		if e.Zone != nil {
 			m["zone"] = e.Zone
 		}
 		if len(e.Addresses) != 0 {

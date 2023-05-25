@@ -31,6 +31,12 @@ func resourceKubernetesNamespace() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("namespace", true),
+			"wait_for_default_service_account": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Terraform will wait for the default service account to be created.",
+			},
 		},
 		Timeouts: &schema.ResourceTimeout{
 			Delete: schema.DefaultTimeout(5 * time.Minute),
@@ -56,6 +62,28 @@ func resourceKubernetesNamespaceCreate(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[INFO] Submitted new namespace: %#v", out)
 	d.SetId(out.Name)
 
+	if d.Get("wait_for_default_service_account").(bool) {
+		log.Printf("[DEBUG] Waiting for default service account to be created")
+
+		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+			_, err := conn.CoreV1().ServiceAccounts(out.Namespace).Get(ctx, "default",
+				metav1.GetOptions{})
+			if err != nil {
+				log.Printf("[DEBUG] Received error: %#v", err)
+				return resource.NonRetryableError(err)
+			}
+			log.Println("[INFO] Received default service account")
+			return nil
+		})
+		if err != nil {
+			lastWarnings, wErr := getLastWarningsForObject(ctx, conn, out.ObjectMeta,
+				"ServiceAccount", 3)
+			if wErr != nil {
+				return diag.FromErr(wErr)
+			}
+			return diag.Errorf("%s%s", err, stringifyEvents(lastWarnings))
+		}
+	}
 	return resourceKubernetesNamespaceRead(ctx, d, meta)
 }
 

@@ -109,6 +109,29 @@ func TestAccKubernetesNamespace_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesNamespace_default_service_account(t *testing.T) {
+	var nsConf api.Namespace
+	var saConf api.ServiceAccount
+	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_namespace.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesSecretDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesNamespaceConfig_basic(nsName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesNamespaceExists("kubernetes_namespace.test", &nsConf),
+					testAccCheckKubernetesDefaultServiceAccountExists(resourceName, &saConf),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesNamespace_generatedName(t *testing.T) {
 	var conf api.Namespace
 	prefix := "tf-acc-test-gen-"
@@ -362,4 +385,34 @@ func testAccKubernetesNamespaceConfig_deleteTimeout(nsName string) string {
   }
 }
 `, nsName)
+}
+
+func testAccCheckKubernetesDefaultServiceAccountExists(n string,
+	obj *api.ServiceAccount) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("Not found: %s", n)
+		}
+
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
+		ctx := context.TODO()
+
+		namespace, _, err := idParts(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+
+		out, err := conn.CoreV1().ServiceAccounts(namespace).Get(ctx, "default",
+			metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		*obj = *out
+		return nil
+	}
 }

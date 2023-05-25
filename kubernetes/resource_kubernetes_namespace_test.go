@@ -122,7 +122,7 @@ func TestAccKubernetesNamespace_default_service_account(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesSecretDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesNamespaceConfig_basic(nsName),
+				Config: testAccKubernetesNamespaceConfig_wait_for_default_service_acccount(nsName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesNamespaceExists("kubernetes_namespace.test", &nsConf),
 					testAccCheckKubernetesDefaultServiceAccountExists(resourceName, &saConf),
@@ -383,6 +383,16 @@ func testAccKubernetesNamespaceConfig_deleteTimeout(nsName string) string {
   timeouts {
     delete = "30m"
   }
+}
+`, nsName)
+}
+
+func testAccKubernetesNamespaceConfig_wait_for_default_service_acccount(nsName string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+  metadata {
+    name = "%s"
+  }
+  wait_for_default_service_account = true
 }
 `, nsName)
 }

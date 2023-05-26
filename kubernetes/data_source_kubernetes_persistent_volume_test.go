@@ -47,31 +47,31 @@ func TestAccKubernetesDataSourcePV_basic(t *testing.T) {
 
 func testAccKubernetesDataSourcePVConfig_basic(name string) string {
 	return fmt.Sprintf(`
-	resource "kubernetes_persistent_volume" "test" {
-		metadata {
-		  name = "%s"
-		}
-	  
-		spec {
-		
-		  capacity = {
-		    storage = "5Gi"
-		  }
-		  
-		  access_modes = ["ReadWriteOnce"]
-		  persistent_volume_source {
-			vsphere_volume {
-			  volume_path = "/absolute/path"
-			}
-		  }
-	  
-		}
-	  }
-	  
-	  data "kubernetes_persistent_volume" "test" {
-		  metadata {
-			  name = "${kubernetes_persistent_volume.test.metadata.0.name}"
-		  }
-	  }
+resource "kubernetes_persistent_volume" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+
+    capacity = {
+      storage = "5Gi"
+    }
+
+    access_modes = ["ReadWriteOnce"]
+    persistent_volume_source {
+      vsphere_volume {
+        volume_path = "/absolute/path"
+      }
+    }
+
+  }
+}
+
+data "kubernetes_persistent_volume" "test" {
+  metadata {
+    name = "${kubernetes_persistent_volume.test.metadata.0.name}"
+  }
+}
 `, name)
 }

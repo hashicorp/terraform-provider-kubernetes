@@ -20,7 +20,7 @@ func dataSourceKubernetesPersistentVolume() *schema.Resource {
 			"spec": {
 				Type:        schema.TypeList,
 				Description: "Spec of the persistent volume owned by the cluster",
-				Required:    true,
+				Optional:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"access_modes": {

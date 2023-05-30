@@ -53,8 +53,4 @@ The following arguments are supported:
 
 ## Import
 
-Node taint can be imported using the format `<node>,<key>=<value>:<effect>`, e.g.
-
-```
-$ terraform import kubernetes_node_taint.example 'my-node.my-cluster.k8s.local,node-role.kubernetes.io/example=true:NoSchedule'
-```
+This resource does not support the `import` command. As this resource operates on Kubernetes resources that already exist, creating the resource is equivalent to importing it.

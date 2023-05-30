@@ -18,7 +18,7 @@ func schemaEndpointSliceSubsetEndpoints() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"conditions": {
+			"condition": {
 				Type:        schema.TypeList,
 				Description: "A list of references to secrets in the same namespace to use for pulling any images in pods that reference this Service Account. More info: http://kubernetes.io/docs/user-guide/secrets#manually-specifying-an-imagepullsecret",
 				Required:    true,
@@ -43,7 +43,7 @@ func schemaEndpointSliceSubsetEndpoints() *schema.Resource {
 					},
 				},
 			},
-			"host_name": {
+			"hostname": {
 				Type:        schema.TypeString,
 				Description: "Host name of this endpoint.",
 				Optional:    true,

@@ -32,13 +32,13 @@ func resourceKubernetesEndpointSlice() *schema.Resource {
 				Description: "addressType specifies the type of address carried by this EndpointSlice. All addresses in this slice must be the same type.",
 				Required:    true,
 			},
-			"endpoints": {
-				Type:        schema.TypeSet,
+			"endpoint": {
+				Type:        schema.TypeList,
 				Description: "A list of references to secrets in the same namespace to use for pulling any images in pods that reference this Service Account. More info: http://kubernetes.io/docs/user-guide/secrets#manually-specifying-an-imagepullsecret",
 				Required:    true,
 				Elem:        schemaEndpointSliceSubsetEndpoints(),
 			},
-			"ports": {
+			"port": {
 				Type:     schema.TypeSet,
 				Required: true,
 				Elem:     schemaEndpointSliceSubsetPorts(),

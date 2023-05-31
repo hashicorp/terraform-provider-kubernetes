@@ -116,7 +116,7 @@ func flattenEndpointSliceEndpoints(in []api.Endpoint) []interface{} {
 		}
 		att[i] = m
 	}
-	return []interface{}{att}
+	return att
 }
 
 func flattenEndpointSlicePorts(in []api.EndpointPort) []interface{} {
@@ -137,7 +137,7 @@ func flattenEndpointSlicePorts(in []api.EndpointPort) []interface{} {
 		}
 		att[i] = m
 	}
-	return []interface{}{att}
+	return att
 }
 
 func flattenObjectReference(in *v1.ObjectReference) []interface{} {

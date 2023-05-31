@@ -97,16 +97,16 @@ func resourceKubernetesEndpointSliceRead(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	flattened := flattenEndpointSliceEndpoints(endpoint.Endpoints)
-	log.Printf("[DEBUG] Flattened EndpointSlice Endpoints: %#v", flattened)
-	err = d.Set("endpoint", flattened)
+	flattenedEndpoints := flattenEndpointSliceEndpoints(endpoint.Endpoints)
+	log.Printf("[DEBUG] Flattened EndpointSlice Endpoints: %#v", flattenedEndpoints)
+	err = d.Set("endpoint", flattenedEndpoints)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	flattened = flattenEndpointSlicePorts(endpoint.Ports)
-	log.Printf("[DEBUG] Flattened EndpointSlice Ports: %#v", flattened)
-	err = d.Set("endpoint", flattened)
+	flattenedPorts := flattenEndpointSlicePorts(endpoint.Ports)
+	log.Printf("[DEBUG] Flattened EndpointSlice Ports: %#v", flattenedPorts)
+	err = d.Set("port", flattenedPorts)
 	if err != nil {
 		return diag.FromErr(err)
 	}

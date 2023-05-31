@@ -4,24 +4,23 @@
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
 	api "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func expandEndpointSliceEndpoints(in *schema.Set) []api.Endpoint {
-	if in == nil || in.Len() == 0 {
+func expandEndpointSliceEndpoints(in []interface{}) []api.Endpoint {
+	if in == nil || len(in) == 0 {
 		return []api.Endpoint{}
 	}
-	endpoints := make([]api.Endpoint, in.Len())
-	for i, endpoint := range in.List() {
+	endpoints := make([]api.Endpoint, len(in))
+	for i, endpoint := range in {
 		r := api.Endpoint{}
 		endpointConfig := endpoint.(map[string]interface{})
 		if v := endpointConfig["addresses"].([]interface{}); len(v) != 0 {
 			r.Addresses = expandStringSlice(v)
 		}
-		if v, ok := endpointConfig["conditions"].(api.EndpointConditions); ok {
+		if v, ok := endpointConfig["condition"].(api.EndpointConditions); ok {
 			r.Conditions = v
 		}
 		if v, ok := endpointConfig["hostname"].(string); ok && v != "" {
@@ -68,12 +67,12 @@ func expandObjectReference(l []interface{}) *v1.ObjectReference {
 	return obj
 }
 
-func expandEndpointSlicePorts(in *schema.Set) []api.EndpointPort {
-	if in == nil || in.Len() == 0 {
+func expandEndpointSlicePorts(in []interface{}) []api.EndpointPort {
+	if in == nil || len(in) == 0 {
 		return []api.EndpointPort{}
 	}
-	ports := make([]api.EndpointPort, in.Len())
-	for i, port := range in.List() {
+	ports := make([]api.EndpointPort, len(in))
+	for i, port := range in {
 		r := api.EndpointPort{}
 		portCfg := port.(map[string]interface{})
 		if v, ok := portCfg["name"].(string); ok {
@@ -93,7 +92,7 @@ func expandEndpointSlicePorts(in *schema.Set) []api.EndpointPort {
 	return ports
 }
 
-func flattenEndpointSliceEndpoints(in []api.Endpoint) *schema.Set {
+func flattenEndpointSliceEndpoints(in []api.Endpoint) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, e := range in {
 		m := make(map[string]interface{})
@@ -117,10 +116,10 @@ func flattenEndpointSliceEndpoints(in []api.Endpoint) *schema.Set {
 		}
 		att[i] = m
 	}
-	return schema.NewSet(hashEndpointSliceEndpoints(), att)
+	return []interface{}{att}
 }
 
-func flattenEndpointSlicePorts(in []api.EndpointPort) *schema.Set {
+func flattenEndpointSlicePorts(in []api.EndpointPort) []interface{} {
 	att := make([]interface{}, len(in), len(in))
 	for i, e := range in {
 		m := make(map[string]interface{})
@@ -138,7 +137,7 @@ func flattenEndpointSlicePorts(in []api.EndpointPort) *schema.Set {
 		}
 		att[i] = m
 	}
-	return schema.NewSet(hashEndpointSlicePorts(), att)
+	return []interface{}{att}
 }
 
 func flattenObjectReference(in *v1.ObjectReference) []interface{} {

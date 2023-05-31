@@ -39,7 +39,7 @@ func resourceKubernetesEndpointSlice() *schema.Resource {
 				Elem:        schemaEndpointSliceSubsetEndpoints(),
 			},
 			"port": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Required: true,
 				Elem:     schemaEndpointSliceSubsetPorts(),
 			},
@@ -57,8 +57,8 @@ func resourceKubernetesEndpointSliceCreate(ctx context.Context, d *schema.Resour
 	endpoint_slice := api.EndpointSlice{
 		ObjectMeta:  metadata,
 		AddressType: api.AddressType(d.Get("address_type").(string)),
-		Endpoints:   expandEndpointSliceEndpoints(d.Get("endpoints").(*schema.Set)),
-		Ports:       expandEndpointSlicePorts(d.Get("ports").(*schema.Set)),
+		Endpoints:   expandEndpointSliceEndpoints(d.Get("endpoint").([]interface{})),
+		Ports:       expandEndpointSlicePorts(d.Get("port").([]interface{})),
 	}
 
 	log.Printf("[INFO] Creating new endpoint_slice: %#v", endpoint_slice)
@@ -127,7 +127,7 @@ func resourceKubernetesEndpointSliceUpdate(ctx context.Context, d *schema.Resour
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("endpoints") {
-		endpoints := expandEndpointSliceEndpoints(d.Get("endpoints").(*schema.Set))
+		endpoints := expandEndpointSliceEndpoints(d.Get("endpoint").([]interface{}))
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/endpoints",
 			Value: endpoints,

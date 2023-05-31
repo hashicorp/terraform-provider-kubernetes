@@ -99,14 +99,14 @@ func resourceKubernetesEndpointSliceRead(ctx context.Context, d *schema.Resource
 
 	flattened := flattenEndpointSliceEndpoints(endpoint.Endpoints)
 	log.Printf("[DEBUG] Flattened EndpointSlice Endpoints: %#v", flattened)
-	err = d.Set("endpoints", flattened)
+	err = d.Set("endpoint", flattened)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	flattened = flattenEndpointSlicePorts(endpoint.Ports)
 	log.Printf("[DEBUG] Flattened EndpointSlice Ports: %#v", flattened)
-	err = d.Set("endpoints", flattened)
+	err = d.Set("endpoint", flattened)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -126,7 +126,7 @@ func resourceKubernetesEndpointSliceUpdate(ctx context.Context, d *schema.Resour
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
-	if d.HasChange("endpoints") {
+	if d.HasChange("endpoint") {
 		endpoints := expandEndpointSliceEndpoints(d.Get("endpoint").([]interface{}))
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/endpoints",

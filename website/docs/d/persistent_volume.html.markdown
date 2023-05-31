@@ -1,7 +1,7 @@
 ---
+subcategory: "core/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_persistent_volume"
-sidebar_current: "docs-kubernetes-data-source-persistent-volume"
 description: |-
   A Persistent Volume (PV) is a piece of networked storage in the cluster that has been provisioned by an administrator.
 ---

@@ -101,7 +101,7 @@ terraform import kubernetes_manifest.secret_sample "apiVersion=v1,kind=Secret,na
 ```
 
 Note the import ID as the last argument to the import command. This ID points Terraform at which Kubernetes object to read when importing.
-It should be constructed with the following syntax: `"apiVersion=<string>,kind=<string>,namespace=<string>,name=<string>"`. The `namespace=<string>` in the ID string is required only for Kubernetes namespaced objects and should be omitted for cluster-wide objects.
+It should be constructed with the following syntax: `"apiVersion=<string>,kind=<string>,[namespace=<string>,]name=<string>"`. The `namespace=<string>` in the ID string is required only for Kubernetes namespaced objects and should be omitted for cluster-wide objects.
 
 ## Using `wait` to block create and update calls
 

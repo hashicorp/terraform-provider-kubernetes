@@ -100,6 +100,14 @@ func resourceKubernetesNodeTaintRead(ctx context.Context, d *schema.ResourceData
 
 	conn, err := m.(KubeClientsets).MainClientset()
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			// The node is gone so the resource should be deleted.
+			return diag.Diagnostics{{
+				Severity: diag.Warning,
+				Summary:  "Node has been deleted",
+				Detail:   fmt.Sprintf("The underlying node %q has been deleted. You should remove it from your configuration.", nodeName),
+			}}
+		}
 		return diag.FromErr(err)
 	}
 	nodeApi := conn.CoreV1().Nodes()

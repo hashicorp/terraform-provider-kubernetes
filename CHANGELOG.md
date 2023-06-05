@@ -1,3 +1,9 @@
+## 2.21.1 (June 5, 2023)
+
+HOTFIX:
+
+* Revert add "conflictsWith" to provider block schema. [[GH-2131](https://github.com/hashicorp/terraform-provider-kubernetes/pull/2131)]
+
 ## 2.21.0 (June 1, 2023)
 
 FEATURES:

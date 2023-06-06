@@ -64,12 +64,7 @@ func resourceKubernetesNamespaceCreate(ctx context.Context, d *schema.ResourceDa
 
 	if d.Get("wait_for_default_service_account").(bool) {
 		log.Printf("[DEBUG] Waiting for default service account to be created")
-		// FIXME: Since the creation of the Default ServiceAccount is asynchronous to the Namespace
-		// We need to wait some period of time, using something like d.Timeout(schema.TimeoutCreate)
-		// is not long enough for a Kind cluster to pass without timing out (about 10 seconds).
-		// Using an undefined word here forces the timeout to use the defaultTimeout of 20mins.
-		// I do not consider this production ready.
-		err = resource.RetryContext(ctx, d.Timeout("FIXME"), func() *resource.RetryError {
+		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
 			_, err := conn.CoreV1().ServiceAccounts(out.Name).Get(ctx, "default", metav1.GetOptions{})
 			if err != nil {
 				if errors.IsNotFound(err) {

@@ -26,7 +26,7 @@ func resourceKubernetesEndpointSlice() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": namespacedMetadataSchema("endpoints", true),
+			"metadata": namespacedMetadataSchema("endpoint_slice", true),
 			"address_type": {
 				Type:        schema.TypeString,
 				Description: "addressType specifies the type of address carried by this EndpointSlice. All addresses in this slice must be the same type.",
@@ -68,7 +68,7 @@ func resourceKubernetesEndpointSliceCreate(ctx context.Context, d *schema.Resour
 	}
 
 	log.Printf("[INFO] Submitted new endpoint_slice: %#v", out)
-	d.SetId(metadata.Name)
+	d.SetId(buildId(out.ObjectMeta))
 
 	return resourceKubernetesEndpointSliceRead(ctx, d, meta)
 }
@@ -78,11 +78,10 @@ func resourceKubernetesEndpointSliceRead(ctx context.Context, d *schema.Resource
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
-	name := d.Id()
+	namespace, name, err := idParts(d.Id())
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	log.Printf("[INFO] Reading endpoint slice %s", name)
-	endpoint, err := conn.DiscoveryV1().EndpointSlices(metadata.Namespace).Get(ctx, name, metav1.GetOptions{})
+	log.Printf("[INFO] Reading endpoint slice %s", metadata.Name)
+	endpoint, err := conn.DiscoveryV1().EndpointSlices(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return diag.Errorf("Failed to read endpoint_slice because: %s", err)
 	}
@@ -143,7 +142,7 @@ func resourceKubernetesEndpointSliceUpdate(ctx context.Context, d *schema.Resour
 		return diag.Errorf("Failed to update endpointSlice: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated endpointSlice: %#v", out)
-	d.SetId(name)
+	d.SetId(buildId(out.ObjectMeta))
 
 	return resourceKubernetesNamespaceRead(ctx, d, meta)
 }

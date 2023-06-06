@@ -64,24 +64,22 @@ func resourceKubernetesNamespaceCreate(ctx context.Context, d *schema.ResourceDa
 
 	if d.Get("wait_for_default_service_account").(bool) {
 		log.Printf("[DEBUG] Waiting for default service account to be created")
-
-		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
-			_, err := conn.CoreV1().ServiceAccounts(out.Namespace).Get(ctx, "default",
-				metav1.GetOptions{})
+		err = resource.RetryContext(ctx, d.Timeout("foo"), func() *resource.RetryError {
+			_, err := conn.CoreV1().ServiceAccounts(out.Name).Get(ctx, "default", metav1.GetOptions{})
 			if err != nil {
-				log.Printf("[DEBUG] Received error: %#v", err)
+				if errors.IsNotFound(err) {
+					log.Printf("[INFO] Default service account does not exist, will retry: %s", metadata.Namespace)
+					return resource.RetryableError(err)
+				}
+
 				return resource.NonRetryableError(err)
 			}
-			log.Println("[INFO] Received default service account")
+
+			log.Printf("[INFO] Default service account exists: %s", metadata.Namespace)
 			return nil
 		})
 		if err != nil {
-			lastWarnings, wErr := getLastWarningsForObject(ctx, conn, out.ObjectMeta,
-				"ServiceAccount", 3)
-			if wErr != nil {
-				return diag.FromErr(wErr)
-			}
-			return diag.Errorf("%s%s", err, stringifyEvents(lastWarnings))
+			return diag.FromErr(err)
 		}
 	}
 	return resourceKubernetesNamespaceRead(ctx, d, meta)

@@ -44,7 +44,7 @@ func TestAccKubernetesNamespace_basic(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_default_service_account"},
 			},
 			{
 				Config: testAccKubernetesNamespaceConfig_addAnnotations(nsName),
@@ -119,7 +119,7 @@ func TestAccKubernetesNamespace_default_service_account(t *testing.T) {
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesSecretDestroy,
+		CheckDestroy:      testAccCheckKubernetesNamespaceDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesNamespaceConfig_wait_for_default_service_acccount(nsName),
@@ -127,6 +127,12 @@ func TestAccKubernetesNamespace_default_service_account(t *testing.T) {
 					testAccCheckKubernetesNamespaceExists("kubernetes_namespace.test", &nsConf),
 					testAccCheckKubernetesDefaultServiceAccountExists(resourceName, &saConf),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_default_service_account"},
 			},
 		},
 	})
@@ -161,7 +167,7 @@ func TestAccKubernetesNamespace_generatedName(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_default_service_account"},
 			},
 		},
 	})
@@ -392,7 +398,7 @@ func testAccKubernetesNamespaceConfig_wait_for_default_service_acccount(nsName s
   metadata {
     name = "%s"
   }
-  wait_for_default_service_account = true
+  wait_for_default_service_account = "true"
 }
 `, nsName)
 }
@@ -411,13 +417,12 @@ func testAccCheckKubernetesDefaultServiceAccountExists(n string,
 		}
 		ctx := context.TODO()
 
-		namespace, _, err := idParts(rs.Primary.ID)
+		namespace, _, err := idParts(rs.Primary.ID + "/")
 		if err != nil {
 			return err
 		}
 
-		out, err := conn.CoreV1().ServiceAccounts(namespace).Get(ctx, "default",
-			metav1.GetOptions{})
+		out, err := conn.CoreV1().ServiceAccounts(namespace).Get(ctx, "default", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

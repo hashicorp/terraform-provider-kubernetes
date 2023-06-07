@@ -18,17 +18,17 @@ resource "kubernetes_endpoint_slice_v1" "test" {
     name = "test"
   }
 
-    endpoint {
-      condition {
-        ready = true
-      }
-      addresses = ["129.144.50.56"]
+  endpoint {
+    condition {
+      ready = true
     }
+    addresses = ["129.144.50.56"]
+  }
 
-    port {
-      port = "9000"
-      name = "first"
-    }
+  port {
+    port = "9000"
+    name = "first"
+  }
 
   address_type = "IPv4"
 }
@@ -39,7 +39,7 @@ resource "kubernetes_endpoint_slice_v1" "test" {
 The following arguments are supported:
 
 * `metadata` - (Required) Standard endpoints' metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
-* `address_type` - (Required) Specifies the type of address carried by this EndpointSlice. All addresses in this slice must be the same type. This field is immutable after creation. The following address types are currently supported: * IPv4: Represents an IPv4 Address. * IPv6: Represents an IPv6 Address. * FQDN: Represents a Fully Qualified Domain Name.
+* `address_type` - (Required) Specifies the type of address carried by this EndpointSlice. All addresses in this slice must be the same type. This field is immutable after creation. The following address types are currently supported: *IPv4: Represents an IPv4 Address.* IPv6: Represents an IPv6 Address. * FQDN: Represents a Fully Qualified Domain Name.
 * `endpoint` - (Required) A list of unique endpoints in this slice. Each slice may include a maximum of 1000 endpoints.
 * `port` - (Required) Specifies the list of network ports exposed by each endpoint in this slice. Each port must have a unique name. When ports is empty, it indicates that there are no defined ports. When a port is defined with a nil port value, it indicates "all ports". Each slice may include a maximum of 100 ports.
 

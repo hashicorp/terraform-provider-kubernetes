@@ -22,26 +22,23 @@ func resourceKubernetesEndpointSlice() *schema.Resource {
 		ReadContext:   resourceKubernetesEndpointSliceRead,
 		UpdateContext: resourceKubernetesEndpointSliceUpdate,
 		DeleteContext: resourceKubernetesEndpointSliceDelete,
-		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
-		},
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("endpoint_slice", true),
 			"address_type": {
 				Type:        schema.TypeString,
-				Description: "addressType specifies the type of address carried by this EndpointSlice. All addresses in this slice must be the same type. This field is immutable after creation.",
+				Description: "address_type specifies the type of address carried by this EndpointSlice. All addresses in this slice must be the same type. This field is immutable after creation.",
 				Required:    true,
 				ForceNew:    true,
 			},
 			"endpoint": {
 				Type:        schema.TypeList,
-				Description: "endpoints is a list of unique endpoints in this slice. Each slice may include a maximum of 1000 endpoints.",
+				Description: "endpoint is a list of unique endpoints in this slice. Each slice may include a maximum of 1000 endpoints.",
 				Required:    true,
 				Elem:        schemaEndpointSliceSubsetEndpoints(),
 			},
 			"port": {
-				Description: "ports specifies the list of network ports exposed by each endpoint in this slice. Each port must have a unique name. Each slice may include a maximum of 100 ports.",
+				Description: "port specifies the list of network ports exposed by each endpoint in this slice. Each port must have a unique name. Each slice may include a maximum of 100 ports.",
 				Type:        schema.TypeList,
 				Required:    true,
 				Elem:        schemaEndpointSliceSubsetPorts(),

@@ -108,7 +108,7 @@ func schemaObjectReference() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "protocol represents the IP protocol for this port. Must be UDP, TCP, or SCTP. Default is TCP.",
 				Optional:    true,
-				Default:     "TCP",
+				Default:     "default",
 			},
 			"resource_version": {
 				Type:        schema.TypeString,

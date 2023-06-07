@@ -185,16 +185,16 @@ func flattenObjectReference(in *v1.ObjectReference) []interface{} {
 		att["name"] = in.Name
 	}
 	if in.Name != "" {
-		att["namespace"] = in.Name
+		att["namespace"] = in.Namespace
 	}
 	if in.FieldPath != "" {
-		att["field_path"] = in.Name
+		att["field_path"] = in.FieldPath
 	}
 	if in.ResourceVersion != "" {
-		att["resource_version"] = in.Name
+		att["resource_version"] = in.ResourceVersion
 	}
 	if in.UID != "" {
-		att["uid"] = in.Name
+		att["uid"] = in.UID
 	}
 
 	return []interface{}{att}

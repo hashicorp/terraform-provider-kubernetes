@@ -1,3 +1,0 @@
-```release-note:enhancement
-`kubernetes/provider.go`: add `conflictsWith` to provider schema
-```

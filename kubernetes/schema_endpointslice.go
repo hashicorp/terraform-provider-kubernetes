@@ -12,7 +12,7 @@ func schemaEndpointSliceSubsetEndpoints() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"addresses": {
 				Type:        schema.TypeList,
-				Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+				Description: "addresses of this endpoint. The contents of this field are interpreted according to the corresponding EndpointSlice addressType field.",
 				Required:    true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -20,24 +20,24 @@ func schemaEndpointSliceSubsetEndpoints() *schema.Resource {
 			},
 			"condition": {
 				Type:        schema.TypeList,
-				Description: "A list of references to secrets in the same namespace to use for pulling any images in pods that reference this Service Account. More info: http://kubernetes.io/docs/user-guide/secrets#manually-specifying-an-imagepullsecret",
+				Description: "condition contains information about the current status of the endpoint.",
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ready": {
 							Type:        schema.TypeBool,
-							Description: "Specification of the desired behavior of the job",
+							Description: "ready indicates that this endpoint is prepared to receive traffic, according to whatever system is managing the endpoint.",
 							Optional:    true,
 						},
 						"serving": {
 							Type:        schema.TypeBool,
-							Description: "Specification of the desired behavior of the job",
+							Description: "serving is identical to ready except that it is set regardless of the terminating state of endpoints.",
 							Optional:    true,
 						},
 						"terminating": {
 							Type:        schema.TypeBool,
-							Description: "Specification of the desired behavior of the job",
+							Description: "terminating indicates that this endpoint is terminating.",
 							Optional:    true,
 						},
 					},
@@ -45,19 +45,20 @@ func schemaEndpointSliceSubsetEndpoints() *schema.Resource {
 			},
 			"hostname": {
 				Type:        schema.TypeString,
-				Description: "Host name of this endpoint.",
+				Description: "hostname of this endpoint. This field may be used by consumers of endpoints to distinguish endpoints from each other.",
 				Optional:    true,
 			},
 			"node_name": {
 				Type:        schema.TypeString,
-				Description: "Node name of this endpoint",
+				Description: "nodeName represents the name of the Node hosting this endpoint. This can be used to determine endpoints local to a Node.",
 				Optional:    true,
 			},
 			"target_ref": {
-				Type:     schema.TypeList,
-				MaxItems: 1,
-				Optional: true,
-				Elem:     schemaObjectReference(),
+				Type:        schema.TypeList,
+				Description: "targetRef is a reference to a Kubernetes object that represents this endpoint.",
+				MaxItems:    1,
+				Optional:    true,
+				Elem:        schemaObjectReference(),
 			},
 			"zone": {
 				Type:        schema.TypeString,
@@ -89,7 +90,7 @@ func schemaEndpointSliceSubsetPorts() *schema.Resource {
 			},
 			"app_protocol": {
 				Type:        schema.TypeString,
-				Description: "The application protocol for this port. This is used as a hint for implementations to offer richer behavior for protocols that they understand. This field follows standard Kubernetes label syntax.",
+				Description: "The application protocol for this port. This is used as a hint for implementations to offer richer behavior for protocols that they understand.",
 				Optional:    true,
 			},
 		},
@@ -101,28 +102,28 @@ func schemaObjectReference() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
-				Description: "port represents the port number of the endpoint.",
+				Description: "Name of the referent.",
 				Required:    true,
 			},
 			"namespace": {
 				Type:        schema.TypeString,
-				Description: "protocol represents the IP protocol for this port. Must be UDP, TCP, or SCTP. Default is TCP.",
+				Description: "Namespace of the referent.",
 				Optional:    true,
 				Default:     "default",
 			},
 			"resource_version": {
 				Type:        schema.TypeString,
-				Description: "name represents the name of this port. All ports in an EndpointSlice must have a unique name.",
+				Description: "Specific resourceVersion to which this reference is made, if any.",
 				Optional:    true,
 			},
 			"uid": {
 				Type:        schema.TypeString,
-				Description: "The application protocol for this port. This is used as a hint for implementations to offer richer behavior for protocols that they understand. This field follows standard Kubernetes label syntax.",
+				Description: "If referring to a piece of an object instead of an entire object, this string should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].",
 				Optional:    true,
 			},
 			"field_path": {
 				Type:        schema.TypeString,
-				Description: "The application protocol for this port. This is used as a hint for implementations to offer richer behavior for protocols that they understand. This field follows standard Kubernetes label syntax.",
+				Description: "If referring to a piece of an object instead of an entire object, this string should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].",
 				Optional:    true,
 			},
 		},

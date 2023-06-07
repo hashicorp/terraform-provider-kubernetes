@@ -30,20 +30,21 @@ func resourceKubernetesEndpointSlice() *schema.Resource {
 			"metadata": namespacedMetadataSchema("endpoint_slice", true),
 			"address_type": {
 				Type:        schema.TypeString,
-				Description: "addressType specifies the type of address carried by this EndpointSlice. All addresses in this slice must be the same type.",
+				Description: "addressType specifies the type of address carried by this EndpointSlice. All addresses in this slice must be the same type. This field is immutable after creation.",
 				Required:    true,
 				ForceNew:    true,
 			},
 			"endpoint": {
 				Type:        schema.TypeList,
-				Description: "A list of references to secrets in the same namespace to use for pulling any images in pods that reference this Service Account. More info: http://kubernetes.io/docs/user-guide/secrets#manually-specifying-an-imagepullsecret",
+				Description: "endpoints is a list of unique endpoints in this slice. Each slice may include a maximum of 1000 endpoints.",
 				Required:    true,
 				Elem:        schemaEndpointSliceSubsetEndpoints(),
 			},
 			"port": {
-				Type:     schema.TypeList,
-				Required: true,
-				Elem:     schemaEndpointSliceSubsetPorts(),
+				Description: "ports specifies the list of network ports exposed by each endpoint in this slice. Each port must have a unique name. Each slice may include a maximum of 100 ports.",
+				Type:        schema.TypeList,
+				Required:    true,
+				Elem:        schemaEndpointSliceSubsetPorts(),
 			},
 		},
 	}

@@ -66,7 +66,6 @@ func resourceKubernetesEndpointSliceCreate(ctx context.Context, d *schema.Resour
 	if err != nil {
 		return diag.Errorf("Failed to create endpoint_slice because: %s", err)
 	}
-
 	log.Printf("[INFO] Submitted new endpoint_slice: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
@@ -79,8 +78,8 @@ func resourceKubernetesEndpointSliceRead(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 	namespace, name, err := idParts(d.Id())
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	log.Printf("[INFO] Reading endpoint slice %s", metadata.Name)
+
+	log.Printf("[INFO] Reading endpoint slice %s", name)
 	endpoint, err := conn.DiscoveryV1().EndpointSlices(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return diag.Errorf("Failed to read endpoint_slice because: %s", err)
@@ -128,8 +127,15 @@ func resourceKubernetesEndpointSliceUpdate(ctx context.Context, d *schema.Resour
 	if d.HasChange("endpoint") {
 		endpoints := expandEndpointSliceEndpoints(d.Get("endpoint").([]interface{}))
 		ops = append(ops, &ReplaceOperation{
-			Path:  "/endpoints",
+			Path:  "/endpoint",
 			Value: endpoints,
+		})
+	}
+	if d.HasChange("port") {
+		ports := expandEndpointSlicePorts(d.Get("port").([]interface{}))
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/port",
+			Value: ports,
 		})
 	}
 	data, err := ops.MarshalJSON()
@@ -144,7 +150,7 @@ func resourceKubernetesEndpointSliceUpdate(ctx context.Context, d *schema.Resour
 	log.Printf("[INFO] Submitted updated endpointSlice: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesNamespaceRead(ctx, d, meta)
+	return resourceKubernetesEndpointSliceRead(ctx, d, meta)
 }
 
 func resourceKubernetesEndpointSliceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

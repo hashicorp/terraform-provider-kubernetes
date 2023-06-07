@@ -13,6 +13,7 @@ import (
 	api "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
 func resourceKubernetesEndpointSlice() *schema.Resource {
@@ -31,6 +32,7 @@ func resourceKubernetesEndpointSlice() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "addressType specifies the type of address carried by this EndpointSlice. All addresses in this slice must be the same type.",
 				Required:    true,
+				ForceNew:    true,
 			},
 			"endpoint": {
 				Type:        schema.TypeList,
@@ -124,17 +126,24 @@ func resourceKubernetesEndpointSliceUpdate(ctx context.Context, d *schema.Resour
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
+	if d.HasChange("address_type") {
+		address_type := d.Get("address_type").(string)
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/addressType",
+			Value: address_type,
+		})
+	}
 	if d.HasChange("endpoint") {
 		endpoints := expandEndpointSliceEndpoints(d.Get("endpoint").([]interface{}))
 		ops = append(ops, &ReplaceOperation{
-			Path:  "/endpoint",
+			Path:  "/endpoints",
 			Value: endpoints,
 		})
 	}
 	if d.HasChange("port") {
 		ports := expandEndpointSlicePorts(d.Get("port").([]interface{}))
 		ops = append(ops, &ReplaceOperation{
-			Path:  "/port",
+			Path:  "/ports",
 			Value: ports,
 		})
 	}
@@ -143,7 +152,7 @@ func resourceKubernetesEndpointSliceUpdate(ctx context.Context, d *schema.Resour
 		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating endpointSlice %q: %v", name, string(data))
-	out, err := conn.DiscoveryV1().EndpointSlices(namespace).Get(ctx, name, metav1.GetOptions{})
+	out, err := conn.DiscoveryV1().EndpointSlices(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return diag.Errorf("Failed to update endpointSlice: %s", err)
 	}

@@ -1,3 +1,26 @@
+## 2.21.1 (June 5, 2023)
+
+HOTFIX:
+
+* Revert add "conflictsWith" to provider block schema. [[GH-2131](https://github.com/hashicorp/terraform-provider-kubernetes/pull/2131)]
+
+## 2.21.0 (June 1, 2023)
+
+FEATURES:
+
+* `resource/kubernetes_runtime_class_v1`: Add a new resource `kubernetes_runtime_class_v1`. [[GH-2080](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2080)]
+
+ENHANCEMENTS:
+
+* `kubernetes/provider.go`: add `conflictsWith` rules to provider configuration schema [[GH-2084](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2084)]
+* `kubernetes/resource_kubernetes_service_account.go`: Remove `default_secret_name` warning [[GH-2085](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2085)]
+* `resource/kubernetes_node_taint` Update import documentation [GH-2094](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2094)
+
+BUG FIXES:
+
+* `resource/kubernetes_node_taint`: Don't fail when there is a taint in the state file for a node that no longer exists. [[GH-2099](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2099)]
+* `resource/kubernetes_job`: Fixed a bug where setting `backoff_limit` to 6 would reset it to 0
+
 ## 2.20.0 (April 20, 2023)
 
 ENHANCEMENTS:

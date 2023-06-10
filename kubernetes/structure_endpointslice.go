@@ -4,6 +4,8 @@
 package kubernetes
 
 import (
+	"strconv"
+
 	v1 "k8s.io/api/core/v1"
 	api "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -78,7 +80,11 @@ func expandEndpointSlicePorts(in []interface{}) []api.EndpointPort {
 		if v, ok := portCfg["name"].(string); ok {
 			r.Name = ptrToString(v)
 		}
-		if v, _ := portCfg["port"].(int); v > 0 {
+		if v, ok := portCfg["port"].(string); ok {
+			if v == "" {
+				continue
+			}
+			v, _ := strconv.Atoi(v)
 			r.Port = ptrToInt32(int32(v))
 		}
 		if v, ok := portCfg["protocol"].(v1.Protocol); ok {
@@ -166,7 +172,7 @@ func flattenEndpointSlicePorts(in []api.EndpointPort) []interface{} {
 			m["name"] = e.Name
 		}
 		if e.Port != nil {
-			m["port"] = int(*e.Port)
+			m["port"] = strconv.Itoa(int(*e.Port))
 		}
 		if e.Protocol != nil {
 			m["protocol"] = string(*e.Protocol)

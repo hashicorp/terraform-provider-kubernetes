@@ -5,6 +5,7 @@ package kubernetes
 
 import (
 	"context"
+	err "errors"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -30,16 +31,26 @@ func resourceKubernetesEndpointSlice() *schema.Resource {
 				Description: "address_type specifies the type of address carried by this EndpointSlice. All addresses in this slice must be the same type. This field is immutable after creation.",
 				Required:    true,
 				ForceNew:    true,
+				ValidateFunc: func(v interface{}, k string) ([]string, []error) {
+					addressType := v.(string)
+
+					if addressType != "IPv4" && addressType != "IPv6" && addressType != "FQDN" {
+						return nil, []error{err.New("address_type: must be either IPv4, IPv6, or FQDN")}
+					}
+					return nil, nil
+				},
 			},
 			"endpoint": {
-				Type:        schema.TypeList,
 				Description: "endpoint is a list of unique endpoints in this slice. Each slice may include a maximum of 1000 endpoints.",
+				Type:        schema.TypeList,
+				MaxItems:    1000,
 				Required:    true,
 				Elem:        schemaEndpointSliceSubsetEndpoints(),
 			},
 			"port": {
 				Description: "port specifies the list of network ports exposed by each endpoint in this slice. Each port must have a unique name. Each slice may include a maximum of 100 ports.",
 				Type:        schema.TypeList,
+				MaxItems:    100,
 				Required:    true,
 				Elem:        schemaEndpointSliceSubsetPorts(),
 			},

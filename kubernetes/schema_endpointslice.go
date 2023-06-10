@@ -4,7 +4,10 @@
 package kubernetes
 
 import (
+	"errors"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 func schemaEndpointSliceSubsetEndpoints() *schema.Resource {
@@ -47,6 +50,16 @@ func schemaEndpointSliceSubsetEndpoints() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "hostname of this endpoint. This field may be used by consumers of endpoints to distinguish endpoints from each other.",
 				Optional:    true,
+				ValidateFunc: func(v interface{}, k string) ([]string, []error) {
+					hostname := v.(string)
+					errs := []error{}
+					errLabels := validation.IsDNS1123Label(hostname)
+					for _, e := range errLabels {
+						errs = append(errs, errors.New(e))
+					}
+
+					return nil, errs
+				},
 			},
 			"node_name": {
 				Type:        schema.TypeString,
@@ -73,7 +86,7 @@ func schemaEndpointSliceSubsetPorts() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
 			"port": {
-				Type:        schema.TypeInt,
+				Type:        schema.TypeString,
 				Description: "port represents the port number of the endpoint.",
 				Required:    true,
 			},
@@ -91,7 +104,7 @@ func schemaEndpointSliceSubsetPorts() *schema.Resource {
 			"app_protocol": {
 				Type:        schema.TypeString,
 				Description: "The application protocol for this port. This is used as a hint for implementations to offer richer behavior for protocols that they understand.",
-				Optional:    true,
+				Required:    true,
 			},
 		},
 	}

@@ -110,18 +110,18 @@ func testAccKubernetesEndpointSliceConfig_basic(name string) string {
     name = "%s"
   }
 
-    endpoint {
-      condition {
-        
-      }
-      addresses = ["129.144.50.56"]
-    }
+  endpoint {
+    condition {
 
-    port {
-      port = "90"
-      name = "first"
-      app_protocol = "test"
     }
+    addresses = ["129.144.50.56"]
+  }
+
+  port {
+    port         = "90"
+    name         = "first"
+    app_protocol = "test"
+  }
 
   address_type = "IPv4"
 }
@@ -130,61 +130,61 @@ func testAccKubernetesEndpointSliceConfig_basic(name string) string {
 
 func testAccKubernetesEndpointSliceConfig_modified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_endpoint_slice_v1" "test" {
-		metadata {
-		  name = "%s"
-		}
-	  
-		  endpoint {
-			condition {
-			  ready = true
-			}
-			target_ref{
-				name = "test"
-			}
-			addresses = ["2001:db8:3333:4444:5555:6666:7777:8888", "2002:db8:3333:4444:5555:6666:7777:8888"]
-			hostname = "test"
-			node_name = "test"
-			zone = "us-west"
-		  }
-	  
-		  port {
-			port = "90"
-			name = "first"
-			app_protocol = "test"
-		  }
+  metadata {
+    name = "%s"
+  }
 
-		  port {
-			port = "900"
-			name = "second"
-			app_protocol = "test"
-		  }
-	  
-		address_type = "IPv6"
-	  }
+  endpoint {
+    condition {
+      ready = true
+    }
+    target_ref {
+      name = "test"
+    }
+    addresses = ["2001:db8:3333:4444:5555:6666:7777:8888", "2002:db8:3333:4444:5555:6666:7777:8888"]
+    hostname  = "test"
+    node_name = "test"
+    zone      = "us-west"
+  }
+
+  port {
+    port         = "90"
+    name         = "first"
+    app_protocol = "test"
+  }
+
+  port {
+    port         = "900"
+    name         = "second"
+    app_protocol = "test"
+  }
+
+  address_type = "IPv6"
+}
 `, name)
 }
 
 func testAccKubernetesEndpointSliceConfig_generatedName(prefix string) string {
 	return fmt.Sprintf(`resource "kubernetes_endpoint_slice_v1" "test" {
-		metadata {
-		  generate_name = "%s"
-		}
-	  
-		  endpoint {
-			condition {
-			  
-			}
-			addresses = ["129.144.50.56"]
-			
-		  }
-	  
-		  port {
-			port = "90"
-			name = "first"
-			app_protocol = "test"
-		  }
-	  
-		address_type = "IPv4"
-	  }
+  metadata {
+    generate_name = "%s"
+  }
+
+  endpoint {
+    condition {
+
+    }
+    addresses = ["129.144.50.56"]
+
+  }
+
+  port {
+    port         = "90"
+    name         = "first"
+    app_protocol = "test"
+  }
+
+  address_type = "IPv4"
+}
 `, prefix)
 }

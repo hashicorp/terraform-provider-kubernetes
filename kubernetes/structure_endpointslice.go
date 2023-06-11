@@ -85,7 +85,9 @@ func expandEndpointSlicePorts(in []interface{}) []api.EndpointPort {
 				continue
 			}
 			v, _ := strconv.Atoi(v)
-			r.Port = ptrToInt32(int32(v))
+			if v < 2147483647 {
+				r.Port = ptrToInt32(int32(v))
+			}
 		}
 		if v, ok := portCfg["protocol"].(v1.Protocol); ok {
 			r.Protocol = &v

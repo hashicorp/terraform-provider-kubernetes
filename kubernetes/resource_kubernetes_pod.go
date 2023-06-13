@@ -56,6 +56,11 @@ func resourceKubernetesPodSchemaV1() map[string]*schema.Schema {
 				Schema: podSpecFields(false, false),
 			},
 		},
+		"updated_target": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+		},
 	}
 }
 
@@ -86,8 +91,14 @@ func resourceKubernetesPodCreate(ctx context.Context, d *schema.ResourceData, me
 
 	d.SetId(buildId(out.ObjectMeta))
 
+	target := []string{"Running"}
+
+	if d.Get("updated_target").(bool) == true {
+		target = []string{"Running", "Succeeded", "Failed"}
+	}
+
 	stateConf := &resource.StateChangeConf{
-		Target:  []string{"Running"},
+		Target:  target,
 		Pending: []string{"Pending"},
 		Timeout: d.Timeout(schema.TimeoutCreate),
 		Refresh: func() (interface{}, string, error) {

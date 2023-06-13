@@ -56,10 +56,10 @@ func resourceKubernetesPodSchemaV1() map[string]*schema.Schema {
 				Schema: podSpecFields(false, false),
 			},
 		},
-		"updated_target": {
+		"legacy_lifecycle_states": {
 			Type:     schema.TypeBool,
 			Optional: true,
-			Default:  false,
+			Default:  true,
 		},
 	}
 }
@@ -93,7 +93,7 @@ func resourceKubernetesPodCreate(ctx context.Context, d *schema.ResourceData, me
 
 	target := []string{"Running"}
 
-	if d.Get("updated_target").(bool) == true {
+	if d.Get("legacy_lifecycle_states").(bool) != true {
 		target = []string{"Running", "Succeeded", "Failed"}
 	}
 

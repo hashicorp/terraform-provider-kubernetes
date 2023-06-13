@@ -169,6 +169,7 @@ The following arguments are supported:
 
 * `metadata` - (Required) Standard pod's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 * `spec` - (Required) Spec of the pod owned by the cluster
+* `legacy_lifecycle_states` - (Optional) Default is `true`, sets the states that are used in a pod lifecycle.
 
 ## Nested Blocks
 

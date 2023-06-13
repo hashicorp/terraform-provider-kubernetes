@@ -5,12 +5,14 @@ package kubernetes
 
 import (
 	"context"
-	err "errors"
+	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	api "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,18 +29,11 @@ func resourceKubernetesEndpointSlice() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("endpoint_slice", true),
 			"address_type": {
-				Type:        schema.TypeString,
-				Description: "address_type specifies the type of address carried by this EndpointSlice. All addresses in this slice must be the same type. This field is immutable after creation.",
-				Required:    true,
-				ForceNew:    true,
-				ValidateFunc: func(v interface{}, k string) ([]string, []error) {
-					addressType := v.(string)
-
-					if addressType != "IPv4" && addressType != "IPv6" && addressType != "FQDN" {
-						return nil, []error{err.New("address_type: must be either IPv4, IPv6, or FQDN")}
-					}
-					return nil, nil
-				},
+				Type:         schema.TypeString,
+				Description:  "address_type specifies the type of address carried by this EndpointSlice. All addresses in this slice must be the same type. This field is immutable after creation.",
+				Required:     true,
+				ForceNew:     true,
+				ValidateFunc: validation.StringInSlice([]string{"IPv4", "IPv6", "FQDN"}, false),
 			},
 			"endpoint": {
 				Description: "endpoint is a list of unique endpoints in this slice. Each slice may include a maximum of 1000 endpoints.",
@@ -53,6 +48,13 @@ func resourceKubernetesEndpointSlice() *schema.Resource {
 				MaxItems:    100,
 				Required:    true,
 				Elem:        schemaEndpointSliceSubsetPorts(),
+				ValidateFunc: func(value interface{}, key string) ([]string, []error) {
+					v, err := strconv.Atoi(value.(string))
+					if err != nil {
+						return []string{}, []error{fmt.Errorf("%s is not a valid integer", key)}
+					}
+					return validateNonNegativeInteger(v, key)
+				},
 			},
 		},
 	}

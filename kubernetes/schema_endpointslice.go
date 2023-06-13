@@ -5,6 +5,8 @@ package kubernetes
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -89,6 +91,13 @@ func schemaEndpointSliceSubsetPorts() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "port represents the port number of the endpoint.",
 				Required:    true,
+				ValidateFunc: func(value interface{}, key string) ([]string, []error) {
+					v, err := strconv.Atoi(value.(string))
+					if err != nil {
+						return []string{}, []error{fmt.Errorf("%s is not a valid integer", key)}
+					}
+					return validateNonNegativeInteger(v, key)
+				},
 			},
 			"protocol": {
 				Type:        schema.TypeString,

@@ -5,9 +5,7 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
@@ -48,13 +46,6 @@ func resourceKubernetesEndpointSlice() *schema.Resource {
 				MaxItems:    100,
 				Required:    true,
 				Elem:        schemaEndpointSliceSubsetPorts(),
-				ValidateFunc: func(value interface{}, key string) ([]string, []error) {
-					v, err := strconv.Atoi(value.(string))
-					if err != nil {
-						return []string{}, []error{fmt.Errorf("%s is not a valid integer", key)}
-					}
-					return validateNonNegativeInteger(v, key)
-				},
 			},
 		},
 	}

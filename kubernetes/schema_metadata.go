@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func metadataFields(objectName string) map[string]*schema.Schema {
+func labelAnnotationsMetadataFields(objectName string) map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"annotations": {
 			Type:         schema.TypeMap,
@@ -18,11 +18,6 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 			Elem:         &schema.Schema{Type: schema.TypeString},
 			ValidateFunc: validateAnnotations,
 		},
-		"generation": {
-			Type:        schema.TypeInt,
-			Description: "A sequence number representing a specific generation of the desired state.",
-			Computed:    true,
-		},
 		"labels": {
 			Type:         schema.TypeMap,
 			Description:  fmt.Sprintf("Map of string keys and values that can be used to organize and categorize (scope and select) the %s. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels", objectName),
@@ -30,25 +25,37 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 			Elem:         &schema.Schema{Type: schema.TypeString},
 			ValidateFunc: validateLabels,
 		},
-		"name": {
-			Type:         schema.TypeString,
-			Description:  fmt.Sprintf("Name of the %s, must be unique. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names", objectName),
-			Optional:     true,
-			ForceNew:     true,
-			Computed:     true,
-			ValidateFunc: validateName,
-		},
-		"resource_version": {
-			Type:        schema.TypeString,
-			Description: fmt.Sprintf("An opaque value that represents the internal version of this %s that can be used by clients to determine when %s has changed. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency", objectName, objectName),
-			Computed:    true,
-		},
-		"uid": {
-			Type:        schema.TypeString,
-			Description: fmt.Sprintf("The unique in time and space value for this %s. More info: http://kubernetes.io/docs/user-guide/identifiers#uids", objectName),
-			Computed:    true,
-		},
 	}
+}
+
+func metadataFields(objectName string) map[string]*schema.Schema {
+	fields := labelAnnotationsMetadataFields(objectName)
+
+	fields["generation"] = &schema.Schema{
+		Type:        schema.TypeInt,
+		Description: "A sequence number representing a specific generation of the desired state.",
+		Computed:    true,
+	}
+	fields["name"] = &schema.Schema{
+		Type:         schema.TypeString,
+		Description:  fmt.Sprintf("Name of the %s, must be unique. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names", objectName),
+		Optional:     true,
+		ForceNew:     true,
+		Computed:     true,
+		ValidateFunc: validateName,
+	}
+	fields["resource_version"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Description: fmt.Sprintf("An opaque value that represents the internal version of this %s that can be used by clients to determine when %s has changed. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency", objectName, objectName),
+		Computed:    true,
+	}
+	fields["uid"] = &schema.Schema{
+		Type:        schema.TypeString,
+		Description: fmt.Sprintf("The unique in time and space value for this %s. More info: http://kubernetes.io/docs/user-guide/identifiers#uids", objectName),
+		Computed:    true,
+	}
+
+	return fields
 }
 
 func metadataSchema(objectName string, generatableName bool) *schema.Schema {

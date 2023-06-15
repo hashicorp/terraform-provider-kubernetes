@@ -687,6 +687,35 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 		},
 	}
 
+	v["ephemeral"] = &schema.Schema{
+		Type:        schema.TypeList,
+		Description: "Represents an ephemeral volume that is handled by a normal storage driver. More info: https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#generic-ephemeral-volumes",
+		Optional:    true,
+		MaxItems:    1,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"metadata": {
+					Type:        schema.TypeList,
+					Description: "May contain labels and annotations that will be copied into the PVC when creating it.",
+					Required:    true,
+					MaxItems:    1,
+					Elem: &schema.Resource{
+						Schema: labelAnnotationsMetadataFields("persistent volume claim"),
+					},
+				},
+				"spec": {
+					Type:        schema.TypeList,
+					Description: "The specification for the PersistentVolumeClaim. The entire content is copied unchanged into the PVC that gets created from this template. The same fields as in a PersistentVolumeClaim are also valid here.",
+					Required:    true,
+					MaxItems:    1,
+					Elem: &schema.Resource{
+						Schema: persistentVolumeClaimSpecFields(),
+					},
+				},
+			},
+		},
+	}
+
 	v["persistent_volume_claim"] = &schema.Schema{
 		Type:        schema.TypeList,
 		Description: "The specification of a persistent volume.",

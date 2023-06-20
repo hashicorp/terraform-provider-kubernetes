@@ -42,6 +42,10 @@ func hashEndpointsSubset() schema.SchemaSetFunc {
 	return schema.HashResource(schemaEndpointsSubset())
 }
 
+func hashEndpointsSubsetAddress() schema.SchemaSetFunc {
+	return schema.HashResource(schemaEndpointsSubsetAddress())
+}
+
 func schemaEndpointsSubsetAddress() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
@@ -62,10 +66,6 @@ func schemaEndpointsSubsetAddress() *schema.Resource {
 			},
 		},
 	}
-}
-
-func hashEndpointsSubsetAddress() schema.SchemaSetFunc {
-	return schema.HashResource(schemaEndpointsSubsetAddress())
 }
 
 func schemaEndpointsSubsetPort() *schema.Resource {

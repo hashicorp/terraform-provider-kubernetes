@@ -258,6 +258,7 @@ func Provider() *schema.Provider {
 			"kubernetes_pod_v1":                     resourceKubernetesPod(),
 			"kubernetes_endpoints":                  resourceKubernetesEndpoints(),
 			"kubernetes_endpoints_v1":               resourceKubernetesEndpoints(),
+			"kubernetes_endpoint_slice_v1":          resourceKubernetesEndpointSlice(),
 			"kubernetes_env":                        resourceKubernetesEnv(),
 			"kubernetes_limit_range":                resourceKubernetesLimitRange(),
 			"kubernetes_limit_range_v1":             resourceKubernetesLimitRange(),

@@ -5,6 +5,11 @@
 ### Acceptance tests
 - [ ] Have you added an acceptance test for the functionality being added?
 - [ ] Have you run the acceptance tests on this branch?
+- [ ] Have you added Copright Headers to the top of all new files created? (If applicable)
+```
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+```
 
 Output from acceptance testing:
 

@@ -23,6 +23,7 @@ func TestAccKubernetesHorizontalPodAutoscalerV2Beta2_minimal(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.23.0")
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.26.0")
 		},
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
@@ -59,7 +60,11 @@ func TestAccKubernetesHorizontalPodAutoscalerV2Beta2_basic(t *testing.T) {
 	resourceName := "kubernetes_horizontal_pod_autoscaler_v2beta2.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.23.0")
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.26.0")
+		},
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
@@ -177,7 +182,11 @@ func TestAccKubernetesHorizontalPodAutoscalerV2Beta2_containerResource(t *testin
 	resourceName := "kubernetes_horizontal_pod_autoscaler_v2beta2.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.23.0")
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.26.0")
+		},
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,

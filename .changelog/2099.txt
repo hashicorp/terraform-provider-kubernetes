@@ -1,0 +1,4 @@
+```release-note:bug
+`resource/kubernetes_node_taint`: Don't fail when there is a taint in the state file for a node that no longer exists.
+
+```

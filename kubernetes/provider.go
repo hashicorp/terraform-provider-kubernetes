@@ -63,6 +63,12 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_INSECURE", false),
 				Description: "Whether server should be accessed without verifying the TLS certificate.",
 			},
+			"tls_server_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("KUBE_TLS_SERVER_NAME", ""),
+				Description: "Server name passed to the server for SNI and is used in the client to check server certificates against.",
+			},
 			"client_certificate": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -258,6 +264,7 @@ func Provider() *schema.Provider {
 			"kubernetes_pod_v1":                     resourceKubernetesPod(),
 			"kubernetes_endpoints":                  resourceKubernetesEndpoints(),
 			"kubernetes_endpoints_v1":               resourceKubernetesEndpoints(),
+			"kubernetes_endpoint_slice_v1":          resourceKubernetesEndpointSlice(),
 			"kubernetes_env":                        resourceKubernetesEnv(),
 			"kubernetes_limit_range":                resourceKubernetesLimitRange(),
 			"kubernetes_limit_range_v1":             resourceKubernetesLimitRange(),
@@ -522,7 +529,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		authInfo, authInfoOk := d.GetOk("config_context_auth_info")
 		cluster, clusterOk := d.GetOk("config_context_cluster")
 		if ctxOk || authInfoOk || clusterOk {
-			ctxSuffix = "; overriden context"
+			ctxSuffix = "; overridden context"
 			if ctxOk {
 				overrides.CurrentContext = kubectx.(string)
 				ctxSuffix += fmt.Sprintf("; config ctx: %s", overrides.CurrentContext)
@@ -538,13 +545,16 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 				overrides.Context.Cluster = cluster.(string)
 				ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
 			}
-			log.Printf("[DEBUG] Using overidden context: %#v", overrides.Context)
+			log.Printf("[DEBUG] Using overridden context: %#v", overrides.Context)
 		}
 	}
 
 	// Overriding with static configuration
 	if v, ok := d.GetOk("insecure"); ok {
 		overrides.ClusterInfo.InsecureSkipTLSVerify = v.(bool)
+	}
+	if v, ok := d.GetOk("tls_server_name"); ok {
+		overrides.ClusterInfo.TLSServerName = v.(string)
 	}
 	if v, ok := d.GetOk("cluster_ca_certificate"); ok {
 		overrides.ClusterInfo.CertificateAuthorityData = bytes.NewBufferString(v.(string)).Bytes()

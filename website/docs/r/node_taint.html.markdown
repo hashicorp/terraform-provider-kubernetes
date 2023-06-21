@@ -31,7 +31,7 @@ resource "kubernetes_node_taint" "example" {
 The following arguments are supported:
 
 * `metadata` - (Required) Metadata describing which Kubernetes node to apply the taint to.
-* `force_manager` - (Optional) Set the name of the field manager for the node taint.
+* `field_manager` - (Optional) Set the name of the field manager for the node taint.
 * `force` - (Optional) Force overwriting annotations that were created or edited outside of Terraform.
 * `taint` - (Required) The taint configuration to apply to the node. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
 

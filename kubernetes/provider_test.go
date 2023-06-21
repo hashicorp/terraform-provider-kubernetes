@@ -120,6 +120,7 @@ func unsetEnv(t *testing.T) func() {
 		"KUBE_CLIENT_KEY_DATA":      e.ClientKeyData,
 		"KUBE_CLUSTER_CA_CERT_DATA": e.ClusterCACertData,
 		"KUBE_INSECURE":             e.Insecure,
+		"KUBE_TLS_SERVER_NAME":      e.TLSServerName,
 		"KUBE_TOKEN":                e.Token,
 	}
 
@@ -150,6 +151,7 @@ func getEnv() *currentEnv {
 		ClientKeyData:     os.Getenv("KUBE_CLIENT_KEY_DATA"),
 		ClusterCACertData: os.Getenv("KUBE_CLUSTER_CA_CERT_DATA"),
 		Insecure:          os.Getenv("KUBE_INSECURE"),
+		TLSServerName:     os.Getenv("KUBE_TLS_SERVER_NAME"),
 		Token:             os.Getenv("KUBE_TOKEN"),
 	}
 	if v := os.Getenv("KUBE_CONFIG_PATH"); v != "" {
@@ -449,5 +451,6 @@ type currentEnv struct {
 	ClientKeyData     string
 	ClusterCACertData string
 	Insecure          string
+	TLSServerName     string
 	Token             string
 }

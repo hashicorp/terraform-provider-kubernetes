@@ -287,6 +287,26 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	}
 	overrides.ClusterInfo.InsecureSkipTLSVerify = insecure
 
+	// Handle 'tls_server_name' attribute
+	//
+	var tlsServerName string
+	if !providerConfig["tls_server_name"].IsNull() && providerConfig["tls_server_name"].IsKnown() {
+		err = providerConfig["tls_server_name"].As(&tlsServerName)
+		if err != nil {
+			// invalid attribute type - this shouldn't happen, bail out for now
+			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Provider configuration: failed to assert type of 'tls_server_name' value",
+				Detail:   err.Error(),
+			})
+			return response, nil
+		}
+		overrides.ClusterInfo.TLSServerName = tlsServerName
+	}
+	if tlsServerName, ok := os.LookupEnv("KUBE_TLS_SERVER_NAME"); ok && tlsServerName != "" {
+		overrides.ClusterInfo.TLSServerName = tlsServerName
+	}
+
 	hasCA := len(overrides.ClusterInfo.CertificateAuthorityData) != 0
 	hasCert := len(overrides.AuthInfo.ClientCertificateData) != 0
 	defaultTLS := hasCA || hasCert || overrides.ClusterInfo.InsecureSkipTLSVerify

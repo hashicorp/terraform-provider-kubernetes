@@ -31,7 +31,7 @@ func expandCSIDriverV1Spec(l []interface{}) storage.CSIDriverSpec {
 }
 
 func expandCSIDriverV1VolumeLifecycleModes(l []interface{}) []storage.VolumeLifecycleMode {
-	lifecycleModes := make([]storage.VolumeLifecycleMode, 0, 0)
+	lifecycleModes := make([]storage.VolumeLifecycleMode, 0)
 	for _, lifecycleMode := range l {
 		lifecycleModes = append(lifecycleModes, storage.VolumeLifecycleMode(lifecycleMode.(string)))
 	}
@@ -55,7 +55,7 @@ func flattenCSIDriverV1Spec(in storage.CSIDriverSpec) ([]interface{}, error) {
 }
 
 func patchCSIDriverV1Spec(keyPrefix, pathPrefix string, d *schema.ResourceData) (*PatchOperations, error) {
-	ops := make(PatchOperations, 0, 0)
+	ops := make(PatchOperations, 0)
 	if d.HasChange(keyPrefix + "attach_required") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/attachRequired",

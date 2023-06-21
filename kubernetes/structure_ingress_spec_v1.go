@@ -13,7 +13,7 @@ import (
 // Flatteners
 
 func flattenIngressV1Rule(in []networking.IngressRule) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, r := range in {
 		m := make(map[string]interface{})
 
@@ -28,7 +28,7 @@ func flattenIngressV1RuleHttp(in *networking.HTTPIngressRuleValue) []interface{}
 	if in == nil {
 		return []interface{}{}
 	}
-	pathAtts := make([]interface{}, len(in.Paths), len(in.Paths))
+	pathAtts := make([]interface{}, len(in.Paths))
 	for i, p := range in.Paths {
 		path := map[string]interface{}{
 			"path":    p.Path,
@@ -105,7 +105,7 @@ func flattenIngressV1Spec(in networking.IngressSpec) []interface{} {
 }
 
 func flattenIngressV1TLS(in []networking.IngressTLS) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 
 	for i, v := range in {
 		m := make(map[string]interface{})
@@ -124,7 +124,7 @@ func expandIngressV1Rule(l []interface{}) []networking.IngressRule {
 	if len(l) == 0 || l[0] == nil {
 		return []networking.IngressRule{}
 	}
-	obj := make([]networking.IngressRule, len(l), len(l))
+	obj := make([]networking.IngressRule, len(l))
 	for i, n := range l {
 		cfg := n.(map[string]interface{})
 
@@ -136,7 +136,7 @@ func expandIngressV1Rule(l []interface{}) []networking.IngressRule {
 				http := h.(map[string]interface{})
 				if v, ok := http["path"]; ok {
 					pathList := v.([]interface{})
-					paths = make([]networking.HTTPIngressPath, len(pathList), len(pathList))
+					paths = make([]networking.HTTPIngressPath, len(pathList))
 					for i, path := range pathList {
 						p := path.(map[string]interface{})
 						t := networking.PathType(p["path_type"].(string))
@@ -242,7 +242,7 @@ func expandIngressV1TLS(l []interface{}) []networking.IngressTLS {
 		return nil
 	}
 
-	tlsList := make([]networking.IngressTLS, len(l), len(l))
+	tlsList := make([]networking.IngressTLS, len(l))
 	for i, t := range l {
 		in := t.(map[string]interface{})
 		obj := networking.IngressTLS{}
@@ -263,7 +263,7 @@ func expandIngressV1TLS(l []interface{}) []networking.IngressTLS {
 // Patch Ops
 
 func patchIngressV1Spec(keyPrefix, pathPrefix string, d *schema.ResourceData) PatchOperations {
-	ops := make([]PatchOperation, 0, 0)
+	ops := make([]PatchOperation, 0)
 	if d.HasChange(keyPrefix + "backend") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "backend",

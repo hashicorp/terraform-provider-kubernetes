@@ -13,7 +13,7 @@ import (
 // Flatteners
 
 func flattenServicePort(in []v1.ServicePort) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
 		m["app_protocol"] = n.AppProtocol
@@ -29,7 +29,7 @@ func flattenServicePort(in []v1.ServicePort) []interface{} {
 }
 
 func flattenIPFamilies(in []v1.IPFamily) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, n := range in {
 		att[i] = string(n)
 	}
@@ -122,7 +122,7 @@ func flattenServiceSpec(in v1.ServiceSpec) []interface{} {
 }
 
 func flattenLoadBalancerStatus(in v1.LoadBalancerStatus) []interface{} {
-	out := make([]interface{}, len(in.Ingress), len(in.Ingress))
+	out := make([]interface{}, len(in.Ingress))
 	for i, ingress := range in.Ingress {
 		att := make(map[string]interface{})
 
@@ -145,7 +145,7 @@ func expandServicePort(l []interface{}, removeNodePort bool) []v1.ServicePort {
 	if len(l) == 0 || l[0] == nil {
 		return []v1.ServicePort{}
 	}
-	obj := make([]v1.ServicePort, len(l), len(l))
+	obj := make([]v1.ServicePort, len(l))
 	for i, n := range l {
 		cfg := n.(map[string]interface{})
 		obj[i] = v1.ServicePort{
@@ -172,7 +172,7 @@ func expandIPFamilies(l []interface{}) []v1.IPFamily {
 	if l[0] == nil {
 		return []v1.IPFamily{}
 	}
-	obj := make([]v1.IPFamily, len(l), len(l))
+	obj := make([]v1.IPFamily, len(l))
 	for i, n := range l {
 		obj[i] = v1.IPFamily(n.(string))
 	}
@@ -287,7 +287,7 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 // Patch Ops
 
 func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, kv *gversion.Version) (PatchOperations, error) {
-	ops := make([]PatchOperation, 0, 0)
+	ops := make([]PatchOperation, 0)
 
 	if d.HasChange(keyPrefix + "allocate_load_balancer_node_ports") {
 		ops = append(ops, &ReplaceOperation{

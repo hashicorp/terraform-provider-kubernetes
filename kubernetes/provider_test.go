@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -359,9 +360,11 @@ func isRunningInKind() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
-	labels := node.GetLabels()
-	if v, ok := labels["kubernetes.io/hostname"]; ok && v == "kind-control-plane" {
+	u, err := url.Parse(node.Spec.ProviderID)
+	if err != nil {
+		return false, err
+	}
+	if u.Scheme == "kind" {
 		return true, nil
 	}
 	return false, nil

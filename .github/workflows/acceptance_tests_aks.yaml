@@ -1,4 +1,4 @@
-name: accceptance test (aks)
+name: Accceptance Tests (AKS)
 
 on:
   workflow_dispatch:
@@ -47,6 +47,7 @@ jobs:
           terraform apply --auto-approve
       - name: Run Tests  
         env: 
+          KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks-new/kubeconfig
           TESTARGS: "-run ${{ inputs.runTests }}"
         run: |
           make testacc

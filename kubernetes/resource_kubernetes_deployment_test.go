@@ -579,9 +579,9 @@ func TestAccKubernetesDeployment_with_container_security_context_seccomp_profile
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.type", "Localhost"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.localhost_profile", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.localhost_profile", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.type", "Localhost"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.localhost_profile", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.localhost_profile", "foo"),
 				),
 			},
 		},
@@ -2149,7 +2149,7 @@ func testAccKubernetesDeploymentConfigWithContainerSecurityContextSeccompProfile
         security_context {
           seccomp_profile {
             type              = "Localhost"
-            localhost_profile = ""
+            localhost_profile = "bar"
           }
         }
         container {
@@ -2159,7 +2159,7 @@ func testAccKubernetesDeploymentConfigWithContainerSecurityContextSeccompProfile
           security_context {
             seccomp_profile {
               type              = "Localhost"
-              localhost_profile = ""
+              localhost_profile = "foo"
             }
           }
         }

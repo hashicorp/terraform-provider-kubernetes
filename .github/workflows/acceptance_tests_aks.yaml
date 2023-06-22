@@ -1,4 +1,4 @@
-name: Accceptance Tests (AKS)
+name: Acceptance Tests (AKS)
 
 on:
   workflow_dispatch:
@@ -47,8 +47,9 @@ jobs:
           terraform apply --auto-approve
       - name: Run Tests  
         env: 
+          TF_ACC_TERRAFORM_VERSION: ${{ inputs.terraformVersion }}
           KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks-new/kubeconfig
-          TESTARGS: "-run ${{ inputs.runTests }}"
+          TESTARGS: -run '${{ inputs.runTests }}'
         run: |
           make testacc
       - name: Destroy AKS

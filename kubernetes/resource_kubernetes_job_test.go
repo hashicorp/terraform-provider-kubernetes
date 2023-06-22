@@ -102,7 +102,7 @@ func TestAccKubernetesJob_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.labels.foo", "bar"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.active_deadline_seconds", "0"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.backoff_limit", "0"),
+					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.backoff_limit", "6"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.completions", "1"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.parallelism", "1"),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.manual_selector", "true"),

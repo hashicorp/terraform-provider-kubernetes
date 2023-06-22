@@ -75,7 +75,7 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.successful_jobs_history_limit", "3"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.suspend", "false"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.parallelism", "2"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.backoff_limit", "0"),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.backoff_limit", "6"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.template.0.metadata.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.template.0.metadata.0.labels.%", "1"),

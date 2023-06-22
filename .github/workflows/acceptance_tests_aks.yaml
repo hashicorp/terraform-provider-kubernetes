@@ -31,7 +31,7 @@ jobs:
       - name: Set up go
         uses: actions/setup-go@v4
         with:
-          go-version: 'go.mod'
+          go-version-file: 'go.mod'
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
         with:

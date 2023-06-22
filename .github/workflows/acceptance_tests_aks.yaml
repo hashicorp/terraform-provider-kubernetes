@@ -37,7 +37,9 @@ jobs:
         with:
           terraform_version: ${{ inputs.terraformVersion }} 
       - name: Azure login 
-        # TODO
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Provision AKS
         working-directory: ./kubernetes/test-infra/aks-new
         run: | 

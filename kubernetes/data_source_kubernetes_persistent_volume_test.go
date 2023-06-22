@@ -21,22 +21,22 @@ func TestAccKubernetesDataSourcePV_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesDataSourcePVConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("data.kubernetes_persistent_volume.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("data.kubernetes_persistent_volume.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("data.kubernetes_persistent_volume.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume.test", "spec.0.access_modes.0", "ReadWriteOnce"),
-					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume.test", "spec.0.capacity.%", "1"),
-					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume.test", "spec.0.capacity.storage", "5Gi"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.access_modes.0", "ReadWriteOnce"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.capacity.%", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume.test", "spec.0.capacity.storage", "5Gi"),
+					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume_v1.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("data.kubernetes_persistent_volume_v1.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("data.kubernetes_persistent_volume_v1.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("data.kubernetes_persistent_volume_v1.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume_v1.test", "spec.0.access_modes.#", "1"),
+					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume_v1.test", "spec.0.access_modes.0", "ReadWriteOnce"),
+					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume_v1.test", "spec.0.capacity.%", "1"),
+					resource.TestCheckResourceAttr("data.kubernetes_persistent_volume_v1.test", "spec.0.capacity.storage", "5Gi"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_v1.test", "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_v1.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_v1.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_v1.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_v1.test", "spec.0.access_modes.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_v1.test", "spec.0.access_modes.0", "ReadWriteOnce"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_v1.test", "spec.0.capacity.%", "1"),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_v1.test", "spec.0.capacity.storage", "5Gi"),
 				),
 			},
 		},
@@ -45,7 +45,7 @@ func TestAccKubernetesDataSourcePV_basic(t *testing.T) {
 
 func testAccKubernetesDataSourcePVConfig_basic(name string) string {
 	return fmt.Sprintf(`
-resource "kubernetes_persistent_volume" "test" {
+resource "kubernetes_persistent_volume_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -66,9 +66,9 @@ resource "kubernetes_persistent_volume" "test" {
   }
 }
 
-data "kubernetes_persistent_volume" "test" {
+data "kubernetes_persistent_volume_v1" "test" {
   metadata {
-    name = "${kubernetes_persistent_volume.test.metadata.0.name}"
+    name = "${kubernetes_persistent_volume_v1.test.metadata.0.name}"
   }
 }
 `, name)

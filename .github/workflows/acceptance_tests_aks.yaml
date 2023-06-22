@@ -47,7 +47,7 @@ jobs:
           terraform apply --auto-approve
       - name: Run Tests  
         env: 
-          TESTARGS: "-run ${{ inputs.terraformVersion }}"
+          TESTARGS: "-run ${{ inputs.runTests }}"
         run: |
           make testacc
       - name: Destroy AKS

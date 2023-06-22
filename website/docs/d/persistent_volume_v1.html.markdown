@@ -1,12 +1,12 @@
 ---
 subcategory: "core/v1"
 layout: "kubernetes"
-page_title: "Kubernetes: kubernetes_persistent_volume"
+page_title: "Kubernetes: kubernetes_persistent_volume_v1"
 description: |-
   A Persistent Volume (PV) is a piece of networked storage in the cluster that has been provisioned by an administrator.
 ---
 
-# kubernetes_persistent_volume
+# kubernetes_persistent_volume_v1
 
 A PersistentVolume (PV) is a piece of networked storage in the cluster provisioned by an administrator. It is a resource in the cluster just like a node is a cluster resource. Persistent Volumes have a lifecycle independent of any individual pod that uses the PV. This data source retrieves information about the specified PV.
 
@@ -14,14 +14,14 @@ A PersistentVolume (PV) is a piece of networked storage in the cluster provision
 ## Example Usage
 
 ```hcl
-data "kubernetes_persistent_volume" "example" {
+data "kubernetes_persistent_volume_v1" "example" {
   metadata {
     name = "terraform-example"
   }
 }
 data "kubernetes_secret" "example" {
   metadata {
-    name = data.kubernetes_persistent_volume.example.spec[0].persistent_volume_source[0].azure_file[0].secret_name
+    name = data.kubernetes_persistent_volume_v1.example.spec[0].persistent_volume_source[0].azure_file[0].secret_name
   }
 }
 output "azure_storageaccount_name" {

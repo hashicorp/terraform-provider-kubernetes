@@ -200,7 +200,7 @@ func TestAccKubernetesJob_ttl_seconds_after_finished(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
+		PreCheck:      func() { testAccPreCheck(t); skipIfClusterVersionLessThan(t, "1.21.0") },
 		IDRefreshName: "kubernetes_job.test",
 		IDRefreshIgnore: []string{
 			"spec.0.selector.0.match_expressions.#",

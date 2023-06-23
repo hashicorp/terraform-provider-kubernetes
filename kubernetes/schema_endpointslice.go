@@ -151,11 +151,3 @@ func schemaObjectReference() *schema.Resource {
 		},
 	}
 }
-
-func hashEndpointSlicePorts() schema.SchemaSetFunc {
-	return schema.HashResource(schemaEndpointSliceSubsetPorts())
-}
-
-func hashEndpointSliceEndpoints() schema.SchemaSetFunc {
-	return schema.HashResource(schemaEndpointSliceSubsetEndpoints())
-}

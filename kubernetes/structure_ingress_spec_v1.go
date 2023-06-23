@@ -4,8 +4,6 @@
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 )
@@ -258,32 +256,4 @@ func expandIngressV1TLS(l []interface{}) []networking.IngressTLS {
 	}
 
 	return tlsList
-}
-
-// Patch Ops
-
-func patchIngressV1Spec(keyPrefix, pathPrefix string, d *schema.ResourceData) PatchOperations {
-	ops := make([]PatchOperation, 0, 0)
-	if d.HasChange(keyPrefix + "backend") {
-		ops = append(ops, &ReplaceOperation{
-			Path:  pathPrefix + "backend",
-			Value: expandIngressV1Backend(d.Get(keyPrefix + "backend").([]interface{})),
-		})
-	}
-
-	if d.HasChange(keyPrefix + "rule") {
-		ops = append(ops, &ReplaceOperation{
-			Path:  pathPrefix + "rules",
-			Value: expandIngressV1Rule(d.Get(keyPrefix + "rule").([]interface{})),
-		})
-	}
-
-	if d.HasChange(keyPrefix + "tls") {
-		ops = append(ops, &ReplaceOperation{
-			Path:  pathPrefix + "tls",
-			Value: expandIngressV1TLS(d.Get(keyPrefix + "tls").([]interface{})),
-		})
-	}
-
-	return ops
 }

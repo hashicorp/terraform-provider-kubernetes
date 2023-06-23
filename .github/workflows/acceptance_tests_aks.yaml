@@ -50,6 +50,7 @@ jobs:
           TF_ACC_TERRAFORM_VERSION: ${{ inputs.terraformVersion }}
           KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks-new/kubeconfig
           TESTARGS: -run '${{ inputs.runTests }}'
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
         run: |
           make testacc
       - name: Destroy AKS

@@ -440,7 +440,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 				if err == context.DeadlineExceeded {
 					resp.Diagnostics = append(resp.Diagnostics,
 						&tfprotov5.Diagnostic{
-							Severity: tfprotov5.DiagnosticSeverityError,
+							Severity: tfprotov5.DiagnosticSeverityWarning,
 							Summary:  "Operation timed out",
 							Detail:   "Terraform timed out waiting on the operation to complete",
 						})
@@ -451,8 +451,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 							Summary:  "Error waiting for operation to complete",
 							Detail:   err.Error(),
 						})
+					return resp, nil
 				}
-				return resp, nil
 			}
 		}
 

@@ -58,6 +58,17 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 				Deprecated:      false,
 			},
 			{
+				Name:            "tls_server_name",
+				Type:            tftypes.String,
+				Description:     "Server name passed to the server for SNI and is used in the client to check server certificates against.",
+				Required:        false,
+				Optional:        true,
+				Computed:        false,
+				Sensitive:       false,
+				DescriptionKind: 0,
+				Deprecated:      false,
+			},
+			{
 				Name:            "client_certificate",
 				Type:            tftypes.String,
 				Description:     "PEM-encoded client certificate for TLS authentication.",

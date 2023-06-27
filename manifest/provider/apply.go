@@ -442,7 +442,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 						&tfprotov5.Diagnostic{
 							Severity: tfprotov5.DiagnosticSeverityWarning,
 							Summary:  "Operation timed out",
-							Detail:   "Terraform timed out waiting on the operation to complete",
+							Detail:   fmt.Sprintf("Resource created but timed out while waiting for %v", waitConfig),
 						})
 				} else {
 					resp.Diagnostics = append(resp.Diagnostics,

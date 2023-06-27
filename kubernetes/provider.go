@@ -229,6 +229,7 @@ func Provider() *schema.Provider {
 			"kubernetes_pod_v1":                     dataSourceKubernetesPod(),
 			"kubernetes_service_account":            dataSourceKubernetesServiceAccount(),
 			"kubernetes_service_account_v1":         dataSourceKubernetesServiceAccount(),
+			"kubernetes_persistent_volume_v1":       dataSourceKubernetesPersistentVolume(),
 			"kubernetes_persistent_volume_claim":    dataSourceKubernetesPersistentVolumeClaim(),
 			"kubernetes_persistent_volume_claim_v1": dataSourceKubernetesPersistentVolumeClaim(),
 			"kubernetes_nodes":                      dataSourceKubernetesNodes(),

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -317,6 +318,16 @@ func skipIfNotRunningInMinikube(t *testing.T) {
 	}
 }
 
+func skipIfNotRunningInKind(t *testing.T) {
+	isRunningInKind, err := isRunningInKind()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !isRunningInKind {
+		t.Skip("The Kubernetes endpoint must come from Kind for this test to run - skipping")
+	}
+}
+
 func skipIfRunningInMinikube(t *testing.T) {
 	isInMinikube, err := isRunningInMinikube()
 	if err != nil {
@@ -339,6 +350,21 @@ func isRunningInMinikube() (bool, error) {
 
 	labels := node.GetLabels()
 	if v, ok := labels["kubernetes.io/hostname"]; ok && v == "minikube" {
+		return true, nil
+	}
+	return false, nil
+}
+
+func isRunningInKind() (bool, error) {
+	node, err := getFirstNode()
+	if err != nil {
+		return false, err
+	}
+	u, err := url.Parse(node.Spec.ProviderID)
+	if err != nil {
+		return false, err
+	}
+	if u.Scheme == "kind" {
 		return true, nil
 	}
 	return false, nil

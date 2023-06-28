@@ -34,6 +34,7 @@ jobs:
         with:
           wait: 2m
           version: v${{ github.event.inputs.kindVersion }}
+          config: .github/config/acceptance_tests_kind_config.yaml
       - name: Run Acceptance Test Suite
         env:
           KUBE_CONFIG_PATH: ${{ env.KUBECONFIG }}

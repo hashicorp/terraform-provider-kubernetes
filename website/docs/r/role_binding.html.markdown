@@ -46,8 +46,8 @@ resource "kubernetes_role_binding" "example" {
 The following arguments are supported:
 
 * `metadata` - (Required) Standard kubernetes metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
-* `role_ref` - (Required) The Role to bind Subjects to. For more info see [Kubernetes reference](https://kubernetes.io/docs/admin/authorization/rbac/#rolebinding-and-clusterrolebinding)
-* `subject` - (Required) The Users, Groups, or ServiceAccounts to grand permissions to. For more info see [Kubernetes reference](https://kubernetes.io/docs/admin/authorization/rbac/#referring-to-subjects)
+* `role_ref` - (Required) The Role to bind Subjects to. For more info see [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#rolebinding-and-clusterrolebinding)
+* `subject` - (Required) The Users, Groups, or ServiceAccounts to grand permissions to. For more info see [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#referring-to-subjects)
 
 
 ## Nested Blocks

@@ -67,6 +67,9 @@ fmt:
 fmtcheck:
 	@./scripts/gofmtcheck.sh
 
+type-assertion:
+	@./scripts/type-assertions.sh
+
 test: fmtcheck
 	go test $(TEST) || exit 1
 	echo $(TEST) | \

@@ -437,12 +437,12 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		if !waitConfig.IsNull() {
 			err = s.waitForCompletion(ctxDeadline, waitConfig, rs, rname, wt, th)
 			if err != nil {
-				if err == context.DeadlineExceeded {
+				if err == fmt.Errorf("timed out waiting on conditions") {
 					resp.Diagnostics = append(resp.Diagnostics,
 						&tfprotov5.Diagnostic{
 							Severity: tfprotov5.DiagnosticSeverityWarning,
 							Summary:  "Operation timed out",
-							Detail:   fmt.Sprintf("Resource created but timed out while waiting for %v", waitConfig),
+							Detail:   "Terraform timed out waiting on the operation to complete",
 						})
 				} else {
 					resp.Diagnostics = append(resp.Diagnostics,

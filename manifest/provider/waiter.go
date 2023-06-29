@@ -145,7 +145,7 @@ func (w *FieldWaiter) Wait(ctx context.Context) error {
 	for {
 		if deadline, ok := ctx.Deadline(); ok {
 			if time.Now().After(deadline) {
-				return context.DeadlineExceeded
+				return fmt.Errorf("timed out waiting on conditions")
 			}
 		}
 

@@ -449,7 +449,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 				resp.Diagnostics = append(resp.Diagnostics,
 					&tfprotov5.Diagnostic{
 						Severity: tfprotov5.DiagnosticSeverityError,
-						Summary:  fmt.Sprintf(`Failed to read resource "%s" after wait conditions`, rname),
+						Summary:  fmt.Sprintf(`Failed to read resource %q after wait conditions`, rname),
 						Detail:   err.Error(),
 					})
 

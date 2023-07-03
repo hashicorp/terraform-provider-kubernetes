@@ -37,7 +37,7 @@ jobs:
         with:
           terraform_version: ${{ inputs.terraformVersion }} 
       - name: Azure login 
-        uses: azure/login@v1 # TSCCR: no entry for repository "azure/login"
+        uses: azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.6
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Provision AKS

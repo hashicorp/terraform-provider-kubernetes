@@ -68,7 +68,7 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 			}
 			atts = make([]tftypes.Type, len(v.Type().(tftypes.Tuple).ElementTypes))
 			for i := range v.Type().(tftypes.Tuple).ElementTypes {
-				atts[i] = t.(tftypes.Tuple).ElementTypes[0]
+				atts[i] = v.Type().(tftypes.Tuple).ElementTypes[i]
 			}
 		}
 		var vals []tftypes.Value

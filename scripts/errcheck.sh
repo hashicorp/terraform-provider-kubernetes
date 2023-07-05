@@ -1,4 +1,7 @@
 # Check gofmt
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 echo "==> Checking for unchecked errors..."
 
 if ! which errcheck > /dev/null; then

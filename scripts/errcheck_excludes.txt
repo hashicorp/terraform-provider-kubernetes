@@ -1,0 +1,2 @@
+(github.com/hashicorp/terraform-plugin-go/tftypes.Value).As
+github.com/hashicorp/terraform-plugin-go/tfprotov5/tf5server.Serve

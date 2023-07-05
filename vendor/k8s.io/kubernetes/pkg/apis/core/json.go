@@ -24,8 +24,5 @@ import "encoding/json"
 var _ = json.Marshaler(&AvoidPods{})
 var _ = json.Unmarshaler(&AvoidPods{})
 
-// MarshalJSON panics to prevent marshalling of internal structs
 func (AvoidPods) MarshalJSON() ([]byte, error) { panic("do not marshal internal struct") }
-
-// UnmarshalJSON panics to prevent unmarshalling of internal structs
-func (*AvoidPods) UnmarshalJSON([]byte) error { panic("do not unmarshal to internal struct") }
+func (*AvoidPods) UnmarshalJSON([]byte) error  { panic("do not unmarshal to internal struct") }

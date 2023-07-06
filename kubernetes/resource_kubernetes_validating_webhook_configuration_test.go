@@ -11,8 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -188,70 +186,6 @@ func testAccCheckKubernetesValidatingWebhookConfigurationExists(n string) resour
 	}
 }
 
-func testAccCheckKubernetesValidatingWebhookGetObjectV1(n string, obj *admissionregistrationv1.ValidatingWebhookConfiguration) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[n]
-		if !ok {
-			return fmt.Errorf("Not found: %s", n)
-		}
-		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-		if err != nil {
-			return err
-		}
-		ctx := context.TODO()
-		name := rs.Primary.ID
-		obj, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
-		return nil
-	}
-}
-
-func testAccCheckKubernetesValidatingWebhookGetObjectV1Beta1(n string, obj *admissionregistrationv1beta1.ValidatingWebhookConfiguration) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[n]
-		if !ok {
-			return fmt.Errorf("Not found: %s", n)
-		}
-		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-		if err != nil {
-			return err
-		}
-		ctx := context.TODO()
-		name := rs.Primary.ID
-		obj, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
-		return nil
-	}
-}
-
-func testAccCheckKubernetesValidatingWebhookConfigV1ForceNew(old, new *admissionregistrationv1.ValidatingWebhookConfiguration, wantNew bool) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if wantNew {
-			if old.ObjectMeta.UID == new.ObjectMeta.UID {
-				return fmt.Errorf("Expecting new resource for ValidatingWebhookConfiguration %s", old.ObjectMeta.UID)
-			}
-		} else {
-			if old.ObjectMeta.UID != new.ObjectMeta.UID {
-				return fmt.Errorf("Expecting ValidatingWebhookConfiguration UIDs to be the same: expected %s got %s", old.ObjectMeta.UID, new.ObjectMeta.UID)
-			}
-		}
-		return nil
-	}
-}
-
-func testAccCheckKubernetesValidatingWebhookConfigV1Beta1ForceNew(old, new *admissionregistrationv1beta1.ValidatingWebhookConfiguration, wantNew bool) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if wantNew {
-			if old.ObjectMeta.UID == new.ObjectMeta.UID {
-				return fmt.Errorf("Expecting new resource for ValidatingWebhookConfiguration %s", old.ObjectMeta.UID)
-			}
-		} else {
-			if old.ObjectMeta.UID != new.ObjectMeta.UID {
-				return fmt.Errorf("Expecting ValidatingWebhookConfiguration UIDs to be the same: expected %s got %s", old.ObjectMeta.UID, new.ObjectMeta.UID)
-			}
-		}
-		return nil
-	}
-}
-
 func testAccKubernetesValidatingWebhookConfigurationConfig_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_validating_webhook_configuration" "test" {
@@ -343,60 +277,6 @@ resource "kubernetes_validating_webhook_configuration" "test" {
   }
 }
 `, name, name)
-}
-
-func testAccKubernetesValidatingWebhookConfigurationConfig_without_rules(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_validating_webhook_configuration_v1" "test" {
-  metadata {
-    name = %q
-  }
-
-  webhook {
-    name = %q
-
-    failure_policy = "Ignore"
-    match_policy   = "Exact"
-
-    admission_review_versions = [
-      "v1",
-      "v1beta1"
-    ]
-
-    client_config {
-      service {
-        namespace = "example-namespace"
-        name      = "example-service"
-      }
-
-      ca_bundle = "test"
-    }
-
-    object_selector {
-      match_labels = {
-        app = "test"
-      }
-    }
-
-    side_effects    = "NoneOnDryRun"
-    timeout_seconds = 5
-  }
-}
-`, name, name)
-}
-
-func skipIfNotAdmissionRegistrationV1Beta1(t *testing.T) {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-	if err != nil {
-		t.Fatal(err)
-	}
-	useadmissionregistrationv1beta1, err := useAdmissionregistrationV1beta1(conn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !useadmissionregistrationv1beta1 {
-		t.Skip("The Kubernetes endpoint is not using admissionregistrationv1beta1 - skipping.")
-	}
 }
 
 func skipIfNotAdmissionRegistrationV1(t *testing.T) {

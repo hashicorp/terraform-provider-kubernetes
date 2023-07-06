@@ -101,14 +101,6 @@ func expandBase64MapToByteMap(m map[string]interface{}) map[string][]byte {
 	return result
 }
 
-func expandStringMapToByteMap(m map[string]interface{}) map[string][]byte {
-	result := make(map[string][]byte)
-	for k, v := range m {
-		result[k] = []byte(v.(string))
-	}
-	return result
-}
-
 func expandStringSlice(s []interface{}) []string {
 	result := make([]string, len(s))
 	for k, v := range s {
@@ -621,17 +613,6 @@ func schemaSetToInt64Array(set *schema.Set) []int64 {
 		array = append(array, int64(e))
 	}
 	return array
-}
-func flattenLabelSelectorRequirementList(l []metav1.LabelSelectorRequirement) []interface{} {
-	att := make([]map[string]interface{}, len(l))
-	for i, v := range l {
-		m := map[string]interface{}{}
-		m["key"] = v.Key
-		m["values"] = newStringSet(schema.HashString, v.Values)
-		m["operator"] = string(v.Operator)
-		att[i] = m
-	}
-	return []interface{}{att}
 }
 
 func flattenLocalObjectReferenceArray(in []api.LocalObjectReference) []interface{} {

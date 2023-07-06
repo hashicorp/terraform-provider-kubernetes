@@ -81,7 +81,7 @@ func flattenNodeStatus(in v1.NodeStatus) []interface{} {
 }
 
 func flattenNodeTaints(in ...v1.Taint) []interface{} {
-	out := make([]interface{}, len(in), len(in))
+	out := make([]interface{}, len(in))
 	for i, taint := range in {
 		m := make(map[string]interface{})
 		m["key"] = taint.Key

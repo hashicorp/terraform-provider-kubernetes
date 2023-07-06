@@ -14,7 +14,7 @@ import (
 )
 
 func flattenCapability(in []v1.Capability) []string {
-	att := make([]string, len(in), len(in))
+	att := make([]string, len(in))
 	for i, v := range in {
 		att[i] = string(v)
 	}
@@ -639,7 +639,7 @@ func expandContainerSecurityContext(l []interface{}) (*v1.SecurityContext, error
 }
 
 func expandCapabilitySlice(s []interface{}) []v1.Capability {
-	result := make([]v1.Capability, len(s), len(s))
+	result := make([]v1.Capability, len(s))
 	for k, v := range s {
 		result[k] = v1.Capability(v.(string))
 	}

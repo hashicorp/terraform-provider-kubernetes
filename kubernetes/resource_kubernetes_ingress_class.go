@@ -299,7 +299,7 @@ func flattenIngressClassSpec(in networking.IngressClassSpec) []interface{} {
 }
 
 func flattenIngressClassParameters(in *networking.IngressClassParametersReference) []interface{} {
-	att := make([]interface{}, 1, 1)
+	att := make([]interface{}, 1)
 
 	m := make(map[string]interface{})
 	m["kind"] = in.Kind

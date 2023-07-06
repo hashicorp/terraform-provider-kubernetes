@@ -293,14 +293,31 @@ func TestAccKubernetesDaemonSet_with_container_security_context_seccomp_profile(
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.type", "RuntimeDefault"),
 				),
 			},
+		},
+	})
+}
+
+func TestAccKubernetesDaemonSet_with_container_security_context_seccomp_localhost_profile(t *testing.T) {
+	var conf appsv1.DaemonSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := nginxImageVersion
+	resourceName := "kubernetes_daemonset.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
+		IDRefreshName:     "kubernetes_daemonset.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
+		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetConfigWithContainerSecurityContextSeccompProfileLocalhost(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.type", "Localhost"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.localhost_profile", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.localhost_profile", "profiles/audit.json"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.type", "Localhost"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.localhost_profile", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.localhost_profile", "profiles/audit.json"),
 				),
 			},
 		},
@@ -855,7 +872,7 @@ func testAccKubernetesDaemonSetConfigWithContainerSecurityContextSeccompProfileL
         security_context {
           seccomp_profile {
             type              = "Localhost"
-            localhost_profile = ""
+            localhost_profile = "profiles/audit.json"
           }
         }
         container {
@@ -865,7 +882,7 @@ func testAccKubernetesDaemonSetConfigWithContainerSecurityContextSeccompProfileL
           security_context {
             seccomp_profile {
               type              = "Localhost"
-              localhost_profile = ""
+              localhost_profile = "profiles/audit.json"
             }
           }
         }

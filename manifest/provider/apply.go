@@ -404,18 +404,6 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, nil
 		}
 
-		newResObject, err := payload.ToTFValue(RemoveServerSideFields(result.Object), tsch, th, tftypes.NewAttributePath())
-		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics,
-				&tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
-					Summary:  "Conversion from Unstructured to tftypes.Value failed",
-					Detail:   err.Error(),
-				})
-			return resp, nil
-		}
-		s.logger.Trace("[ApplyResourceChange][Apply]", "[payload.ToTFValue]", dump(newResObject))
-
 		wt, _, err := s.TFTypeFromOpenAPI(ctx, gvk, true)
 		if err != nil {
 			return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
@@ -454,7 +442,33 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 				}
 				return resp, nil
 			}
+
+			r, err := rs.Get(ctxDeadline, rname, metav1.GetOptions{})
+			if err != nil {
+				s.logger.Error("[ApplyResourceChange][ReadAfterWait]", "API error", dump(err), "API response", dump(result))
+				resp.Diagnostics = append(resp.Diagnostics,
+					&tfprotov5.Diagnostic{
+						Severity: tfprotov5.DiagnosticSeverityError,
+						Summary:  fmt.Sprintf(`Failed to read resource %q after wait conditions`, rname),
+						Detail:   err.Error(),
+					})
+
+				return resp, nil
+			}
+			result = r
 		}
+
+		newResObject, err := payload.ToTFValue(RemoveServerSideFields(result.Object), tsch, th, tftypes.NewAttributePath())
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics,
+				&tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityError,
+					Summary:  "Conversion from Unstructured to tftypes.Value failed",
+					Detail:   err.Error(),
+				})
+			return resp, nil
+		}
+		s.logger.Trace("[ApplyResourceChange][Apply]", "[payload.ToTFValue]", dump(newResObject))
 
 		compObj, err := morph.DeepUnknown(tsch, newResObject, tftypes.NewAttributePath())
 		if err != nil {

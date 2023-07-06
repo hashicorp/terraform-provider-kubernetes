@@ -11,7 +11,7 @@ import (
 // Flatteners
 
 func flattenIngressRule(in []v1beta1.IngressRule) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, r := range in {
 		m := make(map[string]interface{})
 
@@ -26,7 +26,7 @@ func flattenIngressRuleHttp(in *v1beta1.HTTPIngressRuleValue) []interface{} {
 	if in == nil {
 		return []interface{}{}
 	}
-	pathAtts := make([]interface{}, len(in.Paths), len(in.Paths))
+	pathAtts := make([]interface{}, len(in.Paths))
 	for i, p := range in.Paths {
 		path := map[string]interface{}{
 			"path":    p.Path,
@@ -43,7 +43,7 @@ func flattenIngressRuleHttp(in *v1beta1.HTTPIngressRuleValue) []interface{} {
 }
 
 func flattenIngressBackend(in *v1beta1.IngressBackend) []interface{} {
-	att := make([]interface{}, 1, 1)
+	att := make([]interface{}, 1)
 
 	m := make(map[string]interface{})
 	m["service_name"] = in.ServiceName
@@ -77,7 +77,7 @@ func flattenIngressSpec(in v1beta1.IngressSpec) []interface{} {
 }
 
 func flattenIngressTLS(in []v1beta1.IngressTLS) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 
 	for i, v := range in {
 		m := make(map[string]interface{})
@@ -96,7 +96,7 @@ func expandIngressRule(l []interface{}) []v1beta1.IngressRule {
 	if len(l) == 0 || l[0] == nil {
 		return []v1beta1.IngressRule{}
 	}
-	obj := make([]v1beta1.IngressRule, len(l), len(l))
+	obj := make([]v1beta1.IngressRule, len(l))
 	for i, n := range l {
 		cfg := n.(map[string]interface{})
 
@@ -108,7 +108,7 @@ func expandIngressRule(l []interface{}) []v1beta1.IngressRule {
 				http := h.(map[string]interface{})
 				if v, ok := http["path"]; ok {
 					pathList := v.([]interface{})
-					paths = make([]v1beta1.HTTPIngressPath, len(pathList), len(pathList))
+					paths = make([]v1beta1.HTTPIngressPath, len(pathList))
 					for i, path := range pathList {
 						p := path.(map[string]interface{})
 						hip := v1beta1.HTTPIngressPath{
@@ -182,7 +182,7 @@ func expandIngressTLS(l []interface{}) []v1beta1.IngressTLS {
 		return nil
 	}
 
-	tlsList := make([]v1beta1.IngressTLS, len(l), len(l))
+	tlsList := make([]v1beta1.IngressTLS, len(l))
 	for i, t := range l {
 		in := t.(map[string]interface{})
 		obj := v1beta1.IngressTLS{}

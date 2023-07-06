@@ -27,9 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout 
-        uses: actions/checkout@v3
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Set up go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
         with:
           go-version-file: 'go.mod'
       - name: Install Terraform
@@ -37,7 +37,7 @@ jobs:
         with:
           terraform_version: ${{ inputs.terraformVersion }} 
       - name: Azure login 
-        uses: azure/login@v1
+        uses: azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.6
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Provision AKS
@@ -50,6 +50,7 @@ jobs:
           TF_ACC_TERRAFORM_VERSION: ${{ inputs.terraformVersion }}
           KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks-new/kubeconfig
           TESTARGS: -run '${{ inputs.runTests }}'
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
         run: |
           make testacc
       - name: Destroy AKS

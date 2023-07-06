@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -120,6 +121,7 @@ func unsetEnv(t *testing.T) func() {
 		"KUBE_CLIENT_KEY_DATA":      e.ClientKeyData,
 		"KUBE_CLUSTER_CA_CERT_DATA": e.ClusterCACertData,
 		"KUBE_INSECURE":             e.Insecure,
+		"KUBE_TLS_SERVER_NAME":      e.TLSServerName,
 		"KUBE_TOKEN":                e.Token,
 	}
 
@@ -150,6 +152,7 @@ func getEnv() *currentEnv {
 		ClientKeyData:     os.Getenv("KUBE_CLIENT_KEY_DATA"),
 		ClusterCACertData: os.Getenv("KUBE_CLUSTER_CA_CERT_DATA"),
 		Insecure:          os.Getenv("KUBE_INSECURE"),
+		TLSServerName:     os.Getenv("KUBE_TLS_SERVER_NAME"),
 		Token:             os.Getenv("KUBE_TOKEN"),
 	}
 	if v := os.Getenv("KUBE_CONFIG_PATH"); v != "" {
@@ -315,6 +318,16 @@ func skipIfNotRunningInMinikube(t *testing.T) {
 	}
 }
 
+func skipIfNotRunningInKind(t *testing.T) {
+	isRunningInKind, err := isRunningInKind()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !isRunningInKind {
+		t.Skip("The Kubernetes endpoint must come from Kind for this test to run - skipping")
+	}
+}
+
 func skipIfRunningInMinikube(t *testing.T) {
 	isInMinikube, err := isRunningInMinikube()
 	if err != nil {
@@ -337,6 +350,21 @@ func isRunningInMinikube() (bool, error) {
 
 	labels := node.GetLabels()
 	if v, ok := labels["kubernetes.io/hostname"]; ok && v == "minikube" {
+		return true, nil
+	}
+	return false, nil
+}
+
+func isRunningInKind() (bool, error) {
+	node, err := getFirstNode()
+	if err != nil {
+		return false, err
+	}
+	u, err := url.Parse(node.Spec.ProviderID)
+	if err != nil {
+		return false, err
+	}
+	if u.Scheme == "kind" {
 		return true, nil
 	}
 	return false, nil
@@ -449,5 +477,6 @@ type currentEnv struct {
 	ClientKeyData     string
 	ClusterCACertData string
 	Insecure          string
+	TLSServerName     string
 	Token             string
 }

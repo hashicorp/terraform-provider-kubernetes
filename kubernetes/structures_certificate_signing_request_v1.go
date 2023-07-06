@@ -26,7 +26,7 @@ func expandCertificateSigningRequestV1Spec(csr []interface{}) (*certificates.Cer
 }
 
 func expandCertificateSigningRequestV1Usages(s []interface{}) []certificates.KeyUsage {
-	out := make([]certificates.KeyUsage, len(s), len(s))
+	out := make([]certificates.KeyUsage, len(s))
 	for i, v := range s {
 		out[i] = certificates.KeyUsage(v.(string))
 	}

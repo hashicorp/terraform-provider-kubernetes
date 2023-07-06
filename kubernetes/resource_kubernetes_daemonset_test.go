@@ -293,14 +293,31 @@ func TestAccKubernetesDaemonSet_with_container_security_context_seccomp_profile(
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.type", "RuntimeDefault"),
 				),
 			},
+		},
+	})
+}
+
+func TestAccKubernetesDaemonSet_with_container_security_context_seccomp_localhost_profile(t *testing.T) {
+	var conf appsv1.DaemonSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := nginxImageVersion
+	resourceName := "kubernetes_daemonset.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
+		IDRefreshName:     "kubernetes_daemonset.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
+		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetConfigWithContainerSecurityContextSeccompProfileLocalhost(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.type", "Localhost"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.localhost_profile", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.localhost_profile", "profiles/audit.json"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.type", "Localhost"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.localhost_profile", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.localhost_profile", "profiles/audit.json"),
 				),
 			},
 		},
@@ -368,21 +385,6 @@ func TestAccKubernetesDaemonSet_with_resource_requirements(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testAccCheckKubernetesDaemonsetForceNew(old, new *appsv1.DaemonSet, wantNew bool) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if wantNew {
-			if old.ObjectMeta.UID == new.ObjectMeta.UID {
-				return fmt.Errorf("Expecting new resource for daemonset %s", old.ObjectMeta.UID)
-			}
-		} else {
-			if old.ObjectMeta.UID != new.ObjectMeta.UID {
-				return fmt.Errorf("Expecting daemonset UIDs to be the same: expected %s got %s", old.ObjectMeta.UID, new.ObjectMeta.UID)
-			}
-		}
-		return nil
-	}
 }
 
 func testAccCheckKubernetesDaemonSetDestroy(s *terraform.State) error {
@@ -870,7 +872,7 @@ func testAccKubernetesDaemonSetConfigWithContainerSecurityContextSeccompProfileL
         security_context {
           seccomp_profile {
             type              = "Localhost"
-            localhost_profile = ""
+            localhost_profile = "profiles/audit.json"
           }
         }
         container {
@@ -880,7 +882,7 @@ func testAccKubernetesDaemonSetConfigWithContainerSecurityContextSeccompProfileL
           security_context {
             seccomp_profile {
               type              = "Localhost"
-              localhost_profile = ""
+              localhost_profile = "profiles/audit.json"
             }
           }
         }

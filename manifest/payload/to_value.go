@@ -138,8 +138,8 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 }
 
 func sliceToTFDynamicValue(in []interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
-	il := make([]tftypes.Value, len(in), len(in))
-	oTypes := make([]tftypes.Type, len(in), len(in))
+	il := make([]tftypes.Value, len(in))
+	oTypes := make([]tftypes.Type, len(in))
 	for k, v := range in {
 		eap := at.WithElementKeyInt(k)
 		var iv tftypes.Value
@@ -178,11 +178,11 @@ func sliceToTFListValue(in []interface{}, st tftypes.Type, th map[string]string,
 }
 
 func sliceToTFTupleValue(in []interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
-	il := make([]tftypes.Value, len(in), len(in))
-	oTypes := make([]tftypes.Type, len(in), len(in))
+	il := make([]tftypes.Value, len(in))
+	oTypes := make([]tftypes.Type, len(in))
 	ttypes := st.(tftypes.Tuple).ElementTypes
 	if len(ttypes) == 1 && len(il) > 1 {
-		ttypes = make([]tftypes.Type, len(in), len(in))
+		ttypes = make([]tftypes.Type, len(in))
 		for i := range il {
 			ttypes[i] = st.(tftypes.Tuple).ElementTypes[0]
 		}
@@ -201,7 +201,7 @@ func sliceToTFTupleValue(in []interface{}, st tftypes.Type, th map[string]string
 }
 
 func sliceToTFSetValue(in []interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
-	il := make([]tftypes.Value, len(in), len(in))
+	il := make([]tftypes.Value, len(in))
 	var oType tftypes.Type = tftypes.Type(nil)
 	for k, v := range in {
 		eap := at.WithElementKeyInt(k)

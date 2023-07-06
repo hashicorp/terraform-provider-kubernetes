@@ -130,7 +130,7 @@ func flattenRBACSubjects(in []api.Subject) []interface{} {
 }
 
 func flattenClusterRoleRules(in []api.PolicyRule) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
 		m["api_groups"] = n.APIGroups

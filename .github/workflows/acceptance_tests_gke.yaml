@@ -45,13 +45,13 @@ jobs:
     env:
       KUBECONFIG: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig
     steps:
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Set up Go
-        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
         with:
           go-version-file: 'go.mod'
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@ef5d53e30bbcd8d0836f4288f5e50ff3e086997d # v1.0.0
+        uses: google-github-actions/auth@35b0e87d162680511bf346c299f71c9c5c379033 # v1.1.1
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
           access_token_lifetime: "10800s"
@@ -84,9 +84,9 @@ jobs:
     outputs:
       test-case-matrix: ${{ steps.generate.outputs.test-case-matrix }}
     steps:
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Set up Go
-        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
         with:
           go-version-file: 'go.mod'
       - name: "Generate testcase matrix"
@@ -112,18 +112,18 @@ jobs:
       matrix:
         test-case: ${{ fromJson(needs.generate-case-matrix.outputs.test-case-matrix) }}
     steps:
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Set up Go
-        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
         with:
           go-version-file: 'go.mod'
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@ef5d53e30bbcd8d0836f4288f5e50ff3e086997d # v1.0.0
+        uses: google-github-actions/auth@35b0e87d162680511bf346c299f71c9c5c379033 # v1.1.1
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
           access_token_lifetime: "10800s"
       - name: "Set up Cloud SDK"
-        uses: google-github-actions/setup-gcloud@62d4898025f6041e16b1068643bfc5a696863587 # v1.1.0
+        uses: google-github-actions/setup-gcloud@e30db14379863a8c79331b04a9969f4c1e225e0b # v1.1.1
         with:
           install_components: "beta,gke-gcloud-auth-plugin"
       - name: "Initialize gcloud SDK"
@@ -156,7 +156,7 @@ jobs:
     needs: [prepare-gke-environment, acceptance-tests]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: "Retrieve state"
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
@@ -164,7 +164,7 @@ jobs:
           path: |
             ${{ github.workspace }}/kubernetes/test-infra/gke
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@ef5d53e30bbcd8d0836f4288f5e50ff3e086997d # v1.0.0
+        uses: google-github-actions/auth@35b0e87d162680511bf346c299f71c9c5c379033 # v1.1.1
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
           access_token_lifetime: "10800s"
@@ -174,7 +174,7 @@ jobs:
           terraform_version: ${{ github.event.inputs.terraformVersion }}
           terraform_wrapper: false
       - name: "Set up Cloud SDK"
-        uses: google-github-actions/setup-gcloud@62d4898025f6041e16b1068643bfc5a696863587 # v1.1.0
+        uses: google-github-actions/setup-gcloud@e30db14379863a8c79331b04a9969f4c1e225e0b # v1.1.1
         with:
           install_components: "beta,gke-gcloud-auth-plugin"
       - name: "Initialize gcloud SDK"

@@ -455,13 +455,35 @@ func TestAccKubernetesPod_with_pod_security_context_seccomp_profile(t *testing.T
 				),
 			},
 			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPod_with_pod_security_context_seccomp_localhost_profile(t *testing.T) {
+	var conf api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	imageName := nginxImageVersion
+	resourceName := "kubernetes_pod.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
 				Config: testAccKubernetesPodConfigWithSecurityContextSeccompProfileLocalhost(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.seccomp_profile.0.type", "Localhost"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.seccomp_profile.0.localhost_profile", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.seccomp_profile.0.localhost_profile", "profiles/audit.json"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.security_context.0.seccomp_profile.0.type", "Localhost"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.security_context.0.seccomp_profile.0.localhost_profile", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.security_context.0.seccomp_profile.0.localhost_profile", "profiles/audit.json"),
 				),
 			},
 			{
@@ -1906,7 +1928,7 @@ resource "kubernetes_pod" "test" {
     security_context {
       seccomp_profile {
         type              = "Localhost"
-        localhost_profile = ""
+        localhost_profile = "profiles/audit.json"
       }
     }
 
@@ -1916,7 +1938,7 @@ resource "kubernetes_pod" "test" {
       security_context {
         seccomp_profile {
           type              = "Localhost"
-          localhost_profile = ""
+          localhost_profile = "profiles/audit.json"
         }
       }
     }

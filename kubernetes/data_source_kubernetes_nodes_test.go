@@ -31,6 +31,7 @@ func TestAccKubernetesDataSourceNodes_basic(t *testing.T) {
 		resource.TestCheckResourceAttrWith("data.kubernetes_nodes.test", "nodes.0.status.0.capacity.cpu", checkParsableQuantity),
 		resource.TestCheckResourceAttrWith("data.kubernetes_nodes.test", "nodes.0.status.0.capacity.memory", checkParsableQuantity),
 		resource.TestCheckResourceAttrSet("data.kubernetes_nodes.test", "nodes.0.status.0.node_info.0.architecture"),
+		resource.TestCheckResourceAttrSet("data.kubernetes_nodes.test", "nodes.0.status.0.addresses.0.address"),
 	)
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },

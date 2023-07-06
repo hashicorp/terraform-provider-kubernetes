@@ -25,6 +25,17 @@ func flattenNodeSpec(in v1.NodeSpec) []interface{} {
 	return []interface{}{att}
 }
 
+func flattenAddresses(in ...v1.NodeAddress) []interface{} {
+	out := make([]interface{}, len(in))
+	for i, address := range in {
+		m := make(map[string]interface{})
+		m["address"] = address.Address
+		m["type"] = address.Type
+		out[i] = m
+	}
+	return out
+}
+
 func flattenNodeInfo(in v1.NodeSystemInfo) []interface{} {
 	att := make(map[string]interface{})
 	if in.MachineID != "" {
@@ -62,6 +73,7 @@ func flattenNodeInfo(in v1.NodeSystemInfo) []interface{} {
 
 func flattenNodeStatus(in v1.NodeStatus) []interface{} {
 	att := make(map[string]interface{})
+	att["addresses"] = flattenAddresses(in.Addresses...)
 	att["allocatable"] = flattenResourceList(in.Allocatable)
 	att["capacity"] = flattenResourceList(in.Capacity)
 	att["node_info"] = flattenNodeInfo(in.NodeInfo)

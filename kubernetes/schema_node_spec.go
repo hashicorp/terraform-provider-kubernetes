@@ -46,6 +46,23 @@ func nodeSpecFields() map[string]*schema.Schema {
 
 func nodeStatusFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
+		"addresses": {
+			Type:        schema.TypeList,
+			Computed:    true,
+			Description: "Set of IP addresses and/or Hostname assigned to the node. More info: https://kubernetes.io/docs/concepts/architecture/nodes/#addresses/node/#info",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"type": {
+						Type:     schema.TypeString,
+						Computed: true,
+					},
+					"address": {
+						Type:     schema.TypeString,
+						Computed: true,
+					},
+				},
+			},
+		},
 		"allocatable": {
 			Type:        schema.TypeMap,
 			Description: "Represents the total resources of a node.",

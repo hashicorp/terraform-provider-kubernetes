@@ -1834,6 +1834,10 @@ func testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity_match(name, s
 	return testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity(name, nodeAffinity)
 }
 
+//func testAccKubernetesPersistentVolumeConfig_hostPath_withoutNodeAffinity(name string) string {
+//	return testAccKubernetesPersistentVolumeConfig_hostPath_nodeAffinity(name, ``)
+//}
+
 func testAccKubernetesPersistentVolumeConfig_hostPath_mountOptions(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
   metadata {

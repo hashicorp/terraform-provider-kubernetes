@@ -791,21 +791,6 @@ func TestAccKubernetesServiceV1_ipFamilies(t *testing.T) {
 	})
 }
 
-func testAccCheckKubernetesServiceForceNew(old, new *api.Service, wantNew bool) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if wantNew {
-			if old.ObjectMeta.UID == new.ObjectMeta.UID {
-				return fmt.Errorf("Expecting new resource for Service %s", old.ObjectMeta.UID)
-			}
-		} else {
-			if old.ObjectMeta.UID != new.ObjectMeta.UID {
-				return fmt.Errorf("Expecting Service UIDs to be the same: expected %s got %s", old.ObjectMeta.UID, new.ObjectMeta.UID)
-			}
-		}
-		return nil
-	}
-}
-
 func testAccCheckServicePorts(svc *api.Service, expected []api.ServicePort) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(svc.Spec.Ports) == 0 {
@@ -935,24 +920,6 @@ func testAccKubernetesServiceConfig_basic(name string) string {
   }
 }
 `, name)
-}
-
-func testAccKubernetesServiceConfig_stateUpgradev0(provider, name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
-  provider = "%s"
-  metadata {
-    name = "%s"
-  }
-
-  spec {
-    type = "LoadBalancer"
-    port {
-      port        = 8080
-      target_port = 80
-    }
-  }
-}
-`, provider, name)
 }
 
 func testAccKubernetesServiceConfig_modified(name string) string {

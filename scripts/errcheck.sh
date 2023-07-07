@@ -6,7 +6,7 @@ echo "==> Checking for unchecked errors..."
 
 if ! which errcheck > /dev/null; then
     echo "==> Installing errcheck..."
-    go get -u github.com/kisielk/errcheck
+    go install github.com/kisielk/errcheck@latest
 fi
 
 err_files=$($(go env GOPATH)/bin/errcheck -exclude scripts/errcheck_excludes.txt \

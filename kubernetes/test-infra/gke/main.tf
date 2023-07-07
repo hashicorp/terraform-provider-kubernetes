@@ -17,6 +17,10 @@ variable "enable_alpha" {
   default = false
 }
 
+variable "cluster_name" {
+  default = ""
+}
+
 data "google_compute_zones" "available" {
 }
 
@@ -36,7 +40,7 @@ resource "google_service_account" "default" {
 
 resource "google_container_cluster" "primary" {
   provider           = google-beta
-  name               = "tf-acc-test-${random_id.cluster_name.hex}"
+  name               = var.cluster_name != "" ? var.cluster_name : "tf-acc-test-${random_id.cluster_name.hex}"
   location           = data.google_compute_zones.available.names[0]
   node_version       = data.google_container_engine_versions.supported.latest_node_version
   min_master_version = data.google_container_engine_versions.supported.latest_master_version

@@ -307,23 +307,6 @@ func testAccCheckKubernetesConfigMapExists(n string, obj *api.ConfigMap) resourc
 	}
 }
 
-func deleteConfigMap(t *testing.T, obj *api.ConfigMap) {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	ctx := context.TODO()
-	err = conn.CoreV1().ConfigMaps(
-		obj.ObjectMeta.GetNamespace()).Delete(
-		ctx, obj.ObjectMeta.GetName(), metav1.DeleteOptions{})
-	if err != nil {
-		t.Error(err)
-		return
-	}
-}
-
 func testAccKubernetesConfigMapConfig_nodata(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {

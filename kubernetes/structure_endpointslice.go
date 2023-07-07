@@ -120,7 +120,7 @@ func expandEndpointSliceCondition(in []interface{}) api.EndpointConditions {
 }
 
 func flattenEndpointSliceEndpoints(in []api.Endpoint) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, e := range in {
 		m := make(map[string]interface{})
 		if e.Hostname != nil {
@@ -165,7 +165,7 @@ func flattenEndpointSliceConditions(in api.EndpointConditions) []interface{} {
 }
 
 func flattenEndpointSlicePorts(in []api.EndpointPort) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, e := range in {
 		m := make(map[string]interface{})
 		if *e.Name != "" {

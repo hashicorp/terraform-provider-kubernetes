@@ -12,8 +12,8 @@ on:
       terraformVersion:
         description: Terraform version
         default: 1.4.0
-      schedule:
-        cron: '0 21 * * 1-5'
+  schedule:
+    cron: '0 21 * * *'
 
 env:
   KUBECONFIG: ${{ github.workspace }}/.kube/config

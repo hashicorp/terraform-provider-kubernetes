@@ -15,7 +15,7 @@ err_files=$(errcheck -exclude scripts/errcheck_excludes.txt \
                      -ignore 'github.com/hashicorp/terraform/helper/schema:Set' \
                      -ignore 'bytes:.*' \
                      -ignore 'io:Close|Write' \
-                     -asserts ./manifest/provider/ \
+                     -asserts ./manifest/.../ \
                      )
 
 if [[ -n ${err_files} ]]; then

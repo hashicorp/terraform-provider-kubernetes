@@ -8,7 +8,7 @@ resource "random_string" "rand" {
 }
 
 locals {
-  cluster_name    = "test-cluster-${random_string.rand.result}"
+  cluster_name    = var.cluster_name != "" ? var.cluster_name : "test-cluster-${random_string.rand.result}"
   cidr            = "10.0.0.0/16"
   az_count        = min(var.az_span, length(data.aws_availability_zones.available.names))
   azs             = slice(data.aws_availability_zones.available.names, 0, local.az_count)
@@ -28,7 +28,7 @@ data "aws_availability_zones" "available" {
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 18.11"
+  version = "~> 19.15"
 
   cluster_name                    = local.cluster_name
   cluster_version                 = var.cluster_version
@@ -38,17 +38,13 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
-  eks_managed_node_group_defaults = {
-    instance_types = [var.instance_type]
-    min_size       = 1
-    max_size       = local.node_count
-    desired_size   = local.node_count
-  }
-
   eks_managed_node_groups = {
     default_node_group = {
-      create_launch_template = false
-      launch_template_name   = ""
+      desired_size   = local.node_count
+      min_size       = 1
+      max_size       = local.node_count
+      instance_types = [var.instance_type]
+      use_custom_launch_template = false
     }
   }
 
@@ -57,7 +53,7 @@ module "eks" {
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 3.0"
+  version = "~> 5.0"
 
   name = local.cluster_name
   cidr = local.cidr

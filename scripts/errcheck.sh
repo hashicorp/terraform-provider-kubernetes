@@ -9,7 +9,7 @@ if ! which errcheck > /dev/null; then
     go get -u github.com/kisielk/errcheck
 fi
 
-err_files=$(errcheck -exclude scripts/errcheck_excludes.txt \
+err_files=$($(go env GOPATH)/bin/errcheck -exclude scripts/errcheck_excludes.txt \
                      -verbose \
                      -ignoretests \
                      -ignore 'github.com/hashicorp/terraform/helper/schema:Set' \

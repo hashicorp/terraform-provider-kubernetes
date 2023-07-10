@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
 variable "cluster_version" {
-  default = "1.23"
+  default = "1.27"
 }
 
 variable "nodes_per_az" {
@@ -21,4 +21,9 @@ variable "az_span" {
     condition     = var.az_span > 1
     error_message = "Cluster must span at least 2 AZs"
   }
+}
+
+
+variable "cluster_name" {
+  default = ""
 }

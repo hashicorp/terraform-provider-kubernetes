@@ -1,3 +1,29 @@
+## 2.22.0 (July 12, 2023)
+
+FEATURES:
+
+* `kubernetes/data_source_kubernetes_persistent_volume.go`: Add data source for Kubernetes Persistent Volume Resource [[GH-2118](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2118)]
+* `kubernetes/resource_kubernetes_namespace.go`: Add attribute `wait_for_default_service_account` to namespaces which will force Terraform to wait until the default service account has been created by Kubernetes on namespace creation. [[GH-2119](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2119)]
+* `kubernetes/resource_kubernetes_endpointslice.go`: Add kubernetes_endpoint_slice resource [[GH-2086](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2086)]
+
+ENHANCEMENTS:
+
+* `kubernetes/provider.go`: Add `tls_server_name` kubernetes provider options. [[GH-1638](https://github.com/hashicorp/terraform-provider-kubernetes/issues/1638)]
+
+BUG FIXES:
+
+* `resource/kubernetes_manifest`: fix an issue in the `kubernetes_manifest` resource when it panics if tuple attributes within an object have a different number of elements. This leads to the situation when all types of end tuples are getting the same type. [[GH-2164](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2164)]
+* `resource/kubernetes_manifest`: fix an issue with the `kubernetes_manifest` resource, where an object fails to update correctly when employing wait conditions and thus some attributes are not available for the reference after creation. [[GH-2173](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2173)]
+
+## Community Contributors :raised_hands:
+- @SRodi made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/2096
+- @kschoche made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/2119
+- @sbocinec made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/2138
+- @bartoszj made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1638
+- @mpriscella made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/2169
+- @axcosta made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/2137
+- @thevilledev made their outstanding contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/2158, https://github.com/hashicorp/terraform-provider-kubernetes/pull/2154, https://github.com/hashicorp/terraform-provider-kubernetes/pull/2159, https://github.com/hashicorp/terraform-provider-kubernetes/pull/2161 :rocket:
+
 ## 2.21.1 (June 5, 2023)
 
 HOTFIX:

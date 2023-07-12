@@ -3329,7 +3329,7 @@ func testAccKubernetesPodEphemeralStorage(name, imageName string) string {
     name = %[1]q
   }
   storage_provisioner = "pd.csi.storage.gke.io"
-  reclaim_policy = "Delete"
+  reclaim_policy      = "Delete"
   volume_binding_mode = "WaitForFirstConsumer"
 
   parameters = {
@@ -3339,7 +3339,7 @@ func testAccKubernetesPodEphemeralStorage(name, imageName string) string {
 
 resource "kubernetes_pod_v1" "test" {
   metadata {
-    name   = %[1]q
+    name = %[1]q
     labels = {
       Test = "TfAcceptanceTest"
     }
@@ -3347,8 +3347,8 @@ resource "kubernetes_pod_v1" "test" {
   spec {
     priority_class_name = "default"
     container {
-      name    = "containername"
-      image   = %[2]q
+      name  = "containername"
+      image = %[2]q
 
       volume_mount {
         mount_path = "/ephemeral"
@@ -3384,16 +3384,16 @@ resource "kubernetes_pod_v1" "test" {
 
 func testAccKubernetesPodEphemeralStorageWithoutPod(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
-    metadata {
-      name = %[1]q
-    }
-    storage_provisioner = "pd.csi.storage.gke.io"
-    reclaim_policy = "Delete"
-    volume_binding_mode = "WaitForFirstConsumer"
-  
-    parameters = {
-      type = "pd-standard"
-    }
+  metadata {
+    name = %[1]q
   }
+  storage_provisioner = "pd.csi.storage.gke.io"
+  reclaim_policy      = "Delete"
+  volume_binding_mode = "WaitForFirstConsumer"
+
+  parameters = {
+    type = "pd-standard"
+  }
+}
 `, name)
 }

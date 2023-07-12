@@ -906,6 +906,7 @@ The `items` block supports the following:
 * `csi` - (Optional) CSI represents storage that is handled by an external CSI driver. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes/#csi)
 * `downward_api` - (Optional) DownwardAPI represents downward API about the pod that should populate this volume
 * `empty_dir` - (Optional) EmptyDir represents a temporary directory that shares a pod's lifetime. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#emptydir)
+* `ephemeral` - (Optional) Represents an ephemeral volume that is handled by a normal storage driver. More info: https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#generic-ephemeral-volumes. 
 * `fc` - (Optional) Represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.
 * `flex_volume` - (Optional) Represents a generic volume resource that is provisioned/attached using an exec based plugin. This is an alpha feature and may change in future.
 * `flocker` - (Optional) Represents a Flocker volume attached to a kubelet's host machine and exposed to the pod for its usage. This depends on the Flocker control service being running

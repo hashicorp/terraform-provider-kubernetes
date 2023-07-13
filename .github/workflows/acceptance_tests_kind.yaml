@@ -17,6 +17,7 @@ on:
 
 env:
   KUBECONFIG: ${{ github.workspace }}/.kube/config
+  KIND_VERSION: ${{ github.event.inputs.kind_version || vars.KIND_VERSION }}
 
 jobs:
   acceptance_tests:
@@ -35,7 +36,7 @@ jobs:
         uses: helm/kind-action@fa81e57adff234b2908110485695db0f181f3c67 # v1.7.0
         with:
           wait: 2m
-          version: v${{ github.event.inputs.kindVersion }}
+          version: v${{ env.KIND_VERSION }}
           config: .github/config/acceptance_tests_kind_config.yaml
       - name: Run Acceptance Test Suite
         env:

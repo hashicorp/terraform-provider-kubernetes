@@ -572,6 +572,43 @@ func testAccCheckKubernetesPersistentVolumeClaimExists(n string, obj *api.Persis
 	}
 }
 
+func testAccCheckKubernetesPersistentVolumeClaimCreated(namespace, name string, obj *api.PersistentVolumeClaim) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
+		ctx := context.TODO()
+		out, err := conn.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		*obj = *out
+		return nil
+	}
+}
+
+func testAccCheckKubernetesPersistentVolumeClaimIsDestroyed(obj *api.PersistentVolumeClaim) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		meta := obj.GetObjectMeta()
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
+		ctx := context.TODO()
+		out, err := conn.CoreV1().PersistentVolumeClaims(meta.GetNamespace()).Get(ctx, meta.GetName(), metav1.GetOptions{})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return nil
+			}
+			return err
+		}
+
+		return fmt.Errorf("Expected no PVC but still found %q", out.GetObjectMeta().GetName())
+	}
+}
+
 func testAccCheckClaimRef(pv *api.PersistentVolume, expected *ObjectRefStatic) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		or := pv.Spec.ClaimRef

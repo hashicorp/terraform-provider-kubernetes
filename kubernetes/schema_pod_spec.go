@@ -687,6 +687,50 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 		},
 	}
 
+	v["ephemeral"] = &schema.Schema{
+		Type:        schema.TypeList,
+		Description: "Represents an ephemeral volume that is handled by a normal storage driver. More info: https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#generic-ephemeral-volumes",
+		Optional:    true,
+		MaxItems:    1,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"metadata": {
+					Type:        schema.TypeList,
+					Description: "May contain labels and annotations that will be copied into the PVC when creating it.",
+					Required:    true,
+					MaxItems:    1,
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"annotations": {
+								Type:         schema.TypeMap,
+								Description:  "An unstructured key value map stored with the persistent volume claim that may be used to store arbitrary metadata. More info: http://kubernetes.io/docs/user-guide/annotations",
+								Optional:     true,
+								Elem:         &schema.Schema{Type: schema.TypeString},
+								ValidateFunc: validateAnnotations,
+							},
+							"labels": {
+								Type:         schema.TypeMap,
+								Description:  "Map of string keys and values that can be used to organize and categorize (scope and select) the persistent volume claim. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels",
+								Optional:     true,
+								Elem:         &schema.Schema{Type: schema.TypeString},
+								ValidateFunc: validateLabels,
+							},
+						},
+					},
+				},
+				"spec": {
+					Type:        schema.TypeList,
+					Description: "The specification for the PersistentVolumeClaim. The entire content is copied unchanged into the PVC that gets created from this template. The same fields as in a PersistentVolumeClaim are also valid here.",
+					Required:    true,
+					MaxItems:    1,
+					Elem: &schema.Resource{
+						Schema: persistentVolumeClaimSpecFields(),
+					},
+				},
+			},
+		},
+	}
+
 	v["persistent_volume_claim"] = &schema.Schema{
 		Type:        schema.TypeList,
 		Description: "The specification of a persistent volume.",
@@ -789,7 +833,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 					Elem: &schema.Resource{
 						Schema: map[string]*schema.Schema{
 							// identical to SecretVolumeSource but without the default mode and uses a local object reference as name instead of a secret name.
-							"secret": &schema.Schema{
+							"secret": {
 								Type:        schema.TypeList,
 								Description: "Secret represents a secret that should populate this volume. More info: http://kubernetes.io/docs/user-guide/volumes#secrets",
 								Optional:    true,
@@ -835,7 +879,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 								},
 							},
 							// identical to ConfigMapVolumeSource but without the default mode and uses a local object reference as name instead of a secret name.
-							"config_map": &schema.Schema{
+							"config_map": {
 								Type:        schema.TypeList,
 								Description: "ConfigMap represents a configMap that should populate this volume",
 								Optional:    true,
@@ -881,7 +925,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 								},
 							},
 							// identical to DownwardAPIVolumeSource but without the default mode.
-							"downward_api": &schema.Schema{
+							"downward_api": {
 								Type:        schema.TypeList,
 								Description: "DownwardAPI represents downward API about the pod that should populate this volume",
 								Optional:    true,
@@ -959,7 +1003,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 									},
 								},
 							},
-							"service_account_token": &schema.Schema{
+							"service_account_token": {
 								Type:        schema.TypeList,
 								Description: "A projected service account token volume",
 								Optional:    true,

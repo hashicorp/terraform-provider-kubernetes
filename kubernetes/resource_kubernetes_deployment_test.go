@@ -392,7 +392,7 @@ func TestAccKubernetesDeployment_with_container_liveness_probe_using_http_get(t 
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -422,7 +422,7 @@ func TestAccKubernetesDeployment_with_container_liveness_probe_using_tcp(t *test
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1845,7 +1845,7 @@ func testAccKubernetesDeploymentConfigWithLivenessProbeUsingHTTPGet(deploymentNa
         container {
           image = "%s"
           name  = "containername"
-          args  = ["/server"]
+          args  = ["liveness"]
 
           liveness_probe {
             http_get {
@@ -1897,7 +1897,7 @@ func testAccKubernetesDeploymentConfigWithLivenessProbeUsingTCP(deploymentName, 
         container {
           image = "%s"
           name  = "containername"
-          args  = ["/server"]
+          args  = ["liveness"]
 
           liveness_probe {
             tcp_socket {
@@ -2006,9 +2006,9 @@ func testAccKubernetesDeploymentConfigWithContainerSecurityContext(deploymentNam
         }
 
         container {
-          image = "gcr.io/google_containers/liveness"
+          image = "registry.k8s.io/e2e-test-images/agnhost:2.40"
           name  = "containername2"
-          args  = ["/server"]
+          args  = ["liveness"]
 
           security_context {
             allow_privilege_escalation = true

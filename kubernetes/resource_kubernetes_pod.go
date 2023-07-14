@@ -57,9 +57,10 @@ func resourceKubernetesPodSchemaV1() map[string]*schema.Schema {
 			},
 		},
 		"legacy_lifecycle_states": {
-			Type:     schema.TypeBool,
-			Optional: true,
-			Default:  true,
+			Type:        schema.TypeBool,
+			Description: "Setting this attribute to `false` would set the target pod lifecycle state as [\"Running\", \"Succeeded\", \"Failed\"]. The default value of `true` would leave the target pod lifecycle state as [\"Running\"]`.",
+			Optional:    true,
+			Default:     true,
 		},
 	}
 }

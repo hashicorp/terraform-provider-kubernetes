@@ -280,7 +280,7 @@ func TestAccKubernetesReplicationController_with_container_liveness_probe_using_
 	var conf api.ReplicationController
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -310,7 +310,7 @@ func TestAccKubernetesReplicationController_with_container_liveness_probe_using_
 	var conf api.ReplicationController
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -335,7 +335,7 @@ func TestAccKubernetesReplicationController_with_container_lifecycle(t *testing.
 	var conf api.ReplicationController
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -917,7 +917,7 @@ func testAccKubernetesReplicationControllerConfigWithLivenessProbeUsingHTTPGet(r
         container {
           image = "%s"
           name  = "containername"
-          args  = ["/server"]
+          args  = ["liveness"]
 
           liveness_probe {
             http_get {
@@ -967,7 +967,7 @@ func testAccKubernetesReplicationControllerConfigWithLivenessProbeUsingTCP(rcNam
         container {
           image = "%s"
           name  = "containername"
-          args  = ["/server"]
+          args  = ["liveness"]
 
           liveness_probe {
             tcp_socket {
@@ -1011,7 +1011,7 @@ func testAccKubernetesReplicationControllerConfigWithLifeCycle(rcName, imageName
         container {
           image = "%s"
           name  = "containername"
-          args  = ["/server"]
+          args  = ["liveness"]
 
           lifecycle {
             post_start {

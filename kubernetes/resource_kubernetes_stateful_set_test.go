@@ -168,7 +168,7 @@ func TestAccKubernetesStatefulSet_Update(t *testing.T) {
 				Config: testAccKubernetesStatefulSetConfigUpdateImage(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetExists("kubernetes_stateful_set.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.image", "k8s.gcr.io/liveness:latest"),
+					resource.TestCheckResourceAttr("kubernetes_stateful_set.test", "spec.0.template.0.spec.0.container.0.image", "registry.k8s.io/e2e-test-images/agnhost:2.40"),
 				),
 			},
 			{
@@ -542,7 +542,8 @@ func testAccKubernetesStatefulSetConfigUpdateImage(name string) string {
       spec {
         container {
           name  = "ss-test"
-          image = "k8s.gcr.io/liveness:latest"
+          image = "registry.k8s.io/e2e-test-images/agnhost:2.40"
+          args  = ["pause"]
 
           port {
             container_port = "80"
@@ -627,7 +628,8 @@ func testAccKubernetesStatefulSetConfigUpdatedSelectorLabels(name string) string
       spec {
         container {
           name  = "ss-test"
-          image = "k8s.gcr.io/pause:latest"
+          image = "registry.k8s.io/e2e-test-images/agnhost:2.40"
+          args  = ["pause"]
 
           port {
             container_port = "80"
@@ -710,7 +712,8 @@ func testAccKubernetesStatefulSetConfigUpdateReplicas(name string, replicas stri
       spec {
         container {
           name  = "ss-test"
-          image = "k8s.gcr.io/pause:latest"
+          image = "registry.k8s.io/e2e-test-images/agnhost:2.40"
+          args  = ["pause"]
 
           port {
             container_port = "80"
@@ -793,7 +796,8 @@ func testAccKubernetesStatefulSetConfigUpdateTemplate(name string) string {
       spec {
         container {
           name  = "ss-test"
-          image = "k8s.gcr.io/pause:latest"
+          image = "registry.k8s.io/e2e-test-images/agnhost:2.40"
+          args  = ["pause"]
 
           port {
             container_port = "80"
@@ -897,7 +901,8 @@ func testAccKubernetesStatefulSetConfigRollingUpdatePartition(name string) strin
       spec {
         container {
           name  = "ss-test"
-          image = "k8s.gcr.io/pause:latest"
+          image = "registry.k8s.io/e2e-test-images/agnhost:2.40"
+          args  = ["pause"]
 
           port {
             container_port = "80"
@@ -980,7 +985,8 @@ func testAccKubernetesStatefulSetConfigUpdateStrategyOnDelete(name string) strin
       spec {
         container {
           name  = "ss-test"
-          image = "k8s.gcr.io/pause:latest"
+          image = "registry.k8s.io/e2e-test-images/agnhost:2.40"
+          args  = ["pause"]
 
           port {
             container_port = "80"

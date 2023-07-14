@@ -1,11 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,13 +18,35 @@ import (
 
 func resourceKubernetesConfigMap() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesConfigMapCreate,
-		Read:   resourceKubernetesConfigMapRead,
-		Exists: resourceKubernetesConfigMapExists,
-		Update: resourceKubernetesConfigMapUpdate,
-		Delete: resourceKubernetesConfigMapDelete,
+		CreateContext: resourceKubernetesConfigMapCreate,
+		ReadContext:   resourceKubernetesConfigMapRead,
+		UpdateContext: resourceKubernetesConfigMapUpdate,
+		DeleteContext: resourceKubernetesConfigMapDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
+		},
+		CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+			if diff.Id() == "" {
+				return nil
+			}
+
+			// ForceNew if immutable has been set to true
+			// and there are any changes to data, binary_data, or immutable
+			immutable, _ := diff.GetChange("immutable")
+			if immutable.(bool) {
+				immutableFields := []string{
+					"data",
+					"binary_data",
+					"immutable",
+				}
+				for _, f := range immutableFields {
+					if diff.HasChange(f) {
+						diff.ForceNew(f)
+					}
+				}
+			}
+
+			return nil
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -36,73 +62,86 @@ func resourceKubernetesConfigMap() *schema.Resource {
 				Description: "Data contains the configuration data. Each key must consist of alphanumeric characters, '-', '_' or '.'. Values with non-UTF-8 byte sequences must use the BinaryData field. The keys stored in Data must not overlap with the keys in the BinaryData field, this is enforced during validation process.",
 				Optional:    true,
 			},
+			"immutable": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Immutable, if set to true, ensures that data stored in the ConfigMap cannot be updated (only object metadata can be modified). If not set to true, the field can be modified at any time. Defaulted to nil.",
+			},
 		},
 	}
 }
 
-func resourceKubernetesConfigMapCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesConfigMapCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	cfgMap := api.ConfigMap{
 		ObjectMeta: metadata,
 		BinaryData: expandBase64MapToByteMap(d.Get("binary_data").(map[string]interface{})),
 		Data:       expandStringMap(d.Get("data").(map[string]interface{})),
+		Immutable:  ptrToBool(d.Get("immutable").(bool)),
 	}
+
 	log.Printf("[INFO] Creating new config map: %#v", cfgMap)
 	out, err := conn.CoreV1().ConfigMaps(metadata.Namespace).Create(ctx, &cfgMap, metav1.CreateOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted new config map: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesConfigMapRead(d, meta)
+	return resourceKubernetesConfigMapRead(ctx, d, meta)
 }
 
-func resourceKubernetesConfigMapRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesConfigMapRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesConfigMapExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		d.SetId("")
+		return diag.Diagnostics{}
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Reading config map %s", name)
 	cfgMap, err := conn.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received config map: %#v", cfgMap)
-	err = d.Set("metadata", flattenMetadata(cfgMap.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(cfgMap.ObjectMeta, d, meta))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	d.Set("binary_data", flattenByteMapToBase64Map(cfgMap.BinaryData))
 	d.Set("data", cfgMap.Data)
+	d.Set("immutable", cfgMap.Immutable)
 
 	return nil
 }
 
-func resourceKubernetesConfigMapUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesConfigMapUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -118,37 +157,46 @@ func resourceKubernetesConfigMapUpdate(d *schema.ResourceData, meta interface{})
 		ops = append(ops, diffOps...)
 	}
 
+	if d.HasChange("immutable") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/immutable",
+			Value: ptrToBool(d.Get("immutable").(bool)),
+		})
+	}
+
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 
 	log.Printf("[INFO] Updating config map %q: %v", name, string(data))
 	out, err := conn.CoreV1().ConfigMaps(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to update Config Map: %s", err)
+		return diag.Errorf("Failed to update Config Map: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated config map: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesConfigMapRead(d, meta)
+	return resourceKubernetesConfigMapRead(ctx, d, meta)
 }
 
-func resourceKubernetesConfigMapDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesConfigMapDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Deleting config map: %#v", name)
 	err = conn.CoreV1().ConfigMaps(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		return err
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Config map %s deleted", name)
@@ -157,12 +205,11 @@ func resourceKubernetesConfigMapDelete(d *schema.ResourceData, meta interface{})
 	return nil
 }
 
-func resourceKubernetesConfigMapExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesConfigMapExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -172,7 +219,7 @@ func resourceKubernetesConfigMapExists(d *schema.ResourceData, meta interface{})
 	log.Printf("[INFO] Checking config map %s", name)
 	_, err = conn.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

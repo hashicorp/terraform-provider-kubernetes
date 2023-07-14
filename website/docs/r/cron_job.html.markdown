@@ -1,4 +1,5 @@
 ---
+subcategory: "batch/v1beta1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_cron_job"
 description: |-
@@ -12,7 +13,7 @@ description: |-
   One CronJob object is like one line of a crontab (cron table) file. It runs a job periodically on a given schedule, written in Cron format.
 
   Note: All CronJob `schedule` times are based on the timezone of the master where the job is initiated.
-  For instructions on creating and working with cron jobs, and for an example of a spec file for a cron job, see Running automated tasks with cron jobs.
+  For instructions on creating and working with cron jobs, and for an example of a spec file for a cron job, see [Kubernetes reference](https://kubernetes.io/docs/tasks/job/automated-tasks-with-cron-jobs/).
 
 ## Example Usage
 
@@ -77,7 +78,6 @@ The following arguments are supported:
 
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this service that can be used by clients to determine when service has changed. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-* `self_link` - A URL representing this service.
 * `uid` - The unique in time and space value for this service. For more info: http://kubernetes.io/docs/user-guide/identifiers#uids
 
 ### `spec`

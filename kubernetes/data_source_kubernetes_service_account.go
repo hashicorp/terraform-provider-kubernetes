@@ -1,15 +1,19 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"context"
-	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesServiceAccount() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceKubernetesServiceAccountRead,
+		ReadContext: dataSourceKubernetesServiceAccountRead,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("service account", false),
@@ -47,37 +51,36 @@ func dataSourceKubernetesServiceAccount() *schema.Resource {
 				Computed:    true,
 			},
 			"default_secret_name": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:       schema.TypeString,
+				Computed:   true,
+				Deprecated: "Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, `default_secret_name` will be empty",
 			},
 		},
 	}
 }
 
-func dataSourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceKubernetesServiceAccountRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	sa, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("Unable to fetch service account from Kubernetes: %s", err)
+		return diag.Errorf("Unable to fetch service account from Kubernetes: %s", err)
 	}
 
-	defaultSecret, err := findDefaultServiceAccount(ctx, sa, conn)
-	if err != nil {
-		return fmt.Errorf("Failed to discover the default service account token: %s", err)
-	}
+	defaultSecret, diagMsg := findDefaultServiceAccount(ctx, sa, conn)
 
 	err = d.Set("default_secret_name", defaultSecret)
 	if err != nil {
-		return fmt.Errorf("Unable to set default_secret_name: %s", err)
+		return diag.Errorf("Unable to set default_secret_name: %s", err)
 	}
 
 	d.SetId(buildId(sa.ObjectMeta))
 
-	return resourceKubernetesServiceAccountRead(d, meta)
+	diagMsg = append(diagMsg, resourceKubernetesServiceAccountRead(ctx, d, meta)...)
+
+	return diagMsg
 }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -6,8 +9,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,17 +21,22 @@ import (
 
 func resourceKubernetesNamespace() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesNamespaceCreate,
-		Read:   resourceKubernetesNamespaceRead,
-		Exists: resourceKubernetesNamespaceExists,
-		Update: resourceKubernetesNamespaceUpdate,
-		Delete: resourceKubernetesNamespaceDelete,
+		CreateContext: resourceKubernetesNamespaceCreate,
+		ReadContext:   resourceKubernetesNamespaceRead,
+		UpdateContext: resourceKubernetesNamespaceUpdate,
+		DeleteContext: resourceKubernetesNamespaceDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("namespace", true),
+			"wait_for_default_service_account": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Terraform will wait for the default service account to be created.",
+			},
 		},
 		Timeouts: &schema.ResourceTimeout{
 			Delete: schema.DefaultTimeout(5 * time.Minute),
@@ -34,12 +44,11 @@ func resourceKubernetesNamespace() *schema.Resource {
 	}
 }
 
-func resourceKubernetesNamespaceCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesNamespaceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	namespace := api.Namespace{
@@ -48,73 +57,101 @@ func resourceKubernetesNamespaceCreate(d *schema.ResourceData, meta interface{})
 	log.Printf("[INFO] Creating new namespace: %#v", namespace)
 	out, err := conn.CoreV1().Namespaces().Create(ctx, &namespace, metav1.CreateOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted new namespace: %#v", out)
 	d.SetId(out.Name)
 
-	return resourceKubernetesNamespaceRead(d, meta)
+	if d.Get("wait_for_default_service_account").(bool) {
+		log.Printf("[DEBUG] Waiting for default service account to be created")
+		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+			_, err := conn.CoreV1().ServiceAccounts(out.Name).Get(ctx, "default", metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					log.Printf("[INFO] Default service account does not exist, will retry: %s", metadata.Namespace)
+					return resource.RetryableError(err)
+				}
+
+				return resource.NonRetryableError(err)
+			}
+
+			log.Printf("[INFO] Default service account exists: %s", metadata.Namespace)
+			return nil
+		})
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	return resourceKubernetesNamespaceRead(ctx, d, meta)
 }
 
-func resourceKubernetesNamespaceRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesNamespaceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesNamespaceExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		d.SetId("")
+		return diag.Diagnostics{}
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 	log.Printf("[INFO] Reading namespace %s", name)
 	namespace, err := conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received namespace: %#v", namespace)
-	err = d.Set("metadata", flattenMetadata(namespace.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(namespace.ObjectMeta, d, meta))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceKubernetesNamespaceUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesNamespaceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 
 	log.Printf("[INFO] Updating namespace: %s", ops)
 	out, err := conn.CoreV1().Namespaces().Patch(ctx, d.Id(), pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted updated namespace: %#v", out)
 	d.SetId(out.Name)
 
-	return resourceKubernetesNamespaceRead(d, meta)
+	return resourceKubernetesNamespaceRead(ctx, d, meta)
 }
 
-func resourceKubernetesNamespaceDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesNamespaceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting namespace: %#v", name)
 	err = conn.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		return err
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
+		return diag.FromErr(err)
 	}
 
 	stateConf := &resource.StateChangeConf{
@@ -124,7 +161,7 @@ func resourceKubernetesNamespaceDelete(d *schema.ResourceData, meta interface{})
 		Refresh: func() (interface{}, string, error) {
 			out, err := conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 			if err != nil {
-				if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+				if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 					return nil, "", nil
 				}
 				log.Printf("[ERROR] Received error: %#v", err)
@@ -136,9 +173,9 @@ func resourceKubernetesNamespaceDelete(d *schema.ResourceData, meta interface{})
 			return out, statusPhase, nil
 		},
 	}
-	_, err = stateConf.WaitForState()
+	_, err = stateConf.WaitForStateContext(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Namespace %s deleted", name)
 
@@ -146,18 +183,17 @@ func resourceKubernetesNamespaceDelete(d *schema.ResourceData, meta interface{})
 	return nil
 }
 
-func resourceKubernetesNamespaceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesNamespaceExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 	log.Printf("[INFO] Checking namespace %s", name)
 	_, err = conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

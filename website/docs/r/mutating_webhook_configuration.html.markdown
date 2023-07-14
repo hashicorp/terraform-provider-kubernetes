@@ -1,11 +1,12 @@
 ---
+subcategory: "admissionregistration/v1beta1"
 layout: "kubernetes"
-page_title: "Kubernetes: mutating_webhook_configuration"
+page_title: "Kubernetes: kubernetes_mutating_webhook_configuration"
 description: |-
   Mutating Webhook Configuration configures a mutating admission webhook
 ---
 
-# mutating_webhook_configuration
+# kubernetes_mutating_webhook_configuration
 
 Mutating Webhook Configuration configures a [mutating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks).
 
@@ -77,7 +78,6 @@ The following arguments are supported:
 
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this Mutating Webhook Configuration that can be used by clients to determine when Mutating Webhook Configuration has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
-* `self_link` - A URL representing this Mutating Webhook Configuration.
 * `uid` - The unique in time and space value for this Mutating Webhook Configuration. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
 ### `webhook`
@@ -131,5 +131,5 @@ The following arguments are supported:
 Mutating Webhook Configuration can be imported using the name, e.g.
 
 ```
-$ terraform import mutating_webhook_configuration.example terraform-example
+$ terraform import kubernetes_mutating_webhook_configuration.example terraform-example
 ```

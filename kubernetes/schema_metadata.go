@@ -1,9 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func metadataFields(objectName string) map[string]*schema.Schema {
@@ -38,11 +41,6 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 		"resource_version": {
 			Type:        schema.TypeString,
 			Description: fmt.Sprintf("An opaque value that represents the internal version of this %s that can be used by clients to determine when %s has changed. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency", objectName, objectName),
-			Computed:    true,
-		},
-		"self_link": {
-			Type:        schema.TypeString,
-			Description: fmt.Sprintf("A URL representing this %s.", objectName),
 			Computed:    true,
 		},
 		"uid": {

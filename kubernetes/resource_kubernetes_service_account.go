@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -7,8 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,13 +23,12 @@ import (
 
 func resourceKubernetesServiceAccount() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesServiceAccountCreate,
-		Read:   resourceKubernetesServiceAccountRead,
-		Exists: resourceKubernetesServiceAccountExists,
-		Update: resourceKubernetesServiceAccountUpdate,
-		Delete: resourceKubernetesServiceAccountDelete,
+		CreateContext: resourceKubernetesServiceAccountCreate,
+		ReadContext:   resourceKubernetesServiceAccountRead,
+		UpdateContext: resourceKubernetesServiceAccountUpdate,
+		DeleteContext: resourceKubernetesServiceAccountDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourceKubernetesServiceAccountImportState,
+			StateContext: resourceKubernetesServiceAccountImportState,
 		},
 
 		Timeouts: &schema.ResourceTimeout{
@@ -63,23 +67,24 @@ func resourceKubernetesServiceAccount() *schema.Resource {
 			},
 			"automount_service_account_token": {
 				Type:        schema.TypeBool,
-				Description: "True to enable automatic mounting of the service account token",
+				Description: "Enable automatic mounting of the service account token",
 				Optional:    true,
+				Default:     true,
 			},
 			"default_secret_name": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:       schema.TypeString,
+				Computed:   true,
+				Deprecated: "Starting from version 1.24.0 Kubernetes does not automatically generate a token for service accounts, in this case, `default_secret_name` will be empty",
 			},
 		},
 	}
 }
 
-func resourceKubernetesServiceAccountCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesServiceAccountCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svcAcc := api.ServiceAccount{
@@ -91,19 +96,35 @@ func resourceKubernetesServiceAccountCreate(d *schema.ResourceData, meta interfa
 	log.Printf("[INFO] Creating new service account: %#v", svcAcc)
 	out, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Create(ctx, &svcAcc, metav1.CreateOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted new service account: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
 	secret, err := getServiceAccountDefaultSecret(ctx, out.Name, svcAcc, d.Timeout(schema.TimeoutCreate), conn)
-	d.Set("default_secret_name", secret.Name)
-	return resourceKubernetesServiceAccountRead(d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("default_secret_name", secret.Name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return resourceKubernetesServiceAccountRead(ctx, d, meta)
 }
 
 func getServiceAccountDefaultSecret(ctx context.Context, name string, config api.ServiceAccount, timeout time.Duration, conn *kubernetes.Clientset) (*api.Secret, error) {
+	sv, err := serverVersionGreaterThanOrEqual(conn, "1.24.0")
+	if err != nil {
+		return &api.Secret{}, err
+	}
+	if sv {
+		return &api.Secret{}, nil
+	}
+
 	var svcAccTokens []api.Secret
-	err := resource.Retry(timeout, func() *resource.RetryError {
+	err = resource.RetryContext(ctx, timeout, func() *resource.RetryError {
 		resp, err := conn.CoreV1().ServiceAccounts(config.Namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
@@ -118,6 +139,10 @@ func getServiceAccountDefaultSecret(ctx context.Context, name string, config api
 		secretList, err := conn.CoreV1().Secrets(config.Namespace).List(ctx, metav1.ListOptions{
 			FieldSelector: fmt.Sprintf("type=%s", api.SecretTypeServiceAccountToken),
 		})
+		if err != nil {
+			return resource.NonRetryableError(err)
+		}
+
 		for _, secret := range secretList.Items {
 			for _, svcSecret := range diff {
 				if secret.Name != svcSecret.Name {
@@ -144,15 +169,17 @@ func getServiceAccountDefaultSecret(ctx context.Context, name string, config api
 	return &svcAccTokens[0], nil
 }
 
-func findDefaultServiceAccount(ctx context.Context, sa *api.ServiceAccount, conn *kubernetes.Clientset) (string, error) {
+func findDefaultServiceAccount(ctx context.Context, sa *api.ServiceAccount, conn *kubernetes.Clientset) (string, diag.Diagnostics) {
 	/*
-		The default service account token secret would have:
-		- been created either at the same moment as the service account or _just_ after (Kubernetes controllers appears to work off a queue)
-		- have a name starting with "[service account name]-token-"
+	   The default service account token secret would have:
+	   - been created either at the same moment as the service account or _just_ after (Kubernetes controllers appears to work off a queue)
+	   - have a name starting with "[service account name]-token-"
 
-		See this for where the default token is created in Kubernetes
-		https://github.com/kubernetes/kubernetes/blob/release-1.13/pkg/controller/serviceaccount/tokens_controller.go#L384
+	   See this for where the default token is created in Kubernetes
+	   https://github.com/kubernetes/kubernetes/blob/release-1.13/pkg/controller/serviceaccount/tokens_controller.go#L384
 	*/
+	ds := make([]string, 0)
+
 	for _, saSecret := range sa.Secrets {
 		if !strings.HasPrefix(saSecret.Name, fmt.Sprintf("%s-token-", sa.Name)) {
 			log.Printf("[DEBUG] Skipping %s as it doesn't have the right name", saSecret.Name)
@@ -161,7 +188,7 @@ func findDefaultServiceAccount(ctx context.Context, sa *api.ServiceAccount, conn
 
 		secret, err := conn.CoreV1().Secrets(sa.Namespace).Get(ctx, saSecret.Name, metav1.GetOptions{})
 		if err != nil {
-			return "", fmt.Errorf("Unable to fetch secret %s/%s from Kubernetes: %s", sa.Namespace, saSecret.Name, err)
+			return "", diag.Errorf("Unable to fetch secret %s/%s from Kubernetes: %s", sa.Namespace, saSecret.Name, err)
 		}
 
 		if secret.Type != api.SecretTypeServiceAccountToken {
@@ -169,22 +196,40 @@ func findDefaultServiceAccount(ctx context.Context, sa *api.ServiceAccount, conn
 			continue
 		}
 
-		if secret.CreationTimestamp.Before(&sa.CreationTimestamp) {
-			log.Printf("[DEBUG] Skipping %s as it existed before the service account", saSecret.Name)
+		if secret.Annotations[api.ServiceAccountNameKey] != sa.ObjectMeta.Name {
+			log.Printf("[DEBUG] Skipping %s as it has a different name than the service account", saSecret.Name)
 			continue
 		}
 
-		if secret.CreationTimestamp.Sub(sa.CreationTimestamp.Time) > (3 * time.Second) {
-			log.Printf("[DEBUG] Skipping %s as it wasn't created at the same time as the service account", saSecret.Name)
+		if secret.Annotations[api.ServiceAccountUIDKey] != string(sa.ObjectMeta.UID) {
+			log.Printf("[DEBUG] Skipping %s as it has a different UID than the service account", saSecret.Name)
 			continue
 		}
 
 		log.Printf("[DEBUG] Found %s as a candidate for the default service account token", saSecret.Name)
-
-		return saSecret.Name, nil
+		ds = append(ds, saSecret.Name)
 	}
 
-	return "", fmt.Errorf("Unable to find any service accounts tokens which could have been the default one")
+	if len(ds) == 0 {
+		return "", diag.Diagnostics{
+			diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "Unable to find any service accounts tokens which could have been the default one.",
+			},
+		}
+	}
+
+	if len(ds) == 1 {
+		return ds[0], nil
+	}
+
+	return "", diag.Diagnostics{
+		diag.Diagnostic{
+			Severity: diag.Warning,
+			Summary:  "Unable to discover default secret name.",
+			Detail:   "There is more than one service account token associated to the service account.",
+		},
+	}
 }
 
 func diffObjectReferences(origOrs []api.ObjectReference, ors []api.ObjectReference) []api.ObjectReference {
@@ -204,62 +249,74 @@ func diffObjectReferences(origOrs []api.ObjectReference, ors []api.ObjectReferen
 	return diff
 }
 
-func resourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesServiceAccountRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesServiceAccountExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		d.SetId("")
+		return diag.Diagnostics{}
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Reading service account %s", name)
 	svcAcc, err := conn.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received service account: %#v", svcAcc)
-	err = d.Set("metadata", flattenMetadata(svcAcc.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(svcAcc.ObjectMeta, d, meta))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	if svcAcc.AutomountServiceAccountToken == nil {
 		err = d.Set("automount_service_account_token", false)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	} else {
 		err = d.Set("automount_service_account_token", *svcAcc.AutomountServiceAccountToken)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
-	d.Set("image_pull_secret", flattenLocalObjectReferenceArray(svcAcc.ImagePullSecrets))
+	err = d.Set("image_pull_secret", flattenLocalObjectReferenceArray(svcAcc.ImagePullSecrets))
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	defaultSecretName := d.Get("default_secret_name").(string)
 	log.Printf("[DEBUG] Default secret name is %q", defaultSecretName)
 	secrets := flattenServiceAccountSecrets(svcAcc.Secrets, defaultSecretName)
 	log.Printf("[DEBUG] Flattened secrets: %#v", secrets)
-	d.Set("secret", secrets)
+	err = d.Set("secret", secrets)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
 
-func resourceKubernetesServiceAccountUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesServiceAccountUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -288,35 +345,37 @@ func resourceKubernetesServiceAccountUpdate(d *schema.ResourceData, meta interfa
 	}
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating service account %q: %v", name, string(data))
 	out, err := conn.CoreV1().ServiceAccounts(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to update service account: %s", err)
+		return diag.Errorf("Failed to update service account: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated service account: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesServiceAccountRead(d, meta)
+	return resourceKubernetesServiceAccountRead(ctx, d, meta)
 }
 
-func resourceKubernetesServiceAccountDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesServiceAccountDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Deleting service account: %#v", name)
 	err = conn.CoreV1().ServiceAccounts(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		return err
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Service account %s deleted", name)
@@ -325,12 +384,11 @@ func resourceKubernetesServiceAccountDelete(d *schema.ResourceData, meta interfa
 	return nil
 }
 
-func resourceKubernetesServiceAccountExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesServiceAccountExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -340,7 +398,7 @@ func resourceKubernetesServiceAccountExists(d *schema.ResourceData, meta interfa
 	log.Printf("[INFO] Checking service account %s", name)
 	_, err = conn.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)
@@ -348,12 +406,11 @@ func resourceKubernetesServiceAccountExists(d *schema.ResourceData, meta interfa
 	return true, err
 }
 
-func resourceKubernetesServiceAccountImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+func resourceKubernetesServiceAccountImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return nil, err
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -364,15 +421,17 @@ func resourceKubernetesServiceAccountImportState(d *schema.ResourceData, meta in
 	if err != nil {
 		return nil, fmt.Errorf("Unable to fetch service account from Kubernetes: %s", err)
 	}
-	defaultSecret, err := findDefaultServiceAccount(ctx, sa, conn)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to discover the default service account token: %s", err)
+
+	defaultSecret, diagMsg := findDefaultServiceAccount(ctx, sa, conn)
+	if diagMsg.HasError() {
+		log.Print("[WARN] Failed to discover the default service account token")
 	}
 
 	err = d.Set("default_secret_name", defaultSecret)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to set default_secret_name: %s", err)
 	}
+
 	d.SetId(buildId(sa.ObjectMeta))
 
 	return []*schema.ResourceData{d}, nil

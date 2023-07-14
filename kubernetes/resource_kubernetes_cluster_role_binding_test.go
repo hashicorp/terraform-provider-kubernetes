@@ -1,13 +1,17 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	api "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -17,10 +21,11 @@ func TestAccKubernetesClusterRoleBinding_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_cluster_role_binding.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesClusterRoleBindingDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_cluster_role_binding.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesClusterRoleBindingConfig_basic(name),
@@ -29,7 +34,6 @@ func TestAccKubernetesClusterRoleBinding_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.0.api_group", "rbac.authorization.k8s.io"),
@@ -48,7 +52,6 @@ func TestAccKubernetesClusterRoleBinding_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.0.api_group", "rbac.authorization.k8s.io"),
@@ -74,7 +77,6 @@ func TestAccKubernetesClusterRoleBinding_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.0.api_group", "rbac.authorization.k8s.io"),
@@ -100,7 +102,6 @@ func TestAccKubernetesClusterRoleBinding_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.0.api_group", "rbac.authorization.k8s.io"),
@@ -123,15 +124,49 @@ func TestAccKubernetesClusterRoleBinding_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesClusterRoleBinding_generatedName(t *testing.T) {
+	var conf api.ClusterRoleBinding
+	prefix := "tf-acc-test-gen:"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_cluster_role_binding.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesClusterRoleBindingConfig_generateName(prefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesClusterRoleBindingExists("kubernetes_cluster_role_binding.test", &conf),
+					resource.TestMatchResourceAttr("kubernetes_cluster_role_binding.test", "metadata.0.name", regexp.MustCompile("^"+prefix)),
+					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.uid"),
+					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.0.api_group", "rbac.authorization.k8s.io"),
+					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.0.kind", "ClusterRole"),
+					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.0.name", "cluster-admin"),
+					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "subject.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "subject.0.api_group", "rbac.authorization.k8s.io"),
+					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "subject.0.name", "notauser"),
+					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "subject.0.kind", "User"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesClusterRoleBinding_serviceaccount_subject(t *testing.T) {
 	var conf api.ClusterRoleBinding
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_cluster_role_binding.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesClusterRoleBindingDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_cluster_role_binding.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesClusterRoleBindingConfig_serviceaccount_subject(name),
@@ -140,7 +175,6 @@ func TestAccKubernetesClusterRoleBinding_serviceaccount_subject(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.0.api_group", "rbac.authorization.k8s.io"),
@@ -161,10 +195,11 @@ func TestAccKubernetesClusterRoleBinding_group_subject(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_cluster_role_binding.test"
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_cluster_role_binding.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesClusterRoleBindingDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_cluster_role_binding.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesClusterRoleBindingConfig_group_subject(name),
@@ -173,7 +208,6 @@ func TestAccKubernetesClusterRoleBinding_group_subject(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.0.api_group", "rbac.authorization.k8s.io"),
@@ -199,10 +233,11 @@ func TestAccKubernetesClusterRoleBinding_UpdatePatchOperationsOrderWithRemovals(
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_cluster_role_binding.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesClusterRoleBindingDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_cluster_role_binding.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesClusterRoleBindingConfigBug_step_0(name),
@@ -211,7 +246,6 @@ func TestAccKubernetesClusterRoleBinding_UpdatePatchOperationsOrderWithRemovals(
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.0.api_group", "rbac.authorization.k8s.io"),
@@ -236,7 +270,6 @@ func TestAccKubernetesClusterRoleBinding_UpdatePatchOperationsOrderWithRemovals(
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.0.api_group", "rbac.authorization.k8s.io"),
@@ -258,7 +291,6 @@ func TestAccKubernetesClusterRoleBinding_UpdatePatchOperationsOrderWithRemovals(
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_cluster_role_binding.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_cluster_role_binding.test", "role_ref.0.api_group", "rbac.authorization.k8s.io"),
@@ -285,6 +317,7 @@ func TestAccKubernetesClusterRoleBinding_UpdatePatchOperationsOrderWithRemovals(
 
 func testAccCheckKubernetesClusterRoleBindingDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+
 	if err != nil {
 		return err
 	}
@@ -349,6 +382,27 @@ func testAccKubernetesClusterRoleBindingConfig_basic(name string) string {
   }
 }
 `, name)
+}
+
+func testAccKubernetesClusterRoleBindingConfig_generateName(namePrefix string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
+  metadata {
+    generate_name = "%s"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, namePrefix)
 }
 
 func testAccKubernetesClusterRoleBindingConfig_modified(name string) string {

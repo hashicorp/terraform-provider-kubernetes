@@ -1,7 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/core/v1"
 )
 
@@ -72,7 +75,7 @@ func expandEndpointsSubsets(in *schema.Set) []api.EndpointSubset {
 }
 
 func flattenEndpointsAddresses(in []api.EndpointAddress) *schema.Set {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
 		if n.Hostname != "" {
@@ -88,7 +91,7 @@ func flattenEndpointsAddresses(in []api.EndpointAddress) *schema.Set {
 }
 
 func flattenEndpointsPorts(in []api.EndpointPort) *schema.Set {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
 		if n.Name != "" {
@@ -102,7 +105,7 @@ func flattenEndpointsPorts(in []api.EndpointPort) *schema.Set {
 }
 
 func flattenEndpointsSubsets(in []api.EndpointSubset) *schema.Set {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
 		if len(n.Addresses) > 0 {

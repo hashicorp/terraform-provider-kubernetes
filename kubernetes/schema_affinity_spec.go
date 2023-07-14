@@ -1,10 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
-	"regexp"
-
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func affinityFields() map[string]*schema.Schema {
@@ -164,10 +165,9 @@ func podAffinityTermFields() map[string]*schema.Schema {
 			Set:         schema.HashString,
 		},
 		"topology_key": {
-			Type:         schema.TypeString,
-			Description:  "empty topology key is interpreted by the scheduler as 'all topologies'",
-			Optional:     true,
-			ValidateFunc: validation.StringMatch(regexp.MustCompile(`^.+$`), "value cannot be empty"),
+			Type:        schema.TypeString,
+			Description: "empty topology key is interpreted by the scheduler as 'all topologies'",
+			Required:    true,
 		},
 	}
 }

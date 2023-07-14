@@ -1,0 +1,73 @@
+name: Acceptance Tests (EKS)
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: The AWS region
+        default: us-east-1
+      azSpan:
+        description: The number of AZs to spread cluster nodes across
+        default: 2
+      clusterVersion:
+        description: The EKS cluster version
+        default: 1.25
+      nodesPerAz:
+        description: The number of cluster nodes in each AZ
+        default: 2
+      instanceType:
+        description: The type of EC2 instance to use for cluster nodes
+        default: m5.large
+      runTests:
+        description: The regex passed to the -run option of `go test`
+        default: ".*"
+      terraformVersion:
+        description: Terraform version
+        default: 1.4.0
+
+env:
+  AWS_REGION: ${{ github.event.inputs.region }}
+  TF_VAR_az_span: ${{ github.event.inputs.azSpan }}
+  TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion }}
+  TF_VAR_nodes_per_az: ${{ github.event.inputs.nodesPerAz }}
+  TF_VAR_instance_type: ${{ github.event.inputs.instanceType }}
+
+jobs:
+  acceptance_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Set up Go
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: 'go.mod'
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # v2.2.0
+        with:
+          aws-region: ${{ github.event.inputs.region }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ASSUME_ROLE_ARN }}
+          role-session-name: github-actions-tests-${{ github.run_number }}
+          role-duration-seconds: 14400
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
+        with:
+          terraform_version: ${{ github.event.inputs.terraformVersion }}
+      - name: Provision EKS Cluster
+        working-directory: ${{ github.workspace }}/kubernetes/test-infra/eks
+        run: |
+          terraform init
+          terraform apply --auto-approve
+      - name: Run Acceptance Test Suite
+        env:
+          TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion }}
+          TESTARGS: -run '${{ github.event.inputs.runTests }}'
+          KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/eks/kubeconfig
+        run: |
+          make testacc
+      - name: Destroy EKS cluster
+        if: always() # we should destroy the cluster even if the tests fail
+        working-directory: ${{ github.workspace }}/kubernetes/test-infra/eks
+        run: |
+          terraform destroy --auto-approve

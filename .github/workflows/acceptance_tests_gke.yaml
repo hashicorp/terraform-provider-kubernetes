@@ -1,0 +1,188 @@
+name: Acceptance Tests (GKE)
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: The GKE region
+        default: us-east1
+      zone:
+        description: The GKE zone
+        default: us-east1-b
+      kubernetesVersion:
+        description: The GKE kubernetes version
+        default: 1.24
+      workersCount:
+        description: The number of cluster nodes to provision
+        default: 10
+      nodeMachineType:
+        description: The type of GKE instance to use for cluster nodes
+        default: e2-standard-8
+      runTests:
+        description: The regex passed to the -run option of `go test`
+        default: ^TestAcc
+      terraformVersion:
+        description: Terraform version
+        default: 1.4.0
+
+env:
+  GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+  GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+  GOOGLE_REGION: ${{ github.event.inputs.region }}
+  GOOGLE_ZONE: ${{github.event.inputs.zone}}
+  USE_GKE_GCLOUD_AUTH_PLUGIN: True
+  KUBECONFIG: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig
+  KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig
+  TF_ACC_KUBERNETES_RC_REPLICAS: 50
+
+jobs:
+  prepare-gke-environment:
+    name: "Prepare GKE cluster"
+    permissions:
+      contents: "read"
+      id-token: "write"
+    runs-on: ubuntu-latest
+    env:
+      KUBECONFIG: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Set up Go
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: 'go.mod'
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@35b0e87d162680511bf346c299f71c9c5c379033 # v1.1.1
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+          access_token_lifetime: "10800s"
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
+        with:
+          terraform_version: ${{ github.event.inputs.terraformVersion }}
+          terraform_wrapper: false
+      - name: Provision GKE Cluster
+        working-directory: ${{ github.workspace }}/kubernetes/test-infra/gke
+        env:
+          TF_VAR_kubernetes_version: ${{ github.event.inputs.kubernetesVersion }}
+          TF_VAR_workers_count: ${{ github.event.inputs.workersCount }}
+          TF_VAR_node_machine_type: ${{ github.event.inputs.nodeMachineType }}
+        run: |
+          terraform init
+          terraform apply -auto-approve
+      - name: "Persist state"
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: gke-cluster
+          retention-days: 1
+          path: |
+            ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig
+            ${{ github.workspace }}/kubernetes/test-infra/gke/terraform.tfstate
+
+  generate-case-matrix:
+    name: "Generate matrix of test cases"
+    runs-on: ubuntu-latest
+    outputs:
+      test-case-matrix: ${{ steps.generate.outputs.test-case-matrix }}
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Set up Go
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: 'go.mod'
+      - name: "Generate testcase matrix"
+        id: generate
+        run: |
+          make test-compile
+          ./kubernetes.test -test.list '${{ github.event.inputs.runTests }}' | go run tools/batchacc.go -sort -depth 3 | tee groups.json
+          echo "::set-output name=test-case-matrix::$(cat groups.json)"
+      - name: "Persist test binary"
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: test-binary
+          retention-days: 1
+          path: |
+            ${{ github.workspace }}/kubernetes.test
+
+  acceptance-tests:
+    name: "Test"
+    needs: [prepare-gke-environment, generate-case-matrix]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test-case: ${{ fromJson(needs.generate-case-matrix.outputs.test-case-matrix) }}
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Set up Go
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: 'go.mod'
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@35b0e87d162680511bf346c299f71c9c5c379033 # v1.1.1
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+          access_token_lifetime: "10800s"
+      - name: "Set up Cloud SDK"
+        uses: google-github-actions/setup-gcloud@e30db14379863a8c79331b04a9969f4c1e225e0b # v1.1.1
+        with:
+          install_components: "beta,gke-gcloud-auth-plugin"
+      - name: "Initialize gcloud SDK"
+        run: |
+          gcloud init
+          gcloud info
+      - name: "Fetch kubeconfig"
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: gke-cluster
+          path: |
+            ${{ github.workspace }}/kubernetes/test-infra/gke
+      - name: "Fetch test binary"
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: test-binary
+          path: |
+            ${{ github.workspace }}
+      - name: Run Acceptance Test
+        env:
+          TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion }}
+          TF_ACC: 1
+        run: |
+          chmod a+x ${{ github.workspace }}/kubernetes.test
+          ${{ github.workspace }}/kubernetes.test -test.v -test.timeout=3h -test.run='^${{ matrix.test-case }}'
+
+  clean-up:
+    name: "Destroy GKE cluster"
+    if: ${{ always() }}
+    needs: [prepare-gke-environment, acceptance-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: "Retrieve state"
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: gke-cluster
+          path: |
+            ${{ github.workspace }}/kubernetes/test-infra/gke
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@35b0e87d162680511bf346c299f71c9c5c379033 # v1.1.1
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+          access_token_lifetime: "10800s"
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
+        with:
+          terraform_version: ${{ github.event.inputs.terraformVersion }}
+          terraform_wrapper: false
+      - name: "Set up Cloud SDK"
+        uses: google-github-actions/setup-gcloud@e30db14379863a8c79331b04a9969f4c1e225e0b # v1.1.1
+        with:
+          install_components: "beta,gke-gcloud-auth-plugin"
+      - name: "Initialize gcloud SDK"
+        run: |
+          gcloud init
+          gcloud info
+      - name: Destroy GKE cluster
+        working-directory: ${{ github.workspace }}/kubernetes/test-infra/gke
+        run: |
+          terraform init
+          terraform destroy --auto-approve

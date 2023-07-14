@@ -1,4 +1,5 @@
 ---
+subcategory: "apps/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_stateful_set"
 description: |-
@@ -93,12 +94,12 @@ resource "kubernetes_stateful_set" "prometheus" {
           }
 
           resources {
-            limits {
+            limits = {
               cpu    = "10m"
               memory = "10Mi"
             }
 
-            requests {
+            requests = {
               cpu    = "10m"
               memory = "10Mi"
             }
@@ -123,12 +124,12 @@ resource "kubernetes_stateful_set" "prometheus" {
           }
 
           resources {
-            limits {
+            limits = {
               cpu    = "200m"
               memory = "1000Mi"
             }
 
-            requests {
+            requests = {
               cpu    = "200m"
               memory = "1000Mi"
             }
@@ -213,7 +214,7 @@ The following arguments are supported:
 
 * `metadata` - (Required) Standard Kubernetes object metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 * `spec` - (Required) Spec defines the specification of the desired behavior of the stateful set. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status)
-* `wait_for_rollout` - (Optional) Wait for the StatefulSet to finish rolling out. Defaults to `false`.
+* `wait_for_rollout` - (Optional) Wait for the StatefulSet to finish rolling out. Defaults to `true`.
 
 ## Nested Blocks
 
@@ -237,7 +238,6 @@ The following arguments are supported:
 
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this stateful set that can be used by clients to determine when stateful set has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
-* `self_link` - A URL representing this stateful set.
 * `uid` - The unique in time and space value for this stateful set. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
 ### `spec`
@@ -246,7 +246,7 @@ The following arguments are supported:
 
 * `pod_management_policy` - (Optional) podManagementPolicy controls how pods are created during initial scale up, when replacing pods on nodes, or when scaling down. The default policy is `OrderedReady`, where pods are created in increasing order (pod-0, then pod-1, etc) and the controller will wait until each pod is ready before continuing. When scaling down, the pods are removed in the opposite order. The alternative policy is `Parallel` which will create pods in parallel to match the desired scale without waiting, and on scale down will delete all pods at once. *Changing this forces a new resource to be created.*
 
-* `replicas` - (Optional) The desired number of replicas of the given Template. These are replicas in the sense that they are instantiations of the same Template, but individual replicas also have a consistent identity. If unspecified, defaults to 1.
+* `replicas` - (Optional) The desired number of replicas of the given Template. These are replicas in the sense that they are instantiations of the same Template, but individual replicas also have a consistent identity. If unspecified, defaults to 1. This attribute is a string to be able to distinguish between explicit zero and not specified.
 
 * `revision_history_limit` - (Optional)  The maximum number of revisions that will be maintained in the StatefulSet's revision history. The revision history consists of all revisions not represented by a currently applied StatefulSetSpec version. The default value is 10. *Changing this forces a new resource to be created.*
 
@@ -266,9 +266,9 @@ The following arguments are supported:
 
 #### Arguments
 
-* `metadata` - (Required) Standard object's metadata. For more info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata)
+* `metadata` - (Required) Standard object's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata).
 
-* `spec` - (Optional) Specification of the desired behavior of the pod. For more info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status)
+* `spec` - (Optional) Specification of the desired behavior of the pod. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status).
 
 ## Nested Blocks
 
@@ -308,3 +308,20 @@ One or more `volume_claim_template` blocks can be specified.
 Each takes the same attibutes as a `kubernetes_persistent_volume_claim` resource.
 
 Please see its [documentation](persistent_volume_claim.html#argument-reference) for reference.
+
+## Timeouts
+
+The following [Timeout](/docs/configuration/resources.html#operation-timeouts) configuration options are available for the `kubernetes_stateful_set` resource:
+
+* `create` - (Default `10 minutes`) Used for creating new StatefulSet
+* `read`   - (Default `10 minutes`) Used for reading a StatefulSet
+* `update` - (Default `10 minutes`) Used for updating a StatefulSet
+* `delete` - (Default `10 minutes`) Used for destroying a StatefulSet
+
+## Import
+
+kubernetes_stateful_set can be imported using its namespace and name, e.g.
+
+```
+$ terraform import kubernetes_stateful_set.example default/terraform-example
+```

@@ -1,14 +1,15 @@
 ---
+subcategory: "networking/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_network_policy"
 description: |-
-  Kubernetes supports network policies to specificy of how groups of pods are allowed to communicate with each other and other network endpoints.
+  Kubernetes supports network policies to specify how groups of pods are allowed to communicate with each other and with other network endpoints.
   NetworkPolicy resources use labels to select pods and define rules which specify what traffic is allowed to the selected pods.
 ---
 
 # kubernetes_network_policy
 
-Kubernetes supports network policies to specificy of how groups of pods are allowed to communicate with each other and other network endpoints.
+Kubernetes supports network policies to specify how groups of pods are allowed to communicate with each other and with other network endpoints.
 NetworkPolicy resources use labels to select pods and define rules which specify what traffic is allowed to the selected pods.
 Read more about network policies at https://kubernetes.io/docs/concepts/services-networking/network-policies/
 
@@ -93,7 +94,6 @@ The following arguments are supported:
 
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this network policy that can be used by clients to determine when network policies have changed. Read more about [concurrency control and consistency](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency).
-* `self_link` - A URL representing this network policy.
 * `uid` - The unique in time and space value for this network policy. For more info: http://kubernetes.io/docs/user-guide/identifiers#uids
 
 

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -5,23 +8,23 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesAPIService_basic(t *testing.T) {
 	group := fmt.Sprintf("tf-acc-test-%s.k8s.io", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_api_service.test"
 	version := "v1beta1"
 	name := fmt.Sprintf("%s.%s", version, group)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_api_service.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesAPIServiceDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_api_service.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesAPIServiceDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesAPIServiceConfig_basic(name, group, version),
@@ -30,7 +33,6 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.#", "1"),
@@ -46,19 +48,12 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
-			},
-			{
 				Config: testAccKubernetesAPIServiceConfig_modified(name, group, version),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesAPIServiceExists("kubernetes_api_service.test"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.#", "1"),
@@ -80,7 +75,6 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.#", "0"),
@@ -99,7 +93,6 @@ func TestAccKubernetesAPIService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.#", "1"),

@@ -1,11 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,17 +18,16 @@ import (
 
 func resourceKubernetesRoleBinding() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesRoleBindingCreate,
-		Read:   resourceKubernetesRoleBindingRead,
-		Exists: resourceKubernetesRoleBindingExists,
-		Update: resourceKubernetesRoleBindingUpdate,
-		Delete: resourceKubernetesRoleBindingDelete,
+		CreateContext: resourceKubernetesRoleBindingCreate,
+		ReadContext:   resourceKubernetesRoleBindingRead,
+		UpdateContext: resourceKubernetesRoleBindingUpdate,
+		DeleteContext: resourceKubernetesRoleBindingDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchemaRBAC("roleBinding", false, true),
+			"metadata": metadataSchemaRBAC("roleBinding", true, true),
 			"role_ref": {
 				Type:        schema.TypeList,
 				Description: "RoleRef references the Role for this binding",
@@ -48,12 +51,11 @@ func resourceKubernetesRoleBinding() *schema.Resource {
 	}
 }
 
-func resourceKubernetesRoleBindingCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesRoleBindingCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	binding := &api.RoleBinding{
@@ -65,66 +67,72 @@ func resourceKubernetesRoleBindingCreate(d *schema.ResourceData, meta interface{
 	out, err := conn.RbacV1().RoleBindings(metadata.Namespace).Create(ctx, binding, metav1.CreateOptions{})
 
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted new RoleBinding: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesRoleBindingRead(d, meta)
+	return resourceKubernetesRoleBindingRead(ctx, d, meta)
 }
 
-func resourceKubernetesRoleBindingRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesRoleBindingRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesRoleBindingExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		d.SetId("")
+		return diag.Diagnostics{}
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Reading RoleBinding %s", name)
 	binding, err := conn.RbacV1().RoleBindings(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Received RoleBinding: %#v", binding)
-	err = d.Set("metadata", flattenMetadata(binding.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(binding.ObjectMeta, d, meta))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	flattenedRef := flattenRBACRoleRef(binding.RoleRef)
 	log.Printf("[DEBUG] Flattened RoleBinding roleRef: %#v", flattenedRef)
 	err = d.Set("role_ref", flattenedRef)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	flattenedSubjects := flattenRBACSubjects(binding.Subjects)
 	log.Printf("[DEBUG] Flattened RoleBinding subjects: %#v", flattenedSubjects)
 	err = d.Set("subject", flattenedSubjects)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceKubernetesRoleBindingUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesRoleBindingUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -134,47 +142,48 @@ func resourceKubernetesRoleBindingUpdate(d *schema.ResourceData, meta interface{
 	}
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating RoleBinding %q: %v", name, string(data))
 	out, err := conn.RbacV1().RoleBindings(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to update RoleBinding: %s", err)
+		return diag.Errorf("Failed to update RoleBinding: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated RoleBinding: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesRoleBindingRead(d, meta)
+	return resourceKubernetesRoleBindingRead(ctx, d, meta)
 }
 
-func resourceKubernetesRoleBindingDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesRoleBindingDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Deleting RoleBinding: %#v", name)
 	err = conn.RbacV1().RoleBindings(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		return err
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] RoleBinding %s deleted", name)
 
 	return nil
 }
 
-func resourceKubernetesRoleBindingExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesRoleBindingExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -184,7 +193,7 @@ func resourceKubernetesRoleBindingExists(d *schema.ResourceData, meta interface{
 	log.Printf("[INFO] Checking RoleBinding %s", name)
 	_, err = conn.RbacV1().RoleBindings(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

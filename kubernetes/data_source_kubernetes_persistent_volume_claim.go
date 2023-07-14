@@ -1,13 +1,18 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesPersistentVolumeClaim() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceKubernetesPersistentVolumeClaimRead,
+		ReadContext: dataSourceKubernetesPersistentVolumeClaimRead,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("persistent volume claim", true),
@@ -21,7 +26,6 @@ func dataSourceKubernetesPersistentVolumeClaim() *schema.Resource {
 							Type:        schema.TypeSet,
 							Description: "A set of the desired access modes the volume should have. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes-1",
 							Computed:    true,
-							ForceNew:    true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -31,21 +35,19 @@ func dataSourceKubernetesPersistentVolumeClaim() *schema.Resource {
 							Type:        schema.TypeList,
 							Description: "A list of the minimum resources the volume should have. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#resources",
 							Computed:    true,
-							ForceNew:    true,
-							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"limits": {
 										Type:        schema.TypeMap,
 										Description: "Map describing the maximum amount of compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
 										Optional:    true,
-										ForceNew:    true,
+										Computed:    true,
 									},
 									"requests": {
 										Type:        schema.TypeMap,
 										Description: "Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
 										Optional:    true,
-										ForceNew:    true,
+										Computed:    true,
 									},
 								},
 							},
@@ -54,8 +56,7 @@ func dataSourceKubernetesPersistentVolumeClaim() *schema.Resource {
 							Type:        schema.TypeList,
 							Description: "A label query over volumes to consider for binding.",
 							Optional:    true,
-							ForceNew:    true,
-							MaxItems:    1,
+							Computed:    true,
 							Elem: &schema.Resource{
 								Schema: labelSelectorFields(false),
 							},
@@ -64,7 +65,6 @@ func dataSourceKubernetesPersistentVolumeClaim() *schema.Resource {
 							Type:        schema.TypeString,
 							Description: "The binding reference to the PersistentVolume backing this claim.",
 							Optional:    true,
-							ForceNew:    true,
 							Computed:    true,
 						},
 						"storage_class_name": {
@@ -72,7 +72,6 @@ func dataSourceKubernetesPersistentVolumeClaim() *schema.Resource {
 							Description: "Name of the storage class requested by the claim",
 							Optional:    true,
 							Computed:    true,
-							ForceNew:    true,
 						},
 					},
 				},
@@ -81,7 +80,7 @@ func dataSourceKubernetesPersistentVolumeClaim() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesPersistentVolumeClaimRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceKubernetesPersistentVolumeClaimRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
 	om := meta_v1.ObjectMeta{
@@ -90,5 +89,5 @@ func dataSourceKubernetesPersistentVolumeClaimRead(d *schema.ResourceData, meta 
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesPersistentVolumeClaimRead(d, meta)
+	return resourceKubernetesPersistentVolumeClaimRead(ctx, d, meta)
 }

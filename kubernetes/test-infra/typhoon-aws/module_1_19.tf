@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 locals {
     # This local gets a value of 1 when the 'kubernetes_version' input variable requests a 1.19.x version, otherwise it is 0.
     # It's used to enable the module and resources specific to 1.19.x as a workaround for not being able 
@@ -6,11 +9,11 @@ locals {
     enabled_1_19 = length(regexall("v?1.19.?[0-9]{0,2}", var.kubernetes_version))
 }
 
-# This module builds a 1.19.x Typhoon cluster. It is mutually exlusive to the 1.18.x module.
+# This module builds a 1.19.x Typhoon cluster. It is mutually exlusive to other modules of different versions.
 #
 module "typhoon-acc-1_19" {
   count = local.enabled_1_19
-  source = "git::https://github.com/poseidon/typhoon//aws/fedora-coreos/kubernetes?ref=v1.19.0"
+  source = "git::https://github.com/poseidon/typhoon//aws/flatcar-linux/kubernetes?ref=v1.19.4"
 
   cluster_name = var.cluster_name
   dns_zone     = var.base_domain
@@ -28,5 +31,5 @@ module "typhoon-acc-1_19" {
 resource "local_file" "typhoon-acc-1_19" {
   count = local.enabled_1_19
   content  = module.typhoon-acc-1_19[0].kubeconfig-admin
-  filename = "kubeconfig"
+  filename = local.kubeconfig_path
 }

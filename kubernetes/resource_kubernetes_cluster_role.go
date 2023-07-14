@@ -1,11 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,17 +18,16 @@ import (
 
 func resourceKubernetesClusterRole() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesClusterRoleCreate,
-		Read:   resourceKubernetesClusterRoleRead,
-		Exists: resourceKubernetesClusterRoleExists,
-		Update: resourceKubernetesClusterRoleUpdate,
-		Delete: resourceKubernetesClusterRoleDelete,
+		CreateContext: resourceKubernetesClusterRoleCreate,
+		ReadContext:   resourceKubernetesClusterRoleRead,
+		UpdateContext: resourceKubernetesClusterRoleUpdate,
+		DeleteContext: resourceKubernetesClusterRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
-			"metadata": metadataSchemaRBAC("clusterRole", false, false),
+			"metadata": metadataSchemaRBAC("clusterRole", true, false),
 			"rule": {
 				Type:        schema.TypeList,
 				Description: "List of PolicyRules for this ClusterRole",
@@ -57,12 +60,11 @@ func resourceKubernetesClusterRole() *schema.Resource {
 	}
 }
 
-func resourceKubernetesClusterRoleCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesClusterRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	cRole := api.ClusterRole{
@@ -77,20 +79,19 @@ func resourceKubernetesClusterRoleCreate(d *schema.ResourceData, meta interface{
 	log.Printf("[INFO] Creating new cluster role: %#v", cRole)
 	out, err := conn.RbacV1().ClusterRoles().Create(ctx, &cRole, metav1.CreateOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted new cluster role: %#v", out)
 	d.SetId(out.Name)
 
-	return resourceKubernetesClusterRoleRead(d, meta)
+	return resourceKubernetesClusterRoleRead(ctx, d, meta)
 }
 
-func resourceKubernetesClusterRoleUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesClusterRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -104,25 +105,33 @@ func resourceKubernetesClusterRoleUpdate(d *schema.ResourceData, meta interface{
 	}
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating ClusterRole %q: %v", name, string(data))
 	out, err := conn.RbacV1().ClusterRoles().Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to update ClusterRole: %s", err)
+		return diag.Errorf("Failed to update ClusterRole: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated ClusterRole: %#v", out)
 	d.SetId(out.ObjectMeta.Name)
 
-	return resourceKubernetesClusterRoleRead(d, meta)
+	return resourceKubernetesClusterRoleRead(ctx, d, meta)
 }
 
-func resourceKubernetesClusterRoleRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesClusterRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesClusterRoleExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		d.SetId("")
+		return diag.Diagnostics{}
+	}
+
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 	log.Printf("[INFO] Reading cluster role %s", name)
@@ -133,38 +142,40 @@ func resourceKubernetesClusterRoleRead(d *schema.ResourceData, meta interface{})
 			return nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received cluster role: %#v", cRole)
-	err = d.Set("metadata", flattenMetadata(cRole.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(cRole.ObjectMeta, d, meta))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	err = d.Set("rule", flattenClusterRoleRules(cRole.Rules))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if cRole.AggregationRule != nil {
 		err = d.Set("aggregation_rule", flattenClusterRoleAggregationRule(cRole.AggregationRule))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 	return nil
 }
 
-func resourceKubernetesClusterRoleDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesClusterRoleDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting cluster role: %#v", name)
 	err = conn.RbacV1().ClusterRoles().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		return err
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] cluster role %s deleted", name)
@@ -172,12 +183,11 @@ func resourceKubernetesClusterRoleDelete(d *schema.ResourceData, meta interface{
 	return nil
 }
 
-func resourceKubernetesClusterRoleExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesClusterRoleExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 	log.Printf("[INFO] Checking cluster role %s", name)

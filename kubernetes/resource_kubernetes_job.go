@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -6,8 +9,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -18,52 +23,61 @@ import (
 
 func resourceKubernetesJob() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesJobCreate,
-		Read:   resourceKubernetesJobRead,
-		Update: resourceKubernetesJobUpdate,
-		Delete: resourceKubernetesJobDelete,
-		Exists: resourceKubernetesJobExists,
+		CreateContext: resourceKubernetesJobCreate,
+		ReadContext:   resourceKubernetesJobRead,
+		UpdateContext: resourceKubernetesJobUpdate,
+		DeleteContext: resourceKubernetesJobDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
-
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Version: 0,
+				Type:    resourceKubernetesJobV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceKubernetesJobUpgradeV0,
+			},
+		},
+		SchemaVersion: 1,
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(1 * time.Minute),
 			Update: schema.DefaultTimeout(1 * time.Minute),
 			Delete: schema.DefaultTimeout(1 * time.Minute),
 		},
+		Schema: resourceKubernetesJobSchemaV1(),
+	}
+}
 
-		Schema: map[string]*schema.Schema{
-			"metadata": jobMetadataSchema(),
-			"spec": {
-				Type:        schema.TypeList,
-				Description: "Spec of the job owned by the cluster",
-				Required:    true,
-				MaxItems:    1,
-				ForceNew:    true,
-				Elem: &schema.Resource{
-					Schema: jobSpecFields(),
-				},
+func resourceKubernetesJobSchemaV1() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"metadata": jobMetadataSchema(),
+		"spec": {
+			Type:        schema.TypeList,
+			Description: "Spec of the job owned by the cluster",
+			Required:    true,
+			MaxItems:    1,
+			ForceNew:    false,
+			Elem: &schema.Resource{
+				Schema: jobSpecFields(false),
 			},
-			"wait_for_completion": {
-				Type:     schema.TypeBool,
-				Optional: true,
-			},
+		},
+		"wait_for_completion": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  true,
 		},
 	}
 }
 
-func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesJobCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandJobSpec(d.Get("spec").([]interface{}))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	job := batchv1.Job{
@@ -75,7 +89,7 @@ func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error
 
 	out, err := conn.BatchV1().Jobs(metadata.Namespace).Create(ctx, &job, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to create Job! API error: %s", err)
+		return diag.Errorf("Failed to create Job! API error: %s", err)
 	}
 	log.Printf("[INFO] Submitted new job: %#v", out)
 
@@ -83,69 +97,90 @@ func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if d.Get("wait_for_completion").(bool) {
-		return resource.Retry(d.Timeout(schema.TimeoutCreate),
+		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
 			retryUntilJobIsFinished(ctx, conn, namespace, name))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		return diag.Diagnostics{}
 	}
 
-	return resourceKubernetesJobRead(d, meta)
+	return resourceKubernetesJobRead(ctx, d, meta)
 }
 
-func resourceKubernetesJobUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesJobUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
+	if d.HasChange("spec") {
+		specOps, err := patchJobSpec("/spec", "spec.0.", d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		ops = append(ops, specOps...)
+	}
+
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 
 	log.Printf("[INFO] Updating job %s: %#v", d.Id(), ops)
 
 	out, err := conn.BatchV1().Jobs(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to update Job! API error: %s", err)
+		return diag.Errorf("Failed to update Job! API error: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated job: %#v", out)
 
 	d.SetId(buildId(out.ObjectMeta))
 
 	if d.Get("wait_for_completion").(bool) {
-		return resource.Retry(d.Timeout(schema.TimeoutUpdate),
+		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
 			retryUntilJobIsFinished(ctx, conn, namespace, name))
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
-	return resourceKubernetesJobRead(d, meta)
+	return resourceKubernetesJobRead(ctx, d, meta)
 }
 
-func resourceKubernetesJobRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesJobRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesJobExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		d.SetId("")
+		return diag.Diagnostics{}
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Reading job %s", name)
 	job, err := conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return fmt.Errorf("Failed to read Job! API error: %s", err)
+		return diag.Errorf("Failed to read Job! API error: %s", err)
 	}
 	log.Printf("[INFO] Received job: %#v", job)
 
@@ -168,41 +203,47 @@ func resourceKubernetesJobRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	err = d.Set("metadata", flattenMetadata(job.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(job.ObjectMeta, d, meta))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	jobSpec, err := flattenJobSpec(job.Spec, d)
+	jobSpec, err := flattenJobSpec(job.Spec, d, meta)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return d.Set("spec", jobSpec)
+	err = d.Set("spec", jobSpec)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	return diag.Diagnostics{}
 }
 
-func resourceKubernetesJobDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesJobDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Deleting job: %#v", name)
 	err = conn.BatchV1().Jobs(namespace).Delete(ctx, name, deleteOptions)
 	if err != nil {
-		return fmt.Errorf("Failed to delete Job! API error: %s", err)
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
+		return diag.Errorf("Failed to delete Job! API error: %s", err)
 	}
 
-	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
 		_, err := conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
 			return resource.NonRetryableError(err)
@@ -212,7 +253,7 @@ func resourceKubernetesJobDelete(d *schema.ResourceData, meta interface{}) error
 		return resource.RetryableError(e)
 	})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Job %s deleted", name)
@@ -221,12 +262,11 @@ func resourceKubernetesJobDelete(d *schema.ResourceData, meta interface{}) error
 	return nil
 }
 
-func resourceKubernetesJobExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesJobExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -236,7 +276,7 @@ func resourceKubernetesJobExists(d *schema.ResourceData, meta interface{}) (bool
 	log.Printf("[INFO] Checking job %s", name)
 	_, err = conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)
@@ -244,11 +284,14 @@ func resourceKubernetesJobExists(d *schema.ResourceData, meta interface{}) (bool
 	return true, err
 }
 
-// retryUntilJobIsFinished checks if a give job finished its execution and either in Complete or Failed state
+// retryUntilJobIsFinished checks if a given job has finished its execution in either a Complete or Failed state
 func retryUntilJobIsFinished(ctx context.Context, conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
 	return func() *resource.RetryError {
 		job, err := conn.BatchV1().Jobs(ns).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
+			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+				return nil
+			}
 			return resource.NonRetryableError(err)
 		}
 
@@ -259,7 +302,7 @@ func retryUntilJobIsFinished(ctx context.Context, conn *kubernetes.Clientset, ns
 				case batchv1.JobComplete:
 					return nil
 				case batchv1.JobFailed:
-					return resource.NonRetryableError(fmt.Errorf("job: %s/%s is in failed sate", ns, name))
+					return resource.NonRetryableError(fmt.Errorf("job: %s/%s is in failed state", ns, name))
 				}
 			}
 		}

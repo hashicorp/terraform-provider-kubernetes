@@ -1,4 +1,5 @@
 ---
+subcategory: "core/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_replication_controller"
 description: |-
@@ -38,13 +39,13 @@ resource "kubernetes_replication_controller" "example" {
 
       spec {
         container {
-          image = "nginx:1.7.8"
+          image = "nginx:1.21.6"
           name  = "example"
 
           liveness_probe {
             http_get {
-              path = "/nginx_status"
-              port = 8080
+              path = "/"
+              port = 80
 
               http_header {
                 name  = "X-Custom-Header"
@@ -57,11 +58,11 @@ resource "kubernetes_replication_controller" "example" {
           }
 
           resources {
-            limits {
+            limits = {
               cpu    = "0.5"
               memory = "512Mi"
             }
-            requests {
+            requests = {
               cpu    = "250m"
               memory = "50Mi"
             }
@@ -102,7 +103,6 @@ The following arguments are supported:
 
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this replication controller that can be used by clients to determine when replication controller has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
-* `self_link` - A URL representing this replication controller.
 * `uid` - The unique in time and space value for this replication controller. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
 ### `spec`
@@ -120,9 +120,9 @@ The following arguments are supported:
 
 #### Arguments
 
-* `metadata` - (Optional) Standard object's metadata. For more info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata).  While required by the kubernetes API, this field is marked as optional to allow the usage of the deprecated pod spec fields that were mistakenly placed directly under the `template` block.
+* `metadata` - (Optional) Standard object's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata). While required by the kubernetes API, this field is marked as optional to allow the usage of the deprecated pod spec fields that were mistakenly placed directly under the `template` block.
 
-* `spec` - (Optional) Specification of the desired behavior of the pod. For more info: [Kubernetes reference](https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status)
+* `spec` - (Optional) Specification of the desired behavior of the pod. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status)
 
 ~> **NOTE:** all the fields from the `spec.template.spec` block are also accepted at the `spec.template` level but that usage is deprecated. All existing configurations should be updated to only use the new fields under `spec.template.spec`. Mixing the usage of deprecated fields with new fields is not supported.
 

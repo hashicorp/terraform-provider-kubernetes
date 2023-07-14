@@ -1,0 +1,3 @@
+```release-note:new-resource
+`kubernetes/resource_kubernetes_tokenrequest.go`: Add `kubernetes_token_request_v1` resource
+```

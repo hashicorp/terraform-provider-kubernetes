@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -6,8 +9,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,13 +22,12 @@ import (
 
 func resourceKubernetesResourceQuota() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesResourceQuotaCreate,
-		Read:   resourceKubernetesResourceQuotaRead,
-		Exists: resourceKubernetesResourceQuotaExists,
-		Update: resourceKubernetesResourceQuotaUpdate,
-		Delete: resourceKubernetesResourceQuotaDelete,
+		CreateContext: resourceKubernetesResourceQuotaCreate,
+		ReadContext:   resourceKubernetesResourceQuotaRead,
+		UpdateContext: resourceKubernetesResourceQuotaUpdate,
+		DeleteContext: resourceKubernetesResourceQuotaDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Timeouts: &schema.ResourceTimeout{
@@ -40,19 +45,60 @@ func resourceKubernetesResourceQuota() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"hard": {
-							Type:         schema.TypeMap,
-							Description:  "The set of desired hard limits for each named resource. More info: http://releases.k8s.io/HEAD/docs/design/admission_control_resource_quota.md#admissioncontrol-plugin-resourcequota",
-							Optional:     true,
-							Elem:         schema.TypeString,
-							ValidateFunc: validateResourceList,
+							Type:             schema.TypeMap,
+							Description:      "The set of desired hard limits for each named resource. More info: http://releases.k8s.io/HEAD/docs/design/admission_control_resource_quota.md#admissioncontrol-plugin-resourcequota",
+							Optional:         true,
+							Elem:             schema.TypeString,
+							ValidateFunc:     validateResourceList,
+							DiffSuppressFunc: suppressEquivalentResourceQuantity,
 						},
 						"scopes": {
 							Type:        schema.TypeSet,
 							Description: "A collection of filters that must match each object tracked by a quota. If not specified, the quota matches all objects.",
 							Optional:    true,
 							ForceNew:    true,
-							Elem:        &schema.Schema{Type: schema.TypeString},
-							Set:         schema.HashString,
+							Elem: &schema.Schema{
+								Type:         schema.TypeString,
+								ValidateFunc: validation.StringInSlice([]string{"Terminating", "NotTerminating", "BestEffort", "NotBestEffort", "PriorityClass"}, false),
+							},
+							Set: schema.HashString,
+						},
+						"scope_selector": {
+							Type:        schema.TypeList,
+							Description: "A collection of filters like scopes that must match each object tracked by a quota but expressed using ScopeSelectorOperator in combination with possible values. For a resource to match, both scopes AND scopeSelector (if specified in spec), must be matched.",
+							Optional:    true,
+							MaxItems:    1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"match_expression": {
+										Type:        schema.TypeList,
+										Description: "A list of scope selector requirements by scope of the resources.",
+										Optional:    true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"scope_name": {
+													Type:         schema.TypeString,
+													Description:  "The name of the scope that the selector applies to.",
+													Required:     true,
+													ValidateFunc: validation.StringInSlice([]string{"Terminating", "NotTerminating", "BestEffort", "NotBestEffort", "PriorityClass"}, false),
+												},
+												"operator": {
+													Type:         schema.TypeString,
+													Description:  "Represents a scope's relationship to a set of values.",
+													Required:     true,
+													ValidateFunc: validation.StringInSlice([]string{"In", "NotIn", "Exists", "DoesNotExist"}, false),
+												},
+												"values": {
+													Type:        schema.TypeSet,
+													Description: "A list of scope selector requirements by scope of the resources.",
+													Optional:    true,
+													Elem:        &schema.Schema{Type: schema.TypeString},
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},
@@ -61,17 +107,16 @@ func resourceKubernetesResourceQuota() *schema.Resource {
 	}
 }
 
-func resourceKubernetesResourceQuotaCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesResourceQuotaCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandResourceQuotaSpec(d.Get("spec").([]interface{}))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	resQuota := api.ResourceQuota{
 		ObjectMeta: metadata,
@@ -80,12 +125,12 @@ func resourceKubernetesResourceQuotaCreate(d *schema.ResourceData, meta interfac
 	log.Printf("[INFO] Creating new resource quota: %#v", resQuota)
 	out, err := conn.CoreV1().ResourceQuotas(metadata.Namespace).Create(ctx, &resQuota, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to create resource quota: %s", err)
+		return diag.Errorf("Failed to create resource quota: %s", err)
 	}
 	log.Printf("[INFO] Submitted new resource quota: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
 		quota, err := conn.CoreV1().ResourceQuotas(out.Namespace).Get(ctx, out.Name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
@@ -98,29 +143,36 @@ func resourceKubernetesResourceQuotaCreate(d *schema.ResourceData, meta interfac
 		return resource.RetryableError(err)
 	})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourceKubernetesResourceQuotaRead(d, meta)
+	return resourceKubernetesResourceQuotaRead(ctx, d, meta)
 }
 
-func resourceKubernetesResourceQuotaRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesResourceQuotaRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesResourceQuotaExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		d.SetId("")
+		return diag.Diagnostics{}
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Reading resource quota %s", name)
 	resQuota, err := conn.CoreV1().ResourceQuotas(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received resource quota: %#v", resQuota)
 
@@ -132,28 +184,27 @@ func resourceKubernetesResourceQuotaRead(d *schema.ResourceData, meta interface{
 		}
 	}
 
-	err = d.Set("metadata", flattenMetadata(resQuota.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(resQuota.ObjectMeta, d, meta))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	err = d.Set("spec", flattenResourceQuotaSpec(resQuota.Spec))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesResourceQuotaUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
@@ -162,7 +213,7 @@ func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interfac
 	if d.HasChange("spec") {
 		spec, err = expandResourceQuotaSpec(d.Get("spec").([]interface{}))
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/spec",
@@ -172,18 +223,18 @@ func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interfac
 	}
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating resource quota %q: %v", name, string(data))
 	out, err := conn.CoreV1().ResourceQuotas(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to update resource quota: %s", err)
+		return diag.Errorf("Failed to update resource quota: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated resource quota: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
 	if waitForChangedSpec {
-		err = resource.Retry(d.Timeout(schema.TimeoutUpdate), func() *resource.RetryError {
+		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate), func() *resource.RetryError {
 			quota, err := conn.CoreV1().ResourceQuotas(namespace).Get(ctx, name, metav1.GetOptions{})
 			if err != nil {
 				return resource.NonRetryableError(err)
@@ -196,29 +247,31 @@ func resourceKubernetesResourceQuotaUpdate(d *schema.ResourceData, meta interfac
 			return resource.RetryableError(err)
 		})
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 	}
 
-	return resourceKubernetesResourceQuotaRead(d, meta)
+	return resourceKubernetesResourceQuotaRead(ctx, d, meta)
 }
 
-func resourceKubernetesResourceQuotaDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesResourceQuotaDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Deleting resource quota: %#v", name)
 	err = conn.CoreV1().ResourceQuotas(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		return err
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Resource quota %s deleted", name)
@@ -227,12 +280,11 @@ func resourceKubernetesResourceQuotaDelete(d *schema.ResourceData, meta interfac
 	return nil
 }
 
-func resourceKubernetesResourceQuotaExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesResourceQuotaExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -242,7 +294,7 @@ func resourceKubernetesResourceQuotaExists(d *schema.ResourceData, meta interfac
 	log.Printf("[INFO] Checking resource quota %s", name)
 	_, err = conn.CoreV1().ResourceQuotas(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

@@ -1,11 +1,16 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -19,13 +24,12 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 	apiDoc := admissionregistrationv1.ValidatingWebhookConfiguration{}.SwaggerDoc()
 	webhookDoc := admissionregistrationv1.ValidatingWebhook{}.SwaggerDoc()
 	return &schema.Resource{
-		Create: resourceKubernetesValidatingWebhookConfigurationCreate,
-		Read:   resourceKubernetesValidatingWebhookConfigurationRead,
-		Exists: resourceKubernetesValidatingWebhookConfigurationExists,
-		Update: resourceKubernetesValidatingWebhookConfigurationUpdate,
-		Delete: resourceKubernetesValidatingWebhookConfigurationDelete,
+		CreateContext: resourceKubernetesValidatingWebhookConfigurationCreate,
+		ReadContext:   resourceKubernetesValidatingWebhookConfigurationRead,
+		UpdateContext: resourceKubernetesValidatingWebhookConfigurationUpdate,
+		DeleteContext: resourceKubernetesValidatingWebhookConfigurationDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -56,13 +60,21 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 							Type:        schema.TypeString,
 							Description: webhookDoc["failurePolicy"],
 							Optional:    true,
-							Default:     "Fail",
+							Default:     string(admissionregistrationv1.Fail),
+							ValidateFunc: validation.StringInSlice([]string{
+								string(admissionregistrationv1.Fail),
+								string(admissionregistrationv1.Ignore),
+							}, false),
 						},
 						"match_policy": {
 							Type:        schema.TypeString,
 							Description: webhookDoc["matchPolicy"],
 							Optional:    true,
-							Default:     "Equivalent",
+							Default:     string(admissionregistrationv1.Equivalent),
+							ValidateFunc: validation.StringInSlice([]string{
+								string(admissionregistrationv1.Equivalent),
+								string(admissionregistrationv1.Exact),
+							}, false),
 						},
 						"name": {
 							Type:        schema.TypeString,
@@ -90,8 +102,7 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 						"rule": {
 							Type:        schema.TypeList,
 							Description: webhookDoc["rules"],
-							Required:    true,
-							MinItems:    1,
+							Optional:    true,
 							Elem: &schema.Resource{
 								Schema: ruleWithOperationsFields(),
 							},
@@ -100,12 +111,19 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 							Type:        schema.TypeString,
 							Description: webhookDoc["sideEffects"],
 							Optional:    true,
+							ValidateFunc: validation.StringInSlice([]string{
+								string(admissionregistrationv1.SideEffectClassUnknown),
+								string(admissionregistrationv1.SideEffectClassNone),
+								string(admissionregistrationv1.SideEffectClassSome),
+								string(admissionregistrationv1.SideEffectClassNoneOnDryRun),
+							}, false),
 						},
 						"timeout_seconds": {
-							Type:        schema.TypeInt,
-							Description: webhookDoc["timeoutSeconds"],
-							Default:     10,
-							Optional:    true,
+							Type:         schema.TypeInt,
+							Description:  webhookDoc["timeoutSeconds"],
+							Default:      10,
+							Optional:     true,
+							ValidateFunc: validation.IntBetween(1, 30),
 						},
 					},
 				},
@@ -114,12 +132,11 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 	}
 }
 
-func resourceKubernetesValidatingWebhookConfigurationCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesValidatingWebhookConfigurationCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	cfg := admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: expandMetadata(d.Get("metadata").([]interface{})),
@@ -132,7 +149,7 @@ func resourceKubernetesValidatingWebhookConfigurationCreate(d *schema.ResourceDa
 
 	useadmissionregistrationv1beta1, err := useAdmissionregistrationV1beta1(conn)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if useadmissionregistrationv1beta1 {
 		requestv1beta1 := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
@@ -145,22 +162,29 @@ func resourceKubernetesValidatingWebhookConfigurationCreate(d *schema.ResourceDa
 	}
 
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Submitted new ValidatingWebhookConfiguration: %#v", res)
 
 	d.SetId(res.Name)
 
-	return resourceKubernetesValidatingWebhookConfigurationRead(d, meta)
+	return resourceKubernetesValidatingWebhookConfigurationRead(ctx, d, meta)
 }
 
-func resourceKubernetesValidatingWebhookConfigurationRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesValidatingWebhookConfigurationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesValidatingWebhookConfigurationExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		d.SetId("")
+		return diag.Diagnostics{}
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 
@@ -169,7 +193,7 @@ func resourceKubernetesValidatingWebhookConfigurationRead(d *schema.ResourceData
 	log.Printf("[INFO] Reading ValidatingWebhookConfiguration %s", name)
 	useadmissionregistrationv1beta1, err := useAdmissionregistrationV1beta1(conn)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if useadmissionregistrationv1beta1 {
 		cfgv1beta1 := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
@@ -179,10 +203,10 @@ func resourceKubernetesValidatingWebhookConfigurationRead(d *schema.ResourceData
 		cfg, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 	}
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	err = d.Set("metadata", flattenMetadata(cfg.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(cfg.ObjectMeta, d, meta))
 	if err != nil {
 		return nil
 	}
@@ -191,18 +215,17 @@ func resourceKubernetesValidatingWebhookConfigurationRead(d *schema.ResourceData
 
 	err = d.Set("webhook", flattenValidatingWebhooks(cfg.Webhooks))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceKubernetesValidatingWebhookConfigurationUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesValidatingWebhookConfigurationUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
@@ -215,7 +238,7 @@ func resourceKubernetesValidatingWebhookConfigurationUpdate(d *schema.ResourceDa
 
 		useadmissionregistrationv1beta1, err := useAdmissionregistrationV1beta1(conn)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		if useadmissionregistrationv1beta1 {
 			patchv1beta1 := []admissionregistrationv1beta1.ValidatingWebhook{}
@@ -230,7 +253,7 @@ func resourceKubernetesValidatingWebhookConfigurationUpdate(d *schema.ResourceDa
 
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 
 	name := d.Id()
@@ -240,7 +263,7 @@ func resourceKubernetesValidatingWebhookConfigurationUpdate(d *schema.ResourceDa
 
 	useadmissionregistrationv1beta1, err := useAdmissionregistrationV1beta1(conn)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if useadmissionregistrationv1beta1 {
 		responsev1beta1 := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
@@ -250,27 +273,26 @@ func resourceKubernetesValidatingWebhookConfigurationUpdate(d *schema.ResourceDa
 		res, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Patch(ctx, name, types.JSONPatchType, data, metav1.PatchOptions{})
 	}
 	if err != nil {
-		return fmt.Errorf("Failed to update ValidatingWebhookConfiguration: %s", err)
+		return diag.Errorf("Failed to update ValidatingWebhookConfiguration: %s", err)
 	}
 
 	log.Printf("[INFO] Submitted updated ValidatingWebhookConfiguration: %#v", res)
 
-	return resourceKubernetesValidatingWebhookConfigurationRead(d, meta)
+	return resourceKubernetesValidatingWebhookConfigurationRead(ctx, d, meta)
 }
 
-func resourceKubernetesValidatingWebhookConfigurationDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesValidatingWebhookConfigurationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 
 	log.Printf("[INFO] Deleting ValidatingWebhookConfiguration: %#v", name)
 	useadmissionregistrationv1beta1, err := useAdmissionregistrationV1beta1(conn)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	if useadmissionregistrationv1beta1 {
 		err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Delete(ctx, name, metav1.DeleteOptions{})
@@ -278,7 +300,10 @@ func resourceKubernetesValidatingWebhookConfigurationDelete(d *schema.ResourceDa
 		err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(ctx, name, metav1.DeleteOptions{})
 	}
 	if err != nil {
-		return err
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] ValidatingWebhookConfiguration %#v is deleted", name)
@@ -287,12 +312,11 @@ func resourceKubernetesValidatingWebhookConfigurationDelete(d *schema.ResourceDa
 	return nil
 }
 
-func resourceKubernetesValidatingWebhookConfigurationExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesValidatingWebhookConfigurationExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	name := d.Id()
 
@@ -309,7 +333,7 @@ func resourceKubernetesValidatingWebhookConfigurationExists(d *schema.ResourceDa
 	}
 
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		return false, err

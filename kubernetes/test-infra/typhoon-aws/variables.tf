@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 variable "base_domain" {
   type = string
 }
@@ -8,7 +11,7 @@ variable "cluster_name" {
 
 variable "kubernetes_version" {
     type = string
-    default = "1.18.8"
+    default = "1.20.2"
 }
 
 variable "controller_count" {

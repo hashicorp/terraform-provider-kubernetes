@@ -1,11 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,13 +26,12 @@ var (
 
 func resourceKubernetesPodDisruptionBudget() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesPodDisruptionBudgetCreate,
-		Read:   resourceKubernetesPodDisruptionBudgetRead,
-		Update: resourceKubernetesPodDisruptionBudgetUpdate,
-		Delete: resourceKubernetesPodDisruptionBudgetDelete,
-		Exists: resourceKubernetesPodDisruptionBudgetExists,
+		CreateContext: resourceKubernetesPodDisruptionBudgetCreate,
+		ReadContext:   resourceKubernetesPodDisruptionBudgetRead,
+		UpdateContext: resourceKubernetesPodDisruptionBudgetUpdate,
+		DeleteContext: resourceKubernetesPodDisruptionBudgetDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -75,47 +78,45 @@ func resourceKubernetesPodDisruptionBudget() *schema.Resource {
 	}
 }
 
-func resourceKubernetesPodDisruptionBudgetUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesPodDisruptionBudgetUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 
 	log.Printf("[INFO] Updating pod disruption budget %s: %s", d.Id(), ops)
 	out, err := conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Submitted updated pod disruption budget: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesPodDisruptionBudgetRead(d, meta)
+	return resourceKubernetesPodDisruptionBudgetRead(ctx, d, meta)
 }
 
-func resourceKubernetesPodDisruptionBudgetCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesPodDisruptionBudgetCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandPodDisruptionBudgetSpec(d.Get("spec").([]interface{}))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	pdb := api.PodDisruptionBudget{
 		ObjectMeta: metadata,
@@ -125,65 +126,74 @@ func resourceKubernetesPodDisruptionBudgetCreate(d *schema.ResourceData, meta in
 	log.Printf("[INFO] Creating new pod disruption budget: %#v", pdb)
 	out, err := conn.PolicyV1beta1().PodDisruptionBudgets(metadata.Namespace).Create(ctx, &pdb, metav1.CreateOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Submitted new pod disruption budget: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesPodDisruptionBudgetRead(d, meta)
+	return resourceKubernetesPodDisruptionBudgetRead(ctx, d, meta)
 }
 
-func resourceKubernetesPodDisruptionBudgetRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesPodDisruptionBudgetRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesPodDisruptionBudgetExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		d.SetId("")
+		return diag.Diagnostics{}
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Reading pod disruption budget %s", name)
 	pdb, err := conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Received pod disruption budget: %#v", pdb)
-	err = d.Set("metadata", flattenMetadata(pdb.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(pdb.ObjectMeta, d, meta))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = d.Set("spec", flattenPodDisruptionBudgetSpec(pdb.Spec))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceKubernetesPodDisruptionBudgetDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesPodDisruptionBudgetDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Deleting pod disruption budget %#v", name)
 	err = conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Pod disruption budget %#v deleted", name)
@@ -192,12 +202,11 @@ func resourceKubernetesPodDisruptionBudgetDelete(d *schema.ResourceData, meta in
 	return nil
 }
 
-func resourceKubernetesPodDisruptionBudgetExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesPodDisruptionBudgetExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -207,7 +216,7 @@ func resourceKubernetesPodDisruptionBudgetExists(d *schema.ResourceData, meta in
 	log.Printf("[INFO] Checking pod disruption budget %s", name)
 	_, err = conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

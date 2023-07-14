@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -5,9 +8,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	policy "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -18,10 +21,14 @@ func TestAccKubernetesPodSecurityPolicy_basic(t *testing.T) {
 	resourceName := "kubernetes_pod_security_policy.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: resourceName,
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesPodSecurityPolicyDestroy,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.25.0")
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodSecurityPolicyDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodSecurityPolicyConfig_basic(name),
@@ -29,16 +36,13 @@ func TestAccKubernetesPodSecurityPolicy_basic(t *testing.T) {
 					testAccCheckKubernetesPodSecurityPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.labels.TestLabelThree", "three"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.labels.TestLabelFour", "four"),
-					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelThree": "three", "TestLabelFour": "four"}),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_pod_security_policy.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod_security_policy.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod_security_policy.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod_security_policy.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.privileged", "false"),
@@ -81,16 +85,13 @@ func TestAccKubernetesPodSecurityPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
-					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.labels.TestLabelTwo", "two"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.labels.TestLabelThree", "three"),
-					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelTwo": "two", "TestLabelThree": "three"}),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_pod_security_policy.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod_security_policy.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod_security_policy.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod_security_policy.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.privileged", "false"),
@@ -126,13 +127,10 @@ func TestAccKubernetesPodSecurityPolicy_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodSecurityPolicyExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.annotations.%", "0"),
-					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.labels.%", "0"),
-					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_pod_security_policy.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod_security_policy.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_pod_security_policy.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_pod_security_policy.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.privileged", "true"),
@@ -140,6 +138,9 @@ func TestAccKubernetesPodSecurityPolicy_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.default_allow_privilege_escalation", "true"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.host_ipc", "true"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.host_network", "true"),
+					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.allowed_host_paths.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.allowed_host_paths.0.path_prefix", "/"),
+					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.allowed_host_paths.0.read_only", "true"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.allowed_unsafe_sysctls.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.allowed_unsafe_sysctls.0", "kernel.msg*"),
 					resource.TestCheckResourceAttr("kubernetes_pod_security_policy.test", "spec.0.forbidden_sysctls.#", "1"),
@@ -168,6 +169,7 @@ func TestAccKubernetesPodSecurityPolicy_basic(t *testing.T) {
 
 func testAccCheckKubernetesPodSecurityPolicyDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+
 	if err != nil {
 		return err
 	}
@@ -356,6 +358,11 @@ func testAccKubernetesPodSecurityPolicyConfig_specModified(name string) string {
       "downwardAPI",
       "persistentVolumeClaim",
     ]
+
+    allowed_host_paths {
+      path_prefix = "/"
+      read_only   = true
+    }
 
     allowed_unsafe_sysctls = [
       "kernel.msg*"

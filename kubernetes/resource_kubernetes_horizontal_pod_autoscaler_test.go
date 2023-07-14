@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -5,9 +8,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	api "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -18,10 +21,11 @@ func TestAccKubernetesHorizontalPodAutoscaler_basic(t *testing.T) {
 	resourceName := "kubernetes_horizontal_pod_autoscaler.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_horizontal_pod_autoscaler.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_horizontal_pod_autoscaler.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesHorizontalPodAutoscalerConfig_basic(name),
@@ -29,16 +33,13 @@ func TestAccKubernetesHorizontalPodAutoscaler_basic(t *testing.T) {
 					testAccCheckKubernetesHorizontalPodAutoscalerExists(resourceName, &conf),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.annotations.TestAnnotationOne", "one"),
-					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one"}),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.labels.TestLabelThree", "three"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.labels.TestLabelFour", "four"),
-					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelThree": "three", "TestLabelFour": "four"}),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.max_replicas", "10"),
@@ -60,16 +61,13 @@ func TestAccKubernetesHorizontalPodAutoscaler_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.annotations.TestAnnotationTwo", "two"),
-					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{"TestAnnotationOne": "one", "TestAnnotationTwo": "two"}),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.labels.TestLabelOne", "one"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.labels.TestLabelTwo", "two"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.labels.TestLabelThree", "three"),
-					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{"TestLabelOne": "one", "TestLabelTwo": "two", "TestLabelThree": "three"}),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.max_replicas", "10"),
@@ -84,13 +82,10 @@ func TestAccKubernetesHorizontalPodAutoscaler_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesHorizontalPodAutoscalerExists("kubernetes_horizontal_pod_autoscaler.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.annotations.%", "0"),
-					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.labels.%", "0"),
-					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.max_replicas", "8"),
@@ -109,23 +104,21 @@ func TestAccKubernetesHorizontalPodAutoscaler_generatedName(t *testing.T) {
 	prefix := "tf-acc-test-"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_horizontal_pod_autoscaler.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_horizontal_pod_autoscaler.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesHorizontalPodAutoscalerConfig_generatedName(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesHorizontalPodAutoscalerExists("kubernetes_horizontal_pod_autoscaler.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.annotations.%", "0"),
-					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.labels.%", "0"),
-					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.generate_name", prefix),
 					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_horizontal_pod_autoscaler.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_horizontal_pod_autoscaler.test", "spec.0.max_replicas", "1"),
@@ -141,6 +134,7 @@ func TestAccKubernetesHorizontalPodAutoscaler_generatedName(t *testing.T) {
 
 func testAccCheckKubernetesHorizontalPodAutoscalerDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+
 	if err != nil {
 		return err
 	}

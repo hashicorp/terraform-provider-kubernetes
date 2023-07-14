@@ -1,13 +1,56 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func persistentVolumeSourceSchema() *schema.Resource {
+	sources := commonVolumeSources()
+	sources["csi"] = &schema.Schema{
+		Type:        schema.TypeList,
+		Description: "Represents a CSI Volume. More info: http://kubernetes.io/docs/user-guide/volumes#csi",
+		Optional:    true,
+		MaxItems:    1,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"driver": {
+					Type:        schema.TypeString,
+					Description: "the name of the volume driver to use. More info: https://kubernetes.io/docs/concepts/storage/volumes/#csi",
+					Required:    true,
+				},
+				"volume_handle": {
+					Type:        schema.TypeString,
+					Description: "A string value that uniquely identifies the volume. More info: https://kubernetes.io/docs/concepts/storage/volumes/#csi",
+					Required:    true,
+				},
+				"volume_attributes": {
+					Type:        schema.TypeMap,
+					Description: "Attributes of the volume to publish.",
+					Optional:    true,
+				},
+				"fs_type": {
+					Type:        schema.TypeString,
+					Description: "Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified.",
+					Optional:    true,
+				},
+				"read_only": {
+					Type:        schema.TypeBool,
+					Description: "Whether to set the read-only property in VolumeMounts to \"true\". If omitted, the default is \"false\". More info: http://kubernetes.io/docs/user-guide/volumes#csi",
+					Optional:    true,
+				},
+				"controller_publish_secret_ref": commonVolumeSourcesSecretRef("A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI ControllerPublishVolume and ControllerUnpublishVolume calls."),
+				"node_stage_secret_ref":         commonVolumeSourcesSecretRef("A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodeStageVolume and NodeStageVolume and NodeUnstageVolume calls."),
+				"node_publish_secret_ref":       commonVolumeSourcesSecretRef("A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodePublishVolume and NodeUnpublishVolume calls."),
+				"controller_expand_secret_ref":  commonVolumeSourcesSecretRef("A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI ControllerExpandVolume call."),
+			},
+		},
+	}
 	return &schema.Resource{
-		Schema: commonVolumeSources(),
+		Schema: sources,
 	}
 }
 
@@ -107,6 +150,12 @@ func commonVolumeSources() map[string]*schema.Schema {
 						Description: "Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified.",
 						Optional:    true,
 					},
+					"kind": {
+						Type:        schema.TypeString,
+						Description: "The type for the data disk. Expected values: Shared, Dedicated, Managed. Defaults to Shared",
+						Optional:    true,
+						Computed:    true,
+					},
 					"read_only": {
 						Type:        schema.TypeBool,
 						Description: "Whether to force the read-only setting in VolumeMounts. Defaults to false (read/write).",
@@ -132,6 +181,13 @@ func commonVolumeSources() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "The name of secret that contains Azure Storage Account Name and Key",
 						Required:    true,
+					},
+					"secret_namespace": {
+						Type:        schema.TypeString,
+						Description: "The namespace of the secret that contains Azure Storage Account Name and Key. For Kubernetes up to 1.18.x the default is the same as the Pod. For Kubernetes 1.19.x and later the default is \"default\" namespace.",
+						Optional:    true,
+						Computed:    false,
+						ForceNew:    true,
 					},
 					"share_name": {
 						Type:        schema.TypeString,
@@ -201,45 +257,6 @@ func commonVolumeSources() map[string]*schema.Schema {
 						Description: "Volume ID used to identify the volume in Cinder. More info: http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md",
 						Required:    true,
 					},
-				},
-			},
-		},
-		"csi": {
-			Type:        schema.TypeList,
-			Description: "Represents a CSI Volume. More info: http://kubernetes.io/docs/user-guide/volumes#csi",
-			Optional:    true,
-			MaxItems:    1,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"driver": {
-						Type:        schema.TypeString,
-						Description: "the name of the volume driver to use. More info: https://kubernetes.io/docs/concepts/storage/volumes/#csi",
-						Required:    true,
-					},
-					"volume_handle": {
-						Type:        schema.TypeString,
-						Description: "A string value that uniquely identifies the volume. More info: https://kubernetes.io/docs/concepts/storage/volumes/#csi",
-						Required:    true,
-					},
-					"volume_attributes": {
-						Type:        schema.TypeMap,
-						Description: "Attributes of the volume to publish.",
-						Optional:    true,
-					},
-					"fs_type": {
-						Type:        schema.TypeString,
-						Description: "Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified.",
-						Optional:    true,
-					},
-					"read_only": {
-						Type:        schema.TypeBool,
-						Description: "Whether to set the read-only property in VolumeMounts to \"true\". If omitted, the default is \"false\". More info: http://kubernetes.io/docs/user-guide/volumes#csi",
-						Optional:    true,
-					},
-					"controller_publish_secret_ref": commonVolumeSourcesSecretRef("A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI ControllerPublishVolume and ControllerUnpublishVolume calls."),
-					"node_stage_secret_ref":         commonVolumeSourcesSecretRef("A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodeStageVolume and NodeStageVolume and NodeUnstageVolume calls."),
-					"node_publish_secret_ref":       commonVolumeSourcesSecretRef("A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodePublishVolume and NodeUnpublishVolume calls."),
-					"controller_expand_secret_ref":  commonVolumeSourcesSecretRef("A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI ControllerExpandVolume call."),
 				},
 			},
 		},

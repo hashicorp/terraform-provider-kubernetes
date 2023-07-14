@@ -1,0 +1,60 @@
+name: Acceptance Tests (AKS)
+
+on:
+  workflow_dispatch:
+    inputs:
+      location:
+        description: 'Location'
+        default: "West Europe"
+      node_count:
+        description: 'Number of nodes to provision'
+        default: 2
+      vm_size:
+        description: 'The azure machine size for nodes'
+        default: "Standard_A4_v2"
+      kubernetes_version:
+        description: 'The version of kubernetes'
+        default: "1.25.5"
+      terraformVersion:
+        description: Terraform version
+        default: 1.4.2
+      runTests:
+        description: The regex passed to the -run option of `go test`
+        default: ".*"
+
+jobs:
+  acceptanceTests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Set up go
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: 'go.mod'
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ inputs.terraformVersion }} 
+      - name: Azure login 
+        uses: azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.6
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Provision AKS
+        working-directory: ./kubernetes/test-infra/aks-new
+        run: | 
+          terraform init 
+          terraform apply --auto-approve
+      - name: Run Tests  
+        env: 
+          TF_ACC_TERRAFORM_VERSION: ${{ inputs.terraformVersion }}
+          KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks-new/kubeconfig
+          TESTARGS: -run '${{ inputs.runTests }}'
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+        run: |
+          make testacc
+      - name: Destroy AKS
+        if: always()
+        working-directory: ./kubernetes/test-infra/aks-new 
+        run: |
+          terraform destroy --auto-approve

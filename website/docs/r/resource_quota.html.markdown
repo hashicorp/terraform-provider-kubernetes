@@ -1,4 +1,5 @@
 ---
+subcategory: "core/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_resource_quota"
 description: |-
@@ -55,7 +56,6 @@ The following arguments are supported:
 
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this resource quota that can be used by clients to determine when resource quota has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
-* `self_link` - A URL representing this resource quota.
 * `uid` - The unique in time and space value for this resource quota. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
 ### `spec`
@@ -64,6 +64,21 @@ The following arguments are supported:
 
 * `hard` - (Optional) The set of desired hard limits for each named resource. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/policy/resource-quotas)
 * `scopes` - (Optional) A collection of filters that must match each object tracked by a quota. If not specified, the quota matches all objects.
+* `scope_selector` - (Optional) A collection of filters like scopes that must match each object tracked by a quota but expressed using ScopeSelectorOperator in combination with possible values. See `scope_selector` below for more details.
+
+#### `scope_selector`
+
+##### Arguments
+
+* `match_expression` - (Optional) A list of scope selector requirements by scope of the resources. See `match_expression` below for more details.
+
+##### `match_expression`
+
+###### Arguments
+
+* `scope_name` - (Required) The name of the scope that the selector applies to. Valid values are `Terminating`, `NotTerminating`, `BestEffort`, `NotBestEffort`, and `PriorityClass`.
+* `operator` - (Required) Represents a scope's relationship to a set of values. Valid operators are `In`, `NotIn`, `Exists`, `DoesNotExist`.
+* `values` - (Optional)  A list of scope selector requirements by scope of the resources.
 
 ## Import
 

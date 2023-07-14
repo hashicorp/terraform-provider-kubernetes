@@ -1,5 +1,6 @@
 ---
 layout: "kubernetes"
+subcategory: "autoscaling/v1"
 page_title: "Kubernetes: kubernetes_horizontal_pod_autoscaler"
 description: |-
   Horizontal Pod Autoscaler automatically scales the number of pods in a replication controller, deployment or replica set based on observed CPU utilization.
@@ -68,6 +69,58 @@ resource "kubernetes_horizontal_pod_autoscaler" "example" {
 }
 ```
 
+## Example Usage, with `behavior`
+
+```hcl
+resource "kubernetes_horizontal_pod_autoscaler" "example" {
+  metadata {
+    name = "test"
+  }
+
+  spec {
+    min_replicas = 50
+    max_replicas = 100
+
+    scale_target_ref {
+      kind = "Deployment"
+      name = "MyApp"
+    }
+
+    behavior {
+      scale_down {
+        stabilization_window_seconds = 300
+        select_policy                = "Min"
+        policy {
+          period_seconds = 120
+          type           = "Pods"
+          value          = 1
+        }
+
+        policy {
+          period_seconds = 310
+          type           = "Percent"
+          value          = 100
+        }
+      }
+      scale_up {
+        stabilization_window_seconds = 600
+        select_policy                = "Max"
+        policy {
+          period_seconds = 180
+          type           = "Percent"
+          value          = 100
+        }
+        policy {
+          period_seconds = 600
+          type           = "Pods"
+          value          = 5
+        }
+      }
+    }
+  }
+}
+```
+
 ## Support for multiple and custom metrics 
 
 The provider currently supports two version of the HorizontalPodAutoscaler API resource.
@@ -106,7 +159,6 @@ The following arguments are supported:
 
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this horizontal pod autoscaler that can be used by clients to determine when horizontal pod autoscaler has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
-* `self_link` - A URL representing this horizontal pod autoscaler.
 * `uid` - The unique in time and space value for this horizontal pod autoscaler. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
 ### `spec`
@@ -118,6 +170,7 @@ The following arguments are supported:
 * `scale_target_ref` - (Required) Reference to scaled resource. e.g. Replication Controller
 * `target_cpu_utilization_percentage` - (Optional) Target average CPU utilization (represented as a percentage of requested CPU) over all the pods. If not specified the default autoscaling policy will be used.
 * `metric` - (Optional) A metric on which to scale.
+* `behavior` - (Optional) Behavior configures the scaling behavior of the target in both Up and Down directions (scale_up and scale_down fields respectively)
 
 ### `metric`
 
@@ -176,23 +229,48 @@ The following arguments are supported:
 
 #### Quantities
 
-See [here](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#quantity-resource-core) for documentation on quantities.
+See [here](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) for documentation on resource management for pods and containers.
 
 ### `described_object`
 
 #### Arguments
 
-* `api_version` - (Optional) API version of the referent
-* `kind` - (Required) Kind of the referent. e.g. `ReplicationController`. For more info see https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+* `api_version` - (Optional) API version of the referent. This argument is optional for the `v1` API version referents and mandatory for the rest.
+* `kind` - (Required) Kind of the referent. e.g. `ReplicationController`. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#types-kinds)
 * `name` - (Required) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 
 ### `scale_target_ref`
 
 #### Arguments
 
-* `api_version` - (Optional) API version of the referent
-* `kind` - (Required) Kind of the referent. e.g. `ReplicationController`. For more info see https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+* `api_version` - (Optional) API version of the referent. This argument is optional for the `v1` API version referents and mandatory for the rest.
+* `kind` - (Required) Kind of the referent. e.g. `ReplicationController`. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#types-kinds)
 * `name` - (Required) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+
+### `behavior`
+
+#### Arguments
+
+* `scale_up` - (Optional) Scaling policy for scaling Up
+* `scale_down` - (Optional) Scaling policy for scaling Down
+
+
+### `scale_up`
+
+#### Arguments
+
+* `policy` - (Required) List of potential scaling polices which can be used during scaling. At least one policy must be specified, otherwise the scaling rule will be discarded as invalid.
+* `select_policy` - (Optional) Used to specify which policy should be used. If not set, the default value Max is used.
+* `stabilization_window_seconds` - (Optional) Number of seconds for which past recommendations should be considered while scaling up or scaling down. This value must be greater than or equal to zero and less than or equal to 3600 (one hour). If not set, use the default values: - For scale up: 0 (i.e. no stabilization is done). - For scale down: 300 (i.e. the stabilization window is 300 seconds long).
+
+### `policy`
+
+#### Arguments
+
+* `period_seconds` - (Required) Period specifies the window of time for which the policy should hold true. PeriodSeconds must be greater than zero and less than or equal to 1800 (30 min).
+* `type` - (Required) Type is used to specify the scaling policy: Percent or Pods
+* `value` - (Required) Value contains the amount of change which is permitted by the policy. It must be greater than zero.
+
 
 ## Import
 

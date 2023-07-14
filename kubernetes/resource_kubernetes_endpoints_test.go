@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -6,10 +9,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -17,13 +19,13 @@ import (
 func TestAccKubernetesEndpoints_basic(t *testing.T) {
 	var conf api.Endpoints
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_endpoints.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_endpoints.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesEndpointDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_endpoints.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesEndpointDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesEndpointsConfig_basic(name),
@@ -32,35 +34,17 @@ func TestAccKubernetesEndpoints_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1675725831.address.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1675725831.address.4043229419.ip", "10.0.0.4"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1675725831.port.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1675725831.port.3819788156.name", "httptransport"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1675725831.port.3819788156.port", "80"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1675725831.port.3819788156.protocol", "TCP"),
-					testAccCheckEndpointSubsets(&conf, []api.EndpointSubset{
-						{
-							Addresses: []api.EndpointAddress{
-								{
-									IP: "10.0.0.4",
-								},
-							},
-							Ports: []api.EndpointPort{
-								{
-									Name:     "httptransport",
-									Port:     80,
-									Protocol: api.ProtocolTCP,
-								},
-							},
-						},
-					}),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.address.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.address.0.ip", "10.0.0.4"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.0.name", "httptransport"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.0.port", "80"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.0.protocol", "TCP"),
 				),
 			},
 			{
-				ResourceName:            resourceName,
+				ResourceName:            "kubernetes_endpoints.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
@@ -72,85 +56,36 @@ func TestAccKubernetesEndpoints_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1936320382.address.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1936320382.address.761794926.ip", "10.0.0.5"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1936320382.port.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1936320382.port.1261168365.name", "httptransport"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1936320382.port.1261168365.port", "82"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1936320382.port.1261168365.protocol", "TCP"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.address.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.address.3580306450.ip", "10.0.0.6"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.address.3580306450.hostname", "test-hostname"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.address.3580306450.node_name", "test-nodename"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.address.1295295525.ip", "10.0.0.7"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.not_ready_address.678871443.ip", "10.0.0.10"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.not_ready_address.4125104150.ip", "10.0.0.11"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.port.#", "3"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.port.3846540438.name", "httpstransport"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.port.3846540438.port", "443"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.port.3846540438.protocol", "TCP"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.port.2795404772.name", "httpstransport2"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.port.2795404772.port", "444"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.port.2795404772.protocol", "TCP"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.port.2264813282.name", "aaaa"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.port.2264813282.port", "442"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.271063890.port.2264813282.protocol", "TCP"),
-					testAccCheckEndpointSubsets(&conf, []api.EndpointSubset{
-						{
-							Addresses: []api.EndpointAddress{
-								{
-									IP: "10.0.0.5",
-								},
-							},
-							Ports: []api.EndpointPort{
-								{
-									Name:     "httptransport",
-									Port:     82,
-									Protocol: api.ProtocolTCP,
-								},
-							},
-						},
-						{
-							Addresses: []api.EndpointAddress{
-								{
-									IP:       "10.0.0.6",
-									Hostname: "test-hostname",
-									NodeName: ptrToString("test-nodename"),
-								},
-								{
-									IP: "10.0.0.7",
-								},
-							},
-							NotReadyAddresses: []api.EndpointAddress{
-								{
-									IP: "10.0.0.10",
-								},
-								{
-									IP: "10.0.0.11",
-								},
-							},
-							Ports: []api.EndpointPort{
-								{
-									Name:     "httpstransport",
-									Port:     443,
-									Protocol: api.ProtocolTCP,
-								},
-								{
-									Name:     "aaaa",
-									Port:     442,
-									Protocol: api.ProtocolTCP,
-								},
-								{
-									Name:     "httpstransport2",
-									Port:     444,
-									Protocol: api.ProtocolTCP,
-								},
-							},
-						},
-					}),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.%", "3"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.address.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.address.0.%", "3"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.address.0.ip", "10.0.0.5"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.0.name", "httptransport"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.0.port", "82"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.0.protocol", "TCP"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.#", "3"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.1.name", "httpstransport"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.1.port", "443"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.1.protocol", "TCP"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.2.name", "httpstransport2"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.2.port", "444"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.2.protocol", "TCP"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.0.name", "aaaa"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.0.port", "442"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.port.0.protocol", "TCP"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.address.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.address.0.%", "3"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.address.0.ip", "10.0.0.7"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.address.1.%", "3"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.address.1.ip", "10.0.0.6"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.address.1.hostname", "test-hostname"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.not_ready_address.0.%", "3"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.not_ready_address.0.ip", "10.0.0.10"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.not_ready_address.1.ip", "10.0.0.11"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1.not_ready_address.1.%", "3"),
 				),
 			},
 			{
@@ -160,31 +95,13 @@ func TestAccKubernetesEndpoints_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1675725831.address.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1675725831.address.4043229419.ip", "10.0.0.4"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1675725831.port.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1675725831.port.3819788156.name", "httptransport"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1675725831.port.3819788156.port", "80"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.1675725831.port.3819788156.protocol", "TCP"),
-					testAccCheckEndpointSubsets(&conf, []api.EndpointSubset{
-						{
-							Addresses: []api.EndpointAddress{
-								{
-									IP: "10.0.0.4",
-								},
-							},
-							Ports: []api.EndpointPort{
-								{
-									Name:     "httptransport",
-									Port:     80,
-									Protocol: api.ProtocolTCP,
-								},
-							},
-						},
-					}),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.address.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.address.0.ip", "10.0.0.4"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.0.name", "httptransport"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.0.port", "80"),
+					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "subset.0.port.0.protocol", "TCP"),
 				),
 			},
 		},
@@ -194,32 +111,29 @@ func TestAccKubernetesEndpoints_basic(t *testing.T) {
 func TestAccKubernetesEndpoints_generatedName(t *testing.T) {
 	var conf api.Endpoints
 	prefix := "tf-acc-test-gen-"
-	resourceName := "kubernetes_endpoints.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_endpoints.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesEndpointDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_endpoints.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesEndpointDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesEndpointsConfig_generatedName(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesEndpointExists("kubernetes_endpoints.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "metadata.0.annotations.%", "0"),
-					testAccCheckMetaAnnotations(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "metadata.0.labels.%", "0"),
-					testAccCheckMetaLabels(&conf.ObjectMeta, map[string]string{}),
 					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "metadata.0.generate_name", prefix),
 					resource.TestMatchResourceAttr("kubernetes_endpoints.test", "metadata.0.name", regexp.MustCompile("^"+prefix)),
 					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.uid"),
 				),
 			},
 			{
-				ResourceName:            resourceName,
+				ResourceName:            "kubernetes_endpoints.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
@@ -228,23 +142,9 @@ func TestAccKubernetesEndpoints_generatedName(t *testing.T) {
 	})
 }
 
-func testAccCheckEndpointSubsets(svc *api.Endpoints, expected []api.EndpointSubset) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if len(expected) == 0 && len(svc.Subsets) == 0 {
-			return nil
-		}
-
-		subsets := svc.Subsets
-		if diff := cmp.Diff(expected, subsets); diff != "" {
-			return fmt.Errorf("Unexpected output from expander: mismatch (-want +got):\n%s", diff)
-		}
-
-		return nil
-	}
-}
-
 func testAccCheckKubernetesEndpointDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+
 	if err != nil {
 		return err
 	}

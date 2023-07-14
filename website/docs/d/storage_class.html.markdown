@@ -1,4 +1,5 @@
 ---
+subcategory: "storage/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_storage_class"
 description: |-
@@ -36,12 +37,25 @@ The following arguments are supported:
 
 * `name` - (Required) Name of the storage class, must be unique. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
 
+### `allowed_topologies`
+￼
+#### Arguments
+￼
+
+* `match_label_expressions` - (Optional) A list of topology selector requirements by labels. See [match_label_expressions](#match_label_expressions)
+
+### `match_label_expressions`
+
+#### Arguments
+
+* `key` - (Optional) The label key that the selector applies to.
+* `values` - (Optional) An array of string values. One value must match the label to be selected.
+
 #### Attributes
 
 
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this storage class that can be used by clients to determine when storage class has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
-* `self_link` - A URL representing this storage class.
 * `uid` - The unique in time and space value for this storage class. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
 
@@ -56,3 +70,4 @@ The following attributes are exported:
 * `volume_binding_mode` - Indicates when volume binding and dynamic provisioning should occur.
 * `allow_volume_expansion` - Indicates whether the storage class allow volume expand.
 * `mount_options` - Persistent Volumes that are dynamically created by a storage class will have the mount options specified.
+* `allowed_topologies` - (Optional) Restrict the node topologies where volumes can be dynamically provisioned. See [allowed_topologies](#allowed_topologies)

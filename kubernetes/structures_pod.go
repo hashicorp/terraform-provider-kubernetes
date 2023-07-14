@@ -1,15 +1,30 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
+
+// https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions
+var builtInTolerations = map[string]string{
+	v1.TaintNodeNotReady:           "",
+	v1.TaintNodeUnreachable:        "",
+	v1.TaintNodeUnschedulable:      "",
+	v1.TaintNodeMemoryPressure:     "",
+	v1.TaintNodeDiskPressure:       "",
+	v1.TaintNodeNetworkUnavailable: "",
+	v1.TaintNodePIDPressure:        "",
+}
 
 // Flatteners
 
@@ -27,13 +42,26 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["automount_service_account_token"] = *in.AutomountServiceAccountToken
 	}
 
-	containers, err := flattenContainers(in.Containers)
+	// To avoid perpetual diff, remove the service account token volume from PodSpec.
+	serviceAccountName := "default"
+	if in.ServiceAccountName != "" {
+		serviceAccountName = in.ServiceAccountName
+	}
+	serviceAccountRegex := fmt.Sprintf("%s-token-([a-z0-9]{5})", serviceAccountName)
+
+	containers, err := flattenContainers(in.Containers, serviceAccountRegex)
 	if err != nil {
 		return nil, err
 	}
 	att["container"] = containers
 
-	initContainers, err := flattenContainers(in.InitContainers)
+	gates, err := flattenReadinessGates(in.ReadinessGates)
+	if err != nil {
+		return nil, err
+	}
+	att["readiness_gate"] = gates
+
+	initContainers, err := flattenContainers(in.InitContainers, serviceAccountRegex)
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +78,6 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 
 	if in.EnableServiceLinks != nil {
 		att["enable_service_links"] = *in.EnableServiceLinks
-	} else {
-		att["enable_service_links"] = true
 	}
 
 	att["host_aliases"] = flattenHostaliases(in.HostAliases)
@@ -71,6 +97,9 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	if len(in.NodeSelector) > 0 {
 		att["node_selector"] = in.NodeSelector
 	}
+	if in.RuntimeClassName != nil {
+		att["runtime_class_name"] = *in.RuntimeClassName
+	}
 	if in.PriorityClassName != "" {
 		att["priority_class_name"] = in.PriorityClassName
 	}
@@ -81,6 +110,11 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	if in.SecurityContext != nil {
 		att["security_context"] = flattenPodSecurityContext(in.SecurityContext)
 	}
+
+	if in.SchedulerName != "" {
+		att["scheduler_name"] = in.SchedulerName
+	}
+
 	if in.ServiceAccountName != "" {
 		att["service_account_name"] = in.ServiceAccountName
 	}
@@ -100,7 +134,23 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["toleration"] = flattenTolerations(in.Tolerations)
 	}
 
+	if len(in.TopologySpreadConstraints) > 0 {
+		att["topology_spread_constraint"] = flattenTopologySpreadConstraints(in.TopologySpreadConstraints)
+	}
+
 	if len(in.Volumes) > 0 {
+		for i, volume := range in.Volumes {
+			// To avoid perpetual diff, remove the service account token volume from PodSpec.
+			nameMatchesDefaultToken, err := regexp.MatchString(serviceAccountRegex, volume.Name)
+			if err != nil {
+				return []interface{}{att}, err
+			}
+			if nameMatchesDefaultToken || strings.HasPrefix(volume.Name, "kube-api-access") {
+				in.Volumes = removeVolumeFromPodSpec(i, in.Volumes)
+				break
+			}
+		}
+
 		v, err := flattenVolumes(in.Volumes)
 		if err != nil {
 			return []interface{}{att}, err
@@ -108,6 +158,11 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["volume"] = v
 	}
 	return []interface{}{att}, nil
+}
+
+// removeVolumeFromPodSpec removes the specified Volume index (i) from the given list of Volumes.
+func removeVolumeFromPodSpec(i int, v []v1.Volume) []v1.Volume {
+	return append(v[:i], v[i+1:]...)
 }
 
 func flattenPodDNSConfig(in *v1.PodDNSConfig) ([]interface{}, error) {
@@ -153,16 +208,22 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	att := make(map[string]interface{})
 
 	if in.FSGroup != nil {
-		att["fs_group"] = *in.FSGroup
+		att["fs_group"] = strconv.Itoa(int(*in.FSGroup))
 	}
 	if in.RunAsGroup != nil {
-		att["run_as_group"] = *in.RunAsGroup
+		att["run_as_group"] = strconv.Itoa(int(*in.RunAsGroup))
 	}
 	if in.RunAsNonRoot != nil {
 		att["run_as_non_root"] = *in.RunAsNonRoot
 	}
 	if in.RunAsUser != nil {
-		att["run_as_user"] = *in.RunAsUser
+		att["run_as_user"] = strconv.Itoa(int(*in.RunAsUser))
+	}
+	if in.SeccompProfile != nil {
+		att["seccomp_profile"] = flattenSeccompProfile(in.SeccompProfile)
+	}
+	if in.FSGroupChangePolicy != nil {
+		att["fs_group_change_policy"] = *in.FSGroupChangePolicy
 	}
 	if len(in.SupplementalGroups) > 0 {
 		att["supplemental_groups"] = newInt64Set(schema.HashSchema(&schema.Schema{
@@ -182,6 +243,17 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	return []interface{}{}
 }
 
+func flattenSeccompProfile(in *v1.SeccompProfile) []interface{} {
+	att := make(map[string]interface{})
+	if in.Type != "" {
+		att["type"] = in.Type
+		if in.Type == "Localhost" {
+			att["localhost_profile"] = in.LocalhostProfile
+		}
+	}
+	return []interface{}{att}
+}
+
 func flattenSeLinuxOptions(in *v1.SELinuxOptions) []interface{} {
 	att := make(map[string]interface{})
 	if in.User != "" {
@@ -190,7 +262,7 @@ func flattenSeLinuxOptions(in *v1.SELinuxOptions) []interface{} {
 	if in.Role != "" {
 		att["role"] = in.Role
 	}
-	if in.User != "" {
+	if in.Type != "" {
 		att["type"] = in.Type
 	}
 	if in.Level != "" {
@@ -219,7 +291,7 @@ func flattenTolerations(tolerations []v1.Toleration) []interface{} {
 	att := []interface{}{}
 	for _, v := range tolerations {
 		// The API Server may automatically add several Tolerations to pods, strip these to avoid TF diff.
-		if strings.Contains(v.Key, "node.kubernetes.io/") {
+		if _, ok := builtInTolerations[v.Key]; ok {
 			log.Printf("[INFO] ignoring toleration with key: %s", v.Key)
 			continue
 		}
@@ -239,6 +311,28 @@ func flattenTolerations(tolerations []v1.Toleration) []interface{} {
 		}
 		if v.Value != "" {
 			obj["value"] = v.Value
+		}
+		att = append(att, obj)
+	}
+	return att
+}
+
+func flattenTopologySpreadConstraints(tsc []v1.TopologySpreadConstraint) []interface{} {
+	att := []interface{}{}
+	for _, v := range tsc {
+		obj := map[string]interface{}{}
+
+		if v.TopologyKey != "" {
+			obj["topology_key"] = v.TopologyKey
+		}
+		if v.MaxSkew != 0 {
+			obj["max_skew"] = v.MaxSkew
+		}
+		if v.WhenUnsatisfiable != "" {
+			obj["when_unsatisfiable"] = string(v.WhenUnsatisfiable)
+		}
+		if v.LabelSelector != nil {
+			obj["label_selector"] = flattenLabelSelector(v.LabelSelector)
 		}
 		att = append(att, obj)
 	}
@@ -301,6 +395,9 @@ func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
 		if v.CephFS != nil {
 			obj["ceph_fs"] = flattenCephFSVolumeSource(v.CephFS)
 		}
+		if v.CSI != nil {
+			obj["csi"] = flattenCSIVolumeSource(v.CSI)
+		}
 		if v.FC != nil {
 			obj["fc"] = flattenFCVolumeSource(v.FC)
 		}
@@ -324,6 +421,9 @@ func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
 		}
 		if v.PhotonPersistentDisk != nil {
 			obj["photon_persistent_disk"] = flattenPhotonPersistentDiskVolumeSource(v.PhotonPersistentDisk)
+		}
+		if v.Ephemeral != nil {
+			obj["ephemeral"] = flattenEphemeralVolumeSource(v.Ephemeral)
 		}
 		att[i] = obj
 	}
@@ -549,6 +649,16 @@ func flattenServiceAccountTokenProjection(in *v1.ServiceAccountTokenProjection) 
 	return []interface{}{att}
 }
 
+func flattenReadinessGates(in []v1.PodReadinessGate) ([]interface{}, error) {
+	att := make([]interface{}, len(in))
+	for i, v := range in {
+		c := make(map[string]interface{})
+		c["condition_type"] = v.ConditionType
+		att[i] = c
+	}
+	return att, nil
+}
+
 // Expanders
 
 func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
@@ -580,6 +690,14 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 			return obj, err
 		}
 		obj.Containers = cs
+	}
+
+	if v, ok := in["readiness_gate"].([]interface{}); ok && len(v) > 0 {
+		cs, err := expandReadinessGates(v)
+		if err != nil {
+			return obj, err
+		}
+		obj.ReadinessGates = cs
 	}
 
 	if v, ok := in["init_container"].([]interface{}); ok && len(v) > 0 {
@@ -649,6 +767,10 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.NodeSelector = nodeSelectors
 	}
 
+	if v, ok := in["runtime_class_name"].(string); ok && v != "" {
+		obj.RuntimeClassName = ptrToString(v)
+	}
+
 	if v, ok := in["priority_class_name"].(string); ok {
 		obj.PriorityClassName = v
 	}
@@ -658,7 +780,15 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	}
 
 	if v, ok := in["security_context"].([]interface{}); ok && len(v) > 0 {
-		obj.SecurityContext = expandPodSecurityContext(v)
+		ctx, err := expandPodSecurityContext(v)
+		if err != nil {
+			return obj, err
+		}
+		obj.SecurityContext = ctx
+	}
+
+	if v, ok := in["scheduler_name"].(string); ok {
+		obj.SchedulerName = v
 	}
 
 	if v, ok := in["service_account_name"].(string); ok {
@@ -694,6 +824,17 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		}
 		obj.Volumes = cs
 	}
+
+	if v, ok := in["topology_spread_constraint"].([]interface{}); ok && len(v) > 0 {
+		ts, err := expandTopologySpreadConstraints(v)
+		if err != nil {
+			return obj, err
+		}
+		for _, t := range ts {
+			obj.TopologySpreadConstraints = append(obj.TopologySpreadConstraints, *t)
+		}
+	}
+
 	return obj, nil
 }
 
@@ -739,23 +880,38 @@ func expandDNSConfigOptions(options []interface{}) ([]v1.PodDNSConfigOption, err
 	return opts, nil
 }
 
-func expandPodSecurityContext(l []interface{}) *v1.PodSecurityContext {
+func expandPodSecurityContext(l []interface{}) (*v1.PodSecurityContext, error) {
+	obj := &v1.PodSecurityContext{}
 	if len(l) == 0 || l[0] == nil {
-		return &v1.PodSecurityContext{}
+		return obj, nil
 	}
 	in := l[0].(map[string]interface{})
-	obj := &v1.PodSecurityContext{}
-	if v, ok := in["fs_group"].(int); ok {
-		obj.FSGroup = ptrToInt64(int64(v))
+	if v, ok := in["fs_group"].(string); ok && v != "" {
+		i, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return obj, err
+		}
+		obj.FSGroup = ptrToInt64(int64(i))
 	}
-	if v, ok := in["run_as_group"].(int); ok {
-		obj.RunAsGroup = ptrToInt64(int64(v))
+	if v, ok := in["run_as_group"].(string); ok && v != "" {
+		i, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return obj, err
+		}
+		obj.RunAsGroup = ptrToInt64(int64(i))
 	}
 	if v, ok := in["run_as_non_root"].(bool); ok {
 		obj.RunAsNonRoot = ptrToBool(v)
 	}
-	if v, ok := in["run_as_user"].(int); ok {
-		obj.RunAsUser = ptrToInt64(int64(v))
+	if v, ok := in["run_as_user"].(string); ok && v != "" {
+		i, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return obj, err
+		}
+		obj.RunAsUser = ptrToInt64(int64(i))
+	}
+	if v, ok := in["seccomp_profile"].([]interface{}); ok && len(v) > 0 {
+		obj.SeccompProfile = expandSeccompProfile(v)
 	}
 	if v, ok := in["se_linux_options"].([]interface{}); ok && len(v) > 0 {
 		obj.SELinuxOptions = expandSeLinuxOptions(v)
@@ -766,8 +922,11 @@ func expandPodSecurityContext(l []interface{}) *v1.PodSecurityContext {
 	if v, ok := in["sysctl"].([]interface{}); ok && len(v) > 0 {
 		obj.Sysctls = expandSysctls(v)
 	}
-
-	return obj
+	if v, ok := in["fs_group_change_policy"].(string); ok && v != "" {
+		policy := v1.PodFSGroupChangePolicy(v)
+		obj.FSGroupChangePolicy = &policy
+	}
+	return obj, nil
 }
 
 func expandSysctls(l []interface{}) []v1.Sysctl {
@@ -786,6 +945,23 @@ func expandSysctls(l []interface{}) []v1.Sysctl {
 
 	}
 	return sysctls
+}
+
+func expandSeccompProfile(l []interface{}) *v1.SeccompProfile {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.SeccompProfile{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.SeccompProfile{}
+	if v, ok := in["type"].(string); ok {
+		obj.Type = v1.SeccompProfileType(v)
+		if v == "Localhost" {
+			if lp, ok := in["localhost_profile"].(string); ok {
+				obj.LocalhostProfile = &lp
+			}
+		}
+	}
+	return obj
 }
 
 func expandSeLinuxOptions(l []interface{}) *v1.SELinuxOptions {
@@ -1203,6 +1379,35 @@ func expandTolerations(tolerations []interface{}) ([]*v1.Toleration, error) {
 	return ts, nil
 }
 
+func expandTopologySpreadConstraints(tsc []interface{}) ([]*v1.TopologySpreadConstraint, error) {
+	if len(tsc) == 0 {
+		return []*v1.TopologySpreadConstraint{}, nil
+	}
+	ts := make([]*v1.TopologySpreadConstraint, len(tsc))
+	for i, t := range tsc {
+		m := t.(map[string]interface{})
+		ts[i] = &v1.TopologySpreadConstraint{}
+
+		if value, ok := m["topology_key"].(string); ok {
+			ts[i].TopologyKey = value
+		}
+
+		if v, ok := m["label_selector"].([]interface{}); ok && len(v) > 0 {
+			ts[i].LabelSelector = expandLabelSelector(v)
+		}
+
+		if value, ok := m["when_unsatisfiable"].(string); ok {
+			ts[i].WhenUnsatisfiable = v1.UnsatisfiableConstraintAction(value)
+		}
+
+		if value, ok := m["max_skew"].(int); ok {
+			ts[i].MaxSkew = int32(value)
+		}
+
+	}
+	return ts, nil
+}
+
 func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 	if len(volumes) == 0 {
 		return []v1.Volume{}, nil
@@ -1285,6 +1490,9 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 		if v, ok := m["ceph_fs"].([]interface{}); ok && len(v) > 0 {
 			vl[i].CephFS = expandCephFSVolumeSource(v)
 		}
+		if v, ok := m["csi"].([]interface{}); ok && len(v) > 0 {
+			vl[i].CSI = expandCSIVolumeSource(v)
+		}
 		if v, ok := m["fc"].([]interface{}); ok && len(v) > 0 {
 			vl[i].FC = expandFCVolumeSource(v)
 		}
@@ -1309,8 +1517,31 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 		if v, ok := m["photon_persistent_disk"].([]interface{}); ok && len(v) > 0 {
 			vl[i].PhotonPersistentDisk = expandPhotonPersistentDiskVolumeSource(v)
 		}
+		if v, ok := m["ephemeral"].([]interface{}); ok && len(v) > 0 {
+			ephemeral, err := expandEphemeralVolumeSource(v)
+			if err != nil {
+				return vl, err
+			}
+			vl[i].Ephemeral = ephemeral
+		}
 	}
 	return vl, nil
+}
+
+func expandReadinessGates(gates []interface{}) ([]v1.PodReadinessGate, error) {
+	if len(gates) == 0 || gates[0] == nil {
+		return []v1.PodReadinessGate{}, nil
+	}
+	cs := make([]v1.PodReadinessGate, len(gates))
+	for i, c := range gates {
+		gate := c.(map[string]interface{})
+
+		if v, ok := gate["condition_type"]; ok {
+			conType := v1.PodConditionType(v.(string))
+			cs[i].ConditionType = conType
+		}
+	}
+	return cs, nil
 }
 
 func patchPodSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOperations, error) {

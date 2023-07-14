@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 provider "google" {
   // Provider settings to be provided via ENV variables
 }
@@ -26,8 +29,8 @@ variable "workers_count" {
 }
 
 data "google_container_engine_versions" "supported" {
-  location           = data.google_compute_zones.available.names[0]
-  version_prefix     = var.kubernetes_version
+  location       = data.google_compute_zones.available.names[0]
+  version_prefix = var.kubernetes_version
 }
 
 # If the result is empty '[]', the GKE default_cluster_version will be used.
@@ -37,7 +40,7 @@ output "available_master_versions_matching_user_input" {
 
 # Shared network for GKE cluster and Filestore to use.
 resource "google_compute_network" "vpc" {
-  name = "shared"
+  name                    = "shared"
   auto_create_subnetworks = true
 }
 
@@ -49,7 +52,7 @@ resource "google_container_cluster" "primary" {
   min_master_version = data.google_container_engine_versions.supported.latest_master_version
   # node version must match master version
   # https://www.terraform.io/docs/providers/google/r/container_cluster.html#node_version
-  node_version       = data.google_container_engine_versions.supported.latest_master_version
+  node_version = data.google_container_engine_versions.supported.latest_master_version
 
   node_locations = [
     data.google_compute_zones.available.names[1],
@@ -109,7 +112,7 @@ resource "local_file" "kubeconfig" {
 }
 
 provider "kubernetes" {
-  version = "1.11.2"
+  version          = "1.11.2"
   load_config_file = "false"
 
   host = google_container_cluster.primary.endpoint
@@ -131,7 +134,7 @@ resource "kubernetes_storage_class" "nfs" {
   metadata {
     name = "filestore"
   }
-  reclaim_policy  = "Retain"
+  reclaim_policy      = "Retain"
   storage_provisioner = "nfs"
 }
 
@@ -144,11 +147,11 @@ resource "kubernetes_persistent_volume" "example" {
       storage = "1T"
     }
     storage_class_name = kubernetes_storage_class.nfs.metadata[0].name
-    access_modes = ["ReadWriteMany"]
+    access_modes       = ["ReadWriteMany"]
     persistent_volume_source {
       nfs {
         server = google_filestore_instance.test.networks[0].ip_addresses[0]
-        path = "/${google_filestore_instance.test.file_shares[0].name}"
+        path   = "/${google_filestore_instance.test.file_shares[0].name}"
       }
     }
   }
@@ -156,13 +159,13 @@ resource "kubernetes_persistent_volume" "example" {
 
 resource "kubernetes_persistent_volume_claim" "example" {
   metadata {
-    name = "mariadb-data"
+    name      = "mariadb-data"
     namespace = "test"
   }
   spec {
-    access_modes = ["ReadWriteMany"]
+    access_modes       = ["ReadWriteMany"]
     storage_class_name = kubernetes_storage_class.nfs.metadata[0].name
-    volume_name = kubernetes_persistent_volume.example.metadata[0].name
+    volume_name        = kubernetes_persistent_volume.example.metadata[0].name
     resources {
       requests = {
         storage = "1T"
@@ -173,7 +176,7 @@ resource "kubernetes_persistent_volume_claim" "example" {
 
 resource "kubernetes_deployment" "mariadb" {
   metadata {
-    name = "mariadb-example"
+    name      = "mariadb-example"
     namespace = "test"
     labels = {
       mylabel = "MyExampleApp"
@@ -202,16 +205,16 @@ resource "kubernetes_deployment" "mariadb" {
           name  = "example"
 
           env {
-            name = "MYSQL_RANDOM_ROOT_PASSWORD"
+            name  = "MYSQL_RANDOM_ROOT_PASSWORD"
             value = true
           }
 
           resources {
-            limits {
+            limits = {
               cpu    = "0.5"
               memory = "512Mi"
             }
-            requests {
+            requests = {
               cpu    = "250m"
               memory = "50Mi"
             }

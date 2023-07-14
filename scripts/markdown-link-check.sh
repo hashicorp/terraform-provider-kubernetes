@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 # Local script runner for recursive markdown-link-check.
 # Runs a dockerized version of this program: https://github.com/tcort/markdown-link-check
 # Based on: https://github.com/gaurav-nelson/github-action-markdown-link-check/blob/master/entrypoint.sh
@@ -14,6 +17,12 @@ DOCKER=${1:-`command -v docker`}
 DOCKER_RUN_OPTS=${2:-}
 DOCKER_VOLUME_OPTS=${3:-}
 PROVIDER_DIR=${4:-}
+
+# In CI, we use a Github Action instead of this script.
+if [ ${CI:-} ]; then
+  echo "Running inside of Github Actions. Exiting"
+  exit 0
+fi
 
 if [ -z "${PROVIDER_DIR}" ]; then
   echo "Please specify the directory containing the kubernetes provider"

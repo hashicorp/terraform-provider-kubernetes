@@ -1,6 +1,9 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "tls_private_key" "example" {
   algorithm = "ECDSA"
-  rsa_bits = "4096"
+  rsa_bits  = "4096"
 }
 
 resource "tls_cert_request" "example" {
@@ -19,7 +22,7 @@ resource "kubernetes_certificate_signing_request" "example" {
   }
   spec {
     request = tls_cert_request.example.cert_request_pem
-    usages = ["client auth", "server auth"]
+    usages  = ["client auth", "server auth"]
   }
   auto_approve = true
 }
@@ -41,12 +44,12 @@ resource "kubernetes_pod" "main" {
   }
   spec {
     container {
-      name = "default"
-      image = "alpine:latest"
+      name    = "default"
+      image   = "alpine:latest"
       command = ["cat", "/etc/test/tls.crt"]
       volume_mount {
         mount_path = "/etc/test"
-        name = "secretvol"
+        name       = "secretvol"
       }
     }
     volume {

@@ -1,27 +1,29 @@
-#
-# Variables Configuration
-#
-variable "region" {
-  default = "us-west-1"
-  type    = string
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+variable "cluster_version" {
+  default = "1.27"
 }
 
-variable "kubernetes_version" {
-  type    = string
-  default = "1.11"
+variable "nodes_per_az" {
+  default = 1
+  type    = number
 }
 
-variable "workers_count" {
-  default = 2
+variable "instance_type" {
+  default = "m5.large"
 }
 
-variable "workers_type" {
-  type    = string
-  default = "m4.large"
+variable "az_span" {
+  type    = number
+  default = 3
+  validation {
+    condition     = var.az_span > 1
+    error_message = "Cluster must span at least 2 AZs"
+  }
 }
 
-locals {
-  kubeconfig_name = "kubeconfig_${module.vpc.cluster_name}"
-  kubeconfig_path = path.root
-}
 
+variable "cluster_name" {
+  default = ""
+}

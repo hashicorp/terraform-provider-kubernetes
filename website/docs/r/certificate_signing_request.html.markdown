@@ -1,4 +1,5 @@
 ---
+subcategory: "certificates/v1beta1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_certificate_signing_request"
 description: |-
@@ -35,6 +36,17 @@ EOT
   auto_approve = true
 }
 
+
+resource "kubernetes_secret" "example" {
+  metadata {
+    name = "example"
+  }
+  data = {
+    "tls.crt" = kubernetes_certificate_signing_request.example.certificate
+    "tls.key" = tls_private_key.example.private_key_pem # key used to generate Certificate Request
+  }
+  type = "kubernetes.io/tls"
+}
 ```
 
 ## Argument Reference
@@ -64,9 +76,9 @@ The following arguments are supported:
 
 #### Attributes
 
+* `certificate` - The signed certificate PEM data.
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this certificate signing request that can be used by clients to determine when certificate signing request has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
-* `self_link` - A URL representing this certificate signing request.
 * `uid` - The unique in time and space value for this certificate signing request. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
 ### `spec`

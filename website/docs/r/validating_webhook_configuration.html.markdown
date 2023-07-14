@@ -1,11 +1,12 @@
 ---
+subcategory: "admissionregistration/v1beta1"
 layout: "kubernetes"
-page_title: "Kubernetes: validating_webhook_configuration"
+page_title: "Kubernetes: kubernetes_validating_webhook_configuration"
 description: |-
   Validating Webhook Configuration configures a validating admission webhook
 ---
 
-# validating_webhook_configuration
+# kubernetes_validating_webhook_configuration
 
 Validating Webhook Configuration configures a [validating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks).
 
@@ -76,7 +77,6 @@ The following arguments are supported:
 
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this Validating Webhook Configuration that can be used by clients to determine when Validating Webhook Configuration has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
-* `self_link` - A URL representing this Validating Webhook Configuration.
 * `uid` - The unique in time and space value for this Validating Webhook Configuration. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
 ### `webhook`
@@ -127,5 +127,5 @@ The following arguments are supported:
 Validating Webhook Configuration can be imported using the name, e.g.
 
 ```
-$ terraform import validating_webhook_configuration.example terraform-example
+$ terraform import kubernetes_validating_webhook_configuration.example terraform-example
 ```

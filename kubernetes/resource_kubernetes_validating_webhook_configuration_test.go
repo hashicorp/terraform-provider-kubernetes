@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -5,9 +8,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -18,19 +21,19 @@ func TestAccKubernetesValidatingWebhookConfiguration_basic(t *testing.T) {
 	resourceName := "kubernetes_validating_webhook_configuration.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: resourceName,
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesValdiatingWebhookConfigurationDestroy,
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotAdmissionRegistrationV1(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesValdiatingWebhookConfigurationDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesValidatingWebhookConfigurationConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesValdiatingWebhookConfigurationExists(resourceName),
+					testAccCheckKubernetesValidatingWebhookConfigurationExists(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "webhook.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.#", "2"),
@@ -71,7 +74,6 @@ func TestAccKubernetesValidatingWebhookConfiguration_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.self_link"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "webhook.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.#", "2"),
@@ -116,6 +118,7 @@ func TestAccKubernetesValidatingWebhookConfiguration_basic(t *testing.T) {
 
 func testAccCheckKubernetesValdiatingWebhookConfigurationDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+
 	if err != nil {
 		return err
 	}
@@ -139,7 +142,7 @@ func testAccCheckKubernetesValdiatingWebhookConfigurationDestroy(s *terraform.St
 		}
 
 		if err != nil {
-			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
 			return err
@@ -151,7 +154,7 @@ func testAccCheckKubernetesValdiatingWebhookConfigurationDestroy(s *terraform.St
 	return nil
 }
 
-func testAccCheckKubernetesValdiatingWebhookConfigurationExists(n string) resource.TestCheckFunc {
+func testAccCheckKubernetesValidatingWebhookConfigurationExists(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -184,7 +187,8 @@ func testAccCheckKubernetesValdiatingWebhookConfigurationExists(n string) resour
 }
 
 func testAccKubernetesValidatingWebhookConfigurationConfig_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_validating_webhook_configuration" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_validating_webhook_configuration" "test" {
   metadata {
     name = %q
   }
@@ -220,7 +224,8 @@ func testAccKubernetesValidatingWebhookConfigurationConfig_basic(name string) st
 }
 
 func testAccKubernetesValidatingWebhookConfigurationConfig_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_validating_webhook_configuration" "test" {
+	return fmt.Sprintf(`
+resource "kubernetes_validating_webhook_configuration" "test" {
   metadata {
     name = %q
   }
@@ -272,4 +277,18 @@ func testAccKubernetesValidatingWebhookConfigurationConfig_modified(name string)
   }
 }
 `, name, name)
+}
+
+func skipIfNotAdmissionRegistrationV1(t *testing.T) {
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		t.Fatal(err)
+	}
+	useadmissionregistrationv1beta1, err := useAdmissionregistrationV1beta1(conn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if useadmissionregistrationv1beta1 {
+		t.Skip("The Kubernetes endpoint is not using admissionregistrationv1 - skipping.")
+	}
 }

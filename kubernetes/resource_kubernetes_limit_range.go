@@ -1,11 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,13 +18,12 @@ import (
 
 func resourceKubernetesLimitRange() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceKubernetesLimitRangeCreate,
-		Read:   resourceKubernetesLimitRangeRead,
-		Exists: resourceKubernetesLimitRangeExists,
-		Update: resourceKubernetesLimitRangeUpdate,
-		Delete: resourceKubernetesLimitRangeDelete,
+		CreateContext: resourceKubernetesLimitRangeCreate,
+		ReadContext:   resourceKubernetesLimitRangeRead,
+		UpdateContext: resourceKubernetesLimitRangeUpdate,
+		DeleteContext: resourceKubernetesLimitRangeDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -79,17 +82,16 @@ func resourceKubernetesLimitRange() *schema.Resource {
 	}
 }
 
-func resourceKubernetesLimitRangeCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesLimitRangeCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandLimitRangeSpec(d.Get("spec").([]interface{}), d.IsNewResource())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	limitRange := api.LimitRange{
 		ObjectMeta: metadata,
@@ -98,62 +100,68 @@ func resourceKubernetesLimitRangeCreate(d *schema.ResourceData, meta interface{}
 	log.Printf("[INFO] Creating new limit range: %#v", limitRange)
 	out, err := conn.CoreV1().LimitRanges(metadata.Namespace).Create(ctx, &limitRange, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to create limit range: %s", err)
+		return diag.Errorf("Failed to create limit range: %s", err)
 	}
 	log.Printf("[INFO] Submitted new limit range: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesLimitRangeRead(d, meta)
+	return resourceKubernetesLimitRangeRead(ctx, d, meta)
 }
 
-func resourceKubernetesLimitRangeRead(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesLimitRangeRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesLimitRangeExists(ctx, d, meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if !exists {
+		d.SetId("")
+		return diag.Diagnostics{}
+	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Reading limit range %s", name)
 	limitRange, err := conn.CoreV1().LimitRanges(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return err
+		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received limit range: %#v", limitRange)
 
-	err = d.Set("metadata", flattenMetadata(limitRange.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(limitRange.ObjectMeta, d, meta))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	err = d.Set("spec", flattenLimitRangeSpec(limitRange.Spec))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceKubernetesLimitRangeUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesLimitRangeUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("spec") {
 		spec, err := expandLimitRangeSpec(d.Get("spec").([]interface{}), d.IsNewResource())
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/spec",
@@ -162,35 +170,34 @@ func resourceKubernetesLimitRangeUpdate(d *schema.ResourceData, meta interface{}
 	}
 	data, err := ops.MarshalJSON()
 	if err != nil {
-		return fmt.Errorf("Failed to marshal update operations: %s", err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating limit range %q: %v", name, string(data))
 	out, err := conn.CoreV1().LimitRanges(namespace).Patch(ctx, name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
-		return fmt.Errorf("Failed to update limit range: %s", err)
+		return diag.Errorf("Failed to update limit range: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated limit range: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesLimitRangeRead(d, meta)
+	return resourceKubernetesLimitRangeRead(ctx, d, meta)
 }
 
-func resourceKubernetesLimitRangeDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceKubernetesLimitRangeDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Deleting limit range: %#v", name)
 	err = conn.CoreV1().LimitRanges(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Limit range %s deleted", name)
@@ -199,12 +206,11 @@ func resourceKubernetesLimitRangeDelete(d *schema.ResourceData, meta interface{}
 	return nil
 }
 
-func resourceKubernetesLimitRangeExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesLimitRangeExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
 	}
-	ctx := context.TODO()
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -214,7 +220,7 @@ func resourceKubernetesLimitRangeExists(d *schema.ResourceData, meta interface{}
 	log.Printf("[INFO] Checking limit range %s", name)
 	_, err = conn.CoreV1().LimitRanges(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)

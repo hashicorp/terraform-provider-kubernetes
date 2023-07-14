@@ -1,4 +1,5 @@
 ---
+subcategory: "core/v1"
 layout: "kubernetes"
 page_title: "Kubernetes: kubernetes_namespace"
 description: |-
@@ -46,7 +47,6 @@ The following arguments are supported:
 ~> By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
 
 * `resource_version` - An opaque value that represents the internal version of this namespace that can be used by clients to determine when namespaces have changed. Read more about [concurrency control and consistency](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency).
-* `self_link` - A URL representing this namespace.
 * `uid` - The unique in time and space value for this namespace. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
 
 ### `spec`
@@ -54,3 +54,11 @@ The following arguments are supported:
 #### Attributes
 
 * `finalizers` - An opaque list of values that must be empty to permanently remove object from storage. For more info: https://kubernetes.io/docs/tasks/administer-cluster/namespaces/
+
+## Attribute Reference
+
+* `wait_for_default_service_account` - (Optional) When set to `true` Terraform will wait until the
+default service account has been asynchronously created by Kubernetes when creating the namespace resource.
+This has the equivalent effect of creating a `resource_kubernetes_default_service_account` resource for dependent resources
+but allows a user to consume the "default" service account directly.
+The default behaviour (`false`) does not wait for the default service account to exist.

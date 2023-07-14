@@ -169,6 +169,7 @@ The following arguments are supported:
 
 * `metadata` - (Required) Standard pod's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 * `spec` - (Required) Spec of the pod owned by the cluster
+* `legacy_lifecycle_states` - (Optional) Setting this attribute to `false` would set the target pod lifecycle state as `["Running", "Succeeded", "Failed"]`. The default value of `true` would leave the target pod lifecycle state as `["Running"]`.
 
 ## Nested Blocks
 

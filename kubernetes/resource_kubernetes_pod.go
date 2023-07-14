@@ -56,6 +56,12 @@ func resourceKubernetesPodSchemaV1() map[string]*schema.Schema {
 				Schema: podSpecFields(false, false),
 			},
 		},
+		"legacy_lifecycle_states": {
+			Type:        schema.TypeBool,
+			Description: "Setting this attribute to `false` would set the target pod lifecycle state as [\"Running\", \"Succeeded\", \"Failed\"]. The default value of `true` would leave the target pod lifecycle state as [\"Running\"]`.",
+			Optional:    true,
+			Default:     true,
+		},
 	}
 }
 
@@ -86,8 +92,14 @@ func resourceKubernetesPodCreate(ctx context.Context, d *schema.ResourceData, me
 
 	d.SetId(buildId(out.ObjectMeta))
 
+	target := []string{"Running"}
+
+	if d.Get("legacy_lifecycle_states").(bool) != true {
+		target = []string{"Running", "Succeeded", "Failed"}
+	}
+
 	stateConf := &resource.StateChangeConf{
-		Target:  []string{"Running"},
+		Target:  target,
 		Pending: []string{"Pending"},
 		Timeout: d.Timeout(schema.TimeoutCreate),
 		Refresh: func() (interface{}, string, error) {

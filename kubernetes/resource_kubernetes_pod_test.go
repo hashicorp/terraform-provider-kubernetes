@@ -536,7 +536,7 @@ func TestAccKubernetesPod_with_container_liveness_probe_using_http_get(t *testin
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 	resourceName := "kubernetes_pod.test"
 
 	resource.Test(t, resource.TestCase{
@@ -573,7 +573,7 @@ func TestAccKubernetesPod_with_container_liveness_probe_using_tcp(t *testing.T) 
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 	resourceName := "kubernetes_pod.test"
 
 	resource.Test(t, resource.TestCase{
@@ -605,7 +605,7 @@ func TestAccKubernetesPod_with_container_liveness_probe_using_grpc(t *testing.T)
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 	resourceName := "kubernetes_pod.test"
 
 	resource.Test(t, resource.TestCase{
@@ -641,7 +641,7 @@ func TestAccKubernetesPod_with_container_lifecycle(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 	resourceName := "kubernetes_pod.test"
 
 	resource.Test(t, resource.TestCase{
@@ -1960,7 +1960,7 @@ func testAccKubernetesPodConfigWithLivenessProbeUsingHTTPGet(podName, imageName 
     container {
       image = "%s"
       name  = "containername"
-      args  = ["/server"]
+      args  = ["liveness"]
 
       liveness_probe {
         http_get {
@@ -1996,7 +1996,7 @@ func testAccKubernetesPodConfigWithLivenessProbeUsingTCP(podName, imageName stri
     container {
       image = "%s"
       name  = "containername"
-      args  = ["/server"]
+      args  = ["liveness"]
 
       liveness_probe {
         tcp_socket {
@@ -2026,7 +2026,7 @@ func testAccKubernetesPodConfigWithLivenessProbeUsingGRPC(podName, imageName str
     container {
       image = "%s"
       name  = "containername"
-      args  = ["/server"]
+      args  = ["liveness"]
 
       liveness_probe {
         grpc {
@@ -2057,7 +2057,7 @@ func testAccKubernetesPodConfigWithLifeCycle(podName, imageName string) string {
     container {
       image = "%s"
       name  = "containername"
-      args  = ["/server"]
+      args  = ["liveness"]
 
       lifecycle {
         post_start {

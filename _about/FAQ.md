@@ -4,7 +4,7 @@
 
 The HashiCorp Terraform Kubernetes provider team is :
 
-* Tejitha Raju, Product Manager - [@tejavar](https://github.com/Velia7](https://github.com/tejavar )
+* Tejitha Raju, Product Manager - [@tejavar](https://github.com/tejavar)
 * Alex Somesan, Engineer - [@alexsomesan](https://github.com/alexsomesan)
 * John Houston, Engineer - [@jrhouston](https://github.com/jrhouston)
 * Sacha Rybolovlev, Engineer - [@arybolovlev](https://github.com/arybolovlev)

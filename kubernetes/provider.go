@@ -642,10 +642,8 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail: %v", err)
 		return nil, nil
 	}
-	
-	return cfg, nil
-	
 
+	return cfg, nil
 }
 
 var useadmissionregistrationv1beta1 *bool

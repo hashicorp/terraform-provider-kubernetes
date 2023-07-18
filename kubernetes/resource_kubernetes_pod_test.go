@@ -40,7 +40,7 @@ func TestAccKubernetesPod_minimal(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 			{
 				Config:   testAccKubernetesPodConfigMinimal(name, busyboxImageVersion),
@@ -99,7 +99,7 @@ func TestAccKubernetesPod_basic(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -166,7 +166,7 @@ func TestAccKubernetesPod_initContainer_updateForcesNew(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 			{
 				Config: testAccKubernetesPodConfigWithInitContainer(podName, image1),
@@ -219,7 +219,7 @@ func TestAccKubernetesPod_updateArgsForceNew(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 			{
 				Config: testAccKubernetesPodConfigArgsUpdate(podName, imageName, argsAfter),
@@ -278,7 +278,7 @@ func TestAccKubernetesPod_updateEnvForceNew(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 			{
 				Config: testAccKubernetesPodConfigEnvUpdate(podName, imageName, envAfter),
@@ -328,7 +328,7 @@ func TestAccKubernetesPod_with_pod_security_context(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -361,7 +361,7 @@ func TestAccKubernetesPod_with_pod_security_context_fs_group_change_policy(t *te
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -420,7 +420,7 @@ func TestAccKubernetesPod_with_pod_security_context_run_as_group(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -490,7 +490,7 @@ func TestAccKubernetesPod_with_pod_security_context_seccomp_localhost_profile(t 
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -526,7 +526,7 @@ func TestAccKubernetesPod_with_container_liveness_probe_using_exec(t *testing.T)
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -563,7 +563,7 @@ func TestAccKubernetesPod_with_container_liveness_probe_using_http_get(t *testin
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -595,7 +595,7 @@ func TestAccKubernetesPod_with_container_liveness_probe_using_tcp(t *testing.T) 
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -631,7 +631,7 @@ func TestAccKubernetesPod_with_container_liveness_probe_using_grpc(t *testing.T)
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -669,7 +669,7 @@ func TestAccKubernetesPod_with_container_lifecycle(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -706,7 +706,7 @@ func TestAccKubernetesPod_with_container_security_context(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -743,7 +743,7 @@ func TestAccKubernetesPod_with_volume_mount(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -785,7 +785,7 @@ func TestAccKubernetesPod_with_cfg_map_volume_mount(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -877,7 +877,7 @@ func TestAccKubernetesPod_with_projected_volume(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -912,7 +912,7 @@ func TestAccKubernetesPod_with_resource_requirements(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 			{
 				Config: testAccKubernetesPodConfigWithEmptyResourceRequirements(podName, imageName),
@@ -974,7 +974,7 @@ func TestAccKubernetesPod_with_empty_dir_volume(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -1008,7 +1008,7 @@ func TestAccKubernetesPod_with_empty_dir_volume_with_sizeLimit(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -1041,7 +1041,7 @@ func TestAccKubernetesPod_with_secret_vol_items(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -1073,7 +1073,7 @@ func TestAccKubernetesPod_gke_with_nodeSelector(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -1105,7 +1105,7 @@ func TestAccKubernetesPod_config_with_automount_service_account_token(t *testing
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -1135,7 +1135,7 @@ func TestAccKubernetesPod_config_container_working_dir(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 			{
 				Config: testAccKubernetesPodConfigWorkingDir(podName, imageName, "/srv"),
@@ -1179,7 +1179,7 @@ func TestAccKubernetesPod_config_container_startup_probe(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -1210,7 +1210,7 @@ func TestAccKubernetesPod_termination_message_policy_default(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -1241,7 +1241,7 @@ func TestAccKubernetesPod_termination_message_policy_override_as_file(t *testing
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -1272,7 +1272,7 @@ func TestAccKubernetesPod_termination_message_policy_override_as_fallback_to_log
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -1308,7 +1308,7 @@ func TestAccKubernetesPod_enableServiceLinks(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -1352,7 +1352,7 @@ func TestAccKubernetesPod_bug1085(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 			{
 				Config: testAccKubernetesPodConfigWithVolume(name, imageName, `service_account_name="test"`),
@@ -1415,7 +1415,7 @@ func TestAccKubernetesPod_readinessGate(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -1450,7 +1450,7 @@ func TestAccKubernetesPod_topologySpreadConstraint(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})
@@ -1489,7 +1489,7 @@ func TestAccKubernetesPod_runtimeClassName(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})

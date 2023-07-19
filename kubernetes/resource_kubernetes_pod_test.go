@@ -458,7 +458,7 @@ func TestAccKubernetesPod_with_pod_security_context_seccomp_profile(t *testing.T
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "legacy_lifecycle_states"},
 			},
 		},
 	})

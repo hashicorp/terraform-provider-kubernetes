@@ -3345,7 +3345,6 @@ resource "kubernetes_pod_v1" "test" {
     }
   }
   spec {
-    priority_class_name = "default"
     container {
       name  = "containername"
       image = %[2]q

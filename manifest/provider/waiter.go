@@ -283,7 +283,7 @@ func (w *RolloutWaiter) Wait(ctx context.Context) error {
 	for {
 		if deadline, ok := ctx.Deadline(); ok {
 			if time.Now().After(deadline) {
-				return context.DeadlineExceeded
+				return fmt.Errorf("timed out waiting on rollout to complete")
 			}
 		}
 
@@ -333,7 +333,7 @@ func (w *ConditionsWaiter) Wait(ctx context.Context) error {
 	for {
 		if deadline, ok := ctx.Deadline(); ok {
 			if time.Now().After(deadline) {
-				return context.DeadlineExceeded
+				return fmt.Errorf("timed out waiting on configured conditions to be met")
 			}
 		}
 

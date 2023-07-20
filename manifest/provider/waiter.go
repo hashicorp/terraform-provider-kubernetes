@@ -42,6 +42,14 @@ type Waiter interface {
 	Wait(context.Context) error
 }
 
+type WaiterError struct {
+	Reason string
+}
+
+func (e WaiterError) Error() string {
+	return fmt.Sprintf("timed out waiting on %v", e.Reason)
+}
+
 // NewResourceWaiter constructs an appropriate Waiter using the supplied waitForBlock configuration
 func NewResourceWaiter(resource dynamic.ResourceInterface, resourceName string, resourceType tftypes.Type, th map[string]string, waitForBlock tftypes.Value, hl hclog.Logger) (Waiter, error) {
 	var waitForBlockVal map[string]tftypes.Value
@@ -145,7 +153,7 @@ func (w *FieldWaiter) Wait(ctx context.Context) error {
 	for {
 		if deadline, ok := ctx.Deadline(); ok {
 			if time.Now().After(deadline) {
-				return fmt.Errorf("timed out waiting on conditions")
+				return WaiterError{Reason: "FieldsMatchers"}
 			}
 		}
 
@@ -283,7 +291,7 @@ func (w *RolloutWaiter) Wait(ctx context.Context) error {
 	for {
 		if deadline, ok := ctx.Deadline(); ok {
 			if time.Now().After(deadline) {
-				return fmt.Errorf("timed out waiting on rollout to complete")
+				return WaiterError{Reason: "rollout to complete"}
 			}
 		}
 
@@ -333,7 +341,7 @@ func (w *ConditionsWaiter) Wait(ctx context.Context) error {
 	for {
 		if deadline, ok := ctx.Deadline(); ok {
 			if time.Now().After(deadline) {
-				return fmt.Errorf("timed out waiting on configured conditions to be met")
+				return WaiterError{Reason: "conditions"}
 			}
 		}
 

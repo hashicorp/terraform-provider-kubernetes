@@ -1505,7 +1505,11 @@ func TestAccKubernetesPod_with_ephemeral_storage(t *testing.T) {
 	volumeName := "ephemeral"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfNotRunningInKind(t)
+			skipIfClusterVersionLessThan(t, "1.23.0")
+		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
 		Steps: []resource.TestStep{

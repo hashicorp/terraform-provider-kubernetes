@@ -23,7 +23,7 @@ func TestAccKubernetesPod_minimal(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -60,7 +60,7 @@ func TestAccKubernetesPod_basic(t *testing.T) {
 	imageName1 := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -113,7 +113,7 @@ func TestAccKubernetesPod_scheduler(t *testing.T) {
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.22.0")
@@ -147,7 +147,7 @@ func TestAccKubernetesPod_initContainer_updateForcesNew(t *testing.T) {
 	image1 := busyboxImageVersion1
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -194,7 +194,7 @@ func TestAccKubernetesPod_updateArgsForceNew(t *testing.T) {
 	argsAfter := `["-listen=:80", "-text='after modification'"]`
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -253,7 +253,7 @@ func TestAccKubernetesPod_updateEnvForceNew(t *testing.T) {
 	envAfter := "baz"
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -308,7 +308,7 @@ func TestAccKubernetesPod_with_pod_security_context(t *testing.T) {
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -341,7 +341,7 @@ func TestAccKubernetesPod_with_pod_security_context_fs_group_change_policy(t *te
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -399,7 +399,7 @@ func TestAccKubernetesPod_with_pod_security_context_run_as_group(t *testing.T) {
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -433,7 +433,7 @@ func TestAccKubernetesPod_with_pod_security_context_seccomp_profile(t *testing.T
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -471,7 +471,7 @@ func TestAccKubernetesPod_with_pod_security_context_seccomp_localhost_profile(t 
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -503,7 +503,7 @@ func TestAccKubernetesPod_with_container_liveness_probe_using_exec(t *testing.T)
 	imageName := "gcr.io/google_containers/busybox"
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -539,7 +539,7 @@ func TestAccKubernetesPod_with_container_liveness_probe_using_http_get(t *testin
 	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -576,7 +576,7 @@ func TestAccKubernetesPod_with_container_liveness_probe_using_tcp(t *testing.T) 
 	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -608,7 +608,7 @@ func TestAccKubernetesPod_with_container_liveness_probe_using_grpc(t *testing.T)
 	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.24.0")
@@ -644,7 +644,7 @@ func TestAccKubernetesPod_with_container_lifecycle(t *testing.T) {
 	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -682,7 +682,7 @@ func TestAccKubernetesPod_with_container_security_context(t *testing.T) {
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -721,7 +721,7 @@ func TestAccKubernetesPod_with_volume_mount(t *testing.T) {
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -757,7 +757,7 @@ func TestAccKubernetesPod_with_cfg_map_volume_mount(t *testing.T) {
 	imageName := busyboxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -799,7 +799,7 @@ func TestAccKubernetesPod_with_csi_volume_hostpath(t *testing.T) {
 	volumeName := acctest.RandomWithPrefix("tf-acc-test")
 	imageName := "busybox:1.32"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			if err := testAccCheckCSIDriverExists("hostpath.csi.k8s.io"); err != nil {
@@ -840,7 +840,7 @@ func TestAccKubernetesPod_with_projected_volume(t *testing.T) {
 	imageName := busyboxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -890,7 +890,7 @@ func TestAccKubernetesPod_with_resource_requirements(t *testing.T) {
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -954,7 +954,7 @@ func TestAccKubernetesPod_with_empty_dir_volume(t *testing.T) {
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -987,7 +987,7 @@ func TestAccKubernetesPod_with_empty_dir_volume_with_sizeLimit(t *testing.T) {
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -1022,7 +1022,7 @@ func TestAccKubernetesPod_with_secret_vol_items(t *testing.T) {
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -1055,7 +1055,7 @@ func TestAccKubernetesPod_gke_with_nodeSelector(t *testing.T) {
 	region := os.Getenv("GOOGLE_REGION")
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -1088,7 +1088,7 @@ func TestAccKubernetesPod_config_with_automount_service_account_token(t *testing
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -1118,7 +1118,7 @@ func TestAccKubernetesPod_config_container_working_dir(t *testing.T) {
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -1156,7 +1156,7 @@ func TestAccKubernetesPod_config_container_startup_probe(t *testing.T) {
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.17.0")
@@ -1192,7 +1192,7 @@ func TestAccKubernetesPod_termination_message_policy_default(t *testing.T) {
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 		},
@@ -1223,7 +1223,7 @@ func TestAccKubernetesPod_termination_message_policy_override_as_file(t *testing
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 		},
@@ -1254,7 +1254,7 @@ func TestAccKubernetesPod_termination_message_policy_override_as_fallback_to_log
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 		},
@@ -1285,7 +1285,7 @@ func TestAccKubernetesPod_enableServiceLinks(t *testing.T) {
 	imageName := nginxImageVersion
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -1317,7 +1317,7 @@ func TestAccKubernetesPod_enableServiceLinks(t *testing.T) {
 func TestAccKubernetesPod_bug961EmptyBlocks(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -1374,7 +1374,7 @@ func TestAccKubernetesPod_readinessGate(t *testing.T) {
 	imageName1 := nginxImageVersion1
 	resourceName := "kubernetes_pod.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
@@ -1428,7 +1428,7 @@ func TestAccKubernetesPod_topologySpreadConstraint(t *testing.T) {
 	resourceName := "kubernetes_pod.test"
 	imageName := "nginx:1.7.9"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.17.0")
@@ -1463,7 +1463,7 @@ func TestAccKubernetesPod_runtimeClassName(t *testing.T) {
 	resourceName := "kubernetes_pod_v1.test"
 	runtimeHandler := fmt.Sprintf("runc-%s", name)
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfRunningInEks(t)
@@ -1539,7 +1539,7 @@ func TestAccKubernetesPod_phase(t *testing.T) {
 	resourceName := "kubernetes_pod_v1.test"
 	image := "this-fake-image-has-never-exist"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,

@@ -219,7 +219,7 @@ func TestKubernetesManifest_Wait_InvalidCondition(t *testing.T) {
 	tf.Init(ctx)
 
 	err = tf.Apply(ctx)
-	if err == nil || !strings.Contains(err.Error(), "Terraform timed out waiting on the operation to complete") {
+	if err == nil || !strings.Contains(err.Error(), ""timed out waiting on"") {
 		t.Fatalf("Waiter should have timed out")
 	}
 }

@@ -422,6 +422,9 @@ func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
 		if v.PhotonPersistentDisk != nil {
 			obj["photon_persistent_disk"] = flattenPhotonPersistentDiskVolumeSource(v.PhotonPersistentDisk)
 		}
+		if v.Ephemeral != nil {
+			obj["ephemeral"] = flattenEphemeralVolumeSource(v.Ephemeral)
+		}
 		att[i] = obj
 	}
 	return att, nil
@@ -1513,6 +1516,13 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 		}
 		if v, ok := m["photon_persistent_disk"].([]interface{}); ok && len(v) > 0 {
 			vl[i].PhotonPersistentDisk = expandPhotonPersistentDiskVolumeSource(v)
+		}
+		if v, ok := m["ephemeral"].([]interface{}); ok && len(v) > 0 {
+			ephemeral, err := expandEphemeralVolumeSource(v)
+			if err != nil {
+				return vl, err
+			}
+			vl[i].Ephemeral = ephemeral
 		}
 	}
 	return vl, nil

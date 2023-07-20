@@ -392,7 +392,7 @@ func TestAccKubernetesDeployment_with_container_liveness_probe_using_http_get(t 
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -422,7 +422,7 @@ func TestAccKubernetesDeployment_with_container_liveness_probe_using_tcp(t *test
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -554,7 +554,7 @@ func TestAccKubernetesDeployment_with_container_security_context_seccomp_profile
 	resourceName := "kubernetes_deployment.test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck:          func() { testAccPreCheck(t); skipIfClusterVersionLessThan(t, "1.19.0") },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
 		Steps: []resource.TestStep{
@@ -574,14 +574,30 @@ func TestAccKubernetesDeployment_with_container_security_context_seccomp_profile
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.type", "RuntimeDefault"),
 				),
 			},
+		},
+	})
+}
+
+func TestAccKubernetesDeployment_with_container_security_context_seccomp_localhost_profile(t *testing.T) {
+	var conf appsv1.Deployment
+
+	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := nginxImageVersion
+	resourceName := "kubernetes_deployment.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentConfigWithContainerSecurityContextSeccompProfileLocalhost(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.type", "Localhost"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.localhost_profile", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.localhost_profile", "profiles/audit.json"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.type", "Localhost"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.localhost_profile", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.localhost_profile", "profiles/audit.json"),
 				),
 			},
 		},
@@ -1829,7 +1845,7 @@ func testAccKubernetesDeploymentConfigWithLivenessProbeUsingHTTPGet(deploymentNa
         container {
           image = "%s"
           name  = "containername"
-          args  = ["/server"]
+          args  = ["liveness"]
 
           liveness_probe {
             http_get {
@@ -1881,7 +1897,7 @@ func testAccKubernetesDeploymentConfigWithLivenessProbeUsingTCP(deploymentName, 
         container {
           image = "%s"
           name  = "containername"
-          args  = ["/server"]
+          args  = ["liveness"]
 
           liveness_probe {
             tcp_socket {
@@ -1990,9 +2006,9 @@ func testAccKubernetesDeploymentConfigWithContainerSecurityContext(deploymentNam
         }
 
         container {
-          image = "gcr.io/google_containers/liveness"
+          image = "registry.k8s.io/e2e-test-images/agnhost:2.40"
           name  = "containername2"
-          args  = ["/server"]
+          args  = ["liveness"]
 
           security_context {
             allow_privilege_escalation = true
@@ -2149,7 +2165,7 @@ func testAccKubernetesDeploymentConfigWithContainerSecurityContextSeccompProfile
         security_context {
           seccomp_profile {
             type              = "Localhost"
-            localhost_profile = ""
+            localhost_profile = "profiles/audit.json"
           }
         }
         container {
@@ -2159,7 +2175,7 @@ func testAccKubernetesDeploymentConfigWithContainerSecurityContextSeccompProfile
           security_context {
             seccomp_profile {
               type              = "Localhost"
-              localhost_profile = ""
+              localhost_profile = "profiles/audit.json"
             }
           }
         }
@@ -2789,93 +2805,6 @@ func testAccKubernetesDeploymentConfigWithAutomountServiceAccountToken(deploymen
   }
 }
 `, deploymentName, imageName)
-}
-
-func testAccKubernetesDeploymentConfigLocal(provider, name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_deployment" "test" {
-  provider = %s
-  metadata {
-    annotations = {
-      TestAnnotationOne = "one"
-      TestAnnotationTwo = "two"
-    }
-
-    labels = {
-      TestLabelOne   = "one"
-      TestLabelTwo   = "two"
-      TestLabelThree = "three"
-    }
-
-    name = "%s"
-  }
-
-  spec {
-    replicas = 5
-
-    selector {
-      match_labels = {
-        TestLabelOne   = "one"
-        TestLabelTwo   = "two"
-        TestLabelThree = "three"
-      }
-    }
-
-    template {
-      metadata {
-        labels = {
-          TestLabelOne   = "one"
-          TestLabelTwo   = "two"
-          TestLabelThree = "three"
-        }
-      }
-
-      spec {
-        container {
-          image = %q
-          name  = "containername"
-
-          port {
-            container_port = 80
-          }
-
-          readiness_probe {
-            initial_delay_seconds = 5
-            http_get {
-              path = "/"
-              port = 80
-            }
-          }
-
-          resources {
-            requests = {
-              memory = "64Mi"
-              cpu    = "50m"
-            }
-          }
-          env {
-            name = "LIMITS_CPU"
-            value_from {
-              resource_field_ref {
-                container_name = "containername"
-                resource       = "requests.cpu"
-              }
-            }
-          }
-          env {
-            name = "LIMITS_MEM"
-            value_from {
-              resource_field_ref {
-                container_name = "containername"
-                resource       = "requests.memory"
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-`, provider, name, imageName)
 }
 
 func testAccKubernetesDeploymentConfig_ForceNew(secretName, label, deploymentName, imageName string) string {

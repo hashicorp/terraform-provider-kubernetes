@@ -68,7 +68,7 @@ func expandMetadata(in []interface{}) metav1.ObjectMeta {
 }
 
 func patchMetadata(keyPrefix, pathPrefix string, d *schema.ResourceData) PatchOperations {
-	ops := make([]PatchOperation, 0, 0)
+	ops := make([]PatchOperation, 0)
 	if d.HasChange(keyPrefix + "annotations") {
 		oldV, newV := d.GetChange(keyPrefix + "annotations")
 		diffOps := diffStringMap(pathPrefix+"annotations", oldV.(map[string]interface{}), newV.(map[string]interface{}))
@@ -101,16 +101,8 @@ func expandBase64MapToByteMap(m map[string]interface{}) map[string][]byte {
 	return result
 }
 
-func expandStringMapToByteMap(m map[string]interface{}) map[string][]byte {
-	result := make(map[string][]byte)
-	for k, v := range m {
-		result[k] = []byte(v.(string))
-	}
-	return result
-}
-
 func expandStringSlice(s []interface{}) []string {
-	result := make([]string, len(s), len(s))
+	result := make([]string, len(s))
 	for k, v := range s {
 		// Handle the Terraform parser bug which turns empty strings in lists to nil.
 		if v == nil {
@@ -263,7 +255,7 @@ func ptrToInt64(i int64) *int64 {
 }
 
 func sliceOfString(slice []interface{}) []string {
-	result := make([]string, len(slice), len(slice))
+	result := make([]string, len(slice))
 	for i, s := range slice {
 		result[i] = s.(string)
 	}
@@ -332,7 +324,7 @@ func expandMapToResourceList(m map[string]interface{}) (*api.ResourceList, error
 }
 
 func flattenPersistentVolumeAccessModes(in []api.PersistentVolumeAccessMode) *schema.Set {
-	var out = make([]interface{}, len(in), len(in))
+	var out = make([]interface{}, len(in))
 	for i, v := range in {
 		out[i] = string(v)
 	}
@@ -340,7 +332,7 @@ func flattenPersistentVolumeAccessModes(in []api.PersistentVolumeAccessMode) *sc
 }
 
 func expandPersistentVolumeAccessModes(s []interface{}) []api.PersistentVolumeAccessMode {
-	out := make([]api.PersistentVolumeAccessMode, len(s), len(s))
+	out := make([]api.PersistentVolumeAccessMode, len(s))
 	for i, v := range s {
 		out[i] = api.PersistentVolumeAccessMode(v.(string))
 	}
@@ -389,7 +381,7 @@ func expandResourceQuotaSpec(s []interface{}) (*api.ResourceQuotaSpec, error) {
 }
 
 func flattenResourceQuotaScopes(in []api.ResourceQuotaScope) *schema.Set {
-	out := make([]string, len(in), len(in))
+	out := make([]string, len(in))
 	for i, scope := range in {
 		out[i] = string(scope)
 	}
@@ -397,7 +389,7 @@ func flattenResourceQuotaScopes(in []api.ResourceQuotaScope) *schema.Set {
 }
 
 func expandResourceQuotaScopes(s []interface{}) []api.ResourceQuotaScope {
-	out := make([]api.ResourceQuotaScope, len(s), len(s))
+	out := make([]api.ResourceQuotaScope, len(s))
 	for i, scope := range s {
 		out[i] = api.ResourceQuotaScope(scope.(string))
 	}
@@ -420,7 +412,7 @@ func expandResourceQuotaScopeSelector(s []interface{}) *api.ScopeSelector {
 }
 
 func expandResourceQuotaScopeSelectorMatchExpressions(s []interface{}) []api.ScopedResourceSelectorRequirement {
-	out := make([]api.ScopedResourceSelectorRequirement, len(s), len(s))
+	out := make([]api.ScopedResourceSelectorRequirement, len(s))
 
 	for i, raw := range s {
 		matchExp := raw.(map[string]interface{})
@@ -471,14 +463,14 @@ func flattenResourceQuotaScopeSelectorMatchExpressions(in []api.ScopedResourceSe
 }
 
 func newStringSet(f schema.SchemaSetFunc, in []string) *schema.Set {
-	var out = make([]interface{}, len(in), len(in))
+	var out = make([]interface{}, len(in))
 	for i, v := range in {
 		out[i] = v
 	}
 	return schema.NewSet(f, out)
 }
 func newInt64Set(f schema.SchemaSetFunc, in []int64) *schema.Set {
-	var out = make([]interface{}, len(in), len(in))
+	var out = make([]interface{}, len(in))
 	for i, v := range in {
 		out[i] = int(v)
 	}
@@ -515,7 +507,7 @@ func expandLimitRangeSpec(s []interface{}, isNew bool) (*api.LimitRangeSpec, err
 	m := s[0].(map[string]interface{})
 
 	if limits, ok := m["limit"].([]interface{}); ok {
-		newLimits := make([]api.LimitRangeItem, len(limits), len(limits))
+		newLimits := make([]api.LimitRangeItem, len(limits))
 
 		for i, l := range limits {
 			lrItem := api.LimitRangeItem{}
@@ -586,7 +578,7 @@ func flattenLimitRangeSpec(in api.LimitRangeSpec) []interface{} {
 	}
 
 	out := make([]interface{}, 1)
-	limits := make([]interface{}, len(in.Limits), len(in.Limits))
+	limits := make([]interface{}, len(in.Limits))
 
 	for i, l := range in.Limits {
 		m := make(map[string]interface{}, 0)
@@ -621,17 +613,6 @@ func schemaSetToInt64Array(set *schema.Set) []int64 {
 		array = append(array, int64(e))
 	}
 	return array
-}
-func flattenLabelSelectorRequirementList(l []metav1.LabelSelectorRequirement) []interface{} {
-	att := make([]map[string]interface{}, len(l))
-	for i, v := range l {
-		m := map[string]interface{}{}
-		m["key"] = v.Key
-		m["values"] = newStringSet(schema.HashString, v.Values)
-		m["operator"] = string(v.Operator)
-		att[i] = m
-	}
-	return []interface{}{att}
 }
 
 func flattenLocalObjectReferenceArray(in []api.LocalObjectReference) []interface{} {
@@ -745,7 +726,7 @@ func expandNodeSelectorTerm(l []interface{}) *api.NodeSelectorTerm {
 }
 
 func flattenNodeSelectorTerms(in []api.NodeSelectorTerm) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, n := range in {
 		att[i] = flattenNodeSelectorTerm(n)[0]
 	}
@@ -756,7 +737,7 @@ func expandNodeSelectorTerms(l []interface{}) []api.NodeSelectorTerm {
 	if len(l) == 0 || l[0] == nil {
 		return []api.NodeSelectorTerm{}
 	}
-	obj := make([]api.NodeSelectorTerm, len(l), len(l))
+	obj := make([]api.NodeSelectorTerm, len(l))
 	for i, n := range l {
 		obj[i] = *expandNodeSelectorTerm([]interface{}{n})
 	}
@@ -764,7 +745,7 @@ func expandNodeSelectorTerms(l []interface{}) []api.NodeSelectorTerm {
 }
 
 func flattenPersistentVolumeMountOptions(in []string) *schema.Set {
-	var out = make([]interface{}, len(in), len(in))
+	var out = make([]interface{}, len(in))
 	for i, v := range in {
 		out[i] = string(v)
 	}

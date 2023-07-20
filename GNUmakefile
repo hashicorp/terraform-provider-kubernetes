@@ -67,6 +67,10 @@ fmt:
 fmtcheck:
 	@./scripts/gofmtcheck.sh
 
+errcheck:
+	@./scripts/errcheck.sh
+	
+
 test: fmtcheck
 	go test $(TEST) || exit 1
 	echo $(TEST) | \

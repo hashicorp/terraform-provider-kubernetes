@@ -455,13 +455,35 @@ func TestAccKubernetesPod_with_pod_security_context_seccomp_profile(t *testing.T
 				),
 			},
 			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPod_with_pod_security_context_seccomp_localhost_profile(t *testing.T) {
+	var conf api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	imageName := nginxImageVersion
+	resourceName := "kubernetes_pod.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
 				Config: testAccKubernetesPodConfigWithSecurityContextSeccompProfileLocalhost(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.seccomp_profile.0.type", "Localhost"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.seccomp_profile.0.localhost_profile", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.seccomp_profile.0.localhost_profile", "profiles/audit.json"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.security_context.0.seccomp_profile.0.type", "Localhost"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.security_context.0.seccomp_profile.0.localhost_profile", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.security_context.0.seccomp_profile.0.localhost_profile", "profiles/audit.json"),
 				),
 			},
 			{
@@ -514,7 +536,7 @@ func TestAccKubernetesPod_with_container_liveness_probe_using_http_get(t *testin
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 	resourceName := "kubernetes_pod.test"
 
 	resource.Test(t, resource.TestCase{
@@ -551,7 +573,7 @@ func TestAccKubernetesPod_with_container_liveness_probe_using_tcp(t *testing.T) 
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 	resourceName := "kubernetes_pod.test"
 
 	resource.Test(t, resource.TestCase{
@@ -583,7 +605,7 @@ func TestAccKubernetesPod_with_container_liveness_probe_using_grpc(t *testing.T)
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 	resourceName := "kubernetes_pod.test"
 
 	resource.Test(t, resource.TestCase{
@@ -619,7 +641,7 @@ func TestAccKubernetesPod_with_container_lifecycle(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := "gcr.io/google_containers/liveness"
+	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
 	resourceName := "kubernetes_pod.test"
 
 	resource.Test(t, resource.TestCase{
@@ -1473,6 +1495,36 @@ func TestAccKubernetesPod_runtimeClassName(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPod_with_ephemeral_storage(t *testing.T) {
+	var pod api.Pod
+	var pvc api.PersistentVolumeClaim
+
+	testName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := nginxImageVersion
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodEphemeralStorage(testName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodExists("kubernetes_pod_v1.test", &pod),
+					testAccCheckKubernetesPersistentVolumeClaimCreated("default", testName+"-ephemeral", &pvc),
+					resource.TestCheckResourceAttr("kubernetes_pod_v1.test", "spec.0.volume.0.name", "ephemeral"),
+					resource.TestCheckResourceAttr("kubernetes_pod_v1.test", "spec.0.volume.0.ephemeral.0.spec.0.storage_class_name", testName),
+				),
+			},
+			// Do a second test with only the storage class and check that the PVC has been deleted by the ephemeral volume
+			{
+				Config: testAccKubernetesPodEphemeralStorageWithoutPod(testName),
+				Check:  testAccCheckKubernetesPersistentVolumeClaimIsDestroyed(&pvc),
+			},
+		},
+	})
+}
+
 func createRuncRuntimeClass(rn string) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
@@ -1875,7 +1927,7 @@ resource "kubernetes_pod" "test" {
     security_context {
       seccomp_profile {
         type              = "Localhost"
-        localhost_profile = ""
+        localhost_profile = "profiles/audit.json"
       }
     }
 
@@ -1885,7 +1937,7 @@ resource "kubernetes_pod" "test" {
       security_context {
         seccomp_profile {
           type              = "Localhost"
-          localhost_profile = ""
+          localhost_profile = "profiles/audit.json"
         }
       }
     }
@@ -1938,7 +1990,7 @@ func testAccKubernetesPodConfigWithLivenessProbeUsingHTTPGet(podName, imageName 
     container {
       image = "%s"
       name  = "containername"
-      args  = ["/server"]
+      args  = ["liveness"]
 
       liveness_probe {
         http_get {
@@ -1974,7 +2026,7 @@ func testAccKubernetesPodConfigWithLivenessProbeUsingTCP(podName, imageName stri
     container {
       image = "%s"
       name  = "containername"
-      args  = ["/server"]
+      args  = ["liveness"]
 
       liveness_probe {
         tcp_socket {
@@ -2004,7 +2056,7 @@ func testAccKubernetesPodConfigWithLivenessProbeUsingGRPC(podName, imageName str
     container {
       image = "%s"
       name  = "containername"
-      args  = ["/server"]
+      args  = ["liveness"]
 
       liveness_probe {
         grpc {
@@ -2035,7 +2087,7 @@ func testAccKubernetesPodConfigWithLifeCycle(podName, imageName string) string {
     container {
       image = "%s"
       name  = "containername"
-      args  = ["/server"]
+      args  = ["liveness"]
 
       lifecycle {
         post_start {
@@ -3266,6 +3318,81 @@ resource "kubernetes_pod_v1" "scheduler" {
 
   timeouts {
     create = "1m"
+  }
+}
+`, name)
+}
+
+func testAccKubernetesPodEphemeralStorage(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+  metadata {
+    name = %[1]q
+  }
+  storage_provisioner = "pd.csi.storage.gke.io"
+  reclaim_policy      = "Delete"
+  volume_binding_mode = "WaitForFirstConsumer"
+
+  parameters = {
+    type = "pd-standard"
+  }
+}
+
+resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = %[1]q
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+  spec {
+    priority_class_name = "default"
+    container {
+      name  = "containername"
+      image = %[2]q
+
+      volume_mount {
+        mount_path = "/ephemeral"
+        name       = "ephemeral"
+      }
+    }
+
+    volume {
+      name = "ephemeral"
+
+      ephemeral {
+        metadata {
+          labels = {
+            Test = "TfAcceptanceTest"
+          }
+        }
+        spec {
+          access_modes       = ["ReadWriteOnce"]
+          storage_class_name = %[1]q
+
+          resources {
+            requests = {
+              storage = "5Gi"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, name, imageName)
+}
+
+func testAccKubernetesPodEphemeralStorageWithoutPod(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+  metadata {
+    name = %[1]q
+  }
+  storage_provisioner = "pd.csi.storage.gke.io"
+  reclaim_policy      = "Delete"
+  volume_binding_mode = "WaitForFirstConsumer"
+
+  parameters = {
+    type = "pd-standard"
   }
 }
 `, name)

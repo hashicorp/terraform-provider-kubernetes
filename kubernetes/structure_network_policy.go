@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/core/v1"
-	"k8s.io/api/networking/v1"
+	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -30,7 +30,7 @@ func flattenNetworkPolicySpec(in v1.NetworkPolicySpec) []interface{} {
 }
 
 func flattenNetworkPolicyIngress(in []v1.NetworkPolicyIngressRule) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, ingress := range in {
 		m := make(map[string]interface{})
 		if ingress.Ports != nil && len(ingress.Ports) > 0 {
@@ -45,7 +45,7 @@ func flattenNetworkPolicyIngress(in []v1.NetworkPolicyIngressRule) []interface{}
 }
 
 func flattenNetworkPolicyEgress(in []v1.NetworkPolicyEgressRule) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, egress := range in {
 		m := make(map[string]interface{})
 		if egress.Ports != nil && len(egress.Ports) > 0 {
@@ -60,7 +60,7 @@ func flattenNetworkPolicyEgress(in []v1.NetworkPolicyEgressRule) []interface{} {
 }
 
 func flattenNetworkPolicyPorts(in []v1.NetworkPolicyPort) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, port := range in {
 		m := make(map[string]interface{})
 		if port.Port != nil {
@@ -75,7 +75,7 @@ func flattenNetworkPolicyPorts(in []v1.NetworkPolicyPort) []interface{} {
 }
 
 func flattenNetworkPolicyPeer(in []v1.NetworkPolicyPeer) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, peer := range in {
 		m := make(map[string]interface{})
 		if peer.IPBlock != nil {
@@ -141,7 +141,7 @@ func expandNetworkPolicySpec(in []interface{}) (*v1.NetworkPolicySpec, error) {
 }
 
 func expandNetworkPolicyIngress(l []interface{}) (*[]v1.NetworkPolicyIngressRule, error) {
-	ingresses := make([]v1.NetworkPolicyIngressRule, len(l), len(l))
+	ingresses := make([]v1.NetworkPolicyIngressRule, len(l))
 	for i, ingress := range l {
 		if ingress == nil {
 			continue
@@ -170,7 +170,7 @@ func expandNetworkPolicyIngress(l []interface{}) (*[]v1.NetworkPolicyIngressRule
 }
 
 func expandNetworkPolicyEgress(l []interface{}) (*[]v1.NetworkPolicyEgressRule, error) {
-	egresses := make([]v1.NetworkPolicyEgressRule, len(l), len(l))
+	egresses := make([]v1.NetworkPolicyEgressRule, len(l))
 	for i, egress := range l {
 		if egress == nil {
 			continue
@@ -199,7 +199,7 @@ func expandNetworkPolicyEgress(l []interface{}) (*[]v1.NetworkPolicyEgressRule, 
 }
 
 func expandNetworkPolicyPorts(l []interface{}) (*[]v1.NetworkPolicyPort, error) {
-	policyPorts := make([]v1.NetworkPolicyPort, len(l), len(l))
+	policyPorts := make([]v1.NetworkPolicyPort, len(l))
 	for i, port := range l {
 		in, ok := port.(map[string]interface{})
 		if !ok {
@@ -218,7 +218,7 @@ func expandNetworkPolicyPorts(l []interface{}) (*[]v1.NetworkPolicyPort, error) 
 }
 
 func expandNetworkPolicyPeer(l []interface{}) (*[]v1.NetworkPolicyPeer, error) {
-	policyPeers := make([]v1.NetworkPolicyPeer, len(l), len(l))
+	policyPeers := make([]v1.NetworkPolicyPeer, len(l))
 	for i, peer := range l {
 		if peer == nil {
 			continue
@@ -263,7 +263,7 @@ func expandIPBlock(l []interface{}) (*v1.IPBlock, error) {
 }
 
 func expandNetworkPolicyTypes(l []interface{}) (*[]v1.PolicyType, error) {
-	policyTypes := make([]v1.PolicyType, 0, 0)
+	policyTypes := make([]v1.PolicyType, 0)
 	for _, policyType := range l {
 		policyTypes = append(policyTypes, v1.PolicyType(policyType.(string)))
 	}
@@ -273,7 +273,7 @@ func expandNetworkPolicyTypes(l []interface{}) (*[]v1.PolicyType, error) {
 // Patchers
 
 func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData) (*PatchOperations, error) {
-	ops := make(PatchOperations, 0, 0)
+	ops := make(PatchOperations, 0)
 	if d.HasChange(keyPrefix + "ingress") {
 		oldV, _ := d.GetChange(keyPrefix + "ingress")
 		ingress, err := expandNetworkPolicyIngress(d.Get(keyPrefix + "ingress").([]interface{}))

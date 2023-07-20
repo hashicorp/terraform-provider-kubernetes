@@ -1499,8 +1499,10 @@ func TestAccKubernetesPod_with_ephemeral_storage(t *testing.T) {
 	var pod api.Pod
 	var pvc api.PersistentVolumeClaim
 
-	testName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := busyboxImageVersion
+	resourceName := "kubernetes_pod_v1.test"
+	volumeName := "ephemeral"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1508,17 +1510,18 @@ func TestAccKubernetesPod_with_ephemeral_storage(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPodDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodEphemeralStorage(testName, imageName),
+				Config: testAccKubernetesPodEphemeralStorageClass(podName) +
+					testAccKubernetesPodEphemeralStorage(podName, imageName, volumeName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodExists("kubernetes_pod_v1.test", &pod),
-					testAccCheckKubernetesPersistentVolumeClaimCreated("default", testName+"-ephemeral", &pvc),
-					resource.TestCheckResourceAttr("kubernetes_pod_v1.test", "spec.0.volume.0.name", "ephemeral"),
-					resource.TestCheckResourceAttr("kubernetes_pod_v1.test", "spec.0.volume.0.ephemeral.0.spec.0.storage_class_name", testName),
+					testAccCheckKubernetesPodExists(resourceName, &pod),
+					testAccCheckKubernetesPersistentVolumeClaimCreated("default", fmt.Sprintf("%s-%s", podName, volumeName), &pvc),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.name", volumeName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.ephemeral.0.spec.0.storage_class_name", podName),
 				),
 			},
 			// Do a second test with only the storage class and check that the PVC has been deleted by the ephemeral volume
 			{
-				Config: testAccKubernetesPodEphemeralStorageWithoutPod(testName),
+				Config: testAccKubernetesPodEphemeralStorageClass(podName),
 				Check:  testAccCheckKubernetesPersistentVolumeClaimIsDestroyed(&pvc),
 			},
 		},
@@ -3323,21 +3326,8 @@ resource "kubernetes_pod_v1" "scheduler" {
 `, name)
 }
 
-func testAccKubernetesPodEphemeralStorage(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
-  metadata {
-    name = %[1]q
-  }
-  storage_provisioner = "pd.csi.storage.gke.io"
-  reclaim_policy      = "Delete"
-  volume_binding_mode = "WaitForFirstConsumer"
-
-  parameters = {
-    type = "pd-standard"
-  }
-}
-
-resource "kubernetes_pod_v1" "test" {
+func testAccKubernetesPodEphemeralStorage(podName, imageName, volumeName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     name = %[1]q
     labels = {
@@ -3351,12 +3341,12 @@ resource "kubernetes_pod_v1" "test" {
 
       volume_mount {
         mount_path = "/ephemeral"
-        name       = "ephemeral"
+        name       = %[3]q
       }
     }
 
     volume {
-      name = "ephemeral"
+      name = %[3]q
 
       ephemeral {
         metadata {
@@ -3370,7 +3360,7 @@ resource "kubernetes_pod_v1" "test" {
 
           resources {
             requests = {
-              storage = "5Gi"
+              storage = "1Gi"
             }
           }
         }
@@ -3378,21 +3368,17 @@ resource "kubernetes_pod_v1" "test" {
     }
   }
 }
-`, name, imageName)
+`, podName, imageName, volumeName)
 }
 
-func testAccKubernetesPodEphemeralStorageWithoutPod(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+func testAccKubernetesPodEphemeralStorageClass(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
   metadata {
     name = %[1]q
   }
-  storage_provisioner = "pd.csi.storage.gke.io"
+  storage_provisioner = "rancher.io/local-path"
   reclaim_policy      = "Delete"
   volume_binding_mode = "WaitForFirstConsumer"
-
-  parameters = {
-    type = "pd-standard"
-  }
 }
 `, name)
 }

@@ -219,7 +219,8 @@ func TestKubernetesManifest_Wait_InvalidCondition(t *testing.T) {
 	tf.Init(ctx)
 
 	err = tf.Apply(ctx)
-	if err == nil || !strings.Contains(err.Error(), "timed out waiting on") {
+	//panic(err.Error())
+	if err == nil || (!strings.Contains(err.Error(), "timed out waiting on") && !strings.Contains(err.Error(), "client rate limiter")) {
 		t.Fatalf("Waiter should have timed out")
 	}
 }

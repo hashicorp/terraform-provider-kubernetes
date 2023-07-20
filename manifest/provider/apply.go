@@ -452,7 +452,6 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 						Summary:  fmt.Sprintf(`Failed to read resource %q after wait conditions`, rname),
 						Detail:   err.Error(),
 					})
-
 				return resp, nil
 			}
 			result = r

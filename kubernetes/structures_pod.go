@@ -661,6 +661,18 @@ func flattenReadinessGates(in []v1.PodReadinessGate) ([]interface{}, error) {
 
 // Expanders
 
+func expandPodTargetState(p []interface{}) []string {
+	if len(p) > 0 {
+		t := make([]string, len(p))
+		for i, v := range p {
+			t[i] = v.(string)
+		}
+		return t
+	}
+
+	return []string{string(v1.PodRunning)}
+}
+
 func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	obj := &v1.PodSpec{}
 	if len(p) == 0 || p[0] == nil {

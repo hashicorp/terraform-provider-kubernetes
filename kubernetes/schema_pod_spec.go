@@ -703,7 +703,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 						Schema: map[string]*schema.Schema{
 							"metadata": {
 								Type:        schema.TypeList,
-								Description: "May contain labels and annotations that will be copied into the PVC when creating it.",
+								Description: "May contain labels and annotations that will be copied into the PVC when creating it. No other fields are allowed and will be rejected during validation.",
 								Optional:    true,
 								MaxItems:    1,
 								Elem: &schema.Resource{

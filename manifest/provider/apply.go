@@ -428,7 +428,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 				if reason, ok := err.(WaiterError); ok {
 					resp.Diagnostics = append(resp.Diagnostics,
 						&tfprotov5.Diagnostic{
-							Severity: tfprotov5.DiagnosticSeverityWarning,
+							Severity: tfprotov5.DiagnosticSeverityError,
 							Summary:  "Operation timed out",
 							Detail:   reason.Error(),
 						})
@@ -442,8 +442,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 					return resp, nil
 				}
 			}
-
-			r, err := rs.Get(ctxDeadline, rname, metav1.GetOptions{})
+			r, err := rs.Get(ctx, rname, metav1.GetOptions{})
 			if err != nil {
 				s.logger.Error("[ApplyResourceChange][ReadAfterWait]", "API error", dump(err), "API response", dump(result))
 				resp.Diagnostics = append(resp.Diagnostics,

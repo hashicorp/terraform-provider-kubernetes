@@ -545,18 +545,6 @@ func flattenVsphereVirtualDiskVolumeSource(in *v1.VsphereVirtualDiskVolumeSource
 	return []interface{}{att}
 }
 
-func flattenEphemeralVolumeSource(in *v1.EphemeralVolumeSource) []interface{} {
-	att := make(map[string]interface{})
-
-	metadata := make(map[string]interface{})
-	metadata["labels"] = in.VolumeClaimTemplate.ObjectMeta.GetLabels()
-	metadata["annotations"] = in.VolumeClaimTemplate.ObjectMeta.GetAnnotations()
-
-	att["metadata"] = []interface{}{metadata}
-	att["spec"] = flattenPersistentVolumeClaimSpec(in.VolumeClaimTemplate.Spec)
-	return []interface{}{att}
-}
-
 // Expanders
 
 func expandAWSElasticBlockStoreVolumeSource(l []interface{}) *v1.AWSElasticBlockStoreVolumeSource {
@@ -1245,21 +1233,35 @@ func expandVsphereVirtualDiskVolumeSource(l []interface{}) *v1.VsphereVirtualDis
 	return obj
 }
 
+func expandEphemeralVolumeClaimTemplate(l []interface{}) (*v1.PersistentVolumeClaimTemplate, error) {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.PersistentVolumeClaimTemplate{}, nil
+	}
+	in := l[0].(map[string]interface{})
+	pvcClaim, err := expandPersistentVolumeClaimSpec(in["spec"].([]interface{}))
+	if err != nil {
+		return &v1.PersistentVolumeClaimTemplate{}, err
+	}
+
+	obj := &v1.PersistentVolumeClaimTemplate{
+		ObjectMeta: expandMetadata(in["metadata"].([]interface{})),
+		Spec:       *pvcClaim,
+	}
+	return obj, nil
+}
+
 func expandEphemeralVolumeSource(l []interface{}) (*v1.EphemeralVolumeSource, error) {
 	if len(l) == 0 || l[0] == nil {
 		return &v1.EphemeralVolumeSource{}, nil
 	}
 	in := l[0].(map[string]interface{})
-	pvc_claim, err := expandPersistentVolumeClaimSpec(in["spec"].([]interface{}))
-	if err != nil {
-		return &v1.EphemeralVolumeSource{}, err
-	}
 
+	t, err := expandEphemeralVolumeClaimTemplate(in["volume_claim_template"].([]interface{}))
+	if err != nil {
+		return &v1.EphemeralVolumeSource{}, nil
+	}
 	obj := &v1.EphemeralVolumeSource{
-		VolumeClaimTemplate: &v1.PersistentVolumeClaimTemplate{
-			ObjectMeta: expandMetadata(in["metadata"].([]interface{})),
-			Spec:       *pvc_claim,
-		},
+		VolumeClaimTemplate: t,
 	}
 	return obj, nil
 }

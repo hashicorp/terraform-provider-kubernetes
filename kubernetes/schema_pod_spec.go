@@ -694,37 +694,47 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 		MaxItems:    1,
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
-				"metadata": {
+				"volume_claim_template": {
 					Type:        schema.TypeList,
-					Description: "May contain labels and annotations that will be copied into the PVC when creating it.",
+					Description: "Will be used to create a stand-alone PVC to provision the volume. The pod in which this EphemeralVolumeSource is embedded will be the owner of the PVC.",
 					Required:    true,
 					MaxItems:    1,
 					Elem: &schema.Resource{
 						Schema: map[string]*schema.Schema{
-							"annotations": {
-								Type:         schema.TypeMap,
-								Description:  "An unstructured key value map stored with the persistent volume claim that may be used to store arbitrary metadata. More info: http://kubernetes.io/docs/user-guide/annotations",
-								Optional:     true,
-								Elem:         &schema.Schema{Type: schema.TypeString},
-								ValidateFunc: validateAnnotations,
+							"metadata": {
+								Type:        schema.TypeList,
+								Description: "May contain labels and annotations that will be copied into the PVC when creating it.",
+								Optional:    true,
+								MaxItems:    1,
+								Elem: &schema.Resource{
+									Schema: map[string]*schema.Schema{
+										"annotations": {
+											Type:         schema.TypeMap,
+											Description:  "An unstructured key value map stored with the persistent volume claim that may be used to store arbitrary metadata. More info: http://kubernetes.io/docs/user-guide/annotations",
+											Optional:     true,
+											Elem:         &schema.Schema{Type: schema.TypeString},
+											ValidateFunc: validateAnnotations,
+										},
+										"labels": {
+											Type:         schema.TypeMap,
+											Description:  "Map of string keys and values that can be used to organize and categorize (scope and select) the persistent volume claim. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels",
+											Optional:     true,
+											Elem:         &schema.Schema{Type: schema.TypeString},
+											ValidateFunc: validateLabels,
+										},
+									},
+								},
 							},
-							"labels": {
-								Type:         schema.TypeMap,
-								Description:  "Map of string keys and values that can be used to organize and categorize (scope and select) the persistent volume claim. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels",
-								Optional:     true,
-								Elem:         &schema.Schema{Type: schema.TypeString},
-								ValidateFunc: validateLabels,
+							"spec": {
+								Type:        schema.TypeList,
+								Description: "The specification for the PersistentVolumeClaim. The entire content is copied unchanged into the PVC that gets created from this template. The same fields as in a PersistentVolumeClaim are also valid here.",
+								Required:    true,
+								MaxItems:    1,
+								Elem: &schema.Resource{
+									Schema: persistentVolumeClaimSpecFields(),
+								},
 							},
 						},
-					},
-				},
-				"spec": {
-					Type:        schema.TypeList,
-					Description: "The specification for the PersistentVolumeClaim. The entire content is copied unchanged into the PVC that gets created from this template. The same fields as in a PersistentVolumeClaim are also valid here.",
-					Required:    true,
-					MaxItems:    1,
-					Elem: &schema.Resource{
-						Schema: persistentVolumeClaimSpecFields(),
 					},
 				},
 			},

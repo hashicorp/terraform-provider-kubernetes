@@ -572,23 +572,6 @@ func testAccCheckKubernetesPersistentVolumeClaimExists(n string, obj *api.Persis
 	}
 }
 
-func testAccCheckKubernetesPersistentVolumeClaimCreated(namespace, name string, obj *api.PersistentVolumeClaim) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-		if err != nil {
-			return err
-		}
-		ctx := context.TODO()
-		out, err := conn.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		*obj = *out
-		return nil
-	}
-}
-
 func testAccCheckKubernetesPersistentVolumeClaimIsDestroyed(obj *api.PersistentVolumeClaim) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		meta := obj.GetObjectMeta()

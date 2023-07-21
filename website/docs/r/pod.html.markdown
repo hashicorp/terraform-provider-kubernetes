@@ -169,7 +169,7 @@ The following arguments are supported:
 
 * `metadata` - (Required) Standard pod's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
 * `spec` - (Required) Spec of the pod owned by the cluster
-* `target_state` - (Optional) A list of the target statuses of the pod that indicate whether it was successfully created. Options: "Running", "Succeeded", "Failed". Default: "Running". For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase")
+* `target_state` - (Optional) A list of the pod phases that indicate whether it was successfully created. Options: "Running", "Succeeded", "Failed". Default: "Running". For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase")
 
 ## Nested Blocks
 

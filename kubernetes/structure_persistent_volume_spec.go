@@ -1238,16 +1238,15 @@ func expandEphemeralVolumeClaimTemplate(l []interface{}) (*v1.PersistentVolumeCl
 		return &v1.PersistentVolumeClaimTemplate{}, nil
 	}
 	in := l[0].(map[string]interface{})
-	pvcClaim, err := expandPersistentVolumeClaimSpec(in["spec"].([]interface{}))
+	pv, err := expandPersistentVolumeClaimSpec(in["spec"].([]interface{}))
 	if err != nil {
 		return &v1.PersistentVolumeClaimTemplate{}, err
 	}
 
-	obj := &v1.PersistentVolumeClaimTemplate{
+	return &v1.PersistentVolumeClaimTemplate{
 		ObjectMeta: expandMetadata(in["metadata"].([]interface{})),
-		Spec:       *pvcClaim,
-	}
-	return obj, nil
+		Spec:       *pv,
+	}, nil
 }
 
 func expandEphemeralVolumeSource(l []interface{}) (*v1.EphemeralVolumeSource, error) {
@@ -1258,12 +1257,12 @@ func expandEphemeralVolumeSource(l []interface{}) (*v1.EphemeralVolumeSource, er
 
 	t, err := expandEphemeralVolumeClaimTemplate(in["volume_claim_template"].([]interface{}))
 	if err != nil {
-		return &v1.EphemeralVolumeSource{}, nil
+		return &v1.EphemeralVolumeSource{}, err
 	}
-	obj := &v1.EphemeralVolumeSource{
+
+	return &v1.EphemeralVolumeSource{
 		VolumeClaimTemplate: t,
-	}
-	return obj, nil
+	}, nil
 }
 
 func patchPersistentVolumeSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOperations, error) {

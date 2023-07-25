@@ -153,7 +153,7 @@ func (w *FieldWaiter) Wait(ctx context.Context) error {
 	for {
 		if deadline, ok := ctx.Deadline(); ok {
 			if time.Now().After(deadline) {
-				return WaiterError{Reason: "FieldsMatchers"}
+				return WaiterError{Reason: "field matchers"}
 			}
 		}
 

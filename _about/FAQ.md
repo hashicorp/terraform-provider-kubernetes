@@ -33,6 +33,14 @@ Our policy is described on the Terraform website [here](https://www.terraform.io
 
 Due to the constant release pace of Kubernetes and the relatively infrequent major version releases of the provider, there can be cases where a minor version update may contain unexpected changes depending on your configuration or environment.
 
+### Why is not recommended to create Kubernetes resources in the same apply as the cluster?
+
+When using resource attributes to pass credentials to the provider block from resources such as `aws_eks_cluster` and `google_container_cluster`, these resources should not be created in the same Terraform apply operation as Kubernetes provider resources. This will lead to intermittent and unpredictable errors which are hard to debug and diagnose. The root issue lies with the order in which Terraform itself evaluates the provider blocks vs. resources. Please refer to the [Provider Configuratopm](https://developer.hashicorp.com/terraform/language/providers/configuration#provider-configuration) section of the Terraform docs for more information.
+
+For the `kubernetes_manifest` resource specifically, this resource _requires_ a Kubernetes cluster to already be available, as it needs to be able to fetch the OpenAPI spec from the Kubernetes API to generate the Terraform schema information needed to create a plan. 
+
+For this reason, the most reliable way to configure the Kubernetes provider is to ensure that the cluster itself and the Kubernetes provider resources can each be managed with separate apply operations. We recommend using the corresponding data sources to supply values to the provider block as needed.
+
 ### How can I help?
 
 Check out the [Contributing Guide](CONTRIBUTING.md) for additional information.

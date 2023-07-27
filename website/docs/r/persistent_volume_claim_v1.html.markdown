@@ -101,8 +101,8 @@ The following arguments are supported:
 
 #### Arguments
 
-* `limits` - (Optional) Map describing the maximum amount of compute resources allowed. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/compute-resources)/
-* `requests` - (Optional) Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/compute-resources)/
+* `limits` - (Optional) Map describing the maximum amount of compute resources allowed. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/compute-resources/)
+* `requests` - (Optional) Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/compute-resources/)
 
 ### `selector`
 

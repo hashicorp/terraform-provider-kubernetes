@@ -834,6 +834,7 @@ The `items` block supports the following:
 * `csi` - (Optional) CSI represents storage that is handled by an external CSI driver. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes/#csi)
 * `downward_api` - (Optional) DownwardAPI represents downward API about the pod that should populate this volume
 * `empty_dir` - (Optional) EmptyDir represents a temporary directory that shares a pod's lifetime. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#emptydir)
+* `ephemeral` - (Optional) Represents an ephemeral volume that is handled by a normal storage driver. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#generic-ephemeral-volumes)
 * `fc` - (Optional) Represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.
 * `flex_volume` - (Optional) Represents a generic volume resource that is provisioned/attached using an exec based plugin. This is an alpha feature and may change in future.
 * `flocker` - (Optional) Represents a Flocker volume attached to a kubelet's host machine and exposed to the pod for its usage. This depends on the Flocker control service being running
@@ -868,6 +869,19 @@ The `items` block supports the following:
 
 * `fs_type` - (Optional) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
 * `volume_path` - (Required) Path that identifies vSphere volume vmdk
+
+### `ephemeral`
+
+#### Arguments
+
+* `volume_claim_template` - (Required) Will be used to create a stand-alone PVC to provision the volume. The pod in which this EphemeralVolumeSource is embedded will be the owner of the PVC.
+
+### `volume_claim_template`
+
+#### Arguments
+
+* `metadata` - (Optional) May contain labels and annotations that will be copied into the PVC when creating it. No other fields are allowed and will be rejected during validation.
+* `spec` - (Required) Please see the [persistent_volume_claim_v1 resource](persistent_volume_claim_v1.html#spec) for reference.
 
 ## Timeouts
 

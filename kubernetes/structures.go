@@ -41,9 +41,10 @@ func buildIdWithVersionKind(meta metav1.ObjectMeta, apiVersion, kind string) str
 
 func expandMetadata(in []interface{}) metav1.ObjectMeta {
 	meta := metav1.ObjectMeta{}
-	if len(in) < 1 {
+	if len(in) == 0 || in[0] == nil {
 		return meta
 	}
+
 	m := in[0].(map[string]interface{})
 
 	if v, ok := m["annotations"].(map[string]interface{}); ok && len(v) > 0 {

@@ -1525,6 +1525,34 @@ func TestAccKubernetesPod_with_ephemeral_storage(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPod_phase(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod_v1.test"
+	image := "this-fake-image-has-never-exist"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodConfigPhase(name, image),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "target_state"},
+			},
+		},
+	})
+}
+
 func createRuncRuntimeClass(rn string) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
@@ -3396,4 +3424,20 @@ func testAccKubernetesPodEphemeralStorageWithoutPod(name string) string {
   }
 }
 `, name)
+}
+
+func testAccKubernetesPodConfigPhase(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+  target_state = ["Pending"]
+}
+`, name, imageName)
 }

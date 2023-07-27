@@ -59,15 +59,17 @@ func resourceKubernetesPodSchemaV1() map[string]*schema.Schema {
 		},
 		"target_state": {
 			Type:        schema.TypeList,
-			Description: fmt.Sprintf("A list of the pod phases that indicate whether it was successfully created. Options: %q, %q, %q. Default: %q. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase", corev1.PodRunning, corev1.PodSucceeded, corev1.PodFailed, corev1.PodRunning),
+			Description: fmt.Sprintf("A list of the pod phases that indicate whether it was successfully created. Options: %q, %q, %q, %q, %q. Default: %q. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase", corev1.PodPending, corev1.PodRunning, corev1.PodSucceeded, corev1.PodFailed, corev1.PodUnknown, corev1.PodRunning),
 			Optional:    true,
 			MinItems:    1,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 				ValidateFunc: validation.StringInSlice([]string{
+					string(corev1.PodPending),
 					string(corev1.PodRunning),
 					string(corev1.PodSucceeded),
 					string(corev1.PodFailed),
+					string(corev1.PodUnknown),
 				}, false),
 			},
 		},

@@ -29,10 +29,7 @@ func NewHelper(tfstate *tfjson.State) *Helper {
 func (s *Helper) ResourceExists(t *testing.T, resourceAddress string) bool {
 	t.Helper()
 	_, err := getAttributesValuesFromResource(s, resourceAddress)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // getAttributesValuesFromResource pulls out the AttributeValues field from the resource at the given address

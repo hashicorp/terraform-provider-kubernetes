@@ -229,7 +229,7 @@ func TestKubernetesManifest_Wait_InvalidCondition(t *testing.T) {
 	}
 	tfstate := tfstatehelper.NewHelper(st)
 	if !tfstate.ResourceExists(t, "kubernetes_manifest.test") {
-		t.Fatalf("Expected resource does not exist.")
+		t.Fatalf("Expected resource to exist in state")
 	}
 }
 

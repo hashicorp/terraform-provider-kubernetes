@@ -1,0 +1,7 @@
+```release-note:enhancement
+`resource/kubernetes_pod`: add a new attribute `target_state` to specify the Pod phase(s) that indicate whether it was successfully created.
+```
+
+```release-note:enhancement
+`resource/kubernetes_pod_v1`: add a new attribute `target_state` to specify the Pod phase(s) that indicate whether it was successfully created.
+```

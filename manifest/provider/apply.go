@@ -425,12 +425,12 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		if !waitConfig.IsNull() {
 			err = s.waitForCompletion(ctxDeadline, waitConfig, rs, rname, wt, th)
 			if err != nil {
-				if err == context.DeadlineExceeded {
+				if reason, ok := err.(WaiterError); ok {
 					resp.Diagnostics = append(resp.Diagnostics,
 						&tfprotov5.Diagnostic{
 							Severity: tfprotov5.DiagnosticSeverityError,
 							Summary:  "Operation timed out",
-							Detail:   "Terraform timed out waiting on the operation to complete",
+							Detail:   reason.Error(),
 						})
 				} else {
 					resp.Diagnostics = append(resp.Diagnostics,
@@ -439,11 +439,10 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 							Summary:  "Error waiting for operation to complete",
 							Detail:   err.Error(),
 						})
+					return resp, nil
 				}
-				return resp, nil
 			}
-
-			r, err := rs.Get(ctxDeadline, rname, metav1.GetOptions{})
+			r, err := rs.Get(ctx, rname, metav1.GetOptions{})
 			if err != nil {
 				s.logger.Error("[ApplyResourceChange][ReadAfterWait]", "API error", dump(err), "API response", dump(result))
 				resp.Diagnostics = append(resp.Diagnostics,
@@ -452,7 +451,6 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 						Summary:  fmt.Sprintf(`Failed to read resource %q after wait conditions`, rname),
 						Detail:   err.Error(),
 					})
-
 				return resp, nil
 			}
 			result = r

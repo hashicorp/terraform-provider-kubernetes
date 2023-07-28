@@ -1,0 +1,3 @@
+```release-note:bug
+`manifest/provider/apply.go`: update flow in `wait` block to fix timeout bug within tf apply where the resource is created and appears in Kubernetes but does not appear in TF state file after deadline. The fix would ensure that the resource has been created in the state file while also tainting the resource requiring the user to make the necessary changes in order for their to not be another timeout error.
+```

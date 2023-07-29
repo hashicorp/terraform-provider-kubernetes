@@ -9,7 +9,7 @@ description: |-
 # kubernetes_namespace_v1
 
 Kubernetes supports multiple virtual clusters backed by the same physical cluster. These virtual clusters are called namespaces.
-Read more about namespaces in [Kubernetes Documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/).
+Read more about namespaces in [Kubernetes documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/).
 
 ## Example Usage
 

@@ -12,7 +12,7 @@ The resource provides mechanisms to inject containers with sensitive information
 Secrets can be used to store sensitive information either as individual properties or coarse-grained entries like entire files or JSON blobs.
 The resource will by default create a secret which is available to any pod in the specified (or default) namespace.
 
-~> Read more about security properties and risks involved with using Kubernetes secrets in [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/secret/).
+~> Read more about security properties and risks involved with using Kubernetes secrets in [Kubernetes reference](https://kubernetes.io/docs/concepts/configuration/secret/).
 
 ~> **Note:** All arguments including the secret data will be stored in the raw state as plain-text. [Read more about sensitive data in state](/docs/state/sensitive-data.html).
 

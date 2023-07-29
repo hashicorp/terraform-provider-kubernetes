@@ -13,7 +13,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	api "k8s.io/api/core/v1"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
@@ -56,11 +57,21 @@ func resourceKubernetesPodSchemaV1() map[string]*schema.Schema {
 				Schema: podSpecFields(false, false),
 			},
 		},
-		"legacy_lifecycle_states": {
-			Type:        schema.TypeBool,
-			Description: "Setting this attribute to `false` would set the target pod lifecycle state as [\"Running\", \"Succeeded\", \"Failed\"]. The default value of `true` would leave the target pod lifecycle state as [\"Running\"]`.",
+		"target_state": {
+			Type:        schema.TypeList,
+			Description: fmt.Sprintf("A list of the pod phases that indicate whether it was successfully created. Options: %q, %q, %q, %q, %q. Default: %q. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase", corev1.PodPending, corev1.PodRunning, corev1.PodSucceeded, corev1.PodFailed, corev1.PodUnknown, corev1.PodRunning),
 			Optional:    true,
-			Default:     true,
+			MinItems:    1,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+				ValidateFunc: validation.StringInSlice([]string{
+					string(corev1.PodPending),
+					string(corev1.PodRunning),
+					string(corev1.PodSucceeded),
+					string(corev1.PodFailed),
+					string(corev1.PodUnknown),
+				}, false),
+			},
 		},
 	}
 }
@@ -77,7 +88,7 @@ func resourceKubernetesPodCreate(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 
-	pod := api.Pod{
+	pod := corev1.Pod{
 		ObjectMeta: metadata,
 		Spec:       *spec,
 	}
@@ -92,15 +103,9 @@ func resourceKubernetesPodCreate(ctx context.Context, d *schema.ResourceData, me
 
 	d.SetId(buildId(out.ObjectMeta))
 
-	target := []string{"Running"}
-
-	if d.Get("legacy_lifecycle_states").(bool) != true {
-		target = []string{"Running", "Succeeded", "Failed"}
-	}
-
 	stateConf := &resource.StateChangeConf{
-		Target:  target,
-		Pending: []string{"Pending"},
+		Target:  expandPodTargetState(d.Get("target_state").([]interface{})),
+		Pending: []string{string(corev1.PodPending)},
 		Timeout: d.Timeout(schema.TimeoutCreate),
 		Refresh: func() (interface{}, string, error) {
 			out, err := conn.CoreV1().Pods(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})

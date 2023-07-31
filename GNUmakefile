@@ -17,6 +17,9 @@ endif
 LAST_RELEASE?=$$(git describe --tags $$(git rev-list --tags --max-count=1))
 THIS_RELEASE?=$$(git rev-parse --abbrev-ref HEAD)
 
+# The maximum number of tests to run simultaneously.
+PARALLEL_RUNS?=8
+
 default: build
 
 all: build depscheck fmtcheck test testacc test-compile tests-lint tests-lint-fix tools vet website-lint website-lint-fix
@@ -78,7 +81,7 @@ test: fmtcheck
 	go test ./tools
 
 testacc: fmtcheck vet
-	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 3h
+	TF_ACC=1 go test $(TEST) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) -timeout 3h
 
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \

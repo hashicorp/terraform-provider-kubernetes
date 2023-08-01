@@ -29,7 +29,7 @@ func TestAccKubernetesEndpointSlice_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_endpoint_slice_v1.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_endpoint_slice_v1.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.0.condition.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.0.condition.#", "0"),
 					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.0.addresses.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.0.addresses.0", "129.144.50.56"),
 					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "port.#", "1"),
@@ -49,6 +49,8 @@ func TestAccKubernetesEndpointSlice_basic(t *testing.T) {
 					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.0.condition.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.0.condition.0.ready", "true"),
+					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.0.condition.0.serving", "false"),
+					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.0.condition.0.terminating", "false"),
 					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.0.hostname", "test"),
 					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.0.node_name", "test"),
 					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.0.addresses.#", "2"),
@@ -85,7 +87,7 @@ func TestAccKubernetesEndpointSlice_generatedName(t *testing.T) {
 					resource.TestCheckResourceAttrSet("kubernetes_endpoint_slice_v1.test", "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet("kubernetes_endpoint_slice_v1.test", "metadata.0.uid"),
 					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.0.condition.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.0.condition.#", "0"),
 					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.0.addresses.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "endpoint.0.addresses.0", "129.144.50.56"),
 					resource.TestCheckResourceAttr("kubernetes_endpoint_slice_v1.test", "port.#", "1"),
@@ -109,20 +111,14 @@ func testAccKubernetesEndpointSliceConfig_basic(name string) string {
   metadata {
     name = "%s"
   }
-
   endpoint {
-    condition {
-
-    }
     addresses = ["129.144.50.56"]
   }
-
   port {
     port         = "90"
     name         = "first"
     app_protocol = "test"
   }
-
   address_type = "IPv4"
 }
 `, name)
@@ -133,7 +129,6 @@ func testAccKubernetesEndpointSliceConfig_modified(name string) string {
   metadata {
     name = "%s"
   }
-
   endpoint {
     condition {
       ready = true
@@ -146,19 +141,16 @@ func testAccKubernetesEndpointSliceConfig_modified(name string) string {
     node_name = "test"
     zone      = "us-west"
   }
-
   port {
     port         = "90"
     name         = "first"
     app_protocol = "test"
   }
-
   port {
     port         = "900"
     name         = "second"
     app_protocol = "test"
   }
-
   address_type = "IPv6"
 }
 `, name)
@@ -169,21 +161,14 @@ func testAccKubernetesEndpointSliceConfig_generatedName(prefix string) string {
   metadata {
     generate_name = "%s"
   }
-
   endpoint {
-    condition {
-
-    }
     addresses = ["129.144.50.56"]
-
   }
-
   port {
     port         = "90"
     name         = "first"
     app_protocol = "test"
   }
-
   address_type = "IPv4"
 }
 `, prefix)

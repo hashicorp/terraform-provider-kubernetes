@@ -26,7 +26,7 @@ func schemaEndpointSliceSubsetEndpoints() *schema.Resource {
 			"condition": {
 				Type:        schema.TypeList,
 				Description: "condition contains information about the current status of the endpoint.",
-				Required:    true,
+				Optional:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{

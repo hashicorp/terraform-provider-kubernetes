@@ -81,7 +81,11 @@ func resourceKubernetesEndpointSliceRead(ctx context.Context, d *schema.Resource
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
 	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	log.Printf("[INFO] Reading endpoint slice %s", name)
 	endpoint, err := conn.DiscoveryV1().EndpointSlices(namespace).Get(ctx, name, metav1.GetOptions{})

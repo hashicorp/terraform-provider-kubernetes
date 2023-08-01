@@ -73,7 +73,7 @@ The following arguments are supported:
 #### Arguments
 
 * `addresses` - (Required) addresses of this endpoint. The contents of this field are interpreted according to the corresponding EndpointSlice addressType field. Consumers must handle different types of addresses in the context of their own capabilities. This must contain at least one address but no more than 100. 
-* `condition` - (Required) Contains information about the current status of the endpoint.
+* `condition` - (Optional) Contains information about the current status of the endpoint.
 * `hostname` - (Optional) hostname of this endpoint. This field may be used by consumers of endpoints to distinguish endpoints from each other (e.g. in DNS names). Multiple endpoints which use the same hostname should be considered fungible (e.g. multiple A values in DNS). Must be lowercase and pass DNS Label (RFC 1123) validation.
 * `node_name` - (Optional) Represents the name of the Node hosting this endpoint. This can be used to determine endpoints local to a Node.
 * `target_ref` - (Optional) targetRef is a reference to a Kubernetes object that represents this endpoint.
@@ -83,7 +83,7 @@ The following arguments are supported:
 
 #### Attributes
 
-* `ready` - Indicates that this endpoint is prepared to receive traffic, according to whatever system is managing the endpoint.
+* `ready` - (Optional) Indicates that this endpoint is prepared to receive traffic, according to whatever system is managing the endpoint.
 * `serving` - (Optional) Serving is identical to ready except that it is set regardless of the terminating state of endpoints. 
 * `terminating` - (Optional) Indicates that this endpoint is terminating.
 

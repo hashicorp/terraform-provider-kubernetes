@@ -12,7 +12,7 @@ import (
 )
 
 func expandEndpointSliceEndpoints(in []interface{}) []api.Endpoint {
-	if len(in) == 0 || in == nil {
+	if len(in) == 0 {
 		return []api.Endpoint{}
 	}
 	endpoints := make([]api.Endpoint, len(in))
@@ -70,7 +70,7 @@ func expandObjectReference(l []interface{}) *v1.ObjectReference {
 }
 
 func expandEndpointSlicePorts(in []interface{}) []api.EndpointPort {
-	if len(in) == 0 || in == nil {
+	if len(in) == 0 {
 		return []api.EndpointPort{}
 	}
 	ports := make([]api.EndpointPort, len(in))

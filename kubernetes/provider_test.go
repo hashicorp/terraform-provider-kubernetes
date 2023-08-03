@@ -26,8 +26,6 @@ import (
 const (
 	nginxImageVersion  = "nginx:1.19.4"
 	nginxImageVersion1 = "nginx:1.19.3"
-	// busyboxImageVersion  = "busybox:1.32.0"
-	// busyboxImageVersion1 = "busybox:1.31"
 	busyboxImage       = "busybox:1.36"
 	alpineImageVersion = "alpine:3.12.1"
 	agnhostImage       = "registry.k8s.io/e2e-test-images/agnhost:2.43"

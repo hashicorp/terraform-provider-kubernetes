@@ -243,7 +243,7 @@ func TestAccKubernetesPodV1_updateArgsForceNew(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPod_updateEnvForceNew(t *testing.T) {
+func TestAccKubernetesPodV1_updateEnvForceNew(t *testing.T) {
 	var conf1 api.Pod
 	var conf2 api.Pod
 
@@ -1503,7 +1503,7 @@ func TestAccKubernetesPodV1_runtimeClassName(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPod_with_ephemeral_storage(t *testing.T) {
+func TestAccKubernetesPodV1_with_ephemeral_storage(t *testing.T) {
 	var (
 		pod api.Pod
 		pvc api.PersistentVolumeClaim
@@ -1542,7 +1542,7 @@ func TestAccKubernetesPod_with_ephemeral_storage(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesPod_phase(t *testing.T) {
+func TestAccKubernetesPodV1_phase(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_pod_v1.test"
 	image := "this-fake-image-has-never-exist"

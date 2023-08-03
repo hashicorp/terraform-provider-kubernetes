@@ -12,7 +12,7 @@ import (
 )
 
 func expandEndpointSliceEndpoints(in []interface{}) []api.Endpoint {
-	if in == nil || len(in) == 0 {
+	if len(in) == 0 {
 		return []api.Endpoint{}
 	}
 	endpoints := make([]api.Endpoint, len(in))
@@ -23,7 +23,7 @@ func expandEndpointSliceEndpoints(in []interface{}) []api.Endpoint {
 			r.Addresses = expandStringSlice(v)
 		}
 		if v, ok := endpointConfig["condition"].([]interface{}); ok {
-			r.Conditions = expandEndpointSliceCondition(v)
+			r.Conditions = expandEndpointSliceConditions(v)
 		}
 		if v, ok := endpointConfig["hostname"].(string); ok && v != "" {
 			r.Hostname = ptrToString(v)
@@ -70,7 +70,7 @@ func expandObjectReference(l []interface{}) *v1.ObjectReference {
 }
 
 func expandEndpointSlicePorts(in []interface{}) []api.EndpointPort {
-	if in == nil || len(in) == 0 {
+	if len(in) == 0 {
 		return []api.EndpointPort{}
 	}
 	ports := make([]api.EndpointPort, len(in))
@@ -98,10 +98,10 @@ func expandEndpointSlicePorts(in []interface{}) []api.EndpointPort {
 	return ports
 }
 
-func expandEndpointSliceCondition(in []interface{}) api.EndpointConditions {
+func expandEndpointSliceConditions(in []interface{}) api.EndpointConditions {
 	obj := api.EndpointConditions{}
 
-	if in[0] == nil || len(in) == 0 {
+	if len(in) == 0 || in[0] == nil {
 		return obj
 	}
 	cond := in[0].(map[string]interface{})
@@ -123,45 +123,45 @@ func flattenEndpointSliceEndpoints(in []api.Endpoint) []interface{} {
 	att := make([]interface{}, len(in))
 	for i, e := range in {
 		m := make(map[string]interface{})
+		if len(e.Addresses) != 0 {
+			m["addresses"] = e.Addresses
+		}
+		m["condition"] = flattenEndpointSliceConditions(e.Conditions)
 		if e.Hostname != nil {
 			m["hostname"] = e.Hostname
 		}
 		if e.NodeName != nil {
 			m["node_name"] = e.NodeName
 		}
-		if &e.Conditions != nil {
-			m["condition"] = flattenEndpointSliceConditions(e.Conditions)
+		if e.TargetRef != nil {
+			m["target_ref"] = flattenObjectReference(e.TargetRef)
 		}
 		if e.Zone != nil {
 			m["zone"] = e.Zone
 		}
-		if len(e.Addresses) != 0 {
-			m["addresses"] = e.Addresses
-		}
-		if e.TargetRef != nil {
-			m["target_ref"] = flattenObjectReference(e.TargetRef)
-		}
-		if &e.Conditions != nil {
-			m["hostname"] = e.Hostname
-		}
 		att[i] = m
 	}
+
 	return att
 }
 
 func flattenEndpointSliceConditions(in api.EndpointConditions) []interface{} {
-	m := make(map[string]interface{})
+	att := make(map[string]interface{})
 	if in.Ready != nil {
-		m["ready"] = in.Ready
+		att["ready"] = in.Ready
 	}
 	if in.Serving != nil {
-		m["serving"] = in.Serving
+		att["serving"] = in.Serving
 	}
 	if in.Terminating != nil {
-		m["terminating"] = in.Terminating
+		att["terminating"] = in.Terminating
 	}
 
-	return []interface{}{m}
+	if len(att) > 0 {
+		return []interface{}{att}
+	}
+
+	return []interface{}{}
 }
 
 func flattenEndpointSlicePorts(in []api.EndpointPort) []interface{} {

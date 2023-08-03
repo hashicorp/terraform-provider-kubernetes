@@ -20,7 +20,7 @@ import (
 func TestAccKubernetesDeployment_minimal(t *testing.T) {
 	var conf appsv1.Deployment
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -49,7 +49,7 @@ func TestAccKubernetesDeployment_minimal(t *testing.T) {
 func TestAccKubernetesDeployment_basic(t *testing.T) {
 	var conf appsv1.Deployment
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -89,8 +89,8 @@ func TestAccKubernetesDeployment_initContainerForceNew(t *testing.T) {
 	var conf1, conf2 appsv1.Deployment
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	namespace := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
-	imageName1 := busyboxImage
+	imageName := busyboxImageVersion
+	imageName1 := busyboxImageVersion1
 	initCommand := "until nslookup " + name + "-init-service." + namespace + ".svc.cluster.local; do echo waiting for init-service; sleep 2; done"
 
 	resource.Test(t, resource.TestCase{
@@ -188,7 +188,7 @@ func TestAccKubernetesDeployment_initContainerForceNew(t *testing.T) {
 func TestAccKubernetesDeployment_generatedName(t *testing.T) {
 	var conf appsv1.Deployment
 	prefix := "tf-acc-test-gen-"
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -550,7 +550,7 @@ func TestAccKubernetesDeployment_with_container_security_context_seccomp_profile
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 	resourceName := "kubernetes_deployment.test"
 
 	resource.Test(t, resource.TestCase{
@@ -582,7 +582,7 @@ func TestAccKubernetesDeployment_with_container_security_context_seccomp_localho
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 	resourceName := "kubernetes_deployment.test"
 
 	resource.Test(t, resource.TestCase{
@@ -610,7 +610,7 @@ func TestAccKubernetesDeployment_with_volume_mount(t *testing.T) {
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment.test"
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -644,7 +644,7 @@ func TestAccKubernetesDeployment_with_volume_mount(t *testing.T) {
 func TestAccKubernetesDeployment_ForceNew(t *testing.T) {
 	var conf1, conf2 appsv1.Deployment
 
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -762,7 +762,7 @@ func TestAccKubernetesDeployment_with_empty_dir_volume(t *testing.T) {
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -798,7 +798,7 @@ func TestAccKubernetesDeployment_with_empty_dir_volume(t *testing.T) {
 
 func TestAccKubernetesDeploymentUpdate_basic(t *testing.T) {
 	var conf1, conf2 appsv1.Deployment
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
@@ -843,7 +843,7 @@ func TestAccKubernetesDeployment_with_deployment_strategy_rollingupdate(t *testi
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 	resourceName := "kubernetes_deployment.test"
 
 	resource.Test(t, resource.TestCase{
@@ -890,7 +890,7 @@ func TestAccKubernetesDeployment_with_share_process_namespace(t *testing.T) {
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -912,7 +912,7 @@ func TestAccKubernetesDeployment_with_deployment_strategy_rollingupdate_max_surg
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -964,7 +964,7 @@ func TestAccKubernetesDeployment_with_deployment_strategy_rollingupdate_max_surg
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -990,7 +990,7 @@ func TestAccKubernetesDeployment_with_deployment_strategy_rollingupdate_max_surg
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1016,7 +1016,7 @@ func TestAccKubernetesDeployment_with_deployment_strategy_rollingupdate_max_surg
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1042,7 +1042,7 @@ func TestAccKubernetesDeployment_with_deployment_strategy_recreate(t *testing.T)
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1066,7 +1066,7 @@ func TestAccKubernetesDeployment_with_host_aliases(t *testing.T) {
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1093,7 +1093,7 @@ func TestAccKubernetesDeployment_with_host_aliases(t *testing.T) {
 func TestAccKubernetesDeployment_with_resource_field_selector(t *testing.T) {
 	var conf appsv1.Deployment
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1160,7 +1160,7 @@ func TestAccKubernetesDeployment_config_with_automount_service_account_token(t *
 	var confDeployment appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := nginxImageVersion
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1266,6 +1266,7 @@ func testAccKubernetesDeploymentConfig_minimal(name, imageName string) string {
         container {
           image = "%s"
           name  = "tf-acc-test"
+          command = [ "sleep", "300" ]
         }
       }
     }

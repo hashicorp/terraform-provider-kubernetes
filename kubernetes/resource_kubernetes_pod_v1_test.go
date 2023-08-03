@@ -21,7 +21,8 @@ import (
 
 func TestAccKubernetesPodV1_minimal(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_pod.test"
+	resourceName := "kubernetes_pod_v1.test"
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -29,7 +30,7 @@ func TestAccKubernetesPodV1_minimal(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodV1ConfigMinimal(name, busyboxImageVersion),
+				Config: testAccKubernetesPodV1ConfigMinimal(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -43,7 +44,7 @@ func TestAccKubernetesPodV1_minimal(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config:   testAccKubernetesPodV1ConfigMinimal(name, busyboxImageVersion),
+				Config:   testAccKubernetesPodV1ConfigMinimal(name, imageName),
 				PlanOnly: true,
 			},
 		},
@@ -57,8 +58,8 @@ func TestAccKubernetesPodV1_basic(t *testing.T) {
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
 	configMapName := acctest.RandomWithPrefix("tf-acc-test")
 
-	imageName1 := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName1 := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -110,7 +111,7 @@ func TestAccKubernetesPodV1_scheduler(t *testing.T) {
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 	schedulerName := acctest.RandomWithPrefix("test-scheduler")
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -143,9 +144,9 @@ func TestAccKubernetesPodV1_initContainer_updateForcesNew(t *testing.T) {
 	var conf1, conf2 api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	image := busyboxImageVersion
-	image1 := busyboxImageVersion1
-	resourceName := "kubernetes_pod.test"
+	image := busyboxImage
+	image1 := agnhostImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -192,7 +193,7 @@ func TestAccKubernetesPodV1_updateArgsForceNew(t *testing.T) {
 	imageName := "hashicorp/http-echo:latest"
 	argsBefore := `["-listen=:80", "-text='before modification'"]`
 	argsAfter := `["-listen=:80", "-text='after modification'"]`
-	resourceName := "kubernetes_pod.test"
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -251,7 +252,7 @@ func TestAccKubernetesPod_updateEnvForceNew(t *testing.T) {
 	imageName := "hashicorp/http-echo:latest"
 	envBefore := "bar"
 	envAfter := "baz"
-	resourceName := "kubernetes_pod.test"
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -305,8 +306,8 @@ func TestAccKubernetesPodV1_with_pod_security_context(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -338,8 +339,8 @@ func TestAccKubernetesPodV1_with_pod_security_context_fs_group_change_policy(t *
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
@@ -368,7 +369,7 @@ func TestAccKubernetesPodV1_with_pod_security_context_fs_group_change_policy(t *
 }
 
 func testAccKubernetesPodV1ConfigWithSecurityContextFSChangePolicy(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -396,8 +397,8 @@ func TestAccKubernetesPodV1_with_pod_security_context_run_as_group(t *testing.T)
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
@@ -430,8 +431,8 @@ func TestAccKubernetesPodV1_with_pod_security_context_seccomp_profile(t *testing
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -468,8 +469,8 @@ func TestAccKubernetesPodV1_with_pod_security_context_seccomp_localhost_profile(
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
@@ -500,8 +501,8 @@ func TestAccKubernetesPodV1_with_container_liveness_probe_using_exec(t *testing.
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := "gcr.io/google_containers/busybox"
-	resourceName := "kubernetes_pod.test"
+	imageName := agnhostImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -536,8 +537,8 @@ func TestAccKubernetesPodV1_with_container_liveness_probe_using_http_get(t *test
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
-	resourceName := "kubernetes_pod.test"
+	imageName := agnhostImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -573,8 +574,8 @@ func TestAccKubernetesPodV1_with_container_liveness_probe_using_tcp(t *testing.T
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
-	resourceName := "kubernetes_pod.test"
+	imageName := agnhostImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -605,8 +606,8 @@ func TestAccKubernetesPodV1_with_container_liveness_probe_using_grpc(t *testing.
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
-	resourceName := "kubernetes_pod.test"
+	imageName := agnhostImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -641,8 +642,8 @@ func TestAccKubernetesPodV1_with_container_lifecycle(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
-	resourceName := "kubernetes_pod.test"
+	imageName := agnhostImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -679,8 +680,8 @@ func TestAccKubernetesPodV1_with_container_security_context(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -718,8 +719,8 @@ func TestAccKubernetesPodV1_with_volume_mount(t *testing.T) {
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
 
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -754,8 +755,8 @@ func TestAccKubernetesPodV1_with_cfg_map_volume_mount(t *testing.T) {
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 	cfgMap := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -797,7 +798,8 @@ func TestAccKubernetesPodV1_with_csi_volume_hostpath(t *testing.T) {
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
 	volumeName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := "busybox:1.32"
+	resourceName := "kubernetes_pod_v1.test"
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -812,18 +814,18 @@ func TestAccKubernetesPodV1_with_csi_volume_hostpath(t *testing.T) {
 			{
 				Config: testAccKubernetesPodV1CSIVolume(imageName, podName, secretName, volumeName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodV1Exists("kubernetes_pod.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.mount_path", "/volume"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.name", volumeName),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.container.0.volume_mount.0.read_only", "true"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.name", volumeName),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.csi.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.csi.0.driver", "hostpath.csi.k8s.io"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.csi.0.read_only", "true"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.volume.0.csi.0.node_publish_secret_ref.0.name", secretName),
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.mount_path", "/volume"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.name", volumeName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.read_only", "true"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.name", volumeName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.csi.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.csi.0.driver", "hostpath.csi.k8s.io"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.csi.0.read_only", "true"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.csi.0.node_publish_secret_ref.0.name", secretName),
 				),
 			},
 		},
@@ -837,8 +839,8 @@ func TestAccKubernetesPodV1_with_projected_volume(t *testing.T) {
 	cfgMap2Name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -887,8 +889,8 @@ func TestAccKubernetesPodV1_with_resource_requirements(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -951,8 +953,8 @@ func TestAccKubernetesPodV1_with_empty_dir_volume(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -984,8 +986,8 @@ func TestAccKubernetesPodV1_with_empty_dir_volume_with_sizeLimit(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1019,8 +1021,8 @@ func TestAccKubernetesPodV1_with_secret_vol_items(t *testing.T) {
 
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1051,9 +1053,9 @@ func TestAccKubernetesPodV1_gke_with_nodeSelector(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 	region := os.Getenv("GOOGLE_REGION")
-	resourceName := "kubernetes_pod.test"
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
@@ -1085,8 +1087,8 @@ func TestAccKubernetesPodV1_config_with_automount_service_account_token(t *testi
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 	saName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1115,8 +1117,8 @@ func TestAccKubernetesPodV1_config_container_working_dir(t *testing.T) {
 	var confPod api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1153,8 +1155,8 @@ func TestAccKubernetesPodV1_config_container_startup_probe(t *testing.T) {
 	var confPod api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -1189,8 +1191,8 @@ func TestAccKubernetesPodV1_termination_message_policy_default(t *testing.T) {
 	var confPod api.Pod
 
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -1220,8 +1222,8 @@ func TestAccKubernetesPodV1_termination_message_policy_override_as_file(t *testi
 	var confPod api.Pod
 
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -1251,8 +1253,8 @@ func TestAccKubernetesPodV1_termination_message_policy_override_as_fallback_to_l
 	var confPod api.Pod
 
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -1282,8 +1284,8 @@ func TestAccKubernetesPodV1_enableServiceLinks(t *testing.T) {
 	var conf1 api.Pod
 
 	rName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := nginxImageVersion
-	resourceName := "kubernetes_pod.test"
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1316,6 +1318,7 @@ func TestAccKubernetesPodV1_enableServiceLinks(t *testing.T) {
 
 func TestAccKubernetesPodV1_bug961EmptyBlocks(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1324,7 +1327,7 @@ func TestAccKubernetesPodV1_bug961EmptyBlocks(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				ExpectError: regexp.MustCompile("Missing required argument"),
-				Config:      testAccKubernetesPodV1ConfigEmptyBlocks(name, busyboxImageVersion),
+				Config:      testAccKubernetesPodV1ConfigEmptyBlocks(name, imageName),
 			},
 		},
 	})
@@ -1334,7 +1337,7 @@ func TestAccKubernetesPodV1_bug1085(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	imageName := alpineImageVersion
 	var conf api.Pod
-	resourceName := "kubernetes_pod.test"
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
@@ -1371,8 +1374,8 @@ func TestAccKubernetesPodV1_readinessGate(t *testing.T) {
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
 	configMapName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName1 := nginxImageVersion1
-	resourceName := "kubernetes_pod.test"
+	imageName1 := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -1386,7 +1389,6 @@ func TestAccKubernetesPodV1_readinessGate(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesPodV1ConfigReadinessGate(secretName, configMapName, podName, imageName1),
 				PreConfig: func() {
 					conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 					if err != nil {
@@ -1401,11 +1403,16 @@ func TestAccKubernetesPodV1_readinessGate(t *testing.T) {
 					}
 					updatedConditions := append(conditions, testCondition)
 					conf1.Status.Conditions = updatedConditions
-					_, err = conn.CoreV1().Pods("default").UpdateStatus(ctx, &conf1, metav1.UpdateOptions{})
+					p, err := conn.CoreV1().Pods("default").Get(ctx, podName, metav1.GetOptions{})
+					if err != nil {
+						t.Fatal(err)
+					}
+					_, err = conn.CoreV1().Pods("default").UpdateStatus(ctx, p, metav1.UpdateOptions{})
 					if err != nil {
 						t.Fatal(err)
 					}
 				},
+				Config: testAccKubernetesPodV1ConfigReadinessGate(secretName, configMapName, podName, imageName1),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.readiness_gate.0.condition_type", "haha"),
@@ -1425,8 +1432,8 @@ func TestAccKubernetesPodV1_topologySpreadConstraint(t *testing.T) {
 	var conf1 api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_pod.test"
-	imageName := "nginx:1.7.9"
+	resourceName := "kubernetes_pod_v1.test"
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -1462,6 +1469,7 @@ func TestAccKubernetesPodV1_runtimeClassName(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_pod_v1.test"
 	runtimeHandler := fmt.Sprintf("runc-%s", name)
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -1479,7 +1487,7 @@ func TestAccKubernetesPodV1_runtimeClassName(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodV1ConfigRuntimeClassName(name, busyboxImageVersion, runtimeHandler),
+				Config: testAccKubernetesPodV1ConfigRuntimeClassName(name, imageName, runtimeHandler),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.runtime_class_name", runtimeHandler),
@@ -1502,7 +1510,7 @@ func TestAccKubernetesPod_with_ephemeral_storage(t *testing.T) {
 	)
 
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 	volumeName := "ephemeral"
 
@@ -1609,7 +1617,7 @@ func testAccCheckKubernetesPodV1Destroy(s *terraform.State) error {
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_pod" {
+		if rs.Type != "kubernetes_pod_v1" {
 			continue
 		}
 
@@ -1731,7 +1739,7 @@ resource "kubernetes_config_map" "test_from" {
   }
 }
 
-resource "kubernetes_pod" "test" {
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1821,7 +1829,7 @@ func testAccKubernetesPodV1ConfigScheduler(podName, schedulerName, imageName str
 }
 
 func testAccKubernetesPodV1ConfigWithInitContainer(podName, image string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     name = "%s"
     labels = {
@@ -1878,7 +1886,7 @@ resource "kubernetes_service" "test" {
 }
 
 func testAccKubernetesPodV1ConfigWithSecurityContext(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1905,7 +1913,7 @@ func testAccKubernetesPodV1ConfigWithSecurityContext(podName, imageName string) 
 }
 
 func testAccKubernetesPodV1ConfigWithSecurityContextRunAsGroup(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1934,7 +1942,7 @@ func testAccKubernetesPodV1ConfigWithSecurityContextRunAsGroup(podName, imageNam
 
 func testAccKubernetesPodV1ConfigWithSecurityContextSeccompProfile(podName, imageName, seccompProfileType string) string {
 	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1967,7 +1975,7 @@ resource "kubernetes_pod" "test" {
 
 func testAccKubernetesPodV1ConfigWithSecurityContextSeccompProfileLocalhost(podName, imageName string) string {
 	return fmt.Sprintf(`
-resource "kubernetes_pod" "test" {
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2001,7 +2009,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodV1ConfigWithLivenessProbeUsingExec(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2031,7 +2039,7 @@ func testAccKubernetesPodV1ConfigWithLivenessProbeUsingExec(podName, imageName s
 }
 
 func testAccKubernetesPodV1ConfigWithLivenessProbeUsingHTTPGet(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2067,7 +2075,7 @@ func testAccKubernetesPodV1ConfigWithLivenessProbeUsingHTTPGet(podName, imageNam
 }
 
 func testAccKubernetesPodV1ConfigWithLivenessProbeUsingTCP(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2097,7 +2105,7 @@ func testAccKubernetesPodV1ConfigWithLivenessProbeUsingTCP(podName, imageName st
 }
 
 func testAccKubernetesPodV1ConfigWithLivenessProbeUsingGRPC(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2128,7 +2136,7 @@ func testAccKubernetesPodV1ConfigWithLivenessProbeUsingGRPC(podName, imageName s
 }
 
 func testAccKubernetesPodV1ConfigWithLifeCycle(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2163,7 +2171,7 @@ func testAccKubernetesPodV1ConfigWithLifeCycle(podName, imageName string) string
 }
 
 func testAccKubernetesPodV1ConfigWithContainerSecurityContext(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2206,7 +2214,7 @@ func testAccKubernetesPodV1ConfigWithVolumeMounts(secretName, podName, imageName
   }
 }
 
-resource "kubernetes_pod" "test" {
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2252,7 +2260,7 @@ func testAccKubernetesPodV1ConfigWithSecretItemsVolume(secretName, podName, imag
   }
 }
 
-resource "kubernetes_pod" "test" {
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2306,7 +2314,7 @@ func testAccKubernetesPodV1ConfigWithConfigMapVolume(secretName, podName, imageN
   }
 }
 
-resource "kubernetes_pod" "test" {
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2408,7 +2416,7 @@ func testAccKubernetesPodV1CSIVolume(imageName, podName, secretName, volumeName 
   }
 }
 
-resource "kubernetes_pod" "test" {
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       "label" = "web"
@@ -2483,7 +2491,7 @@ resource "kubernetes_secret" "test" {
   }
 }
 
-resource "kubernetes_pod" "test" {
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2572,7 +2580,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodV1ConfigWithResourceRequirements(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2606,7 +2614,7 @@ func testAccKubernetesPodV1ConfigWithResourceRequirements(podName, imageName str
 }
 
 func testAccKubernetesPodV1ConfigWithEmptyResourceRequirements(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2631,7 +2639,7 @@ func testAccKubernetesPodV1ConfigWithEmptyResourceRequirements(podName, imageNam
 }
 
 func testAccKubernetesPodV1ConfigWithResourceRequirementsLimitsOnly(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2658,7 +2666,7 @@ func testAccKubernetesPodV1ConfigWithResourceRequirementsLimitsOnly(podName, ima
 }
 
 func testAccKubernetesPodV1ConfigWithResourceRequirementsRequestsOnly(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2685,7 +2693,7 @@ func testAccKubernetesPodV1ConfigWithResourceRequirementsRequestsOnly(podName, i
 }
 
 func testAccKubernetesPodV1ConfigWithEmptyDirVolumes(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2720,7 +2728,7 @@ func testAccKubernetesPodV1ConfigWithEmptyDirVolumes(podName, imageName string) 
 }
 
 func testAccKubernetesPodV1ConfigWithEmptyDirVolumesSizeLimit(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2756,7 +2764,7 @@ func testAccKubernetesPodV1ConfigWithEmptyDirVolumesSizeLimit(podName, imageName
 }
 
 func testAccKubernetesPodV1ConfigNodeSelector(podName, imageName, region string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2776,7 +2784,7 @@ func testAccKubernetesPodV1ConfigNodeSelector(podName, imageName, region string)
 }
 
 func testAccKubernetesPodV1ConfigArgsUpdate(podName, imageName, args string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2793,7 +2801,7 @@ func testAccKubernetesPodV1ConfigArgsUpdate(podName, imageName, args string) str
 }
 
 func testAccKubernetesPodV1ConfigEnvUpdate(podName, imageName, val string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2820,7 +2828,7 @@ func testAccKubernetesPodV1ConfigWithAutomountServiceAccountToken(saName string,
   }
 }
 
-resource "kubernetes_pod" "test" {
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2851,7 +2859,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodV1ConfigWorkingDir(podName, imageName, val string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2868,7 +2876,7 @@ func testAccKubernetesPodV1ConfigWorkingDir(podName, imageName, val string) stri
 }
 
 func testAccKubernetesPodV1ContainerStartupProbe(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2894,7 +2902,7 @@ func testAccKubernetesPodV1ContainerStartupProbe(podName, imageName string) stri
 }
 
 func testAccKubernetesTerminationMessagePolicyDefault(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2910,7 +2918,7 @@ func testAccKubernetesTerminationMessagePolicyDefault(podName, imageName string)
 }
 
 func testAccKubernetesTerminationMessagePolicyWithOverride(podName, imageName, terminationMessagePolicy string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2935,7 +2943,7 @@ func testAccKubernetesTerminationMessagePolicyWithFallBackToLogsOnErr(podName, i
 }
 
 func testAccKubernetesPodV1ConfigEnableServiceLinks(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -2998,7 +3006,7 @@ resource "kubernetes_config_map" "test_from" {
   }
 }
 
-resource "kubernetes_pod" "test" {
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -3068,7 +3076,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodV1ConfigMinimal(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -3083,7 +3091,7 @@ func testAccKubernetesPodV1ConfigMinimal(name, imageName string) string {
 }
 
 func testAccKubernetesPodV1ConfigEmptyBlocks(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -3166,7 +3174,7 @@ resource "kubernetes_persistent_volume_claim" "test" {
   }
 }
 
-resource "kubernetes_pod" "test" {
+resource "kubernetes_pod_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -3193,7 +3201,7 @@ resource "kubernetes_pod" "test" {
 }
 
 func testAccKubernetesPodV1TopologySpreadConstraintConfig(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     name = "%s"
   }

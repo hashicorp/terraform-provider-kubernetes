@@ -11,9 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
-func dataSourceKubernetesPersistentVolume() *schema.Resource {
+func dataSourceKubernetesPersistentVolumeV1() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKubernetesPersistentVolumeRead,
+		ReadContext: dataSourceKubernetesPersistentVolumeV1Read,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("persistent volume", false),
@@ -144,7 +144,7 @@ func dataSourceKubernetesPersistentVolume() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesPersistentVolumeRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKubernetesPersistentVolumeV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	name := d.Get("metadata.0.name").(string)
 	d.SetId(name)
 	return resourceKubernetesPersistentVolumeRead(ctx, d, meta)

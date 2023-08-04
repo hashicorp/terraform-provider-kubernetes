@@ -5,13 +5,14 @@ package kubernetes
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func dataSourceKubernetesStorageClass() *schema.Resource {
+func dataSourceKubernetesStorageClassV1() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKubernetesStorageClassRead,
+		ReadContext: dataSourceKubernetesStorageClassV1Read,
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("storage class", false),
 			"parameters": {
@@ -85,7 +86,7 @@ func dataSourceKubernetesStorageClass() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesStorageClassRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKubernetesStorageClassV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	name := d.Get("metadata.0.name").(string)
 	d.SetId(name)
 	return resourceKubernetesStorageClassRead(ctx, d, meta)

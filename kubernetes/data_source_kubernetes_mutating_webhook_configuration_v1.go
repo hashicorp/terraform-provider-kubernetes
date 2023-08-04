@@ -12,11 +12,11 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 )
 
-func dataSourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
+func dataSourceKubernetesMutatingWebhookConfigurationV1() *schema.Resource {
 	apiDoc := admissionregistrationv1.MutatingWebhookConfiguration{}.SwaggerDoc()
 	webhookDoc := admissionregistrationv1.MutatingWebhook{}.SwaggerDoc()
 	return &schema.Resource{
-		ReadContext: dataSourceKubernetesMutatingWebhookConfigurationRead,
+		ReadContext: dataSourceKubernetesMutatingWebhookConfigurationV1Read,
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("mutating webhook configuration", false),
 			"webhook": {
@@ -110,7 +110,7 @@ func dataSourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesMutatingWebhookConfigurationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKubernetesMutatingWebhookConfigurationV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	name := d.Get("metadata.0.name").(string)
 	d.SetId(name)
 

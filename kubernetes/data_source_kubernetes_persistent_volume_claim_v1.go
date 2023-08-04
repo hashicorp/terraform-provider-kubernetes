@@ -5,14 +5,15 @@ package kubernetes
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesPersistentVolumeClaim() *schema.Resource {
+func dataSourceKubernetesPersistentVolumeClaimV1() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKubernetesPersistentVolumeClaimRead,
+		ReadContext: dataSourceKubernetesPersistentVolumeClaimV1Read,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("persistent volume claim", true),
@@ -80,7 +81,7 @@ func dataSourceKubernetesPersistentVolumeClaim() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesPersistentVolumeClaimRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKubernetesPersistentVolumeClaimV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
 	om := meta_v1.ObjectMeta{

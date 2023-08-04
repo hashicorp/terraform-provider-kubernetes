@@ -13,9 +13,9 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesNamespace() *schema.Resource {
+func dataSourceKubernetesNamespaceV1() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKubernetesNamespaceRead,
+		ReadContext: dataSourceKubernetesNamespaceV1Read,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("namespace", false),
@@ -40,7 +40,7 @@ func dataSourceKubernetesNamespace() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesNamespaceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKubernetesNamespaceV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)

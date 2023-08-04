@@ -15,7 +15,7 @@ func TestAccKubernetesDataSourcePodV1_basic(t *testing.T) {
 	resourceName := "kubernetes_pod_v1.test"
 	dataSourceName := "data.kubernetes_pod_v1.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImageVersion
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },

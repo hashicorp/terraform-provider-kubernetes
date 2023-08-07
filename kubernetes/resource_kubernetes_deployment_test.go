@@ -1264,9 +1264,9 @@ func testAccKubernetesDeploymentConfig_minimal(name, imageName string) string {
       }
       spec {
         container {
-          image = "%s"
-          name  = "tf-acc-test"
-          command = [ "sleep", "300" ]
+          image   = "%s"
+          name    = "tf-acc-test"
+          command = ["sleep", "300"]
         }
       }
     }

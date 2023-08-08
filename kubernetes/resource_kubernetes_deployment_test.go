@@ -706,7 +706,7 @@ func TestAccKubernetesDeployment_with_resource_requirements(t *testing.T) {
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 	resourceName := "kubernetes_deployment.test"
 
 	resource.Test(t, resource.TestCase{
@@ -1165,7 +1165,7 @@ func TestAccKubernetesDeployment_config_with_automount_service_account_token(t *
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentConfigWithAutomountServiceAccountToken(deploymentName, imageName),
@@ -1264,8 +1264,9 @@ func testAccKubernetesDeploymentConfig_minimal(name, imageName string) string {
       }
       spec {
         container {
-          image = "%s"
-          name  = "tf-acc-test"
+          image   = "%s"
+          name    = "tf-acc-test"
+          command = ["sleep", "300"]
         }
       }
     }

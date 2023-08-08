@@ -20,12 +20,12 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesPod() *schema.Resource {
+func resourceKubernetesPodV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesPodCreate,
-		ReadContext:   resourceKubernetesPodRead,
-		UpdateContext: resourceKubernetesPodUpdate,
-		DeleteContext: resourceKubernetesPodDelete,
+		CreateContext: resourceKubernetesPodV1Create,
+		ReadContext:   resourceKubernetesPodV1Read,
+		UpdateContext: resourceKubernetesPodV1Update,
+		DeleteContext: resourceKubernetesPodV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -76,7 +76,7 @@ func resourceKubernetesPodSchemaV1() map[string]*schema.Schema {
 	}
 }
 
-func resourceKubernetesPodCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPodV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -129,10 +129,10 @@ func resourceKubernetesPodCreate(ctx context.Context, d *schema.ResourceData, me
 	}
 	log.Printf("[INFO] Pod %s created", out.Name)
 
-	return resourceKubernetesPodRead(ctx, d, meta)
+	return resourceKubernetesPodV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesPodUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPodV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -165,11 +165,11 @@ func resourceKubernetesPodUpdate(ctx context.Context, d *schema.ResourceData, me
 	log.Printf("[INFO] Submitted updated pod: %#v", out)
 
 	d.SetId(buildId(out.ObjectMeta))
-	return resourceKubernetesPodRead(ctx, d, meta)
+	return resourceKubernetesPodV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesPodRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesPodExists(ctx, d, meta)
+func resourceKubernetesPodV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesPodV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -213,7 +213,7 @@ func resourceKubernetesPodRead(ctx context.Context, d *schema.ResourceData, meta
 
 }
 
-func resourceKubernetesPodDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPodV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -256,7 +256,7 @@ func resourceKubernetesPodDelete(ctx context.Context, d *schema.ResourceData, me
 	return nil
 }
 
-func resourceKubernetesPodExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesPodV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

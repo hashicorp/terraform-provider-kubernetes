@@ -19,6 +19,7 @@ import (
 func TestAccKubernetesJob_wait_for_completion(t *testing.T) {
 	var conf api.Job
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := busyboxImage
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
@@ -33,7 +34,7 @@ func TestAccKubernetesJob_wait_for_completion(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesJobDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesJobConfig_wait_for_completion(name, busyboxImageVersion),
+				Config: testAccKubernetesJobConfig_wait_for_completion(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// NOTE this is to check that Terraform actually waited for the Job to complete
 					// before considering the Job resource as created
@@ -119,7 +120,7 @@ func TestAccKubernetesJob_update(t *testing.T) {
 	var conf1, conf2, conf3 api.Job
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := alpineImageVersion
-	imageName1 := busyboxImageVersion
+	imageName1 := busyboxImage
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -198,6 +199,7 @@ func TestAccKubernetesJob_update(t *testing.T) {
 func TestAccKubernetesJob_ttl_seconds_after_finished(t *testing.T) {
 	var conf api.Job
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := busyboxImage
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t); skipIfClusterVersionLessThan(t, "1.21.0") },
@@ -209,7 +211,7 @@ func TestAccKubernetesJob_ttl_seconds_after_finished(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesJobDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesJobConfig_ttl_seconds_after_finished(name, busyboxImageVersion),
+				Config: testAccKubernetesJobConfig_ttl_seconds_after_finished(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "60"),

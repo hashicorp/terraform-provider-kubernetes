@@ -77,7 +77,7 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Computed:    isComputed,
 			ForceNew:    !isUpdatable,
 			Default:     conditionalDefault(!isComputed, string(api.DNSClusterFirst)),
-			Description: "Set DNS policy for containers within the pod. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'. Optional: Defaults to 'ClusterFirst', see [Kubernetes reference](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy).",
+			Description: "Set DNS policy for containers within the pod. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'. Defaults to 'ClusterFirst'. More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy",
 			ValidateFunc: validation.StringInSlice([]string{
 				string(api.DNSClusterFirst),
 				string(api.DNSClusterFirstWithHostNet),

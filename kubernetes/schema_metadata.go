@@ -40,7 +40,7 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 		},
 		"resource_version": {
 			Type:        schema.TypeString,
-			Description: fmt.Sprintf("An opaque value that represents the internal version of this %s that can be used by clients to determine when %s has changed. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency", objectName, objectName),
+			Description: fmt.Sprintf("An opaque value that represents the internal version of this %s that can be used by clients to determine when %s has changed. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency", objectName, objectName),
 			Computed:    true,
 		},
 		"uid": {
@@ -57,7 +57,7 @@ func metadataSchema(objectName string, generatableName bool) *schema.Schema {
 	if generatableName {
 		fields["generate_name"] = &schema.Schema{
 			Type:          schema.TypeString,
-			Description:   "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
+			Description:   "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
 			Optional:      true,
 			ForceNew:      true,
 			ValidateFunc:  validateGenerateName,
@@ -98,7 +98,7 @@ func namespacedMetadataSchemaIsTemplate(objectName string, generatableName, isTe
 	if generatableName {
 		fields["generate_name"] = &schema.Schema{
 			Type:          schema.TypeString,
-			Description:   "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
+			Description:   "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
 			Optional:      true,
 			ForceNew:      true,
 			ValidateFunc:  validateGenerateName,

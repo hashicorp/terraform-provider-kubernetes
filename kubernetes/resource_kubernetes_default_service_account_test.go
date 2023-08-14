@@ -16,9 +16,9 @@ import (
 func TestAccKubernetesDefaultServiceAccount_basic(t *testing.T) {
 	var conf api.ServiceAccount
 	namespace := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_default_service_account.test"
+	resourceName := "kubernetes_default_service_account_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -58,8 +58,9 @@ func TestAccKubernetesDefaultServiceAccount_secrets(t *testing.T) {
 	var conf api.ServiceAccount
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	namespace := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_default_service_account_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_default_service_account.test",
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -69,13 +70,13 @@ func TestAccKubernetesDefaultServiceAccount_secrets(t *testing.T) {
 			{
 				Config: testAccKubernetesDefaultServiceAccountConfig_secrets(namespace, name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceAccountExists("kubernetes_default_service_account.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_default_service_account.test", "metadata.0.name", "default"),
-					resource.TestCheckResourceAttrSet("kubernetes_default_service_account.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_default_service_account.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_default_service_account.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_default_service_account.test", "secret.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_default_service_account.test", "image_pull_secret.#", "1"),
+					testAccCheckKubernetesServiceAccountExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", "default"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "secret.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "image_pull_secret.#", "1"),
 					testAccCheckServiceAccountImagePullSecrets(&conf, []*regexp.Regexp{
 						regexp.MustCompile("^" + name + "-two$"),
 					}),
@@ -92,9 +93,9 @@ func TestAccKubernetesDefaultServiceAccount_secrets(t *testing.T) {
 func TestAccKubernetesDefaultServiceAccount_automountServiceAccountToken(t *testing.T) {
 	var conf api.ServiceAccount
 	namespace := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_default_service_account.test"
+	resourceName := "kubernetes_default_service_account_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -123,15 +124,15 @@ func TestAccKubernetesDefaultServiceAccount_automountServiceAccountToken(t *test
 }
 
 func testAccKubernetesDefaultServiceAccountConfig_basic(namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
     name = "%s"
   }
 }
 
-resource "kubernetes_default_service_account" "test" {
+resource "kubernetes_default_service_account_v1" "test" {
   metadata {
-    namespace = kubernetes_namespace.test.metadata.0.name
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
 
     annotations = {
       TestAnnotationOne = "one"
@@ -149,52 +150,52 @@ resource "kubernetes_default_service_account" "test" {
 }
 
 func testAccKubernetesDefaultServiceAccountConfig_secrets(namespace string, name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
     name = "%s"
   }
 }
 
-resource "kubernetes_default_service_account" "test" {
+resource "kubernetes_default_service_account_v1" "test" {
   metadata {
-    namespace = kubernetes_namespace.test.metadata.0.name
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
   }
 
   secret {
-    name = kubernetes_secret.one.metadata[0].name
+    name = kubernetes_secret_v1.one.metadata[0].name
   }
 
   image_pull_secret {
-    name = kubernetes_secret.two.metadata[0].name
+    name = kubernetes_secret_v1.two.metadata[0].name
   }
 }
 
-resource "kubernetes_secret" "one" {
+resource "kubernetes_secret_v1" "one" {
   metadata {
     name      = "%s-one"
-    namespace = kubernetes_namespace.test.metadata.0.name
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
   }
 }
 
-resource "kubernetes_secret" "two" {
+resource "kubernetes_secret_v1" "two" {
   metadata {
     name      = "%s-two"
-    namespace = kubernetes_namespace.test.metadata.0.name
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
   }
 }
 `, namespace, name, name)
 }
 
 func testAccKubernetesDefaultServiceAccountConfig_automountServiceAccountToken(namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
     name = "%s"
   }
 }
 
-resource "kubernetes_default_service_account" "test" {
+resource "kubernetes_default_service_account_v1" "test" {
   metadata {
-    namespace = kubernetes_namespace.test.metadata.0.name
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
   }
 
   automount_service_account_token = false

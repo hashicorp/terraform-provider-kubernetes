@@ -13,13 +13,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesPod() *schema.Resource {
+func dataSourceKubernetesPodV1() *schema.Resource {
 	podSpecFields := podSpecFields(false, false)
 	// Setting this default to false prevents a perpetual diff caused by volume_mounts
 	// being mutated on the server side as Kubernetes automatically adds a mount
 	// for the service account token
 	return &schema.Resource{
-		ReadContext: dataSourceKubernetesPodRead,
+		ReadContext: dataSourceKubernetesPodV1Read,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("pod", true),
@@ -39,7 +39,7 @@ func dataSourceKubernetesPod() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesPodRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKubernetesPodV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)

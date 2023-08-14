@@ -11,9 +11,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesServiceAccount() *schema.Resource {
+func dataSourceKubernetesServiceAccountV1() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKubernetesServiceAccountRead,
+		ReadContext: dataSourceKubernetesServiceAccountV1Read,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("service account", false),
@@ -59,7 +59,7 @@ func dataSourceKubernetesServiceAccount() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesServiceAccountRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)

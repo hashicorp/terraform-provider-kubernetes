@@ -215,23 +215,23 @@ func Provider() *schema.Provider {
 
 		DataSourcesMap: map[string]*schema.Resource{
 			// core
-			"kubernetes_config_map":                 dataSourceKubernetesConfigMap(),
-			"kubernetes_config_map_v1":              dataSourceKubernetesConfigMap(),
-			"kubernetes_namespace":                  dataSourceKubernetesNamespace(),
-			"kubernetes_namespace_v1":               dataSourceKubernetesNamespace(),
+			"kubernetes_config_map":                 dataSourceKubernetesConfigMapV1(),
+			"kubernetes_config_map_v1":              dataSourceKubernetesConfigMapV1(),
+			"kubernetes_namespace":                  dataSourceKubernetesNamespaceV1(),
+			"kubernetes_namespace_v1":               dataSourceKubernetesNamespaceV1(),
 			"kubernetes_all_namespaces":             dataSourceKubernetesAllNamespaces(),
-			"kubernetes_secret":                     dataSourceKubernetesSecret(),
-			"kubernetes_secret_v1":                  dataSourceKubernetesSecret(),
+			"kubernetes_secret":                     dataSourceKubernetesSecretV1(),
+			"kubernetes_secret_v1":                  dataSourceKubernetesSecretV1(),
 			"kubernetes_endpoints_v1":               dataSourceKubernetesEndpointsV1(),
-			"kubernetes_service":                    dataSourceKubernetesService(),
-			"kubernetes_service_v1":                 dataSourceKubernetesService(),
-			"kubernetes_pod":                        dataSourceKubernetesPod(),
-			"kubernetes_pod_v1":                     dataSourceKubernetesPod(),
-			"kubernetes_service_account":            dataSourceKubernetesServiceAccount(),
-			"kubernetes_service_account_v1":         dataSourceKubernetesServiceAccount(),
-			"kubernetes_persistent_volume_v1":       dataSourceKubernetesPersistentVolume(),
-			"kubernetes_persistent_volume_claim":    dataSourceKubernetesPersistentVolumeClaim(),
-			"kubernetes_persistent_volume_claim_v1": dataSourceKubernetesPersistentVolumeClaim(),
+			"kubernetes_service":                    dataSourceKubernetesServiceV1(),
+			"kubernetes_service_v1":                 dataSourceKubernetesServiceV1(),
+			"kubernetes_pod":                        dataSourceKubernetesPodV1(),
+			"kubernetes_pod_v1":                     dataSourceKubernetesPodV1(),
+			"kubernetes_service_account":            dataSourceKubernetesServiceAccountV1(),
+			"kubernetes_service_account_v1":         dataSourceKubernetesServiceAccountV1(),
+			"kubernetes_persistent_volume_v1":       dataSourceKubernetesPersistentVolumeV1(),
+			"kubernetes_persistent_volume_claim":    dataSourceKubernetesPersistentVolumeClaimV1(),
+			"kubernetes_persistent_volume_claim_v1": dataSourceKubernetesPersistentVolumeClaimV1(),
 			"kubernetes_nodes":                      dataSourceKubernetesNodes(),
 
 			// networking
@@ -239,11 +239,11 @@ func Provider() *schema.Provider {
 			"kubernetes_ingress_v1": dataSourceKubernetesIngressV1(),
 
 			// storage
-			"kubernetes_storage_class":    dataSourceKubernetesStorageClass(),
-			"kubernetes_storage_class_v1": dataSourceKubernetesStorageClass(),
+			"kubernetes_storage_class":    dataSourceKubernetesStorageClassV1(),
+			"kubernetes_storage_class_v1": dataSourceKubernetesStorageClassV1(),
 
 			// admission control
-			"kubernetes_mutating_webhook_configuration_v1": dataSourceKubernetesMutatingWebhookConfiguration(),
+			"kubernetes_mutating_webhook_configuration_v1": dataSourceKubernetesMutatingWebhookConfigurationV1(),
 		},
 
 		ResourcesMap: map[string]*schema.Resource{

@@ -13,9 +13,9 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesService() *schema.Resource {
+func dataSourceKubernetesServiceV1() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKubernetesServiceRead,
+		ReadContext: dataSourceKubernetesServiceV1Read,
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("service", false),
 			"spec": {
@@ -239,7 +239,7 @@ func dataSourceKubernetesService() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesServiceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKubernetesServiceV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	om := meta_v1.ObjectMeta{
 		Namespace: d.Get("metadata.0.namespace").(string),
 		Name:      d.Get("metadata.0.name").(string),

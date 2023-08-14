@@ -11,21 +11,21 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
-func TestAccKubernetesDataSourceSecret_basic(t *testing.T) {
+func TestAccKubernetesDataSourceSecretV1_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_secret.test"
-	datasourceName := "data.kubernetes_secret.test"
+	resourceName := "kubernetes_secret_v1.test"
+	datasourceName := "data.kubernetes_secret_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDataSourceSecretConfig_basic(name),
+				Config: testAccKubernetesDataSourceSecretV1_basic(name),
 			},
 			{
-				Config: testAccKubernetesDataSourceSecretConfig_basic(name) +
-					testAccKubernetesDataSourceSecretConfig_read(),
+				Config: testAccKubernetesDataSourceSecretV1_basic(name) +
+					testAccKubernetesDataSourceSecretV1_read(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.name", resourceName, "metadata.0.name"),
 					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.generation", resourceName, "metadata.0.generation"),
@@ -49,21 +49,21 @@ func TestAccKubernetesDataSourceSecret_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesDataSourceSecret_GenerateName(t *testing.T) {
+func TestAccKubernetesDataSourceSecretV1_generateName(t *testing.T) {
 	generate_name := "testing-name"
-	resourceName := "kubernetes_secret.test"
-	datasourceName := "data.kubernetes_secret.test"
+	resourceName := "kubernetes_secret_v1.test"
+	datasourceName := "data.kubernetes_secret_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDataSourceSecretConfig_generateName(generate_name),
+				Config: testAccKubernetesDataSourceSecretV1_generateName(generate_name),
 			},
 			{
-				Config: testAccKubernetesDataSourceSecretConfig_generateName(generate_name) +
-					testAccKubernetesDataSourceSecretConfig_readGenerateName(),
+				Config: testAccKubernetesDataSourceSecretV1_generateName(generate_name) +
+					testAccKubernetesDataSourceSecretV1_readGenerateName(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.name", resourceName, "metadata.0.name"),
 					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.generation", resourceName, "metadata.0.generation"),
@@ -81,8 +81,8 @@ func TestAccKubernetesDataSourceSecret_GenerateName(t *testing.T) {
 	})
 }
 
-func testAccKubernetesDataSourceSecretConfig_generateName(generate_name string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+func testAccKubernetesDataSourceSecretV1_generateName(generate_name string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     generate_name = %q
   }
@@ -99,28 +99,24 @@ func testAccKubernetesDataSourceSecretConfig_generateName(generate_name string) 
 `, generate_name)
 }
 
-func testAccKubernetesDataSourceSecretConfig_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+func testAccKubernetesDataSourceSecretV1_basic(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
       TestAnnotationTwo = "two"
     }
-
     labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
-
     name = "%s"
   }
-
   data = {
     one = "first"
     two = "second"
   }
-
   binary_data = {
     raw = "${base64encode("Raw data should come back as is in the pod")}"
   }
@@ -128,28 +124,26 @@ func testAccKubernetesDataSourceSecretConfig_basic(name string) string {
 `, name)
 }
 
-func testAccKubernetesDataSourceSecretConfig_readGenerateName() string {
-	return fmt.Sprintf(`data "kubernetes_secret" "test" {
+func testAccKubernetesDataSourceSecretV1_readGenerateName() string {
+	return `data "kubernetes_secret_v1" "test" {
   metadata {
-    name = kubernetes_secret.test.metadata.0.name
+    name = kubernetes_secret_v1.test.metadata.0.name
   }
-
   binary_data = {
     raw = ""
   }
 }
-`)
+`
 }
 
-func testAccKubernetesDataSourceSecretConfig_read() string {
-	return fmt.Sprintf(`data "kubernetes_secret" "test" {
+func testAccKubernetesDataSourceSecretV1_read() string {
+	return `data "kubernetes_secret_v1" "test" {
   metadata {
-    name = kubernetes_secret.test.metadata.0.name
+    name = kubernetes_secret_v1.test.metadata.0.name
   }
-
   binary_data = {
     raw = ""
   }
 }
-`)
+`
 }

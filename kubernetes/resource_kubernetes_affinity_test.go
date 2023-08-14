@@ -21,12 +21,12 @@ func TestAccKubernetesPod_with_node_affinity_with_required_during_scheduling_ign
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodConfigWithNodeAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					testAccCheckKubernetesPodV1Exists("kubernetes_pod.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.node_affinity.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.#", keyName), "1"),
@@ -54,12 +54,12 @@ func TestAccKubernetesPod_with_node_affinity_with_preferred_during_scheduling_ig
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					testAccCheckKubernetesPodV1Exists("kubernetes_pod.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.node_affinity.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.#", keyName), "1"),
@@ -91,12 +91,12 @@ func TestAccKubernetesPod_with_pod_affinity_with_required_during_scheduling_igno
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodConfigWithPodAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					testAccCheckKubernetesPodV1Exists("kubernetes_pod.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_affinity.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.#", keyName), "1"),
@@ -125,12 +125,12 @@ func TestAccKubernetesPod_with_pod_affinity_with_preferred_during_scheduling_ign
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodConfigWithPodAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					testAccCheckKubernetesPodV1Exists("kubernetes_pod.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_affinity.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.#", keyName), "1"),
@@ -162,12 +162,12 @@ func TestAccKubernetesPod_with_pod_anti_affinity_with_required_during_scheduling
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfRunningInMinikube(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodConfigWithPodAntiAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					testAccCheckKubernetesPodV1Exists("kubernetes_pod.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_anti_affinity.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.#", keyName), "1"),
@@ -196,12 +196,12 @@ func TestAccKubernetesPod_with_pod_anti_affinity_with_preferred_during_schedulin
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfRunningInMinikube(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodDestroy,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodConfigWithPodAntiAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodExists("kubernetes_pod.test", &conf),
+					testAccCheckKubernetesPodV1Exists("kubernetes_pod.test", &conf),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_anti_affinity.#", "1"),
 					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.#", keyName), "1"),

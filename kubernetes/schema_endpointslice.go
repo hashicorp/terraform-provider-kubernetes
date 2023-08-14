@@ -9,7 +9,9 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"k8s.io/apimachinery/pkg/util/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	corev1 "k8s.io/api/core/v1"
+	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
 func schemaEndpointSliceSubsetEndpoints() *schema.Resource {
@@ -26,7 +28,7 @@ func schemaEndpointSliceSubsetEndpoints() *schema.Resource {
 			"condition": {
 				Type:        schema.TypeList,
 				Description: "condition contains information about the current status of the endpoint.",
-				Required:    true,
+				Optional:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -55,7 +57,7 @@ func schemaEndpointSliceSubsetEndpoints() *schema.Resource {
 				ValidateFunc: func(v interface{}, k string) ([]string, []error) {
 					hostname := v.(string)
 					errs := []error{}
-					errLabels := validation.IsDNS1123Label(hostname)
+					errLabels := k8svalidation.IsDNS1123Label(hostname)
 					for _, e := range errLabels {
 						errs = append(errs, errors.New(e))
 					}
@@ -103,7 +105,12 @@ func schemaEndpointSliceSubsetPorts() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "protocol represents the IP protocol for this port. Must be UDP, TCP, or SCTP. Default is TCP.",
 				Optional:    true,
-				Default:     "TCP",
+				Default:     string(corev1.ProtocolTCP),
+				ValidateFunc: validation.StringInSlice([]string{
+					string(corev1.ProtocolTCP),
+					string(corev1.ProtocolUDP),
+					string(corev1.ProtocolSCTP),
+				}, false),
 			},
 			"name": {
 				Type:        schema.TypeString,

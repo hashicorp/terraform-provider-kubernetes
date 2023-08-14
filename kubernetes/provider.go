@@ -248,8 +248,8 @@ func Provider() *schema.Provider {
 
 		ResourcesMap: map[string]*schema.Resource{
 			// core
-			"kubernetes_namespace":                  resourceKubernetesNamespace(),
-			"kubernetes_namespace_v1":               resourceKubernetesNamespace(),
+			"kubernetes_namespace":                  resourceKubernetesNamespaceV1(),
+			"kubernetes_namespace_v1":               resourceKubernetesNamespaceV1(),
 			"kubernetes_service":                    resourceKubernetesService(),
 			"kubernetes_service_v1":                 resourceKubernetesService(),
 			"kubernetes_service_account":            resourceKubernetesServiceAccount(),

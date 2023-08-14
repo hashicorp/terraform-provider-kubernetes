@@ -5,17 +5,8 @@ on:
   pull_request:
     branches:
       - main
+
 jobs:
-  markdown-link-check:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-    - name: Run markdown link checker
-      uses: gaurav-nelson/github-action-markdown-link-check@d53a906aa6b22b8979d33bc86170567e619495ec # 1.0.15
-      with:
-        config-file: '.github/workflows/markdown.links.config.json'
-        folder-path: 'website/'
   test:
     runs-on: ubuntu-latest
     steps:

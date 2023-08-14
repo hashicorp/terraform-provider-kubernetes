@@ -64,7 +64,7 @@ func resourceKubernetesHorizontalPodAutoscalerV1() *schema.Resource {
 									},
 									"name": {
 										Type:        schema.TypeString,
-										Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+										Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 										Required:    true,
 									},
 								},

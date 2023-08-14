@@ -82,7 +82,7 @@ func horizontalPodAutoscalerSchemaV2() map[string]*schema.Schema {
 								},
 								"name": {
 									Type:        schema.TypeString,
-									Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+									Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 									Required:    true,
 								},
 							},
@@ -248,7 +248,7 @@ func crossVersionObjectReferenceFields() *schema.Resource {
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+				Description: "Name of the referent; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 			},
 		},
 	}

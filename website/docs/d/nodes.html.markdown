@@ -70,7 +70,7 @@ The following arguments are supported:
 * `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the node.
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this node that can be used by clients to determine when the node has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
-* `uid` - The unique in time and space value for this node . For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
+* `uid` - The unique in time and space value for this node . For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids)
 
 ### `spec`
 

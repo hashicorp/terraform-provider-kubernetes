@@ -13,7 +13,7 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"annotations": {
 			Type:         schema.TypeMap,
-			Description:  fmt.Sprintf("An unstructured key value map stored with the %s that may be used to store arbitrary metadata. More info: http://kubernetes.io/docs/user-guide/annotations", objectName),
+			Description:  fmt.Sprintf("An unstructured key value map stored with the %s that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/", objectName),
 			Optional:     true,
 			Elem:         &schema.Schema{Type: schema.TypeString},
 			ValidateFunc: validateAnnotations,
@@ -25,14 +25,14 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 		},
 		"labels": {
 			Type:         schema.TypeMap,
-			Description:  fmt.Sprintf("Map of string keys and values that can be used to organize and categorize (scope and select) the %s. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels", objectName),
+			Description:  fmt.Sprintf("Map of string keys and values that can be used to organize and categorize (scope and select) the %s. May match selectors of replication controllers and services. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/", objectName),
 			Optional:     true,
 			Elem:         &schema.Schema{Type: schema.TypeString},
 			ValidateFunc: validateLabels,
 		},
 		"name": {
 			Type:         schema.TypeString,
-			Description:  fmt.Sprintf("Name of the %s, must be unique. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names", objectName),
+			Description:  fmt.Sprintf("Name of the %s, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names", objectName),
 			Optional:     true,
 			ForceNew:     true,
 			Computed:     true,
@@ -45,7 +45,7 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 		},
 		"uid": {
 			Type:        schema.TypeString,
-			Description: fmt.Sprintf("The unique in time and space value for this %s. More info: http://kubernetes.io/docs/user-guide/identifiers#uids", objectName),
+			Description: fmt.Sprintf("The unique in time and space value for this %s. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids", objectName),
 			Computed:    true,
 		},
 	}

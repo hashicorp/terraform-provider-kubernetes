@@ -35,21 +35,21 @@ The following arguments are supported:
 
 #### Arguments
 
-* `name` - (Optional) Name of the persistent volume claim, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+* `name` - (Optional) Name of the persistent volume claim, must be unique. Cannot be updated. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
 * `namespace` - (Optional) Namespace defines the space within which name of the persistent volume claim must be unique.
 
 #### Attributes
 
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this persistent volume claim that can be used by clients to determine when persistent volume claim has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
-* `uid` - The unique in time and space value for this persistent volume claim. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
+* `uid` - The unique in time and space value for this persistent volume claim. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids)
 
 ### `spec`
 
 #### Attributes
 
-* `access_modes` - A set of the desired access modes the volume should have. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes-1)
-* `selector` - Claims can specify a label selector to further filter the set of volumes. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/persistent-volumes#selector)
+* `access_modes` - A set of the desired access modes the volume should have. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes)
+* `selector` - Claims can specify a label selector to further filter the set of volumes. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#selector)
 * `volume_name` - The binding reference to the PersistentVolume backing this claim.
 * `storage_class_name` - Name of the storage class requested by the claim.
 

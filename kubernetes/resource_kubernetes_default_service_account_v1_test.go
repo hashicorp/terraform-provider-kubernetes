@@ -23,12 +23,12 @@ func TestAccKubernetesDefaultServiceAccountV1_basic(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceAccountDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceAccountV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDefaultServiceAccountV1Config_basic(namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceAccountExists(resourceName, &conf),
+					testAccCheckKubernetesServiceAccountV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -65,22 +65,22 @@ func TestAccKubernetesDefaultServiceAccountV1_secrets(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceAccountDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceAccountV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDefaultServiceAccountV1Config_secrets(namespace, name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceAccountExists(resourceName, &conf),
+					testAccCheckKubernetesServiceAccountV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", "default"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "secret.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "image_pull_secret.#", "1"),
-					testAccCheckServiceAccountImagePullSecrets(&conf, []*regexp.Regexp{
+					testAccCheckServiceAccountV1ImagePullSecrets(&conf, []*regexp.Regexp{
 						regexp.MustCompile("^" + name + "-two$"),
 					}),
-					testAccCheckServiceAccountSecrets(&conf, []*regexp.Regexp{
+					testAccCheckServiceAccountV1Secrets(&conf, []*regexp.Regexp{
 						regexp.MustCompile("^" + name + "one$"),
 						regexp.MustCompile("^default-token-[a-z0-9]+$"),
 					}),
@@ -100,12 +100,12 @@ func TestAccKubernetesDefaultServiceAccountV1_automountServiceAccountToken(t *te
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceAccountDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceAccountV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDefaultServiceAccountV1Config_automountServiceAccountToken(namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceAccountExists(resourceName, &conf),
+					testAccCheckKubernetesServiceAccountV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", "default"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -150,7 +150,7 @@ resource "kubernetes_default_service_account_v1" "test" {
 }
 
 func testAccKubernetesDefaultServiceAccountV1Config_secrets(namespace string, name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
     name = "%s"
   }

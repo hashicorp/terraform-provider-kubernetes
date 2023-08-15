@@ -20,12 +20,12 @@ func TestAccKubernetesTokenRequest_basic(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceAccountDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceAccountV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesTokenRequestConfig_basic(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceAccountExists(resourceName, &conf),
+					testAccCheckKubernetesServiceAccountV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", "tokentest"),
 					resource.TestCheckResourceAttr(tokenName, "metadata.0.name", "tokentest"),
 					resource.TestCheckResourceAttr(tokenName, "spec.0.audiences.0", "api"),

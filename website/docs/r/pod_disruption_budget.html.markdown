@@ -34,8 +34,8 @@ resource "kubernetes_pod_disruption_budget" "demo" {
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard resource's metadata. For more info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
-* `spec` - (Required) Spec defines the behavior of a Pod Disruption Budget. https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+* `metadata` - (Required) Standard resource's metadata. For more info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+* `spec` - (Required) Spec defines the behavior of a Pod Disruption Budget. https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 
 ## Nested Blocks
 

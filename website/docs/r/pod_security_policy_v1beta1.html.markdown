@@ -63,8 +63,8 @@ resource "kubernetes_pod_security_policy_v1beta1" "example" {
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard Pod Security Policy's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#metadata)
-* `spec` - (Required) Spec contains information for locating and communicating with a server. [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#spec-and-status)
+* `metadata` - (Required) Standard Pod Security Policy's metadata. For more info see [Kubernetes reference](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status)
+* `spec` - (Required) Spec contains information for locating and communicating with a server. [Kubernetes reference](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status)
 
 ## Nested Blocks
 

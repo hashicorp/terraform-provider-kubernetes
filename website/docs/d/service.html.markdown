@@ -37,7 +37,7 @@ The following arguments are supported:
 
 ## Attributes
 
-* `spec` - Spec defines the behavior of a service. [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status)
+* `spec` - Spec defines the behavior of a service. [Kubernetes reference](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status)
 
 ## Nested Blocks
 

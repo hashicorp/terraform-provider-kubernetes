@@ -79,7 +79,7 @@ resource "kubernetes_replication_controller_v1" "example" {
 The following arguments are supported:
 
 * `metadata` - (Required) Standard replication controller's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
-* `spec` - (Required) Spec defines the specification of the desired behavior of the replication controller. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status)
+* `spec` - (Required) Spec defines the specification of the desired behavior of the replication controller. For more info see [Kubernetes reference](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status)
 
 ## Nested Blocks
 
@@ -122,7 +122,7 @@ The following arguments are supported:
 
 * `metadata` - (Optional) Standard object's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata). While required by the kubernetes API, this field is marked as optional to allow the usage of the deprecated pod spec fields that were mistakenly placed directly under the `template` block.
 
-* `spec` - (Optional) Specification of the desired behavior of the pod. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status)
+* `spec` - (Optional) Specification of the desired behavior of the pod. For more info see [Kubernetes reference](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status)
 
 ~> **NOTE:** all the fields from the `spec.template.spec` block are also accepted at the `spec.template` level but that usage is deprecated. All existing configurations should be updated to only use the new fields under `spec.template.spec`. Mixing the usage of deprecated fields with new fields is not supported.
 

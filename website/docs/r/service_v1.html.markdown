@@ -121,7 +121,7 @@ output "load_balancer_info" {
 The following arguments are supported:
 
 * `metadata` - (Required) Standard service's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
-* `spec` - (Required) Spec defines the behavior of a service. [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status)
+* `spec` - (Required) Spec defines the behavior of a service. [Kubernetes reference](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status)
 * `wait_for_load_balancer` - (Optional) Terraform will wait for the load balancer to have at least 1 endpoint before considering the resource created. Defaults to `true`.
 
 ## Nested Blocks

@@ -37,7 +37,7 @@ resource "kubernetes_ingress_class_v1" "example" {
 The following arguments are supported:
 
 * `metadata` - (Required) Standard ingress's metadata. For more info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata
-* `spec` - (Required) Spec defines the behavior of a ingress. https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+* `spec` - (Required) Spec defines the behavior of a ingress. https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 * `wait_for_load_balancer` - (Optional) Terraform will wait for the load balancer to have at least 1 endpoint before considering the resource created. Defaults to `false`.
 
 ## Nested Blocks

@@ -54,8 +54,8 @@ resource "kubernetes_cron_job_v1" "demo" {
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard resource's metadata. For more info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
-* `spec` - (Required) Spec defines the behavior of a CronJob. https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+* `metadata` - (Required) Standard resource's metadata. For more info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+* `spec` - (Required) Spec defines the behavior of a CronJob. https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 
 ## Nested Blocks
 
@@ -99,7 +99,7 @@ The following arguments are supported:
 #### Arguments
 
 * `metadata` - (Required) Standard object's metadata of the jobs created from this template. For more info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata
-* `spec` - (Required) Specification of the desired behavior of the job. For more info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+* `spec` - (Required) Specification of the desired behavior of the job. For more info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 
 ### `spec`
 

@@ -206,7 +206,7 @@ func commonVolumeSources() map[string]*schema.Schema {
 				Schema: map[string]*schema.Schema{
 					"monitors": {
 						Type:        schema.TypeSet,
-						Description: "Monitors is a collection of Ceph monitors More info:https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it",
+						Description: "Monitors is a collection of Ceph monitors. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it",
 						Required:    true,
 						Elem:        &schema.Schema{Type: schema.TypeString},
 						Set:         schema.HashString,
@@ -218,18 +218,18 @@ func commonVolumeSources() map[string]*schema.Schema {
 					},
 					"read_only": {
 						Type:        schema.TypeBool,
-						Description: "Whether to force the read-only setting in VolumeMounts. Defaults to `false` (read/write). More info:https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it",
+						Description: "Whether to force the read-only setting in VolumeMounts. Defaults to `false` (read/write). More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it",
 						Optional:    true,
 					},
 					"secret_file": {
 						Type:        schema.TypeString,
-						Description: "The path to key ring for User, default is /etc/ceph/user.secret More info:https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it",
+						Description: "The path to key ring for User, default is `/etc/ceph/user.secret`. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it",
 						Optional:    true,
 					},
-					"secret_ref": commonVolumeSourcesSecretRef("Reference to the authentication secret for User, default is empty. More info:https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it"),
+					"secret_ref": commonVolumeSourcesSecretRef("Reference to the authentication secret for User, default is empty. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it"),
 					"user": {
 						Type:        schema.TypeString,
-						Description: "User is the rados user name, default is admin. More info:https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it",
+						Description: "User is the rados user name, default is admin. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it",
 						Optional:    true,
 					},
 				},

@@ -124,7 +124,7 @@ func TestAccKubernetesDefaultServiceAccountV1_automountServiceAccountToken(t *te
 }
 
 func testAccKubernetesDefaultServiceAccountV1Config_basic(namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -187,7 +187,7 @@ resource "kubernetes_secret_v1" "two" {
 }
 
 func testAccKubernetesDefaultServiceAccountV1Config_automountServiceAccountToken(namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
     name = "%s"
   }

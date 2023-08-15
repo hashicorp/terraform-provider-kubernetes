@@ -10,11 +10,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	api "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
-func TestAccKubernetesDefaultServiceAccount_basic(t *testing.T) {
-	var conf api.ServiceAccount
+func TestAccKubernetesDefaultServiceAccountV1_basic(t *testing.T) {
+	var conf corev1.ServiceAccount
 	namespace := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_default_service_account_v1.test"
 
@@ -26,7 +26,7 @@ func TestAccKubernetesDefaultServiceAccount_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesServiceAccountDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDefaultServiceAccountConfig_basic(namespace),
+				Config: testAccKubernetesDefaultServiceAccountV1Config_basic(namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceAccountExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
@@ -54,8 +54,8 @@ func TestAccKubernetesDefaultServiceAccount_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesDefaultServiceAccount_secrets(t *testing.T) {
-	var conf api.ServiceAccount
+func TestAccKubernetesDefaultServiceAccountV1_secrets(t *testing.T) {
+	var conf corev1.ServiceAccount
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	namespace := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_default_service_account_v1.test"
@@ -68,7 +68,7 @@ func TestAccKubernetesDefaultServiceAccount_secrets(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesServiceAccountDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDefaultServiceAccountConfig_secrets(namespace, name),
+				Config: testAccKubernetesDefaultServiceAccountV1Config_secrets(namespace, name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceAccountExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", "default"),
@@ -90,8 +90,8 @@ func TestAccKubernetesDefaultServiceAccount_secrets(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesDefaultServiceAccount_automountServiceAccountToken(t *testing.T) {
-	var conf api.ServiceAccount
+func TestAccKubernetesDefaultServiceAccountV1_automountServiceAccountToken(t *testing.T) {
+	var conf corev1.ServiceAccount
 	namespace := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_default_service_account_v1.test"
 
@@ -103,7 +103,7 @@ func TestAccKubernetesDefaultServiceAccount_automountServiceAccountToken(t *test
 		CheckDestroy:      testAccCheckKubernetesServiceAccountDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDefaultServiceAccountConfig_automountServiceAccountToken(namespace),
+				Config: testAccKubernetesDefaultServiceAccountV1Config_automountServiceAccountToken(namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceAccountExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", "default"),
@@ -123,8 +123,8 @@ func TestAccKubernetesDefaultServiceAccount_automountServiceAccountToken(t *test
 	})
 }
 
-func testAccKubernetesDefaultServiceAccountConfig_basic(namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+func testAccKubernetesDefaultServiceAccountV1Config_basic(namespace string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = "%s"
   }
@@ -149,8 +149,8 @@ resource "kubernetes_default_service_account_v1" "test" {
 `, namespace)
 }
 
-func testAccKubernetesDefaultServiceAccountConfig_secrets(namespace string, name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+func testAccKubernetesDefaultServiceAccountV1Config_secrets(namespace string, name string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = "%s"
   }
@@ -186,8 +186,8 @@ resource "kubernetes_secret_v1" "two" {
 `, namespace, name, name)
 }
 
-func testAccKubernetesDefaultServiceAccountConfig_automountServiceAccountToken(namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+func testAccKubernetesDefaultServiceAccountV1Config_automountServiceAccountToken(namespace string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = "%s"
   }

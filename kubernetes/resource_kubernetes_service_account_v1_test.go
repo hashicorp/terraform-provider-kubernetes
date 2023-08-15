@@ -12,12 +12,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	api "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesServiceAccount_basic(t *testing.T) {
-	var conf api.ServiceAccount
+	var conf corev1.ServiceAccount
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_service_account_v1.test"
 
@@ -68,7 +68,7 @@ func TestAccKubernetesServiceAccount_basic(t *testing.T) {
 }
 
 func TestAccKubernetesServiceAccount_default_secret(t *testing.T) {
-	var conf api.ServiceAccount
+	var conf corev1.ServiceAccount
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_service_account_v1.test"
 
@@ -101,7 +101,7 @@ func TestAccKubernetesServiceAccount_default_secret(t *testing.T) {
 }
 
 func TestAccKubernetesServiceAccount_automount(t *testing.T) {
-	var conf api.ServiceAccount
+	var conf corev1.ServiceAccount
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_service_account_v1.test"
 
@@ -146,7 +146,7 @@ func TestAccKubernetesServiceAccount_automount(t *testing.T) {
 }
 
 func TestAccKubernetesServiceAccount_update(t *testing.T) {
-	var conf api.ServiceAccount
+	var conf corev1.ServiceAccount
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_service_account_v1.test"
 
@@ -238,7 +238,7 @@ func TestAccKubernetesServiceAccount_update(t *testing.T) {
 }
 
 func TestAccKubernetesServiceAccount_generatedName(t *testing.T) {
-	var conf api.ServiceAccount
+	var conf corev1.ServiceAccount
 	prefix := "tf-acc-test-gen-"
 	resourceName := "kubernetes_service_account_v1.test"
 
@@ -271,7 +271,7 @@ func TestAccKubernetesServiceAccount_generatedName(t *testing.T) {
 	})
 }
 
-func testAccCheckServiceAccountImagePullSecrets(m *api.ServiceAccount, expected []*regexp.Regexp) resource.TestCheckFunc {
+func testAccCheckServiceAccountImagePullSecrets(m *corev1.ServiceAccount, expected []*regexp.Regexp) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(m.ImagePullSecrets) == 0 {
 			return nil
@@ -286,7 +286,7 @@ func testAccCheckServiceAccountImagePullSecrets(m *api.ServiceAccount, expected 
 	}
 }
 
-func matchLocalObjectReferenceName(lor []api.LocalObjectReference, expected []*regexp.Regexp) bool {
+func matchLocalObjectReferenceName(lor []corev1.LocalObjectReference, expected []*regexp.Regexp) bool {
 	for _, r := range expected {
 		for _, ps := range lor {
 			matched := r.MatchString(ps.Name)
@@ -298,7 +298,7 @@ func matchLocalObjectReferenceName(lor []api.LocalObjectReference, expected []*r
 	return false
 }
 
-func testAccCheckServiceAccountSecrets(m *api.ServiceAccount, expected []*regexp.Regexp) resource.TestCheckFunc {
+func testAccCheckServiceAccountSecrets(m *corev1.ServiceAccount, expected []*regexp.Regexp) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if clusterVersionGreaterThanOrEqual("1.24.0") {
 			return nil
@@ -314,7 +314,7 @@ func testAccCheckServiceAccountSecrets(m *api.ServiceAccount, expected []*regexp
 	}
 }
 
-func matchObjectReferenceName(lor []api.ObjectReference, expected []*regexp.Regexp) bool {
+func matchObjectReferenceName(lor []corev1.ObjectReference, expected []*regexp.Regexp) bool {
 	for _, r := range expected {
 		for _, ps := range lor {
 			matched := r.MatchString(ps.Name)
@@ -355,7 +355,7 @@ func testAccCheckKubernetesServiceAccountDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckKubernetesServiceAccountExists(n string, obj *api.ServiceAccount) resource.TestCheckFunc {
+func testAccCheckKubernetesServiceAccountExists(n string, obj *corev1.ServiceAccount) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {

@@ -62,7 +62,7 @@ func TestAccKubernetesDefaultServiceAccountV1_secrets(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_default_service_account.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceAccountDestroy,

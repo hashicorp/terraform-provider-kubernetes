@@ -20,7 +20,7 @@ data "kubernetes_resources" "example" {
 }
 
 output "test" {
-  value = length(data.kubernetes_resources.namespaces.objects)
+  value = length(data.kubernetes_resources.example.objects)
 }
 ```
 
@@ -34,7 +34,7 @@ data "kubernetes_resources" "example" {
 }
 
 output "test" {
-  value = length(data.kubernetes_resources.namespaces.objects)
+  value = length(data.kubernetes_resources.example.objects)
 }
 ```
 

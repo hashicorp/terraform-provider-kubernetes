@@ -29,7 +29,7 @@ func resourceKubernetesHorizontalPodAutoscalerV1() *schema.Resource {
 			"metadata": namespacedMetadataSchema("horizontal pod autoscaler", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: "Behaviour of the autoscaler. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
+				Description: "Behaviour of the autoscaler. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
@@ -64,7 +64,7 @@ func resourceKubernetesHorizontalPodAutoscalerV1() *schema.Resource {
 									},
 									"name": {
 										Type:        schema.TypeString,
-										Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+										Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 										Required:    true,
 									},
 								},

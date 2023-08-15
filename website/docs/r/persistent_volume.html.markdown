@@ -92,10 +92,10 @@ The following arguments are supported:
 
 #### Arguments
 
-* `access_modes` - (Required) Contains all ways the volume can be mounted. Valid values are `ReadWriteOnce`, `ReadOnlyMany`, `ReadWriteMany`. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes)
-* `capacity` - (Required) A description of the persistent volume's resources and capacity. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/persistent-volumes#capacity)
+* `access_modes` - (Required) Contains all ways the volume can be mounted. Valid values are `ReadWriteOnce`, `ReadOnlyMany`, `ReadWriteMany`. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes)
+* `capacity` - (Required) A description of the persistent volume's resources and capacity. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes#capacity)
 * `node_affinity` - (Optional) NodeAffinity defines constraints that limit what nodes this volume can be accessed from. This field influences the scheduling of pods that use this volume.
-* `persistent_volume_reclaim_policy` - (Optional) What happens to a persistent volume when released from its claim. Valid options are Retain (default), Delete and Recycle. Recycling must be supported by the volume plugin underlying this persistent volume. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/persistent-volumes#recycling-policy)
+* `persistent_volume_reclaim_policy` - (Optional) What happens to a persistent volume when released from its claim. Valid options are Retain (default), Delete and Recycle. Recycling must be supported by the volume plugin underlying this persistent volume. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes#reclaiming)
 * `persistent_volume_source` - (Required) The specification of a persistent volume.
 * `storage_class_name` - (Optional) The name of the persistent volume's storage class. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class)
 * `mount_options` - (Optional) A Kubernetes administrator can specify additional mount options for when a Persistent Volume is mounted on a node.
@@ -135,7 +135,7 @@ The following arguments are supported:
 
 #### Arguments
 
-* `aws_elastic_block_store` - (Optional) Represents an AWS Disk resource that is attached to a kubelet's host machine and then exposed to the pod. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#awselasticblockstore)
+* `aws_elastic_block_store` - (Optional) Represents an AWS Disk resource that is attached to a kubelet's host machine and then exposed to the pod. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore)
 * `azure_disk` - (Optional) Represents an Azure Data Disk mount on the host and bind mount to the pod.
 * `azure_file` - (Optional) Represents an Azure File Service mount on the host and bind mount to the pod.
 * `ceph_fs` - (Optional) Represents a Ceph FS mount on the host that shares a pod's lifetime.
@@ -144,12 +144,12 @@ The following arguments are supported:
 * `fc` - (Optional) Represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod.
 * `flex_volume` - (Optional) Represents a generic volume resource that is provisioned/attached using an exec based plugin. This is an alpha feature and may change in future.
 * `flocker` - (Optional) Represents a Flocker volume attached to a kubelet's host machine and exposed to the pod for its usage. This depends on the Flocker control service being running.
-* `gce_persistent_disk` - (Optional) Represents a GCE Disk resource that is attached to a kubelet's host machine and then exposed to the pod. Provisioned by an admin. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#gcepersistentdisk).
+* `gce_persistent_disk` - (Optional) Represents a GCE Disk resource that is attached to a kubelet's host machine and then exposed to the pod. Provisioned by an admin. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk).
 * `glusterfs` - (Optional) Represents a Glusterfs volume that is attached to a host and exposed to the pod. Provisioned by an admin. For more info see https://github.com/kubernetes/examples/tree/master/volumes/glusterfs#glusterfs.
-* `host_path` - (Optional) Represents a directory on the host. Provisioned by a developer or tester. This is useful for single-node development and testing only! On-host storage is not supported in any way and WILL NOT WORK in a multi-node cluster. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#hostpath)
+* `host_path` - (Optional) Represents a directory on the host. Provisioned by a developer or tester. This is useful for single-node development and testing only! On-host storage is not supported in any way and WILL NOT WORK in a multi-node cluster. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#hostpath)
 * `iscsi` - (Optional) Represents an ISCSI Disk resource that is attached to a kubelet's host machine and then exposed to the pod. Provisioned by an admin.
 * `local` - (Optional) Represents a local storage volume on the host. Provisioned by an admin. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes/#local).
-* `nfs` - (Optional) Represents an NFS mount on the host. Provisioned by an admin. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#nfs).
+* `nfs` - (Optional) Represents an NFS mount on the host. Provisioned by an admin. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#nfs).
 * `photon_persistent_disk` - (Optional) Represents a PhotonController persistent disk attached and mounted on kubelets host machine.
 * `quobyte` - (Optional) Quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
 * `rbd` - (Optional) Represents a Rados Block Device mount on the host that shares a pod's lifetime. For more info see https://kubernetes.io/docs/concepts/storage/volumes/#rbd.
@@ -160,10 +160,10 @@ The following arguments are supported:
 
 #### Arguments
 
-* `fs_type` - (Optional) Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#awselasticblockstore)
+* `fs_type` - (Optional) Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore)
 * `partition` - (Optional) The partition in the volume that you want to mount. If omitted, the default is to mount by volume name. Examples: For volume /dev/sda1, you specify the partition as "1". Similarly, the volume partition for /dev/sda is "0" (or you can leave the property empty).
-* `read_only` - (Optional) Whether to set the read-only property in VolumeMounts to "true". If omitted, the default is "false". For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#awselasticblockstore)
-* `volume_id` - (Required) Unique ID of the persistent disk resource in AWS (Amazon EBS volume). For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#awselasticblockstore)
+* `read_only` - (Optional) Whether to set the read-only property in VolumeMounts to "true". If omitted, the default is "false". For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore)
+* `volume_id` - (Required) Unique ID of the persistent disk resource in AWS (Amazon EBS volume). For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore)
 
 ### `azure_disk`
 
@@ -248,10 +248,10 @@ The following arguments are supported:
 
 #### Arguments
 
-* `fs_type` - (Optional) Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#gcepersistentdisk)
-* `partition` - (Optional) The partition in the volume that you want to mount. If omitted, the default is to mount by volume name. Examples: For volume /dev/sda1, you specify the partition as "1". Similarly, the volume partition for /dev/sda is "0" (or you can leave the property empty). For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#gcepersistentdisk)
-* `pd_name` - (Required) Unique name of the PD resource in GCE. Used to identify the disk in GCE. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#gcepersistentdisk)
-* `read_only` - (Optional) Whether to force the ReadOnly setting in VolumeMounts. Defaults to false. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#gcepersistentdisk)
+* `fs_type` - (Optional) Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk)
+* `partition` - (Optional) The partition in the volume that you want to mount. If omitted, the default is to mount by volume name. Examples: For volume /dev/sda1, you specify the partition as "1". Similarly, the volume partition for /dev/sda is "0" (or you can leave the property empty). For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk)
+* `pd_name` - (Required) Unique name of the PD resource in GCE. Used to identify the disk in GCE. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk)
+* `read_only` - (Optional) Whether to force the ReadOnly setting in VolumeMounts. Defaults to false. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk)
 
 ### `glusterfs`
 
@@ -265,14 +265,14 @@ The following arguments are supported:
 
 #### Arguments
 
-* `path` - (Optional) Path of the directory on the host. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#hostpath)
+* `path` - (Optional) Path of the directory on the host. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#hostpath)
 * `type` - (Optional) Type for HostPath volume. Defaults to "". For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#hostpath)
 
 ### `iscsi`
 
 #### Arguments
 
-* `fs_type` - (Optional) Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#iscsi)
+* `fs_type` - (Optional) Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#iscsi)
 * `iqn` - (Required) Target iSCSI Qualified Name.
 * `iscsi_interface` - (Optional) iSCSI interface name that uses an iSCSI transport. Defaults to 'default' (tcp).
 * `lun` - (Optional) iSCSI target lun number.
@@ -283,7 +283,7 @@ The following arguments are supported:
 
 #### Arguments
 
-* `path` - (Optional) Path of the directory on the host. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#local)
+* `path` - (Optional) Path of the directory on the host. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#local)
 
 ### `metadata`
 
@@ -291,27 +291,27 @@ The following arguments are supported:
 
 * `annotations` - (Optional) An unstructured key value map stored with the persistent volume that may be used to store arbitrary metadata.
 
-~> By default, the provider ignores any annotations whose key names end with *kubernetes.io*. This is necessary because such annotations can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such annotations in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/annotations)
+~> By default, the provider ignores any annotations whose key names end with *kubernetes.io*. This is necessary because such annotations can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such annotations in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/)
 
 * `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the persistent volume. May match selectors of replication controllers and services.
 
-~> By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
+~> By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/)
 
-* `name` - (Optional) Name of the persistent volume, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+* `name` - (Optional) Name of the persistent volume, must be unique. Cannot be updated. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
 
 #### Attributes
 
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this persistent volume that can be used by clients to determine when persistent volume has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
-* `uid` - The unique in time and space value for this persistent volume. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
+* `uid` - The unique in time and space value for this persistent volume. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids)
 
 ### `nfs`
 
 #### Arguments
 
-* `path` - (Required) Path that is exported by the NFS server. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#nfs)
-* `read_only` - (Optional) Whether to force the NFS export to be mounted with read-only permissions. Defaults to false. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#nfs)
-* `server` - (Required) Server is the hostname or IP address of the NFS server. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#nfs)
+* `path` - (Required) Path that is exported by the NFS server. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#nfs)
+* `read_only` - (Optional) Whether to force the NFS export to be mounted with read-only permissions. Defaults to false. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#nfs)
+* `server` - (Required) Server is the hostname or IP address of the NFS server. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#nfs)
 
 ### `photon_persistent_disk`
 
@@ -335,7 +335,7 @@ The following arguments are supported:
 #### Arguments
 
 * `ceph_monitors` - (Required) A collection of Ceph monitors. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
-* `fs_type` - (Optional) Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/volumes#rbd)
+* `fs_type` - (Optional) Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/volumes#rbd)
 * `keyring` - (Optional) Keyring is the path to key ring for RBDUser. Default is /etc/ceph/keyring. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
 * `rados_user` - (Optional) The rados user name. Default is admin. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
 * `rbd_image` - (Required) The rados image name. For more info see https://github.com/kubernetes/examples/tree/master/volumes/cephfs/#how-to-use-it.
@@ -347,7 +347,7 @@ The following arguments are supported:
 
 #### Arguments
 
-* `name` - (Optional) Name of the referent. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+* `name` - (Optional) Name of the referent. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
 * `namespace` - (Optional) The Namespace of the referent secret.
 
 ### `vsphere_volume`

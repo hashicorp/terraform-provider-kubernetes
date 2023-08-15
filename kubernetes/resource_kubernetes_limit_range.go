@@ -30,7 +30,7 @@ func resourceKubernetesLimitRange() *schema.Resource {
 			"metadata": namespacedMetadataSchema("limit range", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: "Spec defines the limits enforced. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
+				Description: "Spec defines the limits enforced. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
 				Optional:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{

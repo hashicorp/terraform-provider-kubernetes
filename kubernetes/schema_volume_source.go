@@ -12,7 +12,7 @@ func persistentVolumeSourceSchema() *schema.Resource {
 	sources := commonVolumeSources()
 	sources["csi"] = &schema.Schema{
 		Type:        schema.TypeList,
-		Description: "Represents a CSI Volume. More info: http://kubernetes.io/docs/user-guide/volumes#csi",
+		Description: "Represents a CSI Volume. More info: https://kubernetes.io/docs/concepts/storage/volumes#csi",
 		Optional:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{
@@ -39,7 +39,7 @@ func persistentVolumeSourceSchema() *schema.Resource {
 				},
 				"read_only": {
 					Type:        schema.TypeBool,
-					Description: "Whether to set the read-only property in VolumeMounts to \"true\". If omitted, the default is \"false\". More info: http://kubernetes.io/docs/user-guide/volumes#csi",
+					Description: "Whether to set the read-only property in VolumeMounts to \"true\". If omitted, the default is \"false\". More info: https://kubernetes.io/docs/concepts/storage/volumes#csi",
 					Optional:    true,
 				},
 				"controller_publish_secret_ref": commonVolumeSourcesSecretRef("A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI ControllerPublishVolume and ControllerUnpublishVolume calls."),
@@ -59,14 +59,14 @@ func commonVolumeSources() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"host_path": {
 			Type:        schema.TypeList,
-			Description: "Represents a directory on the host. Provisioned by a developer or tester. This is useful for single-node development and testing only! On-host storage is not supported in any way and WILL NOT WORK in a multi-node cluster. More info: http://kubernetes.io/docs/user-guide/volumes#hostpath",
+			Description: "Represents a directory on the host. Provisioned by a developer or tester. This is useful for single-node development and testing only! On-host storage is not supported in any way and WILL NOT WORK in a multi-node cluster. More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath",
 			Optional:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"path": {
 						Type:        schema.TypeString,
-						Description: "Path of the directory on the host. More info: http://kubernetes.io/docs/user-guide/volumes#hostpath",
+						Description: "Path of the directory on the host. More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath",
 						Optional:    true,
 					},
 					"type": {
@@ -80,14 +80,14 @@ func commonVolumeSources() map[string]*schema.Schema {
 		},
 		"local": {
 			Type:        schema.TypeList,
-			Description: "Represents a mounted local storage device such as a disk, partition or directory. Local volumes can only be used as a statically created PersistentVolume. Dynamic provisioning is not supported yet. More info: http://kubernetes.io/docs/user-guide/volumes#local",
+			Description: "Represents a mounted local storage device such as a disk, partition or directory. Local volumes can only be used as a statically created PersistentVolume. Dynamic provisioning is not supported yet. More info: https://kubernetes.io/docs/concepts/storage/volumes#local",
 			Optional:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"path": {
 						Type:        schema.TypeString,
-						Description: "Path of the directory on the host. More info: http://kubernetes.io/docs/user-guide/volumes#local",
+						Description: "Path of the directory on the host. More info: https://kubernetes.io/docs/concepts/storage/volumes#local",
 						Optional:    true,
 					},
 				},
@@ -95,14 +95,14 @@ func commonVolumeSources() map[string]*schema.Schema {
 		},
 		"aws_elastic_block_store": {
 			Type:        schema.TypeList,
-			Description: "Represents an AWS Disk resource that is attached to a kubelet's host machine and then exposed to the pod. More info: http://kubernetes.io/docs/user-guide/volumes#awselasticblockstore",
+			Description: "Represents an AWS Disk resource that is attached to a kubelet's host machine and then exposed to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore",
 			Optional:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"fs_type": {
 						Type:        schema.TypeString,
-						Description: "Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified. More info: http://kubernetes.io/docs/user-guide/volumes#awselasticblockstore",
+						Description: "Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore",
 						Optional:    true,
 					},
 					"partition": {
@@ -112,12 +112,12 @@ func commonVolumeSources() map[string]*schema.Schema {
 					},
 					"read_only": {
 						Type:        schema.TypeBool,
-						Description: "Whether to set the read-only property in VolumeMounts to \"true\". If omitted, the default is \"false\". More info: http://kubernetes.io/docs/user-guide/volumes#awselasticblockstore",
+						Description: "Whether to set the read-only property in VolumeMounts to \"true\". If omitted, the default is \"false\". More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore",
 						Optional:    true,
 					},
 					"volume_id": {
 						Type:        schema.TypeString,
-						Description: "Unique ID of the persistent disk resource in AWS (Amazon EBS volume). More info: http://kubernetes.io/docs/user-guide/volumes#awselasticblockstore",
+						Description: "Unique ID of the persistent disk resource in AWS (Amazon EBS volume). More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore",
 						Required:    true,
 					},
 				},
@@ -206,7 +206,7 @@ func commonVolumeSources() map[string]*schema.Schema {
 				Schema: map[string]*schema.Schema{
 					"monitors": {
 						Type:        schema.TypeSet,
-						Description: "Monitors is a collection of Ceph monitors More info: http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it",
+						Description: "Monitors is a collection of Ceph monitors. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it",
 						Required:    true,
 						Elem:        &schema.Schema{Type: schema.TypeString},
 						Set:         schema.HashString,
@@ -218,18 +218,18 @@ func commonVolumeSources() map[string]*schema.Schema {
 					},
 					"read_only": {
 						Type:        schema.TypeBool,
-						Description: "Whether to force the read-only setting in VolumeMounts. Defaults to `false` (read/write). More info: http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it",
+						Description: "Whether to force the read-only setting in VolumeMounts. Defaults to `false` (read/write). More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it",
 						Optional:    true,
 					},
 					"secret_file": {
 						Type:        schema.TypeString,
-						Description: "The path to key ring for User, default is /etc/ceph/user.secret More info: http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it",
+						Description: "The path to key ring for User, default is `/etc/ceph/user.secret`. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it",
 						Optional:    true,
 					},
-					"secret_ref": commonVolumeSourcesSecretRef("Reference to the authentication secret for User, default is empty. More info: http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it"),
+					"secret_ref": commonVolumeSourcesSecretRef("Reference to the authentication secret for User, default is empty. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it"),
 					"user": {
 						Type:        schema.TypeString,
-						Description: "User is the rados user name, default is admin. More info: http://releases.k8s.io/HEAD/examples/volumes/cephfs/README.md#how-to-use-it",
+						Description: "User is the rados user name, default is admin. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it",
 						Optional:    true,
 					},
 				},
@@ -237,24 +237,24 @@ func commonVolumeSources() map[string]*schema.Schema {
 		},
 		"cinder": {
 			Type:        schema.TypeList,
-			Description: "Represents a cinder volume attached and mounted on kubelets host machine. More info: http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md",
+			Description: "Represents a cinder volume attached and mounted on kubelets host machine. More info: https://examples.k8s.io/mysql-cinder-pd/README.md",
 			Optional:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"fs_type": {
 						Type:        schema.TypeString,
-						Description: "Filesystem type to mount. Must be a filesystem type supported by the host operating system. Examples: \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified. More info: http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md",
+						Description: "Filesystem type to mount. Must be a filesystem type supported by the host operating system. Examples: \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified. More info: https://examples.k8s.io/mysql-cinder-pd/README.md",
 						Optional:    true,
 					},
 					"read_only": {
 						Type:        schema.TypeBool,
-						Description: "Whether to force the read-only setting in VolumeMounts. Defaults to false (read/write). More info: http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md",
+						Description: "Whether to force the read-only setting in VolumeMounts. Defaults to false (read/write). More info: https://examples.k8s.io/mysql-cinder-pd/README.md",
 						Optional:    true,
 					},
 					"volume_id": {
 						Type:        schema.TypeString,
-						Description: "Volume ID used to identify the volume in Cinder. More info: http://releases.k8s.io/HEAD/examples/mysql-cinder-pd/README.md",
+						Description: "Volume ID used to identify the volume in Cinder. More info: https://examples.k8s.io/mysql-cinder-pd/README.md",
 						Required:    true,
 					},
 				},
@@ -345,29 +345,29 @@ func commonVolumeSources() map[string]*schema.Schema {
 		},
 		"gce_persistent_disk": {
 			Type:        schema.TypeList,
-			Description: "Represents a GCE Disk resource that is attached to a kubelet's host machine and then exposed to the pod. Provisioned by an admin. More info: http://kubernetes.io/docs/user-guide/volumes#gcepersistentdisk",
+			Description: "Represents a GCE Disk resource that is attached to a kubelet's host machine and then exposed to the pod. Provisioned by an admin. More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk",
 			Optional:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"fs_type": {
 						Type:        schema.TypeString,
-						Description: "Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified. More info: http://kubernetes.io/docs/user-guide/volumes#gcepersistentdisk",
+						Description: "Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified. More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk",
 						Optional:    true,
 					},
 					"partition": {
 						Type:        schema.TypeInt,
-						Description: "The partition in the volume that you want to mount. If omitted, the default is to mount by volume name. Examples: For volume /dev/sda1, you specify the partition as \"1\". Similarly, the volume partition for /dev/sda is \"0\" (or you can leave the property empty). More info: http://kubernetes.io/docs/user-guide/volumes#gcepersistentdisk",
+						Description: "The partition in the volume that you want to mount. If omitted, the default is to mount by volume name. Examples: For volume /dev/sda1, you specify the partition as \"1\". Similarly, the volume partition for /dev/sda is \"0\" (or you can leave the property empty). More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk",
 						Optional:    true,
 					},
 					"pd_name": {
 						Type:        schema.TypeString,
-						Description: "Unique name of the PD resource in GCE. Used to identify the disk in GCE. More info: http://kubernetes.io/docs/user-guide/volumes#gcepersistentdisk",
+						Description: "Unique name of the PD resource in GCE. Used to identify the disk in GCE. More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk",
 						Required:    true,
 					},
 					"read_only": {
 						Type:        schema.TypeBool,
-						Description: "Whether to force the ReadOnly setting in VolumeMounts. Defaults to false. More info: http://kubernetes.io/docs/user-guide/volumes#gcepersistentdisk",
+						Description: "Whether to force the ReadOnly setting in VolumeMounts. Defaults to false. More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk",
 						Optional:    true,
 					},
 				},
@@ -375,24 +375,24 @@ func commonVolumeSources() map[string]*schema.Schema {
 		},
 		"glusterfs": {
 			Type:        schema.TypeList,
-			Description: "Represents a Glusterfs volume that is attached to a host and exposed to the pod. Provisioned by an admin. More info: http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md",
+			Description: "Represents a Glusterfs volume that is attached to a host and exposed to the pod. Provisioned by an admin. More info: https://examples.k8s.io/volumes/glusterfs/README.md",
 			Optional:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"endpoints_name": {
 						Type:        schema.TypeString,
-						Description: "The endpoint name that details Glusterfs topology. More info: http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod",
+						Description: "The endpoint name that details Glusterfs topology. More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod",
 						Required:    true,
 					},
 					"path": {
 						Type:        schema.TypeString,
-						Description: "The Glusterfs volume path. More info: http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod",
+						Description: "The Glusterfs volume path. More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod",
 						Required:    true,
 					},
 					"read_only": {
 						Type:        schema.TypeBool,
-						Description: "Whether to force the Glusterfs volume to be mounted with read-only permissions. Defaults to false. More info: http://releases.k8s.io/HEAD/examples/volumes/glusterfs/README.md#create-a-pod",
+						Description: "Whether to force the Glusterfs volume to be mounted with read-only permissions. Defaults to false. More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod",
 						Optional:    true,
 					},
 				},
@@ -407,7 +407,7 @@ func commonVolumeSources() map[string]*schema.Schema {
 				Schema: map[string]*schema.Schema{
 					"fs_type": {
 						Type:        schema.TypeString,
-						Description: "Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified. More info: http://kubernetes.io/docs/user-guide/volumes#iscsi",
+						Description: "Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified. More info: https://kubernetes.io/docs/concepts/storage/volumes#iscsi",
 						Optional:    true,
 					},
 					"iqn": {
@@ -441,24 +441,24 @@ func commonVolumeSources() map[string]*schema.Schema {
 		},
 		"nfs": {
 			Type:        schema.TypeList,
-			Description: "Represents an NFS mount on the host. Provisioned by an admin. More info: http://kubernetes.io/docs/user-guide/volumes#nfs",
+			Description: "Represents an NFS mount on the host. Provisioned by an admin. More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs",
 			Optional:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"path": {
 						Type:        schema.TypeString,
-						Description: "Path that is exported by the NFS server. More info: http://kubernetes.io/docs/user-guide/volumes#nfs",
+						Description: "Path that is exported by the NFS server. More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs",
 						Required:    true,
 					},
 					"read_only": {
 						Type:        schema.TypeBool,
-						Description: "Whether to force the NFS export to be mounted with read-only permissions. Defaults to false. More info: http://kubernetes.io/docs/user-guide/volumes#nfs",
+						Description: "Whether to force the NFS export to be mounted with read-only permissions. Defaults to false. More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs",
 						Optional:    true,
 					},
 					"server": {
 						Type:        schema.TypeString,
-						Description: "Server is the hostname or IP address of the NFS server. More info: http://kubernetes.io/docs/user-guide/volumes#nfs",
+						Description: "Server is the hostname or IP address of the NFS server. More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs",
 						Required:    true,
 					},
 				},
@@ -521,53 +521,53 @@ func commonVolumeSources() map[string]*schema.Schema {
 		},
 		"rbd": {
 			Type:        schema.TypeList,
-			Description: "Represents a Rados Block Device mount on the host that shares a pod's lifetime. More info: http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md",
+			Description: "Represents a Rados Block Device mount on the host that shares a pod's lifetime. More info: https://examples.k8s.io/volumes/rbd/README.md",
 			Optional:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"ceph_monitors": {
 						Type:        schema.TypeSet,
-						Description: "A collection of Ceph monitors. More info: http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it",
+						Description: "A collection of Ceph monitors. More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it",
 						Required:    true,
 						Elem:        &schema.Schema{Type: schema.TypeString},
 						Set:         schema.HashString,
 					},
 					"fs_type": {
 						Type:        schema.TypeString,
-						Description: "Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified. More info: http://kubernetes.io/docs/user-guide/volumes#rbd",
+						Description: "Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified. More info: https://kubernetes.io/docs/concepts/storage/volumes#rbd",
 						Optional:    true,
 					},
 					"keyring": {
 						Type:        schema.TypeString,
-						Description: "Keyring is the path to key ring for RBDUser. Default is /etc/ceph/keyring. More info: http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it",
+						Description: "Keyring is the path to key ring for RBDUser. Default is /etc/ceph/keyring. More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it",
 						Optional:    true,
 						Computed:    true,
 					},
 					"rados_user": {
 						Type:        schema.TypeString,
-						Description: "The rados user name. Default is admin. More info: http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it",
+						Description: "The rados user name. Default is admin. More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it",
 						Optional:    true,
 						Default:     "admin",
 					},
 					"rbd_image": {
 						Type:        schema.TypeString,
-						Description: "The rados image name. More info: http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it",
+						Description: "The rados image name. More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it",
 						Required:    true,
 					},
 					"rbd_pool": {
 						Type:        schema.TypeString,
-						Description: "The rados pool name. Default is rbd. More info: http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it.",
+						Description: "The rados pool name. Default is rbd. More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it.",
 						Optional:    true,
 						Default:     "rbd",
 					},
 					"read_only": {
 						Type:        schema.TypeBool,
-						Description: "Whether to force the read-only setting in VolumeMounts. Defaults to false. More info: http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it",
+						Description: "Whether to force the read-only setting in VolumeMounts. Defaults to false. More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it",
 						Optional:    true,
 						Default:     false,
 					},
-					"secret_ref": commonVolumeSourcesSecretRef("Name of the authentication secret for RBDUser. If provided overrides keyring. Default is nil. More info: http://releases.k8s.io/HEAD/examples/volumes/rbd/README.md#how-to-use-it"),
+					"secret_ref": commonVolumeSourcesSecretRef("Name of the authentication secret for RBDUser. If provided overrides keyring. Default is nil. More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it"),
 				},
 			},
 		},
@@ -604,12 +604,12 @@ func commonVolumeSourcesSecretRef(description string) *schema.Schema {
 			Schema: map[string]*schema.Schema{
 				"name": {
 					Type:        schema.TypeString,
-					Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+					Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 					Optional:    true,
 				},
 				"namespace": {
 					Type:        schema.TypeString,
-					Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+					Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 					Optional:    true,
 					Computed:    true,
 				},

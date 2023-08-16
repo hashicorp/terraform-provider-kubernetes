@@ -71,7 +71,7 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 		return diag.Errorf("Unable to fetch service account from Kubernetes: %s", err)
 	}
 
-	defaultSecret, diagMsg := findDefaultServiceAccount(ctx, sa, conn)
+	defaultSecret, diagMsg := findDefaultServiceAccountV1(ctx, sa, conn)
 
 	err = d.Set("default_secret_name", defaultSecret)
 	if err != nil {
@@ -80,7 +80,7 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 
 	d.SetId(buildId(sa.ObjectMeta))
 
-	diagMsg = append(diagMsg, resourceKubernetesServiceAccountRead(ctx, d, meta)...)
+	diagMsg = append(diagMsg, resourceKubernetesServiceAccountV1Read(ctx, d, meta)...)
 
 	return diagMsg
 }

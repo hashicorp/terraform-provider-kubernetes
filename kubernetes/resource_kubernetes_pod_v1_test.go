@@ -1098,7 +1098,7 @@ func TestAccKubernetesPodV1_config_with_automount_service_account_token(t *testi
 			{
 				Config: testAccKubernetesPodV1ConfigWithAutomountServiceAccountToken(saName, podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceAccountExists("kubernetes_service_account.test", &confSA),
+					testAccCheckKubernetesServiceAccountV1Exists("kubernetes_service_account.test", &confSA),
 					testAccCheckKubernetesPodV1Exists(resourceName, &confPod),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.automount_service_account_token", "true"),
 				),

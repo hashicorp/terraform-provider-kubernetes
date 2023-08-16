@@ -1,3 +1,39 @@
+## 2.23.0 (August 16, 2023)
+
+FEATURES:
+
+* `resource/kubernetes_cron_job_v1`: add a new volume type `ephemeral` to `spec.job_template.spec.template.spec.volume` to support generic ephemeral volumes. [[GH-2199](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2199)]
+* `resource/kubernetes_cron_job`: add a new volume type `ephemeral` to `spec.job_template.spec.template.spec.volume` to support generic ephemeral volumes. [[GH-2199](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2199)]
+* `resource/kubernetes_daemon_set_v1`: add a new volume type `ephemeral` to `spec.template.spec.volume` to support generic ephemeral volumes. [[GH-2199](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2199)]
+* `resource/kubernetes_daemonset`: add a new volume type `ephemeral` to `spec.template.spec..volume` to support generic ephemeral volumes. [[GH-2199](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2199)]
+* `resource/kubernetes_deployment_v1`: add a new volume type `ephemeral` to `spec.template.spec.volume` to support generic ephemeral volumes. [[GH-2199](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2199)]
+* `resource/kubernetes_deployment`: add a new volume type `ephemeral` to `spec.template.spec.volume` to support generic ephemeral volumes. [[GH-2199](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2199)]
+* `resource/kubernetes_job_v1`: add a new volume type `ephemeral` to `spec.template.spec.volume` to support generic ephemeral volumes. [[GH-2199](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2199)]
+* `resource/kubernetes_job`: add a new volume type `ephemeral` to `spec.template.spec.volume` to support generic ephemeral volumes. [[GH-2199](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2199)]
+* `resource/kubernetes_pod_v1`: add a new volume type `ephemeral` to `spec.volume` to support generic ephemeral volumes. [[GH-2199](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2199)]
+* `resource/kubernetes_pod`: add a new volume type `ephemeral` to `spec.volume` to support generic ephemeral volumes. [[GH-2199](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2199)]
+
+ENHANCEMENTS:
+
+* `resource/kubernetes_endpoint_slice_v1`: make attribute  `endpoint.condition` optional. If you had previously included an empty block `condition {}` in your configuration, we request you to remove it. Doing so will prevent receiving continuous _"update in-place"_ messages while performing the plan and apply operations. [[GH-2208](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2208)]
+* `resource/kubernetes_pod_v1`: add a new attribute `target_state` to specify the Pod phase(s) that indicate whether it was successfully created. [[GH-2200](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2200)]
+* `resource/kubernetes_pod`: add a new attribute `target_state` to specify the Pod phase(s) that indicate whether it was successfully created. [[GH-2200](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2200)]
+
+BUG FIXES:
+
+* `resource/kubernetes_manifest`: update flow in `wait` block to fix timeout bug within tf apply where the resource is created and appears in Kubernetes but does not appear in TF state file after deadline. The fix would ensure that the resource has been created in the state file while also tainting the resource requiring the user to make the necessary changes in order for their to not be another timeout error. [[GH-2163](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2163)]
+
+DOCS:
+
+* Fix external broken links in the documentation. [[GH-2221](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2221)]
+
+## Community Contributors :raised_hands:
+
+- @JHeilCoveo made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/2183
+- @baumandm made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/1026
+- @vastep made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/2193
+- @rafed made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/2214, https://github.com/hashicorp/terraform-provider-kubernetes/pull/2225
+
 ## 2.22.0 (July 12, 2023)
 
 FEATURES:

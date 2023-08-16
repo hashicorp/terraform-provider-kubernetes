@@ -67,7 +67,7 @@ The following arguments are supported:
 
 ## Attribute Reference
 
-* `wait_for_default_service_account` - (Optional) When set to `true` Terraform will wait until the default service account has been asynchronously created by Kubernetes when creating the namespace resource.This has the equivalent effect of creating a `resource_kubernetes_default_service_account` resource for dependent resources but allows a user to consume the "default" service account directly. The default behaviour (`false`) does not wait for the default service account to exist.
+* `wait_for_default_service_account` - (Optional) When set to `true` Terraform will wait until the default service account has been asynchronously created by Kubernetes when creating the namespace resource.This has the equivalent effect of creating a `kubernetes_default_service_account` resource for dependent resources but allows a user to consume the "default" service account directly. The default behaviour (`false`) does not wait for the default service account to exist.
 
 ## Import
 

@@ -286,8 +286,8 @@ func Provider() *schema.Provider {
 			// apps
 			"kubernetes_deployment":      resourceKubernetesDeployment(),
 			"kubernetes_deployment_v1":   resourceKubernetesDeployment(),
-			"kubernetes_daemonset":       resourceKubernetesDaemonSet(),
-			"kubernetes_daemon_set_v1":   resourceKubernetesDaemonSet(),
+			"kubernetes_daemonset":       resourceKubernetesDaemonSetV1(),
+			"kubernetes_daemon_set_v1":   resourceKubernetesDaemonSetV1(),
 			"kubernetes_stateful_set":    resourceKubernetesStatefulSet(),
 			"kubernetes_stateful_set_v1": resourceKubernetesStatefulSet(),
 

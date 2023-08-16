@@ -65,6 +65,10 @@ The following arguments are supported:
 * `resource_version` - An opaque value that represents the internal version of this namespace that can be used by clients to determine when namespaces have changed. Read more about [concurrency control and consistency](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency).
 * `uid` - The unique in time and space value for this namespace. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids)
 
+## Attribute Reference
+
+* `wait_for_default_service_account` - (Optional) When set to `true` Terraform will wait until the default service account has been asynchronously created by Kubernetes when creating the namespace resource.This has the equivalent effect of creating a `resource_kubernetes_default_service_account` resource for dependent resources but allows a user to consume the "default" service account directly. The default behaviour (`false`) does not wait for the default service account to exist.
+
 ## Import
 
 Namespaces can be imported using their name, e.g.
@@ -72,3 +76,4 @@ Namespaces can be imported using their name, e.g.
 ```
 $ terraform import kubernetes_namespace.n terraform-example-namespace
 ```
+

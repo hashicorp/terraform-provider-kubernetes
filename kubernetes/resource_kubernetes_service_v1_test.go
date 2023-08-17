@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func TestAccKubernetesService_basic(t *testing.T) {
+func TestAccKubernetesServiceV1_basic(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
@@ -28,12 +28,12 @@ func TestAccKubernetesService_basic(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesServiceConfig_basic(name),
+				Config: testAccKubernetesServiceV1Config_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -51,7 +51,7 @@ func TestAccKubernetesService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "None"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "ClusterIP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.publish_not_ready_addresses", "false"),
-					testAccCheckServicePorts(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
 						{
 							Port:       int32(8080),
 							Protocol:   api.ProtocolTCP,
@@ -67,9 +67,9 @@ func TestAccKubernetesService_basic(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
 			},
 			{
-				Config: testAccKubernetesServiceConfig_modified(name),
+				Config: testAccKubernetesServiceV1Config_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -85,7 +85,7 @@ func TestAccKubernetesService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "None"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "ClusterIP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.publish_not_ready_addresses", "true"),
-					testAccCheckServicePorts(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
 						{
 							Port:       int32(8081),
 							Protocol:   api.ProtocolTCP,
@@ -95,9 +95,9 @@ func TestAccKubernetesService_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesServiceConfig_basic(name),
+				Config: testAccKubernetesServiceV1Config_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -113,7 +113,7 @@ func TestAccKubernetesService_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "None"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "ClusterIP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.publish_not_ready_addresses", "false"),
-					testAccCheckServicePorts(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
 						{
 							Port:       int32(8080),
 							Protocol:   api.ProtocolTCP,
@@ -126,7 +126,7 @@ func TestAccKubernetesService_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesService_loadBalancer(t *testing.T) {
+func TestAccKubernetesServiceV1_loadBalancer(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
@@ -136,12 +136,12 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesServiceConfig_loadBalancer(name),
+				Config: testAccKubernetesServiceV1Config_loadBalancer(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.port.#", "1"),
@@ -163,7 +163,7 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
 					testAccCheckloadBalancerIngressCheck(resourceName),
-					testAccCheckServicePorts(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
 						{
 							Port:       int32(8888),
 							Protocol:   api.ProtocolTCP,
@@ -179,9 +179,9 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
 			},
 			{
-				Config: testAccKubernetesServiceConfig_loadBalancer_modified(name),
+				Config: testAccKubernetesServiceV1Config_loadBalancer_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttrSet(resourceName, "spec.0.cluster_ip"),
@@ -202,7 +202,7 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyModifiedApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.NewSelector", "NewValue"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
-					testAccCheckServicePorts(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
 						{
 							Port:       int32(9999),
 							Protocol:   api.ProtocolTCP,
@@ -215,7 +215,7 @@ func TestAccKubernetesService_loadBalancer(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesService_loadBalancer_internal_traffic_policy(t *testing.T) {
+func TestAccKubernetesServiceV1_loadBalancer_internal_traffic_policy(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
@@ -230,12 +230,12 @@ func TestAccKubernetesService_loadBalancer_internal_traffic_policy(t *testing.T)
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesServiceConfig_loadBalancer_internal_traffic_policy(name),
+				Config: testAccKubernetesServiceV1Config_loadBalancer_internal_traffic_policy(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.external_traffic_policy", "Cluster"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.internal_traffic_policy", "Cluster"),
@@ -248,9 +248,9 @@ func TestAccKubernetesService_loadBalancer_internal_traffic_policy(t *testing.T)
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
 			},
 			{
-				Config: testAccKubernetesServiceConfig_loadBalancer_internal_traffic_policy_modified(name),
+				Config: testAccKubernetesServiceV1Config_loadBalancer_internal_traffic_policy_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.external_traffic_policy", "Local"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.internal_traffic_policy", "Local"),
@@ -260,7 +260,7 @@ func TestAccKubernetesService_loadBalancer_internal_traffic_policy(t *testing.T)
 	})
 }
 
-func TestAccKubernetesService_loadBalancer_class(t *testing.T) {
+func TestAccKubernetesServiceV1_loadBalancer_class(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
@@ -270,12 +270,12 @@ func TestAccKubernetesService_loadBalancer_class(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesServiceConfig_loadBalancer_class(name),
+				Config: testAccKubernetesServiceV1Config_loadBalancer_class(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.load_balancer_class", "loadbalancer.io/loadbalancer"),
@@ -285,7 +285,7 @@ func TestAccKubernetesService_loadBalancer_class(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesService_loadBalancer_healthcheck(t *testing.T) {
+func TestAccKubernetesServiceV1_loadBalancer_healthcheck(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
@@ -295,12 +295,12 @@ func TestAccKubernetesService_loadBalancer_healthcheck(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesServiceConfig_loadBalancer_healthcheck(name, 31111),
+				Config: testAccKubernetesServiceV1Config_loadBalancer_healthcheck(name, 31111),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.external_traffic_policy", "Local"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.health_check_node_port", "31111"),
@@ -313,9 +313,9 @@ func TestAccKubernetesService_loadBalancer_healthcheck(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
 			},
 			{
-				Config: testAccKubernetesServiceConfig_loadBalancer_healthcheck(name, 31112),
+				Config: testAccKubernetesServiceV1Config_loadBalancer_healthcheck(name, 31112),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.external_traffic_policy", "Local"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.health_check_node_port", "31112"),
@@ -325,7 +325,7 @@ func TestAccKubernetesService_loadBalancer_healthcheck(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesService_headless(t *testing.T) {
+func TestAccKubernetesServiceV1_headless(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
@@ -335,12 +335,12 @@ func TestAccKubernetesService_headless(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesServiceConfig_headless(name),
+				Config: testAccKubernetesServiceV1Config_headless(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.cluster_ip", "None"),
 				),
 			},
@@ -348,7 +348,7 @@ func TestAccKubernetesService_headless(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
+func TestAccKubernetesServiceV1_loadBalancer_annotations_aws(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
@@ -358,12 +358,12 @@ func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesServiceConfig_loadBalancer_annotations_aws(name),
+				Config: testAccKubernetesServiceV1Config_loadBalancer_annotations_aws(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "3"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.service.beta.kubernetes.io/aws-load-balancer-backend-protocol", "http"),
@@ -386,7 +386,7 @@ func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
-					testAccCheckServicePorts(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
 						{
 							Port:       int32(8888),
 							Protocol:   api.ProtocolTCP,
@@ -402,9 +402,9 @@ func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
 			},
 			{
-				Config: testAccKubernetesServiceConfig_loadBalancer_annotations_aws_modified(name),
+				Config: testAccKubernetesServiceV1Config_loadBalancer_annotations_aws_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "4"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.service.beta.kubernetes.io/aws-load-balancer-backend-protocol", "http"),
@@ -429,7 +429,7 @@ func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyModifiedApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.NewSelector", "NewValue"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
-					testAccCheckServicePorts(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
 						{
 							Port:       int32(9999),
 							Protocol:   api.ProtocolTCP,
@@ -442,7 +442,7 @@ func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesService_nodePort(t *testing.T) {
+func TestAccKubernetesServiceV1_nodePort(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
@@ -452,12 +452,12 @@ func TestAccKubernetesService_nodePort(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesServiceConfig_nodePort(name),
+				Config: testAccKubernetesServiceV1Config_nodePort(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttrSet(resourceName, "spec.0.cluster_ip"),
@@ -484,7 +484,7 @@ func TestAccKubernetesService_nodePort(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "ClientIP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity_config.0.client_ip.0.timeout_seconds", "300"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "NodePort"),
-					testAccCheckServicePorts(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
 						{
 							AppProtocol: ptrToString("ssh"),
 							Name:        "first",
@@ -509,9 +509,9 @@ func TestAccKubernetesService_nodePort(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
 			},
 			{
-				Config: testAccKubernetesServiceConfig_nodePort_toClusterIP(name),
+				Config: testAccKubernetesServiceV1Config_nodePort_toClusterIP(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttrSet(resourceName, "spec.0.cluster_ip"),
@@ -542,7 +542,7 @@ func TestAccKubernetesService_nodePort(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesService_noTargetPort(t *testing.T) {
+func TestAccKubernetesServiceV1_noTargetPort(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
@@ -552,12 +552,12 @@ func TestAccKubernetesService_noTargetPort(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesServiceConfig_noTargetPort(name),
+				Config: testAccKubernetesServiceV1Config_noTargetPort(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttrSet(resourceName, "spec.0.cluster_ip"),
@@ -577,7 +577,7 @@ func TestAccKubernetesService_noTargetPort(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyOtherApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "None"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
-					testAccCheckServicePorts(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
 						{
 							Name:       "http",
 							Port:       int32(80),
@@ -603,7 +603,7 @@ func TestAccKubernetesService_noTargetPort(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesService_stringTargetPort(t *testing.T) {
+func TestAccKubernetesServiceV1_stringTargetPort(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
@@ -613,13 +613,13 @@ func TestAccKubernetesService_stringTargetPort(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesServiceConfig_stringTargetPort(name),
+				Config: testAccKubernetesServiceV1Config_stringTargetPort(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
-					testAccCheckServicePorts(&conf, []api.ServicePort{
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
+					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
 						{
 							Port:       int32(8080),
 							Protocol:   api.ProtocolTCP,
@@ -638,7 +638,7 @@ func TestAccKubernetesService_stringTargetPort(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesService_externalName(t *testing.T) {
+func TestAccKubernetesServiceV1_externalName(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
@@ -648,12 +648,12 @@ func TestAccKubernetesService_externalName(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesServiceConfig_externalName(name),
+				Config: testAccKubernetesServiceV1Config_externalName(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.cluster_ip", ""),
@@ -677,7 +677,7 @@ func TestAccKubernetesService_externalName(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesService_externalName_toClusterIp(t *testing.T) {
+func TestAccKubernetesServiceV1_externalName_toClusterIp(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
@@ -687,12 +687,12 @@ func TestAccKubernetesService_externalName_toClusterIp(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesServiceConfig_basic(name),
+				Config: testAccKubernetesServiceV1Config_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "spec.0.cluster_ip"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "ClusterIP"),
@@ -705,9 +705,9 @@ func TestAccKubernetesService_externalName_toClusterIp(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
 			},
 			{
-				Config: testAccKubernetesServiceConfig_externalName(name),
+				Config: testAccKubernetesServiceV1Config_externalName(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.cluster_ip", ""),
@@ -715,9 +715,9 @@ func TestAccKubernetesService_externalName_toClusterIp(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesServiceConfig_basic(name),
+				Config: testAccKubernetesServiceV1Config_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "spec.0.cluster_ip"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "ClusterIP"),
@@ -727,7 +727,7 @@ func TestAccKubernetesService_externalName_toClusterIp(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesService_generatedName(t *testing.T) {
+func TestAccKubernetesServiceV1_generatedName(t *testing.T) {
 	var conf api.Service
 	prefix := "tf-acc-test-gen-"
 	resourceName := "kubernetes_service_v1.test"
@@ -737,12 +737,12 @@ func TestAccKubernetesService_generatedName(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesServiceConfig_generatedName(prefix),
+				Config: testAccKubernetesServiceV1Config_generatedName(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", prefix),
@@ -772,12 +772,12 @@ func TestAccKubernetesServiceV1_ipFamilies(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesServiceDestroy,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesServiceConfigV1_ipFamilies(prefix),
+				Config: testAccKubernetesServiceV1ConfigV1_ipFamilies(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceExists(resourceName, &conf),
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", prefix),
@@ -791,7 +791,7 @@ func TestAccKubernetesServiceV1_ipFamilies(t *testing.T) {
 	})
 }
 
-func testAccCheckServicePorts(svc *api.Service, expected []api.ServicePort) resource.TestCheckFunc {
+func testAccCheckServiceV1Ports(svc *api.Service, expected []api.ServicePort) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(svc.Spec.Ports) == 0 {
 			return nil
@@ -838,7 +838,7 @@ func testAccCheckloadBalancerIngressCheck(resourceName string) resource.TestChec
 	}
 }
 
-func testAccCheckKubernetesServiceDestroy(s *terraform.State) error {
+func testAccCheckKubernetesServiceV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	if err != nil {
@@ -867,7 +867,7 @@ func testAccCheckKubernetesServiceDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckKubernetesServiceExists(n string, obj *api.Service) resource.TestCheckFunc {
+func testAccCheckKubernetesServiceV1Exists(n string, obj *api.Service) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -895,7 +895,7 @@ func testAccCheckKubernetesServiceExists(n string, obj *api.Service) resource.Te
 	}
 }
 
-func testAccKubernetesServiceConfig_basic(name string) string {
+func testAccKubernetesServiceV1Config_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     annotations = {
@@ -922,7 +922,7 @@ func testAccKubernetesServiceConfig_basic(name string) string {
 `, name)
 }
 
-func testAccKubernetesServiceConfig_modified(name string) string {
+func testAccKubernetesServiceV1Config_modified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     annotations = {
@@ -950,7 +950,7 @@ func testAccKubernetesServiceConfig_modified(name string) string {
 `, name)
 }
 
-func testAccKubernetesServiceConfig_loadBalancer(name string) string {
+func testAccKubernetesServiceV1Config_loadBalancer(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
@@ -976,7 +976,7 @@ func testAccKubernetesServiceConfig_loadBalancer(name string) string {
 `, name)
 }
 
-func testAccKubernetesServiceConfig_loadBalancer_modified(name string) string {
+func testAccKubernetesServiceV1Config_loadBalancer_modified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
@@ -1004,7 +1004,7 @@ func testAccKubernetesServiceConfig_loadBalancer_modified(name string) string {
 `, name)
 }
 
-func testAccKubernetesServiceConfig_loadBalancer_annotations_aws(name string) string {
+func testAccKubernetesServiceV1Config_loadBalancer_annotations_aws(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
@@ -1035,7 +1035,7 @@ func testAccKubernetesServiceConfig_loadBalancer_annotations_aws(name string) st
 `, name)
 }
 
-func testAccKubernetesServiceConfig_loadBalancer_annotations_aws_modified(name string) string {
+func testAccKubernetesServiceV1Config_loadBalancer_annotations_aws_modified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
@@ -1068,7 +1068,7 @@ func testAccKubernetesServiceConfig_loadBalancer_annotations_aws_modified(name s
 `, name)
 }
 
-func testAccKubernetesServiceConfig_headless(name string) string {
+func testAccKubernetesServiceV1Config_headless(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%s"
@@ -1087,7 +1087,7 @@ func testAccKubernetesServiceConfig_headless(name string) string {
 `, name)
 }
 
-func testAccKubernetesServiceConfig_loadBalancer_healthcheck(name string, nodePort int) string {
+func testAccKubernetesServiceV1Config_loadBalancer_healthcheck(name string, nodePort int) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
@@ -1115,7 +1115,7 @@ func testAccKubernetesServiceConfig_loadBalancer_healthcheck(name string, nodePo
 `, name, nodePort)
 }
 
-func testAccKubernetesServiceConfig_loadBalancer_internal_traffic_policy(name string) string {
+func testAccKubernetesServiceV1Config_loadBalancer_internal_traffic_policy(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
@@ -1144,7 +1144,7 @@ func testAccKubernetesServiceConfig_loadBalancer_internal_traffic_policy(name st
 `, name)
 }
 
-func testAccKubernetesServiceConfig_loadBalancer_internal_traffic_policy_modified(name string) string {
+func testAccKubernetesServiceV1Config_loadBalancer_internal_traffic_policy_modified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
@@ -1173,7 +1173,7 @@ func testAccKubernetesServiceConfig_loadBalancer_internal_traffic_policy_modifie
 `, name)
 }
 
-func testAccKubernetesServiceConfig_loadBalancer_class(name string) string {
+func testAccKubernetesServiceV1Config_loadBalancer_class(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%s"
@@ -1193,7 +1193,7 @@ func testAccKubernetesServiceConfig_loadBalancer_class(name string) string {
 `, name)
 }
 
-func testAccKubernetesServiceConfig_nodePort(name string) string {
+func testAccKubernetesServiceV1Config_nodePort(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
@@ -1235,7 +1235,7 @@ func testAccKubernetesServiceConfig_nodePort(name string) string {
 `, name)
 }
 
-func testAccKubernetesServiceConfig_nodePort_toClusterIP(name string) string {
+func testAccKubernetesServiceV1Config_nodePort_toClusterIP(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
@@ -1275,7 +1275,7 @@ func testAccKubernetesServiceConfig_nodePort_toClusterIP(name string) string {
 `, name)
 }
 
-func testAccKubernetesServiceConfig_stringTargetPort(name string) string {
+func testAccKubernetesServiceV1Config_stringTargetPort(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%s"
@@ -1303,7 +1303,7 @@ func testAccKubernetesServiceConfig_stringTargetPort(name string) string {
 `, name)
 }
 
-func testAccKubernetesServiceConfig_noTargetPort(name string) string {
+func testAccKubernetesServiceV1Config_noTargetPort(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%s"
@@ -1330,7 +1330,7 @@ func testAccKubernetesServiceConfig_noTargetPort(name string) string {
 `, name)
 }
 
-func testAccKubernetesServiceConfig_externalName(name string) string {
+func testAccKubernetesServiceV1Config_externalName(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%s"
@@ -1344,7 +1344,7 @@ func testAccKubernetesServiceConfig_externalName(name string) string {
 `, name)
 }
 
-func testAccKubernetesServiceConfig_generatedName(prefix string) string {
+func testAccKubernetesServiceV1Config_generatedName(prefix string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     generate_name = "%s"
@@ -1360,7 +1360,7 @@ func testAccKubernetesServiceConfig_generatedName(prefix string) string {
 `, prefix)
 }
 
-func testAccKubernetesServiceConfigV1_ipFamilies(prefix string) string {
+func testAccKubernetesServiceV1ConfigV1_ipFamilies(prefix string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     generate_name = "%s"

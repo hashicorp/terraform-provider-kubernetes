@@ -21,9 +21,9 @@ import (
 func TestAccKubernetesService_basic(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_service.test"
+	resourceName := "kubernetes_service_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -129,9 +129,9 @@ func TestAccKubernetesService_basic(t *testing.T) {
 func TestAccKubernetesService_loadBalancer(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_service.test"
+	resourceName := "kubernetes_service_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -220,7 +220,7 @@ func TestAccKubernetesService_loadBalancer_internal_traffic_policy(t *testing.T)
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfNoLoadBalancersAvailable(t)
@@ -265,7 +265,7 @@ func TestAccKubernetesService_loadBalancer_class(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -288,9 +288,9 @@ func TestAccKubernetesService_loadBalancer_class(t *testing.T) {
 func TestAccKubernetesService_loadBalancer_healthcheck(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_service.test"
+	resourceName := "kubernetes_service_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -328,9 +328,9 @@ func TestAccKubernetesService_loadBalancer_healthcheck(t *testing.T) {
 func TestAccKubernetesService_headless(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_service.test"
+	resourceName := "kubernetes_service_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -351,9 +351,9 @@ func TestAccKubernetesService_headless(t *testing.T) {
 func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_service.test"
+	resourceName := "kubernetes_service_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -445,9 +445,9 @@ func TestAccKubernetesService_loadBalancer_annotations_aws(t *testing.T) {
 func TestAccKubernetesService_nodePort(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_service.test"
+	resourceName := "kubernetes_service_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -545,9 +545,9 @@ func TestAccKubernetesService_nodePort(t *testing.T) {
 func TestAccKubernetesService_noTargetPort(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_service.test"
+	resourceName := "kubernetes_service_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -606,9 +606,9 @@ func TestAccKubernetesService_noTargetPort(t *testing.T) {
 func TestAccKubernetesService_stringTargetPort(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_service.test"
+	resourceName := "kubernetes_service_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -641,9 +641,9 @@ func TestAccKubernetesService_stringTargetPort(t *testing.T) {
 func TestAccKubernetesService_externalName(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_service.test"
+	resourceName := "kubernetes_service_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -680,9 +680,9 @@ func TestAccKubernetesService_externalName(t *testing.T) {
 func TestAccKubernetesService_externalName_toClusterIp(t *testing.T) {
 	var conf api.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_service.test"
+	resourceName := "kubernetes_service_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -730,9 +730,9 @@ func TestAccKubernetesService_externalName_toClusterIp(t *testing.T) {
 func TestAccKubernetesService_generatedName(t *testing.T) {
 	var conf api.Service
 	prefix := "tf-acc-test-gen-"
-	resourceName := "kubernetes_service.test"
+	resourceName := "kubernetes_service_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -767,7 +767,7 @@ func TestAccKubernetesServiceV1_ipFamilies(t *testing.T) {
 	prefix := "tf-acc-test-gen-"
 	resourceName := "kubernetes_service_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -896,7 +896,7 @@ func testAccCheckKubernetesServiceExists(n string, obj *api.Service) resource.Te
 }
 
 func testAccKubernetesServiceConfig_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -923,7 +923,7 @@ func testAccKubernetesServiceConfig_basic(name string) string {
 }
 
 func testAccKubernetesServiceConfig_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -951,7 +951,7 @@ func testAccKubernetesServiceConfig_modified(name string) string {
 }
 
 func testAccKubernetesServiceConfig_loadBalancer(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
   }
@@ -977,7 +977,7 @@ func testAccKubernetesServiceConfig_loadBalancer(name string) string {
 }
 
 func testAccKubernetesServiceConfig_loadBalancer_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
   }
@@ -1005,7 +1005,7 @@ func testAccKubernetesServiceConfig_loadBalancer_modified(name string) string {
 }
 
 func testAccKubernetesServiceConfig_loadBalancer_annotations_aws(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
     annotations = {
@@ -1036,7 +1036,7 @@ func testAccKubernetesServiceConfig_loadBalancer_annotations_aws(name string) st
 }
 
 func testAccKubernetesServiceConfig_loadBalancer_annotations_aws_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
     annotations = {
@@ -1069,7 +1069,7 @@ func testAccKubernetesServiceConfig_loadBalancer_annotations_aws_modified(name s
 }
 
 func testAccKubernetesServiceConfig_headless(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -1088,7 +1088,7 @@ func testAccKubernetesServiceConfig_headless(name string) string {
 }
 
 func testAccKubernetesServiceConfig_loadBalancer_healthcheck(name string, nodePort int) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
   }
@@ -1194,7 +1194,7 @@ func testAccKubernetesServiceConfig_loadBalancer_class(name string) string {
 }
 
 func testAccKubernetesServiceConfig_nodePort(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
   }
@@ -1236,7 +1236,7 @@ func testAccKubernetesServiceConfig_nodePort(name string) string {
 }
 
 func testAccKubernetesServiceConfig_nodePort_toClusterIP(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s"
   }
@@ -1276,7 +1276,7 @@ func testAccKubernetesServiceConfig_nodePort_toClusterIP(name string) string {
 }
 
 func testAccKubernetesServiceConfig_stringTargetPort(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%s"
 
@@ -1304,7 +1304,7 @@ func testAccKubernetesServiceConfig_stringTargetPort(name string) string {
 }
 
 func testAccKubernetesServiceConfig_noTargetPort(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -1331,7 +1331,7 @@ func testAccKubernetesServiceConfig_noTargetPort(name string) string {
 }
 
 func testAccKubernetesServiceConfig_externalName(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -1345,7 +1345,7 @@ func testAccKubernetesServiceConfig_externalName(name string) string {
 }
 
 func testAccKubernetesServiceConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     generate_name = "%s"
   }

@@ -158,7 +158,11 @@ func resourceKubernetesConfigMapV1DataUpdate(ctx context.Context, d *schema.Reso
 			// if the resource is gone
 			return nil
 		}
-		return diag.Errorf("The configmap %q does not exist", name)
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return diag.Errorf("The ConfigMap %q does not exist", name)
+		}
+
+		return diag.Errorf("Have got the following error while validating the existence of the ConfigMap %q: %v", name, err)
 	}
 
 	// craft the patch to update the data

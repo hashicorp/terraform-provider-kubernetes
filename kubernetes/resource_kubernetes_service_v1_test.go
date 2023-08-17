@@ -13,13 +13,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	api "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func TestAccKubernetesServiceV1_basic(t *testing.T) {
-	var conf api.Service
+	var conf corev1.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
 
@@ -51,10 +51,10 @@ func TestAccKubernetesServiceV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "None"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "ClusterIP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.publish_not_ready_addresses", "false"),
-					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []corev1.ServicePort{
 						{
 							Port:       int32(8080),
-							Protocol:   api.ProtocolTCP,
+							Protocol:   corev1.ProtocolTCP,
 							TargetPort: intstr.FromInt(80),
 						},
 					}),
@@ -85,10 +85,10 @@ func TestAccKubernetesServiceV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "None"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "ClusterIP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.publish_not_ready_addresses", "true"),
-					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []corev1.ServicePort{
 						{
 							Port:       int32(8081),
-							Protocol:   api.ProtocolTCP,
+							Protocol:   corev1.ProtocolTCP,
 							TargetPort: intstr.FromInt(80),
 						},
 					}),
@@ -113,10 +113,10 @@ func TestAccKubernetesServiceV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "None"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "ClusterIP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.publish_not_ready_addresses", "false"),
-					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []corev1.ServicePort{
 						{
 							Port:       int32(8080),
-							Protocol:   api.ProtocolTCP,
+							Protocol:   corev1.ProtocolTCP,
 							TargetPort: intstr.FromInt(80),
 						},
 					}),
@@ -127,7 +127,7 @@ func TestAccKubernetesServiceV1_basic(t *testing.T) {
 }
 
 func TestAccKubernetesServiceV1_loadBalancer(t *testing.T) {
-	var conf api.Service
+	var conf corev1.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
 
@@ -163,10 +163,10 @@ func TestAccKubernetesServiceV1_loadBalancer(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
 					testAccCheckloadBalancerIngressCheck(resourceName),
-					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []corev1.ServicePort{
 						{
 							Port:       int32(8888),
-							Protocol:   api.ProtocolTCP,
+							Protocol:   corev1.ProtocolTCP,
 							TargetPort: intstr.FromInt(80),
 						},
 					}),
@@ -202,10 +202,10 @@ func TestAccKubernetesServiceV1_loadBalancer(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyModifiedApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.NewSelector", "NewValue"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
-					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []corev1.ServicePort{
 						{
 							Port:       int32(9999),
-							Protocol:   api.ProtocolTCP,
+							Protocol:   corev1.ProtocolTCP,
 							TargetPort: intstr.FromInt(81),
 						},
 					}),
@@ -216,7 +216,7 @@ func TestAccKubernetesServiceV1_loadBalancer(t *testing.T) {
 }
 
 func TestAccKubernetesServiceV1_loadBalancer_internal_traffic_policy(t *testing.T) {
-	var conf api.Service
+	var conf corev1.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
 
@@ -261,7 +261,7 @@ func TestAccKubernetesServiceV1_loadBalancer_internal_traffic_policy(t *testing.
 }
 
 func TestAccKubernetesServiceV1_loadBalancer_class(t *testing.T) {
-	var conf api.Service
+	var conf corev1.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
 
@@ -286,7 +286,7 @@ func TestAccKubernetesServiceV1_loadBalancer_class(t *testing.T) {
 }
 
 func TestAccKubernetesServiceV1_loadBalancer_healthcheck(t *testing.T) {
-	var conf api.Service
+	var conf corev1.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
 
@@ -326,7 +326,7 @@ func TestAccKubernetesServiceV1_loadBalancer_healthcheck(t *testing.T) {
 }
 
 func TestAccKubernetesServiceV1_headless(t *testing.T) {
-	var conf api.Service
+	var conf corev1.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
 
@@ -349,7 +349,7 @@ func TestAccKubernetesServiceV1_headless(t *testing.T) {
 }
 
 func TestAccKubernetesServiceV1_loadBalancer_annotations_aws(t *testing.T) {
-	var conf api.Service
+	var conf corev1.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
 
@@ -386,10 +386,10 @@ func TestAccKubernetesServiceV1_loadBalancer_annotations_aws(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
-					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []corev1.ServicePort{
 						{
 							Port:       int32(8888),
-							Protocol:   api.ProtocolTCP,
+							Protocol:   corev1.ProtocolTCP,
 							TargetPort: intstr.FromInt(80),
 						},
 					}),
@@ -429,10 +429,10 @@ func TestAccKubernetesServiceV1_loadBalancer_annotations_aws(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyModifiedApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.NewSelector", "NewValue"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
-					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []corev1.ServicePort{
 						{
 							Port:       int32(9999),
-							Protocol:   api.ProtocolTCP,
+							Protocol:   corev1.ProtocolTCP,
 							TargetPort: intstr.FromInt(81),
 						},
 					}),
@@ -443,7 +443,7 @@ func TestAccKubernetesServiceV1_loadBalancer_annotations_aws(t *testing.T) {
 }
 
 func TestAccKubernetesServiceV1_nodePort(t *testing.T) {
-	var conf api.Service
+	var conf corev1.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
 
@@ -484,19 +484,19 @@ func TestAccKubernetesServiceV1_nodePort(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "ClientIP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity_config.0.client_ip.0.timeout_seconds", "300"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "NodePort"),
-					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []corev1.ServicePort{
 						{
 							AppProtocol: ptrToString("ssh"),
 							Name:        "first",
 							Port:        int32(10222),
-							Protocol:    api.ProtocolTCP,
+							Protocol:    corev1.ProtocolTCP,
 							TargetPort:  intstr.FromInt(22),
 						},
 						{
 							AppProtocol: ptrToString("terraform.io/kubernetes"),
 							Name:        "second",
 							Port:        int32(10333),
-							Protocol:    api.ProtocolTCP,
+							Protocol:    corev1.ProtocolTCP,
 							TargetPort:  intstr.FromInt(33),
 						},
 					}),
@@ -543,7 +543,7 @@ func TestAccKubernetesServiceV1_nodePort(t *testing.T) {
 }
 
 func TestAccKubernetesServiceV1_noTargetPort(t *testing.T) {
-	var conf api.Service
+	var conf corev1.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
 
@@ -577,17 +577,17 @@ func TestAccKubernetesServiceV1_noTargetPort(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyOtherApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "None"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
-					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []corev1.ServicePort{
 						{
 							Name:       "http",
 							Port:       int32(80),
-							Protocol:   api.ProtocolTCP,
+							Protocol:   corev1.ProtocolTCP,
 							TargetPort: intstr.FromInt(80),
 						},
 						{
 							Name:       "https",
 							Port:       int32(443),
-							Protocol:   api.ProtocolTCP,
+							Protocol:   corev1.ProtocolTCP,
 							TargetPort: intstr.FromInt(443),
 						},
 					}),
@@ -604,7 +604,7 @@ func TestAccKubernetesServiceV1_noTargetPort(t *testing.T) {
 }
 
 func TestAccKubernetesServiceV1_stringTargetPort(t *testing.T) {
-	var conf api.Service
+	var conf corev1.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
 
@@ -619,10 +619,10 @@ func TestAccKubernetesServiceV1_stringTargetPort(t *testing.T) {
 				Config: testAccKubernetesServiceV1Config_stringTargetPort(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
-					testAccCheckServiceV1Ports(&conf, []api.ServicePort{
+					testAccCheckServiceV1Ports(&conf, []corev1.ServicePort{
 						{
 							Port:       int32(8080),
-							Protocol:   api.ProtocolTCP,
+							Protocol:   corev1.ProtocolTCP,
 							TargetPort: intstr.FromString("http-server"),
 						},
 					}),
@@ -639,7 +639,7 @@ func TestAccKubernetesServiceV1_stringTargetPort(t *testing.T) {
 }
 
 func TestAccKubernetesServiceV1_externalName(t *testing.T) {
-	var conf api.Service
+	var conf corev1.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
 
@@ -678,7 +678,7 @@ func TestAccKubernetesServiceV1_externalName(t *testing.T) {
 }
 
 func TestAccKubernetesServiceV1_externalName_toClusterIp(t *testing.T) {
-	var conf api.Service
+	var conf corev1.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_service_v1.test"
 
@@ -728,7 +728,7 @@ func TestAccKubernetesServiceV1_externalName_toClusterIp(t *testing.T) {
 }
 
 func TestAccKubernetesServiceV1_generatedName(t *testing.T) {
-	var conf api.Service
+	var conf corev1.Service
 	prefix := "tf-acc-test-gen-"
 	resourceName := "kubernetes_service_v1.test"
 
@@ -763,7 +763,7 @@ func TestAccKubernetesServiceV1_generatedName(t *testing.T) {
 }
 
 func TestAccKubernetesServiceV1_ipFamilies(t *testing.T) {
-	var conf api.Service
+	var conf corev1.Service
 	prefix := "tf-acc-test-gen-"
 	resourceName := "kubernetes_service_v1.test"
 
@@ -791,7 +791,7 @@ func TestAccKubernetesServiceV1_ipFamilies(t *testing.T) {
 	})
 }
 
-func testAccCheckServiceV1Ports(svc *api.Service, expected []api.ServicePort) resource.TestCheckFunc {
+func testAccCheckServiceV1Ports(svc *corev1.Service, expected []corev1.ServicePort) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(svc.Spec.Ports) == 0 {
 			return nil
@@ -867,7 +867,7 @@ func testAccCheckKubernetesServiceV1Destroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckKubernetesServiceV1Exists(n string, obj *api.Service) resource.TestCheckFunc {
+func testAccCheckKubernetesServiceV1Exists(n string, obj *corev1.Service) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {

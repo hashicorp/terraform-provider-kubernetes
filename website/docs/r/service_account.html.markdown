@@ -10,11 +10,7 @@ description: |-
 
 A service account provides an identity for processes that run in a Pod.
 
-<<<<<<< HEAD
 Read more in [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/).
-=======
-Read more at [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/)
->>>>>>> 011fba352e072c52fc6c7691b5e1e1605f0b3de9
 
 ## Example Usage
 

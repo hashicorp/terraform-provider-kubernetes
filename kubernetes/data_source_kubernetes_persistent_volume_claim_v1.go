@@ -5,26 +5,27 @@ package kubernetes
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesPersistentVolumeClaim() *schema.Resource {
+func dataSourceKubernetesPersistentVolumeClaimV1() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKubernetesPersistentVolumeClaimRead,
+		ReadContext: dataSourceKubernetesPersistentVolumeClaimV1Read,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("persistent volume claim", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: "Spec defines the desired characteristics of a volume requested by a pod author. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#persistentvolumeclaims",
+				Description: "Spec defines the desired characteristics of a volume requested by a pod author. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#persistentvolumeclaims",
 				Optional:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"access_modes": {
 							Type:        schema.TypeSet,
-							Description: "A set of the desired access modes the volume should have. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes-1",
+							Description: "A set of the desired access modes the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes",
 							Computed:    true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
@@ -33,19 +34,19 @@ func dataSourceKubernetesPersistentVolumeClaim() *schema.Resource {
 						},
 						"resources": {
 							Type:        schema.TypeList,
-							Description: "A list of the minimum resources the volume should have. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#resources",
+							Description: "A list of the minimum resources the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources",
 							Computed:    true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"limits": {
 										Type:        schema.TypeMap,
-										Description: "Map describing the maximum amount of compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
+										Description: "Map describing the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/",
 										Optional:    true,
 										Computed:    true,
 									},
 									"requests": {
 										Type:        schema.TypeMap,
-										Description: "Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
+										Description: "Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/",
 										Optional:    true,
 										Computed:    true,
 									},
@@ -80,7 +81,7 @@ func dataSourceKubernetesPersistentVolumeClaim() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesPersistentVolumeClaimRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKubernetesPersistentVolumeClaimV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
 	om := meta_v1.ObjectMeta{

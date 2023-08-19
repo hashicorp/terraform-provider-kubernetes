@@ -11,17 +11,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
-func TestAccKubernetesDataSourceService_basic(t *testing.T) {
+func TestAccKubernetesDataSourceServiceV1_basic(t *testing.T) {
+	resourceName := "kubernetes_service_v1.test"
+	dataSourceName := "data.kubernetes_service_v1.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_service.test"
-	dataSourceName := "data.kubernetes_service.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDataSourceServiceConfig_basic(name),
+				Config: testAccKubernetesDataSourceServiceV1_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
@@ -49,8 +49,8 @@ func TestAccKubernetesDataSourceService_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesDataSourceServiceConfig_basic(name) +
-					testAccKubernetesDataSourceServiceConfig_read(),
+				Config: testAccKubernetesDataSourceServiceV1_basic(name) +
+					testAccKubernetesDataSourceServiceV1_read(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(dataSourceName, "metadata.0.generation"),
@@ -81,8 +81,8 @@ func TestAccKubernetesDataSourceService_basic(t *testing.T) {
 	})
 }
 
-func testAccKubernetesDataSourceServiceConfig_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service" "test" {
+func testAccKubernetesDataSourceServiceV1_basic(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%s"
     annotations = {
@@ -108,11 +108,11 @@ func testAccKubernetesDataSourceServiceConfig_basic(name string) string {
 `, name)
 }
 
-func testAccKubernetesDataSourceServiceConfig_read() string {
-	return fmt.Sprintf(`data "kubernetes_service" "test" {
+func testAccKubernetesDataSourceServiceV1_read() string {
+	return `data "kubernetes_service_v1" "test" {
   metadata {
-    name = "${kubernetes_service.test.metadata.0.name}"
+    name = "${kubernetes_service_v1.test.metadata.0.name}"
   }
 }
-`)
+`
 }

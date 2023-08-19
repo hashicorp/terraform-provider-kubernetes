@@ -11,14 +11,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	api "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesDefaultServiceAccount() *schema.Resource {
-	serviceAccountResource := resourceKubernetesServiceAccount()
+func resourceKubernetesDefaultServiceAccountV1() *schema.Resource {
+	serviceAccountResource := resourceKubernetesServiceAccountV1()
 
 	metaSchema := namespacedMetadataSchema("service account", false)
 
@@ -29,19 +29,19 @@ func resourceKubernetesDefaultServiceAccount() *schema.Resource {
 
 	serviceAccountResource.Schema["metadata"] = metaSchema
 
-	serviceAccountResource.CreateContext = resourceKubernetesDefaultServiceAccountCreate
+	serviceAccountResource.CreateContext = resourceKubernetesDefaultServiceAccountV1Create
 
 	return serviceAccountResource
 }
 
-func resourceKubernetesDefaultServiceAccountCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesDefaultServiceAccountV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	svcAcc := api.ServiceAccount{ObjectMeta: metadata}
+	svcAcc := corev1.ServiceAccount{ObjectMeta: metadata}
 
 	log.Printf("[INFO] Checking for default service account existence: %s", metadata.Namespace)
 	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
@@ -62,7 +62,7 @@ func resourceKubernetesDefaultServiceAccountCreate(ctx context.Context, d *schem
 		return diag.FromErr(err)
 	}
 
-	secret, err := getServiceAccountDefaultSecret(ctx, "default", svcAcc, d.Timeout(schema.TimeoutCreate), conn)
+	secret, err := getServiceAccountDefaultSecretV1(ctx, "default", svcAcc, d.Timeout(schema.TimeoutCreate), conn)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -103,5 +103,5 @@ func resourceKubernetesDefaultServiceAccountCreate(ctx context.Context, d *schem
 
 	d.SetId(buildId(metadata))
 
-	return resourceKubernetesServiceAccountRead(ctx, d, meta)
+	return resourceKubernetesServiceAccountV1Read(ctx, d, meta)
 }

@@ -118,7 +118,7 @@ func resourceKubernetesEnv() *schema.Resource {
 												"name": {
 													Type:        schema.TypeString,
 													Optional:    true,
-													Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+													Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 												},
 												"optional": {
 													Type:        schema.TypeBool,
@@ -190,7 +190,7 @@ func resourceKubernetesEnv() *schema.Resource {
 												"name": {
 													Type:        schema.TypeString,
 													Optional:    true,
-													Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+													Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 												},
 												"optional": {
 													Type:        schema.TypeBool,

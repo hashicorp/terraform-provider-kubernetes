@@ -11,18 +11,20 @@ import (
 )
 
 func TestAccKubernetesDataSourceAllNamespaces_basic(t *testing.T) {
+	dataSourceName := "data.kubernetes_all_namespaces.test"
 	rxPosNum := regexp.MustCompile("^[1-9][0-9]*$")
-	nsName := regexp.MustCompile("^[a-zA-Z][-\\w]*$")
-	resource.Test(t, resource.TestCase{
+	nsName := regexp.MustCompile(`^[a-zA-Z][-\w]*$`)
+
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDataSourceAllNamespacesConfig_basic(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestMatchResourceAttr("data.kubernetes_all_namespaces.test", "namespaces.#", rxPosNum),
-					resource.TestCheckResourceAttrSet("data.kubernetes_all_namespaces.test", "namespaces.0"),
-					resource.TestMatchResourceAttr("data.kubernetes_all_namespaces.test", "namespaces.0", nsName),
+					resource.TestMatchResourceAttr(dataSourceName, "namespaces.#", rxPosNum),
+					resource.TestCheckResourceAttrSet(dataSourceName, "namespaces.0"),
+					resource.TestMatchResourceAttr(dataSourceName, "namespaces.0", nsName),
 				),
 			},
 		},
@@ -30,7 +32,5 @@ func TestAccKubernetesDataSourceAllNamespaces_basic(t *testing.T) {
 }
 
 func testAccKubernetesDataSourceAllNamespacesConfig_basic() string {
-	return `
-data "kubernetes_all_namespaces" "test" {}
-`
+	return `data "kubernetes_all_namespaces" "test" {}`
 }

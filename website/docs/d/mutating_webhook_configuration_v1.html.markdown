@@ -37,7 +37,7 @@ The following arguments are supported:
 
 #### Arguments
 
-* `name` - Name of the Mutating Webhook Configuration, must be unique. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+* `name` - Name of the Mutating Webhook Configuration, must be unique. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
 
 #### Attributes
 
@@ -45,7 +45,7 @@ The following arguments are supported:
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `labels` - Map of string keys and values that can be used to organize and categorize (scope and select) namespaces. May match selectors of replication controllers and services.
 * `resource_version` - An opaque value that represents the internal version of this secret that can be used by clients to determine when secret has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency)
-* `uid` - The unique in time and space value for this secret. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
+* `uid` - The unique in time and space value for this secret. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids)
 
 ### `webhook`
 

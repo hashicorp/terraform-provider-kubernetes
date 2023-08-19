@@ -13,18 +13,18 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	api "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesNamespace() *schema.Resource {
+func resourceKubernetesNamespaceV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesNamespaceCreate,
-		ReadContext:   resourceKubernetesNamespaceRead,
-		UpdateContext: resourceKubernetesNamespaceUpdate,
-		DeleteContext: resourceKubernetesNamespaceDelete,
+		CreateContext: resourceKubernetesNamespaceV1Create,
+		ReadContext:   resourceKubernetesNamespaceV1Read,
+		UpdateContext: resourceKubernetesNamespaceV1Update,
+		DeleteContext: resourceKubernetesNamespaceV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -44,14 +44,14 @@ func resourceKubernetesNamespace() *schema.Resource {
 	}
 }
 
-func resourceKubernetesNamespaceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesNamespaceV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	namespace := api.Namespace{
+	namespace := corev1.Namespace{
 		ObjectMeta: metadata,
 	}
 	log.Printf("[INFO] Creating new namespace: %#v", namespace)
@@ -82,11 +82,11 @@ func resourceKubernetesNamespaceCreate(ctx context.Context, d *schema.ResourceDa
 			return diag.FromErr(err)
 		}
 	}
-	return resourceKubernetesNamespaceRead(ctx, d, meta)
+	return resourceKubernetesNamespaceV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesNamespaceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesNamespaceExists(ctx, d, meta)
+func resourceKubernetesNamespaceV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesNamespaceV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -115,7 +115,7 @@ func resourceKubernetesNamespaceRead(ctx context.Context, d *schema.ResourceData
 	return nil
 }
 
-func resourceKubernetesNamespaceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesNamespaceV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -135,10 +135,10 @@ func resourceKubernetesNamespaceUpdate(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[INFO] Submitted updated namespace: %#v", out)
 	d.SetId(out.Name)
 
-	return resourceKubernetesNamespaceRead(ctx, d, meta)
+	return resourceKubernetesNamespaceV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesNamespaceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesNamespaceV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -183,7 +183,7 @@ func resourceKubernetesNamespaceDelete(ctx context.Context, d *schema.ResourceDa
 	return nil
 }
 
-func resourceKubernetesNamespaceExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesNamespaceV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

@@ -11,21 +11,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesServiceAccount() *schema.Resource {
+func dataSourceKubernetesServiceAccountV1() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKubernetesServiceAccountRead,
+		ReadContext: dataSourceKubernetesServiceAccountV1Read,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("service account", false),
 			"image_pull_secret": {
 				Type:        schema.TypeList,
-				Description: "A list of references to secrets in the same namespace to use for pulling any images in pods that reference this Service Account. More info: http://kubernetes.io/docs/user-guide/secrets#manually-specifying-an-imagepullsecret",
+				Description: "A list of references to secrets in the same namespace to use for pulling any images in pods that reference this Service Account. More info: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod",
 				Computed:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
 							Type:        schema.TypeString,
-							Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+							Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 							Computed:    true,
 						},
 					},
@@ -33,13 +33,13 @@ func dataSourceKubernetesServiceAccount() *schema.Resource {
 			},
 			"secret": {
 				Type:        schema.TypeList,
-				Description: "A list of secrets allowed to be used by pods running using this Service Account. More info: http://kubernetes.io/docs/user-guide/secrets",
+				Description: "A list of secrets allowed to be used by pods running using this Service Account. More info: https://kubernetes.io/docs/concepts/configuration/secret",
 				Computed:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
 							Type:        schema.TypeString,
-							Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+							Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 							Computed:    true,
 						},
 					},
@@ -59,7 +59,7 @@ func dataSourceKubernetesServiceAccount() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesServiceAccountRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -71,7 +71,7 @@ func dataSourceKubernetesServiceAccountRead(ctx context.Context, d *schema.Resou
 		return diag.Errorf("Unable to fetch service account from Kubernetes: %s", err)
 	}
 
-	defaultSecret, diagMsg := findDefaultServiceAccount(ctx, sa, conn)
+	defaultSecret, diagMsg := findDefaultServiceAccountV1(ctx, sa, conn)
 
 	err = d.Set("default_secret_name", defaultSecret)
 	if err != nil {
@@ -80,7 +80,7 @@ func dataSourceKubernetesServiceAccountRead(ctx context.Context, d *schema.Resou
 
 	d.SetId(buildId(sa.ObjectMeta))
 
-	diagMsg = append(diagMsg, resourceKubernetesServiceAccountRead(ctx, d, meta)...)
+	diagMsg = append(diagMsg, resourceKubernetesServiceAccountV1Read(ctx, d, meta)...)
 
 	return diagMsg
 }

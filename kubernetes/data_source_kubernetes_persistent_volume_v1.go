@@ -11,9 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
-func dataSourceKubernetesPersistentVolume() *schema.Resource {
+func dataSourceKubernetesPersistentVolumeV1() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceKubernetesPersistentVolumeRead,
+		ReadContext: dataSourceKubernetesPersistentVolumeV1Read,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("persistent volume", false),
@@ -25,7 +25,7 @@ func dataSourceKubernetesPersistentVolume() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"access_modes": {
 							Type:        schema.TypeSet,
-							Description: "Contains all ways the volume can be mounted. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes",
+							Description: "Contains all ways the volume can be mounted. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes",
 							Required:    true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
@@ -39,7 +39,7 @@ func dataSourceKubernetesPersistentVolume() *schema.Resource {
 						},
 						"capacity": {
 							Type:             schema.TypeMap,
-							Description:      "A description of the persistent volume's resources and capacity. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#capacity",
+							Description:      "A description of the persistent volume's resources and capacity. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#capacity",
 							Required:         true,
 							Elem:             schema.TypeString,
 							ValidateFunc:     validateResourceList,
@@ -47,7 +47,7 @@ func dataSourceKubernetesPersistentVolume() *schema.Resource {
 						},
 						"persistent_volume_reclaim_policy": {
 							Type:        schema.TypeString,
-							Description: "What happens to a persistent volume when released from its claim. Valid options are Retain (default) and Recycle. Recycling must be supported by the volume plugin underlying this persistent volume. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#recycling-policy",
+							Description: "What happens to a persistent volume when released from its claim. Valid options are Retain (default) and Recycle. Recycling must be supported by the volume plugin underlying this persistent volume. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#reclaiming",
 							Optional:    true,
 							Default:     "Retain",
 							ValidateFunc: validation.StringInSlice([]string{
@@ -144,7 +144,7 @@ func dataSourceKubernetesPersistentVolume() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesPersistentVolumeRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceKubernetesPersistentVolumeV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	name := d.Get("metadata.0.name").(string)
 	d.SetId(name)
 	return resourceKubernetesPersistentVolumeRead(ctx, d, meta)

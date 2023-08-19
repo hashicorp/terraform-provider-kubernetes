@@ -5,6 +5,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -17,7 +18,7 @@ func TestAccKubernetesConfigMapV1Data_basic(t *testing.T) {
 	namespace := "default"
 	resourceName := "kubernetes_config_map_v1_data.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createConfigMap(name, namespace)
@@ -64,6 +65,24 @@ func TestAccKubernetesConfigMapV1Data_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "data.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesConfigMapV1Data_validation(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_config_map_v1_data.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccKubernetesConfigMapV1Data_empty(name),
+				ExpectError: regexp.MustCompile("The ConfigMap .* does not exist"),
 			},
 		},
 	})

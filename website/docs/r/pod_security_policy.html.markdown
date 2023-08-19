@@ -74,21 +74,21 @@ The following arguments are supported:
 
 * `annotations` - (Optional) An unstructured key value map stored with the Pod Security Policy that may be used to store arbitrary metadata.
 
-~> By default, the provider ignores any annotations whose key names end with *kubernetes.io*. This is necessary because such annotations can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such annotations in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/annotations)
+~> By default, the provider ignores any annotations whose key names end with *kubernetes.io*. This is necessary because such annotations can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such annotations in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/)
 
 * `generate_name` - (Optional) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#idempotency)
 * `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) the Pod Security Policy. 
 
-~> By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/labels)
+~> By default, the provider ignores any labels whose key names end with *kubernetes.io*. This is necessary because such labels can be mutated by server-side components and consequently cause a perpetual diff in the Terraform plan output. If you explicitly specify any such labels in the configuration template then Terraform will consider these as normal resource attributes and manage them as expected (while still avoiding the perpetual diff problem). For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/)
 
-* `name` - (Optional) Name of the Pod Security Policy, must be unique. Cannot be updated. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#names)
+* `name` - (Optional) Name of the Pod Security Policy, must be unique. Cannot be updated. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
 
 #### Attributes
 
 
 * `generation` - A sequence number representing a specific generation of the desired state.
 * `resource_version` - An opaque value that represents the internal version of this Pod Security Policy that can be used by clients to determine when Pod Security Policy has changed. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/e59e666e3464c7d4851136baa8835a311efdfb8e/contributors/devel/api-conventions.md#concurrency-control-and-consistency)
-* `uid` - The unique in time and space value for this Pod Security Policy. For more info see [Kubernetes reference](http://kubernetes.io/docs/user-guide/identifiers#uids)
+* `uid` - The unique in time and space value for this Pod Security Policy. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids)
 
 ### `spec`
 
@@ -135,21 +135,21 @@ The following arguments are supported:
 #### Arguments
 
 * `rule` - (Required) the strategy that will dictate what FSGroup is used in the SecurityContext.
-* [`range`](#ranges) - (Optional) the allowed ranges of fs groups.  If you would like to force a single fs group then supply a single range with the same start and end. Required for MustRunAs.
+* `range` - (Optional) the allowed ranges of fs groups.  If you would like to force a single fs group then supply a single range with the same start and end. Required for MustRunAs.
 
 ### `run_as_user`
 
 #### Arguments
 
 * `rule` - (Required) the strategy that will dictate the allowable RunAsUser values that may be set.
-* [`ranges`](#ranges) - (Optional) the allowed ranges of uids that may be used. If you would like to force a single uid then supply a single range with the same start and end. Required for MustRunAs.
+* `range` - (Optional) the allowed ranges of uids that may be used. If you would like to force a single uid then supply a single range with the same start and end. Required for MustRunAs.
 
 ### `run_as_group`
 
 #### Arguments
 
 * `rule` - (Required) the strategy that will dictate the allowable RunAsGroup values that may be set.
-* [`range`](#ranges) - (Optional) the allowed ranges of gids that may be used. If you would like to force a single gid then supply a single range with the same start and end. Required for MustRunAs.
+* `range` - (Optional) the allowed ranges of gids that may be used. If you would like to force a single gid then supply a single range with the same start and end. Required for MustRunAs.
 
 ### `se_linux`
 
@@ -163,7 +163,7 @@ The following arguments are supported:
 #### Arguments
 
 * `rule` - (Required) the strategy that will dictate what supplemental groups is used in the SecurityContext.
-* [`range`](#ranges) - (Optional) the allowed ranges of supplemental groups.  If you would like to force a single supplemental group then supply a single range with the same start and end. Required for MustRunAs.
+* `range` - (Optional) the allowed ranges of supplemental groups.  If you would like to force a single supplemental group then supply a single range with the same start and end. Required for MustRunAs.
 
 
 ### `range`

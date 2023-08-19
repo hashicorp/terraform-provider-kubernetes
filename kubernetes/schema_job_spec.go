@@ -75,7 +75,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 				string(batchv1.IndexedCompletion),
 				string(batchv1.NonIndexedCompletion),
 			}, false),
-			Description: "Specifies how Pod completions are tracked. It can be `NonIndexed` (default) or `Indexed`. For more information: https://kubernetes.io/docs/concepts/workloads/controllers/job/#completion-mode",
+			Description: "Specifies how Pod completions are tracked. It can be `NonIndexed` (default) or `Indexed`. More info: https://kubernetes.io/docs/concepts/workloads/controllers/job/#completion-mode",
 		},
 		"manual_selector": {
 			Type:        schema.TypeBool,

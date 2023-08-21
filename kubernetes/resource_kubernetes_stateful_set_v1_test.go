@@ -329,7 +329,7 @@ func testAccCheckKubernetesStatefulSetDestroy(s *terraform.State) error {
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_stateful_set" {
+		if rs.Type != "kubernetes_stateful_set_v1" {
 			continue
 		}
 
@@ -387,7 +387,7 @@ func testAccCheckKubernetesStatefulSetV1Exists(n string, obj *appsv1.StatefulSet
 }
 
 func testAccKubernetesStatefulSetV1ConfigMinimal(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_stateful_set" "test" {
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -417,7 +417,7 @@ func testAccKubernetesStatefulSetV1ConfigMinimal(name, imageName string) string 
 }
 
 func testAccKubernetesStatefulSetV1ConfigBasic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_stateful_set" "test" {
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -508,7 +508,7 @@ func testAccKubernetesStatefulSetV1ConfigBasic(name string) string {
 }
 
 func testAccKubernetesStatefulSetV1ConfigUpdateImage(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_stateful_set" "test" {
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -592,7 +592,7 @@ func testAccKubernetesStatefulSetV1ConfigUpdateImage(name string) string {
 }
 
 func testAccKubernetesStatefulSetV1ConfigUpdatedSelectorLabels(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_stateful_set" "test" {
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -678,7 +678,7 @@ func testAccKubernetesStatefulSetV1ConfigUpdatedSelectorLabels(name string) stri
 }
 
 func testAccKubernetesStatefulSetV1ConfigUpdateReplicas(name string, replicas string) string {
-	return fmt.Sprintf(`resource "kubernetes_stateful_set" "test" {
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -762,7 +762,7 @@ func testAccKubernetesStatefulSetV1ConfigUpdateReplicas(name string, replicas st
 }
 
 func testAccKubernetesStatefulSetV1ConfigUpdateTemplate(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_stateful_set" "test" {
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -867,7 +867,7 @@ func testAccKubernetesStatefulSetV1ConfigUpdateTemplate(name string) string {
 }
 
 func testAccKubernetesStatefulSetV1ConfigRollingUpdatePartition(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_stateful_set" "test" {
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -951,7 +951,7 @@ func testAccKubernetesStatefulSetV1ConfigRollingUpdatePartition(name string) str
 }
 
 func testAccKubernetesStatefulSetV1ConfigUpdateStrategyOnDelete(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_stateful_set" "test" {
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -1044,7 +1044,7 @@ func testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, waitFor
   }
 }
 
-resource "kubernetes_stateful_set" "test" {
+resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     name = "%s"
   }

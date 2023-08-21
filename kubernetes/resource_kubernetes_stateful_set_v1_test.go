@@ -19,7 +19,7 @@ import (
 func TestAccKubernetesStatefulSetV1_minimal(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_stateful_set_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImageVersion
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
@@ -80,7 +80,7 @@ func TestAccKubernetesStatefulSetV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.labels.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.labels.app", "ss-test"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.name", "ss-test"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", "nginx:1.19"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", "busybox:1.32"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.port.0.container_port", "80"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.port.0.name", "web"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.name", "ss-test"),
@@ -271,8 +271,8 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 
 func TestAccKubernetesStatefulSetV1_waitForRollout(t *testing.T) {
 	var conf1, conf2 api.StatefulSet
-	imageName := nginxImageVersion
-	imageName1 := nginxImageVersion1
+	imageName := busyboxImageVersion
+	imageName1 := busyboxImageVersion1
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_stateful_set_v1.test"
 	resource.ParallelTest(t, resource.TestCase{
@@ -456,7 +456,7 @@ func testAccKubernetesStatefulSetV1ConfigBasic(name string) string {
       spec {
         container {
           name  = "ss-test"
-          image = "nginx:1.19"
+          image = "busybox:1.32"
 
           port {
             name           = "web"

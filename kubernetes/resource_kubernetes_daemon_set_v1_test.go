@@ -20,7 +20,7 @@ func TestAccKubernetesDaemonSetV1_minimal(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImageVersion
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -46,8 +46,8 @@ func TestAccKubernetesDaemonSetV1_basic(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := nginxImageVersion
-	imageName1 := nginxImageVersion1
+	imageName := busyboxImageVersion
+	imageName1 := busyboxImageVersion1
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -125,12 +125,12 @@ func TestAccKubernetesDaemonSetV1_with_template_metadata(t *testing.T) {
 
 	depName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImageVersion
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		IDRefreshName:     "kubernetes_daemon_set_v1.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
@@ -166,7 +166,7 @@ func TestAccKubernetesDaemonSetV1_initContainer(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImageVersion
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -198,7 +198,7 @@ func TestAccKubernetesDaemonSetV1_noTopLevelLabels(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDaemonSetV1WithNoTopLevelLabels(name, nginxImageVersion1),
+				Config: testAccKubernetesDaemonSetV1WithNoTopLevelLabels(name, busyboxImageVersion1),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
@@ -220,7 +220,7 @@ func TestAccKubernetesDaemonSetV1_with_tolerations(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		IDRefreshName:     "kubernetes_daemon_set_v1.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		CheckDestroy:      testAccCheckKubernetesDaemonSetDestroy,
 		Steps: []resource.TestStep{
@@ -273,7 +273,7 @@ func TestAccKubernetesDaemonSetV1_with_tolerations_unset_toleration_seconds(t *t
 func TestAccKubernetesDaemonSetV1_with_container_security_context_seccomp_profile(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
+	imageName := busyboxImageVersion
 	resourceName := "kubernetes_daemon_set_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -307,7 +307,7 @@ func TestAccKubernetesDaemonSetV1_with_container_security_context_seccomp_localh
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImageVersion
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
@@ -335,7 +335,7 @@ func TestAccKubernetesDaemonSetV1_with_resource_requirements(t *testing.T) {
 
 	daemonSetName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImageVersion
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -471,8 +471,9 @@ func testAccKubernetesDaemonSetV1Config_minimal(name, imageName string) string {
 
       spec {
         container {
-          image = "%s"
-          name  = "tf-acc-test"
+          image   = "%s"
+          name    = "tf-acc-test"
+          command = ["sleep", "300"]
         }
       }
     }
@@ -518,8 +519,9 @@ func testAccKubernetesDaemonSetV1Config_basic(name, imageName string) string {
 
       spec {
         container {
-          image = "%s"
-          name  = "tf-acc-test"
+          image   = "%s"
+          name    = "tf-acc-test"
+          command = ["sleep", "300"]
         }
       }
     }
@@ -564,8 +566,9 @@ func testAccKubernetesDaemonSetV1Config_modified(name, imageName string) string 
 
       spec {
         container {
-          image = "%s"
-          name  = "tf-acc-test"
+          image   = "%s"
+          name    = "tf-acc-test"
+          command = ["sleep", "300"]
         }
 
         dns_config {

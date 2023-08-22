@@ -18,14 +18,14 @@ import (
 	utils "k8s.io/utils/pointer"
 )
 
-func TestAccKubernetesEnv_DeploymentBasic(t *testing.T) {
+func TestAccKubernetesEnvV1_DeploymentBasic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	namespace := "default"
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
 	configMapName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_env.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			if err := createEnv(t, name, namespace); err != nil {
@@ -43,7 +43,7 @@ func TestAccKubernetesEnv_DeploymentBasic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesEnv_DeploymentBasic(secretName, configMapName, name, namespace),
+				Config: testAccKubernetesEnvV1_DeploymentBasic(secretName, configMapName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
@@ -60,7 +60,7 @@ func TestAccKubernetesEnv_DeploymentBasic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesEnv_DeploymentBasic_modified(secretName, configMapName, name, namespace),
+				Config: testAccKubernetesEnvV1_DeploymentBasic_modified(secretName, configMapName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
@@ -78,14 +78,14 @@ func TestAccKubernetesEnv_DeploymentBasic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesEnv_CronJobBasic(t *testing.T) {
+func TestAccKubernetesEnvV1_CronJobBasic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	namespace := "default"
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
 	configMapName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_env.demo"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createCronJobEnv(t, name, namespace)
@@ -101,7 +101,7 @@ func TestAccKubernetesEnv_CronJobBasic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesEnv_CronJobBasic(secretName, configMapName, name, namespace),
+				Config: testAccKubernetesEnvV1_CronJobBasic(secretName, configMapName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "batch/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "CronJob"),
@@ -116,7 +116,7 @@ func TestAccKubernetesEnv_CronJobBasic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesEnv_CronJobModified(secretName, configMapName, name, namespace),
+				Config: testAccKubernetesEnvV1_CronJobModified(secretName, configMapName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "batch/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "CronJob"),
@@ -136,14 +136,14 @@ func TestAccKubernetesEnv_CronJobBasic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesEnv_Deployment_initContainer(t *testing.T) {
+func TestAccKubernetesEnvV1_Deployment_initContainer(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	namespace := "default"
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
 	configMapName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_env.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createInitContainerEnv(t, name, namespace)
@@ -159,7 +159,7 @@ func TestAccKubernetesEnv_Deployment_initContainer(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesEnv_Deployment_initContainer(secretName, configMapName, name, namespace),
+				Config: testAccKubernetesEnvV1_Deployment_initContainer(secretName, configMapName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
@@ -176,7 +176,7 @@ func TestAccKubernetesEnv_Deployment_initContainer(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesEnv_modified_initContainer(secretName, configMapName, name, namespace),
+				Config: testAccKubernetesEnvV1_modified_initContainer(secretName, configMapName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
@@ -194,14 +194,14 @@ func TestAccKubernetesEnv_Deployment_initContainer(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesEnv_CronJob_initContainer(t *testing.T) {
+func TestAccKubernetesEnvV1_CronJob_initContainer(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	namespace := "default"
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
 	configMapName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_env.demo"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createCronJobInitContainerEnv(t, name, namespace)
@@ -217,7 +217,7 @@ func TestAccKubernetesEnv_CronJob_initContainer(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesEnv_CronJob_initContainer(secretName, configMapName, name, namespace),
+				Config: testAccKubernetesEnvV1_CronJob_initContainer(secretName, configMapName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "batch/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "CronJob"),
@@ -232,7 +232,7 @@ func TestAccKubernetesEnv_CronJob_initContainer(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesEnv_CronJobModified_initContainer(secretName, configMapName, name, namespace),
+				Config: testAccKubernetesEnvV1_CronJobModified_initContainer(secretName, configMapName, name, namespace),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "api_version", "batch/v1"),
 					resource.TestCheckResourceAttr(resourceName, "kind", "CronJob"),
@@ -549,7 +549,7 @@ func confirmExistingCronJobEnvs(name, namespace string) error {
 	return err
 }
 
-func testAccKubernetesEnv_DeploymentBasic(secretName, configMapName, name, namespace string) string {
+func testAccKubernetesEnvV1_DeploymentBasic(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
@@ -614,7 +614,7 @@ resource "kubernetes_env" "test" {
 	`, secretName, configMapName, name, namespace)
 }
 
-func testAccKubernetesEnv_DeploymentBasic_modified(secretName, configMapName, name, namespace string) string {
+func testAccKubernetesEnvV1_DeploymentBasic_modified(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
@@ -675,7 +675,7 @@ resource "kubernetes_env" "test" {
 	`, secretName, configMapName, name, namespace)
 }
 
-func testAccKubernetesEnv_modified_initContainer(secretName, configMapName, name, namespace string) string {
+func testAccKubernetesEnvV1_modified_initContainer(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
@@ -736,7 +736,7 @@ resource "kubernetes_env" "test" {
 	`, secretName, configMapName, name, namespace)
 }
 
-func testAccKubernetesEnv_CronJobBasic(secretName, configMapName, name, namespace string) string {
+func testAccKubernetesEnvV1_CronJobBasic(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
@@ -797,7 +797,7 @@ resource "kubernetes_env" "demo" {
 	`, secretName, configMapName, name, namespace)
 }
 
-func testAccKubernetesEnv_CronJobModified(secretName, configMapName, name, namespace string) string {
+func testAccKubernetesEnvV1_CronJobModified(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
@@ -863,7 +863,7 @@ resource "kubernetes_env" "demo" {
 	`, secretName, configMapName, name, namespace)
 }
 
-func testAccKubernetesEnv_CronJobModified_initContainer(secretName, configMapName, name, namespace string) string {
+func testAccKubernetesEnvV1_CronJobModified_initContainer(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
@@ -929,7 +929,7 @@ resource "kubernetes_env" "demo" {
 	`, secretName, configMapName, name, namespace)
 }
 
-func testAccKubernetesEnv_Deployment_initContainer(secretName, configMapName, name, namespace string) string {
+func testAccKubernetesEnvV1_Deployment_initContainer(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"
@@ -994,7 +994,7 @@ resource "kubernetes_env" "test" {
 	`, secretName, configMapName, name, namespace)
 }
 
-func testAccKubernetesEnv_CronJob_initContainer(secretName, configMapName, name, namespace string) string {
+func testAccKubernetesEnvV1_CronJob_initContainer(secretName, configMapName, name, namespace string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = "%s"

@@ -112,10 +112,11 @@ func TestAccKubernetesEndpointsV1_basic(t *testing.T) {
 func TestAccKubernetesEndpointsV1_generatedName(t *testing.T) {
 	var conf api.Endpoints
 	prefix := "tf-acc-test-gen-"
+	resourceName := "kubernetes_endpoints_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_endpoints.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesEndpointV1Destroy,
@@ -123,18 +124,18 @@ func TestAccKubernetesEndpointsV1_generatedName(t *testing.T) {
 			{
 				Config: testAccKubernetesEndpointsV1_generatedName(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesEndpointV1Exists("kubernetes_endpoints.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "metadata.0.annotations.%", "0"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "metadata.0.labels.%", "0"),
-					resource.TestCheckResourceAttr("kubernetes_endpoints.test", "metadata.0.generate_name", prefix),
-					resource.TestMatchResourceAttr("kubernetes_endpoints.test", "metadata.0.name", regexp.MustCompile("^"+prefix)),
-					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_endpoints.test", "metadata.0.uid"),
+					testAccCheckKubernetesEndpointV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", prefix),
+					resource.TestMatchResourceAttr(resourceName, "metadata.0.name", regexp.MustCompile("^"+prefix)),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 				),
 			},
 			{
-				ResourceName:            "kubernetes_endpoints.test",
+				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
@@ -152,7 +153,7 @@ func testAccCheckKubernetesEndpointV1Destroy(s *terraform.State) error {
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_endpoints" {
+		if rs.Type != "kubernetes_endpoints_v1" {
 			continue
 		}
 
@@ -287,7 +288,7 @@ func testAccKubernetesEndpointsV1_modified(name string) string {
 }
 
 func testAccKubernetesEndpointsV1_generatedName(prefix string) string {
-	return fmt.Sprintf(`resource "kubernetes_endpoints" "test" {
+	return fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
   metadata {
     generate_name = "%s"
   }

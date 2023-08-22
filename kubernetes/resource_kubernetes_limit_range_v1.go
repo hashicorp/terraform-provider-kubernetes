@@ -16,12 +16,12 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesLimitRange() *schema.Resource {
+func resourceKubernetesLimitRangeV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesLimitRangeCreate,
-		ReadContext:   resourceKubernetesLimitRangeRead,
-		UpdateContext: resourceKubernetesLimitRangeUpdate,
-		DeleteContext: resourceKubernetesLimitRangeDelete,
+		CreateContext: resourceKubernetesLimitRangeV1Create,
+		ReadContext:   resourceKubernetesLimitRangeV1Read,
+		UpdateContext: resourceKubernetesLimitRangeV1Update,
+		DeleteContext: resourceKubernetesLimitRangeV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -82,7 +82,7 @@ func resourceKubernetesLimitRange() *schema.Resource {
 	}
 }
 
-func resourceKubernetesLimitRangeCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesLimitRangeV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -105,11 +105,11 @@ func resourceKubernetesLimitRangeCreate(ctx context.Context, d *schema.ResourceD
 	log.Printf("[INFO] Submitted new limit range: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesLimitRangeRead(ctx, d, meta)
+	return resourceKubernetesLimitRangeV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesLimitRangeRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesLimitRangeExists(ctx, d, meta)
+func resourceKubernetesLimitRangeV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesLimitRangeV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -146,7 +146,7 @@ func resourceKubernetesLimitRangeRead(ctx context.Context, d *schema.ResourceDat
 	return nil
 }
 
-func resourceKubernetesLimitRangeUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesLimitRangeV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -180,10 +180,10 @@ func resourceKubernetesLimitRangeUpdate(ctx context.Context, d *schema.ResourceD
 	log.Printf("[INFO] Submitted updated limit range: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesLimitRangeRead(ctx, d, meta)
+	return resourceKubernetesLimitRangeV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesLimitRangeDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesLimitRangeV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -206,7 +206,7 @@ func resourceKubernetesLimitRangeDelete(ctx context.Context, d *schema.ResourceD
 	return nil
 }
 
-func resourceKubernetesLimitRangeExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesLimitRangeV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

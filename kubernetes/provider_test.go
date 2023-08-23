@@ -25,7 +25,6 @@ import (
 // Global constants for testing images (reduces the number of docker pulls).
 const (
 	nginxImageVersion    = "nginx:1.19.4"
-	nginxImageVersion1   = "nginx:1.19.3"
 	busyboxImageVersion  = "busybox:1.32.0"
 	busyboxImageVersion1 = "busybox:1.31"
 	busyboxImage         = "busybox:1.36"

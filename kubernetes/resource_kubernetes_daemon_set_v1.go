@@ -22,12 +22,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func resourceKubernetesDaemonSet() *schema.Resource {
+func resourceKubernetesDaemonSetV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesDaemonSetCreate,
-		ReadContext:   resourceKubernetesDaemonSetRead,
-		UpdateContext: resourceKubernetesDaemonSetUpdate,
-		DeleteContext: resourceKubernetesDaemonSetDelete,
+		CreateContext: resourceKubernetesDaemonSetV1Create,
+		ReadContext:   resourceKubernetesDaemonSetV1Read,
+		UpdateContext: resourceKubernetesDaemonSetV1Update,
+		DeleteContext: resourceKubernetesDaemonSetV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -137,7 +137,7 @@ func resourceKubernetesDaemonSetSchemaV1() map[string]*schema.Schema {
 	}
 }
 
-func resourceKubernetesDaemonSetCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesDaemonSetV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -173,10 +173,10 @@ func resourceKubernetesDaemonSetCreate(ctx context.Context, d *schema.ResourceDa
 
 	log.Printf("[INFO] Submitted new daemonset: %#v", out)
 
-	return resourceKubernetesDaemonSetRead(ctx, d, meta)
+	return resourceKubernetesDaemonSetV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesDaemonSetUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesDaemonSetV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -220,11 +220,11 @@ func resourceKubernetesDaemonSetUpdate(ctx context.Context, d *schema.ResourceDa
 		}
 	}
 
-	return resourceKubernetesDaemonSetRead(ctx, d, meta)
+	return resourceKubernetesDaemonSetV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesDaemonSetRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesDaemonSetExists(ctx, d, meta)
+func resourceKubernetesDaemonSetV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesDaemonSetV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -272,7 +272,7 @@ func resourceKubernetesDaemonSetRead(ctx context.Context, d *schema.ResourceData
 	return nil
 }
 
-func resourceKubernetesDaemonSetDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesDaemonSetV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -298,7 +298,7 @@ func resourceKubernetesDaemonSetDelete(ctx context.Context, d *schema.ResourceDa
 	return nil
 }
 
-func resourceKubernetesDaemonSetExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesDaemonSetV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

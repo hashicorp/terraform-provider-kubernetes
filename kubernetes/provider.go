@@ -284,12 +284,12 @@ func Provider() *schema.Provider {
 			"kubernetes_api_service_v1": resourceKubernetesAPIService(),
 
 			// apps
-			"kubernetes_deployment":      resourceKubernetesDeployment(),
-			"kubernetes_deployment_v1":   resourceKubernetesDeployment(),
-			"kubernetes_daemonset":       resourceKubernetesDaemonSet(),
-			"kubernetes_daemon_set_v1":   resourceKubernetesDaemonSet(),
-			"kubernetes_stateful_set":    resourceKubernetesStatefulSet(),
-			"kubernetes_stateful_set_v1": resourceKubernetesStatefulSet(),
+			"kubernetes_deployment":      resourceKubernetesDeploymentV1(),
+			"kubernetes_deployment_v1":   resourceKubernetesDeploymentV1(),
+			"kubernetes_daemonset":       resourceKubernetesDaemonSetV1(),
+			"kubernetes_daemon_set_v1":   resourceKubernetesDaemonSetV1(),
+			"kubernetes_stateful_set":    resourceKubernetesStatefulSetV1(),
+			"kubernetes_stateful_set_v1": resourceKubernetesStatefulSetV1(),
 
 			// batch
 			"kubernetes_job":         resourceKubernetesJob(),

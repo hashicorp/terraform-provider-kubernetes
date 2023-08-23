@@ -24,12 +24,12 @@ import (
 	"k8s.io/client-go/restmapper"
 )
 
-func resourceKubernetesEnvV1() *schema.Resource {
+func resourceKubernetesEnv() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesEnvV1Create,
-		ReadContext:   resourceKubernetesEnvV1Read,
-		UpdateContext: resourceKubernetesEnvV1Update,
-		DeleteContext: resourceKubernetesEnvV1Delete,
+		CreateContext: resourceKubernetesEnvCreate,
+		ReadContext:   resourceKubernetesEnvRead,
+		UpdateContext: resourceKubernetesEnvUpdate,
+		DeleteContext: resourceKubernetesEnvDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -221,19 +221,19 @@ func resourceKubernetesEnvV1() *schema.Resource {
 	}
 }
 
-func resourceKubernetesEnvV1Create(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceKubernetesEnvCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	d.SetId(buildIdWithVersionKind(metadata,
 		d.Get("api_version").(string),
 		d.Get("kind").(string)))
-	diag := resourceKubernetesEnvV1Update(ctx, d, m)
+	diag := resourceKubernetesEnvUpdate(ctx, d, m)
 	if diag.HasError() {
 		d.SetId("")
 	}
 	return diag
 }
 
-func resourceKubernetesEnvV1Read(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceKubernetesEnvRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	conn, err := m.(KubeClientsets).DynamicClient()
 	if err != nil {
 		return diag.FromErr(err)
@@ -388,7 +388,7 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 	return envs, nil
 }
 
-func resourceKubernetesEnvV1Update(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	conn, err := m.(KubeClientsets).DynamicClient()
 	if err != nil {
 		return diag.FromErr(err)
@@ -531,10 +531,10 @@ func resourceKubernetesEnvV1Update(ctx context.Context, d *schema.ResourceData, 
 		return nil
 	}
 
-	return resourceKubernetesEnvV1Read(ctx, d, m)
+	return resourceKubernetesEnvRead(ctx, d, m)
 }
 
-func resourceKubernetesEnvV1Delete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceKubernetesEnvDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	d.SetId("")
-	return resourceKubernetesEnvV1Update(ctx, d, m)
+	return resourceKubernetesEnvUpdate(ctx, d, m)
 }

@@ -387,20 +387,6 @@ func resourceKubernetesPodSecurityPolicyCreate(ctx context.Context, d *schema.Re
 		}
 	}
 
-	sv, err = serverVersionGreaterThanOrEqual(conn, "1.21.0")
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if sv {
-		return diag.Diagnostics{
-			diag.Diagnostic{
-				Severity: diag.Warning,
-				Summary:  `"PodSecurityPolicy" was deprecated in Kubernetes v1.21.0`,
-				Detail:   `Starting from version 1.21.0 Kubernetes has deprecated PodSecurityPolicy and has removed it entirely in v1.25.0`,
-			},
-		}
-	}
-
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec, err := expandPodSecurityPolicySpec(d.Get("spec").([]interface{}))
 
@@ -459,6 +445,20 @@ func resourceKubernetesPodSecurityPolicyRead(ctx context.Context, d *schema.Reso
 	err = d.Set("spec", flattenedSpec)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	sv, err := serverVersionGreaterThanOrEqual(conn, "1.21.0")
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if sv {
+		return diag.Diagnostics{
+			diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  `"PodSecurityPolicy" was deprecated in Kubernetes v1.21.0`,
+				Detail:   `Starting from version 1.21.0 Kubernetes has deprecated PodSecurityPolicy and has removed it entirely in v1.25.0`,
+			},
+		}
 	}
 
 	return nil

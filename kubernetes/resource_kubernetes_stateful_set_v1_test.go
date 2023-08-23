@@ -413,8 +413,8 @@ func testAccKubernetesStatefulSetV1ConfigMinimal(name, imageName string) string 
       }
       spec {
         container {
-          name  = "ss-test"
-          image = "%s"
+          name    = "ss-test"
+          image   = "%s"
           command = ["sleep", "300"]
         }
       }

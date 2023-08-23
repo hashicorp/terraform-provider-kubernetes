@@ -1648,8 +1648,8 @@ func testAccKubernetesDeploymentV1ConfigWithSecurityContext(deploymentName, imag
         }
 
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
           command = ["sleep", "300"]
         }
       }
@@ -2746,8 +2746,8 @@ func testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(depl
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
           command = ["sleep", "300"]
         }
       }
@@ -2939,8 +2939,8 @@ func testAccKubernetesDeploymentV1ConfigWithResourceFieldSelector(rcName, imageN
       }
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
           command = ["sleep", "300"]
           resources {
             limits = {

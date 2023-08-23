@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesResourceQuota_basic(t *testing.T) {
+func TestAccKubernetesResourceQuotaV1_basic(t *testing.T) {
 	var conf api.ResourceQuota
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	resourceName := "kubernetes_resource_quota.test"
@@ -28,7 +28,7 @@ func TestAccKubernetesResourceQuota_basic(t *testing.T) {
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesResourceQuotaConfig_basic(name),
+				Config: testAccKubernetesResourceQuotaV1Config_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesResourceQuotaExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "1"),
@@ -54,7 +54,7 @@ func TestAccKubernetesResourceQuota_basic(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config: testAccKubernetesResourceQuotaConfig_metaModified(name),
+				Config: testAccKubernetesResourceQuotaV1Config_metaModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesResourceQuotaExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
@@ -75,7 +75,7 @@ func TestAccKubernetesResourceQuota_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesResourceQuotaConfig_specModified(name),
+				Config: testAccKubernetesResourceQuotaV1Config_specModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesResourceQuotaExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
@@ -95,7 +95,7 @@ func TestAccKubernetesResourceQuota_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesResourceQuota_generatedName(t *testing.T) {
+func TestAccKubernetesResourceQuotaV1_generatedName(t *testing.T) {
 	var conf api.ResourceQuota
 	prefix := "tf-acc-test-"
 	resourceName := "kubernetes_resource_quota.test"
@@ -108,7 +108,7 @@ func TestAccKubernetesResourceQuota_generatedName(t *testing.T) {
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesResourceQuotaConfig_generatedName(prefix),
+				Config: testAccKubernetesResourceQuotaV1Config_generatedName(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesResourceQuotaExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
@@ -132,7 +132,7 @@ func TestAccKubernetesResourceQuota_generatedName(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesResourceQuota_withScopes(t *testing.T) {
+func TestAccKubernetesResourceQuotaV1_withScopes(t *testing.T) {
 	var conf api.ResourceQuota
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	resourceName := "kubernetes_resource_quota.test"
@@ -145,7 +145,7 @@ func TestAccKubernetesResourceQuota_withScopes(t *testing.T) {
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesResourceQuotaConfig_withScopes(name),
+				Config: testAccKubernetesResourceQuotaV1Config_withScopes(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesResourceQuotaExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
@@ -167,7 +167,7 @@ func TestAccKubernetesResourceQuota_withScopes(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config: testAccKubernetesResourceQuotaConfig_withScopesModified(name),
+				Config: testAccKubernetesResourceQuotaV1Config_withScopesModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesResourceQuotaExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
@@ -186,7 +186,7 @@ func TestAccKubernetesResourceQuota_withScopes(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesResourceQuota_scopeSelector(t *testing.T) {
+func TestAccKubernetesResourceQuotaV1_scopeSelector(t *testing.T) {
 	var conf api.ResourceQuota
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	resourceName := "kubernetes_resource_quota.test"
@@ -199,7 +199,7 @@ func TestAccKubernetesResourceQuota_scopeSelector(t *testing.T) {
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesResourceQuotaConfigScopeSelector(name),
+				Config: testAccKubernetesResourceQuotaV1ConfigScopeSelector(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesResourceQuotaExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "1"),
@@ -227,7 +227,7 @@ func TestAccKubernetesResourceQuota_scopeSelector(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config: testAccKubernetesResourceQuotaConfigScopeSelectorModified(name),
+				Config: testAccKubernetesResourceQuotaV1ConfigScopeSelectorModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesResourceQuotaExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "1"),
@@ -248,7 +248,7 @@ func TestAccKubernetesResourceQuota_scopeSelector(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesResourceQuotaConfigMultipleMatchExpression(name),
+				Config: testAccKubernetesResourceQuotaV1ConfigMultipleMatchExpression(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesResourceQuotaExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "1"),
@@ -332,7 +332,7 @@ func testAccCheckKubernetesResourceQuotaExists(n string, obj *api.ResourceQuota)
 	}
 }
 
-func testAccKubernetesResourceQuotaConfig_basic(name string) string {
+func testAccKubernetesResourceQuotaV1Config_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_resource_quota" "test" {
   metadata {
     annotations = {
@@ -359,7 +359,7 @@ func testAccKubernetesResourceQuotaConfig_basic(name string) string {
 `, name)
 }
 
-func testAccKubernetesResourceQuotaConfig_metaModified(name string) string {
+func testAccKubernetesResourceQuotaV1Config_metaModified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_resource_quota" "test" {
   metadata {
     annotations = {
@@ -387,7 +387,7 @@ func testAccKubernetesResourceQuotaConfig_metaModified(name string) string {
 `, name)
 }
 
-func testAccKubernetesResourceQuotaConfig_specModified(name string) string {
+func testAccKubernetesResourceQuotaV1Config_specModified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_resource_quota" "test" {
   metadata {
     name = "%s"
@@ -405,7 +405,7 @@ func testAccKubernetesResourceQuotaConfig_specModified(name string) string {
 `, name)
 }
 
-func testAccKubernetesResourceQuotaConfig_generatedName(prefix string) string {
+func testAccKubernetesResourceQuotaV1Config_generatedName(prefix string) string {
 	return fmt.Sprintf(`resource "kubernetes_resource_quota" "test" {
   metadata {
     generate_name = "%s"
@@ -420,7 +420,7 @@ func testAccKubernetesResourceQuotaConfig_generatedName(prefix string) string {
 `, prefix)
 }
 
-func testAccKubernetesResourceQuotaConfig_withScopes(name string) string {
+func testAccKubernetesResourceQuotaV1Config_withScopes(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_resource_quota" "test" {
   metadata {
     name = "%s"
@@ -437,7 +437,7 @@ func testAccKubernetesResourceQuotaConfig_withScopes(name string) string {
 `, name)
 }
 
-func testAccKubernetesResourceQuotaConfig_withScopesModified(name string) string {
+func testAccKubernetesResourceQuotaV1Config_withScopesModified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_resource_quota" "test" {
   metadata {
     name = "%s"
@@ -454,7 +454,7 @@ func testAccKubernetesResourceQuotaConfig_withScopesModified(name string) string
 `, name)
 }
 
-func testAccKubernetesResourceQuotaConfigScopeSelector(name string) string {
+func testAccKubernetesResourceQuotaV1ConfigScopeSelector(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_resource_quota" "test" {
   metadata {
     annotations = {
@@ -489,7 +489,7 @@ func testAccKubernetesResourceQuotaConfigScopeSelector(name string) string {
 `, name)
 }
 
-func testAccKubernetesResourceQuotaConfigScopeSelectorModified(name string) string {
+func testAccKubernetesResourceQuotaV1ConfigScopeSelectorModified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_resource_quota" "test" {
   metadata {
     annotations = {
@@ -524,7 +524,7 @@ func testAccKubernetesResourceQuotaConfigScopeSelectorModified(name string) stri
 `, name)
 }
 
-func testAccKubernetesResourceQuotaConfigMultipleMatchExpression(name string) string {
+func testAccKubernetesResourceQuotaV1ConfigMultipleMatchExpression(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_resource_quota" "test" {
   metadata {

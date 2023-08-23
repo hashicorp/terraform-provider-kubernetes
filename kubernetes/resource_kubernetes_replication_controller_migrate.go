@@ -10,7 +10,7 @@ import (
 )
 
 func resourceKubernetesReplicationControllerV0() *schema.Resource {
-	schemaV1 := resourceKubernetesReplicationControllerSchemaV1()
+	schemaV1 := resourceKubernetesReplicationControllerV1SchemaV1()
 	schemaV0 := patchTemplatePodSpecWithResourcesFieldV0(schemaV1)
 	return &schema.Resource{Schema: schemaV0}
 }

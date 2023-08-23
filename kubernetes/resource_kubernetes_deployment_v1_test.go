@@ -21,19 +21,19 @@ func TestAccKubernetesDeploymentV1_minimal(t *testing.T) {
 	var conf appsv1.Deployment
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1Config_minimal(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
@@ -51,19 +51,19 @@ func TestAccKubernetesDeploymentV1_basic(t *testing.T) {
 	var conf appsv1.Deployment
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := agnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1Config_basic(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -92,8 +92,8 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	namespace := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := busyboxImageVersion
-	imageName1 := busyboxImageVersion1
+	imageName := busyboxImage
+	imageName1 := agnhostImage
 	initCommand := "until nslookup " + name + "-init-service." + namespace + ".svc.cluster.local; do echo waiting for init-service; sleep 2; done"
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -101,14 +101,14 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1Config_initContainer(
 					namespace, name, imageName, imageName1, "64Mi", "testvar",
 					"initcontainer2", initCommand, "IfNotPresent"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf1),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.resources.0.requests.memory", "64Mi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.env.2.value", "testvar"),
@@ -129,7 +129,7 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 					namespace, name, imageName, imageName1, "80Mi", "testvar",
 					"initcontainer2", initCommand, "IfNotPresent"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf2),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.resources.0.requests.memory", "80Mi"),
 					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, false),
 				),
@@ -139,7 +139,7 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 					namespace, name, imageName, imageName1, "64Mi", "testvar",
 					"initcontainer2", initCommand, "IfNotPresent"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf2),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.env.2.value", "testvar"),
 					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, false),
 				),
@@ -149,7 +149,7 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 					namespace, name, imageName, imageName1, "64Mi", "testvar",
 					"initcontainer2", "echo done", "IfNotPresent"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf2),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.1.command.2", "echo done"),
 					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, false),
 				),
@@ -159,7 +159,7 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 					namespace, name, imageName, imageName1, "64Mi", "testvar",
 					"initcontainer2", "echo done", "Never"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf2),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.1.image_pull_policy", "Never"),
 					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, false),
 				),
@@ -169,7 +169,7 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 					namespace, name, imageName, imageName, "64Mi", "testvar",
 					"initcontainer2", "echo done", "Never"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf2),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.1.image", imageName),
 					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, false),
 				),
@@ -179,7 +179,7 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 					namespace, name, imageName, imageName, "64Mi", "testvar",
 					"initcontainertwo", "echo done", "Never"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf2),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.1.name", "initcontainertwo"),
 					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, false),
 				),
@@ -192,19 +192,19 @@ func TestAccKubernetesDeploymentV1_generatedName(t *testing.T) {
 	var conf appsv1.Deployment
 	prefix := "tf-acc-test-gen-"
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1Config_generatedName(prefix, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", prefix),
@@ -229,17 +229,17 @@ func TestAccKubernetesDeploymentV1_with_security_context(t *testing.T) {
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := "redis:5.0.2"
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithSecurityContext(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.fs_group", "100"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.run_as_non_root", "true"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.run_as_user", "101"),
@@ -257,17 +257,17 @@ func TestAccKubernetesDeploymentV1_with_security_context_run_as_group(t *testing
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := "redis:5.0.2"
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithSecurityContextRunAsGroup(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.fs_group", "100"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.run_as_group", "100"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.run_as_non_root", "true"),
@@ -285,17 +285,17 @@ func TestAccKubernetesDeploymentV1_with_security_context_sysctl(t *testing.T) {
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := "redis:5.0.2"
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithSecurityContextSysctl(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.fs_group", "100"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.run_as_non_root", "true"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.run_as_user", "101"),
@@ -315,19 +315,19 @@ func TestAccKubernetesDeploymentV1_with_tolerations(t *testing.T) {
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := "redis:5.0.2"
+	imageName := busyboxImage
 	tolerationSeconds := 6000
 	operator := "Equal"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithTolerations(deploymentName, imageName, &tolerationSeconds, operator, nil),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.toleration.0.effect", "NoExecute"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.toleration.0.key", "myKey"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.toleration.0.operator", operator),
@@ -344,19 +344,19 @@ func TestAccKubernetesDeploymentV1_with_tolerations_unset_toleration_seconds(t *
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := "redis:5.0.2"
+	imageName := busyboxImage
 	operator := "Equal"
 	value := "value"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithTolerations(deploymentName, imageName, nil, operator, &value),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.toleration.0.effect", "NoExecute"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.toleration.0.key", "myKey"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.toleration.0.operator", operator),
@@ -373,17 +373,17 @@ func TestAccKubernetesDeploymentV1_with_container_liveness_probe_using_exec(t *t
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := "gcr.io/google_containers/busybox"
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingExec(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.args.#", "3"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.exec.#", "1"),
@@ -403,17 +403,17 @@ func TestAccKubernetesDeploymentV1_with_container_liveness_probe_using_http_get(
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
+	imageName := agnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingHTTPGet(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.args.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.http_get.#", "1"),
@@ -434,17 +434,17 @@ func TestAccKubernetesDeploymentV1_with_container_liveness_probe_using_tcp(t *te
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
+	imageName := agnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingTCP(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.args.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.tcp_socket.#", "1"),
@@ -460,17 +460,17 @@ func TestAccKubernetesDeploymentV1_with_container_lifecycle(t *testing.T) {
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := "gcr.io/google_containers/busybox"
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithLifeCycle(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.lifecycle.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.lifecycle.0.post_start.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.lifecycle.0.post_start.0.exec.#", "1"),
@@ -492,17 +492,17 @@ func TestAccKubernetesDeploymentV1_with_container_security_context(t *testing.T)
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := "redis:5.0.2"
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithContainerSecurityContext(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.capabilities.#", "0"),
@@ -533,17 +533,17 @@ func TestAccKubernetesDeploymentV1_with_container_security_context_run_as_group(
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := "redis:5.0.2"
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextRunAsGroup(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.privileged", "true"),
@@ -565,18 +565,18 @@ func TestAccKubernetesDeploymentV1_with_container_security_context_seccomp_profi
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 	resourceName := "kubernetes_deployment_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfClusterVersionLessThan(t, "1.19.0") },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextSeccompProfile(deploymentName, imageName, "Unconfined"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.type", "Unconfined"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.type", "Unconfined"),
 				),
@@ -584,7 +584,7 @@ func TestAccKubernetesDeploymentV1_with_container_security_context_seccomp_profi
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextSeccompProfile(deploymentName, imageName, "RuntimeDefault"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.type", "RuntimeDefault"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.type", "RuntimeDefault"),
 				),
@@ -597,18 +597,18 @@ func TestAccKubernetesDeploymentV1_with_container_security_context_seccomp_local
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 	resourceName := "kubernetes_deployment_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextSeccompProfileLocalhost(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.type", "Localhost"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.seccomp_profile.0.localhost_profile", "profiles/audit.json"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.seccomp_profile.0.type", "Localhost"),
@@ -625,17 +625,17 @@ func TestAccKubernetesDeploymentV1_with_volume_mount(t *testing.T) {
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithVolumeMounts(secretName, deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.mount_path", "/tmp/my_path"),
@@ -647,7 +647,7 @@ func TestAccKubernetesDeploymentV1_with_volume_mount(t *testing.T) {
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithVolumeMountsNone(secretName, deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.#", "0"),
 				),
@@ -659,17 +659,18 @@ func TestAccKubernetesDeploymentV1_with_volume_mount(t *testing.T) {
 func TestAccKubernetesDeploymentV1_ForceNew(t *testing.T) {
 	var conf1, conf2 appsv1.Deployment
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImage
+	imageName1 := agnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1Config_ForceNew("secret1", "label1", "deployment1", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf1),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.app", "label1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_labels.app", "label1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.labels.app", "label1"),
@@ -680,7 +681,7 @@ func TestAccKubernetesDeploymentV1_ForceNew(t *testing.T) {
 			{
 				Config: testAccKubernetesDeploymentV1Config_ForceNew("secret2", "label1", "deployment1", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf2),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.app", "label1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_labels.app", "label1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.labels.app", "label1"),
@@ -692,7 +693,7 @@ func TestAccKubernetesDeploymentV1_ForceNew(t *testing.T) {
 			{ // BUG: labels cannot be updated on a deployment without triggering a ForceNew.
 				Config: testAccKubernetesDeploymentV1Config_ForceNew("secret2", "label2", "deployment1", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf2),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.app", "label2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_labels.app", "label2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.labels.app", "label2"),
@@ -702,13 +703,13 @@ func TestAccKubernetesDeploymentV1_ForceNew(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesDeploymentV1Config_ForceNew("secret2", "label2", "deployment1", "nginx:1.18"),
+				Config: testAccKubernetesDeploymentV1Config_ForceNew("secret2", "label2", "deployment1", imageName1),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf2),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.app", "label2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_labels.app", "label2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.labels.app", "label2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", "nginx:1.18"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.secret.0.secret_name", "secret2"),
 					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, true),
 				),
@@ -727,12 +728,12 @@ func TestAccKubernetesDeploymentV1_with_resource_requirements(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithResourceRequirements(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.memory", "50Mi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.cpu", "250m"),
@@ -745,7 +746,7 @@ func TestAccKubernetesDeploymentV1_with_resource_requirements(t *testing.T) {
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithEmptyResourceRequirements(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.#", "0"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.#", "0"),
@@ -754,7 +755,7 @@ func TestAccKubernetesDeploymentV1_with_resource_requirements(t *testing.T) {
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithResourceRequirementsLimitsOnly(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.memory", "512Mi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.cpu", "500m"),
@@ -763,7 +764,7 @@ func TestAccKubernetesDeploymentV1_with_resource_requirements(t *testing.T) {
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithResourceRequirementsRequestsOnly(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.memory", "512Mi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.cpu", "500m"),
@@ -778,17 +779,17 @@ func TestAccKubernetesDeploymentV1_with_empty_dir_volume(t *testing.T) {
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithEmptyDirVolumes(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.mount_path", "/cache"),
@@ -799,7 +800,7 @@ func TestAccKubernetesDeploymentV1_with_empty_dir_volume(t *testing.T) {
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithEmptyDirVolumesModified(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.mount_path", "/cache"),
@@ -815,18 +816,18 @@ func TestAccKubernetesDeploymentV1_with_empty_dir_volume(t *testing.T) {
 func TestAccKubernetesDeploymentV1Update_basic(t *testing.T) {
 	var conf1, conf2 appsv1.Deployment
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := agnhostImage
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1Config_basic(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf1),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf1),
 					// Not to be changed
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					// To be removed
@@ -840,7 +841,7 @@ func TestAccKubernetesDeploymentV1Update_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesDeploymentV1Config_modified(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf2),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					// Unchanged
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					// Removed
@@ -848,7 +849,7 @@ func TestAccKubernetesDeploymentV1Update_basic(t *testing.T) {
 					// Added
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.Different", "1234"),
 					// Changed
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", nginxImageVersion),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, false),
 				),
 			},
@@ -860,18 +861,18 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate(t *tes
 	var conf appsv1.Deployment
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 	resourceName := "kubernetes_deployment_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, "RollingUpdate", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
@@ -882,7 +883,7 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate(t *tes
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, "Recreate", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "Recreate"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "0"),
@@ -891,7 +892,7 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate(t *tes
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, "RollingUpdate", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
@@ -908,17 +909,17 @@ func TestAccKubernetesDeploymentV1_with_share_process_namespace(t *testing.T) {
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithShareProcessNamespace(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.share_process_namespace", "true"),
 				),
 			},
@@ -931,17 +932,17 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate_max_su
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(deploymentName, "30%", "40%", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
@@ -958,17 +959,17 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate_max_su
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(deploymentName, "200%", "0%", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
@@ -985,17 +986,17 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate_max_su
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(deploymentName, "0", "1", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
@@ -1012,17 +1013,17 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate_max_su
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(deploymentName, "1", "0", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
@@ -1039,17 +1040,17 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate_max_su
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(deploymentName, "1", "2", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
@@ -1066,17 +1067,17 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_recreate(t *testing.
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, "Recreate", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "Recreate"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "0"),
@@ -1091,17 +1092,17 @@ func TestAccKubernetesDeploymentV1_with_host_aliases(t *testing.T) {
 
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigHostAliases(deploymentName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.host_aliases.0.hostnames.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.host_aliases.0.hostnames.0", "abc.com"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.host_aliases.0.hostnames.1", "contoso.com"),
@@ -1119,12 +1120,12 @@ func TestAccKubernetesDeploymentV1_with_resource_field_selector(t *testing.T) {
 	var conf appsv1.Deployment
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentDestroy,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				ExpectError: regexp.MustCompile("quantities must match the regular expression"),
@@ -1137,7 +1138,7 @@ func TestAccKubernetesDeploymentV1_with_resource_field_selector(t *testing.T) {
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithResourceFieldSelector(rcName, imageName, "limits.cpu", "1m"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.memory", "512Mi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.env.#", "1"),
@@ -1150,7 +1151,7 @@ func TestAccKubernetesDeploymentV1_with_resource_field_selector(t *testing.T) {
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithResourceFieldSelector(rcName, imageName, "limits.memory", "1Mi"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.env.0.value_from.0.resource_field_ref.0.divisor", "1Mi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.env.0.value_from.0.resource_field_ref.0.resource", "limits.memory"),
 				),
@@ -1158,9 +1159,32 @@ func TestAccKubernetesDeploymentV1_with_resource_field_selector(t *testing.T) {
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithResourceFieldSelector(rcName, imageName, "requests.memory", "1Ki"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &conf),
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.env.0.value_from.0.resource_field_ref.0.divisor", "1Ki"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.env.0.value_from.0.resource_field_ref.0.resource", "requests.memory"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDeploymentV1_config_with_automount_service_account_token(t *testing.T) {
+	var confDeployment appsv1.Deployment
+
+	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_deployment_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentV1ConfigWithAutomountServiceAccountToken(deploymentName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &confDeployment),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.automount_service_account_token", "true"),
 				),
 			},
 		},
@@ -1182,30 +1206,7 @@ func testAccCheckKubernetesDeploymentForceNew(old, new *appsv1.Deployment, wantN
 	}
 }
 
-func TestAccKubernetesDeploymentV1_config_with_automount_service_account_token(t *testing.T) {
-	var confDeployment appsv1.Deployment
-
-	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_deployment_v1.test"
-	imageName := nginxImageVersion
-
-	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesDeploymentV1ConfigWithAutomountServiceAccountToken(deploymentName, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesDeploymentExists(resourceName, &confDeployment),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.automount_service_account_token", "true"),
-				),
-			},
-		},
-	})
-}
-
-func testAccCheckKubernetesDeploymentDestroy(s *terraform.State) error {
+func testAccCheckKubernetesDeploymentV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	if err != nil {
@@ -1260,7 +1261,7 @@ func getDeploymentFromResourceName(s *terraform.State, n string) (*appsv1.Deploy
 	return out, nil
 }
 
-func testAccCheckKubernetesDeploymentExists(n string, obj *appsv1.Deployment) resource.TestCheckFunc {
+func testAccCheckKubernetesDeploymentV1Exists(n string, obj *appsv1.Deployment) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		d, err := getDeploymentFromResourceName(s, n)
 		if err != nil {
@@ -1320,7 +1321,7 @@ func testAccKubernetesDeploymentV1Config_basic(name, imageName string) string {
   }
 
   spec {
-    replicas = 5
+    replicas = 2
 
     selector {
       match_labels = {
@@ -1343,6 +1344,7 @@ func testAccKubernetesDeploymentV1Config_basic(name, imageName string) string {
         container {
           image = "%s"
           name  = "tf-acc-test"
+          args  = ["test-webserver"]
 
           port {
             container_port = 80
@@ -1371,7 +1373,7 @@ func testAccKubernetesDeploymentV1Config_basic(name, imageName string) string {
 }
 
 func testAccKubernetesDeploymentV1Config_initContainer(namespace, name, imageName, imageName1, memory, envName, initName, initCommand, pullPolicy string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -1388,7 +1390,7 @@ resource "kubernetes_deployment_v1" "test" {
       TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
-    namespace = kubernetes_namespace.test.metadata.0.name
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
     name      = "%s"
   }
   spec {
@@ -1428,7 +1430,7 @@ resource "kubernetes_deployment_v1" "test" {
             name = "SECRETENV"
             value_from {
               secret_key_ref {
-                name = kubernetes_secret.test.metadata.0.name
+                name = kubernetes_secret_v1.test.metadata.0.name
                 key  = "SECRETENV"
               }
             }
@@ -1455,7 +1457,7 @@ resource "kubernetes_deployment_v1" "test" {
           }
           env_from {
             config_map_ref {
-              name = kubernetes_config_map.test.metadata.0.name
+              name = kubernetes_config_map_v1.test.metadata.0.name
             }
             prefix = "CONFIG"
           }
@@ -1482,10 +1484,10 @@ resource "kubernetes_deployment_v1" "test" {
   }
 }
 
-resource "kubernetes_service" "test" {
+resource "kubernetes_service_v1" "test" {
   metadata {
     name      = "%s-init-service"
-    namespace = kubernetes_namespace.test.metadata.0.name
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
     labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
@@ -1500,10 +1502,10 @@ resource "kubernetes_service" "test" {
   }
 }
 
-resource "kubernetes_secret" "test" {
+resource "kubernetes_secret_v1" "test" {
   metadata {
     name      = "%s-test"
-    namespace = kubernetes_namespace.test.metadata.0.name
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
   }
   data = {
     "SECRETENV" = "asdf1234"
@@ -1511,10 +1513,10 @@ resource "kubernetes_secret" "test" {
 }
 
 
-resource "kubernetes_config_map" "test" {
+resource "kubernetes_config_map_v1" "test" {
   metadata {
     name      = "%s-test"
-    namespace = kubernetes_namespace.test.metadata.0.name
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
   }
   data = {
     "ENV" = "somedata"
@@ -1559,14 +1561,15 @@ func testAccKubernetesDeploymentV1Config_modified(name, imageName string) string
 
       spec {
         container {
-          image = %q
+          image = "%s"
           name  = "tf-acc-test"
+          args  = ["test-webserver"]
         }
       }
     }
   }
 }
-`, name, nginxImageVersion)
+`, name, imageName)
 }
 
 func testAccKubernetesDeploymentV1Config_generatedName(prefix, imageName string) string {
@@ -1601,14 +1604,15 @@ func testAccKubernetesDeploymentV1Config_generatedName(prefix, imageName string)
 
       spec {
         container {
-          image = %q
-          name  = "tf-acc-test"
+          image   = %q
+          name    = "tf-acc-test"
+          command = ["sleep", "300"]
         }
       }
     }
   }
 }
-`, prefix, nginxImageVersion)
+`, prefix, imageName)
 }
 
 func testAccKubernetesDeploymentV1ConfigWithSecurityContext(deploymentName, imageName string) string {
@@ -1646,6 +1650,7 @@ func testAccKubernetesDeploymentV1ConfigWithSecurityContext(deploymentName, imag
         container {
           image = "%s"
           name  = "containername"
+          command = ["sleep", "300"]
         }
       }
     }
@@ -1688,8 +1693,9 @@ func testAccKubernetesDeploymentV1ConfigWithSecurityContextRunAsGroup(deployment
         }
 
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "300"]
         }
       }
     }
@@ -1736,8 +1742,9 @@ func testAccKubernetesDeploymentV1ConfigWithSecurityContextSysctl(deploymentName
         }
 
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "300"]
         }
       }
     }
@@ -1789,8 +1796,9 @@ func testAccKubernetesDeploymentV1ConfigWithTolerations(deploymentName, imageNam
         }
 
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "300"]
         }
       }
     }
@@ -2020,8 +2028,9 @@ func testAccKubernetesDeploymentV1ConfigWithContainerSecurityContext(deploymentN
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = %[2]q
+          name    = "containername"
+          command = ["sleep", "300"]
 
           security_context {
             privileged  = true
@@ -2034,9 +2043,9 @@ func testAccKubernetesDeploymentV1ConfigWithContainerSecurityContext(deploymentN
         }
 
         container {
-          image = "registry.k8s.io/e2e-test-images/agnhost:2.40"
-          name  = "containername2"
-          args  = ["liveness"]
+          image   = %[2]q
+          name    = "containername2"
+          command = ["sleep", "300"]
 
           security_context {
             allow_privilege_escalation = true
@@ -2089,8 +2098,9 @@ func testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextRunAsGroup(d
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "300"]
 
           security_context {
             privileged  = true
@@ -2149,8 +2159,9 @@ func testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextSeccompProfi
           }
         }
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "300"]
 
           security_context {
             seccomp_profile {
@@ -2197,8 +2208,9 @@ func testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextSeccompProfi
           }
         }
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "300"]
 
           security_context {
             seccomp_profile {
@@ -2250,8 +2262,9 @@ resource "kubernetes_deployment_v1" "test" {
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "300"]
 
           volume_mount {
             mount_path = "/tmp/my_path"
@@ -2309,8 +2322,9 @@ resource "kubernetes_deployment_v1" "test" {
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "300"]
         }
 
         volume {
@@ -2538,8 +2552,9 @@ func testAccKubernetesDeploymentV1ConfigWithEmptyDirVolumes(deploymentName, imag
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "300"]
 
           volume_mount {
             mount_path = "/cache"
@@ -2587,8 +2602,9 @@ func testAccKubernetesDeploymentV1ConfigWithEmptyDirVolumesModified(deploymentNa
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "300"]
 
           volume_mount {
             mount_path = "/cache"
@@ -2641,8 +2657,9 @@ func testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, s
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "300"]
         }
       }
     }
@@ -2678,12 +2695,14 @@ func testAccKubernetesDeploymentV1ConfigWithShareProcessNamespace(deploymentName
       spec {
         share_process_namespace = true
         container {
-          image = "%s"
-          name  = "containername1"
+          image   = "%s"
+          name    = "containername1"
+          command = ["sleep", "300"]
         }
         container {
-          image = "%s"
-          name  = "containername2"
+          image   = "%s"
+          name    = "containername2"
+          command = ["sleep", "300"]
         }
       }
     }
@@ -2729,6 +2748,7 @@ func testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(depl
         container {
           image = "%s"
           name  = "containername"
+          command = ["sleep", "300"]
         }
       }
     }
@@ -2776,8 +2796,9 @@ func testAccKubernetesDeploymentV1ConfigHostAliases(name string, imageName strin
 
       spec {
         container {
-          image = "%s"
-          name  = "tf-acc-test"
+          image   = "%s"
+          name    = "tf-acc-test"
+          command = ["sleep", "300"]
 
           resources {
             requests = {
@@ -2825,8 +2846,9 @@ func testAccKubernetesDeploymentV1ConfigWithAutomountServiceAccountToken(deploym
       spec {
         automount_service_account_token = true
         container {
-          name  = "containername"
-          image = "%s"
+          name    = "containername"
+          image   = "%s"
+          command = ["sleep", "300"]
         }
       }
     }
@@ -2835,7 +2857,7 @@ func testAccKubernetesDeploymentV1ConfigWithAutomountServiceAccountToken(deploym
 `, deploymentName, imageName)
 }
 
-func testAccKubernetesDeploymentV1Config_ForceNew(secretName, label, deploymentName, imageName string) string {
+func testAccKubernetesDeploymentV1Config_ForceNew(secretName, label, name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     name = %[1]q
@@ -2871,8 +2893,9 @@ resource "kubernetes_deployment_v1" "test" {
 
       spec {
         container {
-          image = %[4]q
-          name  = "containername"
+          image   = %[4]q
+          name    = "containername"
+          command = ["sleep", "300"]
 
           volume_mount {
             mount_path = "/tmp/my_path"
@@ -2891,7 +2914,7 @@ resource "kubernetes_deployment_v1" "test" {
     }
   }
 }
-`, secretName, label, deploymentName, imageName)
+`, secretName, label, name, imageName)
 }
 
 func testAccKubernetesDeploymentV1ConfigWithResourceFieldSelector(rcName, imageName, resourceName, divisor string) string {
@@ -2918,6 +2941,7 @@ func testAccKubernetesDeploymentV1ConfigWithResourceFieldSelector(rcName, imageN
         container {
           image = "%s"
           name  = "containername"
+          command = ["sleep", "300"]
           resources {
             limits = {
               memory = "512Mi"

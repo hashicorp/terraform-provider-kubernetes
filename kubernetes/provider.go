@@ -250,8 +250,8 @@ func Provider() *schema.Provider {
 			// core
 			"kubernetes_namespace":                  resourceKubernetesNamespaceV1(),
 			"kubernetes_namespace_v1":               resourceKubernetesNamespaceV1(),
-			"kubernetes_service":                    resourceKubernetesService(),
-			"kubernetes_service_v1":                 resourceKubernetesService(),
+			"kubernetes_service":                    resourceKubernetesServiceV1(),
+			"kubernetes_service_v1":                 resourceKubernetesServiceV1(),
 			"kubernetes_service_account":            resourceKubernetesServiceAccountV1(),
 			"kubernetes_service_account_v1":         resourceKubernetesServiceAccountV1(),
 			"kubernetes_default_service_account":    resourceKubernetesDefaultServiceAccountV1(),

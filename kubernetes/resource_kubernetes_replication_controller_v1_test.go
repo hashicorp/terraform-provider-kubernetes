@@ -1092,7 +1092,7 @@ func testAccKubernetesReplicationControllerV1ConfigWithContainerSecurityContext(
 }
 
 func testAccKubernetesReplicationControllerV1ConfigWithVolumeMounts(secretName, rcName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -1138,7 +1138,7 @@ resource "kubernetes_replication_controller_v1" "test" {
           name = "db"
 
           secret {
-            secret_name = "${kubernetes_secret.test.metadata.0.name}"
+            secret_name = "${kubernetes_secret_v1.test.metadata.0.name}"
           }
         }
       }

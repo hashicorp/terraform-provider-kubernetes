@@ -44,11 +44,11 @@ func resourceKubernetesReplicationControllerV1() *schema.Resource {
 			},
 		},
 		SchemaVersion: 1,
-		Schema:        resourceKubernetesReplicationControllerV1SchemaV1(),
+		Schema:        resourceKubernetesReplicationControllerV1Schema(),
 	}
 }
 
-func resourceKubernetesReplicationControllerV1SchemaV1() map[string]*schema.Schema {
+func resourceKubernetesReplicationControllerV1Schema() map[string]*schema.Schema {
 
 	return map[string]*schema.Schema{
 		"metadata": namespacedMetadataSchema("replication controller", true),

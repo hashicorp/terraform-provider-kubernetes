@@ -20,7 +20,7 @@ import (
 
 func TestAccKubernetesReplicationControllerV1_minimal(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImageVersion
+	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
 	resource.Test(t, resource.TestCase{
@@ -28,7 +28,7 @@ func TestAccKubernetesReplicationControllerV1_minimal(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
+		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesReplicationControllerV1ConfigMinimal(name, imageName),
@@ -49,7 +49,7 @@ func TestAccKubernetesReplicationControllerV1_minimal(t *testing.T) {
 func TestAccKubernetesReplicationControllerV1_basic(t *testing.T) {
 	var conf api.ReplicationController
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImageVersion
+	imageName := busyboxImage
 	replicas := getReplicaCount()
 	resourceName := "kubernetes_replication_controller_v1.test"
 
@@ -58,12 +58,12 @@ func TestAccKubernetesReplicationControllerV1_basic(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
+		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesReplicationControllerV1Config_basic(name, imageName, replicas),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists(resourceName, &conf),
+					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -90,7 +90,7 @@ func TestAccKubernetesReplicationControllerV1_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesReplicationControllerV1Config_modified(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists(resourceName, &conf),
+					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.Different", "1234"),
@@ -122,13 +122,13 @@ func TestAccKubernetesReplicationControllerV1_initContainer(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
+		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesReplicationControllerV1Config_initContainer(name, busyboxImageVersion, replicas),
+				Config: testAccKubernetesReplicationControllerV1Config_initContainer(name, busyboxImage, replicas),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists(resourceName, &conf1),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.image", busyboxImageVersion),
+					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf1),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.image", busyboxImage),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.name", "install"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.command.0", "wget"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.command.1", "-O"),
@@ -151,11 +151,11 @@ func TestAccKubernetesReplicationControllerV1_initContainer(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesReplicationControllerV1Config_initContainer(name, busyboxImageVersion1, replicas),
+				Config: testAccKubernetesReplicationControllerV1Config_initContainer(name, busyboxImageVersion, replicas),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists(resourceName, &conf2),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.image", busyboxImageVersion1),
-					testAccCheckKubernetesReplicationControllerForceNew(&conf1, &conf2, true),
+					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.image", busyboxImageVersion),
+					testAccCheckKubernetesReplicationControllerV1ForceNew(&conf1, &conf2, true),
 				),
 			},
 		},
@@ -165,7 +165,7 @@ func TestAccKubernetesReplicationControllerV1_initContainer(t *testing.T) {
 func TestAccKubernetesReplicationControllerV1_generatedName(t *testing.T) {
 	var conf api.ReplicationController
 	prefix := "tf-acc-test-gen-"
-	imageName := busyboxImageVersion
+	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
 	resource.Test(t, resource.TestCase{
@@ -173,12 +173,12 @@ func TestAccKubernetesReplicationControllerV1_generatedName(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
+		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesReplicationControllerV1Config_generatedName(prefix, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists(resourceName, &conf),
+					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "3"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", prefix),
@@ -202,18 +202,18 @@ func TestAccKubernetesReplicationControllerV1_with_security_context(t *testing.T
 	var conf api.ReplicationController
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImageVersion
+	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
+		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesReplicationControllerV1ConfigWithSecurityContext(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists(resourceName, &conf),
+					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.fs_group", "100"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.run_as_non_root", "true"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.run_as_user", "101"),
@@ -229,18 +229,18 @@ func TestAccKubernetesReplicationControllerV1_with_security_context_run_as_group
 	var conf api.ReplicationController
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImageVersion
+	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
+		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesReplicationControllerV1ConfigWithSecurityContextRunAsGroup(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists(resourceName, &conf),
+					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.fs_group", "100"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.run_as_group", "100"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.run_as_non_root", "true"),
@@ -263,12 +263,12 @@ func TestAccKubernetesReplicationControllerV1_with_container_liveness_probe_usin
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
+		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesReplicationControllerV1ConfigWithLivenessProbeUsingExec(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists(resourceName, &conf),
+					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.args.#", "3"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.exec.#", "1"),
@@ -293,12 +293,12 @@ func TestAccKubernetesReplicationControllerV1_with_container_liveness_probe_usin
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
+		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesReplicationControllerV1ConfigWithLivenessProbeUsingHTTPGet(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists(resourceName, &conf),
+					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.args.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.http_get.#", "1"),
@@ -324,12 +324,12 @@ func TestAccKubernetesReplicationControllerV1_with_container_liveness_probe_usin
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
+		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesReplicationControllerV1ConfigWithLivenessProbeUsingTCP(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists(resourceName, &conf),
+					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.args.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.tcp_socket.#", "1"),
@@ -350,12 +350,12 @@ func TestAccKubernetesReplicationControllerV1_with_container_lifecycle(t *testin
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
+		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesReplicationControllerV1ConfigWithLifeCycle(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists(resourceName, &conf),
+					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.lifecycle.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.lifecycle.0.post_start.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.lifecycle.0.post_start.0.exec.#", "1"),
@@ -376,18 +376,18 @@ func TestAccKubernetesReplicationControllerV1_with_container_security_context(t 
 	var conf api.ReplicationController
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImageVersion
+	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
+		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesReplicationControllerV1ConfigWithContainerSecurityContext(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists(resourceName, &conf),
+					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.#", "1"),
 				),
 			},
@@ -401,18 +401,18 @@ func TestAccKubernetesReplicationControllerV1_with_volume_mount(t *testing.T) {
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
-	imageName := busyboxImageVersion
+	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
+		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesReplicationControllerV1ConfigWithVolumeMounts(secretName, rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists(resourceName, &conf),
+					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.mount_path", "/tmp/my_path"),
@@ -430,18 +430,18 @@ func TestAccKubernetesReplicationControllerV1_with_resource_requirements(t *test
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
-	imageName := busyboxImageVersion
+	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
+		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesReplicationControllerV1ConfigWithResourceRequirements(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists(resourceName, &conf),
+					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.memory", "50Mi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.cpu", "250m"),
@@ -457,18 +457,18 @@ func TestAccKubernetesReplicationControllerV1_with_empty_dir_volume(t *testing.T
 	var conf api.ReplicationController
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImageVersion
+	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesReplicationControllerDestroy,
+		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesReplicationControllerV1ConfigWithEmptyDirVolumes(rcName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesReplicationControllerExists(resourceName, &conf),
+					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.mount_path", "/cache"),
@@ -480,7 +480,7 @@ func TestAccKubernetesReplicationControllerV1_with_empty_dir_volume(t *testing.T
 	})
 }
 
-func testAccCheckKubernetesReplicationControllerDestroy(s *terraform.State) error {
+func testAccCheckKubernetesReplicationControllerV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	if err != nil {
@@ -509,7 +509,7 @@ func testAccCheckKubernetesReplicationControllerDestroy(s *terraform.State) erro
 	return nil
 }
 
-func testAccCheckKubernetesReplicationControllerExists(n string, obj *api.ReplicationController) resource.TestCheckFunc {
+func testAccCheckKubernetesReplicationControllerV1Exists(n string, obj *api.ReplicationController) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -537,7 +537,7 @@ func testAccCheckKubernetesReplicationControllerExists(n string, obj *api.Replic
 	}
 }
 
-func testAccCheckKubernetesReplicationControllerForceNew(old, new *api.ReplicationController, wantNew bool) resource.TestCheckFunc {
+func testAccCheckKubernetesReplicationControllerV1ForceNew(old, new *api.ReplicationController, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {
 			if old.ObjectMeta.UID == new.ObjectMeta.UID {

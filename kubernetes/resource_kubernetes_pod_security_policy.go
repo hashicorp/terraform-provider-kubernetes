@@ -66,10 +66,11 @@ var (
 
 func resourceKubernetesPodSecurityPolicy() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesPodSecurityPolicyCreate,
-		ReadContext:   resourceKubernetesPodSecurityPolicyRead,
-		UpdateContext: resourceKubernetesPodSecurityPolicyUpdate,
-		DeleteContext: resourceKubernetesPodSecurityPolicyDelete,
+		DeprecationMessage: `"PodSecurityPolicy" was deprecated in Kubernetes v1.21.0; Starting from version 1.21.0 Kubernetes has deprecated PodSecurityPolicy and has been removed entirely in v1.25.0`,
+		CreateContext:      resourceKubernetesPodSecurityPolicyCreate,
+		ReadContext:        resourceKubernetesPodSecurityPolicyRead,
+		UpdateContext:      resourceKubernetesPodSecurityPolicyUpdate,
+		DeleteContext:      resourceKubernetesPodSecurityPolicyDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

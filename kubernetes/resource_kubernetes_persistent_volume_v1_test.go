@@ -24,7 +24,7 @@ func TestAccKubernetesPersistentVolumeV1_minimal(t *testing.T) {
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
 
-	const resourceName = "kubernetes_persistent_volume_v1.test"
+	resourceName := "kubernetes_persistent_volume_v1.test"
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
@@ -900,8 +900,8 @@ func TestAccKubernetesPersistentVolumeV1_hostpath_claimRef(t *testing.T) {
 	var conf3 api.PersistentVolumeClaim
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	name := fmt.Sprintf("tf-acc-test-%s", randString)
+	resourceName := "kubernetes_persistent_volume_v1.test"
 
-	const resourceName = "kubernetes_persistent_volume_v1.test"
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,

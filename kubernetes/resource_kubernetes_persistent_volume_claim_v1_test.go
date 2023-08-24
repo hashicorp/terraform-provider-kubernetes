@@ -164,7 +164,7 @@ func TestAccKubernetesPersistentVolumeClaimV1_googleCloud_volumeMatch(t *testing
 					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "5Gi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_name", volumeName),
-					testAccCheckKubernetesPersistentVolumeV1Exists("kubernetes_persistent_volume.test", &pvConf),
+					testAccCheckKubernetesPersistentVolumeV1Exists("kubernetes_persistent_volume_v1.test", &pvConf),
 				),
 			},
 			{
@@ -295,40 +295,40 @@ func TestAccKubernetesPersistentVolumeClaimV1_googleCloud_volumeUpdate(t *testin
 			{
 				Config: testAccKubernetesPersistentVolumeClaimV1Config_volumeUpdate(volumeName, claimName, "5Gi", diskName, zone),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeClaimV1Exists("kubernetes_persistent_volume_claim.test", &pvcConf),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.annotations.%", "0"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.labels.%", "0"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", claimName),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.0", "ReadWriteOnce"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.volume_name", volumeName),
-					testAccCheckKubernetesPersistentVolumeV1Exists("kubernetes_persistent_volume.test", &pvConf),
+					testAccCheckKubernetesPersistentVolumeClaimV1Exists(resourceName, &pvcConf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", claimName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.0", "ReadWriteOnce"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "5Gi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_name", volumeName),
+					testAccCheckKubernetesPersistentVolumeV1Exists("kubernetes_persistent_volume_v1.test", &pvConf),
 					testAccCheckClaimRef(&pvConf, &ObjectRefStatic{Namespace: "default", Name: claimName}),
 				),
 			},
 			{
 				Config: testAccKubernetesPersistentVolumeClaimV1Config_volumeUpdate(volumeName, claimName, "10Gi", diskName, zone),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeClaimV1Exists("kubernetes_persistent_volume_claim.test", &pvcConf),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.annotations.%", "0"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.labels.%", "0"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", claimName),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.0", "ReadWriteOnce"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.volume_name", volumeName),
-					testAccCheckKubernetesPersistentVolumeV1Exists("kubernetes_persistent_volume.test", &pvConf),
+					testAccCheckKubernetesPersistentVolumeClaimV1Exists(resourceName, &pvcConf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", claimName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.0", "ReadWriteOnce"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "5Gi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_name", volumeName),
+					testAccCheckKubernetesPersistentVolumeV1Exists("kubernetes_persistent_volume_v1.test", &pvConf),
 					testAccCheckClaimRef(&pvConf, &ObjectRefStatic{Namespace: "default", Name: claimName}),
 				),
 			},
@@ -343,10 +343,11 @@ func TestAccKubernetesPersistentVolumeClaimV1_googleCloud_storageClass(t *testin
 
 	className := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	claimName := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_persistent_volume_claim_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
-		IDRefreshName:     "kubernetes_persistent_volume_claim.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimV1Destroy,
@@ -354,24 +355,24 @@ func TestAccKubernetesPersistentVolumeClaimV1_googleCloud_storageClass(t *testin
 			{
 				Config: testAccKubernetesPersistentVolumeClaimV1Config_storageClass(className, claimName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeClaimV1Exists("kubernetes_persistent_volume_claim.test", &pvcConf),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.annotations.%", "0"),
+					testAccCheckKubernetesPersistentVolumeClaimV1Exists(resourceName, &pvcConf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
 					//  "pv.kubernetes.io/bind-completed":               "yes",
 					//  "pv.kubernetes.io/bound-by-controller":          "yes",
 					//  "volume.beta.kubernetes.io/storage-provisioner": "kubernetes.io/gce-pd",
 					//}),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.labels.%", "0"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", claimName),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.0", "ReadWriteOnce"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.storage_class_name", className),
-					testAccCheckKubernetesStorageClassExists("kubernetes_storage_class.test", &storageClass),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", claimName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.0", "ReadWriteOnce"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "5Gi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.storage_class_name", className),
+					testAccCheckKubernetesStorageClassExists("kubernetes_storage_class_v1.test", &storageClass),
 				),
 			},
 			{
@@ -383,19 +384,19 @@ func TestAccKubernetesPersistentVolumeClaimV1_googleCloud_storageClass(t *testin
 					//            "pv.kubernetes.io/bound-by-controller":          "yes",
 					//            "volume.beta.kubernetes.io/storage-provisioner": "kubernetes.io/gce-pd",
 					//          }),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.labels.%", "0"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", claimName),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_persistent_volume_claim.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.access_modes.0", "ReadWriteOnce"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.%", "1"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "5Gi"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.storage_class_name", className+"-second"),
-					testAccCheckKubernetesStorageClassExists("kubernetes_storage_class.test", &storageClass),
-					testAccCheckKubernetesStorageClassExists("kubernetes_storage_class.second", &secondStorageClass),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", claimName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.0", "ReadWriteOnce"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "5Gi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.storage_class_name", className+"-second"),
+					testAccCheckKubernetesStorageClassExists("kubernetes_storage_class_v1.test", &storageClass),
+					testAccCheckKubernetesStorageClassExists("kubernetes_storage_class_v1.second", &secondStorageClass),
 				),
 			},
 		},
@@ -406,10 +407,11 @@ func TestAccKubernetesPersistentVolumeClaimV1_expansionGoogleCloud(t *testing.T)
 	var conf1, conf2 api.PersistentVolumeClaim
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	imageName := busyboxImage
+	resourceName := "kubernetes_persistent_volume_claim_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
-		IDRefreshName:     "kubernetes_persistent_volume_claim.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
@@ -422,9 +424,9 @@ func TestAccKubernetesPersistentVolumeClaimV1_expansionGoogleCloud(t *testing.T)
 					return !isInGke, err
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeClaimV1Exists("kubernetes_persistent_volume_claim.test", &conf1),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "1Gi"),
+					testAccCheckKubernetesPersistentVolumeClaimV1Exists(resourceName, &conf1),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "1Gi"),
 				),
 			},
 			{ // GKE specific check -- Update -- storage is increased in place.
@@ -434,9 +436,9 @@ func TestAccKubernetesPersistentVolumeClaimV1_expansionGoogleCloud(t *testing.T)
 					return !isInGke, err
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeClaimV1Exists("kubernetes_persistent_volume_claim.test", &conf2),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "2Gi"),
+					testAccCheckKubernetesPersistentVolumeClaimV1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "2Gi"),
 					testAccCheckKubernetesPersistentVolumeClaimV1ForceNew(&conf1, &conf2, false),
 				),
 			},
@@ -447,10 +449,11 @@ func TestAccKubernetesPersistentVolumeClaimV1_expansionGoogleCloud(t *testing.T)
 func TestAccKubernetesPersistentVolumeClaimV1_expansionMinikube(t *testing.T) {
 	var conf1, conf2 api.PersistentVolumeClaim
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_persistent_volume_claim_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
-		IDRefreshName:     "kubernetes_persistent_volume_claim.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimV1Destroy,
@@ -462,9 +465,9 @@ func TestAccKubernetesPersistentVolumeClaimV1_expansionMinikube(t *testing.T) {
 					return !isInMinikube, err
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeClaimV1Exists("kubernetes_persistent_volume_claim.test", &conf1),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "1Gi"),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.limits.storage", "5Gi"),
+					testAccCheckKubernetesPersistentVolumeClaimV1Exists(resourceName, &conf1),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "1Gi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.limits.storage", "5Gi"),
 				),
 			},
 			{ // Minikube specific check -- Update -- PVC is updated in-place when `resources.requests` is increased.
@@ -474,8 +477,8 @@ func TestAccKubernetesPersistentVolumeClaimV1_expansionMinikube(t *testing.T) {
 					return !isInMinikube, err
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeClaimV1Exists("kubernetes_persistent_volume_claim.test", &conf2),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "2Gi"),
+					testAccCheckKubernetesPersistentVolumeClaimV1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "2Gi"),
 					testAccCheckKubernetesPersistentVolumeClaimV1ForceNew(&conf1, &conf2, false),
 				),
 			},
@@ -486,9 +489,9 @@ func TestAccKubernetesPersistentVolumeClaimV1_expansionMinikube(t *testing.T) {
 					return !isInMinikube, err
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeClaimV1Exists("kubernetes_persistent_volume_claim.test", &conf2),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.limits.storage", "6Gi"),
+					testAccCheckKubernetesPersistentVolumeClaimV1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.limits.storage", "6Gi"),
 					testAccCheckKubernetesPersistentVolumeClaimV1ForceNew(&conf1, &conf2, true),
 				),
 			},
@@ -499,9 +502,9 @@ func TestAccKubernetesPersistentVolumeClaimV1_expansionMinikube(t *testing.T) {
 					return !isInMinikube, err
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPersistentVolumeClaimV1Exists("kubernetes_persistent_volume_claim.test", &conf2),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim.test", "spec.0.resources.0.requests.storage", "1Gi"),
+					testAccCheckKubernetesPersistentVolumeClaimV1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "1Gi"),
 					testAccCheckKubernetesPersistentVolumeClaimV1ForceNew(&conf1, &conf2, true),
 				),
 			},
@@ -517,7 +520,7 @@ func testAccCheckKubernetesPersistentVolumeClaimV1Destroy(s *terraform.State) er
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_persistent_volume_claim.test" {
+		if rs.Type != "kubernetes_persistent_volume_claim_v1.test" {
 			continue
 		}
 
@@ -656,14 +659,14 @@ func testAccKubernetesPersistentVolumeClaimV1Config_basic(name string) string {
 }
 
 func testAccKubernetesPersistentVolumeClaimV1Config_updateStorageMinikube(name, requests, limits string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
   metadata {
     name = "allow-expansion"
   }
   reclaim_policy      = "Delete"
   storage_provisioner = "k8s.io/minikube-hostpath"
 }
-resource "kubernetes_persistent_volume" "test" {
+resource "kubernetes_persistent_volume_v1" "test" {
   metadata {
     name = "test"
   }
@@ -689,8 +692,8 @@ resource "kubernetes_persistent_volume_claim_v1" "test" {
   }
   spec {
     access_modes       = ["ReadWriteOnce"]
-    storage_class_name = kubernetes_storage_class.test.metadata.0.name
-    volume_name        = kubernetes_persistent_volume.test.metadata.0.name
+    storage_class_name = kubernetes_storage_class_v1.test.metadata.0.name
+    volume_name        = kubernetes_persistent_volume_v1.test.metadata.0.name
     resources {
       requests = {
         storage = "%s"
@@ -705,7 +708,7 @@ resource "kubernetes_persistent_volume_claim_v1" "test" {
 }
 
 func testAccKubernetesPersistentVolumeClaimV1Config_updateStorageGKE(name, requests, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
   metadata {
     name = "test"
   }
@@ -719,7 +722,7 @@ resource "kubernetes_persistent_volume_claim_v1" "test" {
   }
   spec {
     access_modes       = ["ReadWriteOnce"]
-    storage_class_name = kubernetes_storage_class.test.metadata.0.name
+    storage_class_name = kubernetes_storage_class_v1.test.metadata.0.name
     resources {
       requests = {
         storage = "%s"
@@ -844,7 +847,7 @@ resource "kubernetes_persistent_volume_claim_v1" "test" {
       }
     }
 
-    volume_name = "${kubernetes_persistent_volume.test.metadata.0.name}"
+    volume_name = "${kubernetes_persistent_volume_v1.test.metadata.0.name}"
   }
 }
 `, volumeName, diskName, zone, claimName)
@@ -902,7 +905,7 @@ resource "kubernetes_persistent_volume_claim_v1" "test" {
       }
     }
 
-    volume_name = "${kubernetes_persistent_volume.test2.metadata.0.name}"
+    volume_name = "${kubernetes_persistent_volume_v1.test2.metadata.0.name}"
   }
 }
 `, volumeName, diskName, zone, claimName)
@@ -1053,7 +1056,7 @@ resource "kubernetes_persistent_volume_claim_v1" "test" {
 }
 
 func testAccKubernetesPersistentVolumeClaimV1Config_storageClass(className, claimName string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -1079,14 +1082,14 @@ resource "kubernetes_persistent_volume_claim_v1" "test" {
       }
     }
 
-    storage_class_name = "${kubernetes_storage_class.test.metadata.0.name}"
+    storage_class_name = "${kubernetes_storage_class_v1.test.metadata.0.name}"
   }
 }
 `, className, claimName)
 }
 
 func testAccKubernetesPersistentVolumeClaimV1Config_storageClassUpdated(className, claimName string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -1098,7 +1101,7 @@ func testAccKubernetesPersistentVolumeClaimV1Config_storageClassUpdated(classNam
   }
 }
 
-resource "kubernetes_storage_class" "second" {
+resource "kubernetes_storage_class_v1" "second" {
   metadata {
     name = "%s-second"
   }
@@ -1124,7 +1127,7 @@ resource "kubernetes_persistent_volume_claim_v1" "test" {
       }
     }
 
-    storage_class_name = "${kubernetes_storage_class.second.metadata.0.name}"
+    storage_class_name = "${kubernetes_storage_class_v1.second.metadata.0.name}"
   }
 }
 `, className, className, claimName)

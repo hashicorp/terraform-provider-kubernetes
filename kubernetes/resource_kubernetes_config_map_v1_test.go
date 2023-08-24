@@ -15,26 +15,26 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	api "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesConfigMap_basic(t *testing.T) {
-	var conf api.ConfigMap
+func TestAccKubernetesConfigMapV1_basic(t *testing.T) {
+	var conf corev1.ConfigMap
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_config_map.test"
+	resourceName := "kubernetes_config_map_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesConfigMapDestroy,
+		CheckDestroy:      testAccCheckKubernetesConfigMapV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesConfigMapConfig_nodata(name),
+				Config: testAccKubernetesConfigMapV1Config_nodata(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					testAccCheckKubernetesConfigMapV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -57,9 +57,9 @@ func TestAccKubernetesConfigMap_basic(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config: testAccKubernetesConfigMapConfig_basic(name),
+				Config: testAccKubernetesConfigMapV1Config_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					testAccCheckKubernetesConfigMapV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -74,13 +74,13 @@ func TestAccKubernetesConfigMap_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "data.one", "first"),
 					resource.TestCheckResourceAttr(resourceName, "data.two", "second"),
-					testAccCheckConfigMapData(&conf, map[string]string{"one": "first", "two": "second"}),
+					testAccCheckConfigMapV1Data(&conf, map[string]string{"one": "first", "two": "second"}),
 				),
 			},
 			{
-				Config: testAccKubernetesConfigMapConfig_modified(name),
+				Config: testAccKubernetesConfigMapV1Config_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					testAccCheckKubernetesConfigMapV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.Different", "1234"),
@@ -95,13 +95,13 @@ func TestAccKubernetesConfigMap_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "data.one", "first"),
 					resource.TestCheckResourceAttr(resourceName, "data.two", "second"),
 					resource.TestCheckResourceAttr(resourceName, "data.nine", "ninth"),
-					testAccCheckConfigMapData(&conf, map[string]string{"one": "first", "two": "second", "nine": "ninth"}),
+					testAccCheckConfigMapV1Data(&conf, map[string]string{"one": "first", "two": "second", "nine": "ninth"}),
 				),
 			},
 			{
-				Config: testAccKubernetesConfigMapConfig_noData(name),
+				Config: testAccKubernetesConfigMapV1Config_noData(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					testAccCheckKubernetesConfigMapV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -109,42 +109,42 @@ func TestAccKubernetesConfigMap_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "data.%", "0"),
-					testAccCheckConfigMapData(&conf, map[string]string{}),
+					testAccCheckConfigMapV1Data(&conf, map[string]string{}),
 				),
 			},
 		},
 	})
 }
-func TestAccKubernetesConfigMap_binaryData(t *testing.T) {
-	var conf api.ConfigMap
+func TestAccKubernetesConfigMapV1_binaryData(t *testing.T) {
+	var conf corev1.ConfigMap
 	prefix := "tf-acc-test-gen-"
-	resourceName := "kubernetes_config_map.test"
+	resourceName := "kubernetes_config_map_v1.test"
 	baseDir := "."
 	cwd, _ := os.Getwd()
 	if filepath.Base(cwd) != "kubernetes" { // running from test binary
 		baseDir = "kubernetes"
 	}
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesConfigMapDestroy,
+		CheckDestroy:      testAccCheckKubernetesConfigMapV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesConfigMapConfig_binaryData(prefix, baseDir),
+				Config: testAccKubernetesConfigMapV1Config_binaryData(prefix, baseDir),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					testAccCheckKubernetesConfigMapV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "binary_data.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "data.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "data.two", "second"),
 				),
 			},
 			{
-				Config: testAccKubernetesConfigMapConfig_binaryData2(prefix, baseDir),
+				Config: testAccKubernetesConfigMapV1Config_binaryData2(prefix, baseDir),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					testAccCheckKubernetesConfigMapV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "binary_data.%", "3"),
 					resource.TestCheckResourceAttr(resourceName, "binary_data.raw", "UmF3IGRhdGEgc2hvdWxkIGNvbWUgYmFjayBhcyBpcyBpbiB0aGUgcG9k"),
 					resource.TestCheckResourceAttr(resourceName, "data.%", "1"),
@@ -156,21 +156,21 @@ func TestAccKubernetesConfigMap_binaryData(t *testing.T) {
 }
 
 func TestAccKubernetesConfigMap_generatedName(t *testing.T) {
-	var conf api.ConfigMap
+	var conf corev1.ConfigMap
 	prefix := "tf-acc-test-gen-"
-	resourceName := "kubernetes_config_map.test"
+	resourceName := "kubernetes_config_map_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesConfigMapDestroy,
+		CheckDestroy:      testAccCheckKubernetesConfigMapV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesConfigMapConfig_generatedName(prefix),
+				Config: testAccKubernetesConfigMapV1Config_generatedName(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					testAccCheckKubernetesConfigMapV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", prefix),
@@ -190,21 +190,21 @@ func TestAccKubernetesConfigMap_generatedName(t *testing.T) {
 }
 
 func TestAccKubernetesConfigMap_immutable(t *testing.T) {
-	var conf api.ConfigMap
+	var conf corev1.ConfigMap
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_config_map.test"
+	resourceName := "kubernetes_config_map_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesConfigMapDestroy,
+		CheckDestroy:      testAccCheckKubernetesConfigMapV1Destroy,
 		Steps: []resource.TestStep{
 			// create config_map with immutable set to true
 			{
-				Config: testAccKubernetesConfigMapConfig_immutable(name, true, "second"),
+				Config: testAccKubernetesConfigMapV1Config_immutable(name, true, "second"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					testAccCheckKubernetesConfigMapV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "data.one", "first"),
@@ -214,9 +214,9 @@ func TestAccKubernetesConfigMap_immutable(t *testing.T) {
 			},
 			// change the immutable variable to false
 			{
-				Config: testAccKubernetesConfigMapConfig_immutable(name, false, "second"),
+				Config: testAccKubernetesConfigMapV1Config_immutable(name, false, "second"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					testAccCheckKubernetesConfigMapV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "immutable", "false"),
 					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
@@ -226,9 +226,9 @@ func TestAccKubernetesConfigMap_immutable(t *testing.T) {
 			},
 			// update data while immutable is false
 			{
-				Config: testAccKubernetesConfigMapConfig_immutable(name, false, "third"),
+				Config: testAccKubernetesConfigMapV1Config_immutable(name, false, "third"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesConfigMapExists(resourceName, &conf),
+					testAccCheckKubernetesConfigMapV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "immutable", "false"),
 					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
@@ -240,7 +240,7 @@ func TestAccKubernetesConfigMap_immutable(t *testing.T) {
 	})
 }
 
-func testAccCheckConfigMapData(m *api.ConfigMap, expected map[string]string) resource.TestCheckFunc {
+func testAccCheckConfigMapV1Data(m *corev1.ConfigMap, expected map[string]string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(m.Data) == 0 {
 			return nil
@@ -253,7 +253,7 @@ func testAccCheckConfigMapData(m *api.ConfigMap, expected map[string]string) res
 	}
 }
 
-func testAccCheckKubernetesConfigMapDestroy(s *terraform.State) error {
+func testAccCheckKubernetesConfigMapV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	if err != nil {
@@ -280,7 +280,7 @@ func testAccCheckKubernetesConfigMapDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckKubernetesConfigMapExists(n string, obj *api.ConfigMap) resource.TestCheckFunc {
+func testAccCheckKubernetesConfigMapV1Exists(n string, obj *corev1.ConfigMap) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -307,8 +307,8 @@ func testAccCheckKubernetesConfigMapExists(n string, obj *api.ConfigMap) resourc
 	}
 }
 
-func testAccKubernetesConfigMapConfig_nodata(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
+func testAccKubernetesConfigMapV1Config_nodata(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -329,8 +329,8 @@ func testAccKubernetesConfigMapConfig_nodata(name string) string {
 `, name)
 }
 
-func testAccKubernetesConfigMapConfig_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
+func testAccKubernetesConfigMapV1Config_basic(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -354,8 +354,8 @@ func testAccKubernetesConfigMapConfig_basic(name string) string {
 `, name)
 }
 
-func testAccKubernetesConfigMapConfig_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
+func testAccKubernetesConfigMapV1Config_modified(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -379,8 +379,8 @@ func testAccKubernetesConfigMapConfig_modified(name string) string {
 `, name)
 }
 
-func testAccKubernetesConfigMapConfig_noData(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
+func testAccKubernetesConfigMapV1Config_noData(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -388,8 +388,8 @@ func testAccKubernetesConfigMapConfig_noData(name string) string {
 `, name)
 }
 
-func testAccKubernetesConfigMapConfig_generatedName(prefix string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
+func testAccKubernetesConfigMapV1Config_generatedName(prefix string) string {
+	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -402,8 +402,8 @@ func testAccKubernetesConfigMapConfig_generatedName(prefix string) string {
 `, prefix)
 }
 
-func testAccKubernetesConfigMapConfig_binaryData(prefix string, bd string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
+func testAccKubernetesConfigMapV1Config_binaryData(prefix string, bd string) string {
+	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -419,8 +419,8 @@ func testAccKubernetesConfigMapConfig_binaryData(prefix string, bd string) strin
 `, prefix, bd)
 }
 
-func testAccKubernetesConfigMapConfig_binaryData2(prefix string, bd string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
+func testAccKubernetesConfigMapV1Config_binaryData2(prefix string, bd string) string {
+	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -438,8 +438,8 @@ func testAccKubernetesConfigMapConfig_binaryData2(prefix string, bd string) stri
 `, prefix, bd, bd)
 }
 
-func testAccKubernetesConfigMapConfig_immutable(name string, immutable bool, data string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
+func testAccKubernetesConfigMapV1Config_immutable(name string, immutable bool, data string) string {
+	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"

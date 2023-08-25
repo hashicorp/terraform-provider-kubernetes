@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
-func TestAccKubernetesEndpointSlice_basic(t *testing.T) {
+func TestAccKubernetesEndpointSliceV1_basic(t *testing.T) {
 	resourceName := "kubernetes_endpoint_slice_v1.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
@@ -23,7 +23,7 @@ func TestAccKubernetesEndpointSlice_basic(t *testing.T) {
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesEndpointSliceConfig_basic(name),
+				Config: testAccKubernetesEndpointSliceV1Config_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
@@ -41,7 +41,7 @@ func TestAccKubernetesEndpointSlice_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesEndpointSliceConfig_modified(name),
+				Config: testAccKubernetesEndpointSliceV1Config_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
@@ -72,7 +72,7 @@ func TestAccKubernetesEndpointSlice_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesEndpointSlice_generatedName(t *testing.T) {
+func TestAccKubernetesEndpointSliceV1_generatedName(t *testing.T) {
 	resourceName := "kubernetes_endpoint_slice_v1.test"
 	prefix := "tf-acc-test-gen-"
 
@@ -83,7 +83,7 @@ func TestAccKubernetesEndpointSlice_generatedName(t *testing.T) {
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesEndpointSliceConfig_generatedName(prefix),
+				Config: testAccKubernetesEndpointSliceV1Config_generatedName(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -108,7 +108,7 @@ func TestAccKubernetesEndpointSlice_generatedName(t *testing.T) {
 	})
 }
 
-func testAccKubernetesEndpointSliceConfig_basic(name string) string {
+func testAccKubernetesEndpointSliceV1Config_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_endpoint_slice_v1" "test" {
   metadata {
     name = "%s"
@@ -126,7 +126,7 @@ func testAccKubernetesEndpointSliceConfig_basic(name string) string {
 `, name)
 }
 
-func testAccKubernetesEndpointSliceConfig_modified(name string) string {
+func testAccKubernetesEndpointSliceV1Config_modified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_endpoint_slice_v1" "test" {
   metadata {
     name = "%s"
@@ -158,7 +158,7 @@ func testAccKubernetesEndpointSliceConfig_modified(name string) string {
 `, name)
 }
 
-func testAccKubernetesEndpointSliceConfig_generatedName(prefix string) string {
+func testAccKubernetesEndpointSliceV1Config_generatedName(prefix string) string {
 	return fmt.Sprintf(`resource "kubernetes_endpoint_slice_v1" "test" {
   metadata {
     generate_name = "%s"

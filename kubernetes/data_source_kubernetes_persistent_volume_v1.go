@@ -147,5 +147,5 @@ func dataSourceKubernetesPersistentVolumeV1() *schema.Resource {
 func dataSourceKubernetesPersistentVolumeV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	name := d.Get("metadata.0.name").(string)
 	d.SetId(name)
-	return resourceKubernetesPersistentVolumeRead(ctx, d, meta)
+	return resourceKubernetesPersistentVolumeV1Read(ctx, d, meta)
 }

@@ -43,5 +43,5 @@ func dataSourceKubernetesConfigMapV1Read(ctx context.Context, d *schema.Resource
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesConfigMapRead(ctx, d, meta)
+	return resourceKubernetesConfigMapV1Read(ctx, d, meta)
 }

@@ -15,17 +15,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	api "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesService() *schema.Resource {
+func resourceKubernetesServiceV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesServiceCreate,
-		ReadContext:   resourceKubernetesServiceRead,
-		UpdateContext: resourceKubernetesServiceUpdate,
-		DeleteContext: resourceKubernetesServiceDelete,
+		CreateContext: resourceKubernetesServiceV1Create,
+		ReadContext:   resourceKubernetesServiceV1Read,
+		UpdateContext: resourceKubernetesServiceV1Update,
+		DeleteContext: resourceKubernetesServiceV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -68,7 +69,7 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 						ForceNew:    true,
 						Computed:    true,
 						ValidateFunc: validation.Any(
-							validation.StringInSlice([]string{api.ClusterIPNone}, false),
+							validation.StringInSlice([]string{corev1.ClusterIPNone}, false),
 							validation.IsIPAddress,
 						),
 					},
@@ -82,7 +83,7 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 						Elem: &schema.Schema{
 							Type: schema.TypeString,
 							ValidateFunc: validation.Any(
-								validation.StringInSlice([]string{api.ClusterIPNone}, false),
+								validation.StringInSlice([]string{corev1.ClusterIPNone}, false),
 								validation.IsIPAddress,
 							),
 						},
@@ -107,8 +108,8 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 						Optional:    true,
 						Computed:    true,
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.ServiceExternalTrafficPolicyTypeLocal),
-							string(api.ServiceExternalTrafficPolicyTypeCluster),
+							string(corev1.ServiceExternalTrafficPolicyTypeLocal),
+							string(corev1.ServiceExternalTrafficPolicyTypeCluster),
 						}, false),
 					},
 					"ip_families": {
@@ -120,8 +121,8 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 						Elem: &schema.Schema{
 							Type: schema.TypeString,
 							ValidateFunc: validation.StringInSlice([]string{
-								string(api.IPv4Protocol),
-								string(api.IPv6Protocol),
+								string(corev1.IPv4Protocol),
+								string(corev1.IPv6Protocol),
 							}, false),
 						},
 					},
@@ -131,9 +132,9 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 						Optional:    true,
 						Computed:    true,
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.IPFamilyPolicySingleStack),
-							string(api.IPFamilyPolicyPreferDualStack),
-							string(api.IPFamilyPolicyRequireDualStack),
+							string(corev1.IPFamilyPolicySingleStack),
+							string(corev1.IPFamilyPolicyPreferDualStack),
+							string(corev1.IPFamilyPolicyRequireDualStack),
 						}, false),
 					},
 					"internal_traffic_policy": {
@@ -142,8 +143,8 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 						Optional:    true,
 						Computed:    true,
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.ServiceInternalTrafficPolicyCluster),
-							string(api.ServiceInternalTrafficPolicyLocal),
+							string(corev1.ServiceInternalTrafficPolicyCluster),
+							string(corev1.ServiceInternalTrafficPolicyLocal),
 						}, false),
 					},
 					"load_balancer_class": {
@@ -232,10 +233,10 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Used to maintain session affinity. Supports `ClientIP` and `None`. Defaults to `None`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies",
 						Optional:    true,
-						Default:     string(api.ServiceAffinityNone),
+						Default:     string(corev1.ServiceAffinityNone),
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.ServiceAffinityClientIP),
-							string(api.ServiceAffinityNone),
+							string(corev1.ServiceAffinityClientIP),
+							string(corev1.ServiceAffinityNone),
 						}, false),
 					},
 					"session_affinity_config": {
@@ -271,12 +272,12 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Determines how the service is exposed. Defaults to `ClusterIP`. Valid options are `ExternalName`, `ClusterIP`, `NodePort`, and `LoadBalancer`. `ExternalName` maps to the specified `external_name`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types",
 						Optional:    true,
-						Default:     string(api.ServiceTypeClusterIP),
+						Default:     string(corev1.ServiceTypeClusterIP),
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.ServiceTypeClusterIP),
-							string(api.ServiceTypeExternalName),
-							string(api.ServiceTypeNodePort),
-							string(api.ServiceTypeLoadBalancer),
+							string(corev1.ServiceTypeClusterIP),
+							string(corev1.ServiceTypeExternalName),
+							string(corev1.ServiceTypeNodePort),
+							string(corev1.ServiceTypeLoadBalancer),
 						}, false),
 					},
 					"health_check_node_port": {
@@ -331,14 +332,14 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 	}
 }
 
-func resourceKubernetesServiceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesServiceV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	svc := api.Service{
+	svc := corev1.Service{
 		ObjectMeta: metadata,
 		Spec:       expandServiceSpec(d.Get("spec").([]interface{})),
 	}
@@ -350,7 +351,7 @@ func resourceKubernetesServiceCreate(ctx context.Context, d *schema.ResourceData
 	log.Printf("[INFO] Submitted new service: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	if out.Spec.Type == api.ServiceTypeLoadBalancer && d.Get("wait_for_load_balancer").(bool) {
+	if out.Spec.Type == corev1.ServiceTypeLoadBalancer && d.Get("wait_for_load_balancer").(bool) {
 		log.Printf("[DEBUG] Waiting for load balancer to assign IP/hostname")
 
 		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
@@ -379,11 +380,11 @@ func resourceKubernetesServiceCreate(ctx context.Context, d *schema.ResourceData
 		}
 	}
 
-	return resourceKubernetesServiceRead(ctx, d, meta)
+	return resourceKubernetesServiceV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesServiceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesServiceExists(ctx, d, meta)
+func resourceKubernetesServiceV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesServiceV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -432,7 +433,7 @@ func resourceKubernetesServiceRead(ctx context.Context, d *schema.ResourceData, 
 	return nil
 }
 
-func resourceKubernetesServiceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesServiceV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -467,10 +468,10 @@ func resourceKubernetesServiceUpdate(ctx context.Context, d *schema.ResourceData
 	log.Printf("[INFO] Submitted updated service: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesServiceRead(ctx, d, meta)
+	return resourceKubernetesServiceV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesServiceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesServiceV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -512,7 +513,7 @@ func resourceKubernetesServiceDelete(ctx context.Context, d *schema.ResourceData
 	return nil
 }
 
-func resourceKubernetesServiceExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesServiceV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

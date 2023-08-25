@@ -23,7 +23,7 @@ func TestAccKubernetesReplicationControllerV1_minimal(t *testing.T) {
 	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -53,7 +53,7 @@ func TestAccKubernetesReplicationControllerV1_basic(t *testing.T) {
 	replicas := getReplicaCount()
 	resourceName := "kubernetes_replication_controller_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -116,8 +116,10 @@ func TestAccKubernetesReplicationControllerV1_initContainer(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	replicas := getReplicaCount()
 	resourceName := "kubernetes_replication_controller_v1.test"
+	imageName := busyboxImage
+	imageName1 := agnhostImage
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -125,10 +127,10 @@ func TestAccKubernetesReplicationControllerV1_initContainer(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesReplicationControllerV1Config_initContainer(name, busyboxImage, replicas),
+				Config: testAccKubernetesReplicationControllerV1Config_initContainer(name, imageName, replicas),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf1),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.image", busyboxImage),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.name", "install"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.command.0", "wget"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.command.1", "-O"),
@@ -151,10 +153,10 @@ func TestAccKubernetesReplicationControllerV1_initContainer(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesReplicationControllerV1Config_initContainer(name, busyboxImageVersion, replicas),
+				Config: testAccKubernetesReplicationControllerV1Config_initContainer(name, imageName1, replicas),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesReplicationControllerV1Exists(resourceName, &conf2),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.image", busyboxImageVersion),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.image", imageName1),
 					testAccCheckKubernetesReplicationControllerV1ForceNew(&conf1, &conf2, true),
 				),
 			},
@@ -168,7 +170,7 @@ func TestAccKubernetesReplicationControllerV1_generatedName(t *testing.T) {
 	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -205,7 +207,7 @@ func TestAccKubernetesReplicationControllerV1_with_security_context(t *testing.T
 	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
@@ -232,7 +234,7 @@ func TestAccKubernetesReplicationControllerV1_with_security_context_run_as_group
 	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
@@ -257,10 +259,10 @@ func TestAccKubernetesReplicationControllerV1_with_container_liveness_probe_usin
 	var conf api.ReplicationController
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := "gcr.io/google_containers/busybox"
+	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
@@ -287,10 +289,10 @@ func TestAccKubernetesReplicationControllerV1_with_container_liveness_probe_usin
 	var conf api.ReplicationController
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
+	imageName := agnhostImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
@@ -318,10 +320,10 @@ func TestAccKubernetesReplicationControllerV1_with_container_liveness_probe_usin
 	var conf api.ReplicationController
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
+	imageName := agnhostImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
@@ -344,10 +346,10 @@ func TestAccKubernetesReplicationControllerV1_with_container_lifecycle(t *testin
 	var conf api.ReplicationController
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := "registry.k8s.io/e2e-test-images/agnhost:2.40"
+	imageName := agnhostImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
@@ -379,7 +381,7 @@ func TestAccKubernetesReplicationControllerV1_with_container_security_context(t 
 	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
@@ -404,7 +406,7 @@ func TestAccKubernetesReplicationControllerV1_with_volume_mount(t *testing.T) {
 	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
@@ -433,7 +435,7 @@ func TestAccKubernetesReplicationControllerV1_with_resource_requirements(t *test
 	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,
@@ -460,7 +462,7 @@ func TestAccKubernetesReplicationControllerV1_with_empty_dir_volume(t *testing.T
 	imageName := busyboxImage
 	resourceName := "kubernetes_replication_controller_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesReplicationControllerV1Destroy,

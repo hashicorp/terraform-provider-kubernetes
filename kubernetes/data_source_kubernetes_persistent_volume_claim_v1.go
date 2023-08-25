@@ -90,5 +90,5 @@ func dataSourceKubernetesPersistentVolumeClaimV1Read(ctx context.Context, d *sch
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesPersistentVolumeClaimRead(ctx, d, meta)
+	return resourceKubernetesPersistentVolumeClaimV1Read(ctx, d, meta)
 }

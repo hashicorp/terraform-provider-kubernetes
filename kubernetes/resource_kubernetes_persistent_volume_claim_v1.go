@@ -20,7 +20,7 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesPersistentVolumeClaim() *schema.Resource {
+func resourceKubernetesPersistentVolumeClaimV1() *schema.Resource {
 	fields := persistentVolumeClaimFields()
 	// The 'wait_until_bound' control attribute only makes sense in stand-alone PVCs,
 	// so adding it on top of the standard PVC fields which are re-usable for other resources.
@@ -31,10 +31,10 @@ func resourceKubernetesPersistentVolumeClaim() *schema.Resource {
 		Default:     true,
 	}
 	return &schema.Resource{
-		CreateContext: resourceKubernetesPersistentVolumeClaimCreate,
-		ReadContext:   resourceKubernetesPersistentVolumeClaimRead,
-		UpdateContext: resourceKubernetesPersistentVolumeClaimUpdate,
-		DeleteContext: resourceKubernetesPersistentVolumeClaimDelete,
+		CreateContext: resourceKubernetesPersistentVolumeClaimV1Create,
+		ReadContext:   resourceKubernetesPersistentVolumeClaimV1Read,
+		UpdateContext: resourceKubernetesPersistentVolumeClaimV1Update,
+		DeleteContext: resourceKubernetesPersistentVolumeClaimV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: func(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 				d.Set("wait_until_bound", true)
@@ -89,7 +89,7 @@ func resourceKubernetesPersistentVolumeClaim() *schema.Resource {
 	}
 }
 
-func resourceKubernetesPersistentVolumeClaimCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPersistentVolumeClaimV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -153,11 +153,11 @@ func resourceKubernetesPersistentVolumeClaimCreate(ctx context.Context, d *schem
 	}
 	log.Printf("[INFO] Persistent volume claim %s created", out.Name)
 
-	return resourceKubernetesPersistentVolumeClaimRead(ctx, d, meta)
+	return resourceKubernetesPersistentVolumeClaimV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesPersistentVolumeClaimRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesPersistentVolumeClaimExists(ctx, d, meta)
+func resourceKubernetesPersistentVolumeClaimV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesPersistentVolumeClaimV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -194,7 +194,7 @@ func resourceKubernetesPersistentVolumeClaimRead(ctx context.Context, d *schema.
 	return nil
 }
 
-func resourceKubernetesPersistentVolumeClaimUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPersistentVolumeClaimV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -230,10 +230,10 @@ func resourceKubernetesPersistentVolumeClaimUpdate(ctx context.Context, d *schem
 	}
 	log.Printf("[INFO] Submitted updated persistent volume claim: %#v", out)
 
-	return resourceKubernetesPersistentVolumeClaimRead(ctx, d, meta)
+	return resourceKubernetesPersistentVolumeClaimV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesPersistentVolumeClaimDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPersistentVolumeClaimV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -276,7 +276,7 @@ func resourceKubernetesPersistentVolumeClaimDelete(ctx context.Context, d *schem
 	return nil
 }
 
-func resourceKubernetesPersistentVolumeClaimExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesPersistentVolumeClaimV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

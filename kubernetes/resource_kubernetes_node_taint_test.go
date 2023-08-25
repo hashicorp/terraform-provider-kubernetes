@@ -23,6 +23,8 @@ const (
 	taintEffect  = "PreferNoSchedule"
 )
 
+//Due to the nature of this resource it will not be modified to run in parallel
+
 func TestAccKubernetesResourceNodeTaint_basic(t *testing.T) {
 	resourceName := "kubernetes_node_taint.test"
 

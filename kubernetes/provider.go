@@ -274,8 +274,8 @@ func Provider() *schema.Provider {
 			"kubernetes_persistent_volume_v1":       resourceKubernetesPersistentVolumeV1(),
 			"kubernetes_persistent_volume_claim":    resourceKubernetesPersistentVolumeClaimV1(),
 			"kubernetes_persistent_volume_claim_v1": resourceKubernetesPersistentVolumeClaimV1(),
-			"kubernetes_replication_controller":     resourceKubernetesReplicationController(),
-			"kubernetes_replication_controller_v1":  resourceKubernetesReplicationController(),
+			"kubernetes_replication_controller":     resourceKubernetesReplicationControllerV1(),
+			"kubernetes_replication_controller_v1":  resourceKubernetesReplicationControllerV1(),
 			"kubernetes_resource_quota":             resourceKubernetesResourceQuota(),
 			"kubernetes_resource_quota_v1":          resourceKubernetesResourceQuota(),
 

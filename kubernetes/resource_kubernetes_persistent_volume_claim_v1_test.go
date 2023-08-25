@@ -189,7 +189,7 @@ func TestAccKubernetesPersistentVolumeClaimV1_googleCloud_volumeMatch(t *testing
 					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "5Gi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_name", volumeNameModified),
-					testAccCheckKubernetesPersistentVolumeV1Exists("kubernetes_persistent_volume.test2", &pvConf),
+					testAccCheckKubernetesPersistentVolumeV1Exists("kubernetes_persistent_volume_v1.test2", &pvConf),
 				),
 			},
 		},
@@ -520,7 +520,7 @@ func testAccCheckKubernetesPersistentVolumeClaimV1Destroy(s *terraform.State) er
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_persistent_volume_claim_v1.test" {
+		if rs.Type != "kubernetes_persistent_volume_claim_v1" {
 			continue
 		}
 
@@ -675,7 +675,7 @@ resource "kubernetes_persistent_volume_v1" "test" {
       storage = "5Gi"
     }
     access_modes                     = ["ReadWriteOnce"]
-    storage_class_name               = kubernetes_storage_class.test.metadata.0.name
+    storage_class_name               = kubernetes_storage_class_v1.test.metadata.0.name
     persistent_volume_reclaim_policy = "Recycle"
     persistent_volume_source {
       host_path {
@@ -730,7 +730,7 @@ resource "kubernetes_persistent_volume_claim_v1" "test" {
     }
   }
 }
-resource "kubernetes_pod" "main" {
+resource "kubernetes_pod_v1" "main" {
   metadata {
     name = "test"
   }

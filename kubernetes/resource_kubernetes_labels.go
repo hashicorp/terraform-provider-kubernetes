@@ -179,10 +179,12 @@ func getManagedLabels(managedFields []v1.ManagedFieldsEntry, manager string) (ma
 		if err != nil {
 			return nil, err
 		}
-		metadata := mm["f:metadata"].(map[string]interface{})
-		if l, ok := metadata["f:labels"].(map[string]interface{}); ok {
-			labels = l
+		if fm, ok := mm["f:metadata"].(map[string]interface{}); ok {
+			if l, ok := fm["f:labels"].(map[string]interface{}); ok {
+				labels = l
+			}
 		}
+
 	}
 	return labels, nil
 }
@@ -232,7 +234,7 @@ func resourceKubernetesLabelsUpdate(ctx context.Context, d *schema.ResourceData,
 	}
 
 	// check the resource exists before we try and patch it
-	_, err = r.Get(ctx, name, v1.GetOptions{})
+	ro, err := r.Get(ctx, name, v1.GetOptions{})
 	if err != nil {
 		if d.Id() == "" {
 			// if we are deleting then there is nothing to do
@@ -249,6 +251,7 @@ func resourceKubernetesLabelsUpdate(ctx context.Context, d *schema.ResourceData,
 		// with an empty labels map
 		labels = map[string]interface{}{}
 	}
+
 	patchmeta := map[string]interface{}{
 		"name":   name,
 		"labels": labels,
@@ -256,13 +259,8 @@ func resourceKubernetesLabelsUpdate(ctx context.Context, d *schema.ResourceData,
 	if namespacedResource {
 		patchmeta["namespace"] = namespace
 	}
-	patchobj := map[string]interface{}{
-		"apiVersion": apiVersion,
-		"kind":       kind,
-		"metadata":   patchmeta,
-	}
-	patch := unstructured.Unstructured{}
-	patch.Object = patchobj
+	ro.Object["metadata"] = patchmeta
+	patch := unstructured.Unstructured{Object: ro.Object}
 	patchbytes, err := patch.MarshalJSON()
 	if err != nil {
 		return diag.FromErr(err)

@@ -1536,7 +1536,7 @@ func TestAccKubernetesPodV1_with_ephemeral_storage(t *testing.T) {
 			// Do a second test with only the storage class and check that the PVC has been deleted by the ephemeral volume
 			{
 				Config: testAccKubernetesPodV1EphemeralStorageClass(podName),
-				Check:  testAccCheckKubernetesPersistentVolumeClaimIsDestroyed(&pvc),
+				Check:  testAccCheckKubernetesPersistentVolumeClaimV1IsDestroyed(&pvc),
 			},
 		},
 	})

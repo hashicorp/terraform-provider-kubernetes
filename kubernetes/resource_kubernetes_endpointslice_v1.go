@@ -17,12 +17,12 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesEndpointSlice() *schema.Resource {
+func resourceKubernetesEndpointSliceV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesEndpointSliceCreate,
-		ReadContext:   resourceKubernetesEndpointSliceRead,
-		UpdateContext: resourceKubernetesEndpointSliceUpdate,
-		DeleteContext: resourceKubernetesEndpointSliceDelete,
+		CreateContext: resourceKubernetesEndpointSliceV1Create,
+		ReadContext:   resourceKubernetesEndpointSliceV1Read,
+		UpdateContext: resourceKubernetesEndpointSliceV1Update,
+		DeleteContext: resourceKubernetesEndpointSliceV1Delete,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("endpoint_slice", true),
@@ -51,7 +51,7 @@ func resourceKubernetesEndpointSlice() *schema.Resource {
 	}
 }
 
-func resourceKubernetesEndpointSliceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesEndpointSliceV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -73,10 +73,10 @@ func resourceKubernetesEndpointSliceCreate(ctx context.Context, d *schema.Resour
 	log.Printf("[INFO] Submitted new endpoint_slice: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesEndpointSliceRead(ctx, d, meta)
+	return resourceKubernetesEndpointSliceV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesEndpointSliceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesEndpointSliceV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -120,7 +120,7 @@ func resourceKubernetesEndpointSliceRead(ctx context.Context, d *schema.Resource
 	return nil
 }
 
-func resourceKubernetesEndpointSliceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesEndpointSliceV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -165,10 +165,10 @@ func resourceKubernetesEndpointSliceUpdate(ctx context.Context, d *schema.Resour
 	log.Printf("[INFO] Submitted updated endpointSlice: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesEndpointSliceRead(ctx, d, meta)
+	return resourceKubernetesEndpointSliceV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesEndpointSliceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesEndpointSliceV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)

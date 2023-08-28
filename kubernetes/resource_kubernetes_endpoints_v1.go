@@ -16,12 +16,12 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesEndpoints() *schema.Resource {
+func resourceKubernetesEndpointsV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesEndpointsCreate,
-		ReadContext:   resourceKubernetesEndpointsRead,
-		UpdateContext: resourceKubernetesEndpointsUpdate,
-		DeleteContext: resourceKubernetesEndpointsDelete,
+		CreateContext: resourceKubernetesEndpointsV1Create,
+		ReadContext:   resourceKubernetesEndpointsV1Read,
+		UpdateContext: resourceKubernetesEndpointsV1Update,
+		DeleteContext: resourceKubernetesEndpointsV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -39,7 +39,7 @@ func resourceKubernetesEndpoints() *schema.Resource {
 	}
 }
 
-func resourceKubernetesEndpointsCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesEndpointsV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -58,11 +58,11 @@ func resourceKubernetesEndpointsCreate(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[INFO] Submitted new endpoints: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesEndpointsRead(ctx, d, meta)
+	return resourceKubernetesEndpointsV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesEndpointsRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesEndpointsExists(ctx, d, meta)
+func resourceKubernetesEndpointsV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesEndpointsV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -102,7 +102,7 @@ func resourceKubernetesEndpointsRead(ctx context.Context, d *schema.ResourceData
 	return nil
 }
 
-func resourceKubernetesEndpointsUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesEndpointsV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -133,10 +133,10 @@ func resourceKubernetesEndpointsUpdate(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[INFO] Submitted updated endpoints: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesEndpointsRead(ctx, d, meta)
+	return resourceKubernetesEndpointsV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesEndpointsDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesEndpointsV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -160,7 +160,7 @@ func resourceKubernetesEndpointsDelete(ctx context.Context, d *schema.ResourceDa
 	return nil
 }
 
-func resourceKubernetesEndpointsExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesEndpointsV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

@@ -19,12 +19,12 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesSecret() *schema.Resource {
+func resourceKubernetesSecretV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesSecretCreate,
-		ReadContext:   resourceKubernetesSecretRead,
-		UpdateContext: resourceKubernetesSecretUpdate,
-		DeleteContext: resourceKubernetesSecretDelete,
+		CreateContext: resourceKubernetesSecretV1Create,
+		ReadContext:   resourceKubernetesSecretV1Read,
+		UpdateContext: resourceKubernetesSecretV1Update,
+		DeleteContext: resourceKubernetesSecretV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -92,7 +92,7 @@ func resourceKubernetesSecret() *schema.Resource {
 	}
 }
 
-func resourceKubernetesSecretCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesSecretV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -165,11 +165,11 @@ func resourceKubernetesSecretCreate(ctx context.Context, d *schema.ResourceData,
 		}
 	}
 
-	return resourceKubernetesSecretRead(ctx, d, meta)
+	return resourceKubernetesSecretV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesSecretRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesSecretExists(ctx, d, meta)
+func resourceKubernetesSecretV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesSecretV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -219,7 +219,7 @@ func resourceKubernetesSecretRead(ctx context.Context, d *schema.ResourceData, m
 	return nil
 }
 
-func resourceKubernetesSecretUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesSecretV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -286,10 +286,10 @@ func resourceKubernetesSecretUpdate(ctx context.Context, d *schema.ResourceData,
 	log.Printf("[INFO] Submitting updated secret: %#v", out.ObjectMeta)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesSecretRead(ctx, d, meta)
+	return resourceKubernetesSecretV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesSecretDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesSecretV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -316,7 +316,7 @@ func resourceKubernetesSecretDelete(ctx context.Context, d *schema.ResourceData,
 	return nil
 }
 
-func resourceKubernetesSecretExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesSecretV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

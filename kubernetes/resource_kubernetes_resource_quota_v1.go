@@ -20,12 +20,12 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesResourceQuota() *schema.Resource {
+func resourceKubernetesResourceQuotaV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesResourceQuotaCreate,
-		ReadContext:   resourceKubernetesResourceQuotaRead,
-		UpdateContext: resourceKubernetesResourceQuotaUpdate,
-		DeleteContext: resourceKubernetesResourceQuotaDelete,
+		CreateContext: resourceKubernetesResourceQuotaV1Create,
+		ReadContext:   resourceKubernetesResourceQuotaV1Read,
+		UpdateContext: resourceKubernetesResourceQuotaV1Update,
+		DeleteContext: resourceKubernetesResourceQuotaV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -107,7 +107,7 @@ func resourceKubernetesResourceQuota() *schema.Resource {
 	}
 }
 
-func resourceKubernetesResourceQuotaCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesResourceQuotaV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -146,11 +146,11 @@ func resourceKubernetesResourceQuotaCreate(ctx context.Context, d *schema.Resour
 		return diag.FromErr(err)
 	}
 
-	return resourceKubernetesResourceQuotaRead(ctx, d, meta)
+	return resourceKubernetesResourceQuotaV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesResourceQuotaRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesResourceQuotaExists(ctx, d, meta)
+func resourceKubernetesResourceQuotaV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesResourceQuotaV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -196,7 +196,7 @@ func resourceKubernetesResourceQuotaRead(ctx context.Context, d *schema.Resource
 	return nil
 }
 
-func resourceKubernetesResourceQuotaUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesResourceQuotaV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -251,10 +251,10 @@ func resourceKubernetesResourceQuotaUpdate(ctx context.Context, d *schema.Resour
 		}
 	}
 
-	return resourceKubernetesResourceQuotaRead(ctx, d, meta)
+	return resourceKubernetesResourceQuotaV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesResourceQuotaDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesResourceQuotaV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -280,7 +280,7 @@ func resourceKubernetesResourceQuotaDelete(ctx context.Context, d *schema.Resour
 	return nil
 }
 
-func resourceKubernetesResourceQuotaExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesResourceQuotaV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

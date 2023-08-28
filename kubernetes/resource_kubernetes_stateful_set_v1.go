@@ -23,12 +23,12 @@ import (
 	"k8s.io/kubectl/pkg/polymorphichelpers"
 )
 
-func resourceKubernetesStatefulSet() *schema.Resource {
+func resourceKubernetesStatefulSetV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesStatefulSetCreate,
-		ReadContext:   resourceKubernetesStatefulSetRead,
-		UpdateContext: resourceKubernetesStatefulSetUpdate,
-		DeleteContext: resourceKubernetesStatefulSetDelete,
+		CreateContext: resourceKubernetesStatefulSetV1Create,
+		ReadContext:   resourceKubernetesStatefulSetV1Read,
+		UpdateContext: resourceKubernetesStatefulSetV1Update,
+		DeleteContext: resourceKubernetesStatefulSetV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -72,7 +72,7 @@ func resourceKubernetesStatefulSetSchemaV1() map[string]*schema.Schema {
 	}
 }
 
-func resourceKubernetesStatefulSetCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesStatefulSetV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -112,10 +112,10 @@ func resourceKubernetesStatefulSetCreate(ctx context.Context, d *schema.Resource
 		}
 	}
 
-	return resourceKubernetesStatefulSetRead(ctx, d, meta)
+	return resourceKubernetesStatefulSetV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesStatefulSetExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesStatefulSetV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
@@ -137,8 +137,8 @@ func resourceKubernetesStatefulSetExists(ctx context.Context, d *schema.Resource
 	return true, err
 }
 
-func resourceKubernetesStatefulSetRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesStatefulSetExists(ctx, d, meta)
+func resourceKubernetesStatefulSetV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesStatefulSetV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -184,7 +184,7 @@ func resourceKubernetesStatefulSetRead(ctx context.Context, d *schema.ResourceDa
 	return nil
 }
 
-func resourceKubernetesStatefulSetUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesStatefulSetV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -226,10 +226,10 @@ func resourceKubernetesStatefulSetUpdate(ctx context.Context, d *schema.Resource
 		return diag.Diagnostics{}
 	}
 
-	return resourceKubernetesStatefulSetRead(ctx, d, meta)
+	return resourceKubernetesStatefulSetV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesStatefulSetDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesStatefulSetV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)

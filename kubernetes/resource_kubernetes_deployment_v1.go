@@ -27,12 +27,12 @@ const (
 	TimedOutReason = "ProgressDeadlineExceeded"
 )
 
-func resourceKubernetesDeployment() *schema.Resource {
+func resourceKubernetesDeploymentV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesDeploymentCreate,
-		ReadContext:   resourceKubernetesDeploymentRead,
-		UpdateContext: resourceKubernetesDeploymentUpdate,
-		DeleteContext: resourceKubernetesDeploymentDelete,
+		CreateContext: resourceKubernetesDeploymentV1Create,
+		ReadContext:   resourceKubernetesDeploymentV1Read,
+		UpdateContext: resourceKubernetesDeploymentV1Update,
+		DeleteContext: resourceKubernetesDeploymentV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -216,7 +216,7 @@ func resourceKubernetesDeploymentSchemaV1() map[string]*schema.Schema {
 	}
 }
 
-func resourceKubernetesDeploymentCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesDeploymentV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -254,10 +254,10 @@ func resourceKubernetesDeploymentCreate(ctx context.Context, d *schema.ResourceD
 
 	log.Printf("[INFO] Submitted new deployment: %#v", out)
 
-	return resourceKubernetesDeploymentRead(ctx, d, meta)
+	return resourceKubernetesDeploymentV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesDeploymentUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesDeploymentV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -312,11 +312,11 @@ func resourceKubernetesDeploymentUpdate(ctx context.Context, d *schema.ResourceD
 		}
 	}
 
-	return resourceKubernetesDeploymentRead(ctx, d, meta)
+	return resourceKubernetesDeploymentV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesDeploymentRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesDeploymentExists(ctx, d, meta)
+func resourceKubernetesDeploymentV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesDeploymentV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -360,7 +360,7 @@ func resourceKubernetesDeploymentRead(ctx context.Context, d *schema.ResourceDat
 	return nil
 }
 
-func resourceKubernetesDeploymentDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesDeploymentV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -403,7 +403,7 @@ func resourceKubernetesDeploymentDelete(ctx context.Context, d *schema.ResourceD
 	return nil
 }
 
-func resourceKubernetesDeploymentExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesDeploymentV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

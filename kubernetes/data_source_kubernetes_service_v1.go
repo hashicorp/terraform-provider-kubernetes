@@ -246,5 +246,5 @@ func dataSourceKubernetesServiceV1Read(ctx context.Context, d *schema.ResourceDa
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesServiceRead(ctx, d, meta)
+	return resourceKubernetesServiceV1Read(ctx, d, meta)
 }

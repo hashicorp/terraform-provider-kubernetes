@@ -162,6 +162,7 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 			"taints": taints,
 		},
 	}
+
 	patch := unstructured.Unstructured{
 		Object: patchObj,
 	}

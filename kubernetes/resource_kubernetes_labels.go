@@ -234,7 +234,7 @@ func resourceKubernetesLabelsUpdate(ctx context.Context, d *schema.ResourceData,
 	}
 
 	// check the resource exists before we try and patch it
-	ro, err := r.Get(ctx, name, v1.GetOptions{})
+	_, err = r.Get(ctx, name, v1.GetOptions{})
 	if err != nil {
 		if d.Id() == "" {
 			// if we are deleting then there is nothing to do
@@ -259,8 +259,13 @@ func resourceKubernetesLabelsUpdate(ctx context.Context, d *schema.ResourceData,
 	if namespacedResource {
 		patchmeta["namespace"] = namespace
 	}
-	ro.Object["metadata"] = patchmeta
-	patch := unstructured.Unstructured{Object: ro.Object}
+	patchobj := map[string]interface{}{
+		"apiVersion": apiVersion,
+		"kind":       kind,
+		"metadata":   patchmeta,
+	}
+	patch := unstructured.Unstructured{}
+	patch.Object = patchobj
 	patchbytes, err := patch.MarshalJSON()
 	if err != nil {
 		return diag.FromErr(err)

@@ -136,7 +136,7 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 	}
 	nodeApi := conn.CoreV1().Nodes()
 
-	ro, err := nodeApi.Get(ctx, nodeName, metav1.GetOptions{})
+	_, err = nodeApi.Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		if d.Id() == "" {
 			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
@@ -146,8 +146,6 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 		}
 		return diag.FromErr(err)
 	}
-	testOutput := fmt.Sprintf("%v", ro.Labels)
-	print(testOutput)
 
 	taints := d.Get("taint").([]interface{})
 	if d.Id() == "" {
@@ -158,13 +156,13 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 		"apiVersion": "v1",
 		"kind":       "Node",
 		"metadata": map[string]interface{}{
-			"name":   nodeName,
-			"labels": ro.Labels,
+			"name": nodeName,
 		},
 		"spec": map[string]interface{}{
 			"taints": taints,
 		},
 	}
+
 	patch := unstructured.Unstructured{
 		Object: patchObj,
 	}

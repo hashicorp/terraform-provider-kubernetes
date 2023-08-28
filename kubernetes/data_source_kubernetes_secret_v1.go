@@ -50,5 +50,5 @@ func dataSourceKubernetesSecretV1Read(ctx context.Context, d *schema.ResourceDat
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesSecretRead(ctx, d, meta)
+	return resourceKubernetesSecretV1Read(ctx, d, meta)
 }

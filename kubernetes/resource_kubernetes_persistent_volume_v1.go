@@ -27,12 +27,12 @@ const (
 	persistentVolumeAzureBlobError    = `Unable to apply Azure Disk configuration. Blob storage disks require configuration: kind = "Shared" or kind = "Dedicated"`
 )
 
-func resourceKubernetesPersistentVolume() *schema.Resource {
+func resourceKubernetesPersistentVolumeV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesPersistentVolumeCreate,
-		ReadContext:   resourceKubernetesPersistentVolumeRead,
-		UpdateContext: resourceKubernetesPersistentVolumeUpdate,
-		DeleteContext: resourceKubernetesPersistentVolumeDelete,
+		CreateContext: resourceKubernetesPersistentVolumeV1Create,
+		ReadContext:   resourceKubernetesPersistentVolumeV1Read,
+		UpdateContext: resourceKubernetesPersistentVolumeV1Update,
+		DeleteContext: resourceKubernetesPersistentVolumeV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -205,7 +205,7 @@ func resourceKubernetesPersistentVolume() *schema.Resource {
 	}
 }
 
-func resourceKubernetesPersistentVolumeCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPersistentVolumeV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -252,11 +252,11 @@ func resourceKubernetesPersistentVolumeCreate(ctx context.Context, d *schema.Res
 
 	d.SetId(out.Name)
 
-	return resourceKubernetesPersistentVolumeRead(ctx, d, meta)
+	return resourceKubernetesPersistentVolumeV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesPersistentVolumeRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesPersistentVolumeExists(ctx, d, meta)
+func resourceKubernetesPersistentVolumeV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesPersistentVolumeV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -289,7 +289,7 @@ func resourceKubernetesPersistentVolumeRead(ctx context.Context, d *schema.Resou
 	return nil
 }
 
-func resourceKubernetesPersistentVolumeUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPersistentVolumeV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -316,10 +316,10 @@ func resourceKubernetesPersistentVolumeUpdate(ctx context.Context, d *schema.Res
 	log.Printf("[INFO] Submitted updated persistent volume: %#v", out)
 	d.SetId(out.Name)
 
-	return resourceKubernetesPersistentVolumeRead(ctx, d, meta)
+	return resourceKubernetesPersistentVolumeV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesPersistentVolumeDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPersistentVolumeV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -358,7 +358,7 @@ func resourceKubernetesPersistentVolumeDelete(ctx context.Context, d *schema.Res
 	return nil
 }
 
-func resourceKubernetesPersistentVolumeExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesPersistentVolumeV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

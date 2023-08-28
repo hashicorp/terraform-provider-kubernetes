@@ -25,7 +25,7 @@ func TestAccKubernetesEnv_DeploymentBasic(t *testing.T) {
 	configMapName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_env.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			if err := createEnv(t, name, namespace); err != nil {
@@ -85,7 +85,7 @@ func TestAccKubernetesEnv_CronJobBasic(t *testing.T) {
 	configMapName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_env.demo"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createCronJobEnv(t, name, namespace)
@@ -143,7 +143,7 @@ func TestAccKubernetesEnv_Deployment_initContainer(t *testing.T) {
 	configMapName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_env.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createInitContainerEnv(t, name, namespace)
@@ -201,7 +201,7 @@ func TestAccKubernetesEnv_CronJob_initContainer(t *testing.T) {
 	configMapName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_env.demo"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createCronJobInitContainerEnv(t, name, namespace)

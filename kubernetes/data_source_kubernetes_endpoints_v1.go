@@ -34,5 +34,5 @@ func dataSourceKubernetesEndpointsV1Read(ctx context.Context, d *schema.Resource
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesEndpointsRead(ctx, d, meta)
+	return resourceKubernetesEndpointsV1Read(ctx, d, meta)
 }

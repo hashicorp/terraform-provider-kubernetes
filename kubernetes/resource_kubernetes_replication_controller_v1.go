@@ -20,12 +20,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func resourceKubernetesReplicationController() *schema.Resource {
+func resourceKubernetesReplicationControllerV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesReplicationControllerCreate,
-		ReadContext:   resourceKubernetesReplicationControllerRead,
-		UpdateContext: resourceKubernetesReplicationControllerUpdate,
-		DeleteContext: resourceKubernetesReplicationControllerDelete,
+		CreateContext: resourceKubernetesReplicationControllerV1Create,
+		ReadContext:   resourceKubernetesReplicationControllerV1Read,
+		UpdateContext: resourceKubernetesReplicationControllerV1Update,
+		DeleteContext: resourceKubernetesReplicationControllerV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -44,11 +44,11 @@ func resourceKubernetesReplicationController() *schema.Resource {
 			},
 		},
 		SchemaVersion: 1,
-		Schema:        resourceKubernetesReplicationControllerSchemaV1(),
+		Schema:        resourceKubernetesReplicationControllerV1Schema(),
 	}
 }
 
-func resourceKubernetesReplicationControllerSchemaV1() map[string]*schema.Schema {
+func resourceKubernetesReplicationControllerV1Schema() map[string]*schema.Schema {
 
 	return map[string]*schema.Schema{
 		"metadata": namespacedMetadataSchema("replication controller", true),
@@ -110,7 +110,7 @@ func replicationControllerTemplateFieldSpec() map[string]*schema.Schema {
 	return templateFields
 }
 
-func resourceKubernetesReplicationControllerCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesReplicationControllerV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -150,11 +150,11 @@ func resourceKubernetesReplicationControllerCreate(ctx context.Context, d *schem
 
 	log.Printf("[INFO] Submitted new replication controller: %#v", out)
 
-	return resourceKubernetesReplicationControllerRead(ctx, d, meta)
+	return resourceKubernetesReplicationControllerV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesReplicationControllerRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesReplicationControllerExists(ctx, d, meta)
+func resourceKubernetesReplicationControllerV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesReplicationControllerV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -198,7 +198,7 @@ func resourceKubernetesReplicationControllerRead(ctx context.Context, d *schema.
 	return nil
 }
 
-func resourceKubernetesReplicationControllerUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesReplicationControllerV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -239,10 +239,10 @@ func resourceKubernetesReplicationControllerUpdate(ctx context.Context, d *schem
 		return diag.FromErr(err)
 	}
 
-	return resourceKubernetesReplicationControllerRead(ctx, d, meta)
+	return resourceKubernetesReplicationControllerV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesReplicationControllerDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesReplicationControllerV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -307,7 +307,7 @@ func resourceKubernetesReplicationControllerDelete(ctx context.Context, d *schem
 	return nil
 }
 
-func resourceKubernetesReplicationControllerExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesReplicationControllerV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

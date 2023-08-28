@@ -1,3 +1,3 @@
 ```release-note:bug
-`resource/kubernetes_labels`: Add ["ff:metadata"] check in kubernetes_labels to prevent crash with kubernetes_node_taints
+`resource/kubernetes_labels`: Add ["f:metadata"] check in kubernetes_labels to prevent crash with kubernetes_node_taints
 ```

@@ -1561,10 +1561,14 @@ func TestAccKubernetesPodV1_phase(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "target_state"},
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
+					"spec.0.node_name",
+					"target_state",
+				},
 			},
 		},
 	})

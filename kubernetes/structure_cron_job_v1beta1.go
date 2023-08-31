@@ -43,7 +43,7 @@ func flattenJobTemplate(in v1beta1.JobTemplateSpec, d *schema.ResourceData, meta
 
 	att["metadata"] = flattenMetadata(in.ObjectMeta, d, meta)
 
-	jobSpec, err := flattenJobSpec(in.Spec, d, meta, "spec.0.job_template.0.spec.0.template.0.")
+	jobSpec, err := flattenJobV1Spec(in.Spec, d, meta, "spec.0.job_template.0.spec.0.template.0.")
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func expandJobTemplate(in []interface{}) (v1beta1.JobTemplateSpec, error) {
 
 	tpl := in[0].(map[string]interface{})
 
-	spec, err := expandJobSpec(tpl["spec"].([]interface{}))
+	spec, err := expandJobV1Spec(tpl["spec"].([]interface{}))
 	if err != nil {
 		return obj, err
 	}

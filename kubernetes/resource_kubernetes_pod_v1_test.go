@@ -1335,7 +1335,7 @@ func TestAccKubernetesPodV1_bug961EmptyBlocks(t *testing.T) {
 
 func TestAccKubernetesPodV1_bug1085(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := alpineImageVersion
+	imageName := busyboxImage
 	var conf api.Pod
 	resourceName := "kubernetes_pod_v1.test"
 

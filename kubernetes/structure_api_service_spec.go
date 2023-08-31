@@ -9,7 +9,7 @@ import (
 
 // Flatteners
 
-func flattenAPIServiceSpec(in v1.APIServiceSpec) []interface{} {
+func flattenAPIServiceV1Spec(in v1.APIServiceSpec) []interface{} {
 	att := make(map[string]interface{})
 
 	att["ca_bundle"] = string(in.CABundle)
@@ -35,7 +35,7 @@ func flattenAPIServiceSpec(in v1.APIServiceSpec) []interface{} {
 
 // Expanders
 
-func expandAPIServiceSpec(l []interface{}) v1.APIServiceSpec {
+func expandAPIServiceV1Spec(l []interface{}) v1.APIServiceSpec {
 	if len(l) == 0 || l[0] == nil {
 		return v1.APIServiceSpec{}
 	}

@@ -14,104 +14,105 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesAPIService_basic(t *testing.T) {
+func TestAccKubernetesAPIServiceV1_basic(t *testing.T) {
 	group := fmt.Sprintf("tf-acc-test-%s.k8s.io", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	version := "v1beta1"
+	version := "v1"
 	name := fmt.Sprintf("%s.%s", version, group)
+	resourceName := "kubernetes_api_service_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_api_service.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesAPIServiceDestroy,
+		CheckDestroy:      testAccCheckKubernetesAPIServiceV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesAPIServiceConfig_basic(name, group, version),
+				Config: testAccKubernetesAPIServiceV1Config_basic(name, group, version),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesAPIServiceExists("kubernetes_api_service.test"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.name", "metrics-server"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.namespace", "kube-system"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.port", "443"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group", group),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group_priority_minimum", "1"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version", version),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version_priority", "1"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.ca_bundle", ""),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.insecure_skip_tls_verify", "true"),
+					testAccCheckKubernetesAPIServiceV1Exists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.service.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.service.0.name", "metrics-server"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.service.0.namespace", "kube-system"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.service.0.port", "443"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.group", group),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.group_priority_minimum", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.version", version),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.version_priority", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ca_bundle", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.insecure_skip_tls_verify", "true"),
 				),
 			},
 			{
-				Config: testAccKubernetesAPIServiceConfig_modified(name, group, version),
+				Config: testAccKubernetesAPIServiceV1Config_modified(name, group, version),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesAPIServiceExists("kubernetes_api_service.test"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.name", "metrics-server"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.namespace", "kube-system"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.port", "8443"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group", group),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group_priority_minimum", "100"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version", version),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version_priority", "100"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.ca_bundle", "data"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.insecure_skip_tls_verify", "false"),
+					testAccCheckKubernetesAPIServiceV1Exists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.service.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.service.0.name", "metrics-server"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.service.0.namespace", "kube-system"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.service.0.port", "8443"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.group", group),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.group_priority_minimum", "100"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.version", version),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.version_priority", "100"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ca_bundle", "data"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.insecure_skip_tls_verify", "false"),
 				),
 			},
 			{
-				Config: testAccKubernetesAPIServiceConfig_modified_local_service(name, group, version),
+				Config: testAccKubernetesAPIServiceV1Config_modified_local_service(name, group, version),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesAPIServiceExists("kubernetes_api_service.test"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.#", "0"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group", group),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group_priority_minimum", "100"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version", version),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version_priority", "100"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.ca_bundle", ""),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.insecure_skip_tls_verify", "false"),
+					testAccCheckKubernetesAPIServiceV1Exists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.service.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.group", group),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.group_priority_minimum", "100"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.version", version),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.version_priority", "100"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ca_bundle", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.insecure_skip_tls_verify", "false"),
 				),
 			},
 			{
-				Config: testAccKubernetesAPIServiceConfig_basic(name, group, version),
+				Config: testAccKubernetesAPIServiceV1Config_basic(name, group, version),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesAPIServiceExists("kubernetes_api_service.test"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_api_service.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.name", "metrics-server"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.namespace", "kube-system"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.service.0.port", "443"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group", group),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.group_priority_minimum", "1"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version", version),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.version_priority", "1"),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.ca_bundle", ""),
-					resource.TestCheckResourceAttr("kubernetes_api_service.test", "spec.0.insecure_skip_tls_verify", "true"),
+					testAccCheckKubernetesAPIServiceV1Exists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.service.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.service.0.name", "metrics-server"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.service.0.namespace", "kube-system"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.service.0.port", "443"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.group", group),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.group_priority_minimum", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.version", version),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.version_priority", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ca_bundle", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.insecure_skip_tls_verify", "true"),
 				),
 			},
 		},
 	})
 }
 
-func testAccCheckKubernetesAPIServiceDestroy(s *terraform.State) error {
+func testAccCheckKubernetesAPIServiceV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).AggregatorClientset()
 	if err != nil {
 		return err
@@ -119,7 +120,7 @@ func testAccCheckKubernetesAPIServiceDestroy(s *terraform.State) error {
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_api_service" {
+		if rs.Type != "kubernetes_api_service_v1" {
 			continue
 		}
 
@@ -136,7 +137,7 @@ func testAccCheckKubernetesAPIServiceDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckKubernetesAPIServiceExists(n string) resource.TestCheckFunc {
+func testAccCheckKubernetesAPIServiceV1Exists(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -160,8 +161,8 @@ func testAccCheckKubernetesAPIServiceExists(n string) resource.TestCheckFunc {
 	}
 }
 
-func testAccKubernetesAPIServiceConfig_basic(name, group, version string) string {
-	return fmt.Sprintf(`resource "kubernetes_api_service" "test" {
+func testAccKubernetesAPIServiceV1Config_basic(name, group, version string) string {
+	return fmt.Sprintf(`resource "kubernetes_api_service_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -195,8 +196,8 @@ func testAccKubernetesAPIServiceConfig_basic(name, group, version string) string
 `, name, group, version)
 }
 
-func testAccKubernetesAPIServiceConfig_modified(name, group, version string) string {
-	return fmt.Sprintf(`resource "kubernetes_api_service" "test" {
+func testAccKubernetesAPIServiceV1Config_modified(name, group, version string) string {
+	return fmt.Sprintf(`resource "kubernetes_api_service_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -230,8 +231,8 @@ func testAccKubernetesAPIServiceConfig_modified(name, group, version string) str
 `, name, group, version)
 }
 
-func testAccKubernetesAPIServiceConfig_modified_local_service(name, group, version string) string {
-	return fmt.Sprintf(`resource "kubernetes_api_service" "test" {
+func testAccKubernetesAPIServiceV1Config_modified_local_service(name, group, version string) string {
+	return fmt.Sprintf(`resource "kubernetes_api_service_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"

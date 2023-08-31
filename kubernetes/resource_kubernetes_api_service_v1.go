@@ -17,12 +17,12 @@ import (
 	v1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 )
 
-func resourceKubernetesAPIService() *schema.Resource {
+func resourceKubernetesAPIServiceV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesAPIServiceCreate,
-		ReadContext:   resourceKubernetesAPIServiceRead,
-		UpdateContext: resourceKubernetesAPIServiceUpdate,
-		DeleteContext: resourceKubernetesAPIServiceDelete,
+		CreateContext: resourceKubernetesAPIServiceV1Create,
+		ReadContext:   resourceKubernetesAPIServiceV1Read,
+		UpdateContext: resourceKubernetesAPIServiceV1Update,
+		DeleteContext: resourceKubernetesAPIServiceV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -104,7 +104,7 @@ func resourceKubernetesAPIService() *schema.Resource {
 	}
 }
 
-func resourceKubernetesAPIServiceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesAPIServiceV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).AggregatorClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -113,7 +113,7 @@ func resourceKubernetesAPIServiceCreate(ctx context.Context, d *schema.ResourceD
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svc := v1.APIService{
 		ObjectMeta: metadata,
-		Spec:       expandAPIServiceSpec(d.Get("spec").([]interface{})),
+		Spec:       expandAPIServiceV1Spec(d.Get("spec").([]interface{})),
 	}
 
 	log.Printf("[INFO] Creating new API service: %#v", svc)
@@ -124,11 +124,11 @@ func resourceKubernetesAPIServiceCreate(ctx context.Context, d *schema.ResourceD
 	log.Printf("[INFO] Submitted new API service: %#v", out)
 	d.SetId(out.ObjectMeta.Name)
 
-	return resourceKubernetesAPIServiceRead(ctx, d, meta)
+	return resourceKubernetesAPIServiceV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesAPIServiceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesAPIServiceExists(ctx, d, meta)
+func resourceKubernetesAPIServiceV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesAPIServiceV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -154,7 +154,7 @@ func resourceKubernetesAPIServiceRead(ctx context.Context, d *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 
-	flattened := flattenAPIServiceSpec(svc.Spec)
+	flattened := flattenAPIServiceV1Spec(svc.Spec)
 	log.Printf("[DEBUG] Flattened API service spec: %#v", flattened)
 	err = d.Set("spec", flattened)
 	if err != nil {
@@ -164,7 +164,7 @@ func resourceKubernetesAPIServiceRead(ctx context.Context, d *schema.ResourceDat
 	return nil
 }
 
-func resourceKubernetesAPIServiceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesAPIServiceV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).AggregatorClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -175,7 +175,7 @@ func resourceKubernetesAPIServiceUpdate(ctx context.Context, d *schema.ResourceD
 	if d.HasChange("spec") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/spec",
-			Value: expandAPIServiceSpec(d.Get("spec").([]interface{})),
+			Value: expandAPIServiceV1Spec(d.Get("spec").([]interface{})),
 		})
 	}
 	data, err := ops.MarshalJSON()
@@ -190,10 +190,10 @@ func resourceKubernetesAPIServiceUpdate(ctx context.Context, d *schema.ResourceD
 	log.Printf("[INFO] Submitted updated API service: %#v", out)
 	d.SetId(out.ObjectMeta.Name)
 
-	return resourceKubernetesAPIServiceRead(ctx, d, meta)
+	return resourceKubernetesAPIServiceV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesAPIServiceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesAPIServiceV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).AggregatorClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -216,7 +216,7 @@ func resourceKubernetesAPIServiceDelete(ctx context.Context, d *schema.ResourceD
 	return nil
 }
 
-func resourceKubernetesAPIServiceExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesAPIServiceV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).AggregatorClientset()
 	if err != nil {
 		return false, err

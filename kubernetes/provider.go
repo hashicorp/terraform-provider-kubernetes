@@ -280,8 +280,8 @@ func Provider() *schema.Provider {
 			"kubernetes_resource_quota_v1":          resourceKubernetesResourceQuotaV1(),
 
 			// api registration
-			"kubernetes_api_service":    resourceKubernetesAPIService(),
-			"kubernetes_api_service_v1": resourceKubernetesAPIService(),
+			"kubernetes_api_service":    resourceKubernetesAPIServiceV1(),
+			"kubernetes_api_service_v1": resourceKubernetesAPIServiceV1(),
 
 			// apps
 			"kubernetes_deployment":      resourceKubernetesDeploymentV1(),

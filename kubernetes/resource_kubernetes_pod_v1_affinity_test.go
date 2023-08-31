@@ -9,222 +9,228 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	api "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
-func TestAccKubernetesPod_with_node_affinity_with_required_during_scheduling_ignored_during_execution(t *testing.T) {
-	var conf api.Pod
+func TestAccKubernetesPodV1_with_node_affinity_with_required_during_scheduling_ignored_during_execution(t *testing.T) {
+	var conf corev1.Pod
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 	keyName := "spec.0.affinity.0.node_affinity.0.required_during_scheduling_ignored_during_execution"
+	resourceName := "kubernetes_pod_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodConfigWithNodeAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName),
+				Config: testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodV1Exists("kubernetes_pod.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.node_affinity.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.#", keyName), "2"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.0.key", keyName), "kubernetes.io/hostname"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.0.operator", keyName), "NotIn"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.0.values.0", keyName), "bar"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.0.values.1", keyName), "foo"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.1.key", keyName), "kubernetes.io/os"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.1.operator", keyName), "In"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.1.values.0", keyName), "linux"),
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.0.node_affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.#", keyName), "2"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.0.key", keyName), "kubernetes.io/hostname"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.0.operator", keyName), "NotIn"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.0.values.0", keyName), "bar"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.0.values.1", keyName), "foo"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.1.key", keyName), "kubernetes.io/os"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.1.operator", keyName), "In"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.1.values.0", keyName), "linux"),
 				),
 			},
 		},
 	})
 }
 
-func TestAccKubernetesPod_with_node_affinity_with_preferred_during_scheduling_ignored_during_execution(t *testing.T) {
-	var conf api.Pod
+func TestAccKubernetesPodV1_with_node_affinity_with_preferred_during_scheduling_ignored_during_execution(t *testing.T) {
+	var conf corev1.Pod
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 	keyName := "spec.0.affinity.0.node_affinity.0.preferred_during_scheduling_ignored_during_execution"
+	resourceName := "kubernetes_pod_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName),
+				Config: testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodV1Exists("kubernetes_pod.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.node_affinity.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.#", keyName), "2"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.0.key", keyName), "kubernetes.io/hostname"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.0.%%", keyName), "3"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.0.operator", keyName), "NotIn"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.0.values.#", keyName), "2"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.0.values.0", keyName), "bar"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.0.values.1", keyName), "foo"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.1.%%", keyName), "3"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.1.key", keyName), "kubernetes.io/os"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.1.operator", keyName), "In"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.1.values.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.preference.0.match_expressions.1.values.0", keyName), "linux"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.weight", keyName), "1"),
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.0.node_affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_expressions.#", keyName), "2"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_expressions.0.key", keyName), "kubernetes.io/hostname"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_expressions.0.%%", keyName), "3"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_expressions.0.operator", keyName), "NotIn"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_expressions.0.values.#", keyName), "2"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_expressions.0.values.0", keyName), "bar"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_expressions.0.values.1", keyName), "foo"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_expressions.1.%%", keyName), "3"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_expressions.1.key", keyName), "kubernetes.io/os"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_expressions.1.operator", keyName), "In"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_expressions.1.values.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_expressions.1.values.0", keyName), "linux"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.weight", keyName), "1"),
 				),
 			},
 		},
 	})
 }
 
-func TestAccKubernetesPod_with_pod_affinity_with_required_during_scheduling_ignored_during_execution(t *testing.T) {
-	var conf api.Pod
+func TestAccKubernetesPodV1_with_pod_affinity_with_required_during_scheduling_ignored_during_execution(t *testing.T) {
+	var conf corev1.Pod
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 	keyName := "spec.0.affinity.0.pod_affinity.0.required_during_scheduling_ignored_during_execution"
+	resourceName := "kubernetes_pod_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodConfigWithPodAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName),
+				Config: testAccKubernetesPodV1ConfigWithPodAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodV1Exists("kubernetes_pod.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_affinity.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.0.match_expressions.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.key", keyName), "security"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.operator", keyName), "NotIn"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.values.#", keyName), "2"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.values.0", keyName), "bar"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.values.1", keyName), "foo"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.0.match_labels.%%", keyName), "0"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.namespaces.#", keyName), "0"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.topology_key", keyName), "kubernetes.io/hostname"),
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.0.pod_affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.0.match_expressions.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.key", keyName), "security"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.operator", keyName), "NotIn"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.values.#", keyName), "2"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.values.0", keyName), "bar"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.values.1", keyName), "foo"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.0.match_labels.%%", keyName), "0"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.namespaces.#", keyName), "0"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.topology_key", keyName), "kubernetes.io/hostname"),
 				),
 			},
 		},
 	})
 }
 
-func TestAccKubernetesPod_with_pod_affinity_with_preferred_during_scheduling_ignored_during_execution(t *testing.T) {
-	var conf api.Pod
+func TestAccKubernetesPodV1_with_pod_affinity_with_preferred_during_scheduling_ignored_during_execution(t *testing.T) {
+	var conf corev1.Pod
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 	keyName := "spec.0.affinity.0.pod_affinity.0.preferred_during_scheduling_ignored_during_execution"
+	resourceName := "kubernetes_pod_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodConfigWithPodAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName),
+				Config: testAccKubernetesPodV1ConfigWithPodAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodV1Exists("kubernetes_pod.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_affinity.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.key", keyName), "security"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.operator", keyName), "NotIn"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.values.#", keyName), "2"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.values.0", keyName), "bar"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.values.1", keyName), "foo"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_labels.%%", keyName), "0"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.namespaces.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.namespaces.0", keyName), "default"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.topology_key", keyName), "kubernetes.io/hostname"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.weight", keyName), "100"),
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.0.pod_affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.key", keyName), "security"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.operator", keyName), "NotIn"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.values.#", keyName), "2"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.values.0", keyName), "bar"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.values.1", keyName), "foo"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_labels.%%", keyName), "0"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.namespaces.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.namespaces.0", keyName), "default"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.topology_key", keyName), "kubernetes.io/hostname"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.weight", keyName), "100"),
 				),
 			},
 		},
 	})
 }
 
-func TestAccKubernetesPod_with_pod_anti_affinity_with_required_during_scheduling_ignored_during_execution(t *testing.T) {
-	var conf api.Pod
+func TestAccKubernetesPodV1_with_pod_anti_affinity_with_required_during_scheduling_ignored_during_execution(t *testing.T) {
+	var conf corev1.Pod
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 	keyName := "spec.0.affinity.0.pod_anti_affinity.0.required_during_scheduling_ignored_during_execution"
+	resourceName := "kubernetes_pod_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfRunningInMinikube(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodConfigWithPodAntiAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName),
+				Config: testAccKubernetesPodV1ConfigWithPodAntiAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodV1Exists("kubernetes_pod.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_anti_affinity.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.0.match_expressions.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.key", keyName), "security"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.operator", keyName), "NotIn"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.values.#", keyName), "2"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.values.0", keyName), "bar"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.values.1", keyName), "foo"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.label_selector.0.match_labels.%%", keyName), "0"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.namespaces.#", keyName), "0"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.topology_key", keyName), "kubernetes.io/hostname"),
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.0.pod_anti_affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.0.match_expressions.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.key", keyName), "security"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.operator", keyName), "NotIn"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.values.#", keyName), "2"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.values.0", keyName), "bar"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.0.match_expressions.0.values.1", keyName), "foo"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.label_selector.0.match_labels.%%", keyName), "0"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.namespaces.#", keyName), "0"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.topology_key", keyName), "kubernetes.io/hostname"),
 				),
 			},
 		},
 	})
 }
 
-func TestAccKubernetesPod_with_pod_anti_affinity_with_preferred_during_scheduling_ignored_during_execution(t *testing.T) {
-	var conf api.Pod
+func TestAccKubernetesPodV1_with_pod_anti_affinity_with_preferred_during_scheduling_ignored_during_execution(t *testing.T) {
+	var conf corev1.Pod
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := nginxImageVersion
+	imageName := busyboxImage
 	keyName := "spec.0.affinity.0.pod_anti_affinity.0.preferred_during_scheduling_ignored_during_execution"
+	resourceName := "kubernetes_pod_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfRunningInMinikube(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodConfigWithPodAntiAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName),
+				Config: testAccKubernetesPodV1ConfigWithPodAntiAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodV1Exists("kubernetes_pod.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", "spec.0.affinity.0.pod_anti_affinity.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.#", keyName), "1"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.key", keyName), "security"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.operator", keyName), "NotIn"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.values.#", keyName), "2"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.values.0", keyName), "bar"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.values.1", keyName), "foo"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_labels.%%", keyName), "0"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.namespaces.#", keyName), "0"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.pod_affinity_term.0.topology_key", keyName), "kubernetes.io/hostname"),
-					resource.TestCheckResourceAttr("kubernetes_pod.test", fmt.Sprintf("%s.0.weight", keyName), "100"),
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.0.pod_anti_affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.key", keyName), "security"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.operator", keyName), "NotIn"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.values.#", keyName), "2"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.values.0", keyName), "bar"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_expressions.0.values.1", keyName), "foo"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.label_selector.0.match_labels.%%", keyName), "0"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.namespaces.#", keyName), "0"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.pod_affinity_term.0.topology_key", keyName), "kubernetes.io/hostname"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.weight", keyName), "100"),
 				),
 			},
 		},
 	})
 }
 
-func testAccKubernetesPodConfigWithNodeAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+func testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -265,8 +271,8 @@ func testAccKubernetesPodConfigWithNodeAffinityWithRequiredDuringSchedulingIgnor
     `, podName, imageName)
 }
 
-func testAccKubernetesPodConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+func testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -308,8 +314,8 @@ func testAccKubernetesPodConfigWithNodeAffinityWithPreferredDuringSchedulingIgno
     `, podName, imageName)
 }
 
-func testAccKubernetesPodConfigWithPodAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+func testAccKubernetesPodV1ConfigWithPodAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -346,8 +352,8 @@ func testAccKubernetesPodConfigWithPodAffinityWithRequiredDuringSchedulingIgnore
     `, podName, imageName)
 }
 
-func testAccKubernetesPodConfigWithPodAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+func testAccKubernetesPodV1ConfigWithPodAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -388,8 +394,8 @@ func testAccKubernetesPodConfigWithPodAffinityWithPreferredDuringSchedulingIgnor
     `, podName, imageName)
 }
 
-func testAccKubernetesPodConfigWithPodAntiAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -427,8 +433,8 @@ func testAccKubernetesPodConfigWithPodAntiAffinityWithRequiredDuringSchedulingIg
     `, podName, imageName)
 }
 
-func testAccKubernetesPodConfigWithPodAntiAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod" "test" {
+func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"

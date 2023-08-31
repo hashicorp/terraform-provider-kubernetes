@@ -12,21 +12,22 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	batch "k8s.io/api/batch/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestAccKubernetesCronJobV1_basic(t *testing.T) {
-	var conf1, conf2 batch.CronJob
+	var conf1, conf2 batchv1.CronJob
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := alpineImageVersion
+	imageName := busyboxImage
+	resourceName := "kubernetes_cron_job_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.25.0")
 		},
-		IDRefreshName:     "kubernetes_cron_job_v1.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
@@ -34,51 +35,51 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesCronJobV1Config_basic(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesCronJobV1Exists("kubernetes_cron_job_v1.test", &conf1),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "metadata.0.annotations.hashicorp", "terraform"),
-					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "spec.0.schedule"),
-					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "spec.0.timezone"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.concurrency_policy", "Replace"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.failed_jobs_history_limit", "5"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.schedule", "1 0 * * *"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.timezone", "Etc/UTC"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.starting_deadline_seconds", "10"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.successful_jobs_history_limit", "10"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.suspend", "true"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.metadata.0.annotations.cluster-autoscaler.kubernetes.io/safe-to-evict", "false"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.parallelism", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.backoff_limit", "2"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.template.0.metadata.0.annotations.controller.kubernetes.io/pod-deletion-cost", "10000"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.template.0.spec.0.container.0.name", "hello"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.template.0.spec.0.container.0.image", imageName),
+					testAccCheckKubernetesCronJobV1Exists(resourceName, &conf1),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.hashicorp", "terraform"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.schedule"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.timezone"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.concurrency_policy", "Replace"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.failed_jobs_history_limit", "5"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.schedule", "1 0 * * *"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.timezone", "Etc/UTC"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.starting_deadline_seconds", "10"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.successful_jobs_history_limit", "10"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.suspend", "true"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.metadata.0.annotations.cluster-autoscaler.kubernetes.io/safe-to-evict", "false"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.parallelism", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.backoff_limit", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.template.0.metadata.0.annotations.controller.kubernetes.io/pod-deletion-cost", "10000"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.template.0.spec.0.container.0.name", "hello"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.template.0.spec.0.container.0.image", imageName),
 				),
 			},
 			{
 				Config: testAccKubernetesCronJobV1Config_modified(name, "test"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesCronJobV1Exists("kubernetes_cron_job_v1.test", &conf2),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.concurrency_policy", "Allow"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.failed_jobs_history_limit", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.schedule", "1 0 * * *"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.timezone", ""),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.starting_deadline_seconds", "0"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.successful_jobs_history_limit", "3"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.suspend", "false"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.parallelism", "2"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.backoff_limit", "6"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.template.0.spec.0.container.0.name", "hello"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.template.0.metadata.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.template.0.metadata.0.labels.%", "1"),
+					testAccCheckKubernetesCronJobV1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.concurrency_policy", "Allow"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.failed_jobs_history_limit", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.schedule", "1 0 * * *"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.timezone", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.starting_deadline_seconds", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.successful_jobs_history_limit", "3"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.suspend", "false"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.parallelism", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.backoff_limit", "6"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.template.0.spec.0.container.0.name", "hello"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.template.0.metadata.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.template.0.metadata.0.labels.%", "1"),
 					testAccCheckKubernetesCronJobV1ForceNew(&conf1, &conf2, false),
 				),
 			},
@@ -87,16 +88,17 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 }
 
 func TestAccKubernetesCronJobV1_extra(t *testing.T) {
-	var conf batch.CronJob
+	var conf batchv1.CronJob
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := alpineImageVersion
+	imageName := busyboxImage
+	resourceName := "kubernetes_cron_job_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.25.0")
 		},
-		IDRefreshName:     "kubernetes_cron_job_v1.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
@@ -104,27 +106,27 @@ func TestAccKubernetesCronJobV1_extra(t *testing.T) {
 			{
 				Config: testAccKubernetesCronJobV1Config_extra(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesCronJobV1Exists("kubernetes_cron_job_v1.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "spec.0.schedule"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.concurrency_policy", "Forbid"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.successful_jobs_history_limit", "10"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.failed_jobs_history_limit", "10"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.starting_deadline_seconds", "60"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.backoff_limit", "2"),
+					testAccCheckKubernetesCronJobV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.schedule"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.concurrency_policy", "Forbid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.successful_jobs_history_limit", "10"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.failed_jobs_history_limit", "10"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.starting_deadline_seconds", "60"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.backoff_limit", "2"),
 				),
 			},
 			{
 				Config: testAccKubernetesCronJobV1Config_extraModified(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesCronJobV1Exists("kubernetes_cron_job_v1.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_cron_job_v1.test", "spec.0.schedule"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.concurrency_policy", "Forbid"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.successful_jobs_history_limit", "2"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.failed_jobs_history_limit", "2"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.starting_deadline_seconds", "120"),
-					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.job_template.0.spec.0.backoff_limit", "3"),
+					testAccCheckKubernetesCronJobV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.schedule"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.concurrency_policy", "Forbid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.successful_jobs_history_limit", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.failed_jobs_history_limit", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.starting_deadline_seconds", "120"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.backoff_limit", "3"),
 				),
 			},
 		},
@@ -140,7 +142,7 @@ func testAccCheckKubernetesCronJobV1Destroy(s *terraform.State) error {
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_cron_job" {
+		if rs.Type != "kubernetes_cron_job_v1" {
 			continue
 		}
 
@@ -160,7 +162,7 @@ func testAccCheckKubernetesCronJobV1Destroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckKubernetesCronJobV1Exists(n string, obj *batch.CronJob) resource.TestCheckFunc {
+func testAccCheckKubernetesCronJobV1Exists(n string, obj *batchv1.CronJob) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -327,7 +329,7 @@ func testAccKubernetesCronJobV1Config_extraModified(name, imageName string) stri
 }`, name, imageName)
 }
 
-func testAccCheckKubernetesCronJobV1ForceNew(old, new *batch.CronJob, wantNew bool) resource.TestCheckFunc {
+func testAccCheckKubernetesCronJobV1ForceNew(old, new *batchv1.CronJob, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {
 			if old.ObjectMeta.UID != new.ObjectMeta.UID {

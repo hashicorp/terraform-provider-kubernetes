@@ -12,18 +12,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	api "k8s.io/api/batch/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesJob_wait_for_completion(t *testing.T) {
-	var conf api.Job
+func TestAccKubernetesJobV1_wait_for_completion(t *testing.T) {
+	var conf batchv1.Job
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := busyboxImage
+	resourceName := "kubernetes_job_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_job.test",
+		IDRefreshName: resourceName,
 		IDRefreshIgnore: []string{
 			"metadata.0.resource_version",
 			"spec.0.selector.0.match_expressions.#",
@@ -31,23 +32,186 @@ func TestAccKubernetesJob_wait_for_completion(t *testing.T) {
 			"spec.0.template.0.spec.0.container.0.resources.0.requests.#",
 		},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesJobDestroy,
+		CheckDestroy:      testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesJobConfig_wait_for_completion(name, imageName),
+				Config: testAccKubernetesJobV1Config_wait_for_completion(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// NOTE this is to check that Terraform actually waited for the Job to complete
 					// before considering the Job resource as created
-					testAccCheckJobWaited(time.Duration(10)*time.Second),
-					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "wait_for_completion", "true"),
+					testAccCheckJobV1Waited(time.Duration(10)*time.Second),
+					testAccCheckKubernetesJobV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "wait_for_completion", "true"),
 				),
 			},
 		},
 	})
 }
 
-func testAccCheckJobWaited(minDuration time.Duration) func(*terraform.State) error {
+func TestAccKubernetesJobV1_basic(t *testing.T) {
+	var conf batchv1.Job
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := busyboxImage
+	resourceName := "kubernetes_job_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesJobV1Config_basic(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.active_deadline_seconds", "120"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backoff_limit", "10"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.completions", "10"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parallelism", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.name", "hello"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr(resourceName, "wait_for_completion", "false"),
+				),
+			},
+			{
+				Config: testAccKubernetesJobV1Config_modified(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.active_deadline_seconds", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backoff_limit", "6"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.completions", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parallelism", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.manual_selector", "true"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.name", "hello"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr(resourceName, "wait_for_completion", "false"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesJobV1_update(t *testing.T) {
+	var conf1, conf2, conf3 batchv1.Job
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := busyboxImage
+	imageName1 := agnhostImage
+	resourceName := "kubernetes_job_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesJobV1Config_basic(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(resourceName, &conf1),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.active_deadline_seconds", "120"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backoff_limit", "10"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.completions", "10"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parallelism", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.name", "hello"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr(resourceName, "wait_for_completion", "false"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.manual_selector", "false"),
+				),
+			},
+			{
+				Config: testAccKubernetesJobV1Config_updateMutableFields(name, imageName, "121", "10", "false", "2"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.active_deadline_seconds", "121"),
+					testAccCheckKubernetesJobV1ForceNew(&conf1, &conf2, false),
+				),
+			},
+			{
+				Config: testAccKubernetesJobV1Config_updateMutableFields(name, imageName, "121", "11", "false", "2"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backoff_limit", "11"),
+					testAccCheckKubernetesJobV1ForceNew(&conf1, &conf2, false),
+				),
+			},
+			{
+				Config: testAccKubernetesJobV1Config_updateMutableFields(name, imageName, "121", "11", "true", "2"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.manual_selector", "true"),
+					testAccCheckKubernetesJobV1ForceNew(&conf1, &conf2, false),
+				),
+			},
+			{
+				Config: testAccKubernetesJobV1Config_updateMutableFields(name, imageName, "121", "11", "true", "3"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parallelism", "3"),
+					testAccCheckKubernetesJobV1ForceNew(&conf1, &conf2, false),
+				),
+			},
+			{
+				Config: testAccKubernetesJobV1Config_updateImmutableFields(name, imageName, "12"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.completions", "12"),
+					testAccCheckKubernetesJobV1ForceNew(&conf1, &conf2, true),
+				),
+			},
+			{
+				Config: testAccKubernetesJobV1Config_updateImmutableFields(name, imageName1, "12"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(resourceName, &conf3),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName1),
+					testAccCheckKubernetesJobV1ForceNew(&conf2, &conf3, true),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesJobV1_ttl_seconds_after_finished(t *testing.T) {
+	var conf batchv1.Job
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := busyboxImage
+	resourceName := "kubernetes_job_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:      func() { testAccPreCheck(t); skipIfClusterVersionLessThan(t, "1.21.0") },
+		IDRefreshName: resourceName,
+		IDRefreshIgnore: []string{
+			"spec.0.selector.0.match_expressions.#",
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesJobV1Config_ttl_seconds_after_finished(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ttl_seconds_after_finished", "60"),
+				),
+			},
+		},
+	})
+}
+
+func testAccCheckJobV1Waited(minDuration time.Duration) func(*terraform.State) error {
 	// NOTE this works because this function is called when setting up the test
 	// and the function it returns is called after the resource has been created
 	startTime := time.Now()
@@ -61,167 +225,7 @@ func testAccCheckJobWaited(minDuration time.Duration) func(*terraform.State) err
 	}
 }
 
-func TestAccKubernetesJob_basic(t *testing.T) {
-	var conf api.Job
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := alpineImageVersion
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_job.test",
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesJobDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesJobConfig_basic(name, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_job.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_job.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_job.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.active_deadline_seconds", "120"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.backoff_limit", "10"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.completions", "10"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.parallelism", "2"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "wait_for_completion", "false"),
-				),
-			},
-			{
-				Config: testAccKubernetesJobConfig_modified(name, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_job.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_job.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_job.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.labels.%", "1"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.labels.foo", "bar"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.active_deadline_seconds", "0"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.backoff_limit", "6"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.completions", "1"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.parallelism", "1"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.manual_selector", "true"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "wait_for_completion", "false"),
-				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesJob_update(t *testing.T) {
-	var conf1, conf2, conf3 api.Job
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := alpineImageVersion
-	imageName1 := busyboxImage
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_job.test",
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesJobDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesJobConfig_basic(name, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf1),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.active_deadline_seconds", "120"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.backoff_limit", "10"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.completions", "10"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.parallelism", "2"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.name", "hello"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "wait_for_completion", "false"),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.manual_selector", "false"),
-				),
-			},
-			{
-				Config: testAccKubernetesJobConfig_updateMutableFields(name, imageName, "121", "10", "false", "2"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf2),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.active_deadline_seconds", "121"),
-					testAccCheckKubernetesJobForceNew(&conf1, &conf2, false),
-				),
-			},
-			{
-				Config: testAccKubernetesJobConfig_updateMutableFields(name, imageName, "121", "11", "false", "2"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf2),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.backoff_limit", "11"),
-					testAccCheckKubernetesJobForceNew(&conf1, &conf2, false),
-				),
-			},
-			{
-				Config: testAccKubernetesJobConfig_updateMutableFields(name, imageName, "121", "11", "true", "2"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf2),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.manual_selector", "true"),
-					testAccCheckKubernetesJobForceNew(&conf1, &conf2, false),
-				),
-			},
-			{
-				Config: testAccKubernetesJobConfig_updateMutableFields(name, imageName, "121", "11", "true", "3"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf2),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.parallelism", "3"),
-					testAccCheckKubernetesJobForceNew(&conf1, &conf2, false),
-				),
-			},
-			{
-				Config: testAccKubernetesJobConfig_updateImmutableFields(name, imageName, "12"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf2),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.completions", "12"),
-					testAccCheckKubernetesJobForceNew(&conf1, &conf2, true),
-				),
-			},
-			{
-				Config: testAccKubernetesJobConfig_updateImmutableFields(name, imageName1, "12"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf3),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.template.0.spec.0.container.0.image", imageName1),
-					testAccCheckKubernetesJobForceNew(&conf2, &conf3, true),
-				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesJob_ttl_seconds_after_finished(t *testing.T) {
-	var conf api.Job
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t); skipIfClusterVersionLessThan(t, "1.21.0") },
-		IDRefreshName: "kubernetes_job.test",
-		IDRefreshIgnore: []string{
-			"spec.0.selector.0.match_expressions.#",
-		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesJobDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesJobConfig_ttl_seconds_after_finished(name, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesJobExists("kubernetes_job.test", &conf),
-					resource.TestCheckResourceAttr("kubernetes_job.test", "spec.0.ttl_seconds_after_finished", "60"),
-				),
-			},
-		},
-	})
-}
-
-func testAccCheckKubernetesJobForceNew(old, new *api.Job, wantNew bool) resource.TestCheckFunc {
+func testAccCheckKubernetesJobV1ForceNew(old, new *batchv1.Job, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {
 			if old.ObjectMeta.UID == new.ObjectMeta.UID {
@@ -236,7 +240,7 @@ func testAccCheckKubernetesJobForceNew(old, new *api.Job, wantNew bool) resource
 	}
 }
 
-func testAccCheckKubernetesJobDestroy(s *terraform.State) error {
+func testAccCheckKubernetesJobV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	if err != nil {
@@ -245,7 +249,7 @@ func testAccCheckKubernetesJobDestroy(s *terraform.State) error {
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_job" {
+		if rs.Type != "kubernetes_job_v1" {
 			continue
 		}
 
@@ -265,7 +269,7 @@ func testAccCheckKubernetesJobDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckKubernetesJobExists(n string, obj *api.Job) resource.TestCheckFunc {
+func testAccCheckKubernetesJobV1Exists(n string, obj *batchv1.Job) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -293,8 +297,8 @@ func testAccCheckKubernetesJobExists(n string, obj *api.Job) resource.TestCheckF
 	}
 }
 
-func testAccKubernetesJobConfig_basic(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_job" "test" {
+func testAccKubernetesJobV1Config_basic(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_job_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -319,8 +323,8 @@ func testAccKubernetesJobConfig_basic(name, imageName string) string {
 }`, name, imageName)
 }
 
-func testAccKubernetesJobConfig_updateMutableFields(name, imageName, activeDeadlineSeconds, backoffLimit, manualSelector, parallelism string) string {
-	return fmt.Sprintf(`resource "kubernetes_job" "test" {
+func testAccKubernetesJobV1Config_updateMutableFields(name, imageName, activeDeadlineSeconds, backoffLimit, manualSelector, parallelism string) string {
+	return fmt.Sprintf(`resource "kubernetes_job_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -346,8 +350,8 @@ func testAccKubernetesJobConfig_updateMutableFields(name, imageName, activeDeadl
 }`, name, activeDeadlineSeconds, backoffLimit, manualSelector, parallelism, imageName)
 }
 
-func testAccKubernetesJobConfig_updateImmutableFields(name, imageName, completions string) string {
-	return fmt.Sprintf(`resource "kubernetes_job" "test" {
+func testAccKubernetesJobV1Config_updateImmutableFields(name, imageName, completions string) string {
+	return fmt.Sprintf(`resource "kubernetes_job_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -369,8 +373,8 @@ func testAccKubernetesJobConfig_updateImmutableFields(name, imageName, completio
 }`, name, completions, imageName)
 }
 
-func testAccKubernetesJobConfig_ttl_seconds_after_finished(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_job" "test" {
+func testAccKubernetesJobV1Config_ttl_seconds_after_finished(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_job_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -393,8 +397,8 @@ func testAccKubernetesJobConfig_ttl_seconds_after_finished(name, imageName strin
 }`, name, imageName)
 }
 
-func testAccKubernetesJobConfig_wait_for_completion(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_job" "test" {
+func testAccKubernetesJobV1Config_wait_for_completion(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_job_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -419,8 +423,8 @@ func testAccKubernetesJobConfig_wait_for_completion(name, imageName string) stri
 }`, name, imageName)
 }
 
-func testAccKubernetesJobConfig_modified(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_job" "test" {
+func testAccKubernetesJobV1Config_modified(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_job_v1" "test" {
   metadata {
     name = "%s"
     labels = {

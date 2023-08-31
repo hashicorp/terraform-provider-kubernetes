@@ -292,8 +292,8 @@ func Provider() *schema.Provider {
 			"kubernetes_stateful_set_v1": resourceKubernetesStatefulSetV1(),
 
 			// batch
-			"kubernetes_job":         resourceKubernetesJob(),
-			"kubernetes_job_v1":      resourceKubernetesJob(),
+			"kubernetes_job":         resourceKubernetesJobV1(),
+			"kubernetes_job_v1":      resourceKubernetesJobV1(),
 			"kubernetes_cron_job":    resourceKubernetesCronJobV1Beta1(),
 			"kubernetes_cron_job_v1": resourceKubernetesCronJobV1(),
 

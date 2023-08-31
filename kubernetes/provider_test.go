@@ -24,9 +24,8 @@ import (
 
 // Global constants for testing images (reduces the number of docker pulls).
 const (
-	nginxImageVersion = "nginx:1.19.4"
-	busyboxImage      = "busybox:1.36"
-	agnhostImage      = "registry.k8s.io/e2e-test-images/agnhost:2.43"
+	busyboxImage = "busybox:1.36"
+	agnhostImage = "registry.k8s.io/e2e-test-images/agnhost:2.43"
 )
 
 var testAccProvider *schema.Provider

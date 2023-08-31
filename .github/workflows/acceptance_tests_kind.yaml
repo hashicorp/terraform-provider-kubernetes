@@ -21,8 +21,8 @@ on:
 env:
   KUBECONFIG: ${{ github.workspace }}/.kube/config
   KIND_VERSION: ${{ github.event.inputs.kind_version || vars.KIND_VERSION }}
-  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
   PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || vars.PARALLEL_RUNS }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
 
 jobs:
   acceptance_tests:
@@ -52,5 +52,6 @@ jobs:
           # Do not set TF_ACC_TERRAFORM_PATH or TF_ACC_TERRAFORM_VERSION.
           # In this case, the framework will search for the Terraform CLI binary based on the operating system PATH.
           # Eventually, it will use the one we set up.
+          # More information: https://developer.hashicorp.com/terraform/plugin/sdkv2/testing/acceptance-tests#terraform-cli-installation-behaviors
         run: |
           make testacc

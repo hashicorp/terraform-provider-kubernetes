@@ -19,12 +19,14 @@ func TestAccKubernetesCertificateSigningRequestV1_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	usages := []string{"client auth"}
 	signerName := "kubernetes.io/kube-apiserver-client"
-	resource.Test(t, resource.TestCase{
+	resourceName := "kubernetes_certificate_signing_request_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
-		IDRefreshName:     "kubernetes_certificate_signing_request_v1.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestV1Destroy,
@@ -33,9 +35,9 @@ func TestAccKubernetesCertificateSigningRequestV1_basic(t *testing.T) {
 				Config: testAccKubernetesCertificateSigningRequestV1Config_basic(name, signerName, usages, true),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesCertificateSigningRequestV1Valid,
-					resource.TestCheckResourceAttrSet("kubernetes_certificate_signing_request_v1.test", "certificate"),
-					resource.TestCheckResourceAttr("kubernetes_certificate_signing_request_v1.test", "spec.0.signer_name", signerName),
-					resource.TestCheckResourceAttr("kubernetes_certificate_signing_request_v1.test", "spec.0.usages.0", usages[0]),
+					resource.TestCheckResourceAttrSet(resourceName, "certificate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.signer_name", signerName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.usages.0", usages[0]),
 				),
 			},
 		},
@@ -44,12 +46,14 @@ func TestAccKubernetesCertificateSigningRequestV1_basic(t *testing.T) {
 
 func TestAccKubernetesCertificateSigningRequestV1_generateName(t *testing.T) {
 	generateName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resource.Test(t, resource.TestCase{
+	resourceName := "kubernetes_certificate_signing_request_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
-		IDRefreshName:     "kubernetes_certificate_signing_request_v1.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestV1Destroy,
@@ -58,7 +62,7 @@ func TestAccKubernetesCertificateSigningRequestV1_generateName(t *testing.T) {
 				Config: testAccKubernetesCertificateSigningRequestV1Config_generateName(generateName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesCertificateSigningRequestV1Valid,
-					resource.TestCheckResourceAttrSet("kubernetes_certificate_signing_request_v1.test", "certificate"),
+					resource.TestCheckResourceAttrSet(resourceName, "certificate"),
 				),
 			},
 		},

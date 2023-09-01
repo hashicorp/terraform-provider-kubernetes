@@ -1296,6 +1296,7 @@ func testAccKubernetesDeploymentV1Config_minimal(name, imageName string) string 
           name    = "tf-acc-test"
           command = ["sleep", "300"]
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -1365,6 +1366,7 @@ func testAccKubernetesDeploymentV1Config_basic(name, imageName string) string {
             }
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -1479,6 +1481,7 @@ resource "kubernetes_deployment_v1" "test" {
             "%s",
           ]
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -1565,6 +1568,7 @@ func testAccKubernetesDeploymentV1Config_modified(name, imageName string) string
           name  = "tf-acc-test"
           args  = ["test-webserver"]
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -1608,6 +1612,7 @@ func testAccKubernetesDeploymentV1Config_generatedName(prefix, imageName string)
           name    = "tf-acc-test"
           command = ["sleep", "300"]
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -1652,6 +1657,7 @@ func testAccKubernetesDeploymentV1ConfigWithSecurityContext(deploymentName, imag
           name    = "containername"
           command = ["sleep", "300"]
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -1697,6 +1703,7 @@ func testAccKubernetesDeploymentV1ConfigWithSecurityContextRunAsGroup(deployment
           name    = "containername"
           command = ["sleep", "300"]
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -1746,6 +1753,7 @@ func testAccKubernetesDeploymentV1ConfigWithSecurityContextSysctl(deploymentName
           name    = "containername"
           command = ["sleep", "300"]
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -1800,6 +1808,7 @@ func testAccKubernetesDeploymentV1ConfigWithTolerations(deploymentName, imageNam
           name    = "containername"
           command = ["sleep", "300"]
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -1846,6 +1855,7 @@ func testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingExec(deploymentNam
             period_seconds        = 5
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -1898,6 +1908,7 @@ func testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingHTTPGet(deployment
             period_seconds        = 3
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -1944,6 +1955,7 @@ func testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingTCP(deploymentName
             period_seconds        = 3
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -1995,6 +2007,7 @@ func testAccKubernetesDeploymentV1ConfigWithLifeCycle(deploymentName, imageName 
             }
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2065,6 +2078,7 @@ func testAccKubernetesDeploymentV1ConfigWithContainerSecurityContext(deploymentN
             }
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2115,12 +2129,14 @@ func testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextRunAsGroup(d
         container {
           name    = "container2"
           image   = "%s"
-          command = ["sh", "-c", "echo The app is running! && sleep 3600"]
+          command = ["sh", "-c", "echo The app is running! && sleep 300"]
           security_context {
             run_as_group = 200
             run_as_user  = 201
           }
         }
+
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2169,6 +2185,7 @@ func testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextSeccompProfi
             }
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2219,6 +2236,7 @@ func testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextSeccompProfi
             }
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2227,7 +2245,7 @@ func testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextSeccompProfi
 }
 
 func testAccKubernetesDeploymentV1ConfigWithVolumeMounts(secretName, deploymentName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2276,9 +2294,10 @@ resource "kubernetes_deployment_v1" "test" {
           name = "db"
 
           secret {
-            secret_name = "${kubernetes_secret.test.metadata.0.name}"
+            secret_name = "${kubernetes_secret_v1.test.metadata.0.name}"
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2287,7 +2306,7 @@ resource "kubernetes_deployment_v1" "test" {
 }
 
 func testAccKubernetesDeploymentV1ConfigWithVolumeMountsNone(secretName, deploymentName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2331,9 +2350,11 @@ resource "kubernetes_deployment_v1" "test" {
           name = "db"
 
           secret {
-            secret_name = "${kubernetes_secret.test.metadata.0.name}"
+            secret_name = "${kubernetes_secret_v1.test.metadata.0.name}"
           }
         }
+
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2384,6 +2405,7 @@ func testAccKubernetesDeploymentV1ConfigWithResourceRequirements(deploymentName,
             }
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2427,6 +2449,7 @@ func testAccKubernetesDeploymentV1ConfigWithEmptyResourceRequirements(deployment
             requests = {}
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2472,6 +2495,7 @@ func testAccKubernetesDeploymentV1ConfigWithResourceRequirementsLimitsOnly(deplo
             }
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2517,6 +2541,7 @@ func testAccKubernetesDeploymentV1ConfigWithResourceRequirementsRequestsOnly(dep
             }
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2569,6 +2594,8 @@ func testAccKubernetesDeploymentV1ConfigWithEmptyDirVolumes(deploymentName, imag
             medium = "Memory"
           }
         }
+
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2620,6 +2647,8 @@ func testAccKubernetesDeploymentV1ConfigWithEmptyDirVolumesModified(deploymentNa
             size_limit = "128Mi"
           }
         }
+
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2661,6 +2690,7 @@ func testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, s
           name    = "containername"
           command = ["sleep", "300"]
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2704,6 +2734,7 @@ func testAccKubernetesDeploymentV1ConfigWithShareProcessNamespace(deploymentName
           name    = "containername2"
           command = ["sleep", "300"]
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2750,6 +2781,7 @@ func testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(depl
           name    = "containername"
           command = ["sleep", "300"]
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2817,6 +2849,8 @@ func testAccKubernetesDeploymentV1ConfigHostAliases(name string, imageName strin
           ip        = "127.0.0.6"
           hostnames = ["xyz.com"]
         }
+
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2850,6 +2884,7 @@ func testAccKubernetesDeploymentV1ConfigWithAutomountServiceAccountToken(deploym
           image   = "%s"
           command = ["sleep", "300"]
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2858,7 +2893,7 @@ func testAccKubernetesDeploymentV1ConfigWithAutomountServiceAccountToken(deploym
 }
 
 func testAccKubernetesDeploymentV1Config_ForceNew(secretName, label, name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -2907,9 +2942,11 @@ resource "kubernetes_deployment_v1" "test" {
           name = "db"
 
           secret {
-            secret_name = "${kubernetes_secret.test.metadata.0.name}"
+            secret_name = "${kubernetes_secret_v1.test.metadata.0.name}"
           }
         }
+
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -2958,6 +2995,7 @@ func testAccKubernetesDeploymentV1ConfigWithResourceFieldSelector(rcName, imageN
             }
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }

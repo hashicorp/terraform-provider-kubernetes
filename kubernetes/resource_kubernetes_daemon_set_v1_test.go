@@ -475,6 +475,7 @@ func testAccKubernetesDaemonSetV1Config_minimal(name, imageName string) string {
           name    = "tf-acc-test"
           command = ["sleep", "300"]
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -523,6 +524,7 @@ func testAccKubernetesDaemonSetV1Config_basic(name, imageName string) string {
           name    = "tf-acc-test"
           command = ["sleep", "300"]
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -584,8 +586,8 @@ func testAccKubernetesDaemonSetV1Config_modified(name, imageName string) string 
             name = "use-vc"
           }
         }
-
-        dns_policy = "Default"
+        dns_policy                       = "Default"
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -629,6 +631,7 @@ func testAccKubernetesDaemonSetV1ConfigWithTemplateMetadata(depName, imageName s
           image = "%s"
           name  = "containername"
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -672,6 +675,7 @@ func testAccKubernetesDaemonSetV1ConfigWithTemplateMetadataModified(depName, ima
           image = "%s"
           name  = "containername"
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -714,6 +718,7 @@ func testAccKubernetesDaemonSetV1WithInitContainer(depName, imageName string) st
           image = "%s"
           name  = "containername"
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -746,6 +751,7 @@ func testAccKubernetesDaemonSetV1WithNoTopLevelLabels(depName, imageName string)
           image = "%s"
           name  = "containername"
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -799,6 +805,7 @@ func testAccKubernetesDaemonSetV1ConfigWithTolerations(rcName, imageName string,
           image = "%s"
           name  = "containername"
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -846,6 +853,7 @@ func testAccKubernetesDaemonSetV1ConfigWithContainerSecurityContextSeccompProfil
             }
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -895,6 +903,7 @@ func testAccKubernetesDaemonSetV1ConfigWithContainerSecurityContextSeccompProfil
             }
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -945,6 +954,7 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirements(deploymentName, 
             }
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -986,6 +996,7 @@ func testAccKubernetesDaemonSetV1ConfigWithEmptyResourceRequirements(deploymentN
             requests = {}
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -1029,6 +1040,7 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirementsLimitsOnly(deploy
             }
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -1072,6 +1084,7 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirementsRequestsOnly(depl
             }
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
   }

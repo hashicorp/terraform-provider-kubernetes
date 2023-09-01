@@ -72,7 +72,7 @@ func TestAccKubernetesJobV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.active_deadline_seconds", "120"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.backoff_limit", "10"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.completions", "10"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.completions", "4"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.parallelism", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
@@ -125,7 +125,7 @@ func TestAccKubernetesJobV1_update(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.active_deadline_seconds", "120"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.backoff_limit", "10"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.completions", "10"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.completions", "4"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.parallelism", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
@@ -134,7 +134,7 @@ func TestAccKubernetesJobV1_update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesJobV1Config_updateMutableFields(name, imageName, "121", "10", "false", "2"),
+				Config: testAccKubernetesJobV1Config_updateMutableFields(name, imageName, "121", "4", "false", "2"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.active_deadline_seconds", "121"),
@@ -142,15 +142,15 @@ func TestAccKubernetesJobV1_update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesJobV1Config_updateMutableFields(name, imageName, "121", "11", "false", "2"),
+				Config: testAccKubernetesJobV1Config_updateMutableFields(name, imageName, "121", "5", "false", "2"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobV1Exists(resourceName, &conf2),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.backoff_limit", "11"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backoff_limit", "5"),
 					testAccCheckKubernetesJobV1ForceNew(&conf1, &conf2, false),
 				),
 			},
 			{
-				Config: testAccKubernetesJobV1Config_updateMutableFields(name, imageName, "121", "11", "true", "2"),
+				Config: testAccKubernetesJobV1Config_updateMutableFields(name, imageName, "121", "5", "true", "2"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.manual_selector", "true"),
@@ -158,7 +158,7 @@ func TestAccKubernetesJobV1_update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesJobV1Config_updateMutableFields(name, imageName, "121", "11", "true", "3"),
+				Config: testAccKubernetesJobV1Config_updateMutableFields(name, imageName, "121", "5", "true", "3"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.parallelism", "3"),
@@ -166,15 +166,15 @@ func TestAccKubernetesJobV1_update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesJobV1Config_updateImmutableFields(name, imageName, "12"),
+				Config: testAccKubernetesJobV1Config_updateImmutableFields(name, imageName, "6"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobV1Exists(resourceName, &conf2),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.completions", "12"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.completions", "6"),
 					testAccCheckKubernetesJobV1ForceNew(&conf1, &conf2, true),
 				),
 			},
 			{
-				Config: testAccKubernetesJobV1Config_updateImmutableFields(name, imageName1, "12"),
+				Config: testAccKubernetesJobV1Config_updateImmutableFields(name, imageName1, "6"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobV1Exists(resourceName, &conf3),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName1),
@@ -305,7 +305,7 @@ func testAccKubernetesJobV1Config_basic(name, imageName string) string {
   spec {
     active_deadline_seconds = 120
     backoff_limit           = 10
-    completions             = 10
+    completions             = 4
     parallelism             = 2
     template {
       metadata {}
@@ -331,7 +331,7 @@ func testAccKubernetesJobV1Config_updateMutableFields(name, imageName, activeDea
   spec {
     active_deadline_seconds = %s
     backoff_limit           = %s
-    completions             = 10
+    completions             = 4
     manual_selector         = %s
     parallelism             = %s
     template {
@@ -380,7 +380,7 @@ func testAccKubernetesJobV1Config_ttl_seconds_after_finished(name, imageName str
   }
   spec {
     backoff_limit              = 10
-    completions                = 10
+    completions                = 4
     parallelism                = 2
     ttl_seconds_after_finished = "60"
     template {

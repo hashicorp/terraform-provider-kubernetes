@@ -5,7 +5,7 @@ package kubernetes
 
 import (
 	api "k8s.io/api/core/v1"
-	"k8s.io/api/networking/v1"
+	v1 "k8s.io/api/networking/v1"
 
 	"reflect"
 	"testing"
@@ -71,7 +71,7 @@ func TestFlattenNetworkPolicyIngressPorts(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output := flattenNetworkPolicyPorts(tc.Input)
+		output := flattenNetworkPolicyV1Ports(tc.Input)
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)
@@ -130,7 +130,7 @@ func TestExpandNetworkPolicyIngressPorts(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output, _ := expandNetworkPolicyPorts(tc.Input)
+		output, _ := expandNetworkPolicyV1Ports(tc.Input)
 		if !reflect.DeepEqual(output, &tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)

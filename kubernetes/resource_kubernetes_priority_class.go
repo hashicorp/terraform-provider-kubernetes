@@ -18,12 +18,12 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesPriorityClass() *schema.Resource {
+func resourceKubernetesPriorityClassV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesPriorityClassCreate,
-		ReadContext:   resourceKubernetesPriorityClassRead,
-		UpdateContext: resourceKubernetesPriorityClassUpdate,
-		DeleteContext: resourceKubernetesPriorityClassDelete,
+		CreateContext: resourceKubernetesPriorityClassV1Create,
+		ReadContext:   resourceKubernetesPriorityClassV1Read,
+		UpdateContext: resourceKubernetesPriorityClassV1Update,
+		DeleteContext: resourceKubernetesPriorityClassV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -63,7 +63,7 @@ func resourceKubernetesPriorityClass() *schema.Resource {
 	}
 }
 
-func resourceKubernetesPriorityClassCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPriorityClassV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -91,11 +91,11 @@ func resourceKubernetesPriorityClassCreate(ctx context.Context, d *schema.Resour
 	log.Printf("[INFO] Submitted new priority class: %#v", out)
 	d.SetId(out.ObjectMeta.Name)
 
-	return resourceKubernetesPriorityClassRead(ctx, d, meta)
+	return resourceKubernetesPriorityClassV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesPriorityClassRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesPriorityClassExists(ctx, d, meta)
+func resourceKubernetesPriorityClassV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesPriorityClassV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -146,7 +146,7 @@ func resourceKubernetesPriorityClassRead(ctx context.Context, d *schema.Resource
 	return nil
 }
 
-func resourceKubernetesPriorityClassUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPriorityClassV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -192,10 +192,10 @@ func resourceKubernetesPriorityClassUpdate(ctx context.Context, d *schema.Resour
 	log.Printf("[INFO] Submitted updated priority class: %#v", out)
 	d.SetId(out.ObjectMeta.Name)
 
-	return resourceKubernetesPriorityClassRead(ctx, d, meta)
+	return resourceKubernetesPriorityClassV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesPriorityClassDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPriorityClassV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -218,7 +218,7 @@ func resourceKubernetesPriorityClassDelete(ctx context.Context, d *schema.Resour
 	return nil
 }
 
-func resourceKubernetesPriorityClassExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesPriorityClassV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

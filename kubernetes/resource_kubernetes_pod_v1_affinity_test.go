@@ -282,10 +282,10 @@ resource "kubernetes_pod_v1" "test" {
 
 func testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
-    metadata {
-      name = %[1]q
-    }
+  metadata {
+    name = %[1]q
   }
+}
 
 resource "kubernetes_pod_v1" "test" {
   metadata {
@@ -334,10 +334,10 @@ resource "kubernetes_pod_v1" "test" {
 
 func testAccKubernetesPodV1ConfigWithPodAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
-    metadata {
-      name = %[1]q
-    }
+  metadata {
+    name = %[1]q
   }
+}
 
 resource "kubernetes_pod_v1" "test" {
   metadata {
@@ -381,10 +381,10 @@ resource "kubernetes_pod_v1" "test" {
 
 func testAccKubernetesPodV1ConfigWithPodAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
-    metadata {
-      name = %[1]q
-    }
+  metadata {
+    name = %[1]q
   }
+}
 
 resource "kubernetes_pod_v1" "test" {
   metadata {
@@ -432,10 +432,10 @@ resource "kubernetes_pod_v1" "test" {
 
 func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
-    metadata {
-      name = %[1]q
-    }
+  metadata {
+    name = %[1]q
   }
+}
 
 resource "kubernetes_pod_v1" "test" {
   metadata {
@@ -479,10 +479,10 @@ resource "kubernetes_pod_v1" "test" {
 
 func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
-    metadata {
-      name = %[1]q
-    }
+  metadata {
+    name = %[1]q
   }
+}
 
 resource "kubernetes_pod_v1" "test" {
   metadata {

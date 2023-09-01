@@ -8,14 +8,15 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	api "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
-func TestAccKubernetesTokenRequest_basic(t *testing.T) {
-	var conf api.ServiceAccount
-	resourceName := "kubernetes_service_account_v1.tokentest"
-	tokenName := "kubernetes_token_request_v1.test"
-	resource.Test(t, resource.TestCase{
+func TestAccKubernetesTokenRequestV1_basic(t *testing.T) {
+	var conf corev1.ServiceAccount
+	saName := "kubernetes_service_account_v1.test"
+	resourceName := "kubernetes_token_request_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -23,23 +24,32 @@ func TestAccKubernetesTokenRequest_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesServiceAccountV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesTokenRequestConfig_basic(),
+				Config: testAccKubernetesTokenRequestV1Config_basic(`["api"]`),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceAccountV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(saName, "metadata.0.name", "tokentest"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", "tokentest"),
-					resource.TestCheckResourceAttr(tokenName, "metadata.0.name", "tokentest"),
-					resource.TestCheckResourceAttr(tokenName, "spec.0.audiences.0", "api"),
-					resource.TestCheckResourceAttr(tokenName, "spec.0.audiences.1", "vault"),
-					resource.TestCheckResourceAttr(tokenName, "spec.0.audiences.2", "factors"),
-					resource.TestCheckResourceAttrSet(tokenName, "token"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.audiences.0", "api"),
+					resource.TestCheckResourceAttrSet(resourceName, "token"),
+				),
+			},
+			{
+				Config: testAccKubernetesTokenRequestV1Config_basic(`["api", "vault"]`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceAccountV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(saName, "metadata.0.name", "tokentest"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", "tokentest"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.audiences.0", "api"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.audiences.1", "vault"),
+					resource.TestCheckResourceAttrSet(resourceName, "token"),
 				),
 			},
 		},
 	})
 }
 
-func testAccKubernetesTokenRequestConfig_basic() string {
-	return fmt.Sprintf(`resource "kubernetes_service_account_v1" "tokentest" {
+func testAccKubernetesTokenRequestV1Config_basic(audiences string) string {
+	return fmt.Sprintf(`resource "kubernetes_service_account_v1" "test" {
   metadata {
     name = "tokentest"
   }
@@ -47,17 +57,11 @@ func testAccKubernetesTokenRequestConfig_basic() string {
 
 resource "kubernetes_token_request_v1" "test" {
   metadata {
-    name = kubernetes_service_account_v1.tokentest.metadata.0.name
+    name = kubernetes_service_account_v1.test.metadata.0.name
   }
   spec {
-    audiences = [
-      "api",
-      "vault",
-      "factors"
-    ]
+    audiences = %s
   }
 }
-
-
-`)
+`, audiences)
 }

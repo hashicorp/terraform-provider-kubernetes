@@ -24,8 +24,8 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 	apiDoc := admissionregistrationv1.ValidatingWebhookConfiguration{}.SwaggerDoc()
 	webhookDoc := admissionregistrationv1.ValidatingWebhook{}.SwaggerDoc()
 	return &schema.Resource{
-		CreateContext: resourceKubernetesValidatingWebhookConfigurationCreate,
-		ReadContext:   resourceKubernetesValidatingWebhookConfigurationRead,
+		CreateContext: resourceKubernetesValidatingWebhookConfigurationV1Create,
+		ReadContext:   resourceKubernetesValidatingWebhookConfigurationV1Read,
 		UpdateContext: resourceKubernetesValidatingWebhookConfigurationUpdate,
 		DeleteContext: resourceKubernetesValidatingWebhookConfigurationDelete,
 		Importer: &schema.ResourceImporter{

@@ -338,7 +338,7 @@ func Provider() *schema.Provider {
 			// admission control
 			"kubernetes_validating_webhook_configuration":    resourceKubernetesValidatingWebhookConfiguration(),
 			"kubernetes_validating_webhook_configuration_v1": resourceKubernetesValidatingWebhookConfigurationV1(),
-			"kubernetes_mutating_webhook_configuration":      resourceKubernetesMutatingWebhookConfiguration(),
+			"kubernetes_mutating_webhook_configuration":      resourceKubernetesMutatingWebhookConfigurationV1(),
 			"kubernetes_mutating_webhook_configuration_v1":   resourceKubernetesMutatingWebhookConfigurationV1(),
 
 			// storage

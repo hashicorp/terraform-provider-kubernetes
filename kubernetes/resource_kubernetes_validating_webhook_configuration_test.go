@@ -20,7 +20,7 @@ func TestAccKubernetesValidatingWebhookConfiguration_basic(t *testing.T) {
 	name := fmt.Sprintf("acc-test-%v.terraform.io", acctest.RandString(10))
 	resourceName := "kubernetes_validating_webhook_configuration.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotAdmissionRegistrationV1(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},

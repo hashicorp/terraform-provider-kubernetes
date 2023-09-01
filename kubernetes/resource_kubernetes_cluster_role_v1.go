@@ -8,20 +8,19 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	api "k8s.io/api/rbac/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesClusterRole() *schema.Resource {
+func resourceKubernetesClusterRoleV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesClusterRoleCreate,
-		ReadContext:   resourceKubernetesClusterRoleRead,
-		UpdateContext: resourceKubernetesClusterRoleUpdate,
-		DeleteContext: resourceKubernetesClusterRoleDelete,
+		CreateContext: resourceKubernetesClusterRoleV1Create,
+		ReadContext:   resourceKubernetesClusterRoleV1Read,
+		UpdateContext: resourceKubernetesClusterRoleV1Update,
+		DeleteContext: resourceKubernetesClusterRoleV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -60,14 +59,14 @@ func resourceKubernetesClusterRole() *schema.Resource {
 	}
 }
 
-func resourceKubernetesClusterRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesClusterRoleV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	cRole := api.ClusterRole{
+	cRole := rbacv1.ClusterRole{
 		ObjectMeta: metadata,
 		Rules:      expandClusterRoleRules(d.Get("rule").([]interface{})),
 	}
@@ -84,10 +83,10 @@ func resourceKubernetesClusterRoleCreate(ctx context.Context, d *schema.Resource
 	log.Printf("[INFO] Submitted new cluster role: %#v", out)
 	d.SetId(out.Name)
 
-	return resourceKubernetesClusterRoleRead(ctx, d, meta)
+	return resourceKubernetesClusterRoleV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesClusterRoleUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesClusterRoleV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -115,11 +114,11 @@ func resourceKubernetesClusterRoleUpdate(ctx context.Context, d *schema.Resource
 	log.Printf("[INFO] Submitted updated ClusterRole: %#v", out)
 	d.SetId(out.ObjectMeta.Name)
 
-	return resourceKubernetesClusterRoleRead(ctx, d, meta)
+	return resourceKubernetesClusterRoleV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesClusterRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesClusterRoleExists(ctx, d, meta)
+func resourceKubernetesClusterRoleV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesClusterRoleV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -162,7 +161,7 @@ func resourceKubernetesClusterRoleRead(ctx context.Context, d *schema.ResourceDa
 	return nil
 }
 
-func resourceKubernetesClusterRoleDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesClusterRoleV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -183,7 +182,7 @@ func resourceKubernetesClusterRoleDelete(ctx context.Context, d *schema.Resource
 	return nil
 }
 
-func resourceKubernetesClusterRoleExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesClusterRoleV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

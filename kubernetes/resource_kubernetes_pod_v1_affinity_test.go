@@ -259,16 +259,17 @@ func testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgn
     container {
       image = "%s"
       name  = "containername"
+      args  = ["sleep", "5"]
       resources {
         limits = {
           cpu    = "50m"
-          memory = "50M"
+          memory = "64M"
         }
       }
     }
   }
 }
-    `, podName, imageName)
+`, podName, imageName)
 }
 
 func testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
@@ -302,6 +303,7 @@ func testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIg
     container {
       image = "%s"
       name  = "containername"
+      args  = ["sleep", "5"]
       resources {
         limits = {
           cpu    = "50m"
@@ -311,7 +313,7 @@ func testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIg
     }
   }
 }
-    `, podName, imageName)
+`, podName, imageName)
 }
 
 func testAccKubernetesPodV1ConfigWithPodAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
@@ -340,16 +342,17 @@ func testAccKubernetesPodV1ConfigWithPodAffinityWithRequiredDuringSchedulingIgno
     container {
       image = "%s"
       name  = "containername"
+      args  = ["sleep", "5"]
       resources {
         limits = {
           cpu    = "200m"
-          memory = "1024M"
+          memory = "64M"
         }
       }
     }
   }
 }
-    `, podName, imageName)
+`, podName, imageName)
 }
 
 func testAccKubernetesPodV1ConfigWithPodAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
@@ -382,16 +385,17 @@ func testAccKubernetesPodV1ConfigWithPodAffinityWithPreferredDuringSchedulingIgn
     container {
       image = "%s"
       name  = "containername"
+      args  = ["sleep", "5"]
       resources {
         limits = {
           cpu    = "200m"
-          memory = "1024M"
+          memory = "64M"
         }
       }
     }
   }
 }
-    `, podName, imageName)
+`, podName, imageName)
 }
 
 func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
@@ -420,17 +424,18 @@ func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithRequiredDuringScheduling
     container {
       image = "%s"
       name  = "containername"
+      args  = ["sleep", "5"]
       resources {
         limits = {
           cpu    = "200m"
-          memory = "1024M"
+          memory = "64M"
         }
       }
 
     }
   }
 }
-    `, podName, imageName)
+`, podName, imageName)
 }
 
 func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
@@ -462,14 +467,15 @@ func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithPreferredDuringSchedulin
     container {
       image = "%s"
       name  = "containername"
+      args  = ["sleep", "5"]
       resources {
         limits = {
           cpu    = "200m"
-          memory = "1024M"
+          memory = "64M"
         }
       }
     }
   }
 }
-    `, podName, imageName)
+`, podName, imageName)
 }

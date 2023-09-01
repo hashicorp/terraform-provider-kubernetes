@@ -259,7 +259,7 @@ func testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgn
     container {
       image = "%s"
       name  = "containername"
-      args  = ["sleep", "5"]
+      args  = ["sleep", "300"]
       resources {
         limits = {
           cpu    = "50m"
@@ -267,6 +267,7 @@ func testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgn
         }
       }
     }
+    termination_grace_period_seconds = 1
   }
 }
 `, podName, imageName)
@@ -303,7 +304,7 @@ func testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIg
     container {
       image = "%s"
       name  = "containername"
-      args  = ["sleep", "5"]
+      args  = ["sleep", "300"]
       resources {
         limits = {
           cpu    = "50m"
@@ -311,6 +312,7 @@ func testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIg
         }
       }
     }
+    termination_grace_period_seconds = 1
   }
 }
 `, podName, imageName)
@@ -342,7 +344,7 @@ func testAccKubernetesPodV1ConfigWithPodAffinityWithRequiredDuringSchedulingIgno
     container {
       image = "%s"
       name  = "containername"
-      args  = ["sleep", "5"]
+      args  = ["sleep", "300"]
       resources {
         limits = {
           cpu    = "200m"
@@ -350,6 +352,7 @@ func testAccKubernetesPodV1ConfigWithPodAffinityWithRequiredDuringSchedulingIgno
         }
       }
     }
+    termination_grace_period_seconds = 1
   }
 }
 `, podName, imageName)
@@ -385,7 +388,7 @@ func testAccKubernetesPodV1ConfigWithPodAffinityWithPreferredDuringSchedulingIgn
     container {
       image = "%s"
       name  = "containername"
-      args  = ["sleep", "5"]
+      args  = ["sleep", "300"]
       resources {
         limits = {
           cpu    = "200m"
@@ -393,6 +396,7 @@ func testAccKubernetesPodV1ConfigWithPodAffinityWithPreferredDuringSchedulingIgn
         }
       }
     }
+    termination_grace_period_seconds = 1
   }
 }
 `, podName, imageName)
@@ -424,15 +428,15 @@ func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithRequiredDuringScheduling
     container {
       image = "%s"
       name  = "containername"
-      args  = ["sleep", "5"]
+      args  = ["sleep", "300"]
       resources {
         limits = {
           cpu    = "200m"
           memory = "64M"
         }
       }
-
     }
+    termination_grace_period_seconds = 1
   }
 }
 `, podName, imageName)
@@ -467,7 +471,7 @@ func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithPreferredDuringSchedulin
     container {
       image = "%s"
       name  = "containername"
-      args  = ["sleep", "5"]
+      args  = ["sleep", "300"]
       resources {
         limits = {
           cpu    = "200m"
@@ -475,6 +479,7 @@ func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithPreferredDuringSchedulin
         }
       }
     }
+    termination_grace_period_seconds = 1
   }
 }
 `, podName, imageName)

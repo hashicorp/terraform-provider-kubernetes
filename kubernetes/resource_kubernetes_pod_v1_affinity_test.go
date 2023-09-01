@@ -230,12 +230,19 @@ func TestAccKubernetesPodV1_with_pod_anti_affinity_with_preferred_during_schedul
 }
 
 func testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
     }
-    name = "%s"
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    name      = %[1]q
   }
   spec {
     affinity {
@@ -257,7 +264,7 @@ func testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgn
       }
     }
     container {
-      image = "%s"
+      image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
       resources {
@@ -274,12 +281,19 @@ func testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgn
 }
 
 func testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
     }
-    name = "%s"
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    name      = %[1]q
   }
   spec {
     affinity {
@@ -302,7 +316,7 @@ func testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIg
       }
     }
     container {
-      image = "%s"
+      image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
       resources {
@@ -319,12 +333,19 @@ func testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIg
 }
 
 func testAccKubernetesPodV1ConfigWithPodAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
     }
-    name = "%s"
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    name      = %[1]q
   }
   spec {
     affinity {
@@ -342,7 +363,7 @@ func testAccKubernetesPodV1ConfigWithPodAffinityWithRequiredDuringSchedulingIgno
       }
     }
     container {
-      image = "%s"
+      image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
       resources {
@@ -359,12 +380,19 @@ func testAccKubernetesPodV1ConfigWithPodAffinityWithRequiredDuringSchedulingIgno
 }
 
 func testAccKubernetesPodV1ConfigWithPodAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
     }
-    name = "%s"
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    name      = %[1]q
   }
   spec {
     affinity {
@@ -386,7 +414,7 @@ func testAccKubernetesPodV1ConfigWithPodAffinityWithPreferredDuringSchedulingIgn
       }
     }
     container {
-      image = "%s"
+      image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
       resources {
@@ -403,12 +431,19 @@ func testAccKubernetesPodV1ConfigWithPodAffinityWithPreferredDuringSchedulingIgn
 }
 
 func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
     }
-    name = "%s"
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    name      = %[1]q
   }
   spec {
     affinity {
@@ -426,7 +461,7 @@ func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithRequiredDuringScheduling
       }
     }
     container {
-      image = "%s"
+      image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
       resources {
@@ -443,12 +478,19 @@ func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithRequiredDuringScheduling
 }
 
 func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
     }
-    name = "%s"
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    name      = %[1]q
   }
   spec {
     affinity {
@@ -469,7 +511,7 @@ func testAccKubernetesPodV1ConfigWithPodAntiAffinityWithPreferredDuringSchedulin
       }
     }
     container {
-      image = "%s"
+      image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
       resources {

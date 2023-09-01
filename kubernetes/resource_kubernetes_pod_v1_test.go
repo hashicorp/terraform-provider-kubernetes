@@ -1339,7 +1339,7 @@ func TestAccKubernetesPodV1_bug1085(t *testing.T) {
 	var conf api.Pod
 	resourceName := "kubernetes_pod_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
@@ -1514,7 +1514,7 @@ func TestAccKubernetesPodV1_with_ephemeral_storage(t *testing.T) {
 	resourceName := "kubernetes_pod_v1.test"
 	volumeName := "ephemeral"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfNotRunningInKind(t)

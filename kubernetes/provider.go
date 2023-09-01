@@ -342,8 +342,8 @@ func Provider() *schema.Provider {
 			"kubernetes_mutating_webhook_configuration_v1":   resourceKubernetesMutatingWebhookConfigurationV1(),
 
 			// storage
-			"kubernetes_storage_class":    resourceKubernetesStorageClass(),
-			"kubernetes_storage_class_v1": resourceKubernetesStorageClass(),
+			"kubernetes_storage_class":    resourceKubernetesStorageClassV1(),
+			"kubernetes_storage_class_v1": resourceKubernetesStorageClassV1(),
 			"kubernetes_csi_driver":       resourceKubernetesCSIDriver(),
 			"kubernetes_csi_driver_v1":    resourceKubernetesCSIDriverV1(),
 

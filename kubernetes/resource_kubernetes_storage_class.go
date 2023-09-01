@@ -20,12 +20,12 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesStorageClass() *schema.Resource {
+func resourceKubernetesStorageClassV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesStorageClassCreate,
-		ReadContext:   resourceKubernetesStorageClassRead,
-		UpdateContext: resourceKubernetesStorageClassUpdate,
-		DeleteContext: resourceKubernetesStorageClassDelete,
+		CreateContext: resourceKubernetesStorageClassV1Create,
+		ReadContext:   resourceKubernetesStorageClassV1Read,
+		UpdateContext: resourceKubernetesStorageClassV1Update,
+		DeleteContext: resourceKubernetesStorageClassV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -115,7 +115,7 @@ func resourceKubernetesStorageClass() *schema.Resource {
 	}
 }
 
-func resourceKubernetesStorageClassCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesStorageClassV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -152,13 +152,13 @@ func resourceKubernetesStorageClassCreate(ctx context.Context, d *schema.Resourc
 	log.Printf("[INFO] Submitted new storage class: %#v", out)
 	d.SetId(out.Name)
 
-	return resourceKubernetesStorageClassRead(ctx, d, meta)
+	return resourceKubernetesStorageClassV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesStorageClassRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesStorageClassV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	diags := diag.Diagnostics{}
 
-	exists, err := resourceKubernetesStorageClassExists(ctx, d, meta)
+	exists, err := resourceKubernetesStorageClassV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -196,7 +196,7 @@ func resourceKubernetesStorageClassRead(ctx context.Context, d *schema.ResourceD
 	return diags
 }
 
-func resourceKubernetesStorageClassUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesStorageClassV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -225,10 +225,10 @@ func resourceKubernetesStorageClassUpdate(ctx context.Context, d *schema.Resourc
 	log.Printf("[INFO] Submitted updated storage class: %#v", out)
 	d.SetId(out.ObjectMeta.Name)
 
-	return resourceKubernetesStorageClassRead(ctx, d, meta)
+	return resourceKubernetesStorageClassV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesStorageClassDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesStorageClassV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -265,7 +265,7 @@ func resourceKubernetesStorageClassDelete(ctx context.Context, d *schema.Resourc
 	return nil
 }
 
-func resourceKubernetesStorageClassExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesStorageClassV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

@@ -10,7 +10,7 @@ description: |-
 
 A service account provides an identity for processes that run in a Pod.  This data source reads the service account and makes specific attributes available to Terraform.
 
-Read more at [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/)
+Read more in [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/).
 
 ## Example Usage
 

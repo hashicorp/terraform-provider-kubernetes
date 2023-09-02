@@ -10,7 +10,7 @@ description: |-
 
 A service account provides an identity for processes that run in a Pod.
 
-Read more at [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/)
+Read more in [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/).
 
 ## Example Usage
 
@@ -35,9 +35,9 @@ resource "kubernetes_secret_v1" "example" {
 
 The following arguments are supported:
 
-* `metadata` - (Required) Standard service account's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
-* `image_pull_secret` - (Optional) A list of references to secrets in the same namespace to use for pulling any images in pods that reference this Service Account. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod)
-* `secret` - (Optional) A list of secrets allowed to be used by pods running using this Service Account. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/configuration/secret)
+* `metadata` - (Required) Standard service account's metadata. For more info see [Kubernetes reference](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata).
+* `image_pull_secret` - (Optional) A list of references to secrets in the same namespace to use for pulling any images in pods that reference this Service Account. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/configuration/secret/#manually-specifying-an-imagepullsecret).
+* `secret` - (Optional) A list of secrets allowed to be used by pods running using this Service Account. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/configuration/secret/).
 * `automount_service_account_token` - (Optional) Boolean, `true` to enable automatic mounting of the service account token. Defaults to `true`.
 
 ## Nested Blocks

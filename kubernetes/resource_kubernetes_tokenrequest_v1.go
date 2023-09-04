@@ -9,28 +9,28 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	apiv1 "k8s.io/api/authentication/v1"
+	authv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func resourceKubernetesTokenRequestV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesTokenRequestCreateV1,
-		ReadContext:   resourceKubernetesTokenRequestReadV1,
-		UpdateContext: resourceKubernetesTokenRequestUpdateV1,
-		DeleteContext: resourceKubernetesTokenDeleteV1,
+		CreateContext: resourceKubernetesTokenRequestV1Create,
+		ReadContext:   resourceKubernetesTokenRequestV1Read,
+		UpdateContext: resourceKubernetesTokenRequestV1Update,
+		DeleteContext: resourceKubernetesTokenRequestV1Delete,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("token request", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: apiv1.TokenRequest{}.Spec.SwaggerDoc()["spec"],
+				Description: authv1.TokenRequest{}.Spec.SwaggerDoc()["spec"],
 				Optional:    true,
 				Computed:    true,
 				ForceNew:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
-					Schema: tokenRequestSpecFields(),
+					Schema: tokenRequestV1SpecFields(),
 				},
 			},
 			"token": {
@@ -43,17 +43,17 @@ func resourceKubernetesTokenRequestV1() *schema.Resource {
 	}
 }
 
-func resourceKubernetesTokenRequestCreateV1(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesTokenRequestV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	spec := expandTokenRequestSpec(d.Get("spec").([]interface{}))
+	spec := expandTokenRequestV1Spec(d.Get("spec").([]interface{}))
 	saName := d.Get("metadata.0.name").(string)
 
-	request := apiv1.TokenRequest{
+	request := authv1.TokenRequest{
 		ObjectMeta: metadata,
 		Spec:       *spec,
 	}
@@ -64,7 +64,7 @@ func resourceKubernetesTokenRequestCreateV1(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 	d.Set("token", out.Status.Token)
-	s, err := flattenTokenRequestSpec(out.Spec, d, meta)
+	s, err := flattenTokenRequestV1Spec(out.Spec, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -73,20 +73,17 @@ func resourceKubernetesTokenRequestCreateV1(ctx context.Context, d *schema.Resou
 	log.Printf("[INFO] Submitted new TokenRequest: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesTokenRequestReadV1(ctx, d, meta)
+	return resourceKubernetesTokenRequestV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesTokenRequestReadV1(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-
+func resourceKubernetesTokenRequestV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }
 
-func resourceKubernetesTokenRequestUpdateV1(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-
-	return resourceKubernetesRoleRead(ctx, d, meta)
+func resourceKubernetesTokenRequestV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	return nil
 }
 
-func resourceKubernetesTokenDeleteV1(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-
+func resourceKubernetesTokenRequestV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }

@@ -8,9 +8,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	api "k8s.io/api/networking/v1"
+	networking "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
@@ -18,30 +17,30 @@ import (
 
 // Use generated swagger docs from kubernetes' client-go to avoid copy/pasting them here
 var (
-	networkPolicySpecDoc                  = api.NetworkPolicy{}.SwaggerDoc()["spec"]
-	networkPolicySpecIngressDoc           = api.NetworkPolicySpec{}.SwaggerDoc()["ingress"]
-	networkPolicyIngressRulePortsDoc      = api.NetworkPolicyIngressRule{}.SwaggerDoc()["ports"]
-	networkPolicyIngressRuleFromDoc       = api.NetworkPolicyIngressRule{}.SwaggerDoc()["from"]
-	networkPolicySpecEgressDoc            = api.NetworkPolicySpec{}.SwaggerDoc()["egress"]
-	networkPolicyEgressRulePortsDoc       = api.NetworkPolicyEgressRule{}.SwaggerDoc()["ports"]
-	networkPolicyEgressRuleToDoc          = api.NetworkPolicyEgressRule{}.SwaggerDoc()["to"]
-	networkPolicyPortPortDoc              = api.NetworkPolicyPort{}.SwaggerDoc()["port"]
-	networkPolicyPortProtocolDoc          = api.NetworkPolicyPort{}.SwaggerDoc()["protocol"]
-	networkPolicyPeerIpBlockDoc           = api.NetworkPolicyPeer{}.SwaggerDoc()["ipBlock"]
-	ipBlockCidrDoc                        = api.IPBlock{}.SwaggerDoc()["cidr"]
-	ipBlockExceptDoc                      = api.IPBlock{}.SwaggerDoc()["except"]
-	networkPolicyPeerNamespaceSelectorDoc = api.NetworkPolicyPeer{}.SwaggerDoc()["namespaceSelector"]
-	networkPolicyPeerPodSelectorDoc       = api.NetworkPolicyPeer{}.SwaggerDoc()["podSelector"]
-	networkPolicySpecPodSelectorDoc       = api.NetworkPolicySpec{}.SwaggerDoc()["podSelector"]
-	networkPolicySpecPolicyTypesDoc       = api.NetworkPolicySpec{}.SwaggerDoc()["policyTypes"]
+	networkPolicyV1SpecDoc                  = networking.NetworkPolicy{}.SwaggerDoc()["spec"]
+	networkPolicyV1SpecIngressDoc           = networking.NetworkPolicySpec{}.SwaggerDoc()["ingress"]
+	networkPolicyV1IngressRulePortsDoc      = networking.NetworkPolicyIngressRule{}.SwaggerDoc()["ports"]
+	networkPolicyV1IngressRuleFromDoc       = networking.NetworkPolicyIngressRule{}.SwaggerDoc()["from"]
+	networkPolicyV1SpecEgressDoc            = networking.NetworkPolicySpec{}.SwaggerDoc()["egress"]
+	networkPolicyV1EgressRulePortsDoc       = networking.NetworkPolicyEgressRule{}.SwaggerDoc()["ports"]
+	networkPolicyV1EgressRuleToDoc          = networking.NetworkPolicyEgressRule{}.SwaggerDoc()["to"]
+	networkPolicyV1PortPortDoc              = networking.NetworkPolicyPort{}.SwaggerDoc()["port"]
+	networkPolicyV1PortProtocolDoc          = networking.NetworkPolicyPort{}.SwaggerDoc()["protocol"]
+	networkPolicyV1PeerIpBlockDoc           = networking.NetworkPolicyPeer{}.SwaggerDoc()["ipBlock"]
+	ipBlockCidrDoc                          = networking.IPBlock{}.SwaggerDoc()["cidr"]
+	ipBlockExceptDoc                        = networking.IPBlock{}.SwaggerDoc()["except"]
+	networkPolicyV1PeerNamespaceSelectorDoc = networking.NetworkPolicyPeer{}.SwaggerDoc()["namespaceSelector"]
+	networkPolicyV1PeerPodSelectorDoc       = networking.NetworkPolicyPeer{}.SwaggerDoc()["podSelector"]
+	networkPolicyV1SpecPodSelectorDoc       = networking.NetworkPolicySpec{}.SwaggerDoc()["podSelector"]
+	networkPolicyV1SpecPolicyTypesDoc       = networking.NetworkPolicySpec{}.SwaggerDoc()["policyTypes"]
 )
 
-func resourceKubernetesNetworkPolicy() *schema.Resource {
+func resourceKubernetesNetworkPolicyV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesNetworkPolicyCreate,
-		ReadContext:   resourceKubernetesNetworkPolicyRead,
-		UpdateContext: resourceKubernetesNetworkPolicyUpdate,
-		DeleteContext: resourceKubernetesNetworkPolicyDelete,
+		CreateContext: resourceKubernetesNetworkPolicyV1Create,
+		ReadContext:   resourceKubernetesNetworkPolicyV1Read,
+		UpdateContext: resourceKubernetesNetworkPolicyV1Update,
+		DeleteContext: resourceKubernetesNetworkPolicyV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -50,31 +49,31 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 			"metadata": namespacedMetadataSchema("network policy", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: networkPolicySpecDoc,
+				Description: networkPolicyV1SpecDoc,
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ingress": {
 							Type:        schema.TypeList,
-							Description: networkPolicySpecIngressDoc,
+							Description: networkPolicyV1SpecIngressDoc,
 							Optional:    true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"ports": {
 										Type:        schema.TypeList,
-										Description: networkPolicyIngressRulePortsDoc,
+										Description: networkPolicyV1IngressRulePortsDoc,
 										Optional:    true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"port": {
 													Type:        schema.TypeString,
-													Description: networkPolicyPortPortDoc,
+													Description: networkPolicyV1PortPortDoc,
 													Optional:    true,
 												},
 												"protocol": {
 													Type:        schema.TypeString,
-													Description: networkPolicyPortProtocolDoc,
+													Description: networkPolicyV1PortProtocolDoc,
 													Optional:    true,
 													Default:     "TCP",
 												},
@@ -83,13 +82,13 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 									},
 									"from": {
 										Type:        schema.TypeList,
-										Description: networkPolicyIngressRuleFromDoc,
+										Description: networkPolicyV1IngressRuleFromDoc,
 										Optional:    true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"ip_block": {
 													Type:        schema.TypeList,
-													Description: networkPolicyPeerIpBlockDoc,
+													Description: networkPolicyV1PeerIpBlockDoc,
 													Optional:    true,
 													MaxItems:    1,
 													Elem: &schema.Resource{
@@ -110,7 +109,7 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 												},
 												"namespace_selector": {
 													Type:        schema.TypeList,
-													Description: networkPolicyPeerNamespaceSelectorDoc,
+													Description: networkPolicyV1PeerNamespaceSelectorDoc,
 													Optional:    true,
 													MaxItems:    1,
 													Elem: &schema.Resource{
@@ -119,7 +118,7 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 												},
 												"pod_selector": {
 													Type:        schema.TypeList,
-													Description: networkPolicyPeerPodSelectorDoc,
+													Description: networkPolicyV1PeerPodSelectorDoc,
 													Optional:    true,
 													MaxItems:    1,
 													Elem: &schema.Resource{
@@ -134,24 +133,24 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 						},
 						"egress": {
 							Type:        schema.TypeList,
-							Description: networkPolicySpecEgressDoc,
+							Description: networkPolicyV1SpecEgressDoc,
 							Optional:    true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"ports": {
 										Type:        schema.TypeList,
-										Description: networkPolicyEgressRulePortsDoc,
+										Description: networkPolicyV1EgressRulePortsDoc,
 										Optional:    true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"port": {
 													Type:        schema.TypeString,
-													Description: networkPolicyPortPortDoc,
+													Description: networkPolicyV1PortPortDoc,
 													Optional:    true,
 												},
 												"protocol": {
 													Type:        schema.TypeString,
-													Description: networkPolicyPortProtocolDoc,
+													Description: networkPolicyV1PortProtocolDoc,
 													Optional:    true,
 													Default:     "TCP",
 												},
@@ -160,13 +159,13 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 									},
 									"to": {
 										Type:        schema.TypeList,
-										Description: networkPolicyEgressRuleToDoc,
+										Description: networkPolicyV1EgressRuleToDoc,
 										Optional:    true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"ip_block": {
 													Type:        schema.TypeList,
-													Description: networkPolicyPeerIpBlockDoc,
+													Description: networkPolicyV1PeerIpBlockDoc,
 													Optional:    true,
 													MaxItems:    1,
 													Elem: &schema.Resource{
@@ -187,7 +186,7 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 												},
 												"namespace_selector": {
 													Type:        schema.TypeList,
-													Description: networkPolicyPeerNamespaceSelectorDoc,
+													Description: networkPolicyV1PeerNamespaceSelectorDoc,
 													Optional:    true,
 													MaxItems:    1,
 													Elem: &schema.Resource{
@@ -196,7 +195,7 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 												},
 												"pod_selector": {
 													Type:        schema.TypeList,
-													Description: networkPolicyPeerPodSelectorDoc,
+													Description: networkPolicyV1PeerPodSelectorDoc,
 													Optional:    true,
 													MaxItems:    1,
 													Elem: &schema.Resource{
@@ -211,7 +210,7 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 						},
 						"pod_selector": {
 							Type:        schema.TypeList,
-							Description: networkPolicySpecPodSelectorDoc,
+							Description: networkPolicyV1SpecPodSelectorDoc,
 							Required:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
@@ -225,7 +224,7 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 						// without egress rules nor policy types from working as expected as PolicyTypes will stick to Ingress server side.
 						"policy_types": {
 							Type:        schema.TypeList,
-							Description: networkPolicySpecPolicyTypesDoc,
+							Description: networkPolicyV1SpecPolicyTypesDoc,
 							Required:    true,
 							MinItems:    1,
 							MaxItems:    2,
@@ -238,19 +237,19 @@ func resourceKubernetesNetworkPolicy() *schema.Resource {
 	}
 }
 
-func resourceKubernetesNetworkPolicyCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesNetworkPolicyV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	spec, err := expandNetworkPolicySpec(d.Get("spec").([]interface{}))
+	spec, err := expandNetworkPolicyV1Spec(d.Get("spec").([]interface{}))
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	svc := api.NetworkPolicy{
+	svc := networking.NetworkPolicy{
 		ObjectMeta: metadata,
 		Spec:       *spec,
 	}
@@ -263,11 +262,11 @@ func resourceKubernetesNetworkPolicyCreate(ctx context.Context, d *schema.Resour
 	log.Printf("[INFO] Submitted new network policy: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesNetworkPolicyRead(ctx, d, meta)
+	return resourceKubernetesNetworkPolicyV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesNetworkPolicyRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesNetworkPolicyExists(ctx, d, meta)
+func resourceKubernetesNetworkPolicyV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesNetworkPolicyV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -296,7 +295,7 @@ func resourceKubernetesNetworkPolicyRead(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	flattened := flattenNetworkPolicySpec(svc.Spec)
+	flattened := flattenNetworkPolicyV1Spec(svc.Spec)
 	log.Printf("[DEBUG] Flattened network policy spec: %#v", flattened)
 	err = d.Set("spec", flattened)
 	if err != nil {
@@ -306,7 +305,7 @@ func resourceKubernetesNetworkPolicyRead(ctx context.Context, d *schema.Resource
 	return nil
 }
 
-func resourceKubernetesNetworkPolicyUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesNetworkPolicyV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -319,7 +318,7 @@ func resourceKubernetesNetworkPolicyUpdate(ctx context.Context, d *schema.Resour
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("spec") {
-		diffOps, err := patchNetworkPolicySpec("spec.0.", "/spec", d)
+		diffOps, err := patchNetworkPolicyV1Spec("spec.0.", "/spec", d)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -337,10 +336,10 @@ func resourceKubernetesNetworkPolicyUpdate(ctx context.Context, d *schema.Resour
 	log.Printf("[INFO] Submitted updated network policy: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesNetworkPolicyRead(ctx, d, meta)
+	return resourceKubernetesNetworkPolicyV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesNetworkPolicyDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesNetworkPolicyV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -364,7 +363,7 @@ func resourceKubernetesNetworkPolicyDelete(ctx context.Context, d *schema.Resour
 	return nil
 }
 
-func resourceKubernetesNetworkPolicyExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesNetworkPolicyV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

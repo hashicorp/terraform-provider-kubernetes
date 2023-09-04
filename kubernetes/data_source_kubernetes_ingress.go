@@ -142,5 +142,5 @@ func dataSourceKubernetesIngressRead(ctx context.Context, d *schema.ResourceData
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesIngressRead(ctx, d, meta)
+	return resourceKubernetesIngressV1Beta1Read(ctx, d, meta)
 }

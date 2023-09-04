@@ -16,22 +16,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesIngressClass_basic(t *testing.T) {
+func TestAccKubernetesIngressClassV1_basic(t *testing.T) {
 	var conf networking.IngressClass
 	rName := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_ingress_class.test"
+	resourceName := "kubernetes_ingress_class_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressClassDestroy,
+		CheckDestroy:      testAccCheckKubernetesIngressClassV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesIngressClassConfigBasic(rName),
+				Config: testAccKubernetesIngressClassV1ConfigBasic(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressClassExists(resourceName, &conf),
+					testAccCheckKubernetesIngressClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
@@ -48,23 +48,23 @@ func TestAccKubernetesIngressClass_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesIngressClass_parameters(t *testing.T) {
+func TestAccKubernetesIngressClassV1_parameters(t *testing.T) {
 	var conf networking.IngressClass
 	rName := acctest.RandomWithPrefix("tf-acc-test")
 	rNameUpdated := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_ingress_class.test"
+	resourceName := "kubernetes_ingress_class_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressClassDestroy,
+		CheckDestroy:      testAccCheckKubernetesIngressClassV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesIngressClassConfigParameters(rName, rName),
+				Config: testAccKubernetesIngressClassV1ConfigParameters(rName, rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressClassExists(resourceName, &conf),
+					testAccCheckKubernetesIngressClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
@@ -80,9 +80,9 @@ func TestAccKubernetesIngressClass_parameters(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccKubernetesIngressClassConfigParameters(rName, rNameUpdated),
+				Config: testAccKubernetesIngressClassV1ConfigParameters(rName, rNameUpdated),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressClassExists(resourceName, &conf),
+					testAccCheckKubernetesIngressClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
@@ -96,23 +96,23 @@ func TestAccKubernetesIngressClass_parameters(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesIngressClass_parameters_apiGroup(t *testing.T) {
+func TestAccKubernetesIngressClassV1_parameters_apiGroup(t *testing.T) {
 	var conf networking.IngressClass
 	rName := acctest.RandomWithPrefix("tf-acc-test")
 	rNameUpdated := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_ingress_class.test"
+	resourceName := "kubernetes_ingress_class_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressClassDestroy,
+		CheckDestroy:      testAccCheckKubernetesIngressClassV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesIngressClassConfigParametersApiGroup(rName, rName),
+				Config: testAccKubernetesIngressClassV1ConfigParametersApiGroup(rName, rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressClassExists(resourceName, &conf),
+					testAccCheckKubernetesIngressClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
@@ -129,9 +129,9 @@ func TestAccKubernetesIngressClass_parameters_apiGroup(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccKubernetesIngressClassConfigParametersApiGroup(rName, rNameUpdated),
+				Config: testAccKubernetesIngressClassV1ConfigParametersApiGroup(rName, rNameUpdated),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesIngressClassExists(resourceName, &conf),
+					testAccCheckKubernetesIngressClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
@@ -146,14 +146,14 @@ func TestAccKubernetesIngressClass_parameters_apiGroup(t *testing.T) {
 	})
 }
 
-func testAccCheckKubernetesIngressClassDestroy(s *terraform.State) error {
+func testAccCheckKubernetesIngressClassV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
 		return err
 	}
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_ingress_class" {
+		if rs.Type != "kubernetes_ingress_class_v1" {
 			continue
 		}
 
@@ -170,7 +170,7 @@ func testAccCheckKubernetesIngressClassDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckKubernetesIngressClassExists(n string, obj *networking.IngressClass) resource.TestCheckFunc {
+func testAccCheckKubernetesIngressClassV1Exists(n string, obj *networking.IngressClass) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -194,9 +194,8 @@ func testAccCheckKubernetesIngressClassExists(n string, obj *networking.IngressC
 	}
 }
 
-func testAccKubernetesIngressClassConfigBasic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress_class" "test" {
+func testAccKubernetesIngressClassV1ConfigBasic(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_ingress_class_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -207,9 +206,8 @@ resource "kubernetes_ingress_class" "test" {
 `, name)
 }
 
-func testAccKubernetesIngressClassConfigParameters(name, paramName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress_class" "test" {
+func testAccKubernetesIngressClassV1ConfigParameters(name, paramName string) string {
+	return fmt.Sprintf(`resource "kubernetes_ingress_class_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -224,9 +222,8 @@ resource "kubernetes_ingress_class" "test" {
 `, name, paramName)
 }
 
-func testAccKubernetesIngressClassConfigParametersApiGroup(name, paramName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_ingress_class" "test" {
+func testAccKubernetesIngressClassV1ConfigParametersApiGroup(name, paramName string) string {
+	return fmt.Sprintf(`resource "kubernetes_ingress_class_v1" "test" {
   metadata {
     name = %[1]q
   }

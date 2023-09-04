@@ -20,14 +20,14 @@ import (
 	copier "github.com/jinzhu/copier"
 )
 
-func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
+func resourceKubernetesValidatingWebhookConfigurationV1Beta1() *schema.Resource {
 	apiDoc := admissionregistrationv1.ValidatingWebhookConfiguration{}.SwaggerDoc()
 	webhookDoc := admissionregistrationv1.ValidatingWebhook{}.SwaggerDoc()
 	return &schema.Resource{
-		CreateContext: resourceKubernetesValidatingWebhookConfigurationCreate,
-		ReadContext:   resourceKubernetesValidatingWebhookConfigurationRead,
-		UpdateContext: resourceKubernetesValidatingWebhookConfigurationUpdate,
-		DeleteContext: resourceKubernetesValidatingWebhookConfigurationDelete,
+		CreateContext: resourceKubernetesValidatingWebhookConfigurationV1Beta1Create,
+		ReadContext:   resourceKubernetesValidatingWebhookConfigurationV1Beta1Read,
+		UpdateContext: resourceKubernetesValidatingWebhookConfigurationV1Beta1Update,
+		DeleteContext: resourceKubernetesValidatingWebhookConfigurationV1Beta1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -132,7 +132,7 @@ func resourceKubernetesValidatingWebhookConfiguration() *schema.Resource {
 	}
 }
 
-func resourceKubernetesValidatingWebhookConfigurationCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesValidatingWebhookConfigurationV1Beta1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -169,11 +169,11 @@ func resourceKubernetesValidatingWebhookConfigurationCreate(ctx context.Context,
 
 	d.SetId(res.Name)
 
-	return resourceKubernetesValidatingWebhookConfigurationRead(ctx, d, meta)
+	return resourceKubernetesValidatingWebhookConfigurationV1Beta1Read(ctx, d, meta)
 }
 
-func resourceKubernetesValidatingWebhookConfigurationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesValidatingWebhookConfigurationExists(ctx, d, meta)
+func resourceKubernetesValidatingWebhookConfigurationV1Beta1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesValidatingWebhookConfigurationV1Beta1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -221,7 +221,7 @@ func resourceKubernetesValidatingWebhookConfigurationRead(ctx context.Context, d
 	return nil
 }
 
-func resourceKubernetesValidatingWebhookConfigurationUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesValidatingWebhookConfigurationV1Beta1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -278,10 +278,10 @@ func resourceKubernetesValidatingWebhookConfigurationUpdate(ctx context.Context,
 
 	log.Printf("[INFO] Submitted updated ValidatingWebhookConfiguration: %#v", res)
 
-	return resourceKubernetesValidatingWebhookConfigurationRead(ctx, d, meta)
+	return resourceKubernetesValidatingWebhookConfigurationV1Beta1Read(ctx, d, meta)
 }
 
-func resourceKubernetesValidatingWebhookConfigurationDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesValidatingWebhookConfigurationV1Beta1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -312,7 +312,7 @@ func resourceKubernetesValidatingWebhookConfigurationDelete(ctx context.Context,
 	return nil
 }
 
-func resourceKubernetesValidatingWebhookConfigurationExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesValidatingWebhookConfigurationV1Beta1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

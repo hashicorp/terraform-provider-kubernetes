@@ -89,5 +89,5 @@ func dataSourceKubernetesStorageClassV1() *schema.Resource {
 func dataSourceKubernetesStorageClassV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	name := d.Get("metadata.0.name").(string)
 	d.SetId(name)
-	return resourceKubernetesStorageClassRead(ctx, d, meta)
+	return resourceKubernetesStorageClassV1Read(ctx, d, meta)
 }

@@ -17,22 +17,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesStorageClass_minikube(t *testing.T) {
+func TestAccKubernetesStorageClassV1_minikube(t *testing.T) {
 	var conf api.StorageClass
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_storage_class.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStorageClassDestroy,
+		CheckDestroy:      testAccCheckKubernetesStorageClassV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesStorageClassConfig_basic(name, "k8s.io/minikube-hostpath"),
+				Config: testAccKubernetesStorageClassV1Config_basic(name, "k8s.io/minikube-hostpath"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStorageClassExists(resourceName, &conf),
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -60,9 +60,9 @@ func TestAccKubernetesStorageClass_minikube(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config: testAccKubernetesStorageClassConfig_modified(name, "k8s.io/minikube-hostpath"),
+				Config: testAccKubernetesStorageClassV1Config_modified(name, "k8s.io/minikube-hostpath"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStorageClassExists(resourceName, &conf),
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.Different", "1234"),
@@ -85,21 +85,21 @@ func TestAccKubernetesStorageClass_minikube(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesStorageClass_volumeExpansion(t *testing.T) {
+func TestAccKubernetesStorageClassV1_volumeExpansion(t *testing.T) {
 	var conf api.StorageClass
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_storage_class.test"
+	resourceName := "kubernetes_storage_class_v1.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStorageClassDestroy,
+		CheckDestroy:      testAccCheckKubernetesStorageClassV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesStorageClassConfig_volumeExpansion(name, "k8s.io/minikube-hostpath"),
+				Config: testAccKubernetesStorageClassV1Config_volumeExpansion(name, "k8s.io/minikube-hostpath"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStorageClassExists(resourceName, &conf),
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -111,9 +111,9 @@ func TestAccKubernetesStorageClass_volumeExpansion(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStorageClassConfig_volumeExpansionModified(name, "k8s.io/minikube-hostpath"),
+				Config: testAccKubernetesStorageClassV1Config_volumeExpansionModified(name, "k8s.io/minikube-hostpath"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStorageClassExists(resourceName, &conf),
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
@@ -127,22 +127,22 @@ func TestAccKubernetesStorageClass_volumeExpansion(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesStorageClass_basic(t *testing.T) {
+func TestAccKubernetesStorageClassV1_basic(t *testing.T) {
 	var conf api.StorageClass
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_storage_class.test"
+	resourceName := "kubernetes_storage_class_v1.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStorageClassDestroy,
+		CheckDestroy:      testAccCheckKubernetesStorageClassV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesStorageClassConfig_basic(name, "kubernetes.io/gce-pd"),
+				Config: testAccKubernetesStorageClassV1Config_basic(name, "kubernetes.io/gce-pd"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStorageClassExists(resourceName, &conf),
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -163,7 +163,7 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "mount_options.0", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "parameters.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "parameters.type", "pd-ssd"),
-					testAccCheckStorageClassParameters(&conf, map[string]string{"type": "pd-ssd"}),
+					testAccCheckStorageClassV1Parameters(&conf, map[string]string{"type": "pd-ssd"}),
 				),
 			},
 			{
@@ -173,9 +173,9 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config: testAccKubernetesStorageClassConfig_modified(name, "kubernetes.io/gce-pd"),
+				Config: testAccKubernetesStorageClassV1Config_modified(name, "kubernetes.io/gce-pd"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStorageClassExists(resourceName, &conf),
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.Different", "1234"),
@@ -195,13 +195,13 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "parameters.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "parameters.type", "pd-standard"),
 					resource.TestCheckResourceAttr(resourceName, "parameters.zones", "us-west1-a,us-west1-b"),
-					testAccCheckStorageClassParameters(&conf, map[string]string{"type": "pd-standard", "zones": "us-west1-a,us-west1-b"}),
+					testAccCheckStorageClassV1Parameters(&conf, map[string]string{"type": "pd-standard", "zones": "us-west1-a,us-west1-b"}),
 				),
 			},
 			{
-				Config: testAccKubernetesStorageClassConfig_noParameters(name, "kubernetes.io/gce-pd"),
+				Config: testAccKubernetesStorageClassV1Config_noParameters(name, "kubernetes.io/gce-pd"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStorageClassExists(resourceName, &conf),
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -220,51 +220,51 @@ func TestAccKubernetesStorageClass_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesStorageClass_allowedTopologies_minikube(t *testing.T) {
+func TestAccKubernetesStorageClassV1_allowedTopologies_minikube(t *testing.T) {
 	var conf api.StorageClass
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_storage_class.test"
+	resourceName := "kubernetes_storage_class_v1.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStorageClassDestroy,
+		CheckDestroy:      testAccCheckKubernetesStorageClassV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesStorageClassConfig_allowedTopologies(name, "k8s.io/minikube-hostpath"),
+				Config: testAccKubernetesStorageClassV1Config_allowedTopologies(name, "k8s.io/minikube-hostpath"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStorageClassExists(resourceName, &conf),
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.key", "failure-domain.beta.kubernetes.io/zone"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.values.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.values.0", "us-west1-a"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.values.1", "us-west1-b"),
-					testAccCheckStorageClassParameters(&conf, map[string]string{}),
+					testAccCheckStorageClassV1Parameters(&conf, map[string]string{}),
 				),
 			},
 		},
 	})
 }
 
-func TestAccKubernetesStorageClass_generatedName(t *testing.T) {
+func TestAccKubernetesStorageClassV1_generatedName(t *testing.T) {
 	var conf api.StorageClass
 	prefix := "tf-acc-test-gen-"
-	resourceName := "kubernetes_storage_class.test"
+	resourceName := "kubernetes_storage_class_v1.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStorageClassDestroy,
+		CheckDestroy:      testAccCheckKubernetesStorageClassV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesStorageClassConfig_generatedName(prefix, "k8s.io/minikube"),
+				Config: testAccKubernetesStorageClassV1Config_generatedName(prefix, "k8s.io/minikube"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStorageClassExists(resourceName, &conf),
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", prefix),
@@ -284,7 +284,7 @@ func TestAccKubernetesStorageClass_generatedName(t *testing.T) {
 	})
 }
 
-func testAccCheckStorageClassParameters(m *api.StorageClass, expected map[string]string) resource.TestCheckFunc {
+func testAccCheckStorageClassV1Parameters(m *api.StorageClass, expected map[string]string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(m.Parameters) == 0 {
 			return nil
@@ -297,7 +297,7 @@ func testAccCheckStorageClassParameters(m *api.StorageClass, expected map[string
 	}
 }
 
-func testAccCheckKubernetesStorageClassDestroy(s *terraform.State) error {
+func testAccCheckKubernetesStorageClassV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	if err != nil {
@@ -306,7 +306,7 @@ func testAccCheckKubernetesStorageClassDestroy(s *terraform.State) error {
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_storage_class" {
+		if rs.Type != "kubernetes_storage_class_v1" {
 			continue
 		}
 		name := rs.Primary.ID
@@ -321,7 +321,7 @@ func testAccCheckKubernetesStorageClassDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckKubernetesStorageClassExists(n string, obj *api.StorageClass) resource.TestCheckFunc {
+func testAccCheckKubernetesStorageClassV1Exists(n string, obj *api.StorageClass) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -345,8 +345,8 @@ func testAccCheckKubernetesStorageClassExists(n string, obj *api.StorageClass) r
 	}
 }
 
-func testAccKubernetesStorageClassConfig_basic(name, provisioner string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+func testAccKubernetesStorageClassV1Config_basic(name, provisioner string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -376,8 +376,8 @@ func testAccKubernetesStorageClassConfig_basic(name, provisioner string) string 
 `, name, provisioner)
 }
 
-func testAccKubernetesStorageClassConfig_modified(name, provisioner string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+func testAccKubernetesStorageClassV1Config_modified(name, provisioner string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -409,8 +409,8 @@ func testAccKubernetesStorageClassConfig_modified(name, provisioner string) stri
 `, name, provisioner)
 }
 
-func testAccKubernetesStorageClassConfig_volumeExpansion(name, provisioner string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+func testAccKubernetesStorageClassV1Config_volumeExpansion(name, provisioner string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -421,8 +421,8 @@ func testAccKubernetesStorageClassConfig_volumeExpansion(name, provisioner strin
 `, name, provisioner)
 }
 
-func testAccKubernetesStorageClassConfig_volumeExpansionModified(name, provisioner string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+func testAccKubernetesStorageClassV1Config_volumeExpansionModified(name, provisioner string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -433,8 +433,8 @@ func testAccKubernetesStorageClassConfig_volumeExpansionModified(name, provision
 `, name, provisioner)
 }
 
-func testAccKubernetesStorageClassConfig_noParameters(name, provisioner string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+func testAccKubernetesStorageClassV1Config_noParameters(name, provisioner string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -444,8 +444,8 @@ func testAccKubernetesStorageClassConfig_noParameters(name, provisioner string) 
 `, name, provisioner)
 }
 
-func testAccKubernetesStorageClassConfig_generatedName(prefix, provisioner string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+func testAccKubernetesStorageClassV1Config_generatedName(prefix, provisioner string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -455,8 +455,8 @@ func testAccKubernetesStorageClassConfig_generatedName(prefix, provisioner strin
 `, prefix, provisioner)
 }
 
-func testAccKubernetesStorageClassConfig_allowedTopologies(name, provisioner string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+func testAccKubernetesStorageClassV1Config_allowedTopologies(name, provisioner string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
   metadata {
     name = "%s"
   }

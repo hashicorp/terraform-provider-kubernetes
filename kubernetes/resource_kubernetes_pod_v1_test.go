@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	api "k8s.io/api/core/v1"
-	nodev1 "k8s.io/api/node/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -1475,16 +1474,9 @@ func TestAccKubernetesPodV1_runtimeClassName(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfRunningInEks(t)
-			createRuncRuntimeClass(runtimeHandler)
 		},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy: func(s *terraform.State) error {
-			err := deleteRuntimeClass(runtimeHandler)
-			if err != nil {
-				return err
-			}
-			return testAccCheckKubernetesPodV1Destroy(s)
-		},
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodV1ConfigRuntimeClassName(name, imageName, runtimeHandler),
@@ -1572,31 +1564,6 @@ func TestAccKubernetesPodV1_phase(t *testing.T) {
 			},
 		},
 	})
-}
-
-func createRuncRuntimeClass(rn string) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-	if err != nil {
-		return err
-	}
-	_, err = conn.NodeV1().RuntimeClasses().Create(context.Background(), &nodev1.RuntimeClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: rn,
-		},
-		Handler: "runc",
-	}, metav1.CreateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func deleteRuntimeClass(rn string) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-	if err != nil {
-		return err
-	}
-	return conn.NodeV1().RuntimeClasses().Delete(context.Background(), rn, metav1.DeleteOptions{})
 }
 
 func testAccCheckCSIDriverExists(csiDriverName string) error {
@@ -3237,19 +3204,26 @@ func testAccKubernetesPodV1TopologySpreadConstraintConfig(podName, imageName str
 }
 
 func testAccKubernetesPodV1ConfigRuntimeClassName(name, imageName, runtimeHandler string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_runtime_class_v1" "test" {
   metadata {
-    name = "%s"
+    name = %[3]q
+  }
+  handler = "runc"
+}
+
+resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = %[1]q
   }
   spec {
-    runtime_class_name = "%s"
+    runtime_class_name = kubernetes_runtime_class_v1.test.metadata.0.name
     container {
-      image = "%s"
+      image = %[2]q
       name  = "containername"
     }
   }
 }
-`, name, runtimeHandler, imageName)
+`, name, imageName, runtimeHandler)
 }
 
 func testAccKubernetesCustomScheduler(name string) string {

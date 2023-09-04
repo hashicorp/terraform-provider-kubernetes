@@ -15,10 +15,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesPodSecurityPolicyV1_basic(t *testing.T) {
+func TestAccKubernetesPodSecurityPolicyV1Beta1_basic(t *testing.T) {
 	var conf policy.PodSecurityPolicy
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
-	resourceName := "kubernetes_pod_security_policy_v1.test"
+	resourceName := "kubernetes_pod_security_policy_v1beta1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -28,12 +28,12 @@ func TestAccKubernetesPodSecurityPolicyV1_basic(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodSecurityPolicyV1Destroy,
+		CheckDestroy:      testAccCheckKubernetesPodSecurityPolicyV1Beta1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodSecurityPolicyV1Config_basic(name),
+				Config: testAccKubernetesPodSecurityPolicyV1Beta1Config_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodSecurityPolicyV1Exists(resourceName, &conf),
+					testAccCheckKubernetesPodSecurityPolicyV1Beta1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "3"),
@@ -79,9 +79,9 @@ func TestAccKubernetesPodSecurityPolicyV1_basic(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccKubernetesPodSecurityPolicyV1Config_metaModified(name),
+				Config: testAccKubernetesPodSecurityPolicyV1Beta1Config_metaModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodSecurityPolicyV1Exists(resourceName, &conf),
+					testAccCheckKubernetesPodSecurityPolicyV1Beta1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -123,9 +123,9 @@ func TestAccKubernetesPodSecurityPolicyV1_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesPodSecurityPolicyV1Config_specModified(name),
+				Config: testAccKubernetesPodSecurityPolicyV1Beta1Config_specModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodSecurityPolicyV1Exists(resourceName, &conf),
+					testAccCheckKubernetesPodSecurityPolicyV1Beta1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -167,7 +167,7 @@ func TestAccKubernetesPodSecurityPolicyV1_basic(t *testing.T) {
 	})
 }
 
-func testAccCheckKubernetesPodSecurityPolicyV1Destroy(s *terraform.State) error {
+func testAccCheckKubernetesPodSecurityPolicyV1Beta1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	if err != nil {
@@ -176,7 +176,7 @@ func testAccCheckKubernetesPodSecurityPolicyV1Destroy(s *terraform.State) error 
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_pod_security_policy_v1" {
+		if rs.Type != "kubernetes_pod_security_policy_v1beta1" {
 			continue
 		}
 
@@ -193,7 +193,7 @@ func testAccCheckKubernetesPodSecurityPolicyV1Destroy(s *terraform.State) error 
 	return nil
 }
 
-func testAccCheckKubernetesPodSecurityPolicyV1Exists(n string, obj *policy.PodSecurityPolicy) resource.TestCheckFunc {
+func testAccCheckKubernetesPodSecurityPolicyV1Beta1Exists(n string, obj *policy.PodSecurityPolicy) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -218,8 +218,8 @@ func testAccCheckKubernetesPodSecurityPolicyV1Exists(n string, obj *policy.PodSe
 	}
 }
 
-func testAccKubernetesPodSecurityPolicyV1Config_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod_security_policy_v1" "test" {
+func testAccKubernetesPodSecurityPolicyV1Beta1Config_basic(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_security_policy_v1beta1" "test" {
   metadata {
     name = "%s"
 
@@ -279,8 +279,8 @@ func testAccKubernetesPodSecurityPolicyV1Config_basic(name string) string {
 `, name)
 }
 
-func testAccKubernetesPodSecurityPolicyV1Config_metaModified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod_security_policy_v1" "test" {
+func testAccKubernetesPodSecurityPolicyV1Beta1Config_metaModified(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_security_policy_v1beta1" "test" {
   metadata {
     name = "%s"
 
@@ -336,8 +336,8 @@ func testAccKubernetesPodSecurityPolicyV1Config_metaModified(name string) string
 `, name)
 }
 
-func testAccKubernetesPodSecurityPolicyV1Config_specModified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod_security_policy_v1" "test" {
+func testAccKubernetesPodSecurityPolicyV1Beta1Config_specModified(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_security_policy_v1beta1" "test" {
   metadata {
     name = "%s"
   }

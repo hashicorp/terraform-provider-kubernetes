@@ -64,13 +64,13 @@ var (
 	pspRunAsGroupRuleDoc                      = policy.RunAsGroupStrategyOptions{}.SwaggerDoc()["rule"]
 )
 
-func resourceKubernetesPodSecurityPolicyV1() *schema.Resource {
+func resourceKubernetesPodSecurityPolicyV1Beta1() *schema.Resource {
 	return &schema.Resource{
 		DeprecationMessage: `"PodSecurityPolicy" was deprecated in Kubernetes v1.21.0; Starting from version 1.21.0 Kubernetes has deprecated PodSecurityPolicy and has been removed entirely in v1.25.0`,
-		CreateContext:      resourceKubernetesPodSecurityPolicyV1Create,
-		ReadContext:        resourceKubernetesPodSecurityPolicyV1Read,
-		UpdateContext:      resourceKubernetesPodSecurityPolicyV1Update,
-		DeleteContext:      resourceKubernetesPodSecurityPolicyV1Delete,
+		CreateContext:      resourceKubernetesPodSecurityPolicyV1Beta1Create,
+		ReadContext:        resourceKubernetesPodSecurityPolicyV1Beta1Read,
+		UpdateContext:      resourceKubernetesPodSecurityPolicyV1Beta1Update,
+		DeleteContext:      resourceKubernetesPodSecurityPolicyV1Beta1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -368,7 +368,7 @@ func resourceKubernetesPodSecurityPolicyV1() *schema.Resource {
 	}
 }
 
-func resourceKubernetesPodSecurityPolicyV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPodSecurityPolicyV1Beta1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -395,11 +395,11 @@ func resourceKubernetesPodSecurityPolicyV1Create(ctx context.Context, d *schema.
 	log.Printf("[INFO] Submitted new PodSecurityPolicy: %#v", out)
 	d.SetId(out.Name)
 
-	return resourceKubernetesPodSecurityPolicyV1Read(ctx, d, meta)
+	return resourceKubernetesPodSecurityPolicyV1Beta1Read(ctx, d, meta)
 }
 
-func resourceKubernetesPodSecurityPolicyV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesPodSecurityPolicyV1Exists(ctx, d, meta)
+func resourceKubernetesPodSecurityPolicyV1Beta1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesPodSecurityPolicyV1Beta1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -437,7 +437,7 @@ func resourceKubernetesPodSecurityPolicyV1Read(ctx context.Context, d *schema.Re
 	return nil
 }
 
-func resourceKubernetesPodSecurityPolicyV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPodSecurityPolicyV1Beta1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -466,10 +466,10 @@ func resourceKubernetesPodSecurityPolicyV1Update(ctx context.Context, d *schema.
 	log.Printf("[INFO] Submitted updated PodSecurityPolicy: %#v", out)
 	d.SetId(out.Name)
 
-	return resourceKubernetesPodSecurityPolicyV1Read(ctx, d, meta)
+	return resourceKubernetesPodSecurityPolicyV1Beta1Read(ctx, d, meta)
 }
 
-func resourceKubernetesPodSecurityPolicyV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesPodSecurityPolicyV1Beta1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -490,7 +490,7 @@ func resourceKubernetesPodSecurityPolicyV1Delete(ctx context.Context, d *schema.
 	return nil
 }
 
-func resourceKubernetesPodSecurityPolicyV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesPodSecurityPolicyV1Beta1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

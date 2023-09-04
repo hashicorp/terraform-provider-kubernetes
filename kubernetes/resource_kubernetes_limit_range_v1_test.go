@@ -465,7 +465,7 @@ func testAccKubernetesLimitRangeV1Config_generatedName(prefix, ns string) string
 resource "kubernetes_limit_range_v1" "test" {
   metadata {
     generate_name = %[2]q
-	namespace     = kubernetes_namespace_v1.test.metadata.0.name
+    namespace     = kubernetes_namespace_v1.test.metadata.0.name
   }
 
   spec {

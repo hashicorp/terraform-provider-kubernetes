@@ -328,8 +328,8 @@ func Provider() *schema.Provider {
 			// policy
 			"kubernetes_pod_disruption_budget":       resourceKubernetesPodDisruptionBudget(),
 			"kubernetes_pod_disruption_budget_v1":    resourceKubernetesPodDisruptionBudgetV1(),
-			"kubernetes_pod_security_policy":         resourceKubernetesPodSecurityPolicy(),
-			"kubernetes_pod_security_policy_v1beta1": resourceKubernetesPodSecurityPolicy(),
+			"kubernetes_pod_security_policy":         resourceKubernetesPodSecurityPolicyV1Beta1(),
+			"kubernetes_pod_security_policy_v1beta1": resourceKubernetesPodSecurityPolicyV1Beta1(),
 
 			// scheduling
 			"kubernetes_priority_class":    resourceKubernetesPriorityClass(),

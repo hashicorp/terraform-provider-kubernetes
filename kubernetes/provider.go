@@ -336,7 +336,7 @@ func Provider() *schema.Provider {
 			"kubernetes_priority_class_v1": resourceKubernetesPriorityClass(),
 
 			// admission control
-			"kubernetes_validating_webhook_configuration":    resourceKubernetesValidatingWebhookConfiguration(),
+			"kubernetes_validating_webhook_configuration":    resourceKubernetesValidatingWebhookConfigurationV1Beta1(),
 			"kubernetes_validating_webhook_configuration_v1": resourceKubernetesValidatingWebhookConfigurationV1(),
 			"kubernetes_mutating_webhook_configuration":      resourceKubernetesMutatingWebhookConfigurationV1(),
 			"kubernetes_mutating_webhook_configuration_v1":   resourceKubernetesMutatingWebhookConfigurationV1(),

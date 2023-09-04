@@ -16,21 +16,25 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
-func TestAccKubernetesValidatingWebhookConfiguration_basic(t *testing.T) {
+func TestAccKubernetesValidatingWebhookConfigurationV1Beta1_basic(t *testing.T) {
 	name := fmt.Sprintf("acc-test-%v.terraform.io", acctest.RandString(10))
 	resourceName := "kubernetes_validating_webhook_configuration.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotAdmissionRegistrationV1(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfNotAdmissionRegistrationV1(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
+		},
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesValdiatingWebhookConfigurationDestroy,
+		CheckDestroy:      testAccCheckKubernetesValdiatingWebhookConfigurationV1Beta1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesValidatingWebhookConfigurationConfig_basic(name),
+				Config: testAccKubernetesValidatingWebhookConfigurationV1Beta1Config_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesValidatingWebhookConfigurationExists(resourceName),
+					testAccCheckKubernetesValidatingWebhookConfigurationV1Beta1Exists(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -69,7 +73,7 @@ func TestAccKubernetesValidatingWebhookConfiguration_basic(t *testing.T) {
 				ImportStateVerify: true,
 			},
 			{
-				Config: testAccKubernetesValidatingWebhookConfigurationConfig_modified(name),
+				Config: testAccKubernetesValidatingWebhookConfigurationV1Beta1Config_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
@@ -116,7 +120,7 @@ func TestAccKubernetesValidatingWebhookConfiguration_basic(t *testing.T) {
 	})
 }
 
-func testAccCheckKubernetesValdiatingWebhookConfigurationDestroy(s *terraform.State) error {
+func testAccCheckKubernetesValdiatingWebhookConfigurationV1Beta1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	if err != nil {
@@ -154,7 +158,7 @@ func testAccCheckKubernetesValdiatingWebhookConfigurationDestroy(s *terraform.St
 	return nil
 }
 
-func testAccCheckKubernetesValidatingWebhookConfigurationExists(n string) resource.TestCheckFunc {
+func testAccCheckKubernetesValidatingWebhookConfigurationV1Beta1Exists(n string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -186,7 +190,7 @@ func testAccCheckKubernetesValidatingWebhookConfigurationExists(n string) resour
 	}
 }
 
-func testAccKubernetesValidatingWebhookConfigurationConfig_basic(name string) string {
+func testAccKubernetesValidatingWebhookConfigurationV1Beta1Config_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_validating_webhook_configuration" "test" {
   metadata {
@@ -223,7 +227,7 @@ resource "kubernetes_validating_webhook_configuration" "test" {
 `, name, name)
 }
 
-func testAccKubernetesValidatingWebhookConfigurationConfig_modified(name string) string {
+func testAccKubernetesValidatingWebhookConfigurationV1Beta1Config_modified(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_validating_webhook_configuration" "test" {
   metadata {

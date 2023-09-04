@@ -5,13 +5,13 @@ package kubernetes
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	v1 "k8s.io/api/authentication/v1"
+	authv1 "k8s.io/api/authentication/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 // Flatteners
 
-func flattenTokenRequestSpec(in v1.TokenRequestSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
+func flattenTokenRequestV1Spec(in authv1.TokenRequestSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
 	att["audiences"] = in.Audiences
@@ -31,7 +31,7 @@ func flattenTokenRequestSpec(in v1.TokenRequestSpec, d *schema.ResourceData, met
 	return []interface{}{att}, nil
 }
 
-func flattenBoundObjectReference(in v1.BoundObjectReference, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
+func flattenBoundObjectReference(in authv1.BoundObjectReference, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
 	att["api_version"] = in.APIVersion
@@ -47,8 +47,8 @@ func flattenBoundObjectReference(in v1.BoundObjectReference, d *schema.ResourceD
 
 // Expanders
 
-func expandTokenRequestSpec(p []interface{}) *v1.TokenRequestSpec {
-	obj := &v1.TokenRequestSpec{}
+func expandTokenRequestV1Spec(p []interface{}) *authv1.TokenRequestSpec {
+	obj := &authv1.TokenRequestSpec{}
 	if len(p) == 0 || p[0] == nil {
 		return obj
 	}
@@ -71,8 +71,8 @@ func expandTokenRequestSpec(p []interface{}) *v1.TokenRequestSpec {
 	return obj
 }
 
-func expandBoundObjectReference(p []interface{}) (*v1.BoundObjectReference, error) {
-	obj := &v1.BoundObjectReference{}
+func expandBoundObjectReference(p []interface{}) (*authv1.BoundObjectReference, error) {
+	obj := &authv1.BoundObjectReference{}
 	if len(p) == 0 || p[0] == nil {
 		return nil, nil
 	}

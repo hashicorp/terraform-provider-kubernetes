@@ -18,12 +18,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func resourceKubernetesIngress() *schema.Resource {
+func resourceKubernetesIngressV1Beta1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesIngressCreate,
-		ReadContext:   resourceKubernetesIngressRead,
-		UpdateContext: resourceKubernetesIngressUpdate,
-		DeleteContext: resourceKubernetesIngressDelete,
+		CreateContext: resourceKubernetesIngressV1Beta1Create,
+		ReadContext:   resourceKubernetesIngressV1Beta1Read,
+		UpdateContext: resourceKubernetesIngressV1Beta1Update,
+		DeleteContext: resourceKubernetesIngressV1Beta1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -165,7 +165,7 @@ func resourceKubernetesIngressSchemaV1() map[string]*schema.Schema {
 	}
 }
 
-func resourceKubernetesIngressCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesIngressV1Beta1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -185,7 +185,7 @@ func resourceKubernetesIngressCreate(ctx context.Context, d *schema.ResourceData
 	d.SetId(buildId(out.ObjectMeta))
 
 	if !d.Get("wait_for_load_balancer").(bool) {
-		return resourceKubernetesIngressRead(ctx, d, meta)
+		return resourceKubernetesIngressV1Beta1Read(ctx, d, meta)
 	}
 
 	log.Printf("[INFO] Waiting for load balancer to become ready: %#v", out)
@@ -201,7 +201,7 @@ func resourceKubernetesIngressCreate(ctx context.Context, d *schema.ResourceData
 		}
 
 		if len(res.Status.LoadBalancer.Ingress) > 0 {
-			diagnostics := resourceKubernetesIngressRead(ctx, d, meta)
+			diagnostics := resourceKubernetesIngressV1Beta1Read(ctx, d, meta)
 			if diagnostics.HasError() {
 				errmsg := diagnostics[0].Summary
 				return resource.NonRetryableError(fmt.Errorf("Error reading ingress: %v", errmsg))
@@ -218,8 +218,8 @@ func resourceKubernetesIngressCreate(ctx context.Context, d *schema.ResourceData
 	return diag.Diagnostics{}
 }
 
-func resourceKubernetesIngressRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesIngressExists(ctx, d, meta)
+func resourceKubernetesIngressV1Beta1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesIngressV1Beta1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -268,7 +268,7 @@ func resourceKubernetesIngressRead(ctx context.Context, d *schema.ResourceData, 
 	return nil
 }
 
-func resourceKubernetesIngressUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesIngressV1Beta1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -297,10 +297,10 @@ func resourceKubernetesIngressUpdate(ctx context.Context, d *schema.ResourceData
 	}
 	log.Printf("[INFO] Submitted updated ingress: %#v", out)
 
-	return resourceKubernetesIngressRead(ctx, d, meta)
+	return resourceKubernetesIngressV1Beta1Read(ctx, d, meta)
 }
 
-func resourceKubernetesIngressDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesIngressV1Beta1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -339,7 +339,7 @@ func resourceKubernetesIngressDelete(ctx context.Context, d *schema.ResourceData
 	return nil
 }
 
-func resourceKubernetesIngressExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesIngressV1Beta1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

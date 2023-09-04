@@ -9,37 +9,35 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-
-	core "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func resourceKubernetesIngressClass() *schema.Resource {
+func resourceKubernetesIngressClassV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesIngressClassCreate,
-		ReadContext:   resourceKubernetesIngressClassRead,
-		UpdateContext: resourceKubernetesIngressClassUpdate,
-		DeleteContext: resourceKubernetesIngressClassDelete,
+		CreateContext: resourceKubernetesIngressClassV1Create,
+		ReadContext:   resourceKubernetesIngressClassV1Read,
+		UpdateContext: resourceKubernetesIngressClassV1Update,
+		DeleteContext: resourceKubernetesIngressClassV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		Schema: resourceKubernetesIngressClassSchema(),
+		Schema: resourceKubernetesIngressClassV1Schema(),
 	}
 }
 
-func resourceKubernetesIngressClassSchema() map[string]*schema.Schema {
+func resourceKubernetesIngressClassV1Schema() map[string]*schema.Schema {
 	docIngressClass := networking.IngressClass{}.SwaggerDoc()
 	docIngressClassSpec := networking.IngressClassSpec{}.SwaggerDoc()
-	docIngressClassSpecParametes := core.TypedLocalObjectReference{}.SwaggerDoc()
+	docIngressClassSpecParametes := corev1.TypedLocalObjectReference{}.SwaggerDoc()
 
 	return map[string]*schema.Schema{
-		"metadata": metadataSchema("ingress_class", true),
+		"metadata": metadataSchema("ingress_class_v1", true),
 		"spec": {
 			Type:        schema.TypeList,
 			Description: docIngressClass["spec"],
@@ -94,7 +92,7 @@ func resourceKubernetesIngressClassSchema() map[string]*schema.Schema {
 	}
 }
 
-func resourceKubernetesIngressClassCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesIngressClassV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -102,7 +100,7 @@ func resourceKubernetesIngressClassCreate(ctx context.Context, d *schema.Resourc
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	ing := &networking.IngressClass{
-		Spec: expandIngressClassSpec(d.Get("spec").([]interface{})),
+		Spec: expandIngressClassV1Spec(d.Get("spec").([]interface{})),
 	}
 	ing.ObjectMeta = metadata
 	log.Printf("[INFO] Creating new Ingress Class: %#v", ing)
@@ -116,8 +114,8 @@ func resourceKubernetesIngressClassCreate(ctx context.Context, d *schema.Resourc
 	return diag.Diagnostics{}
 }
 
-func resourceKubernetesIngressClassRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesIngressClassExists(ctx, d, meta)
+func resourceKubernetesIngressClassV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesIngressClassV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -144,7 +142,7 @@ func resourceKubernetesIngressClassRead(ctx context.Context, d *schema.ResourceD
 		return diag.FromErr(err)
 	}
 
-	flattened := flattenIngressClassSpec(ing.Spec)
+	flattened := flattenIngressClassV1Spec(ing.Spec)
 	log.Printf("[DEBUG] Flattened Ingress Class spec: %#v", flattened)
 	err = d.Set("spec", flattened)
 	if err != nil {
@@ -154,14 +152,14 @@ func resourceKubernetesIngressClassRead(ctx context.Context, d *schema.ResourceD
 	return nil
 }
 
-func resourceKubernetesIngressClassUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesIngressClassV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	spec := expandIngressClassSpec(d.Get("spec").([]interface{}))
+	spec := expandIngressClassV1Spec(d.Get("spec").([]interface{}))
 
 	if metadata.Namespace == "" {
 		metadata.Namespace = "default"
@@ -178,10 +176,10 @@ func resourceKubernetesIngressClassUpdate(ctx context.Context, d *schema.Resourc
 	}
 	log.Printf("[INFO] Submitted updated Ingress Class: %#v", out)
 
-	return resourceKubernetesIngressClassRead(ctx, d, meta)
+	return resourceKubernetesIngressClassV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesIngressClassDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesIngressClassV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -217,7 +215,7 @@ func resourceKubernetesIngressClassDelete(ctx context.Context, d *schema.Resourc
 	return nil
 }
 
-func resourceKubernetesIngressClassExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesIngressClassV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err
@@ -236,7 +234,7 @@ func resourceKubernetesIngressClassExists(ctx context.Context, d *schema.Resourc
 	return true, err
 }
 
-func expandIngressClassSpec(l []interface{}) networking.IngressClassSpec {
+func expandIngressClassV1Spec(l []interface{}) networking.IngressClassSpec {
 	if len(l) == 0 || l[0] == nil {
 		return networking.IngressClassSpec{}
 	}
@@ -248,13 +246,13 @@ func expandIngressClassSpec(l []interface{}) networking.IngressClassSpec {
 	}
 
 	if v, ok := in["parameters"].([]interface{}); ok && len(v) > 0 {
-		obj.Parameters = expandIngressClassParameters(v)
+		obj.Parameters = expandIngressClassV1Parameters(v)
 	}
 
 	return obj
 }
 
-func expandIngressClassParameters(l []interface{}) *networking.IngressClassParametersReference {
+func expandIngressClassV1Parameters(l []interface{}) *networking.IngressClassParametersReference {
 	if len(l) == 0 || l[0] == nil {
 		return &networking.IngressClassParametersReference{}
 	}
@@ -284,7 +282,7 @@ func expandIngressClassParameters(l []interface{}) *networking.IngressClassParam
 	return obj
 }
 
-func flattenIngressClassSpec(in networking.IngressClassSpec) []interface{} {
+func flattenIngressClassV1Spec(in networking.IngressClassSpec) []interface{} {
 	att := make(map[string]interface{})
 
 	if in.Controller != "" {
@@ -292,13 +290,13 @@ func flattenIngressClassSpec(in networking.IngressClassSpec) []interface{} {
 	}
 
 	if in.Parameters != nil {
-		att["parameters"] = flattenIngressClassParameters(in.Parameters)
+		att["parameters"] = flattenIngressClassV1Parameters(in.Parameters)
 	}
 
 	return []interface{}{att}
 }
 
-func flattenIngressClassParameters(in *networking.IngressClassParametersReference) []interface{} {
+func flattenIngressClassV1Parameters(in *networking.IngressClassParametersReference) []interface{} {
 	att := make([]interface{}, 1)
 
 	m := make(map[string]interface{})

@@ -194,11 +194,11 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigUpdateReplicas(name, imageName, "5"),
+				Config: testAccKubernetesStatefulSetV1ConfigUpdateReplicas(name, imageName, "3"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.replicas", "5"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.replicas", "3"),
 				),
 			},
 			{
@@ -207,7 +207,7 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					// NOTE setting to empty should preserve the current replica count
-					resource.TestCheckResourceAttr(resourceName, "spec.0.replicas", "5"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.replicas", "3"),
 				),
 			},
 			{
@@ -417,6 +417,7 @@ func testAccKubernetesStatefulSetV1ConfigMinimal(name, imageName string) string 
           image   = "%s"
           command = ["sleep", "300"]
         }
+        termination_grace_period_seconds = 1
       }
     }
   }
@@ -739,6 +740,7 @@ func testAccKubernetesStatefulSetV1ConfigUpdateReplicas(name, imageName, replica
             mount_path = "/work-dir"
           }
         }
+        termination_grace_period_seconds = 1
       }
     }
 

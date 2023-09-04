@@ -22,7 +22,7 @@ func TestAccKubernetesAnnotations_basic(t *testing.T) {
 	namespace := "default"
 	resourceName := "kubernetes_annotations.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createConfigMap(name, namespace)
@@ -87,7 +87,7 @@ func TestAccKubernetesAnnotations_template_cronjob(t *testing.T) {
 	namespace := "default"
 	resourceName := "kubernetes_annotations.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createCronJob(name, namespace)
@@ -158,7 +158,7 @@ func TestAccKubernetesAnnotations_template_deployment(t *testing.T) {
 	namespace := "default"
 	resourceName := "kubernetes_annotations.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createDeployment(name, namespace)
@@ -229,7 +229,7 @@ func TestAccKubernetesAnnotations_template_only(t *testing.T) {
 	namespace := "default"
 	resourceName := "kubernetes_annotations.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createDeployment(name, namespace)
@@ -261,7 +261,7 @@ func TestAccKubernetesAnnotations_resource_only(t *testing.T) {
 	namespace := "default"
 	resourceName := "kubernetes_annotations.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createDeployment(name, namespace)

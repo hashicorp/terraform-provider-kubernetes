@@ -15,12 +15,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesruntime_class_v1_basic(t *testing.T) {
+func TestAccKubernetesRuntimeClassV1_basic(t *testing.T) {
 	var conf nodev1.RuntimeClass
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_runtime_class_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -28,9 +28,9 @@ func TestAccKubernetesruntime_class_v1_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesRuntimeClassV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesruntime_class_v1_basic(rcName),
+				Config: testAccKubernetesRuntimeClassV1Config_basic(rcName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesruntime_class_v1Exists(resourceName, &conf),
+					testAccCheckKubernetesRuntimeClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rcName),
 					resource.TestCheckResourceAttr(resourceName, "handler", "myclass"),
 				),
@@ -42,9 +42,9 @@ func TestAccKubernetesruntime_class_v1_basic(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config: testAccKubernetesruntime_class_v1_addAnnotations(rcName),
+				Config: testAccKubernetesRuntimeClassV1Config_annotations(rcName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesruntime_class_v1Exists(resourceName, &conf),
+					testAccCheckKubernetesRuntimeClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -57,9 +57,9 @@ func TestAccKubernetesruntime_class_v1_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesruntime_class_v1_addLabels(rcName),
+				Config: testAccKubernetesRuntimeClassV1Config_labels(rcName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesruntime_class_v1Exists(resourceName, &conf),
+					testAccCheckKubernetesRuntimeClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationOne", "one"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotationTwo", "two"),
@@ -77,7 +77,7 @@ func TestAccKubernetesruntime_class_v1_basic(t *testing.T) {
 	})
 }
 
-func testAccKubernetesruntime_class_v1_basic(name string) string {
+func testAccKubernetesRuntimeClassV1Config_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_runtime_class_v1" "test" {
   metadata {
     name = %q
@@ -87,7 +87,7 @@ func testAccKubernetesruntime_class_v1_basic(name string) string {
 	`, name)
 }
 
-func testAccKubernetesruntime_class_v1_addAnnotations(name string) string {
+func testAccKubernetesRuntimeClassV1Config_annotations(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_runtime_class_v1" "test" {
   metadata {
     annotations = {
@@ -101,7 +101,7 @@ func testAccKubernetesruntime_class_v1_addAnnotations(name string) string {
 `, name)
 }
 
-func testAccKubernetesruntime_class_v1_addLabels(name string) string {
+func testAccKubernetesRuntimeClassV1Config_labels(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_runtime_class_v1" "test" {
   metadata {
     annotations = {
@@ -144,7 +144,7 @@ func testAccCheckKubernetesRuntimeClassV1Destroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckKubernetesruntime_class_v1Exists(n string, obj *nodev1.RuntimeClass) resource.TestCheckFunc {
+func testAccCheckKubernetesRuntimeClassV1Exists(n string, obj *nodev1.RuntimeClass) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {

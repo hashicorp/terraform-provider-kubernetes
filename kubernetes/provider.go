@@ -318,12 +318,12 @@ func Provider() *schema.Provider {
 			"kubernetes_cluster_role_binding_v1": resourceKubernetesClusterRoleBinding(),
 
 			// networking
-			"kubernetes_ingress":           resourceKubernetesIngress(),
+			"kubernetes_ingress":           resourceKubernetesIngressV1Beta1(),
 			"kubernetes_ingress_v1":        resourceKubernetesIngressV1(),
-			"kubernetes_ingress_class":     resourceKubernetesIngressClass(),
-			"kubernetes_ingress_class_v1":  resourceKubernetesIngressClass(),
-			"kubernetes_network_policy":    resourceKubernetesNetworkPolicy(),
-			"kubernetes_network_policy_v1": resourceKubernetesNetworkPolicy(),
+			"kubernetes_ingress_class":     resourceKubernetesIngressClassV1(),
+			"kubernetes_ingress_class_v1":  resourceKubernetesIngressClassV1(),
+			"kubernetes_network_policy":    resourceKubernetesNetworkPolicyV1(),
+			"kubernetes_network_policy_v1": resourceKubernetesNetworkPolicyV1(),
 
 			// policy
 			"kubernetes_pod_disruption_budget":       resourceKubernetesPodDisruptionBudget(),
@@ -344,7 +344,7 @@ func Provider() *schema.Provider {
 			// storage
 			"kubernetes_storage_class":    resourceKubernetesStorageClassV1(),
 			"kubernetes_storage_class_v1": resourceKubernetesStorageClassV1(),
-			"kubernetes_csi_driver":       resourceKubernetesCSIDriver(),
+			"kubernetes_csi_driver":       resourceKubernetesCSIDriverV1Beta1(),
 			"kubernetes_csi_driver_v1":    resourceKubernetesCSIDriverV1(),
 
 			// provider helper resources

@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	api "k8s.io/api/core/v1"
-	nodev1 "k8s.io/api/node/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -190,9 +189,9 @@ func TestAccKubernetesPodV1_updateArgsForceNew(t *testing.T) {
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 
-	imageName := "hashicorp/http-echo:latest"
-	argsBefore := `["-listen=:80", "-text='before modification'"]`
-	argsAfter := `["-listen=:80", "-text='after modification'"]`
+	imageName := busyboxImage
+	argsBefore := `["sleep", "60"]`
+	argsAfter := `["sleep", "300"]`
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -211,8 +210,8 @@ func TestAccKubernetesPodV1_updateArgsForceNew(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.args.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.args.0", "-listen=:80"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.args.1", "-text='before modification'"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.args.0", "sleep"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.args.1", "60"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.name", "containername"),
 				),
 			},
@@ -233,8 +232,8 @@ func TestAccKubernetesPodV1_updateArgsForceNew(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.args.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.args.0", "-listen=:80"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.args.1", "-text='after modification'"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.args.0", "sleep"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.args.1", "300"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.name", "containername"),
 					testAccCheckKubernetesPodForceNew(&conf1, &conf2, true),
 				),
@@ -1098,7 +1097,7 @@ func TestAccKubernetesPodV1_config_with_automount_service_account_token(t *testi
 			{
 				Config: testAccKubernetesPodV1ConfigWithAutomountServiceAccountToken(saName, podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceAccountV1Exists("kubernetes_service_account.test", &confSA),
+					testAccCheckKubernetesServiceAccountV1Exists("kubernetes_service_account_v1.test", &confSA),
 					testAccCheckKubernetesPodV1Exists(resourceName, &confPod),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.automount_service_account_token", "true"),
 				),
@@ -1339,7 +1338,7 @@ func TestAccKubernetesPodV1_bug1085(t *testing.T) {
 	var conf api.Pod
 	resourceName := "kubernetes_pod_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
@@ -1475,16 +1474,9 @@ func TestAccKubernetesPodV1_runtimeClassName(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfRunningInEks(t)
-			createRuncRuntimeClass(runtimeHandler)
 		},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy: func(s *terraform.State) error {
-			err := deleteRuntimeClass(runtimeHandler)
-			if err != nil {
-				return err
-			}
-			return testAccCheckKubernetesPodV1Destroy(s)
-		},
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodV1ConfigRuntimeClassName(name, imageName, runtimeHandler),
@@ -1514,7 +1506,7 @@ func TestAccKubernetesPodV1_with_ephemeral_storage(t *testing.T) {
 	resourceName := "kubernetes_pod_v1.test"
 	volumeName := "ephemeral"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfNotRunningInKind(t)
@@ -1572,31 +1564,6 @@ func TestAccKubernetesPodV1_phase(t *testing.T) {
 			},
 		},
 	})
-}
-
-func createRuncRuntimeClass(rn string) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-	if err != nil {
-		return err
-	}
-	_, err = conn.NodeV1().RuntimeClasses().Create(context.Background(), &nodev1.RuntimeClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: rn,
-		},
-		Handler: "runc",
-	}, metav1.CreateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func deleteRuntimeClass(rn string) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-	if err != nil {
-		return err
-	}
-	return conn.NodeV1().RuntimeClasses().Delete(context.Background(), rn, metav1.DeleteOptions{})
 }
 
 func testAccCheckCSIDriverExists(csiDriverName string) error {
@@ -1701,7 +1668,7 @@ func testAccCheckKubernetesPersistentVolumeClaimCreated(name string, obj *api.Pe
 }
 
 func testAccKubernetesPodV1ConfigBasic(secretName, configMapName, podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -1711,7 +1678,7 @@ func testAccKubernetesPodV1ConfigBasic(secretName, configMapName, podName, image
   }
 }
 
-resource "kubernetes_secret" "test_from" {
+resource "kubernetes_secret_v1" "test_from" {
   metadata {
     name = "%s-from"
   }
@@ -1722,7 +1689,7 @@ resource "kubernetes_secret" "test_from" {
   }
 }
 
-resource "kubernetes_config_map" "test" {
+resource "kubernetes_config_map_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -1732,7 +1699,7 @@ resource "kubernetes_config_map" "test" {
   }
 }
 
-resource "kubernetes_config_map" "test_from" {
+resource "kubernetes_config_map_v1" "test_from" {
   metadata {
     name = "%s-from"
   }
@@ -1763,7 +1730,7 @@ resource "kubernetes_pod_v1" "test" {
 
         value_from {
           secret_key_ref {
-            name     = "${kubernetes_secret.test.metadata.0.name}"
+            name     = "${kubernetes_secret_v1.test.metadata.0.name}"
             key      = "one"
             optional = true
           }
@@ -1773,7 +1740,7 @@ resource "kubernetes_pod_v1" "test" {
         name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
         value_from {
           config_map_key_ref {
-            name     = "${kubernetes_config_map.test.metadata.0.name}"
+            name     = "${kubernetes_config_map_v1.test.metadata.0.name}"
             key      = "one"
             optional = true
           }
@@ -1782,14 +1749,14 @@ resource "kubernetes_pod_v1" "test" {
 
       env_from {
         config_map_ref {
-          name     = "${kubernetes_config_map.test_from.metadata.0.name}"
+          name     = "${kubernetes_config_map_v1.test_from.metadata.0.name}"
           optional = true
         }
         prefix = "FROM_CM_"
       }
       env_from {
         secret_ref {
-          name     = "${kubernetes_secret.test_from.metadata.0.name}"
+          name     = "${kubernetes_secret_v1.test_from.metadata.0.name}"
           optional = false
         }
         prefix = "FROM_S_"
@@ -1800,7 +1767,7 @@ resource "kubernetes_pod_v1" "test" {
       name = "db"
 
       secret {
-        secret_name = "${kubernetes_secret.test.metadata.0.name}"
+        secret_name = "${kubernetes_secret_v1.test.metadata.0.name}"
       }
     }
   }
@@ -1846,7 +1813,7 @@ func testAccKubernetesPodV1ConfigWithInitContainer(podName, image string) string
     container {
       name    = "container"
       image   = "%s"
-      command = ["sh", "-c", "echo The app is running! && sleep 3600"]
+      command = ["sh", "-c", "echo The app is running! && sleep 300"]
 
       resources {
         requests = {
@@ -1868,10 +1835,11 @@ func testAccKubernetesPodV1ConfigWithInitContainer(podName, image string) string
         }
       }
     }
+    termination_grace_period_seconds = 1
   }
 }
 
-resource "kubernetes_service" "test" {
+resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%s-init-service"
   }
@@ -2037,6 +2005,7 @@ func testAccKubernetesPodV1ConfigWithLivenessProbeUsingExec(podName, imageName s
         period_seconds        = 5
       }
     }
+    termination_grace_period_seconds = 1
   }
 }
 `, podName, imageName)
@@ -2208,7 +2177,7 @@ func testAccKubernetesPodV1ConfigWithContainerSecurityContext(podName, imageName
 }
 
 func testAccKubernetesPodV1ConfigWithVolumeMounts(secretName, podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2245,7 +2214,7 @@ resource "kubernetes_pod_v1" "test" {
       name = "db"
 
       secret {
-        secret_name = "${kubernetes_secret.test.metadata.0.name}"
+        secret_name = "${kubernetes_secret_v1.test.metadata.0.name}"
       }
     }
   }
@@ -2254,7 +2223,7 @@ resource "kubernetes_pod_v1" "test" {
 }
 
 func testAccKubernetesPodV1ConfigWithSecretItemsVolume(secretName, podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2290,7 +2259,7 @@ resource "kubernetes_pod_v1" "test" {
       name = "db"
 
       secret {
-        secret_name = "${kubernetes_secret.test.metadata.0.name}"
+        secret_name = "${kubernetes_secret_v1.test.metadata.0.name}"
 
         items {
           key  = "one"
@@ -2304,7 +2273,7 @@ resource "kubernetes_pod_v1" "test" {
 }
 
 func testAccKubernetesPodV1ConfigWithConfigMapVolume(secretName, podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2360,7 +2329,7 @@ resource "kubernetes_pod_v1" "test" {
       name = "cfg"
 
       config_map {
-        name         = "${kubernetes_config_map.test.metadata.0.name}"
+        name         = "${kubernetes_config_map_v1.test.metadata.0.name}"
         default_mode = "0777"
       }
     }
@@ -2369,7 +2338,7 @@ resource "kubernetes_pod_v1" "test" {
       name = "cfg-item"
 
       config_map {
-        name = "${kubernetes_config_map.test.metadata.0.name}"
+        name = "${kubernetes_config_map_v1.test.metadata.0.name}"
 
         items {
           key  = "one"
@@ -2382,7 +2351,7 @@ resource "kubernetes_pod_v1" "test" {
       name = "cfg-item-with-mode"
 
       config_map {
-        name = "${kubernetes_config_map.test.metadata.0.name}"
+        name = "${kubernetes_config_map_v1.test.metadata.0.name}"
 
         items {
           key  = "one"
@@ -2396,7 +2365,7 @@ resource "kubernetes_pod_v1" "test" {
       name = "cfg-binary"
 
       config_map {
-        name = "${kubernetes_config_map.test.metadata.0.name}"
+        name = "${kubernetes_config_map_v1.test.metadata.0.name}"
 
         items {
           key  = "raw"
@@ -2404,13 +2373,14 @@ resource "kubernetes_pod_v1" "test" {
         }
       }
     }
+    termination_grace_period_seconds = 1
   }
 }
 `, secretName, podName, imageName)
 }
 
 func testAccKubernetesPodV1CSIVolume(imageName, podName, secretName, volumeName string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test-secret" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test-secret" {
   metadata {
     name = %[3]q
   }
@@ -2431,7 +2401,7 @@ resource "kubernetes_pod_v1" "test" {
     container {
       image   = %[2]q
       name    = %[1]q
-      command = ["sleep", "36000"]
+      command = ["sleep", "300"]
       volume_mount {
         name       = %[4]q
         mount_path = "/volume"
@@ -2452,12 +2422,13 @@ resource "kubernetes_pod_v1" "test" {
         }
       }
     }
+    termination_grace_period_seconds = 1
   }
 }`, podName, imageName, secretName, volumeName)
 }
 
 func testAccKubernetesPodV1ProjectedVolume(cfgMapName, cfgMap2Name, secretName, podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2471,7 +2442,7 @@ func testAccKubernetesPodV1ProjectedVolume(cfgMapName, cfgMap2Name, secretName, 
   }
 }
 
-resource "kubernetes_config_map" "test2" {
+resource "kubernetes_config_map_v1" "test2" {
   metadata {
     name = "%s"
   }
@@ -2485,7 +2456,7 @@ resource "kubernetes_config_map" "test2" {
   }
 }
 
-resource "kubernetes_secret" "test" {
+resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2512,7 +2483,7 @@ resource "kubernetes_pod_v1" "test" {
       image = "%s"
       name  = "containername"
 
-      command = ["sleep", "3600"]
+      command = ["sleep", "300"]
 
       lifecycle {
         post_start {
@@ -2534,7 +2505,7 @@ resource "kubernetes_pod_v1" "test" {
         default_mode = "0777"
         sources {
           config_map {
-            name = "${kubernetes_config_map.test.metadata.0.name}"
+            name = "${kubernetes_config_map_v1.test.metadata.0.name}"
             items {
               key  = "raw"
               path = "raw.txt"
@@ -2543,7 +2514,7 @@ resource "kubernetes_pod_v1" "test" {
         }
         sources {
           config_map {
-            name = "${kubernetes_config_map.test2.metadata.0.name}"
+            name = "${kubernetes_config_map_v1.test2.metadata.0.name}"
             items {
               key  = "raw"
               path = "raw-again.txt"
@@ -2552,7 +2523,7 @@ resource "kubernetes_pod_v1" "test" {
         }
         sources {
           secret {
-            name = "${kubernetes_secret.test.metadata.0.name}"
+            name = "${kubernetes_secret_v1.test.metadata.0.name}"
             items {
               key  = "one"
               path = "secret.txt"
@@ -2578,6 +2549,7 @@ resource "kubernetes_pod_v1" "test" {
         }
       }
     }
+    termination_grace_period_seconds = 1
   }
 }
 `, cfgMapName, cfgMap2Name, secretName, podName, imageName)
@@ -2799,6 +2771,7 @@ func testAccKubernetesPodV1ConfigArgsUpdate(podName, imageName, args string) str
       args  = %s
       name  = "containername"
     }
+    termination_grace_period_seconds = 1
   }
 }
 `, podName, imageName, args)
@@ -2826,7 +2799,7 @@ func testAccKubernetesPodV1ConfigEnvUpdate(podName, imageName, val string) strin
 }
 
 func testAccKubernetesPodV1ConfigWithAutomountServiceAccountToken(saName string, podName string, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2842,7 +2815,7 @@ resource "kubernetes_pod_v1" "test" {
   }
 
   spec {
-    service_account_name            = kubernetes_service_account.test.metadata.0.name
+    service_account_name            = kubernetes_service_account_v1.test.metadata.0.name
     automount_service_account_token = true
 
     container {
@@ -2968,7 +2941,7 @@ func testAccKubernetesPodV1ConfigEnableServiceLinks(podName, imageName string) s
 }
 
 func testAccKubernetesPodV1ConfigReadinessGate(secretName, configMapName, podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2978,7 +2951,7 @@ func testAccKubernetesPodV1ConfigReadinessGate(secretName, configMapName, podNam
   }
 }
 
-resource "kubernetes_secret" "test_from" {
+resource "kubernetes_secret_v1" "test_from" {
   metadata {
     name = "%s-from"
   }
@@ -2989,7 +2962,7 @@ resource "kubernetes_secret" "test_from" {
   }
 }
 
-resource "kubernetes_config_map" "test" {
+resource "kubernetes_config_map_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -2999,7 +2972,7 @@ resource "kubernetes_config_map" "test" {
   }
 }
 
-resource "kubernetes_config_map" "test_from" {
+resource "kubernetes_config_map_v1" "test_from" {
   metadata {
     name = "%s-from"
   }
@@ -3034,7 +3007,7 @@ resource "kubernetes_pod_v1" "test" {
 
         value_from {
           secret_key_ref {
-            name     = "${kubernetes_secret.test.metadata.0.name}"
+            name     = "${kubernetes_secret_v1.test.metadata.0.name}"
             key      = "one"
             optional = true
           }
@@ -3044,7 +3017,7 @@ resource "kubernetes_pod_v1" "test" {
         name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
         value_from {
           config_map_key_ref {
-            name     = "${kubernetes_config_map.test.metadata.0.name}"
+            name     = "${kubernetes_config_map_v1.test.metadata.0.name}"
             key      = "one"
             optional = true
           }
@@ -3053,14 +3026,14 @@ resource "kubernetes_pod_v1" "test" {
 
       env_from {
         config_map_ref {
-          name     = "${kubernetes_config_map.test_from.metadata.0.name}"
+          name     = "${kubernetes_config_map_v1.test_from.metadata.0.name}"
           optional = true
         }
         prefix = "FROM_CM_"
       }
       env_from {
         secret_ref {
-          name     = "${kubernetes_secret.test_from.metadata.0.name}"
+          name     = "${kubernetes_secret_v1.test_from.metadata.0.name}"
           optional = false
         }
         prefix = "FROM_S_"
@@ -3071,7 +3044,7 @@ resource "kubernetes_pod_v1" "test" {
       name = "db"
 
       secret {
-        secret_name = "${kubernetes_secret.test.metadata.0.name}"
+        secret_name = "${kubernetes_secret_v1.test.metadata.0.name}"
       }
     }
   }
@@ -3136,7 +3109,7 @@ func testAccKubernetesPodV1ConfigWithVolume(name, imageName, serviceAccount stri
   storage_provisioner = "k8s.io/minikube-hostpath"
 }
 
-resource "kubernetes_service_account" "test" {
+resource "kubernetes_service_account_v1" "test" {
   metadata {
     name = "test"
   }
@@ -3187,7 +3160,7 @@ resource "kubernetes_pod_v1" "test" {
     container {
       name    = "default"
       image   = "%s"
-      command = ["sleep", "3600s"]
+      command = ["sleep", "300"]
       volume_mount {
         mount_path = "/etc/test"
         name       = "pvc"
@@ -3199,6 +3172,7 @@ resource "kubernetes_pod_v1" "test" {
         claim_name = kubernetes_persistent_volume_claim.test.metadata[0].name
       }
     }
+    termination_grace_period_seconds = 1
   }
 }
 `, name, serviceAccount, imageName)
@@ -3230,19 +3204,26 @@ func testAccKubernetesPodV1TopologySpreadConstraintConfig(podName, imageName str
 }
 
 func testAccKubernetesPodV1ConfigRuntimeClassName(name, imageName, runtimeHandler string) string {
-	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_runtime_class_v1" "test" {
   metadata {
-    name = "%s"
+    name = %[3]q
+  }
+  handler = "runc"
+}
+
+resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = %[1]q
   }
   spec {
-    runtime_class_name = "%s"
+    runtime_class_name = kubernetes_runtime_class_v1.test.metadata.0.name
     container {
-      image = "%s"
+      image = %[2]q
       name  = "containername"
     }
   }
 }
-`, name, runtimeHandler, imageName)
+`, name, imageName, runtimeHandler)
 }
 
 func testAccKubernetesCustomScheduler(name string) string {
@@ -3424,6 +3405,7 @@ func testAccKubernetesPodV1EphemeralStorage(podName, imageName, volumeName strin
         }
       }
     }
+    termination_grace_period_seconds = 1
   }
 }
 `, podName, imageName, volumeName)

@@ -116,7 +116,7 @@ func TestAccKubernetesLimitRangeV1_empty(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	resourceName := "kubernetes_limit_range_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -145,7 +145,7 @@ func TestAccKubernetesLimitRangeV1_generatedName(t *testing.T) {
 	prefix := "tf-acc-test-"
 	resourceName := "kubernetes_limit_range_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -175,7 +175,7 @@ func TestAccKubernetesLimitRangeV1_typeChange(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	resourceName := "kubernetes_limit_range_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -225,7 +225,7 @@ func TestAccKubernetesLimitRangeV1_multipleLimits(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	resourceName := "kubernetes_limit_range_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},

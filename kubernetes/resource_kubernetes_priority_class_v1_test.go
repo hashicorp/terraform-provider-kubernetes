@@ -82,7 +82,6 @@ func TestAccKubernetesPriorityClassV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "value", "100"),
 					resource.TestCheckResourceAttr(resourceName, "description", "Foobar"),
-					resource.TestCheckResourceAttr(resourceName, "global_default", "true"),
 					resource.TestCheckResourceAttr(resourceName, "preemption_policy", "Never"),
 				),
 			},
@@ -95,7 +94,7 @@ func TestAccKubernetesPriorityClassV1_generatedName(t *testing.T) {
 	prefix := "tf-acc-test-"
 	resourceName := "kubernetes_priority_class_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -113,6 +112,42 @@ func TestAccKubernetesPriorityClassV1_generatedName(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "value", "999"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPriorityClassV1_globalDefault(t *testing.T) {
+	var conf api.PriorityClass
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_priority_class_v1.test"
+
+	// This test has a global cluster effect and thus should be run sequentially before all parallel tests.
+	// Otherwise, it may affect all Pod-related tests due to this setting: `global_default = true`.
+	// The globalDefault field indicates that the value of this PriorityClass should be used for Pods without a priorityClassName.
+	// More information: https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/#priorityclass
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPriorityClassV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPriorityClassV1Config_globalDefault(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPriorityClassV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "value", "100"),
+					resource.TestCheckResourceAttr(resourceName, "description", "Foobar"),
+					resource.TestCheckResourceAttr(resourceName, "global_default", "true"),
+					resource.TestCheckResourceAttr(resourceName, "preemption_policy", "Never"),
 				),
 			},
 		},
@@ -223,7 +258,6 @@ func testAccKubernetesPriorityClassV1Config_modified(name string) string {
 
   value             = 100
   description       = "Foobar"
-  global_default    = true
   preemption_policy = "Never"
 }
 `, name)
@@ -238,4 +272,18 @@ func testAccKubernetesPriorityClassV1Config_generatedName(prefix string) string 
   value = 999
 }
 `, prefix)
+}
+
+func testAccKubernetesPriorityClassV1Config_globalDefault(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_priority_class_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  value             = 100
+  description       = "Foobar"
+  preemption_policy = "Never"
+  global_default    = true
+}
+`, name)
 }

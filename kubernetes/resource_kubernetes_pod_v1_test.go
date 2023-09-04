@@ -248,7 +248,7 @@ func TestAccKubernetesPodV1_updateEnvForceNew(t *testing.T) {
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 
-	imageName := "hashicorp/http-echo:latest"
+	imageName := busyboxImage
 	envBefore := "bar"
 	envAfter := "baz"
 	resourceName := "kubernetes_pod_v1.test"

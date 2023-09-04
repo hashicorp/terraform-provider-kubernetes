@@ -116,7 +116,7 @@ func TestAccKubernetesLimitRangeV1_empty(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	resourceName := "kubernetes_limit_range_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -143,9 +143,10 @@ func TestAccKubernetesLimitRangeV1_empty(t *testing.T) {
 func TestAccKubernetesLimitRangeV1_generatedName(t *testing.T) {
 	var conf api.LimitRange
 	prefix := "tf-acc-test-"
+	ns := fmt.Sprintf("%s-%s", prefix, acctest.RandString(10))
 	resourceName := "kubernetes_limit_range_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -153,7 +154,7 @@ func TestAccKubernetesLimitRangeV1_generatedName(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesLimitRangeDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesLimitRangeV1Config_generatedName(prefix),
+				Config: testAccKubernetesLimitRangeV1Config_generatedName(prefix, ns),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesLimitRangeExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
@@ -175,7 +176,7 @@ func TestAccKubernetesLimitRangeV1_typeChange(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	resourceName := "kubernetes_limit_range_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -225,7 +226,7 @@ func TestAccKubernetesLimitRangeV1_multipleLimits(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	resourceName := "kubernetes_limit_range_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -318,16 +319,29 @@ func testAccCheckKubernetesLimitRangeExists(n string, obj *api.LimitRange) resou
 }
 
 func testAccKubernetesLimitRangeV1Config_empty(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_limit_range_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
-    name = "%s"
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_limit_range_v1" "test" {
+  metadata {
+    name      = %[1]q
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
   }
 }
 `, name)
 }
 
 func testAccKubernetesLimitRangeV1Config_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_limit_range_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_limit_range_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -339,7 +353,8 @@ func testAccKubernetesLimitRangeV1Config_basic(name string) string {
       TestLabelFour  = "four"
     }
 
-    name = "%s"
+    name      = %[1]q
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
   }
 
   spec {
@@ -362,7 +377,13 @@ func testAccKubernetesLimitRangeV1Config_basic(name string) string {
 }
 
 func testAccKubernetesLimitRangeV1Config_metaModified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_limit_range_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_limit_range_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -375,7 +396,8 @@ func testAccKubernetesLimitRangeV1Config_metaModified(name string) string {
       TestLabelThree = "three"
     }
 
-    name = "%s"
+    name      = %[1]q
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
   }
 
   spec {
@@ -398,9 +420,16 @@ func testAccKubernetesLimitRangeV1Config_metaModified(name string) string {
 }
 
 func testAccKubernetesLimitRangeV1Config_specModified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_limit_range_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
-    name = "%s"
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_limit_range_v1" "test" {
+  metadata {
+    name      = %[1]q
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
   }
 
   spec {
@@ -426,10 +455,17 @@ func testAccKubernetesLimitRangeV1Config_specModified(name string) string {
 `, name)
 }
 
-func testAccKubernetesLimitRangeV1Config_generatedName(prefix string) string {
-	return fmt.Sprintf(`resource "kubernetes_limit_range_v1" "test" {
+func testAccKubernetesLimitRangeV1Config_generatedName(prefix, ns string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
-    generate_name = "%s"
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_limit_range_v1" "test" {
+  metadata {
+    generate_name = %[2]q
+    namespace     = kubernetes_namespace_v1.test.metadata.0.name
   }
 
   spec {
@@ -438,13 +474,20 @@ func testAccKubernetesLimitRangeV1Config_generatedName(prefix string) string {
     }
   }
 }
-`, prefix)
+`, ns, prefix)
 }
 
 func testAccKubernetesLimitRangeV1Config_typeChange(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_limit_range_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
-    name = "%s"
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_limit_range_v1" "test" {
+  metadata {
+    name      = %[1]q
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
   }
 
   spec {
@@ -462,9 +505,16 @@ func testAccKubernetesLimitRangeV1Config_typeChange(name string) string {
 }
 
 func testAccKubernetesLimitRangeV1Config_typeChangeModified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_limit_range_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
-    name = "%s"
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_limit_range_v1" "test" {
+  metadata {
+    name      = %[1]q
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
   }
 
   spec {
@@ -482,9 +532,16 @@ func testAccKubernetesLimitRangeV1Config_typeChangeModified(name string) string 
 }
 
 func testAccKubernetesLimitRangeV1Config_multipleLimits(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_limit_range_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
-    name = "%s"
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_limit_range_v1" "test" {
+  metadata {
+    name      = %[1]q
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
   }
 
   spec {

@@ -308,14 +308,14 @@ func Provider() *schema.Provider {
 			"kubernetes_certificate_signing_request_v1": resourceKubernetesCertificateSigningRequestV1(),
 
 			// rbac
-			"kubernetes_role":                    resourceKubernetesRole(),
-			"kubernetes_role_v1":                 resourceKubernetesRole(),
-			"kubernetes_role_binding":            resourceKubernetesRoleBinding(),
-			"kubernetes_role_binding_v1":         resourceKubernetesRoleBinding(),
-			"kubernetes_cluster_role":            resourceKubernetesClusterRole(),
-			"kubernetes_cluster_role_v1":         resourceKubernetesClusterRole(),
-			"kubernetes_cluster_role_binding":    resourceKubernetesClusterRoleBinding(),
-			"kubernetes_cluster_role_binding_v1": resourceKubernetesClusterRoleBinding(),
+			"kubernetes_role":                    resourceKubernetesRoleV1(),
+			"kubernetes_role_v1":                 resourceKubernetesRoleV1(),
+			"kubernetes_role_binding":            resourceKubernetesRoleBindingV1(),
+			"kubernetes_role_binding_v1":         resourceKubernetesRoleBindingV1(),
+			"kubernetes_cluster_role":            resourceKubernetesClusterRoleV1(),
+			"kubernetes_cluster_role_v1":         resourceKubernetesClusterRoleV1(),
+			"kubernetes_cluster_role_binding":    resourceKubernetesClusterRoleBindingV1(),
+			"kubernetes_cluster_role_binding_v1": resourceKubernetesClusterRoleBindingV1(),
 
 			// networking
 			"kubernetes_ingress":           resourceKubernetesIngressV1Beta1(),

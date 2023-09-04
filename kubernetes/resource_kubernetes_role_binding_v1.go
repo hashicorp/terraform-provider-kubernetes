@@ -8,20 +8,19 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	api "k8s.io/api/rbac/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesRoleBinding() *schema.Resource {
+func resourceKubernetesRoleBindingV1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesRoleBindingCreate,
-		ReadContext:   resourceKubernetesRoleBindingRead,
-		UpdateContext: resourceKubernetesRoleBindingUpdate,
-		DeleteContext: resourceKubernetesRoleBindingDelete,
+		CreateContext: resourceKubernetesRoleBindingV1Create,
+		ReadContext:   resourceKubernetesRoleBindingV1Read,
+		UpdateContext: resourceKubernetesRoleBindingV1Update,
+		DeleteContext: resourceKubernetesRoleBindingV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -51,14 +50,14 @@ func resourceKubernetesRoleBinding() *schema.Resource {
 	}
 }
 
-func resourceKubernetesRoleBindingCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesRoleBindingV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	binding := &api.RoleBinding{
+	binding := &rbacv1.RoleBinding{
 		ObjectMeta: metadata,
 		RoleRef:    expandRBACRoleRef(d.Get("role_ref").([]interface{})),
 		Subjects:   expandRBACSubjects(d.Get("subject").([]interface{})),
@@ -72,11 +71,11 @@ func resourceKubernetesRoleBindingCreate(ctx context.Context, d *schema.Resource
 	log.Printf("[INFO] Submitted new RoleBinding: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesRoleBindingRead(ctx, d, meta)
+	return resourceKubernetesRoleBindingV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesRoleBindingRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesRoleBindingExists(ctx, d, meta)
+func resourceKubernetesRoleBindingV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesRoleBindingV1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -124,7 +123,7 @@ func resourceKubernetesRoleBindingRead(ctx context.Context, d *schema.ResourceDa
 	return nil
 }
 
-func resourceKubernetesRoleBindingUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesRoleBindingV1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -152,10 +151,10 @@ func resourceKubernetesRoleBindingUpdate(ctx context.Context, d *schema.Resource
 	log.Printf("[INFO] Submitted updated RoleBinding: %#v", out)
 	d.SetId(buildId(out.ObjectMeta))
 
-	return resourceKubernetesRoleBindingRead(ctx, d, meta)
+	return resourceKubernetesRoleBindingV1Read(ctx, d, meta)
 }
 
-func resourceKubernetesRoleBindingDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesRoleBindingV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -179,7 +178,7 @@ func resourceKubernetesRoleBindingDelete(ctx context.Context, d *schema.Resource
 	return nil
 }
 
-func resourceKubernetesRoleBindingExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesRoleBindingV1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

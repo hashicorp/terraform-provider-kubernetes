@@ -12,25 +12,26 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	api "k8s.io/api/rbac/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesClusterRole_basic(t *testing.T) {
-	var conf api.ClusterRole
-	resourceName := "kubernetes_cluster_role.test"
+func TestAccKubernetesClusterRoleV1_basic(t *testing.T) {
+	var conf rbacv1.ClusterRole
+	resourceName := "kubernetes_cluster_role_v1.test"
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resource.Test(t, resource.TestCase{
+
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesClusterRoleConfig_basic(name),
+				Config: testAccKubernetesClusterRoleConfigV1_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "rule.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.0", "pods"),
@@ -47,9 +48,9 @@ func TestAccKubernetesClusterRole_basic(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config: testAccKubernetesClusterRoleConfig_modified(name),
+				Config: testAccKubernetesClusterRoleConfigV1_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "rule.#", "3"),
 					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.#", "3"),
 					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.2", "watch"),
@@ -69,22 +70,22 @@ func TestAccKubernetesClusterRole_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRole_generatedName(t *testing.T) {
-	var conf api.ClusterRole
+func TestAccKubernetesClusterRoleV1_generatedName(t *testing.T) {
+	var conf rbacv1.ClusterRole
 	prefix := "tf-acc-test-gen:"
-	resourceName := "kubernetes_cluster_role.test"
+	resourceName := "kubernetes_cluster_role_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     "kubernetes_cluster_role.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesClusterRoleConfig_generateName(prefix),
+				Config: testAccKubernetesClusterRoleConfigV1_generateName(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists("kubernetes_cluster_role.test", &conf),
+					testAccCheckKubernetesClusterRoleV1Exists(resourceName, &conf),
 					resource.TestMatchResourceAttr(resourceName, "metadata.0.name", regexp.MustCompile("^"+prefix)),
 					resource.TestCheckResourceAttr(resourceName, "rule.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.#", "1"),
@@ -97,21 +98,22 @@ func TestAccKubernetesClusterRole_generatedName(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRole_UpdatePatchOperationsOrderWithRemovals(t *testing.T) {
-	var conf api.ClusterRole
-	resourceName := "kubernetes_cluster_role.test"
+func TestAccKubernetesClusterRoleV1_UpdatePatchOperationsOrderWithRemovals(t *testing.T) {
+	var conf rbacv1.ClusterRole
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resource.Test(t, resource.TestCase{
+	resourceName := "kubernetes_cluster_role_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesClusterRoleConfigBug_step_0(name),
+				Config: testAccKubernetesClusterRoleConfigV1Bug_step_0(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "rule.#", "3"),
 					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.0", "pods"),
@@ -128,9 +130,9 @@ func TestAccKubernetesClusterRole_UpdatePatchOperationsOrderWithRemovals(t *test
 				),
 			},
 			{
-				Config: testAccKubernetesClusterRoleConfigBug_step_1(name),
+				Config: testAccKubernetesClusterRoleConfigV1Bug_step_1(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "rule.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.0", "deployments"),
@@ -145,9 +147,9 @@ func TestAccKubernetesClusterRole_UpdatePatchOperationsOrderWithRemovals(t *test
 				),
 			},
 			{
-				Config: testAccKubernetesClusterRoleConfigBug_step_2(name),
+				Config: testAccKubernetesClusterRoleConfigV1Bug_step_2(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "rule.#", "4"),
 					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.0", "pods"),
@@ -172,21 +174,22 @@ func TestAccKubernetesClusterRole_UpdatePatchOperationsOrderWithRemovals(t *test
 	})
 }
 
-func TestAccKubernetesClusterRole_aggregationRuleBasic(t *testing.T) {
-	var conf api.ClusterRole
-	resourceName := "kubernetes_cluster_role.test"
+func TestAccKubernetesClusterRoleV1_aggregationRuleBasic(t *testing.T) {
+	var conf rbacv1.ClusterRole
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resource.Test(t, resource.TestCase{
+	resourceName := "kubernetes_cluster_role_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesClusterRoleConfig_aggRule(name),
+				Config: testAccKubernetesClusterRoleConfigV1_aggRule(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.0.match_expressions.0.key", "environment"),
@@ -202,9 +205,9 @@ func TestAccKubernetesClusterRole_aggregationRuleBasic(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config: testAccKubernetesClusterRoleConfig_aggRuleModified(name),
+				Config: testAccKubernetesClusterRoleConfigV1_aggRuleModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.0.match_expressions.0.key", "env"),
@@ -217,21 +220,22 @@ func TestAccKubernetesClusterRole_aggregationRuleBasic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRole_aggregationRuleMultiple(t *testing.T) {
-	var conf api.ClusterRole
-	resourceName := "kubernetes_cluster_role.test"
+func TestAccKubernetesClusterRoleV1_aggregationRuleMultiple(t *testing.T) {
+	var conf rbacv1.ClusterRole
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resource.Test(t, resource.TestCase{
+	resourceName := "kubernetes_cluster_role_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesClusterRoleConfig_aggRuleMultiple(name),
+				Config: testAccKubernetesClusterRoleConfigV1_aggRuleMultiple(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.0.match_labels.foo", "bar"),
@@ -245,9 +249,9 @@ func TestAccKubernetesClusterRole_aggregationRuleMultiple(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config: testAccKubernetesClusterRoleConfig_aggRuleMultipleModified(name),
+				Config: testAccKubernetesClusterRoleConfigV1_aggRuleMultipleModified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "aggregation_rule.0.cluster_role_selectors.0.match_labels.bar", "foo"),
@@ -258,27 +262,28 @@ func TestAccKubernetesClusterRole_aggregationRuleMultiple(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRole_aggregationRuleRuleAggregation(t *testing.T) {
-	var conf api.ClusterRole
-	resourceName := "kubernetes_cluster_role.test"
+func TestAccKubernetesClusterRoleV1_aggregationRuleRuleAggregation(t *testing.T) {
+	var conf rbacv1.ClusterRole
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resource.Test(t, resource.TestCase{
+	resourceName := "kubernetes_cluster_role_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesClusterRoleDestroy,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesClusterRoleConfig_aggRule2(name),
+				Config: testAccKubernetesClusterRoleConfigV1_aggRule2(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleV1Exists(resourceName, &conf),
 				),
 			},
 			{
-				Config: testAccKubernetesClusterRoleConfig_aggRule2(name),
+				Config: testAccKubernetesClusterRoleConfigV1_aggRule2(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleExists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "rule.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "rule.0.resources.0", "pods"),
@@ -292,7 +297,7 @@ func TestAccKubernetesClusterRole_aggregationRuleRuleAggregation(t *testing.T) {
 	})
 }
 
-func testAccCheckKubernetesClusterRoleDestroy(s *terraform.State) error {
+func testAccCheckKubernetesClusterRoleV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	if err != nil {
@@ -301,7 +306,7 @@ func testAccCheckKubernetesClusterRoleDestroy(s *terraform.State) error {
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_cluster_role" {
+		if rs.Type != "kubernetes_cluster_role_v1" {
 			continue
 		}
 		resp, err := conn.RbacV1().ClusterRoles().Get(ctx, rs.Primary.ID, metav1.GetOptions{})
@@ -314,7 +319,7 @@ func testAccCheckKubernetesClusterRoleDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckKubernetesClusterRoleExists(n string, obj *api.ClusterRole) resource.TestCheckFunc {
+func testAccCheckKubernetesClusterRoleV1Exists(n string, obj *rbacv1.ClusterRole) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -335,8 +340,8 @@ func testAccCheckKubernetesClusterRoleExists(n string, obj *api.ClusterRole) res
 	}
 }
 
-func testAccKubernetesClusterRoleConfig_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
+func testAccKubernetesClusterRoleConfigV1_basic(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
   metadata {
     labels = {
       TestLabelOne   = "one"
@@ -356,8 +361,8 @@ func testAccKubernetesClusterRoleConfig_basic(name string) string {
 `, name)
 }
 
-func testAccKubernetesClusterRoleConfig_generateName(prefixName string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
+func testAccKubernetesClusterRoleConfigV1_generateName(prefixName string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -371,8 +376,8 @@ func testAccKubernetesClusterRoleConfig_generateName(prefixName string) string {
 `, prefixName)
 }
 
-func testAccKubernetesClusterRoleConfig_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
+func testAccKubernetesClusterRoleConfigV1_modified(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
   metadata {
     labels = {
       TestLabelOne   = "one"
@@ -402,8 +407,8 @@ func testAccKubernetesClusterRoleConfig_modified(name string) string {
 `, name)
 }
 
-func testAccKubernetesClusterRoleConfigBug_step_0(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
+func testAccKubernetesClusterRoleConfigV1Bug_step_0(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -428,8 +433,8 @@ func testAccKubernetesClusterRoleConfigBug_step_0(name string) string {
 `, name)
 }
 
-func testAccKubernetesClusterRoleConfigBug_step_1(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
+func testAccKubernetesClusterRoleConfigV1Bug_step_1(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -449,8 +454,8 @@ func testAccKubernetesClusterRoleConfigBug_step_1(name string) string {
 `, name)
 }
 
-func testAccKubernetesClusterRoleConfigBug_step_2(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
+func testAccKubernetesClusterRoleConfigV1Bug_step_2(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -481,8 +486,8 @@ func testAccKubernetesClusterRoleConfigBug_step_2(name string) string {
 `, name)
 }
 
-func testAccKubernetesClusterRoleConfig_aggRule(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
+func testAccKubernetesClusterRoleConfigV1_aggRule(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
   metadata {
     labels = {
       TestLabelOne   = "one"
@@ -510,8 +515,8 @@ func testAccKubernetesClusterRoleConfig_aggRule(name string) string {
 `, name)
 }
 
-func testAccKubernetesClusterRoleConfig_aggRuleModified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
+func testAccKubernetesClusterRoleConfigV1_aggRuleModified(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
   metadata {
     labels = {
       TestLabelOne   = "one"
@@ -539,8 +544,8 @@ func testAccKubernetesClusterRoleConfig_aggRuleModified(name string) string {
 `, name)
 }
 
-func testAccKubernetesClusterRoleConfig_aggRuleMultiple(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
+func testAccKubernetesClusterRoleConfigV1_aggRuleMultiple(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -561,8 +566,8 @@ func testAccKubernetesClusterRoleConfig_aggRuleMultiple(name string) string {
 `, name)
 }
 
-func testAccKubernetesClusterRoleConfig_aggRuleMultipleModified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
+func testAccKubernetesClusterRoleConfigV1_aggRuleMultipleModified(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -583,8 +588,8 @@ func testAccKubernetesClusterRoleConfig_aggRuleMultipleModified(name string) str
 `, name)
 }
 
-func testAccKubernetesClusterRoleConfig_aggRule2(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
+func testAccKubernetesClusterRoleConfigV1_aggRule2(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
   metadata {
     name = "%[1]s"
   }
@@ -598,7 +603,7 @@ func testAccKubernetesClusterRoleConfig_aggRule2(name string) string {
   }
 }
 
-resource "kubernetes_cluster_role" "test2" {
+resource "kubernetes_cluster_role_v1" "test2" {
   metadata {
     labels = {
       "rbac.example.com/aggregate-to-monitoring" = "true"

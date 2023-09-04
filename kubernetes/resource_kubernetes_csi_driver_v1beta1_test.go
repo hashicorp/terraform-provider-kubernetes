@@ -15,12 +15,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesCSIDriver_basic(t *testing.T) {
+func TestAccKubernetesCSIDriverV1Beta1_basic(t *testing.T) {
 	var conf api.CSIDriver
 	resourceName := "kubernetes_csi_driver.test"
 	name := acctest.RandomWithPrefix("tf-acc-test")
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
@@ -28,12 +28,12 @@ func TestAccKubernetesCSIDriver_basic(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesCSIDriverDestroy,
+		CheckDestroy:      testAccCheckKubernetesCSIDriverV1Beta1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesCSIDriverBasicConfig(name, true),
+				Config: testAccKubernetesCSIDriverBasicV1Beta1Config(name, true),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesCSIDriverExists(resourceName, &conf),
+					testAccCheckKubernetesCSIDriverV1Beta1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.attach_required", "true"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_info_on_mount", "true"),
@@ -49,7 +49,7 @@ func TestAccKubernetesCSIDriver_basic(t *testing.T) {
 	})
 }
 
-func testAccCheckKubernetesCSIDriverDestroy(s *terraform.State) error {
+func testAccCheckKubernetesCSIDriverV1Beta1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
 	if err != nil {
@@ -73,7 +73,7 @@ func testAccCheckKubernetesCSIDriverDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccCheckKubernetesCSIDriverExists(n string, obj *api.CSIDriver) resource.TestCheckFunc {
+func testAccCheckKubernetesCSIDriverV1Beta1Exists(n string, obj *api.CSIDriver) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -97,7 +97,7 @@ func testAccCheckKubernetesCSIDriverExists(n string, obj *api.CSIDriver) resourc
 	}
 }
 
-func testAccKubernetesCSIDriverBasicConfig(name string, attached bool) string {
+func testAccKubernetesCSIDriverBasicV1Beta1Config(name string, attached bool) string {
 	return fmt.Sprintf(`resource "kubernetes_csi_driver" "test" {
   metadata {
     name = %[1]q

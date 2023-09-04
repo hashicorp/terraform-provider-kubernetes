@@ -19,12 +19,12 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesCSIDriver() *schema.Resource {
+func resourceKubernetesCSIDriverV1Beta1() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesCSIDriverCreate,
-		ReadContext:   resourceKubernetesCSIDriverRead,
-		UpdateContext: resourceKubernetesCSIDriverUpdate,
-		DeleteContext: resourceKubernetesCSIDriverDelete,
+		CreateContext: resourceKubernetesCSIDriverV1Beta1Create,
+		ReadContext:   resourceKubernetesCSIDriverV1Beta1Read,
+		UpdateContext: resourceKubernetesCSIDriverV1Beta1Update,
+		DeleteContext: resourceKubernetesCSIDriverV1Beta1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -32,7 +32,7 @@ func resourceKubernetesCSIDriver() *schema.Resource {
 			"metadata": metadataSchema("csi driver", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: fmt.Sprintf("Spec of the CSIDriver"),
+				Description: fmt.Sprint("Spec of the CSIDriver"),
 				Optional:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
@@ -67,7 +67,7 @@ func resourceKubernetesCSIDriver() *schema.Resource {
 	}
 }
 
-func resourceKubernetesCSIDriverCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesCSIDriverV1Beta1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -86,11 +86,11 @@ func resourceKubernetesCSIDriverCreate(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[INFO] Submitted new CSIDriver: %#v", out)
 	d.SetId(out.Name)
 
-	return resourceKubernetesCSIDriverRead(ctx, d, meta)
+	return resourceKubernetesCSIDriverV1Beta1Read(ctx, d, meta)
 }
 
-func resourceKubernetesCSIDriverRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	exists, err := resourceKubernetesCSIDriverExists(ctx, d, meta)
+func resourceKubernetesCSIDriverV1Beta1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	exists, err := resourceKubernetesCSIDriverV1Beta1Exists(ctx, d, meta)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -129,7 +129,7 @@ func resourceKubernetesCSIDriverRead(ctx context.Context, d *schema.ResourceData
 	return nil
 }
 
-func resourceKubernetesCSIDriverUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesCSIDriverV1Beta1Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -156,10 +156,10 @@ func resourceKubernetesCSIDriverUpdate(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[INFO] Submitted updated CSIDriver: %#v", out)
 	d.SetId(out.ObjectMeta.Name)
 
-	return resourceKubernetesCSIDriverRead(ctx, d, meta)
+	return resourceKubernetesCSIDriverV1Beta1Read(ctx, d, meta)
 }
 
-func resourceKubernetesCSIDriverDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceKubernetesCSIDriverV1Beta1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -193,7 +193,7 @@ func resourceKubernetesCSIDriverDelete(ctx context.Context, d *schema.ResourceDa
 	return nil
 }
 
-func resourceKubernetesCSIDriverExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
+func resourceKubernetesCSIDriverV1Beta1Exists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return false, err

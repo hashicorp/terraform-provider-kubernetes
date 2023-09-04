@@ -332,8 +332,8 @@ func Provider() *schema.Provider {
 			"kubernetes_pod_security_policy_v1beta1": resourceKubernetesPodSecurityPolicyV1Beta1(),
 
 			// scheduling
-			"kubernetes_priority_class":    resourceKubernetesPriorityClass(),
-			"kubernetes_priority_class_v1": resourceKubernetesPriorityClass(),
+			"kubernetes_priority_class":    resourceKubernetesPriorityClassV1(),
+			"kubernetes_priority_class_v1": resourceKubernetesPriorityClassV1(),
 
 			// admission control
 			"kubernetes_validating_webhook_configuration":    resourceKubernetesValidatingWebhookConfigurationV1Beta1(),

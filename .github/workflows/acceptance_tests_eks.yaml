@@ -11,22 +11,30 @@ on:
         default: 2
       clusterVersion:
         description: The EKS cluster version
-        default: 1.25
+        default: 1.27
       nodesPerAz:
         description: The number of cluster nodes in each AZ
-        default: 2
+        default: 1
       instanceType:
         description: The type of EC2 instance to use for cluster nodes
-        default: m5.large
+        default: m7g.xlarge
+      parallelRuns:
+        description: The maximum number of tests to run simultaneously
+        default: 8
       runTests:
         description: The regex passed to the -run option of `go test`
         default: ".*"
       terraformVersion:
         description: Terraform version
-        default: 1.4.0
+        default: 1.5.6
+  schedule:
+    - cron: '0 20 * * *'
 
 env:
   AWS_REGION: ${{ github.event.inputs.region }}
+  KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/eks/kubeconfig
+  PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || vars.PARALLEL_RUNS }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
   TF_VAR_az_span: ${{ github.event.inputs.azSpan }}
   TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion }}
   TF_VAR_nodes_per_az: ${{ github.event.inputs.nodesPerAz }}
@@ -34,7 +42,7 @@ env:
 
 jobs:
   acceptance_tests:
-    runs-on: ubuntu-latest
+    runs-on: [custom, linux, medium]
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Set up Go
@@ -53,17 +61,25 @@ jobs:
       - name: Install Terraform
         uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
         with:
-          terraform_version: ${{ github.event.inputs.terraformVersion }}
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
       - name: Provision EKS Cluster
         working-directory: ${{ github.workspace }}/kubernetes/test-infra/eks
         run: |
           terraform init
           terraform apply --auto-approve
+      - name: Install AWS EBS CSI Driver
+        working-directory: ${{ github.workspace }}/kubernetes/test-infra/aws-ebs-csi-driver
+        run: |
+          terraform init
+          terraform apply --auto-approve
       - name: Run Acceptance Test Suite
         env:
-          TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion }}
           TESTARGS: -run '${{ github.event.inputs.runTests }}'
-          KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/eks/kubeconfig
+          # Do not set TF_ACC_TERRAFORM_PATH or TF_ACC_TERRAFORM_VERSION.
+          # In this case, the framework will search for the Terraform CLI binary based on the operating system PATH.
+          # Eventually, it will use the one we set up.
+          # More information: https://developer.hashicorp.com/terraform/plugin/sdkv2/testing/acceptance-tests#terraform-cli-installation-behaviors
         run: |
           make testacc
       - name: Destroy EKS cluster

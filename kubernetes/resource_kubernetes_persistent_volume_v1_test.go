@@ -410,9 +410,10 @@ func TestAccKubernetesPersistentVolumeV1_googleCloud_volumeSource(t *testing.T) 
 				),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesPersistentVolumeV1Config_hostPath_volumeSource(name, "/custom/testing/path", ""),
@@ -775,9 +776,10 @@ func TestAccKubernetesPersistentVolumeV1_csi_basic(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesPersistentVolumeV1Config_csi_modified(name),

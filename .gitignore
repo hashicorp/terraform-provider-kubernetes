@@ -5,6 +5,7 @@ example.tf
 kubeconfig
 terraform.tfplan
 terraform.tfstate
+.terraform.tfstate.lock.info
 bin/
 modules-dev/
 /pkg/

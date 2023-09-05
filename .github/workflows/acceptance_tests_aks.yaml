@@ -18,13 +18,15 @@ on:
       terraformVersion:
         description: Terraform version
         default: 1.4.2
+      schedule:
+        cron: '0 22 * * *'
       runTests:
         description: The regex passed to the -run option of `go test`
         default: ".*"
 
 jobs:
   acceptanceTests:
-    runs-on: ubuntu-latest
+    runs-on: [custom, linux, medium]
     steps:
       - name: Checkout 
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
@@ -35,7 +37,7 @@ jobs:
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: ${{ inputs.terraformVersion }} 
+          terraform_version: ${{ env.terraformVersion }} 
       - name: Azure login 
         uses: azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.6
         with:
@@ -47,7 +49,7 @@ jobs:
           terraform apply --auto-approve
       - name: Run Tests  
         env: 
-          TF_ACC_TERRAFORM_VERSION: ${{ inputs.terraformVersion }}
+          TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
           KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks-new/kubeconfig
           TESTARGS: -run '${{ inputs.runTests }}'
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}

@@ -504,7 +504,6 @@ func testAccKubernetesStatefulSetV1ConfigBasic(name, imageName string) string {
 
       spec {
         access_modes = ["ReadWriteOnce"]
-
         resources {
           requests = {
             storage = "1Gi"

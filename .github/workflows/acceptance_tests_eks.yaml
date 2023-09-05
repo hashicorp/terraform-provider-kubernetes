@@ -17,7 +17,7 @@ on:
         default: 1
       instanceType:
         description: The type of EC2 instance to use for cluster nodes
-        default: m7g.xlarge
+        default: m7g.large
       parallelRuns:
         description: The maximum number of tests to run simultaneously
         default: 8

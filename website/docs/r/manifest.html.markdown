@@ -194,7 +194,7 @@ resource "kubernetes_manifest" "test" {
 
 ## Computed fields
 
-When setting the value of an field in configuration, Terraform will check that the same value is returned after the apply operation. This ensures that the actual configuration requested by the user is successfully applied. In some cases, with the Kubernetes API this is not the desired behavior. Particularly when using mutating admission controllers, there is a chance that the values configured by the user will be modified by the API. 
+When setting the value of an field in configuration, Terraform will check that the same value is returned after the apply operation. This ensures that the actual configuration requested by the user is successfully applied. In some cases, with the Kubernetes API this is not the desired behavior. Particularly when using mutating admission controllers, there is a chance that the values configured by the user will be modified by the API. This usually manifest as `Error: Provider produced inconsistent result after apply` and `produced an unexpected new value:` messages when applying.
 
 To accommodate this, the `kubernetes_manifest` resources allows defining so-called "computed" fields. When an field is defined as "computed" Terraform will allow the final value stored in state after `apply` as returned by the API to be different than what the user requested. 
 

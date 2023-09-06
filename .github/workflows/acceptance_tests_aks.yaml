@@ -14,15 +14,19 @@ on:
         default: "Standard_A4_v2"
       kubernetes_version:
         description: 'The version of kubernetes'
-        default: "1.25.5"
+        default: "1.27"
       terraformVersion:
         description: Terraform version
         default: 1.4.2
-      schedule:
-        cron: '0 22 * * *'
       runTests:
         description: The regex passed to the -run option of `go test`
         default: ".*"
+  schedule:
+    - cron: '0 22 * * *'
+
+env:
+  KUBECONFIG: ${{ github.workspace }}/.kube/confi
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
 
 jobs:
   acceptanceTests:
@@ -37,19 +41,18 @@ jobs:
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: ${{ env.terraformVersion }} 
+          terraform_version: ${{ env.TERRAFORM_VERSION }} 
       - name: Azure login 
         uses: azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.6
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Provision AKS
-        working-directory: ./kubernetes/test-infra/aks-new
+        working-directory: ${{ github.workspace }}/kubernetes/test-infra/aks-new
         run: | 
           terraform init 
           terraform apply --auto-approve
       - name: Run Tests  
         env: 
-          TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
           KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks-new/kubeconfig
           TESTARGS: -run '${{ inputs.runTests }}'
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}

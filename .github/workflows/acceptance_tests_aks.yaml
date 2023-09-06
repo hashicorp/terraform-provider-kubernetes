@@ -14,10 +14,10 @@ on:
         default: "Standard_A4_v2"
       kubernetes_version:
         description: 'The version of kubernetes'
-        default: "1.27"
+        default: ".*"
       terraformVersion:
         description: Terraform version
-        default: 1.4.2
+        default: 1.5.6
       runTests:
         description: The regex passed to the -run option of `go test`
         default: ".*"
@@ -25,8 +25,12 @@ on:
     - cron: '0 22 * * *'
 
 env:
-  KUBECONFIG: ${{ github.workspace }}/.kube/confi
-  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
+  KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks/kubeconfig
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}  
+  TF_VAR_az_span: ${{ github.event.inputs.azSpan }}
+  TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion }}
+  TF_VAR_nodes_per_az: ${{ github.event.inputs.nodesPerAz }}
+  TF_VAR_instance_type: ${{ github.event.inputs.instanceType }}
 
 jobs:
   acceptanceTests:
@@ -53,7 +57,6 @@ jobs:
           terraform apply --auto-approve
       - name: Run Tests  
         env: 
-          KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks-new/kubeconfig
           TESTARGS: -run '${{ inputs.runTests }}'
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
         run: |

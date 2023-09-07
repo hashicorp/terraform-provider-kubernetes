@@ -6,25 +6,39 @@ on:
       location:
         description: 'Location'
         default: "West Europe"
-      node_count:
+      nodeCount:
         description: 'Number of nodes to provision'
         default: 2
-      vm_size:
+      vmSize:
         description: 'The azure machine size for nodes'
         default: "Standard_A4_v2"
-      kubernetes_version:
+      clusterVersion:
         description: 'The version of kubernetes'
-        default: "1.25.5"
+        default: "1.27"
       terraformVersion:
         description: Terraform version
-        default: 1.4.2
+        default: 1.5.6
       runTests:
         description: The regex passed to the -run option of `go test`
         default: ".*"
+      parallelRuns:
+        description: The maximum number of tests to run simultaneously
+        default: 8
+  schedule:
+    - cron: '0 22 * * *'
 
+env:
+  KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks-new/kubeconfig
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
+  PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || vars.PARALLEL_RUNS }}
+  TF_VAR_location: ${{ github.event.inputs.location || vars.AZURE_LOCATION }}
+  TF_VAR_node_count: ${{ github.event.inputs.nodeCount || vars.AZURE_NODE_COUNT }}
+  TF_VAR_vm_size: ${{ github.event.inputs.vmSize || vars.AZURE_VM_SIZE }}  
+  TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion || vars.CLUSTER_VERSION}}
+  
 jobs:
   acceptanceTests:
-    runs-on: ubuntu-latest
+    runs-on: [custom, linux, medium]
     steps:
       - name: Checkout 
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
@@ -33,28 +47,27 @@ jobs:
         with:
           go-version-file: 'go.mod'
       - name: Install Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
         with:
-          terraform_version: ${{ inputs.terraformVersion }} 
+          terraform_version: ${{ env.TERRAFORM_VERSION }} 
+          terraform_wrapper: false
       - name: Azure login 
         uses: azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.6
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Provision AKS
-        working-directory: ./kubernetes/test-infra/aks-new
+        working-directory: ${{ github.workspace }}/kubernetes/test-infra/aks-new
         run: | 
           terraform init 
           terraform apply --auto-approve
       - name: Run Tests  
         env: 
-          TF_ACC_TERRAFORM_VERSION: ${{ inputs.terraformVersion }}
-          KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks-new/kubeconfig
           TESTARGS: -run '${{ inputs.runTests }}'
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
         run: |
           make testacc
       - name: Destroy AKS
         if: always()
-        working-directory: ./kubernetes/test-infra/aks-new 
+        working-directory: ${{ github.workspace }}/kubernetes/test-infra/aks-new 
         run: |
           terraform destroy --auto-approve

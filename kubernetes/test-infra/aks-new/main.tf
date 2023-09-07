@@ -17,7 +17,7 @@ resource "azurerm_kubernetes_cluster" "test" {
   location            = azurerm_resource_group.test_group.location
   resource_group_name = azurerm_resource_group.test_group.name
   dns_prefix          = "test"
-  kubernetes_version  = var.kubernetes_version
+  kubernetes_version  = var.cluster_version
 
   default_node_pool {
     name       = "default"

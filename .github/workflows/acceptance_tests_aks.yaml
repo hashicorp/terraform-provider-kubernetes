@@ -21,12 +21,16 @@ on:
       runTests:
         description: The regex passed to the -run option of `go test`
         default: ".*"
+      parallelRuns:
+        description: The maximum number of tests to run simultaneously
+        default: 8
   schedule:
     - cron: '0 22 * * *'
 
 env:
   KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks-new/kubeconfig
   TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
+  PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || vars.PARALLEL_RUNS }}
   TF_VAR_location: ${{ github.event.inputs.location || vars.AZURE_LOCATION }}
   TF_VAR_node_count: ${{ github.event.inputs.nodeCount || vars.AZURE_NODE_COUNT }}
   TF_VAR_vm_size: ${{ github.event.inputs.vmSize || vars.AZURE_VM_SIZE }}  

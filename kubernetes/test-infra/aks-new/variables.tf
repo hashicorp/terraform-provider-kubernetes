@@ -16,7 +16,7 @@ variable "vm_size" {
   default = "Standard_A4_v2"
 }
 
-variable "kubernetes_version" {
+variable "cluster_version" {
   type = string
-  default = "1.25.5"
+  default = "1.27"
 }

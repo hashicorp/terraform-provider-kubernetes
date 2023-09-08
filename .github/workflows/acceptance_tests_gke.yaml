@@ -24,7 +24,8 @@ on:
       terraformVersion:
         description: Terraform version
         default: 1.4.2
-
+  schedule:
+    - cron: '0 23 * * *'
 env:
   GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
   GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}

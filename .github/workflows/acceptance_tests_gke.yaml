@@ -23,13 +23,15 @@ on:
         default: ^TestAcc
       terraformVersion:
         description: Terraform version
-        default: 1.4.0
+        default: 1.4.2
 
 env:
   GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
   GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
-  GOOGLE_REGION: ${{ github.event.inputs.region }}
-  GOOGLE_ZONE: ${{github.event.inputs.zone}}
+  GOOGLE_REGION: ${{ github.event.inputs.region || vars.GOOGLE_REGION }}
+  GOOGLE_ZONE: ${{github.event.inputs.zone || vars.GOOGLE_ZONE }}
+  PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || vars.PARALLEL_RUNS }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
   USE_GKE_GCLOUD_AUTH_PLUGIN: True
   KUBECONFIG: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig
   KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig
@@ -41,7 +43,7 @@ jobs:
     permissions:
       contents: "read"
       id-token: "write"
-    runs-on: ubuntu-latest
+    runs-on: [custom, linux, medium]
     env:
       KUBECONFIG: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig
     steps:
@@ -106,7 +108,7 @@ jobs:
   acceptance-tests:
     name: "Test"
     needs: [prepare-gke-environment, generate-case-matrix]
-    runs-on: ubuntu-latest
+    runs-on: [custom, linux, medium]
     strategy:
       fail-fast: false
       matrix:

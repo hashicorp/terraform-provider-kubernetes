@@ -202,7 +202,7 @@ func resourceKubernetesHorizontalPodAutoscalerExists(ctx context.Context, d *sch
 }
 
 func useV2Beta2(d *schema.ResourceData) bool {
-	if len(d.Get("spec.0.metric").([]interface{})) > 0 {
+	if d.Get("spec.0.metric").(*schema.Set).Len() > 0 {
 		log.Printf("[INFO] Using autoscaling/v2beta2 because this resource has a metric field")
 		return true
 	}

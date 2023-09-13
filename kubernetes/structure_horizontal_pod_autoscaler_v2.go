@@ -32,8 +32,8 @@ func expandHorizontalPodAutoscalerV2Spec(in []interface{}) (*autoscalingv2.Horiz
 		spec.ScaleTargetRef = expandV2CrossVersionObjectReference(v.([]interface{}))
 	}
 
-	if v, ok := m["metric"].([]interface{}); ok {
-		spec.Metrics = expandV2Metrics(v)
+	if v, ok := m["metric"].((*schema.Set)); ok {
+		spec.Metrics = expandV2Metrics(v.List())
 	}
 
 	if v, ok := m["behavior"].([]interface{}); ok {

@@ -32,8 +32,8 @@ func expandHorizontalPodAutoscalerV2Beta2Spec(in []interface{}) (*autoscalingv2b
 		spec.ScaleTargetRef = expandV2Beta2CrossVersionObjectReference(v.([]interface{}))
 	}
 
-	if v, ok := m["metric"].([]interface{}); ok {
-		spec.Metrics = expandV2Beta2Metrics(v)
+	if v, ok := m["metric"].(*schema.Set); ok {
+		spec.Metrics = expandV2Beta2Metrics(v.List())
 	}
 
 	if v, ok := m["behavior"].([]interface{}); ok {
@@ -505,7 +505,7 @@ func patchHorizontalPodAutoscalerV2Beta2Spec(prefix string, pathPrefix string, d
 	if d.HasChange(prefix + "metric") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/metrics",
-			Value: expandV2Beta2Metrics(d.Get(prefix + "metric").([]interface{})),
+			Value: expandV2Beta2Metrics(d.Get(prefix + "metric").(*schema.Set).List()),
 		})
 	}
 

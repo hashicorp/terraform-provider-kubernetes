@@ -1,0 +1,3 @@
+```release-note:doc
+Add example module for configuring OIDC authentication on EKS
+```release-note:doc

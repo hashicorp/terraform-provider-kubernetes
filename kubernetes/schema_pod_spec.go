@@ -346,7 +346,7 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 					},
 					"windows_options": {
 						Type:        schema.TypeSet,
-						Description: "A list of groups applied to the first process run in each container, in addition to the container's primary GID. If unspecified, no groups will be added to any container.",
+						Description: "The Windows specific settings applied to all containers. If unspecified, the options within a container's SecurityContext will be used. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. Note that this field cannot be set when spec.os.name is linux.",
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						Elem: map[string]*schema.Schema{
@@ -362,11 +362,10 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 								Required:    true,
 								ForceNew:    !isUpdatable,
 							},
-							"run_as_user_name": {
+							"run_as_username": {
 								Type:        schema.TypeString,
 								Description: "The UserName in Windows to run the entrypoint of the container process. Defaults to the user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
-								Required:    true,
-								ForceNew:    !isUpdatable,
+								Optional:    true,
 							},
 						},
 					},

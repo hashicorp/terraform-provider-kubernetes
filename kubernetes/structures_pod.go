@@ -812,6 +812,12 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.NodeSelector = nodeSelectors
 	}
 
+	if v, ok := in["os"].(map[string]interface{}); ok {
+		if n, ok := v["name"].(string); ok && n != "" {
+			obj.OS.Name = v1.OSName(n)
+		}
+	}
+
 	if v, ok := in["runtime_class_name"].(string); ok && v != "" {
 		obj.RuntimeClassName = ptrToString(v)
 	}

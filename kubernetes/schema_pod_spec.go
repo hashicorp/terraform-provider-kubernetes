@@ -344,6 +344,32 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 							Type: schema.TypeInt,
 						},
 					},
+					"windows_options": {
+						Type:        schema.TypeSet,
+						Description: "A list of groups applied to the first process run in each container, in addition to the container's primary GID. If unspecified, no groups will be added to any container.",
+						Optional:    true,
+						ForceNew:    !isUpdatable,
+						Elem: map[string]*schema.Schema{
+							"gmsa_credential_spec": {
+								Type:        schema.TypeString,
+								Description: "GMSACredentialSpec is where the GMSA admission webhook inlines the contents of the GMSA credential spec named by the GMSACredentialSpecName field",
+								Required:    true,
+								ForceNew:    !isUpdatable,
+							},
+							"gmsa_credential_spec_name": {
+								Type:        schema.TypeString,
+								Description: "GMSACredentialSpecName is the name of the GMSA credential spec to use.",
+								Required:    true,
+								ForceNew:    !isUpdatable,
+							},
+							"run_as_user_name": {
+								Type:        schema.TypeString,
+								Description: "The UserName in Windows to run the entrypoint of the container process. Defaults to the user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
+								Required:    true,
+								ForceNew:    !isUpdatable,
+							},
+						},
+					},
 					"sysctl": {
 						Type:        schema.TypeList,
 						Optional:    true,

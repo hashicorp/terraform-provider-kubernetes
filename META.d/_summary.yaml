@@ -2,14 +2,12 @@
 
 schema: 1.1
 
-partition: hcp
-category: terraform
+partition: tf-ecosystem
 
 summary:
   owner: team-tf-hybrid-cloud
   description: |
     The Kubernetes provider for Terraform is a plugin that enables full lifecycle management of Kubernetes resources.
     
-
   visibility: external
-  auth_methods: |
+  

@@ -1,0 +1,10 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+runbooks: []
+#- name: <Link name>
+#  link: <Link URL>
+
+other_links: []
+#- name: <Link name>
+#  link: <Link URL>

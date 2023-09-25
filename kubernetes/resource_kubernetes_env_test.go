@@ -550,7 +550,7 @@ func confirmExistingCronJobEnvs(name, namespace string) error {
 }
 
 func testAccKubernetesEnv_DeploymentBasic(secretName, configMapName, name, namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -560,7 +560,7 @@ func testAccKubernetesEnv_DeploymentBasic(secretName, configMapName, name, names
   }
 }
 
-resource "kubernetes_config_map" "test" {
+resource "kubernetes_config_map_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -592,7 +592,7 @@ resource "kubernetes_env" "test" {
     name = "EXPORTED_VARIABLE_FROM_SECRET"
     value_from {
       secret_key_ref {
-        name     = "${kubernetes_secret.test.metadata.0.name}"
+        name     = "${kubernetes_secret_v1.test.metadata.0.name}"
         key      = "one"
         optional = true
       }
@@ -603,7 +603,7 @@ resource "kubernetes_env" "test" {
     name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
     value_from {
       config_map_key_ref {
-        name     = "${kubernetes_config_map.test.metadata.0.name}"
+        name     = "${kubernetes_config_map_v1.test.metadata.0.name}"
         key      = "one"
         optional = true
       }
@@ -615,7 +615,7 @@ resource "kubernetes_env" "test" {
 }
 
 func testAccKubernetesEnv_DeploymentBasic_modified(secretName, configMapName, name, namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -625,7 +625,7 @@ func testAccKubernetesEnv_DeploymentBasic_modified(secretName, configMapName, na
   }
 }
 
-resource "kubernetes_config_map" "test" {
+resource "kubernetes_config_map_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -653,7 +653,7 @@ resource "kubernetes_env" "test" {
 
     value_from {
       secret_key_ref {
-        name     = "${kubernetes_secret.test.metadata.0.name}"
+        name     = "${kubernetes_secret_v1.test.metadata.0.name}"
         key      = "two"
         optional = true
       }
@@ -665,7 +665,7 @@ resource "kubernetes_env" "test" {
     name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
     value_from {
       config_map_key_ref {
-        name     = "${kubernetes_config_map.test.metadata.0.name}"
+        name     = "${kubernetes_config_map_v1.test.metadata.0.name}"
         key      = "three"
         optional = true
       }
@@ -676,7 +676,7 @@ resource "kubernetes_env" "test" {
 }
 
 func testAccKubernetesEnv_modified_initContainer(secretName, configMapName, name, namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -686,7 +686,7 @@ func testAccKubernetesEnv_modified_initContainer(secretName, configMapName, name
   }
 }
 
-resource "kubernetes_config_map" "test" {
+resource "kubernetes_config_map_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -714,7 +714,7 @@ resource "kubernetes_env" "test" {
 
     value_from {
       secret_key_ref {
-        name     = "${kubernetes_secret.test.metadata.0.name}"
+        name     = "${kubernetes_secret_v1.test.metadata.0.name}"
         key      = "two"
         optional = true
       }
@@ -726,7 +726,7 @@ resource "kubernetes_env" "test" {
     name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
     value_from {
       config_map_key_ref {
-        name     = "${kubernetes_config_map.test.metadata.0.name}"
+        name     = "${kubernetes_config_map_v1.test.metadata.0.name}"
         key      = "three"
         optional = true
       }
@@ -737,7 +737,7 @@ resource "kubernetes_env" "test" {
 }
 
 func testAccKubernetesEnv_CronJobBasic(secretName, configMapName, name, namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -747,7 +747,7 @@ func testAccKubernetesEnv_CronJobBasic(secretName, configMapName, name, namespac
   }
 }
 
-resource "kubernetes_config_map" "test" {
+resource "kubernetes_config_map_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -775,7 +775,7 @@ resource "kubernetes_env" "demo" {
 
     value_from {
       secret_key_ref {
-        name     = "${kubernetes_secret.test.metadata.0.name}"
+        name     = "${kubernetes_secret_v1.test.metadata.0.name}"
         key      = "one"
         optional = true
       }
@@ -787,7 +787,7 @@ resource "kubernetes_env" "demo" {
     name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
     value_from {
       config_map_key_ref {
-        name     = "${kubernetes_config_map.test.metadata.0.name}"
+        name     = "${kubernetes_config_map_v1.test.metadata.0.name}"
         key      = "one"
         optional = true
       }
@@ -798,7 +798,7 @@ resource "kubernetes_env" "demo" {
 }
 
 func testAccKubernetesEnv_CronJobModified(secretName, configMapName, name, namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -808,7 +808,7 @@ func testAccKubernetesEnv_CronJobModified(secretName, configMapName, name, names
   }
 }
 
-resource "kubernetes_config_map" "test" {
+resource "kubernetes_config_map_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -841,7 +841,7 @@ resource "kubernetes_env" "demo" {
 
     value_from {
       secret_key_ref {
-        name     = "${kubernetes_secret.test.metadata.0.name}"
+        name     = "${kubernetes_secret_v1.test.metadata.0.name}"
         key      = "two"
         optional = true
       }
@@ -853,7 +853,7 @@ resource "kubernetes_env" "demo" {
     name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
     value_from {
       config_map_key_ref {
-        name     = "${kubernetes_config_map.test.metadata.0.name}"
+        name     = "${kubernetes_config_map_v1.test.metadata.0.name}"
         key      = "three"
         optional = true
       }
@@ -864,7 +864,7 @@ resource "kubernetes_env" "demo" {
 }
 
 func testAccKubernetesEnv_CronJobModified_initContainer(secretName, configMapName, name, namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -874,7 +874,7 @@ func testAccKubernetesEnv_CronJobModified_initContainer(secretName, configMapNam
   }
 }
 
-resource "kubernetes_config_map" "test" {
+resource "kubernetes_config_map_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -907,7 +907,7 @@ resource "kubernetes_env" "demo" {
 
     value_from {
       secret_key_ref {
-        name     = "${kubernetes_secret.test.metadata.0.name}"
+        name     = "${kubernetes_secret_v1.test.metadata.0.name}"
         key      = "two"
         optional = true
       }
@@ -919,7 +919,7 @@ resource "kubernetes_env" "demo" {
     name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
     value_from {
       config_map_key_ref {
-        name     = "${kubernetes_config_map.test.metadata.0.name}"
+        name     = "${kubernetes_config_map_v1.test.metadata.0.name}"
         key      = "three"
         optional = true
       }
@@ -930,7 +930,7 @@ resource "kubernetes_env" "demo" {
 }
 
 func testAccKubernetesEnv_Deployment_initContainer(secretName, configMapName, name, namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -940,7 +940,7 @@ func testAccKubernetesEnv_Deployment_initContainer(secretName, configMapName, na
   }
 }
 
-resource "kubernetes_config_map" "test" {
+resource "kubernetes_config_map_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -972,7 +972,7 @@ resource "kubernetes_env" "test" {
     name = "EXPORTED_VARIABLE_FROM_SECRET"
     value_from {
       secret_key_ref {
-        name     = "${kubernetes_secret.test.metadata.0.name}"
+        name     = "${kubernetes_secret_v1.test.metadata.0.name}"
         key      = "one"
         optional = true
       }
@@ -983,7 +983,7 @@ resource "kubernetes_env" "test" {
     name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
     value_from {
       config_map_key_ref {
-        name     = "${kubernetes_config_map.test.metadata.0.name}"
+        name     = "${kubernetes_config_map_v1.test.metadata.0.name}"
         key      = "one"
         optional = true
       }
@@ -995,7 +995,7 @@ resource "kubernetes_env" "test" {
 }
 
 func testAccKubernetesEnv_CronJob_initContainer(secretName, configMapName, name, namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -1005,7 +1005,7 @@ func testAccKubernetesEnv_CronJob_initContainer(secretName, configMapName, name,
   }
 }
 
-resource "kubernetes_config_map" "test" {
+resource "kubernetes_config_map_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -1033,7 +1033,7 @@ resource "kubernetes_env" "demo" {
 
     value_from {
       secret_key_ref {
-        name     = "${kubernetes_secret.test.metadata.0.name}"
+        name     = "${kubernetes_secret_v1.test.metadata.0.name}"
         key      = "one"
         optional = true
       }
@@ -1045,7 +1045,7 @@ resource "kubernetes_env" "demo" {
     name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
     value_from {
       config_map_key_ref {
-        name     = "${kubernetes_config_map.test.metadata.0.name}"
+        name     = "${kubernetes_config_map_v1.test.metadata.0.name}"
         key      = "one"
         optional = true
       }

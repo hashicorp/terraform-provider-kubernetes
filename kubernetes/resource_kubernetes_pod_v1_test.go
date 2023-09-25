@@ -3102,7 +3102,7 @@ func testAccKubernetesPodV1ConfigEmptyBlocks(name, imageName string) string {
 }
 
 func testAccKubernetesPodV1ConfigWithVolume(name, imageName, serviceAccount string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
   metadata {
     name = "test"
   }
@@ -3115,7 +3115,7 @@ resource "kubernetes_service_account_v1" "test" {
   }
 }
 
-resource "kubernetes_persistent_volume" "test" {
+resource "kubernetes_persistent_volume_v1" "test" {
   metadata {
     name = "test"
   }
@@ -3124,7 +3124,7 @@ resource "kubernetes_persistent_volume" "test" {
       storage = "1Gi"
     }
     access_modes       = ["ReadWriteOnce"]
-    storage_class_name = kubernetes_storage_class.test.metadata.0.name
+    storage_class_name = kubernetes_storage_class_v1.test.metadata.0.name
     persistent_volume_source {
       host_path {
         path = "/mnt/minikube"
@@ -3134,15 +3134,15 @@ resource "kubernetes_persistent_volume" "test" {
   }
 }
 
-resource "kubernetes_persistent_volume_claim" "test" {
+resource "kubernetes_persistent_volume_claim_v1" "test" {
   wait_until_bound = false
   metadata {
     name = "test"
   }
   spec {
     access_modes       = ["ReadWriteOnce"]
-    storage_class_name = kubernetes_storage_class.test.metadata.0.name
-    volume_name        = kubernetes_persistent_volume.test.metadata.0.name
+    storage_class_name = kubernetes_storage_class_v1.test.metadata.0.name
+    volume_name        = kubernetes_persistent_volume_v1.test.metadata.0.name
     resources {
       requests = {
         storage = "1G"
@@ -3169,7 +3169,7 @@ resource "kubernetes_pod_v1" "test" {
     volume {
       name = "pvc"
       persistent_volume_claim {
-        claim_name = kubernetes_persistent_volume_claim.test.metadata[0].name
+        claim_name = kubernetes_persistent_volume_claim_v1.test.metadata[0].name
       }
     }
     termination_grace_period_seconds = 1

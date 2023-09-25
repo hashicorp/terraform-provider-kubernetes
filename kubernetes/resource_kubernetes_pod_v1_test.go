@@ -1067,7 +1067,7 @@ func TestAccKubernetesPodV1_gke_with_nodeSelector(t *testing.T) {
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.node_selector.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.node_selector.failure-domain.beta.kubernetes.io/region", region),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.node_selector.topology.kubernetes.io/region", region),
 				),
 			},
 			{
@@ -2752,7 +2752,7 @@ func testAccKubernetesPodV1ConfigNodeSelector(podName, imageName, region string)
     }
 
     node_selector = {
-      "failure-domain.beta.kubernetes.io/region" = "%s"
+      "topology.kubernetes.io/region" = "%s"
     }
   }
 }

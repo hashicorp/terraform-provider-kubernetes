@@ -1,15 +1,15 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-variable "kubernetes_version" {
+variable "cluster_version" {
   default = ""
 }
 
-variable "workers_count" {
-  default = "2"
+variable "node_count" {
+  default = "1"
 }
 
-variable "node_machine_type" {
+variable "instance_type" {
   default = "e2-standard-2"
 }
 
@@ -26,7 +26,7 @@ data "google_compute_zones" "available" {
 
 data "google_container_engine_versions" "supported" {
   location       = data.google_compute_zones.available.names[0]
-  version_prefix = var.kubernetes_version
+  version_prefix = var.cluster_version
 }
 
 resource "random_id" "cluster_name" {
@@ -59,13 +59,13 @@ resource "google_container_cluster" "primary" {
   ]
 
   node_pool {
-    initial_node_count = var.workers_count
+    initial_node_count = var.node_count
     management {
       auto_repair  = var.enable_alpha ? false : true
       auto_upgrade = var.enable_alpha ? false : true
     }
     node_config {
-      machine_type    = var.node_machine_type
+      machine_type    = var.instance_type
       service_account = google_service_account.default.email
       oauth_scopes = [
         "https://www.googleapis.com/auth/cloud-platform",

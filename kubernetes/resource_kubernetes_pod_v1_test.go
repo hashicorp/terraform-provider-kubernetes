@@ -1448,7 +1448,7 @@ func TestAccKubernetesPodV1_topologySpreadConstraint(t *testing.T) {
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.max_skew", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.topology_key", "failure-domain.beta.kubernetes.io/zone"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.topology_key", "topology.kubernetes.io/zone"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.when_unsatisfiable", "ScheduleAnyway"),
 				),
 			},
@@ -3190,7 +3190,7 @@ func testAccKubernetesPodV1TopologySpreadConstraintConfig(podName, imageName str
     }
     topology_spread_constraint {
       max_skew           = 1
-      topology_key       = "failure-domain.beta.kubernetes.io/zone"
+      topology_key       = "topology.kubernetes.io/zone"
       when_unsatisfiable = "ScheduleAnyway"
       label_selector {
         match_labels = {

@@ -44,7 +44,8 @@ jobs:
   acceptance_tests:
     runs-on: [custom, linux, medium]
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Checkout repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Set up Go
         uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
         with:
@@ -67,12 +68,12 @@ jobs:
         working-directory: ${{ github.workspace }}/kubernetes/test-infra/eks
         run: |
           terraform init
-          terraform apply --auto-approve
+          terraform apply -auto-approve
       - name: Install AWS EBS CSI Driver
         working-directory: ${{ github.workspace }}/kubernetes/test-infra/aws-ebs-csi-driver
         run: |
           terraform init
-          terraform apply --auto-approve
+          terraform apply -auto-approve
       - name: Run Acceptance Test Suite
         env:
           TESTARGS: -run '${{ github.event.inputs.runTests }}'
@@ -86,4 +87,4 @@ jobs:
         if: always() # we should destroy the cluster even if the tests fail
         working-directory: ${{ github.workspace }}/kubernetes/test-infra/eks
         run: |
-          terraform destroy --auto-approve
+          terraform destroy -auto-approve

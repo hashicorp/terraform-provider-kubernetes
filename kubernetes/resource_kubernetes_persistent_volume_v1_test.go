@@ -53,8 +53,7 @@ func TestAccKubernetesPersistentVolumeV1_azure_basic(t *testing.T) {
 	resourceName := "kubernetes_persistent_volume_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
-		// IDRefreshName:     resourceName,
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
@@ -120,8 +119,7 @@ func TestAccKubernetesPersistentVolumeV1_azure_blobStorageDisk(t *testing.T) {
 	resourceName := "kubernetes_persistent_volume_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
-		// IDRefreshName:     resourceName,
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
@@ -178,8 +176,7 @@ func TestAccKubernetesPersistentVolumeV1_azure_file(t *testing.T) {
 	resourceName := "kubernetes_persistent_volume_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
-		// IDRefreshName:     resourceName,
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,

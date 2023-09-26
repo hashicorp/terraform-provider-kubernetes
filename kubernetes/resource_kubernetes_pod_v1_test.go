@@ -117,6 +117,7 @@ func TestAccKubernetesPodV1_scheduler(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.22.0")
+			skipIfRunningInAks(t)
 			setClusterVersionVar(t, "TF_VAR_scheduler_cluster_version") // should be in format 'vX.Y.Z'
 		},
 		ProviderFactories: testAccProviderFactories,

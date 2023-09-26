@@ -54,7 +54,6 @@ func TestAccKubernetesPersistentVolumeV1_azure_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
-		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
@@ -121,7 +120,6 @@ func TestAccKubernetesPersistentVolumeV1_azure_blobStorageDisk(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
-		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
@@ -179,7 +177,6 @@ func TestAccKubernetesPersistentVolumeV1_azure_file(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
-		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
@@ -987,7 +984,7 @@ func testAccCheckKubernetesPersistentVolumeV1Destroy(s *terraform.State) error {
 	poll := 1 * time.Second
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_persistent_volume.test" {
+		if rs.Type != "kubernetes_persistent_volume_v1.test" {
 			continue
 		}
 		name := rs.Primary.ID
@@ -1286,6 +1283,7 @@ func testAccKubernetesPersistentVolumeV1Config_azure_managedDisk(name, location 
 	return fmt.Sprintf(`provider "azurerm" {
   features {}
 }
+
 resource "azurerm_resource_group" "test" {
   name     = %[1]q
   location = %[2]q
@@ -1293,6 +1291,7 @@ resource "azurerm_resource_group" "test" {
     environment = "terraform-provider-kubernetes-test"
   }
 }
+
 resource "azurerm_managed_disk" "test" {
   name                 = %[1]q
   location             = azurerm_resource_group.test.location
@@ -1351,6 +1350,7 @@ func testAccKubernetesPersistentVolumeV1Config_azure_blobStorage(name, location 
 	return fmt.Sprintf(`provider "azurerm" {
   features {}
 }
+
 resource "azurerm_resource_group" "test" {
   name     = "%s"
   location = "%s"
@@ -1358,6 +1358,7 @@ resource "azurerm_resource_group" "test" {
     environment = "terraform-provider-kubernetes-test"
   }
 }
+
 resource "azurerm_storage_account" "test" {
   name                     = %[1]q
   resource_group_name      = azurerm_resource_group.test.name
@@ -1369,6 +1370,7 @@ resource "azurerm_storage_account" "test" {
     environment = "terraform-provider-kubernetes-test"
   }
 }
+
 resource "azurerm_storage_container" "test" {
   name                  = %[1]q
   storage_account_name  = azurerm_storage_account.test.name
@@ -1442,6 +1444,7 @@ func testAccKubernetesPersistentVolumeV1Config_azure_file(name, location string)
 	return fmt.Sprintf(`provider "azurerm" {
   features {}
 }
+
 resource "azurerm_resource_group" "test" {
   name     = "%s"
   location = "%s"
@@ -1449,6 +1452,7 @@ resource "azurerm_resource_group" "test" {
     environment = "terraform-provider-kubernetes-test"
   }
 }
+
 resource "azurerm_storage_account" "test" {
   name                     = %[1]q
   resource_group_name      = azurerm_resource_group.test.name
@@ -1462,6 +1466,7 @@ resource "azurerm_storage_account" "test" {
     environment = "terraform-provider-kubernetes-test"
   }
 }
+
 resource "azurerm_storage_share" "test" {
   name                 = %[1]q
   storage_account_name = azurerm_storage_account.test.name

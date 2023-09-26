@@ -30,6 +30,7 @@ The following arguments are supported:
 * `value` - (Required, Forces new resource) The value of this priority class. This is the actual priority that pods receive when they have the name of this class in their pod spec.
 * `description` - (Optional) An arbitrary string that usually provides guidelines on when this priority class should be used.
 * `global_default` - (Optional) Boolean that specifies whether this PriorityClass should be considered as the default priority for pods that do not have any priority class.
+* `preemption_policy` - (Optional) PreemptionPolicy is the Policy for preempting pods with lower priority. One of Never, PreemptLowerPriority. Defaults to PreemptLowerPriority if unset.
 
 ## Nested Blocks
 

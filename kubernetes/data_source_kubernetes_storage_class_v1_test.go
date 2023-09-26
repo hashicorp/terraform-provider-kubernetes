@@ -159,7 +159,7 @@ func testAccKubernetesDataSourceStorageClassV1_basic(name, provisioner string) s
   }
   allowed_topologies {
     match_label_expressions {
-      key = "failure-domain.beta.kubernetes.io/zone"
+      key = "topology.kubernetes.io/zone"
       values = [
         "us-east-1a",
         "us-east-1b"

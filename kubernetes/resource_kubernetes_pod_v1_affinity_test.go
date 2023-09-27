@@ -25,7 +25,7 @@ func TestAccKubernetesPodV1_with_node_affinity_with_required_during_scheduling_i
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName),
+				Config: testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgnoredDuringExecution_MatchExpressions(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.#", "1"),
@@ -40,6 +40,21 @@ func TestAccKubernetesPodV1_with_node_affinity_with_required_during_scheduling_i
 					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.1.key", keyName), "kubernetes.io/os"),
 					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.1.operator", keyName), "In"),
 					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_expressions.1.values.0", keyName), "linux"),
+				),
+			},
+			{
+				Config: testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgnoredDuringExecution_MatchFields(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.0.node_affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_fields.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_fields.0.key", keyName), "metadata.name"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_fields.0.%%", keyName), "3"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_fields.0.operator", keyName), "NotIn"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_fields.0.values.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.node_selector_term.0.match_fields.0.values.0", keyName), "foo"),
 				),
 			},
 		},
@@ -59,7 +74,7 @@ func TestAccKubernetesPodV1_with_node_affinity_with_preferred_during_scheduling_
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName),
+				Config: testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution_MatchExpressions(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.#", "1"),
@@ -77,6 +92,22 @@ func TestAccKubernetesPodV1_with_node_affinity_with_preferred_during_scheduling_
 					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_expressions.1.operator", keyName), "In"),
 					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_expressions.1.values.#", keyName), "1"),
 					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_expressions.1.values.0", keyName), "linux"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.weight", keyName), "1"),
+				),
+			},
+			{
+				Config: testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution_MatchFields(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.affinity.0.node_affinity.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_fields.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_fields.0.key", keyName), "metadata.name"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_fields.0.%%", keyName), "3"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_fields.0.operator", keyName), "NotIn"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_fields.0.values.#", keyName), "1"),
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.preference.0.match_fields.0.values.0", keyName), "foo"),
 					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.0.weight", keyName), "1"),
 				),
 			},
@@ -229,7 +260,7 @@ func TestAccKubernetesPodV1_with_pod_anti_affinity_with_preferred_during_schedul
 	})
 }
 
-func testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
+func testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgnoredDuringExecution_MatchExpressions(podName, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
     name = %[1]q
@@ -280,7 +311,53 @@ resource "kubernetes_pod_v1" "test" {
 `, podName, imageName)
 }
 
-func testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName string) string {
+func testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgnoredDuringExecution_MatchFields(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_pod_v1" "test" {
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    name      = %[1]q
+  }
+  spec {
+    affinity {
+      node_affinity {
+        required_during_scheduling_ignored_during_execution {
+          node_selector_term {
+            match_fields {
+              key      = "metadata.name"
+              operator = "NotIn"
+              values   = ["foo"]
+            }
+          }
+        }
+      }
+    }
+    container {
+      image = %[2]q
+      name  = "containername"
+      args  = ["sleep", "300"]
+      resources {
+        limits = {
+          cpu    = "50m"
+          memory = "64M"
+        }
+      }
+    }
+    termination_grace_period_seconds = 1
+  }
+}
+`, podName, imageName)
+}
+
+func testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution_MatchExpressions(podName, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
     name = %[1]q
@@ -310,6 +387,53 @@ resource "kubernetes_pod_v1" "test" {
               key      = "kubernetes.io/os"
               operator = "In"
               values   = ["linux"]
+            }
+          }
+        }
+      }
+    }
+    container {
+      image = %[2]q
+      name  = "containername"
+      args  = ["sleep", "300"]
+      resources {
+        limits = {
+          cpu    = "50m"
+          memory = "50M"
+        }
+      }
+    }
+    termination_grace_period_seconds = 1
+  }
+}
+`, podName, imageName)
+}
+
+func testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution_MatchFields(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_pod_v1" "test" {
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    name      = %[1]q
+  }
+  spec {
+    affinity {
+      node_affinity {
+        preferred_during_scheduling_ignored_during_execution {
+          weight = 1
+          preference {
+            match_fields {
+              key      = "metadata.name"
+              operator = "NotIn"
+              values   = ["foo"]
             }
           }
         }

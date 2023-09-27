@@ -238,7 +238,7 @@ func TestAccKubernetesStorageClassV1_allowedTopologies_minikube(t *testing.T) {
 					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.key", "failure-domain.beta.kubernetes.io/zone"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.key", "topology.kubernetes.io/zone"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.values.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.values.0", "us-west1-a"),
 					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.values.1", "us-west1-b"),
@@ -464,7 +464,7 @@ func testAccKubernetesStorageClassV1Config_allowedTopologies(name, provisioner s
   storage_provisioner = "%s"
   allowed_topologies {
     match_label_expressions {
-      key = "failure-domain.beta.kubernetes.io/zone"
+      key = "topology.kubernetes.io/zone"
       values = [
         "us-west1-a",
         "us-west1-b"

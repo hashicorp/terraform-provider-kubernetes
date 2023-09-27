@@ -5,13 +5,13 @@ on:
     inputs:
       location:
         description: 'Location'
-        default: "West Europe"
+        default: "West US 3"
       nodeCount:
         description: 'Number of nodes to provision'
         default: 2
       vmSize:
         description: 'The azure machine size for nodes'
-        default: "Standard_A4_v2"
+        default: "Standard_A2_v2"
       clusterVersion:
         description: 'The version of kubernetes'
         default: "1.27"

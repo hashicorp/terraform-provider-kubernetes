@@ -202,9 +202,10 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Description: "Specifies the hostname of the Pod If not specified, the pod's hostname will be set to a system-defined value.",
 		},
 		"os": {
-			Type:     schema.TypeList,
-			Optional: true,
-			MaxItems: 1,
+			Type:        schema.TypeList,
+			Optional:    true,
+			MaxItems:    1,
+			Description: "Specifies the OS of the containers in the pod.",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"name": {

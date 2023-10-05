@@ -1,8 +1,10 @@
 package kubernetes
 
 import (
+	"fmt"
 	"testing"
 
+	gversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
@@ -17,11 +19,34 @@ func TestAccKubernetesDataSourceServerVersion_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesDataSourceServerVersionConfig_basic(),
 				Check: func(st *terraform.State) error {
-					v, err := getClusterVersion()
-					if err != nil {
-						t.Fail()
+					meta := testAccProvider.Meta()
+					if meta == nil {
+						return fmt.Errorf("Provider not initialized, unable to check cluster version")
 					}
-					return resource.TestCheckResourceAttr(dataSourceName, "version", v.String())(st)
+					conn, err := meta.(KubeClientsets).MainClientset()
+					if err != nil {
+						return err
+					}
+					ver, err := conn.ServerVersion()
+					if err != nil {
+						return err
+					}
+					gver, err := gversion.NewVersion(ver.String())
+					if err != nil {
+						return err
+					}
+					return resource.ComposeAggregateTestCheckFunc(
+						resource.TestCheckResourceAttr(dataSourceName, "version", gver.String()),
+						resource.TestCheckResourceAttr(dataSourceName, "build_date", ver.BuildDate),
+						resource.TestCheckResourceAttr(dataSourceName, "compiler", ver.Compiler),
+						resource.TestCheckResourceAttr(dataSourceName, "git_commit", ver.GitCommit),
+						resource.TestCheckResourceAttr(dataSourceName, "git_tree_state", ver.GitTreeState),
+						resource.TestCheckResourceAttr(dataSourceName, "git_version", ver.GitVersion),
+						resource.TestCheckResourceAttr(dataSourceName, "major", ver.Major),
+						resource.TestCheckResourceAttr(dataSourceName, "minor", ver.Minor),
+						resource.TestCheckResourceAttr(dataSourceName, "platform", ver.Platform),
+						resource.TestCheckResourceAttr(dataSourceName, "go_version", ver.GoVersion),
+					)(st)
 				},
 			},
 		},

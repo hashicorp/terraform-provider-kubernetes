@@ -92,10 +92,8 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	}
 	att["image_pull_secrets"] = flattenLocalObjectReferenceArray(in.ImagePullSecrets)
 
-	if in.OS.Name != "" {
-		att["os"] = map[string]interface{}{
-			"name": in.OS.Name,
-		}
+	if in.OS != nil {
+		att["os"] = flattenOS(*in.OS)
 	}
 
 	if in.NodeName != "" {
@@ -242,6 +240,10 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	}
 	if in.Sysctls != nil {
 		att["sysctl"] = flattenSysctls(in.Sysctls)
+	}
+
+	if in.WindowsOptions != nil {
+		att["windows_options"] = flattenWindowsOptions(*in.WindowsOptions)
 	}
 
 	if len(att) > 0 {
@@ -818,10 +820,8 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.NodeSelector = nodeSelectors
 	}
 
-	if v, ok := in["os"].(map[string]interface{}); ok {
-		if n, ok := v["name"].(string); ok && n != "" {
-			obj.OS.Name = v1.OSName(n)
-		}
+	if v, ok := in["os"].([]interface{}); ok {
+		obj.OS = expandOS(v)
 	}
 
 	if v, ok := in["runtime_class_name"].(string); ok && v != "" {
@@ -895,6 +895,29 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	return obj, nil
 }
 
+func expandOS(l []interface{}) *v1.PodOS {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.PodOS{}
+	}
+
+	in := l[0].(map[string]interface{})
+	obj := &v1.PodOS{}
+
+	if v, ok := in["name"].(string); ok {
+		obj.Name = v1.OSName(v)
+	}
+
+	return obj
+}
+
+func flattenOS(in v1.PodOS) []interface{} {
+	att := make(map[string]interface{})
+	if in.Name != "" {
+		att["name"] = in.Name
+	}
+	return []interface{}{att}
+}
+
 func expandWindowsOptions(l []interface{}) *v1.WindowsSecurityContextOptions {
 	if len(l) == 0 || l[0] == nil {
 		return &v1.WindowsSecurityContextOptions{}
@@ -918,7 +941,7 @@ func expandWindowsOptions(l []interface{}) *v1.WindowsSecurityContextOptions {
 	return obj
 }
 
-func flattenWindowsOptions(in *v1.WindowsSecurityContextOptions) ([]interface{}, error) {
+func flattenWindowsOptions(in v1.WindowsSecurityContextOptions) []interface{} {
 	att := make(map[string]interface{})
 
 	if in.GMSACredentialSpec != nil {
@@ -933,7 +956,7 @@ func flattenWindowsOptions(in *v1.WindowsSecurityContextOptions) ([]interface{},
 		att["run_as_username"] = *in.RunAsUserName
 	}
 
-	return []interface{}{att}, nil
+	return []interface{}{att}
 }
 
 func expandPodDNSConfig(l []interface{}) (*v1.PodDNSConfig, error) {

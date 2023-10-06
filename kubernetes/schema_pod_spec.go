@@ -348,24 +348,23 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						Type:        schema.TypeSet,
 						Description: "The Windows specific settings applied to all containers. If unspecified, the options within a container's SecurityContext will be used. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. Note that this field cannot be set when spec.os.name is linux.",
 						Optional:    true,
-						ForceNew:    !isUpdatable,
-						Elem: map[string]*schema.Schema{
-							"gmsa_credential_spec": {
-								Type:        schema.TypeString,
-								Description: "GMSACredentialSpec is where the GMSA admission webhook inlines the contents of the GMSA credential spec named by the GMSACredentialSpecName field",
-								Required:    true,
-								ForceNew:    !isUpdatable,
-							},
-							"gmsa_credential_spec_name": {
-								Type:        schema.TypeString,
-								Description: "GMSACredentialSpecName is the name of the GMSA credential spec to use.",
-								Required:    true,
-								ForceNew:    !isUpdatable,
-							},
-							"run_as_username": {
-								Type:        schema.TypeString,
-								Description: "The UserName in Windows to run the entrypoint of the container process. Defaults to the user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
-								Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"gmsa_credential_spec": {
+									Type:        schema.TypeString,
+									Description: "GMSACredentialSpec is where the GMSA admission webhook inlines the contents of the GMSA credential spec named by the GMSACredentialSpecName field",
+									Required:    true,
+								},
+								"gmsa_credential_spec_name": {
+									Type:        schema.TypeString,
+									Description: "GMSACredentialSpecName is the name of the GMSA credential spec to use.",
+									Required:    true,
+								},
+								"run_as_username": {
+									Type:        schema.TypeString,
+									Description: "The UserName in Windows to run the entrypoint of the container process. Defaults to the user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
+									Optional:    true,
+								},
 							},
 						},
 					},

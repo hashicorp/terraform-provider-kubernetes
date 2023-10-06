@@ -918,6 +918,24 @@ func expandWindowsOptions(l []interface{}) *v1.WindowsSecurityContextOptions {
 	return obj
 }
 
+func flattenWindowsOptions(in *v1.WindowsSecurityContextOptions) ([]interface{}, error) {
+	att := make(map[string]interface{})
+
+	if in.GMSACredentialSpec != nil {
+		att["gmsa_credential_spec"] = *in.GMSACredentialSpec
+	}
+
+	if in.GMSACredentialSpecName != nil {
+		att["gmsa_credential_spec_name"] = *in.GMSACredentialSpecName
+	}
+
+	if in.RunAsUserName != nil {
+		att["run_as_username"] = *in.RunAsUserName
+	}
+
+	return []interface{}{att}, nil
+}
+
 func expandPodDNSConfig(l []interface{}) (*v1.PodDNSConfig, error) {
 	if len(l) == 0 || l[0] == nil {
 		return &v1.PodDNSConfig{}, nil

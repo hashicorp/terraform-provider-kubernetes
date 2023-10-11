@@ -116,7 +116,7 @@ func TestAccKubernetesPodV1_scheduler(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.22.0")
+			skipIfClusterVersionLessThan(t, "1.25.0")
 			skipIfRunningInAks(t)
 			setClusterVersionVar(t, "TF_VAR_scheduler_cluster_version") // should be in format 'vX.Y.Z'
 		},
@@ -3305,7 +3305,7 @@ resource "kubernetes_config_map_v1" "scheduler_config" {
   data = {
     "scheduler-config.yaml" = yamlencode(
       {
-        "apiVersion" : "kubescheduler.config.k8s.io/v1beta2",
+        "apiVersion" : "kubescheduler.config.k8s.io/v1",
         "kind" : "KubeSchedulerConfiguration",
         profiles : [{
           "schedulerName" : var.scheduler_name

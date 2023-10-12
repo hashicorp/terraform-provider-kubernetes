@@ -76,6 +76,8 @@ resource "google_container_cluster" "primary" {
       ]
     }
   }
+
+  deletion_protection = false
 }
 
 locals {

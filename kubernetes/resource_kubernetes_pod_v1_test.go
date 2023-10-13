@@ -3479,9 +3479,9 @@ func testAccKubernetesPodV1ConfigOS(name, imageName string) string {
     name = "%s"
   }
   spec {
-	os {
-		name = "linux"
-	}
+    os {
+      name = "linux"
+    }
     container {
       image = "%s"
       name  = "containername"

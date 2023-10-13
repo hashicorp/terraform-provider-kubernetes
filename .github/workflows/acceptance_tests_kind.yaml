@@ -15,6 +15,12 @@ on:
       parallelRuns:
         description: The maximum number of tests to run simultaneously
         default: 8
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'kubernetes/*.go'
+      - 'go.mod'
   schedule:
     - cron: '0 21 * * *'
 

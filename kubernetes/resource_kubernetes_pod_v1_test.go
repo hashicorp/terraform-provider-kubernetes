@@ -1567,6 +1567,39 @@ func TestAccKubernetesPodV1_phase(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPodV1_os(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1ConfigOS(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.os.0.name", "linux"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
+				Config:   testAccKubernetesPodV1ConfigOS(name, imageName),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
 func testAccCheckCSIDriverExists(csiDriverName string) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
@@ -3436,6 +3469,24 @@ func testAccKubernetesPodConfigPhase(name, imageName string) string {
     }
   }
   target_state = ["Pending"]
+}
+`, name, imageName)
+}
+
+func testAccKubernetesPodV1ConfigOS(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    os {
+      name = "linux"
+    }
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
 }
 `, name, imageName)
 }

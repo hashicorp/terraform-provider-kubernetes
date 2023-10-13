@@ -11,7 +11,7 @@ on:
         default: ".*"
       terraformVersion:
         description: Terraform version
-        default: 1.5.3
+        default: 1.5.6
       parallelRuns:
         description: The maximum number of tests to run simultaneously
         default: 8
@@ -25,7 +25,7 @@ env:
   TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
 
 jobs:
-  acceptance_tests:
+  acceptance_tests_kind:
     runs-on: [custom, linux, medium]
     steps:
       - name: Checkout repository

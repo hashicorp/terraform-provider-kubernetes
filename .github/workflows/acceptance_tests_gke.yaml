@@ -43,7 +43,7 @@ env:
   TF_VAR_instance_type: ${{ github.event.inputs.instanceType || vars.GOOGLE_INSTANCE_TYPE }}
 
 jobs:
-  acceptance_tests:
+  acceptance_tests_gke:
     runs-on: [custom, linux, medium]
     steps:
       - name: Checkout repository

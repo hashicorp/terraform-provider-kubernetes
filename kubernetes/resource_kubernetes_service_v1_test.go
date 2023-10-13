@@ -304,7 +304,7 @@ func TestAccKubernetesServiceV1_loadBalancer_healthcheck(t *testing.T) {
 					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.external_traffic_policy", "Local"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.health_check_node_port", "31114"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.health_check_node_port", "31111"),
 				),
 			},
 			{
@@ -319,7 +319,7 @@ func TestAccKubernetesServiceV1_loadBalancer_healthcheck(t *testing.T) {
 					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.external_traffic_policy", "Local"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.health_check_node_port", "31115"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.health_check_node_port", "31112"),
 				),
 			},
 		},

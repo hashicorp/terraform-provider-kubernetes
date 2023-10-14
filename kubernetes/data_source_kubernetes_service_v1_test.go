@@ -21,7 +21,8 @@ func TestAccKubernetesDataSourceServiceV1_basic(t *testing.T) {
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesConfig_ignoreAnnotations() + testAccKubernetesDataSourceServiceV1_basic(name),
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesDataSourceServiceV1_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
@@ -49,7 +50,8 @@ func TestAccKubernetesDataSourceServiceV1_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesConfig_ignoreAnnotations() + testAccKubernetesDataSourceServiceV1_basic(name) +
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesDataSourceServiceV1_basic(name) +
 					testAccKubernetesDataSourceServiceV1_read(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),

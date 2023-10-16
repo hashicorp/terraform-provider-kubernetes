@@ -345,7 +345,8 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						},
 					},
 					"windows_options": {
-						Type:        schema.TypeSet,
+						Type:        schema.TypeList,
+						MaxItems:    1,
 						Description: "The Windows specific settings applied to all containers. If unspecified, the options within a container's SecurityContext will be used. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. Note that this field cannot be set when spec.os.name is linux.",
 						Optional:    true,
 						Elem: &schema.Resource{
@@ -353,12 +354,18 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 								"gmsa_credential_spec": {
 									Type:        schema.TypeString,
 									Description: "GMSACredentialSpec is where the GMSA admission webhook inlines the contents of the GMSA credential spec named by the GMSACredentialSpecName field",
-									Required:    true,
+									Optional:    true,
 								},
 								"gmsa_credential_spec_name": {
 									Type:        schema.TypeString,
 									Description: "GMSACredentialSpecName is the name of the GMSA credential spec to use.",
-									Required:    true,
+									Optional:    true,
+								},
+								"host_process": {
+									Type:        schema.TypeBool,
+									Description: "HostProcess determines if a container should be run as a 'Host Process' container. Default value is false.",
+									Default:     false,
+									Optional:    true,
 								},
 								"run_as_username": {
 									Type:        schema.TypeString,

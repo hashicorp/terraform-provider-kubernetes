@@ -6,7 +6,7 @@ variable "cluster_name" {
 }
 
 variable "oidc_issuer_url" {
-    default = "https://app.terraform.io"
+  default = "https://app.terraform.io"
 }
 
 variable "oidc_audience" {

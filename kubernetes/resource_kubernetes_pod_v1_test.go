@@ -117,7 +117,7 @@ func TestAccKubernetesPodV1_scheduler(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.22.0")
+			skipIfClusterVersionLessThan(t, "1.25.0")
 			skipIfRunningInAks(t)
 			setClusterVersionVar(t, "TF_VAR_scheduler_cluster_version") // should be in format 'vX.Y.Z'
 		},
@@ -155,7 +155,8 @@ func TestAccKubernetesPodV1_initContainer_updateForcesNew(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodV1ConfigWithInitContainer(podName, image),
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesPodV1ConfigWithInitContainer(podName, image),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", podName),
@@ -171,7 +172,8 @@ func TestAccKubernetesPodV1_initContainer_updateForcesNew(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config: testAccKubernetesPodV1ConfigWithInitContainer(podName, image1),
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesPodV1ConfigWithInitContainer(podName, image1),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", podName),
@@ -1563,6 +1565,39 @@ func TestAccKubernetesPodV1_phase(t *testing.T) {
 					"spec.0.node_name",
 					"target_state",
 				},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPodV1_os(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1ConfigOS(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.os.0.name", "linux"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
+				Config:   testAccKubernetesPodV1ConfigOS(name, imageName),
+				PlanOnly: true,
 			},
 		},
 	})
@@ -3309,7 +3344,7 @@ resource "kubernetes_config_map_v1" "scheduler_config" {
   data = {
     "scheduler-config.yaml" = yamlencode(
       {
-        "apiVersion" : "kubescheduler.config.k8s.io/v1beta2",
+        "apiVersion" : "kubescheduler.config.k8s.io/v1",
         "kind" : "KubeSchedulerConfiguration",
         profiles : [{
           "schedulerName" : var.scheduler_name
@@ -3440,6 +3475,24 @@ func testAccKubernetesPodConfigPhase(name, imageName string) string {
     }
   }
   target_state = ["Pending"]
+}
+`, name, imageName)
+}
+
+func testAccKubernetesPodV1ConfigOS(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    os {
+      name = "linux"
+    }
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
 }
 `, name, imageName)
 }

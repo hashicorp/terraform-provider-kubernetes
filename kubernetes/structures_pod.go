@@ -29,6 +29,14 @@ var builtInTolerations = map[string]string{
 
 // Flatteners
 
+func flattenOS(in v1.PodOS) []interface{} {
+	att := make(map[string]interface{})
+	if in.Name != "" {
+		att["name"] = in.Name
+	}
+	return []interface{}{att}
+}
+
 func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	if in.ActiveDeadlineSeconds != nil {
@@ -701,6 +709,21 @@ func flattenPodEphemeralVolumeSource(in *v1.EphemeralVolumeSource) []interface{}
 }
 
 // Expanders
+
+func expandOS(l []interface{}) *v1.PodOS {
+	if len(l) == 0 || l[0] == nil {
+		return nil
+	}
+
+	in := l[0].(map[string]interface{})
+	obj := &v1.PodOS{}
+
+	if v, ok := in["name"].(string); ok {
+		obj.Name = v1.OSName(v)
+	}
+
+	return obj
+}
 
 func expandPodTargetState(p []interface{}) []string {
 	if len(p) > 0 {

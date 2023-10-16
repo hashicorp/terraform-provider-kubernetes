@@ -1,26 +1,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-variable "cluster_version" {
-  default = ""
-}
-
-variable "node_count" {
-  default = "1"
-}
-
-variable "instance_type" {
-  default = "e2-standard-2"
-}
-
-variable "enable_alpha" {
-  default = false
-}
-
-variable "cluster_name" {
-  default = ""
-}
-
 data "google_compute_zones" "available" {
 }
 
@@ -76,6 +56,8 @@ resource "google_container_cluster" "primary" {
       ]
     }
   }
+
+  deletion_protection = false
 }
 
 locals {
@@ -124,20 +106,4 @@ locals {
 resource "local_file" "kubeconfig" {
   content  = yamlencode(local.kubeconfig)
   filename = "${path.module}/kubeconfig"
-}
-
-output "google_zone" {
-  value = data.google_compute_zones.available.names[0]
-}
-
-output "node_version" {
-  value = google_container_cluster.primary.node_version
-}
-
-output "kubeconfig_path" {
-  value = local_file.kubeconfig.filename
-}
-
-output "cluster_name" {
-  value = google_container_cluster.primary.name
 }

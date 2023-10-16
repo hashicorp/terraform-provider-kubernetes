@@ -1723,9 +1723,9 @@ resource "kubernetes_pod_v1" "test" {
 
   spec {
     automount_service_account_token = false
-	os{
-		name = "linux"
-	}
+    os {
+      name = "linux"
+    }
     container {
       image = "%s"
       name  = "containername"

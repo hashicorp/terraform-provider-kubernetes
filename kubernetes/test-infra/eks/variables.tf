@@ -26,3 +26,8 @@ variable "az_span" {
 variable "cluster_name" {
   default = ""
 }
+
+variable "capacity_type" {
+  description = "Type of capacity associated with the EKS Node Group."
+  default     = "ON_DEMAND"
+}

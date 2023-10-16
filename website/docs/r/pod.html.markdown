@@ -327,6 +327,12 @@ The following arguments are supported:
 * `pod_affinity_term` - (Required) A pod affinity term, associated with the corresponding weight.
 * `weight` - (Required) Weight associated with matching the corresponding `pod_affinity_term`, in the range 1-100.
 
+### `os`
+
+#### Arguments
+
+* `name` - (Required) Name is the name of the operating system. The currently supported values are `linux` and `windows`.
+
 ### `container`
 
 #### Arguments

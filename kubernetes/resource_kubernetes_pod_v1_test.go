@@ -154,7 +154,8 @@ func TestAccKubernetesPodV1_initContainer_updateForcesNew(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodV1ConfigWithInitContainer(podName, image),
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesPodV1ConfigWithInitContainer(podName, image),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", podName),
@@ -170,7 +171,8 @@ func TestAccKubernetesPodV1_initContainer_updateForcesNew(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config: testAccKubernetesPodV1ConfigWithInitContainer(podName, image1),
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesPodV1ConfigWithInitContainer(podName, image1),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", podName),

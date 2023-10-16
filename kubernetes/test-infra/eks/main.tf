@@ -41,6 +41,7 @@ module "eks" {
   eks_managed_node_groups = {
     default_node_group = {
       ami_type                   = "AL2_ARM_64"
+      capacity_type              = var.capacity_type
       desired_size               = local.node_count
       min_size                   = 1
       max_size                   = local.node_count

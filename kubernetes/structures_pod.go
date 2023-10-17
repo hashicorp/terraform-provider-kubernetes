@@ -710,21 +710,6 @@ func flattenPodEphemeralVolumeSource(in *v1.EphemeralVolumeSource) []interface{}
 
 // Expanders
 
-func expandOS(l []interface{}) *v1.PodOS {
-	if len(l) == 0 || l[0] == nil {
-		return nil
-	}
-
-	in := l[0].(map[string]interface{})
-	obj := &v1.PodOS{}
-
-	if v, ok := in["name"].(string); ok {
-		obj.Name = v1.OSName(v)
-	}
-
-	return obj
-}
-
 func expandPodTargetState(p []interface{}) []string {
 	if len(p) > 0 {
 		t := make([]string, len(p))
@@ -931,14 +916,6 @@ func expandOS(l []interface{}) *v1.PodOS {
 	}
 
 	return obj
-}
-
-func flattenOS(in v1.PodOS) []interface{} {
-	att := make(map[string]interface{})
-	if in.Name != "" {
-		att["name"] = in.Name
-	}
-	return []interface{}{att}
 }
 
 func expandWindowsOptions(l []interface{}) *v1.WindowsSecurityContextOptions {

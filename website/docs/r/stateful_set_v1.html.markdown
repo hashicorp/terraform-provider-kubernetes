@@ -204,6 +204,11 @@ resource "kubernetes_stateful_set_v1" "prometheus" {
         }
       }
     }
+
+    persistent_volume_claim_retention_policy {
+      when_deleted = "Delete"
+      when_scaled  = "Delete"
+    }
   }
 }
 ```
@@ -260,6 +265,8 @@ The following arguments are supported:
 
 * `volume_claim_template` - (Optional) A list of volume claims that pods are allowed to reference. A claim in this list takes precedence over any volumes in the template, with the same name. *Changing this forces a new resource to be created.*
 
+* `persistent_volume_claim_retention_policy` - (Optional) The object controls if and how PVCs are deleted during the lifecycle of a StatefulSet.
+
 ## Nested Blocks
 
 ### `spec.template`
@@ -308,6 +315,14 @@ One or more `volume_claim_template` blocks can be specified.
 Each takes the same attibutes as a `kubernetes_persistent_volume_claim` resource.
 
 Please see its [documentation](persistent_volume_claim.html#argument-reference) for reference.
+
+### `spec.persistent_volume_claim_retention_policy`
+
+#### Arguments
+
+* `when_deleted` - (Optional) This field controls what happens when a Statefulset is deleted. Default is Retain.
+
+* `when_scaled` - (Optional) This field controls what happens when a Statefulset is scaled. Default is Retain.
 
 ## Timeouts
 

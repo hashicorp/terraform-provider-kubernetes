@@ -40,3 +40,13 @@ variable "TFE_CA_cert" {
   type        = string
   default     = null
 }
+
+variable "rbac_oidc_group_name" {
+  description = "Name of OIDC group (according to 'oidc_group_claim') to be granted the role designated by 'var.rbac_group_cluster_role'"
+  type = string
+}
+
+variable "rbac_group_cluster_role" {
+  description = "Kubernetes role to be bound to the OIDC group designated by 'var.rbac_oidc_group_name'"
+  default = "cluster-admin"
+}

@@ -828,7 +828,7 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.NodeSelector = nodeSelectors
 	}
 
-	if v, ok := in["os"].([]interface{}); ok {
+	if v, ok := in["os"].([]interface{}); ok && len(v) != 0 {
 		obj.OS = expandOS(v)
 	}
 
@@ -911,7 +911,7 @@ func expandOS(l []interface{}) *v1.PodOS {
 	in := l[0].(map[string]interface{})
 	obj := &v1.PodOS{}
 
-	if v, ok := in["name"].(string); ok {
+	if v, ok := in["name"].(string); ok && v != "" {
 		obj.Name = v1.OSName(v)
 	}
 

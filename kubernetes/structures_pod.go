@@ -905,17 +905,14 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 
 func expandOS(l []interface{}) *v1.PodOS {
 	if len(l) == 0 || l[0] == nil {
-		return &v1.PodOS{}
+		return nil
 	}
 
 	in := l[0].(map[string]interface{})
-	obj := &v1.PodOS{}
 
-	if v, ok := in["name"].(string); ok && v != "" {
-		obj.Name = v1.OSName(v)
+	return &v1.PodOS{
+		Name: v1.OSName(in["name"].(string)),
 	}
-
-	return obj
 }
 
 func expandWindowsOptions(l []interface{}) *v1.WindowsSecurityContextOptions {

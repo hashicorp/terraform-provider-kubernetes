@@ -210,8 +210,7 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 				Schema: map[string]*schema.Schema{
 					"name": {
 						Type:         schema.TypeString,
-						Optional:     true,
-						Default:      "linux",
+						Required:     true,
 						ValidateFunc: validation.StringInSlice([]string{string(api.Linux), string(api.Windows)}, false),
 						Description:  "Name is the name of the operating system. The currently supported values are linux and windows.",
 					},

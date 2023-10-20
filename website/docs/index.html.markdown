@@ -114,42 +114,6 @@ If you want to connect to a different cluster than the one terraform is running 
 
 For example, you would first have to create a service account and then grant permissions to that service account and then you will be able to spin up a pod using that service account:  
 
-```hcl
-provider "kubernetes"{
-  apiVersion: v1
-  kind: ServiceAccount
-  metadata:
-    name: terraform
-}
-
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: terraform
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - create
-  - get
-  - delete
-  - patch
-
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: terraform
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: terraform
-subjects:
-- kind: ServiceAccount
-  name: terraform
-```
-
 ## Exec plugins
 
 Some cloud providers have short-lived authentication tokens that can expire relatively quickly. To ensure the Kubernetes provider is receiving valid credentials, an exec-based plugin can be used to fetch a new token before initializing the provider. For example, on EKS, the command `eks get-token` can be used:

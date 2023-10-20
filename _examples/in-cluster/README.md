@@ -12,14 +12,45 @@ Standard run:
 
 ```
 # terraform apply \
-  -var "minikube_host_ip=$(minikube --profile kubernetes-1.16 ip)"
+  kubectl apply -f serviceAccount.yaml
+  kubectl apply -f role.yaml
+  kubectl apply -f clusterRoleBinding.yaml
 ```
 
-With a custom build:
+
+
+```yaml 
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: terraform
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: terraform
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - get
+  - delete
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: terraform
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: terraform
+subjects:
+- kind: ServiceAccount
+  name: terraform
 
 ```
-# terraform apply \
-  -var "minikube_host_ip=$(minikube --profile kubernetes-1.16 ip)" \
-  -var "in_cluster_provider_version=v1.10.1-dev" \
-  -var "in_cluster_provider_url=https://storage.googleapis.com/my-custom-bucket/terraform-provider-kubernetes"
-```
+

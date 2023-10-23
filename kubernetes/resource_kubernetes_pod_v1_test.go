@@ -1451,6 +1451,7 @@ func TestAccKubernetesPodV1_topologySpreadConstraint(t *testing.T) {
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.max_skew", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.min_domains", "3"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.topology_key", "topology.kubernetes.io/zone"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.when_unsatisfiable", "ScheduleAnyway"),
 				),

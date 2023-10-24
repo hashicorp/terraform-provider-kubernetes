@@ -2,7 +2,7 @@
 
 Running Terraform in a Kubernetes cluster using in-cluster config.
 
-## Prerequisites
+## Steps
 
 Executing Terraform in a Kubernetes cluster using an in-cluster config would require a service account with appropriate privileges attached to the Pod where Terraform is running.
 

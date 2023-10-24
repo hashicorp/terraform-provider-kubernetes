@@ -16,7 +16,11 @@ func TestAccKubernetesDataSourceMutatingWebhookConfigurationV1_basic(t *testing.
 	dataSourceName := fmt.Sprintf("data.%s", resourceName)
 	name := fmt.Sprintf("acc-test-%v.terraform.io", acctest.RandString(10))
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			// AKS sets up some namespaceSelectors and thus we have to skip these tests
+			skipIfRunningInAks(t)
+		},
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{

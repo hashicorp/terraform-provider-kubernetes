@@ -21,7 +21,7 @@ require (
 	github.com/mitchellh/hashstructure v1.1.0
 	github.com/robfig/cron v1.2.0
 	github.com/stretchr/testify v1.8.1
-	golang.org/x/mod v0.8.0
+	golang.org/x/mod v0.13.0
 	k8s.io/api v0.25.11
 	k8s.io/apiextensions-apiserver v0.25.11
 	k8s.io/apimachinery v0.25.11
@@ -123,12 +123,12 @@ require (
 	github.com/xlab/treeprint v1.1.0 // indirect
 	github.com/zclconf/go-cty v1.12.1
 	go.starlark.net v0.0.0-20221205180719-3fd0dac74452 // indirect
-	golang.org/x/crypto v0.4.0 // indirect
-	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.4.0 // indirect
-	golang.org/x/sys v0.6.0 // indirect
-	golang.org/x/term v0.6.0 // indirect
-	golang.org/x/text v0.8.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/term v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect

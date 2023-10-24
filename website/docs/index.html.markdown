@@ -112,6 +112,8 @@ The provider uses the `KUBERNETES_SERVICE_HOST` and `KUBERNETES_SERVICE_PORT` en
 
 If you want to connect to a different cluster than the one terraform is running inside, configure the provider as [above](#credentials-config).
 
+Find more comprehensive `in-cluster` config example [here](https://github.com/hashicorp/terraform-provider-kubernetes/tree/main/_examples/in-cluster).
+
 ## Exec plugins
 
 Some cloud providers have short-lived authentication tokens that can expire relatively quickly. To ensure the Kubernetes provider is receiving valid credentials, an exec-based plugin can be used to fetch a new token before initializing the provider. For example, on EKS, the command `eks get-token` can be used:

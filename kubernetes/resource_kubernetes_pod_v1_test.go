@@ -116,7 +116,8 @@ func TestAccKubernetesPodV1_scheduler(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.22.0")
+			skipIfClusterVersionLessThan(t, "1.25.0")
+			skipIfRunningInAks(t)
 			setClusterVersionVar(t, "TF_VAR_scheduler_cluster_version") // should be in format 'vX.Y.Z'
 		},
 		ProviderFactories: testAccProviderFactories,
@@ -153,7 +154,8 @@ func TestAccKubernetesPodV1_initContainer_updateForcesNew(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodV1ConfigWithInitContainer(podName, image),
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesPodV1ConfigWithInitContainer(podName, image),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", podName),
@@ -169,7 +171,8 @@ func TestAccKubernetesPodV1_initContainer_updateForcesNew(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config: testAccKubernetesPodV1ConfigWithInitContainer(podName, image1),
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesPodV1ConfigWithInitContainer(podName, image1),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", podName),
@@ -1067,7 +1070,7 @@ func TestAccKubernetesPodV1_gke_with_nodeSelector(t *testing.T) {
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.node_selector.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.node_selector.failure-domain.beta.kubernetes.io/region", region),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.node_selector.topology.kubernetes.io/region", region),
 				),
 			},
 			{
@@ -1448,7 +1451,7 @@ func TestAccKubernetesPodV1_topologySpreadConstraint(t *testing.T) {
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.max_skew", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.topology_key", "failure-domain.beta.kubernetes.io/zone"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.topology_key", "topology.kubernetes.io/zone"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.when_unsatisfiable", "ScheduleAnyway"),
 				),
 			},
@@ -1561,6 +1564,39 @@ func TestAccKubernetesPodV1_phase(t *testing.T) {
 					"spec.0.node_name",
 					"target_state",
 				},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPodV1_os(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1ConfigOS(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.os.0.name", "linux"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
+				Config:   testAccKubernetesPodV1ConfigOS(name, imageName),
+				PlanOnly: true,
 			},
 		},
 	})
@@ -2752,7 +2788,7 @@ func testAccKubernetesPodV1ConfigNodeSelector(podName, imageName, region string)
     }
 
     node_selector = {
-      "failure-domain.beta.kubernetes.io/region" = "%s"
+      "topology.kubernetes.io/region" = "%s"
     }
   }
 }
@@ -3102,7 +3138,7 @@ func testAccKubernetesPodV1ConfigEmptyBlocks(name, imageName string) string {
 }
 
 func testAccKubernetesPodV1ConfigWithVolume(name, imageName, serviceAccount string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
   metadata {
     name = "test"
   }
@@ -3115,7 +3151,7 @@ resource "kubernetes_service_account_v1" "test" {
   }
 }
 
-resource "kubernetes_persistent_volume" "test" {
+resource "kubernetes_persistent_volume_v1" "test" {
   metadata {
     name = "test"
   }
@@ -3124,7 +3160,7 @@ resource "kubernetes_persistent_volume" "test" {
       storage = "1Gi"
     }
     access_modes       = ["ReadWriteOnce"]
-    storage_class_name = kubernetes_storage_class.test.metadata.0.name
+    storage_class_name = kubernetes_storage_class_v1.test.metadata.0.name
     persistent_volume_source {
       host_path {
         path = "/mnt/minikube"
@@ -3134,15 +3170,15 @@ resource "kubernetes_persistent_volume" "test" {
   }
 }
 
-resource "kubernetes_persistent_volume_claim" "test" {
+resource "kubernetes_persistent_volume_claim_v1" "test" {
   wait_until_bound = false
   metadata {
     name = "test"
   }
   spec {
     access_modes       = ["ReadWriteOnce"]
-    storage_class_name = kubernetes_storage_class.test.metadata.0.name
-    volume_name        = kubernetes_persistent_volume.test.metadata.0.name
+    storage_class_name = kubernetes_storage_class_v1.test.metadata.0.name
+    volume_name        = kubernetes_persistent_volume_v1.test.metadata.0.name
     resources {
       requests = {
         storage = "1G"
@@ -3169,7 +3205,7 @@ resource "kubernetes_pod_v1" "test" {
     volume {
       name = "pvc"
       persistent_volume_claim {
-        claim_name = kubernetes_persistent_volume_claim.test.metadata[0].name
+        claim_name = kubernetes_persistent_volume_claim_v1.test.metadata[0].name
       }
     }
     termination_grace_period_seconds = 1
@@ -3190,7 +3226,7 @@ func testAccKubernetesPodV1TopologySpreadConstraintConfig(podName, imageName str
     }
     topology_spread_constraint {
       max_skew           = 1
-      topology_key       = "failure-domain.beta.kubernetes.io/zone"
+      topology_key       = "topology.kubernetes.io/zone"
       when_unsatisfiable = "ScheduleAnyway"
       label_selector {
         match_labels = {
@@ -3304,7 +3340,7 @@ resource "kubernetes_config_map_v1" "scheduler_config" {
   data = {
     "scheduler-config.yaml" = yamlencode(
       {
-        "apiVersion" : "kubescheduler.config.k8s.io/v1beta2",
+        "apiVersion" : "kubescheduler.config.k8s.io/v1",
         "kind" : "KubeSchedulerConfiguration",
         profiles : [{
           "schedulerName" : var.scheduler_name
@@ -3435,6 +3471,24 @@ func testAccKubernetesPodConfigPhase(name, imageName string) string {
     }
   }
   target_state = ["Pending"]
+}
+`, name, imageName)
+}
+
+func testAccKubernetesPodV1ConfigOS(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    os {
+      name = "linux"
+    }
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
 }
 `, name, imageName)
 }

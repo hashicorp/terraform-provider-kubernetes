@@ -295,6 +295,16 @@ func skipIfNotRunningInEks(t *testing.T) {
 	}
 }
 
+func skipIfRunningInAks(t *testing.T) {
+	isInAks, err := isRunningInAks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isInAks {
+		t.Skip("This test cannot be run in AKS cluster")
+	}
+}
+
 func skipIfRunningInEks(t *testing.T) {
 	isInEks, err := isRunningInEks()
 	if err != nil {
@@ -302,6 +312,16 @@ func skipIfRunningInEks(t *testing.T) {
 	}
 	if isInEks {
 		t.Skip("This test cannot be run in EKS cluster")
+	}
+}
+
+func skipIfRunningInGke(t *testing.T) {
+	isInGke, err := isRunningInGke()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isInGke {
+		t.Skip("This test cannot be run in GKE cluster")
 	}
 }
 

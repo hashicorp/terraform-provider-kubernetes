@@ -29,6 +29,14 @@ var builtInTolerations = map[string]string{
 
 // Flatteners
 
+func flattenOS(in v1.PodOS) []interface{} {
+	att := make(map[string]interface{})
+	if in.Name != "" {
+		att["name"] = in.Name
+	}
+	return []interface{}{att}
+}
+
 func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	if in.ActiveDeadlineSeconds != nil {
@@ -91,6 +99,10 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 		att["hostname"] = in.Hostname
 	}
 	att["image_pull_secrets"] = flattenLocalObjectReferenceArray(in.ImagePullSecrets)
+
+	if in.OS != nil {
+		att["os"] = flattenOS(*in.OS)
+	}
 
 	if in.NodeName != "" {
 		att["node_name"] = in.NodeName
@@ -236,6 +248,10 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	}
 	if in.Sysctls != nil {
 		att["sysctl"] = flattenSysctls(in.Sysctls)
+	}
+
+	if in.WindowsOptions != nil {
+		att["windows_options"] = flattenWindowsOptions(*in.WindowsOptions)
 	}
 
 	if len(att) > 0 {
@@ -812,6 +828,10 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.NodeSelector = nodeSelectors
 	}
 
+	if v, ok := in["os"].([]interface{}); ok && len(v) != 0 {
+		obj.OS = expandOS(v)
+	}
+
 	if v, ok := in["runtime_class_name"].(string); ok && v != "" {
 		obj.RuntimeClassName = ptrToString(v)
 	}
@@ -883,6 +903,18 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	return obj, nil
 }
 
+func expandOS(l []interface{}) *v1.PodOS {
+	if len(l) == 0 || l[0] == nil {
+		return nil
+	}
+
+	in := l[0].(map[string]interface{})
+
+	return &v1.PodOS{
+		Name: v1.OSName(in["name"].(string)),
+	}
+}
+
 func expandWindowsOptions(l []interface{}) *v1.WindowsSecurityContextOptions {
 	if len(l) == 0 || l[0] == nil {
 		return &v1.WindowsSecurityContextOptions{}
@@ -895,6 +927,10 @@ func expandWindowsOptions(l []interface{}) *v1.WindowsSecurityContextOptions {
 		obj.GMSACredentialSpec = ptrToString(v)
 	}
 
+	if v, ok := in["host_process"].(bool); ok {
+		obj.HostProcess = ptrToBool(v)
+	}
+
 	if v, ok := in["gmsa_credential_spec_name"].(string); ok {
 		obj.GMSACredentialSpecName = ptrToString(v)
 	}
@@ -904,6 +940,28 @@ func expandWindowsOptions(l []interface{}) *v1.WindowsSecurityContextOptions {
 	}
 
 	return obj
+}
+
+func flattenWindowsOptions(in v1.WindowsSecurityContextOptions) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.GMSACredentialSpec != nil {
+		att["gmsa_credential_spec"] = *in.GMSACredentialSpec
+	}
+
+	if in.GMSACredentialSpecName != nil {
+		att["gmsa_credential_spec_name"] = *in.GMSACredentialSpecName
+	}
+
+	if in.HostProcess != nil {
+		att["host_process"] = *in.HostProcess
+	}
+
+	if in.RunAsUserName != nil {
+		att["run_as_username"] = *in.RunAsUserName
+	}
+
+	return []interface{}{att}
 }
 
 func expandPodDNSConfig(l []interface{}) (*v1.PodDNSConfig, error) {

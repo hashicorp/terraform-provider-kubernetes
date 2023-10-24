@@ -201,6 +201,22 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			ForceNew:    !isUpdatable,
 			Description: "Specifies the hostname of the Pod If not specified, the pod's hostname will be set to a system-defined value.",
 		},
+		"os": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			MaxItems:    1,
+			Description: "Specifies the OS of the containers in the pod.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"name": {
+						Type:         schema.TypeString,
+						Required:     true,
+						ValidateFunc: validation.StringInSlice([]string{string(api.Linux), string(api.Windows)}, false),
+						Description:  "Name is the name of the operating system. The currently supported values are linux and windows.",
+					},
+				},
+			},
+		},
 		"image_pull_secrets": {
 			Type:        schema.TypeList,
 			Description: "ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. For example, in the case of docker, only DockerConfig type secrets are honored. More info: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod",
@@ -331,27 +347,33 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						},
 					},
 					"windows_options": {
-						Type:        schema.TypeSet,
+						Type:        schema.TypeList,
+						MaxItems:    1,
 						Description: "The Windows specific settings applied to all containers. If unspecified, the options within a container's SecurityContext will be used. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. Note that this field cannot be set when spec.os.name is linux.",
 						Optional:    true,
-						ForceNew:    !isUpdatable,
-						Elem: map[string]*schema.Schema{
-							"gmsa_credential_spec": {
-								Type:        schema.TypeString,
-								Description: "GMSACredentialSpec is where the GMSA admission webhook inlines the contents of the GMSA credential spec named by the GMSACredentialSpecName field",
-								Required:    true,
-								ForceNew:    !isUpdatable,
-							},
-							"gmsa_credential_spec_name": {
-								Type:        schema.TypeString,
-								Description: "GMSACredentialSpecName is the name of the GMSA credential spec to use.",
-								Required:    true,
-								ForceNew:    !isUpdatable,
-							},
-							"run_as_username": {
-								Type:        schema.TypeString,
-								Description: "The UserName in Windows to run the entrypoint of the container process. Defaults to the user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
-								Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"gmsa_credential_spec": {
+									Type:        schema.TypeString,
+									Description: "GMSACredentialSpec is where the GMSA admission webhook inlines the contents of the GMSA credential spec named by the GMSACredentialSpecName field",
+									Optional:    true,
+								},
+								"gmsa_credential_spec_name": {
+									Type:        schema.TypeString,
+									Description: "GMSACredentialSpecName is the name of the GMSA credential spec to use.",
+									Optional:    true,
+								},
+								"host_process": {
+									Type:        schema.TypeBool,
+									Description: "HostProcess determines if a container should be run as a 'Host Process' container. Default value is false.",
+									Default:     false,
+									Optional:    true,
+								},
+								"run_as_username": {
+									Type:        schema.TypeString,
+									Description: "The UserName in Windows to run the entrypoint of the container process. Defaults to the user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
+									Optional:    true,
+								},
 							},
 						},
 					},

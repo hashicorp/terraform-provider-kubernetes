@@ -54,7 +54,6 @@ func TestAccKubernetesPersistentVolumeV1_azure_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
-		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
@@ -121,7 +120,6 @@ func TestAccKubernetesPersistentVolumeV1_azure_blobStorageDisk(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
-		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
@@ -179,7 +177,6 @@ func TestAccKubernetesPersistentVolumeV1_azure_file(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
-		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
@@ -933,7 +930,7 @@ func TestAccKubernetesPersistentVolumeV1_hostpath_claimRef(t *testing.T) {
 				Config: testAccKubernetesPersistentVolumeV1Config_hostPath_claimRef_withPVC(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeV1Exists(resourceName, &conf2),
-					testAccCheckKubernetesPersistentVolumeClaimV1Exists("kubernetes_persistent_volume_claim.test", &conf3),
+					testAccCheckKubernetesPersistentVolumeClaimV1Exists("kubernetes_persistent_volume_claim_v1.test", &conf3),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.0.namespace", name),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.claim_ref.0.name", name),
 					testAccCheckKubernetesPersistentVolumeV1ForceNew(&conf1, &conf2, false),
@@ -987,7 +984,7 @@ func testAccCheckKubernetesPersistentVolumeV1Destroy(s *terraform.State) error {
 	poll := 1 * time.Second
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_persistent_volume.test" {
+		if rs.Type != "kubernetes_persistent_volume_v1.test" {
 			continue
 		}
 		name := rs.Primary.ID
@@ -1286,6 +1283,7 @@ func testAccKubernetesPersistentVolumeV1Config_azure_managedDisk(name, location 
 	return fmt.Sprintf(`provider "azurerm" {
   features {}
 }
+
 resource "azurerm_resource_group" "test" {
   name     = %[1]q
   location = %[2]q
@@ -1293,6 +1291,7 @@ resource "azurerm_resource_group" "test" {
     environment = "terraform-provider-kubernetes-test"
   }
 }
+
 resource "azurerm_managed_disk" "test" {
   name                 = %[1]q
   location             = azurerm_resource_group.test.location
@@ -1351,6 +1350,7 @@ func testAccKubernetesPersistentVolumeV1Config_azure_blobStorage(name, location 
 	return fmt.Sprintf(`provider "azurerm" {
   features {}
 }
+
 resource "azurerm_resource_group" "test" {
   name     = "%s"
   location = "%s"
@@ -1358,6 +1358,7 @@ resource "azurerm_resource_group" "test" {
     environment = "terraform-provider-kubernetes-test"
   }
 }
+
 resource "azurerm_storage_account" "test" {
   name                     = %[1]q
   resource_group_name      = azurerm_resource_group.test.name
@@ -1369,6 +1370,7 @@ resource "azurerm_storage_account" "test" {
     environment = "terraform-provider-kubernetes-test"
   }
 }
+
 resource "azurerm_storage_container" "test" {
   name                  = %[1]q
   storage_account_name  = azurerm_storage_account.test.name
@@ -1378,7 +1380,7 @@ resource "azurerm_storage_container" "test" {
 }
 
 func testAccKubernetesPersistentVolumeV1Config_azure_PersistentVolumeAzureFile(name, secretName string) string {
-	return fmt.Sprintf(`resource "kubernetes_persistent_volume" "test" {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -1399,13 +1401,13 @@ func testAccKubernetesPersistentVolumeV1Config_azure_PersistentVolumeAzureFile(n
 }
 
 func testAccKubernetesPersistentVolumeV1Config_azure_PersistentVolumeAzureFileNamespace(name, namespace, secretName string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
     name = %[2]q
   }
 }
 
-resource "kubernetes_secret" "test" {
+resource "kubernetes_secret_v1" "test" {
   metadata {
     name      = %[3]q
     namespace = %[2]q
@@ -1442,6 +1444,7 @@ func testAccKubernetesPersistentVolumeV1Config_azure_file(name, location string)
 	return fmt.Sprintf(`provider "azurerm" {
   features {}
 }
+
 resource "azurerm_resource_group" "test" {
   name     = "%s"
   location = "%s"
@@ -1449,6 +1452,7 @@ resource "azurerm_resource_group" "test" {
     environment = "terraform-provider-kubernetes-test"
   }
 }
+
 resource "azurerm_storage_account" "test" {
   name                     = %[1]q
   resource_group_name      = azurerm_resource_group.test.name
@@ -1462,6 +1466,7 @@ resource "azurerm_storage_account" "test" {
     environment = "terraform-provider-kubernetes-test"
   }
 }
+
 resource "azurerm_storage_share" "test" {
   name                 = %[1]q
   storage_account_name = azurerm_storage_account.test.name
@@ -1770,7 +1775,7 @@ func testAccKubernetesPersistentVolumeV1Config_storageClass(name, diskName, stor
       }
     }
 
-    storage_class_name = "${kubernetes_storage_class.%s.metadata.0.name}"
+    storage_class_name = "${kubernetes_storage_class_v1.%s.metadata.0.name}"
   }
 }
 
@@ -1789,7 +1794,7 @@ resource "google_compute_disk" "test" {
   }
 }
 
-resource "kubernetes_storage_class" "test" {
+resource "kubernetes_storage_class_v1" "test" {
   metadata {
     name = "%s"
   }
@@ -1801,7 +1806,7 @@ resource "kubernetes_storage_class" "test" {
   }
 }
 
-resource "kubernetes_storage_class" "test2" {
+resource "kubernetes_storage_class_v1" "test2" {
   metadata {
     name = "%s"
   }
@@ -1921,14 +1926,14 @@ func testAccKubernetesPersistentVolumeV1Config_hostPath_claimRef_noNamespace(nam
 }
 
 func testAccKubernetesPersistentVolumeV1Config_hostPath_claimRef_withNamespace(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
-    name = "%s"
+    name = %[1]q
   }
 }
 resource "kubernetes_persistent_volume_v1" "test" {
   metadata {
-    name = "%s"
+    name = %[1]q
   }
   spec {
     capacity = {
@@ -1937,8 +1942,8 @@ resource "kubernetes_persistent_volume_v1" "test" {
     access_modes  = ["ReadWriteMany"]
     mount_options = ["foo"]
     claim_ref {
-      name      = "%s"
-      namespace = kubernetes_namespace.test.metadata.0.name
+      name      = %[1]q
+      namespace = kubernetes_namespace_v1.test.metadata.0.name
     }
 
     persistent_volume_source {
@@ -1947,19 +1952,19 @@ resource "kubernetes_persistent_volume_v1" "test" {
       }
     }
   }
-}`, name, name, name)
+}`, name)
 }
 
 func testAccKubernetesPersistentVolumeV1Config_hostPath_claimRef_withPVC(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
-    name = "%s"
+    name = %[1]q
   }
 }
 
 resource "kubernetes_persistent_volume_v1" "test" {
   metadata {
-    name = "%s"
+    name = %[1]q
   }
   spec {
     capacity = {
@@ -1968,8 +1973,8 @@ resource "kubernetes_persistent_volume_v1" "test" {
     access_modes  = ["ReadWriteMany"]
     mount_options = ["foo"]
     claim_ref {
-      name      = "%s"
-      namespace = "%s"
+      name      = %[1]q
+      namespace = kubernetes_namespace_v1.test.metadata.0.name
     }
 
     persistent_volume_source {
@@ -1980,10 +1985,10 @@ resource "kubernetes_persistent_volume_v1" "test" {
   }
 }
 
-resource "kubernetes_persistent_volume_claim" "test" {
+resource "kubernetes_persistent_volume_claim_v1" "test" {
   metadata {
-    name      = "%s"
-    namespace = "%s"
+    name      = %[1]q
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
   }
 
   spec {
@@ -1998,5 +2003,5 @@ resource "kubernetes_persistent_volume_claim" "test" {
     volume_name = kubernetes_persistent_volume_v1.test.metadata.0.name
   }
 }
-`, name, name, name, name, name, name)
+`, name)
 }

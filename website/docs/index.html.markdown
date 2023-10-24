@@ -112,7 +112,7 @@ The provider uses the `KUBERNETES_SERVICE_HOST` and `KUBERNETES_SERVICE_PORT` en
 
 If you want to connect to a different cluster than the one terraform is running inside, configure the provider as [above](#credentials-config).
 
-For example, you would first have to create a service account and then grant permissions to that service account and then you will be able to spin up a pod using that service account:  
+Find more comprehensive `in-cluster` config example [here](https://github.com/hashicorp/terraform-provider-kubernetes/tree/main/_examples/in-cluster).
 
 ## Exec plugins
 

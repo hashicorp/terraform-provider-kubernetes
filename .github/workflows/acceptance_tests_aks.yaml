@@ -28,7 +28,7 @@ on:
     - cron: '0 22 * * *'
 
 env:
-  KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks-new/kubeconfig
+  KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks/kubeconfig
   TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
   PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || vars.PARALLEL_RUNS }}
   TF_VAR_location: ${{ github.event.inputs.location || vars.AZURE_LOCATION }}
@@ -37,7 +37,7 @@ env:
   TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion || vars.CLUSTER_VERSION}}
   
 jobs:
-  acceptanceTests:
+  acceptance_tests_aks:
     runs-on: [custom, linux, medium]
     steps:
       - name: Checkout repository
@@ -56,7 +56,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Provision AKS
-        working-directory: ${{ github.workspace }}/kubernetes/test-infra/aks-new
+        working-directory: ${{ github.workspace }}/kubernetes/test-infra/aks
         run: | 
           terraform init 
           terraform apply -auto-approve
@@ -68,6 +68,6 @@ jobs:
           make testacc
       - name: Destroy AKS
         if: always()
-        working-directory: ${{ github.workspace }}/kubernetes/test-infra/aks-new 
+        working-directory: ${{ github.workspace }}/kubernetes/test-infra/aks 
         run: |
           terraform destroy -auto-approve

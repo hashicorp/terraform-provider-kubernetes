@@ -356,12 +356,12 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 								"gmsa_credential_spec": {
 									Type:        schema.TypeString,
 									Description: "GMSACredentialSpec is where the GMSA admission webhook inlines the contents of the GMSA credential spec named by the GMSACredentialSpecName field",
-									Optional:    true,
+									Required:    true,
 								},
 								"gmsa_credential_spec_name": {
 									Type:        schema.TypeString,
 									Description: "GMSACredentialSpecName is the name of the GMSA credential spec to use.",
-									Optional:    true,
+									Required:    true,
 								},
 								"host_process": {
 									Type:        schema.TypeBool,

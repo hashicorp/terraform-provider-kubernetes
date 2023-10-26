@@ -28,7 +28,7 @@ require (
 	k8s.io/client-go v0.25.11
 	k8s.io/kube-aggregator v0.25.11
 	k8s.io/kubectl v0.25.11
-	k8s.io/kubernetes v1.15.0-alpha.0
+	k8s.io/kubernetes v1.25.11
 )
 
 require (

@@ -599,6 +599,7 @@ func TestAccKubernetesPersistentVolumeV1_storageClass(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
+		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
 		Steps: []resource.TestStep{
 			{

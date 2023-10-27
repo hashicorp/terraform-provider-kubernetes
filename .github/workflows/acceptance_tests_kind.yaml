@@ -50,6 +50,10 @@ jobs:
           key: ${{ runner.os }}-golang-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-golang-${{ github.sha }}
+      - name: CMD
+        run: |
+          ls -lah ~/.cache/go-build
+          ls -lah ~/go/pkg/mod
       - name: Install Terraform
         uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
         with:

@@ -501,7 +501,8 @@ func testAccKubernetesStatefulSetV1ConfigBasic(name, imageName string) string {
           }
 
           readiness_probe {
-            initial_delay_seconds = 5
+            initial_delay_seconds = 3
+            period_seconds        = 1
             http_get {
               path = "/"
               port = 80
@@ -1116,7 +1117,8 @@ func testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, waitFor
           }
 
           readiness_probe {
-            initial_delay_seconds = 5
+            initial_delay_seconds = 3
+            period_seconds        = 1
             tcp_socket {
               port = 80
             }

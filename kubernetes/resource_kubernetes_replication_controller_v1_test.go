@@ -895,9 +895,8 @@ func testAccKubernetesReplicationControllerV1ConfigWithLivenessProbeUsingExec(rc
             exec {
               command = ["cat", "/tmp/healthy"]
             }
-
-            initial_delay_seconds = 5
-            period_seconds        = 5
+            initial_delay_seconds = 3
+            period_seconds        = 1
           }
         }
       }
@@ -945,9 +944,8 @@ func testAccKubernetesReplicationControllerV1ConfigWithLivenessProbeUsingHTTPGet
                 value = "Awesome"
               }
             }
-
             initial_delay_seconds = 3
-            period_seconds        = 3
+            period_seconds        = 1
           }
         }
       }
@@ -989,9 +987,8 @@ func testAccKubernetesReplicationControllerV1ConfigWithLivenessProbeUsingTCP(rcN
             tcp_socket {
               port = 8080
             }
-
             initial_delay_seconds = 3
-            period_seconds        = 3
+            period_seconds        = 1
           }
         }
       }

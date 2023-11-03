@@ -22,13 +22,13 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/mod v0.13.0
-	k8s.io/api v0.25.11
-	k8s.io/apiextensions-apiserver v0.25.11
-	k8s.io/apimachinery v0.25.11
-	k8s.io/client-go v0.25.11
-	k8s.io/kube-aggregator v0.25.11
-	k8s.io/kubectl v0.25.11
-	k8s.io/kubernetes v1.25.11
+	k8s.io/api v0.25.15
+	k8s.io/apiextensions-apiserver v0.25.15
+	k8s.io/apimachinery v0.25.15
+	k8s.io/client-go v0.25.15
+	k8s.io/kube-aggregator v0.25.15
+	k8s.io/kubectl v0.25.15
+	k8s.io/kubernetes v1.25.15
 )
 
 require (
@@ -137,8 +137,8 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/cli-runtime v0.25.11 // indirect
-	k8s.io/component-base v0.25.11 // indirect
+	k8s.io/cli-runtime v0.25.15 // indirect
+	k8s.io/component-base v0.25.15 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20221207184640-f3cff1453715 // indirect
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
@@ -152,9 +152,8 @@ require (
 // kustomize needs to be kept in sync with the cli-runtime.
 // go-openapi needs to be locked at a version that is compatible with kustomize
 replace (
-	github.com/go-openapi/spec => github.com/go-openapi/spec v0.19.9
-	// k8s.io/cli-runtime => k8s.io/cli-runtime v0.25.5
-	k8s.io/client-go => k8s.io/client-go v0.25.5
+	github.com/go-openapi/spec => github.com/go-openapi/spec v0.20.9
+	k8s.io/client-go => k8s.io/client-go v0.25.15
 // sigs.k8s.io/kustomize/pkg/transformers => ./vendor/k8s.io/cli-runtime/pkg/kustomize/k8sdeps/transformer
 // sigs.k8s.io/kustomize/pkg/transformers/config => ./vendor/k8s.io/cli-runtime/pkg/kustomize/k8sdeps/transformer/config
 )

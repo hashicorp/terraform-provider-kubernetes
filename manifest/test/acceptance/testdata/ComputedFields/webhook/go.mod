@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/slok/kubewebhook/v2 v2.5.0
-	k8s.io/apimachinery v0.25.11
+	k8s.io/apimachinery v0.27.7
 )
 
 require (

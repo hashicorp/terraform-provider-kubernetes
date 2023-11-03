@@ -150,4 +150,4 @@ replace (
 // sigs.k8s.io/kustomize/pkg/transformers/config => ./vendor/k8s.io/cli-runtime/pkg/kustomize/k8sdeps/transformer/config
 )
 
-go 1.20
+go 1.21

@@ -1,11 +1,11 @@
 module github.com/hashicorp/k8s-manifest-hook
 
-go 1.20
+go 1.21
 
 require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/slok/kubewebhook/v2 v2.5.0
-	k8s.io/apimachinery v0.25.11
+	k8s.io/apimachinery v0.27.7
 )
 
 require (
@@ -24,8 +24,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/api v0.25.11 // indirect
 	k8s.io/client-go v0.25.5 // indirect
-	k8s.io/klog/v2 v2.80.1 // indirect
-	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448 // indirect
+	k8s.io/klog/v2 v2.90.1 // indirect
+	k8s.io/utils v0.0.0-20230209194617-a36077c30491 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect

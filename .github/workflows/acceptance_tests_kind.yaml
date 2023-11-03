@@ -26,7 +26,7 @@ on:
 
 env:
   KUBECONFIG: ${{ github.workspace }}/.kube/config
-  KIND_VERSION: ${{ github.event.inputs.kind_version || vars.KIND_VERSION }}
+  KIND_VERSION: ${{ github.event.inputs.kindVersion || vars.KIND_VERSION }}
   PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || vars.PARALLEL_RUNS }}
   TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
 

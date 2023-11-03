@@ -258,7 +258,7 @@ func resourceKubernetesIngressV1Beta1Read(ctx context.Context, d *schema.Resourc
 
 	err = d.Set("status", []interface{}{
 		map[string][]interface{}{
-			"load_balancer": flattenLoadBalancerStatus(ing.Status.LoadBalancer),
+			"load_balancer": flattenIngressStatus(ing.Status.LoadBalancer),
 		},
 	})
 	if err != nil {

@@ -90,6 +90,22 @@ func flattenIngressTLS(in []v1beta1.IngressTLS) []interface{} {
 	return att
 }
 
+func flattenIngressStatus(in v1beta1.IngressLoadBalancerStatus) []interface{} {
+	out := make([]interface{}, len(in.Ingress))
+	for i, ingress := range in.Ingress {
+		out[i] = map[string]interface{}{
+			"ip":       ingress.IP,
+			"hostname": ingress.Hostname,
+		}
+	}
+
+	return []interface{}{
+		map[string][]interface{}{
+			"ingress": out,
+		},
+	}
+}
+
 // Expanders
 
 func expandIngressRule(l []interface{}) []v1beta1.IngressRule {

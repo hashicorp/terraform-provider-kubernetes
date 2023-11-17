@@ -33,11 +33,29 @@ resource "kubernetes_manifest" "oidc_conf" {
             clientID                 = var.oidc_audience
             issuerURI                = var.odic_issuer_uri
             userClaim                = var.oidc_user_claim
-            groupClaim               = var.oidc_group_claim
+            groupsClaim              = var.oidc_group_claim
             certificateAuthorityData = var.TFE_CA_cert
           }
         }
       ]
     }
+  }
+}
+
+resource "kubernetes_cluster_role_binding_v1" "oidc_role" {
+  metadata {
+    name = "odic-identity"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = var.rbac_group_cluster_role
+  }
+
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Group"
+    name      = var.rbac_oidc_group_name
   }
 }

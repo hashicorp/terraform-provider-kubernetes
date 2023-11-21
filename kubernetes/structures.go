@@ -143,6 +143,8 @@ func flattenTemplateMetadata(meta metav1.ObjectMeta) []interface{} {
 	m := flattenMetadataFields(meta)
 	m["annotations"] = meta.Annotations
 
+	// The Jobs controller adds labels 'batch.kubernetes.io/controller-uid' and 'batch.kubernetes.io/job-name'
+	// to the template block dynamically and thus we have to ignore them to avoid perpetual diff.
 	dynamicLabels := []string{
 		"batch.kubernetes.io/controller-uid",
 		"batch.kubernetes.io/job-name",

@@ -9,8 +9,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	v1 "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesNamespaceV1() *schema.Resource {
@@ -49,24 +49,27 @@ func dataSourceKubernetesNamespaceV1Read(ctx context.Context, d *schema.Resource
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	d.SetId(metadata.Name)
 
-	namespace, err := conn.CoreV1().Namespaces().Get(ctx, metadata.Name, meta_v1.GetOptions{})
+	namespace, err := conn.CoreV1().Namespaces().Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received namespace: %#v", namespace)
+
 	err = d.Set("metadata", flattenDataSourceMetadata(namespace.ObjectMeta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	err = d.Set("spec", flattenNamespaceSpec(&namespace.Spec))
+
+	err = d.Set("spec", flattenNamespaceV1Spec(&namespace.Spec))
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
 	return nil
 }
 
-func flattenNamespaceSpec(in *v1.NamespaceSpec) []interface{} {
+func flattenNamespaceV1Spec(in *corev1.NamespaceSpec) []interface{} {
 	if in == nil || len(in.Finalizers) == 0 {
 		return []interface{}{}
 	}
@@ -76,5 +79,6 @@ func flattenNamespaceSpec(in *v1.NamespaceSpec) []interface{} {
 		fin[i] = string(f)
 	}
 	spec["finalizers"] = fin
+
 	return []interface{}{spec}
 }

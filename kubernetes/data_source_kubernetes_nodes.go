@@ -111,5 +111,6 @@ func dataSourceKubernetesNodesRead(ctx context.Context, d *schema.ResourceData, 
 	}
 	id := fmt.Sprintf("%x", idsum.Sum(nil))
 	d.SetId(id)
+
 	return nil
 }

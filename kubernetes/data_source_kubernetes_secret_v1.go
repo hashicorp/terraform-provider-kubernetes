@@ -5,10 +5,11 @@ package kubernetes
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesSecretV1() *schema.Resource {
@@ -44,11 +45,47 @@ func dataSourceKubernetesSecretV1() *schema.Resource {
 }
 
 func dataSourceKubernetesSecretV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	om := meta_v1.ObjectMeta{
-		Namespace: d.Get("metadata.0.namespace").(string),
-		Name:      d.Get("metadata.0.name").(string),
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+
+	om := metav1.ObjectMeta{
+		Namespace: metadata.Namespace,
+		Name:      metadata.Name,
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesSecretV1Read(ctx, d, meta)
+	log.Printf("[INFO] Reading secret %s", metadata.Name)
+	secret, err := conn.CoreV1().Secrets(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	log.Printf("[INFO] Received secret: %#v", secret.ObjectMeta)
+
+	err = d.Set("metadata", flattenDataSourceMetadata(secret.ObjectMeta))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	binaryDataKeys := []string{}
+	if v, ok := d.GetOk("binary_data"); ok {
+		binaryData := map[string][]byte{}
+		for k := range v.(map[string]interface{}) {
+			binaryData[k] = secret.Data[k]
+			binaryDataKeys = append(binaryDataKeys, k)
+		}
+		d.Set("binary_data", base64EncodeByteMap(binaryData))
+	}
+
+	for _, k := range binaryDataKeys {
+		delete(secret.Data, k)
+	}
+	d.Set("data", flattenByteMapToStringMap(secret.Data))
+	d.Set("type", secret.Type)
+	d.Set("immutable", secret.Immutable)
+
+	return nil
 }

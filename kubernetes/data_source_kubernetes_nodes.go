@@ -94,13 +94,11 @@ func dataSourceKubernetesNodesRead(ctx context.Context, d *schema.ResourceData, 
 	nodes := make([]interface{}, len(nodesRaw.Items))
 	for i, v := range nodesRaw.Items {
 		log.Printf("[INFO] Received node: %s", v.Name)
-		prefix := fmt.Sprintf("nodes.%d.", i)
-		n := map[string]interface{}{
-			"metadata": flattenMetadata(v.ObjectMeta, d, meta, prefix),
+		nodes[i] = map[string]interface{}{
+			"metadata": flattenDataSourceMetadata(v.ObjectMeta),
 			"spec":     flattenNodeSpec(v.Spec),
 			"status":   flattenNodeStatus(v.Status),
 		}
-		nodes[i] = n
 	}
 	if err := d.Set("nodes", nodes); err != nil {
 		return diag.FromErr(err)

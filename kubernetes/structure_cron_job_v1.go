@@ -44,7 +44,7 @@ func flattenCronJobSpecV1(in batch.CronJobSpec, d *schema.ResourceData, meta int
 func flattenJobTemplateV1(in batch.JobTemplateSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
-	att["metadata"] = flattenMetadata(in.ObjectMeta, d, meta, "spec.0.job_template.0.")
+	att["metadata"] = flattenTemplateMetadata(in.ObjectMeta)
 
 	jobSpec, err := flattenJobV1Spec(in.Spec, d, meta, "spec.0.job_template.0.spec.0.template.0.")
 	if err != nil {

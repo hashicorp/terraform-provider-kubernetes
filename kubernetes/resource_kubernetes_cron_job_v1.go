@@ -58,11 +58,6 @@ func resourceKubernetesCronJobV1Create(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	configAnnotations := d.Get("metadata.0.annotations").(map[string]interface{})
-	ignoreAnnotations := meta.(kubeClientsets).IgnoreAnnotations
-	annotations := removeInternalKeys(metadata.Annotations, make(map[string]interface{}))
-	metadata.Annotations = removeKeys(annotations, configAnnotations, ignoreAnnotations)
-
 	job := batch.CronJob{
 		ObjectMeta: metadata,
 		Spec:       spec,
@@ -96,11 +91,6 @@ func resourceKubernetesCronJobV1Update(ctx context.Context, d *schema.ResourceDa
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	configAnnotations := d.Get("metadata.0.annotations").(map[string]interface{})
-	ignoreAnnotations := meta.(kubeClientsets).IgnoreAnnotations
-	annotations := removeInternalKeys(metadata.Annotations, make(map[string]interface{}))
-	metadata.Annotations = removeKeys(annotations, configAnnotations, ignoreAnnotations)
-	spec.JobTemplate.ObjectMeta.Annotations = metadata.Annotations
 
 	cronjob := &batch.CronJob{
 		ObjectMeta: metadata,

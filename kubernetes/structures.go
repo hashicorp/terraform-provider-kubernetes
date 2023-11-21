@@ -115,38 +115,58 @@ func expandStringSlice(s []interface{}) []string {
 	return result
 }
 
-func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMetadata interface{}, metaPrefix ...string) []interface{} {
+func flattenMetadataFields(meta metav1.ObjectMeta) map[string]interface{} {
 	m := make(map[string]interface{})
-	prefix := ""
-	if len(metaPrefix) > 0 {
-		prefix = metaPrefix[0]
-	}
-
-	if prefix == "" {
-		configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
-		ignoreAnnotations := providerMetadata.(kubeClientsets).IgnoreAnnotations
-		annotations := removeInternalKeys(meta.Annotations, configAnnotations)
-		m["annotations"] = removeKeys(annotations, configAnnotations, ignoreAnnotations)
-	} else {
-		m["annotations"] = d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
-	}
-
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}
-
-	configLabels := d.Get(prefix + "metadata.0.labels").(map[string]interface{})
-	ignoreLabels := providerMetadata.(kubeClientsets).IgnoreLabels
-	labels := removeInternalKeys(meta.Labels, configLabels)
-	m["labels"] = removeKeys(labels, configLabels, ignoreLabels)
-	m["name"] = meta.Name
-	m["resource_version"] = meta.ResourceVersion
-	m["uid"] = fmt.Sprintf("%v", meta.UID)
 	m["generation"] = meta.Generation
-
+	m["name"] = meta.Name
 	if meta.Namespace != "" {
 		m["namespace"] = meta.Namespace
 	}
+	m["resource_version"] = meta.ResourceVersion
+	m["uid"] = meta.UID
+
+	return m
+}
+
+func flattenDataSourceMetadata(meta metav1.ObjectMeta) []interface{} {
+	m := flattenMetadataFields(meta)
+	m["annotations"] = meta.Annotations
+	m["labels"] = meta.Labels
+
+	return []interface{}{m}
+}
+
+func flattenTemplateMetadata(meta metav1.ObjectMeta) []interface{} {
+	m := flattenMetadataFields(meta)
+	m["annotations"] = meta.Annotations
+
+	dynamicLabels := []string{
+		"batch.kubernetes.io/controller-uid",
+		"batch.kubernetes.io/job-name",
+	}
+	for _, l := range dynamicLabels {
+		delete(meta.Labels, l)
+	}
+	m["labels"] = meta.Labels
+
+	return []interface{}{m}
+}
+
+func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMetadata interface{}) []interface{} {
+	m := flattenMetadataFields(meta)
+
+	configAnnotations := d.Get("metadata.0.annotations").(map[string]interface{})
+	ignoreAnnotations := providerMetadata.(kubeClientsets).IgnoreAnnotations
+	annotations := removeInternalKeys(meta.Annotations, configAnnotations)
+	m["annotations"] = removeKeys(annotations, configAnnotations, ignoreAnnotations)
+
+	configLabels := d.Get("metadata.0.labels").(map[string]interface{})
+	ignoreLabels := providerMetadata.(kubeClientsets).IgnoreLabels
+	labels := removeInternalKeys(meta.Labels, configLabels)
+	m["labels"] = removeKeys(labels, configLabels, ignoreLabels)
 
 	return []interface{}{m}
 }

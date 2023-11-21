@@ -51,7 +51,7 @@ func flattenJobV1Spec(in batchv1.JobSpec, d *schema.ResourceData, meta interface
 		delete(labels, "job-name")
 	}
 
-	podSpec, err := flattenPodTemplateSpec(in.Template, d, meta, prefix...)
+	podSpec, err := flattenPodTemplateSpec(in.Template)
 	if err != nil {
 		return nil, err
 	}

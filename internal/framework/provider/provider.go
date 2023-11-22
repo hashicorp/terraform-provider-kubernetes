@@ -52,8 +52,8 @@ type KubernetesProviderModel struct {
 
 	ProxyURL types.String `tfsdk:"proxy_url"`
 
-	IgnoreAnnotations types.List `tfsdk:"ignore_annotations"`
-	IgnoreLabels      types.List `tfsdk:"ignore_labels"`
+	IgnoreAnnotations []types.String `tfsdk:"ignore_annotations"`
+	IgnoreLabels      []types.String `tfsdk:"ignore_labels"`
 
 	Exec []struct {
 		APIVersion types.String            `tfsdk:"api_version"`
@@ -185,7 +185,9 @@ func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequ
 }
 
 func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	resources := []func() resource.Resource{}
+	resources = append(resources, generatedResources...)
+	return resources
 }
 
 func (p *KubernetesProvider) DataSources(ctx context.Context) []func() datasource.DataSource {

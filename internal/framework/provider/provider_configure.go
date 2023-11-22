@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/client"
+
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/mitchellh/go-homedir"
@@ -32,10 +34,22 @@ func (p *KubernetesProvider) Configure(ctx context.Context, req provider.Configu
 		return
 	}
 
-	_, err := newKubernetesClientConfig(ctx, data)
+	cfg, err := newKubernetesClientConfig(ctx, data)
 	if err != nil {
 		resp.Diagnostics.Append(diag.NewErrorDiagnostic("failed to initilize Kubernetes client configuration", err.Error()))
 	}
+
+	// FIXME make a helper function for this
+	ignoreLabels := make([]string, len(data.IgnoreLabels))
+	for i, s := range data.IgnoreLabels {
+		ignoreLabels[i] = s.ValueString()
+	}
+	ignoreAnnotations := make([]string, len(data.IgnoreAnnotations))
+	for i, s := range data.IgnoreAnnotations {
+		ignoreAnnotations[i] = s.ValueString()
+	}
+
+	resp.ResourceData = client.NewKubernetesClientGetter(cfg, ignoreLabels, ignoreAnnotations)
 }
 
 func newKubernetesClientConfig(ctx context.Context, data KubernetesProviderModel) (*restclient.Config, error) {

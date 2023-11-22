@@ -21,12 +21,11 @@ func checkParsableQuantity(value string) error {
 func TestAccKubernetesDataSourceNodes_basic(t *testing.T) {
 	dataSourceName := "data.kubernetes_nodes.test"
 	nodeName := regexp.MustCompile(`^[a-z0-9]+(?:[-.]{1}[a-z0-9]+)*$`)
-	zeroOrMore := regexp.MustCompile(`^[0-9]+$`)
 	oneOrMore := regexp.MustCompile(`^[1-9][0-9]*$`)
 	checkFuncs := resource.ComposeAggregateTestCheckFunc(
 		resource.TestMatchResourceAttr(dataSourceName, "nodes.#", oneOrMore),
-		resource.TestMatchResourceAttr(dataSourceName, "nodes.0.metadata.0.annotations.%", zeroOrMore),
-		resource.TestMatchResourceAttr(dataSourceName, "nodes.0.metadata.0.labels.%", zeroOrMore),
+		resource.TestMatchResourceAttr(dataSourceName, "nodes.0.metadata.0.annotations.%", oneOrMore),
+		resource.TestMatchResourceAttr(dataSourceName, "nodes.0.metadata.0.labels.%", oneOrMore),
 		resource.TestCheckResourceAttrSet(dataSourceName, "nodes.0.metadata.0.resource_version"),
 		resource.TestMatchResourceAttr(dataSourceName, "nodes.0.metadata.0.name", nodeName),
 		resource.TestMatchResourceAttr(dataSourceName, "nodes.0.spec.0.%", oneOrMore),

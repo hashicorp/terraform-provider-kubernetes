@@ -1,0 +1,3 @@
+```release-note:note
+We have updated the logic of data sources and now the provider will return all annotations and labels attached to the object, in spite of the `ignore_annotations` and `ignore_labels` provider settings.
+```

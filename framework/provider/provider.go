@@ -5,7 +5,6 @@ package provider
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -27,7 +26,6 @@ type KubernetesProvider struct {
 
 // KubernetesProviderModel describes the provider data model.
 type KubernetesProviderModel struct {
-	Endpoint types.String `tfsdk:"endpoint"`
 }
 
 func (p *KubernetesProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -37,26 +35,121 @@ func (p *KubernetesProvider) Metadata(ctx context.Context, req provider.Metadata
 
 func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Attributes: map[string]schema.Attribute{},
+		Attributes: map[string]schema.Attribute{
+			"host": schema.StringAttribute{
+				Description: "The hostname (in form of URI) of Kubernetes master.",
+				Optional:    true,
+			},
+			"username": schema.StringAttribute{
+				Description: "The username to use for HTTP basic authentication when accessing the Kubernetes master endpoint.",
+				Optional:    true,
+			},
+			"password": schema.StringAttribute{
+				Description: "The password to use for HTTP basic authentication when accessing the Kubernetes master endpoint.",
+				Optional:    true,
+			},
+			"insecure": schema.BoolAttribute{
+				Description: "Whether server should be accessed without verifying the TLS certificate.",
+				Optional:    true,
+			},
+			"tls_server_name": schema.StringAttribute{
+				Description: "Server name passed to the server for SNI and is used in the client to check server certificates against.",
+				Optional:    true,
+			},
+			"client_certificate": schema.StringAttribute{
+				Description: "PEM-encoded client certificate for TLS authentication.",
+				Optional:    true,
+			},
+			"client_key": schema.StringAttribute{
+				Description: "PEM-encoded client certificate key for TLS authentication.",
+				Optional:    true,
+			},
+			"cluster_ca_certificate": schema.StringAttribute{
+				Description: "PEM-encoded root certificates bundle for TLS authentication.",
+				Optional:    true,
+			},
+			"config_paths": schema.ListAttribute{
+				ElementType: types.StringType,
+				Description: "A list of paths to kube config files. Can be set with KUBE_CONFIG_PATHS environment variable.",
+				Optional:    true,
+			},
+			"config_path": schema.StringAttribute{
+				Description: "Path to the kube config file. Can be set with KUBE_CONFIG_PATH.",
+				Optional:    true,
+			},
+			"config_context": schema.StringAttribute{
+				Description: "",
+				Optional:    true,
+			},
+			"config_context_auth_info": schema.StringAttribute{
+				Description: "",
+				Optional:    true,
+			},
+			"config_context_cluster": schema.StringAttribute{
+				Description: "",
+				Optional:    true,
+			},
+			"token": schema.StringAttribute{
+				Description: "Token to authenticate an service account",
+				Optional:    true,
+			},
+			"proxy_url": schema.StringAttribute{
+				Description: "URL to the proxy to be used for all API requests",
+				Optional:    true,
+			},
+			"ignore_annotations": schema.ListAttribute{
+				ElementType: types.StringType,
+				Description: "List of Kubernetes metadata annotations to ignore across all resources handled by this provider for situations where external systems are managing certain resource annotations. Each item is a regular expression.",
+				Optional:    true,
+			},
+			"ignore_labels": schema.ListAttribute{
+				ElementType: types.StringType,
+				Description: "List of Kubernetes metadata labels to ignore across all resources handled by this provider for situations where external systems are managing certain resource labels. Each item is a regular expression.",
+				Optional:    true,
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"exec": schema.ListNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"api_version": schema.StringAttribute{
+							Required: true,
+						},
+						"command": schema.StringAttribute{
+							Required: true,
+						},
+						"env": schema.MapAttribute{
+							ElementType: types.StringType,
+							Optional:    true,
+						},
+						"args": schema.ListAttribute{
+							ElementType: types.StringType,
+							Optional:    true,
+						},
+					},
+				},
+			},
+			"experiments": schema.ListNestedBlock{
+				Description: "Enable and disable experimental features.",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"manifest_resource": schema.BoolAttribute{
+							Description: "Enable the `kubernetes_manifest` resource.",
+							Optional:    true,
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
 func (p *KubernetesProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	var data KubernetesProviderModel
-
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
-
-	// Example client configuration for data sources and resources
-	client := http.DefaultClient
-	resp.DataSourceData = client
-	resp.ResourceData = client
 }
 
 func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Resource {

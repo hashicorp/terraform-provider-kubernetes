@@ -161,21 +161,20 @@ func flattenTemplateMetadata(meta metav1.ObjectMeta) []interface{} {
 
 func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMetadata interface{}) []interface{} {
 	m := flattenMetadataFields(meta)
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
-	configAnnotations := d.Get("metadata.0.annotations").(map[string]interface{})
 	ignoreAnnotations := providerMetadata.(kubeClientsets).IgnoreAnnotations
-	annotations := removeInternalKeys(meta.Annotations, configAnnotations)
-	m["annotations"] = removeKeys(annotations, configAnnotations, ignoreAnnotations)
+	annotations := removeInternalKeys(meta.Annotations, metadata.Annotations)
+	m["annotations"] = removeKeys(annotations, metadata.Annotations, ignoreAnnotations)
 
-	configLabels := d.Get("metadata.0.labels").(map[string]interface{})
 	ignoreLabels := providerMetadata.(kubeClientsets).IgnoreLabels
-	labels := removeInternalKeys(meta.Labels, configLabels)
-	m["labels"] = removeKeys(labels, configLabels, ignoreLabels)
+	labels := removeInternalKeys(meta.Labels, metadata.Labels)
+	m["labels"] = removeKeys(labels, metadata.Labels, ignoreLabels)
 
 	return []interface{}{m}
 }
 
-func removeInternalKeys(m map[string]string, d map[string]interface{}) map[string]string {
+func removeInternalKeys(m map[string]string, d map[string]string) map[string]string {
 	for k := range m {
 		if isInternalKey(k) && !isKeyInMap(k, d) {
 			delete(m, k)
@@ -186,7 +185,7 @@ func removeInternalKeys(m map[string]string, d map[string]interface{}) map[strin
 
 // removeKeys removes given Kubernetes metadata(annotations and labels) keys.
 // In that case, they won't be available in the TF state file and will be ignored during apply/plan operations.
-func removeKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadataKeys []string) map[string]string {
+func removeKeys(m map[string]string, d map[string]string, ignoreKubernetesMetadataKeys []string) map[string]string {
 	for k := range m {
 		if ignoreKey(k, ignoreKubernetesMetadataKeys) && !isKeyInMap(k, d) {
 			delete(m, k)
@@ -195,7 +194,7 @@ func removeKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesM
 	return m
 }
 
-func isKeyInMap(key string, d map[string]interface{}) bool {
+func isKeyInMap(key string, d map[string]string) bool {
 	if d == nil {
 		return false
 	}

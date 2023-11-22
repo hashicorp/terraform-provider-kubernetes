@@ -51,7 +51,7 @@ func TestAccKubernetesDeploymentV1_basic(t *testing.T) {
 	var conf appsv1.Deployment
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := agnhostImage
+	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -823,7 +823,7 @@ func TestAccKubernetesDeploymentV1_with_empty_dir_volume(t *testing.T) {
 func TestAccKubernetesDeploymentV1Update_basic(t *testing.T) {
 	var conf1, conf2 appsv1.Deployment
 	resourceName := "kubernetes_deployment_v1.test"
-	imageName := agnhostImage
+	imageName := busyboxImage
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -1352,20 +1352,7 @@ func testAccKubernetesDeploymentV1Config_basic(name, imageName string) string {
         container {
           image = "%s"
           name  = "tf-acc-test"
-          args  = ["test-webserver"]
-
-          port {
-            container_port = 80
-          }
-
-          readiness_probe {
-            initial_delay_seconds = 3
-            period_seconds        = 1
-            http_get {
-              path = "/"
-              port = 80
-            }
-          }
+          args  = ["sleep", "infinity"]
 
           resources {
             requests = {
@@ -1574,7 +1561,7 @@ func testAccKubernetesDeploymentV1Config_modified(name, imageName string) string
         container {
           image = "%s"
           name  = "tf-acc-test"
-          args  = ["test-webserver"]
+          args  = ["sleep", "infinity"]
         }
         termination_grace_period_seconds = 1
       }

@@ -145,11 +145,6 @@ func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequ
 }
 
 func (p *KubernetesProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var data KubernetesProviderModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 }
 
 func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Resource {

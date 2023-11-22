@@ -26,7 +26,8 @@ import (
 
 const (
 	providerName = "registry.terraform.io/hashicorp/kubernetes"
-	version      = "dev"
+
+	Version = "dev"
 )
 
 // Generate docs for website
@@ -39,7 +40,7 @@ func main() {
 	providers := []func() tfprotov5.ProviderServer{
 		kubernetes.Provider().GRPCProvider,
 		manifest.Provider(),
-		providerserver.NewProtocol5(framework.New(version)),
+		providerserver.NewProtocol5(framework.New(Version)),
 	}
 
 	ctx := context.Background()

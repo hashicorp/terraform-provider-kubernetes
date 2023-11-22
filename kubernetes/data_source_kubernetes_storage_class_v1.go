@@ -94,11 +94,11 @@ func dataSourceKubernetesStorageClassV1Read(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 
-	name := d.Get("metadata.0.name").(string)
-	d.SetId(name)
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	d.SetId(metadata.Name)
 
-	log.Printf("[INFO] Reading storage class %s", name)
-	storageClass, err := conn.StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
+	log.Printf("[INFO] Reading storage class %s", metadata.Name)
+	storageClass, err := conn.StorageV1().StorageClasses().Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)

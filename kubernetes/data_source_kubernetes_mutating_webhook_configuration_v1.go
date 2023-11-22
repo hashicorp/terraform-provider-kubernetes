@@ -118,11 +118,11 @@ func dataSourceKubernetesMutatingWebhookConfigurationV1Read(ctx context.Context,
 		return diag.FromErr(err)
 	}
 
-	name := d.Get("metadata.0.name").(string)
-	d.SetId(name)
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	d.SetId(metadata.Name)
 
-	log.Printf("[INFO] Reading mutating webhook configuration %s", name)
-	cfg, err := conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
+	log.Printf("[INFO] Reading mutating webhook configuration %s", metadata.Name)
+	cfg, err := conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)

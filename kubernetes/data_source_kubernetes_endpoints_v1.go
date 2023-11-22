@@ -37,8 +37,8 @@ func dataSourceKubernetesEndpointsV1Read(ctx context.Context, d *schema.Resource
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
 	om := metav1.ObjectMeta{
-		Namespace: d.Get("metadata.0.namespace").(string),
-		Name:      d.Get("metadata.0.name").(string),
+		Namespace: metadata.Namespace,
+		Name:      metadata.Name,
 	}
 	d.SetId(buildId(om))
 

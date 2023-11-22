@@ -74,9 +74,9 @@ func dataSourceKubernetesNodesRead(ctx context.Context, d *schema.ResourceData, 
 
 	listOptions := metav1.ListOptions{}
 
-	m := d.Get("metadata").([]interface{})
-	if len(m) > 0 {
-		metadata := expandMetadata(m)
+	metadata := d.Get("metadata").([]interface{})
+	if len(metadata) > 0 {
+		metadata := expandMetadata(metadata)
 		labelMap, err := metav1.LabelSelectorAsMap(&metav1.LabelSelector{MatchLabels: metadata.Labels})
 		if err != nil {
 			return diag.FromErr(err)

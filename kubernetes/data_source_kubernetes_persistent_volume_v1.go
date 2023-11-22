@@ -152,11 +152,11 @@ func dataSourceKubernetesPersistentVolumeV1Read(ctx context.Context, d *schema.R
 		return diag.FromErr(err)
 	}
 
-	name := d.Get("metadata.0.name").(string)
-	d.SetId(name)
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	d.SetId(metadata.Name)
 
-	log.Printf("[INFO] Reading persistent volume %s", name)
-	volume, err := conn.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
+	log.Printf("[INFO] Reading persistent volume %s", metadata.Name)
+	volume, err := conn.CoreV1().PersistentVolumes().Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)

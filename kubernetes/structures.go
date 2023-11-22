@@ -115,6 +115,8 @@ func expandStringSlice(s []interface{}) []string {
 	return result
 }
 
+// flattenMetadataFields flattens all metadata fields except 'annotations' and 'labels'
+// that are treated differently depending on a target object.
 func flattenMetadataFields(meta metav1.ObjectMeta) map[string]interface{} {
 	m := make(map[string]interface{})
 	if meta.GenerateName != "" {

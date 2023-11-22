@@ -51,6 +51,13 @@ func (s *RawProviderServer) PrepareProviderConfig(ctx context.Context, req *tfpr
 	return resp, nil
 }
 
+// GetMetadata function
+func (s *RawProviderServer) GetMetadata(ctx context.Context, req *tfprotov5.GetMetadataRequest) (*tfprotov5.GetMetadataResponse, error) {
+	s.logger.Trace("[GetMetadata][Request]\n%s\n", dump(*req))
+	resp := &tfprotov5.GetMetadataResponse{}
+	return resp, nil
+}
+
 // ValidateDataSourceConfig function
 func (s *RawProviderServer) ValidateDataSourceConfig(ctx context.Context, req *tfprotov5.ValidateDataSourceConfigRequest) (*tfprotov5.ValidateDataSourceConfigResponse, error) {
 	s.logger.Trace("[ValidateDataSourceConfig][Request]\n%s\n", dump(*req))

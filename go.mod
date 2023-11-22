@@ -1,6 +1,6 @@
 module github.com/hashicorp/terraform-provider-kubernetes
 
-go 1.21
+go 1.21.5
 
 require (
 	github.com/Masterminds/semver v1.5.0
@@ -13,6 +13,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.20.1
 	github.com/hashicorp/terraform-exec v0.21.0
 	github.com/hashicorp/terraform-json v0.22.1
+	github.com/hashicorp/terraform-plugin-codegen-kubernetes v0.0.0-00010101000000-000000000000
 	github.com/hashicorp/terraform-plugin-docs v0.16.0
 	github.com/hashicorp/terraform-plugin-framework v1.7.0
 	github.com/hashicorp/terraform-plugin-go v0.23.0
@@ -24,12 +25,12 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/hashstructure v1.1.0
 	github.com/robfig/cron v1.2.0
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.9.0
 	golang.org/x/mod v0.16.0
-	k8s.io/api v0.28.6
+	k8s.io/api v0.28.8
 	k8s.io/apiextensions-apiserver v0.28.6
-	k8s.io/apimachinery v0.28.6
-	k8s.io/client-go v0.28.6
+	k8s.io/apimachinery v0.28.8
+	k8s.io/client-go v0.28.8
 	k8s.io/kube-aggregator v0.28.6
 	k8s.io/kubectl v0.28.6
 	k8s.io/kubernetes v1.28.6
@@ -46,6 +47,7 @@ require (
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
+	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/huandu/xstrings v1.3.3 // indirect
 	github.com/invopop/yaml v0.2.0 // indirect
@@ -78,7 +80,6 @@ require (
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
-	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.2 // indirect
@@ -148,3 +149,5 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.14.3-0.20230601165947-6ce0bf390ce3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
+
+replace github.com/hashicorp/terraform-plugin-codegen-kubernetes => /Users/john/dev/hashicorp/terraform-plugin-codegen-kubernetes

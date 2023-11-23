@@ -151,8 +151,13 @@ func patchJobV1Spec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOpe
 
 // removeGeneratedLabels removes server-generated labels
 func removeGeneratedLabels(labels map[string]string) map[string]string {
-	// The Jobs controller adds labels 'batch.kubernetes.io/controller-uid' and 'batch.kubernetes.io/job-name'
-	// to the template block dynamically and thus we have to ignore them to avoid perpetual diff.
+	// The Jobs controller adds the following labels to the template block dynamically
+	// and thus we have to ignore them to avoid perpetual diff:
+	// - 'batch.kubernetes.io/controller-uid'
+	// - 'batch.kubernetes.io/job-name'
+	// - 'controller-uid' // deprecated starting from Kubernetes 1.27
+	// - 'job-name'  // deprecated starting from Kubernetes 1.27
+	//
 	// More information: https://kubernetes.io/docs/reference/labels-annotations-taints/
 	generatedLabels := []string{
 		"batch.kubernetes.io/controller-uid",

@@ -18,7 +18,7 @@ DOCS:
 NOTES:
 
 * Bump Go version from 1.20 to 1.21. [[GH-2337](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2337)]
-* Bump Kubernetes dependencies from x.25.11 to x.27.7. [[GH-2337](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2337)]
+* Bump Kubernetes dependencies from x.25.11 to x.27.8.
 
 ## 2.23.0 (August 16, 2023)
 

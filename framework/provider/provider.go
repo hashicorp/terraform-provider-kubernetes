@@ -36,8 +36,8 @@ type KubernetesProviderModel struct {
 	ClientKey            types.String `tfsdk:"client_key"`
 	ClusterCACertificate types.String `tfsdk:"cluster_ca_certificate"`
 
-	ConfigPaths types.List   `tfsdk:"config_paths"`
-	ConfigPath  types.String `tfsdk:"config_path"`
+	ConfigPaths []types.String `tfsdk:"config_paths"`
+	ConfigPath  types.String   `tfsdk:"config_path"`
 
 	ConfigContext         types.String `tfsdk:"config_context"`
 	ConfigContextAuthInfo types.String `tfsdk:"config_context_auth_info"`
@@ -51,10 +51,10 @@ type KubernetesProviderModel struct {
 	IgnoreLabels      types.List `tfsdk:"ignore_labels"`
 
 	Exec []struct {
-		APIVersion types.String `tfsdk:"api_version"`
-		Command    types.String `tfsdk:"command"`
-		Env        types.Map    `tfsdk:"env"`
-		Args       types.List   `tfsdk:"args"`
+		APIVersion types.String            `tfsdk:"api_version"`
+		Command    types.String            `tfsdk:"command"`
+		Env        map[string]types.String `tfsdk:"env"`
+		Args       []types.String          `tfsdk:"args"`
 	} `tfsdk:"exec"`
 
 	Experiments []struct {
@@ -175,14 +175,6 @@ func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequ
 				},
 			},
 		},
-	}
-}
-
-func (p *KubernetesProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var data KubernetesProviderModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
 	}
 }
 

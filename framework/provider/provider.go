@@ -26,6 +26,40 @@ type KubernetesProvider struct {
 
 // KubernetesProviderModel describes the provider data model.
 type KubernetesProviderModel struct {
+	Host     types.String `tfsdk:"host"`
+	Username types.String `tfsdk:"username"`
+	Password types.String `tfsdk:"password"`
+	Insecure types.Bool   `tfsdk:"insecure"`
+
+	TLSServerName        types.String `tfsdk:"tls_server_name"`
+	ClientCertificate    types.String `tfsdk:"client_certificate"`
+	ClientKey            types.String `tfsdk:"client_key"`
+	ClusterCACertificate types.String `tfsdk:"cluster_ca_certificate"`
+
+	ConfigPaths types.List   `tfsdk:"config_paths"`
+	ConfigPath  types.String `tfsdk:"config_path"`
+
+	ConfigContext         types.String `tfsdk:"config_context"`
+	ConfigContextAuthInfo types.String `tfsdk:"config_context_auth_info"`
+	ConfigContextCluster  types.String `tfsdk:"config_context_cluster"`
+
+	Token types.String `tfsdk:"token"`
+
+	ProxyURL types.String `tfsdk:"proxy_url"`
+
+	IgnoreAnnotations types.List `tfsdk:"ignore_annotations"`
+	IgnoreLabels      types.List `tfsdk:"ignore_labels"`
+
+	Exec []struct {
+		APIVersion types.String `tfsdk:"api_version"`
+		Command    types.String `tfsdk:"command"`
+		Env        types.Map    `tfsdk:"env"`
+		Args       types.List   `tfsdk:"args"`
+	} `tfsdk:"exec"`
+
+	Experiments []struct {
+		ManifestResource types.Bool `tfsdk:"manifest_resource"`
+	} `tfsdk:"experiments"`
 }
 
 func (p *KubernetesProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -145,6 +179,11 @@ func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequ
 }
 
 func (p *KubernetesProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	var data KubernetesProviderModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Resource {

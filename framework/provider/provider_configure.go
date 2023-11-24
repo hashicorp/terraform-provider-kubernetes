@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -30,7 +31,7 @@ func (p *KubernetesProvider) Configure(ctx context.Context, req provider.Configu
 
 	_, err := newKubernetesClientConfig(ctx, data)
 	if err != nil {
-		return
+		resp.Diagnostics.Append(diag.NewErrorDiagnostic("failed to initilize Kubernetes client configuration", err.Error()))
 	}
 }
 

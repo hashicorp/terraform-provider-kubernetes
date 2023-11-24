@@ -107,7 +107,7 @@ func dataSourceKubernetesStorageClassV1Read(ctx context.Context, d *schema.Resou
 
 	diags := diag.Diagnostics{}
 
-	err = d.Set("metadata", flattenDataSourceMetadata(storageClass.ObjectMeta))
+	err = d.Set("metadata", flattenMetadataFields(storageClass.ObjectMeta))
 	if err != nil {
 		diags = append(diags, diag.FromErr(err)[0])
 	}

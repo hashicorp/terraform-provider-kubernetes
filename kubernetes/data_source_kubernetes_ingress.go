@@ -156,7 +156,7 @@ func dataSourceKubernetesIngressRead(ctx context.Context, d *schema.ResourceData
 	}
 	log.Printf("[INFO] Received ingress: %#v", ing)
 
-	err = d.Set("metadata", flattenDataSourceMetadata(ing.ObjectMeta))
+	err = d.Set("metadata", flattenMetadataFields(ing.ObjectMeta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

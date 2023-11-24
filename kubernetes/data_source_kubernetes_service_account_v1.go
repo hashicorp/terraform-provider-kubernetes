@@ -90,7 +90,7 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 	}
 	log.Printf("[INFO] Received service account: %#v", svcAcc)
 
-	err = d.Set("metadata", flattenDataSourceMetadata(svcAcc.ObjectMeta))
+	err = d.Set("metadata", flattenMetadataFields(svcAcc.ObjectMeta))
 	if err != nil {
 		diagMsg = append(diagMsg, diag.FromErr(err)...)
 		return diagMsg

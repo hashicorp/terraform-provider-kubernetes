@@ -149,7 +149,7 @@ func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData, met
 func flattenPodTemplateSpec(t corev1.PodTemplateSpec) ([]interface{}, error) {
 	template := make(map[string]interface{})
 
-	template["metadata"] = flattenTemplateMetadata(t.ObjectMeta)
+	template["metadata"] = flattenMetadataFields(t.ObjectMeta)
 	spec, err := flattenPodSpec(t.Spec)
 	if err != nil {
 		return []interface{}{template}, err
@@ -164,7 +164,7 @@ func flattenPersistentVolumeClaim(in []corev1.PersistentVolumeClaim, d *schema.R
 
 	for i, pvc := range in {
 		pvcs[i] = map[string]interface{}{
-			"metadata": flattenTemplateMetadata(pvc.ObjectMeta),
+			"metadata": flattenMetadataFields(pvc.ObjectMeta),
 			"spec":     flattenPersistentVolumeClaimSpec(pvc.Spec),
 		}
 	}

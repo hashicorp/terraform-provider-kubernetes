@@ -50,7 +50,7 @@ func dataSourceKubernetesEndpointsV1Read(ctx context.Context, d *schema.Resource
 	}
 	log.Printf("[INFO] Received endpoints: %#v", ep)
 
-	err = d.Set("metadata", flattenDataSourceMetadata(ep.ObjectMeta))
+	err = d.Set("metadata", flattenMetadataFields(ep.ObjectMeta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

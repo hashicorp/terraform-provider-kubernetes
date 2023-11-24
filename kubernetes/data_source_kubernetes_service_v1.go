@@ -262,7 +262,7 @@ func dataSourceKubernetesServiceV1Read(ctx context.Context, d *schema.ResourceDa
 	}
 	log.Printf("[INFO] Received service: %#v", svc)
 
-	err = d.Set("metadata", flattenDataSourceMetadata(svc.ObjectMeta))
+	err = d.Set("metadata", flattenMetadataFields(svc.ObjectMeta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

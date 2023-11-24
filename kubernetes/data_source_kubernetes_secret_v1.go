@@ -65,7 +65,7 @@ func dataSourceKubernetesSecretV1Read(ctx context.Context, d *schema.ResourceDat
 	}
 	log.Printf("[INFO] Received secret: %#v", secret.ObjectMeta)
 
-	err = d.Set("metadata", flattenDataSourceMetadata(secret.ObjectMeta))
+	err = d.Set("metadata", flattenMetadataFields(secret.ObjectMeta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

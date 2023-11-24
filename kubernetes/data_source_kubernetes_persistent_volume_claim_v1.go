@@ -110,7 +110,7 @@ func dataSourceKubernetesPersistentVolumeClaimV1Read(ctx context.Context, d *sch
 	}
 	log.Printf("[INFO] Received persistent volume claim: %#v", claim)
 
-	err = d.Set("metadata", flattenDataSourceMetadata(claim.ObjectMeta))
+	err = d.Set("metadata", flattenMetadataFields(claim.ObjectMeta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

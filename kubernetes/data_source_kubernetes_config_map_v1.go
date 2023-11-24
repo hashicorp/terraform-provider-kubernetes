@@ -59,7 +59,7 @@ func dataSourceKubernetesConfigMapV1Read(ctx context.Context, d *schema.Resource
 	}
 	log.Printf("[INFO] Received config map: %#v", cfgMap)
 
-	err = d.Set("metadata", flattenDataSourceMetadata(cfgMap.ObjectMeta))
+	err = d.Set("metadata", flattenMetadataFields(cfgMap.ObjectMeta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

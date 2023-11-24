@@ -60,7 +60,7 @@ func dataSourceKubernetesPodV1Read(ctx context.Context, d *schema.ResourceData, 
 	}
 	log.Printf("[INFO] Received pod: %#v", pod)
 
-	err = d.Set("metadata", flattenDataSourceMetadata(pod.ObjectMeta))
+	err = d.Set("metadata", flattenMetadataFields(pod.ObjectMeta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

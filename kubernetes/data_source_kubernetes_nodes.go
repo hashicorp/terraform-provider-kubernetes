@@ -95,7 +95,7 @@ func dataSourceKubernetesNodesRead(ctx context.Context, d *schema.ResourceData, 
 	for i, v := range nodesRaw.Items {
 		log.Printf("[INFO] Received node: %s", v.Name)
 		nodes[i] = map[string]interface{}{
-			"metadata": flattenDataSourceMetadata(v.ObjectMeta),
+			"metadata": flattenMetadataFields(v.ObjectMeta),
 			"spec":     flattenNodeSpec(v.Spec),
 			"status":   flattenNodeStatus(v.Status),
 		}

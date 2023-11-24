@@ -56,7 +56,7 @@ func dataSourceKubernetesNamespaceV1Read(ctx context.Context, d *schema.Resource
 	}
 	log.Printf("[INFO] Received namespace: %#v", namespace)
 
-	err = d.Set("metadata", flattenDataSourceMetadata(namespace.ObjectMeta))
+	err = d.Set("metadata", flattenMetadataFields(namespace.ObjectMeta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

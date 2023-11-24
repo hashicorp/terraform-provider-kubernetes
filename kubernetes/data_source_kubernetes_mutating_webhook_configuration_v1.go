@@ -129,7 +129,7 @@ func dataSourceKubernetesMutatingWebhookConfigurationV1Read(ctx context.Context,
 	}
 	log.Printf("[INFO] Received mutating webhook configuration: %#v", cfg)
 
-	err = d.Set("metadata", flattenDataSourceMetadata(cfg.ObjectMeta))
+	err = d.Set("metadata", flattenMetadataFields(cfg.ObjectMeta))
 	if err != nil {
 		return diag.FromErr(err)
 	}

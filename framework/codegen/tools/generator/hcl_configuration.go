@@ -4,35 +4,49 @@ import "github.com/hashicorp/hcl/v2/hclsimple"
 
 // GeneratorConfig is the top level code generator configuration
 type GeneratorConfig struct {
-	Resources  []Resource   `hcl:"resource,block"`
-	DataSource []DataSource `hcl:"data,block"`
+	Resources  []ResourceConfig   `hcl:"resource,block"`
+	DataSource []DataSourceConfig `hcl:"data,block"`
 }
 
-// Resource configures code generation for a Terraform resource
-type Resource struct {
+// ResourceConfig configures code generation for a Terraform resource
+type ResourceConfig struct {
 	Name    string `hcl:"name,label"`
 	Package string `hcl:"package"`
 
-	OutputFilename    string `hcl:"output_filename,optional"`
-	OverridesFilename string `hcl:"overrides_filename,optional"`
+	OutputFilenamePrefix string `hcl:"output_filename_prefix"`
 
 	APIVersion string `hcl:"api_version"`
 	Kind       string `hcl:"kind"`
 
+	Description string `hcl:"description"`
+
 	IgnoreFields   []string `hcl:"ignore_fields,optional"`
 	ComputedFields []string `hcl:"computed_fields,optional"`
+
+	Generate GenerateConfig `hcl:"generate,block"`
 
 	TerraformPluginGenOpenAPI TerraformPluginGenOpenAPIConfig `hcl:"tfplugingen_openapi,block"`
 }
 
-// DataSource configures code generation for a Terraform data source
-type DataSource struct {
+// DataSourceConfig configures code generation for a Terraform data source
+type DataSourceConfig struct {
 }
 
 // TerraformPluginGenOpenAPIConfig supplies configuration to tfplugingen-openapi
 // See: https://github.com/hashicorp/terraform-plugin-codegen-openapi
 type TerraformPluginGenOpenAPIConfig struct {
 	OpenAPISpecFilename string `hcl:"openapi_spec_filename"`
+	CreatePath          string `hcl:"create_path"`
+	ReadPath            string `hcl:"read_path"`
+}
+
+// GenerateConfig configures the options for what we should generate
+type GenerateConfig struct {
+	Schema        bool `hcl:"schema,optional"`
+	Overrides     bool `hcl:"overrides,optional"`
+	Model         bool `hcl:"model,optional"`
+	CRUDUNiversal bool `hcl:"crud_universal,optional"`
+	CRUDStubs     bool `hcl:"crud_stubs,optional"`
 }
 
 func parseGeneratorHCLConfig(filename string) (GeneratorConfig, error) {

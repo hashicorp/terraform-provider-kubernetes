@@ -74,6 +74,12 @@ func dataSourceKubernetesPersistentVolumeClaimV1() *schema.Resource {
 							Optional:    true,
 							Computed:    true,
 						},
+						"volume_mode": {
+							Type:        schema.TypeString,
+							Description: "Defines what type of volume is required by the claim.",
+							Optional:    true,
+							Computed:    true,
+						},
 					},
 				},
 			},

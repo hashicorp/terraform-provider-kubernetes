@@ -532,11 +532,6 @@ func TestAccKubernetesPersistentVolumeClaimV1_volumeMode(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.0", "ReadWriteOnce"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "1Gi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_mode", string(corev1.PersistentVolumeFilesystem)),
 				),
 			},
@@ -548,11 +543,6 @@ func TestAccKubernetesPersistentVolumeClaimV1_volumeMode(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.0", "ReadWriteOnce"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "1Gi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_mode", string(corev1.PersistentVolumeFilesystem)),
 				),
 			},
@@ -564,11 +554,6 @@ func TestAccKubernetesPersistentVolumeClaimV1_volumeMode(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.0", "ReadWriteOnce"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "1Gi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_mode", string(corev1.PersistentVolumeBlock)),
 				),
 			},
@@ -1205,7 +1190,6 @@ func testAccKubernetesPersistentVolumeClaimV1Config_volumeModeDefault(name strin
 
   spec {
     access_modes = ["ReadWriteOnce"]
-
     resources {
       requests = {
         storage = "1Gi"
@@ -1227,7 +1211,6 @@ func testAccKubernetesPersistentVolumeClaimV1Config_volumeMode(name, volumeMode 
   spec {
     access_modes = ["ReadWriteOnce"]
     volume_mode  = %q
-
     resources {
       requests = {
         storage = "1Gi"

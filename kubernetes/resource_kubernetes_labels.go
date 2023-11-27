@@ -277,7 +277,7 @@ func resourceKubernetesLabelsUpdate(ctx context.Context, d *schema.ResourceData,
 		patchbytes,
 		v1.PatchOptions{
 			FieldManager: d.Get("field_manager").(string),
-			Force:        ptrToBool(d.Get("force").(bool)),
+			Force:        pointerOf(d.Get("force").(bool)),
 		},
 	)
 	if err != nil {

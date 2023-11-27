@@ -221,7 +221,7 @@ func expandPodSecurityPolicySpec(in []interface{}) (v1beta1.PodSecurityPolicySpe
 	}
 
 	if v, ok := m["allow_privilege_escalation"].(bool); ok {
-		spec.AllowPrivilegeEscalation = ptrToBool(v)
+		spec.AllowPrivilegeEscalation = pointerOf(v)
 	}
 
 	if v, ok := m["allowed_capabilities"].([]interface{}); ok && len(v) > 0 {
@@ -249,7 +249,7 @@ func expandPodSecurityPolicySpec(in []interface{}) (v1beta1.PodSecurityPolicySpe
 	}
 
 	if v, ok := m["default_allow_privilege_escalation"].(bool); ok {
-		spec.DefaultAllowPrivilegeEscalation = ptrToBool(v)
+		spec.DefaultAllowPrivilegeEscalation = pointerOf(v)
 	}
 
 	if v, ok := m["forbidden_sysctls"].([]interface{}); ok && len(v) > 0 {

@@ -16,11 +16,11 @@ func expandCSIDriverV1Spec(l []interface{}) storage.CSIDriverSpec {
 	obj := storage.CSIDriverSpec{}
 
 	if v, ok := in["attach_required"].(bool); ok {
-		obj.AttachRequired = ptrToBool(v)
+		obj.AttachRequired = pointerOf(v)
 	}
 
 	if v, ok := in["pod_info_on_mount"].(bool); ok {
-		obj.PodInfoOnMount = ptrToBool(v)
+		obj.PodInfoOnMount = pointerOf(v)
 	}
 
 	if v, ok := in["volume_lifecycle_modes"].([]interface{}); ok && len(v) > 0 {

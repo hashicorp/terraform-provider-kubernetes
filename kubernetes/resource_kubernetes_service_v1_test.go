@@ -504,14 +504,14 @@ func TestAccKubernetesServiceV1_nodePort(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "NodePort"),
 					testAccCheckServiceV1Ports(&conf, []corev1.ServicePort{
 						{
-							AppProtocol: ptrToString("ssh"),
+							AppProtocol: pointerOf("ssh"),
 							Name:        "first",
 							Port:        int32(10222),
 							Protocol:    corev1.ProtocolTCP,
 							TargetPort:  intstr.FromInt(22),
 						},
 						{
-							AppProtocol: ptrToString("terraform.io/kubernetes"),
+							AppProtocol: pointerOf("terraform.io/kubernetes"),
 							Name:        "second",
 							Port:        int32(10333),
 							Protocol:    corev1.ProtocolTCP,

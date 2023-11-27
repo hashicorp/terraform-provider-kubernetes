@@ -62,7 +62,7 @@ func expandAPIServiceV1Spec(l []interface{}) v1.APIServiceSpec {
 		}
 
 		if v, ok := m["port"].(int); ok && v > 0 {
-			obj.Service.Port = ptrToInt32(int32(v))
+			obj.Service.Port = pointerOf(int32(v))
 		}
 	}
 	if v, ok := in["version"].(string); ok {

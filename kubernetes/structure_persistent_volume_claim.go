@@ -86,7 +86,7 @@ func expandPersistentVolumeClaimSpec(l []interface{}) (*corev1.PersistentVolumeC
 		obj.VolumeName = v
 	}
 	if v, ok := in["storage_class_name"].(string); ok && v != "" {
-		obj.StorageClassName = ptrToString(v)
+		obj.StorageClassName = pointerOf(v)
 	}
 	if v, ok := in["volume_mode"].(string); ok && v != "" {
 		obj.VolumeMode = pointerOf(api.PersistentVolumeMode(v))

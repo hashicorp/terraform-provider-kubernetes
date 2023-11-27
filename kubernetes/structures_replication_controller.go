@@ -41,7 +41,7 @@ func expandReplicationControllerSpec(rc []interface{}) (*corev1.ReplicationContr
 	}
 	in := rc[0].(map[string]interface{})
 	obj.MinReadySeconds = int32(in["min_ready_seconds"].(int))
-	obj.Replicas = ptrToInt32(int32(in["replicas"].(int)))
+	obj.Replicas = pointerOf(int32(in["replicas"].(int)))
 	obj.Selector = expandStringMap(in["selector"].(map[string]interface{}))
 
 	template, err := expandReplicationControllerTemplate(in["template"].([]interface{}))

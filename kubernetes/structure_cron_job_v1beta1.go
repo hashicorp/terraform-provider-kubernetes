@@ -66,7 +66,7 @@ func expandCronJobSpecV1Beta1(j []interface{}) (v1beta1.CronJobSpec, error) {
 	}
 
 	if v, ok := in["failed_jobs_history_limit"].(int); ok && v != 1 {
-		obj.FailedJobsHistoryLimit = ptrToInt32(int32(v))
+		obj.FailedJobsHistoryLimit = pointerOf(int32(v))
 	}
 
 	if v, ok := in["schedule"].(string); ok && v != "" {
@@ -80,15 +80,15 @@ func expandCronJobSpecV1Beta1(j []interface{}) (v1beta1.CronJobSpec, error) {
 	obj.JobTemplate = jtSpec
 
 	if v, ok := in["starting_deadline_seconds"].(int); ok && v > 0 {
-		obj.StartingDeadlineSeconds = ptrToInt64(int64(v))
+		obj.StartingDeadlineSeconds = pointerOf(int64(v))
 	}
 
 	if v, ok := in["successful_jobs_history_limit"].(int); ok && v != 3 {
-		obj.SuccessfulJobsHistoryLimit = ptrToInt32(int32(v))
+		obj.SuccessfulJobsHistoryLimit = pointerOf(int32(v))
 	}
 
 	if v, ok := in["suspend"].(bool); ok {
-		obj.Suspend = ptrToBool(v)
+		obj.Suspend = pointerOf(v)
 	}
 
 	return obj, nil

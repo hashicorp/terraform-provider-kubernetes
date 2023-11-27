@@ -640,7 +640,7 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 	err = discovery.ServerSupportsVersion(d, v1)
 	if err == nil {
 		log.Printf("[INFO] Using %s/v1", group)
-		useadmissionregistrationv1beta1 = ptrToBool(false)
+		useadmissionregistrationv1beta1 = pointerOf(false)
 		return false, nil
 	}
 
@@ -655,7 +655,7 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 	}
 
 	log.Printf("[INFO] Using %s/v1beta1", group)
-	useadmissionregistrationv1beta1 = ptrToBool(true)
+	useadmissionregistrationv1beta1 = pointerOf(true)
 	return true, nil
 }
 

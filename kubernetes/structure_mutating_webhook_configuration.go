@@ -109,7 +109,7 @@ func expandMutatingWebhook(in map[string]interface{}) admissionregistrationv1.Mu
 	}
 
 	if v, ok := in["timeout_seconds"].(int); ok {
-		obj.TimeoutSeconds = ptrToInt32(int32(v))
+		obj.TimeoutSeconds = pointerOf(int32(v))
 	}
 
 	return obj

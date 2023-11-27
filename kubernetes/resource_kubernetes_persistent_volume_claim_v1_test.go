@@ -1226,7 +1226,7 @@ func testAccKubernetesPersistentVolumeClaimV1Config_volumeMode(name, volumeMode 
 
   spec {
     access_modes = ["ReadWriteOnce"]
-	volume_mode  = %q
+    volume_mode  = %q
 
     resources {
       requests = {

@@ -6,12 +6,16 @@ import (
 	"os"
 	"os/exec"
 
+	"log/slog"
+
 	specresource "github.com/hashicorp/terraform-plugin-codegen-spec/resource"
 	"github.com/hashicorp/terraform-plugin-codegen-spec/spec"
 	"gopkg.in/yaml.v2"
 )
 
-var codegenTempDir = "./codegen-tmp"
+var codegenTempDir = "./.codegen-tmp"
+
+var tfplugingenOpenAPIBinary = "tfplugingen-openapi"
 
 // generateResourceSpec uses the supplied configuration to generate the
 // framework IR JSON from an OpenAPI spec then marshalls the IR into
@@ -41,7 +45,7 @@ func generateResourceSpec(r ResourceConfig) (specresource.Resource, error) {
 		return specresource.Resource{}, fmt.Errorf("error marshalling tfplugingen-openapi configuration: %v", err)
 	}
 
-	tfplugingenopenapiPath, err := exec.LookPath("tfplugingen-openapi")
+	tfplugingenopenapiPath, err := exec.LookPath(tfplugingenOpenAPIBinary)
 	if err != nil {
 		return specresource.Resource{}, fmt.Errorf(`could not find "tfplugingen-openapi" in PATH`)
 	}
@@ -69,16 +73,19 @@ func generateResourceSpec(r ResourceConfig) (specresource.Resource, error) {
 	// tool, having to exec the binary is yucky
 	yamlConfigFilename := yamlConfigFile.Name()
 	frameworkIRFilename := frameworkIRFile.Name()
-	cmd := exec.Command(tfplugingenopenapiPath,
+	args := []string{
 		"generate",
 		"--config", yamlConfigFilename,
 		"--output", frameworkIRFilename,
-		r.TerraformPluginGenOpenAPI.OpenAPISpecFilename)
+		r.TerraformPluginGenOpenAPI.OpenAPISpecFilename,
+	}
+	slog.Info(fmt.Sprintf("Executing %s", tfplugingenOpenAPIBinary), "args", args)
+	cmd := exec.Command(tfplugingenopenapiPath, args...)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		if len(out) > 0 {
-			fmt.Println(string(out))
+			slog.Error("Command failed and produced output", "output", string(out))
 		}
 		return specresource.Resource{}, fmt.Errorf("error running tfplugingen-openapi: %v", err)
 	}

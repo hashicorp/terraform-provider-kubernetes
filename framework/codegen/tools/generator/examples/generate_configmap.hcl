@@ -18,7 +18,7 @@ resource "kubernetes_config_map_v1" {
 
   generate {
     schema     = true
-    models     = true
+    model      = true
     crud_stubs = true
   }
 }

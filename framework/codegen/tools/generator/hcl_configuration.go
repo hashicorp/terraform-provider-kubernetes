@@ -20,8 +20,9 @@ type ResourceConfig struct {
 
 	Description string `hcl:"description"`
 
-	IgnoreFields   []string `hcl:"ignore_fields,optional"`
-	ComputedFields []string `hcl:"computed_fields,optional"`
+	IgnoreFields    []string `hcl:"ignore_fields,optional"`
+	ComputedFields  []string `hcl:"computed_fields,optional"`
+	SensitiveFields []string `hcl:"sensitive_fields,optional"`
 
 	Generate GenerateConfig `hcl:"generate,block"`
 

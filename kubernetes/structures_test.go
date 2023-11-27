@@ -35,3 +35,29 @@ func TestIsInternalKey(t *testing.T) {
 		})
 	}
 }
+
+func TestPointerOf(t *testing.T) {
+	b := false
+	bp := pointerOf(b)
+	if b != *bp {
+		t.Error("Failed to get bool pointer")
+	}
+
+	s := "this"
+	sp := pointerOf(s)
+	if s != *sp {
+		t.Error("Failed to get string pointer")
+	}
+
+	i := int(1984)
+	ip := pointerOf(i)
+	if i != *ip {
+		t.Error("Failed to get int pointer")
+	}
+
+	i64 := int64(1984)
+	i64p := pointerOf(i64)
+	if i64 != *i64p {
+		t.Error("Failed to get int64 pointer")
+	}
+}

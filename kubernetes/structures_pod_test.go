@@ -57,7 +57,7 @@ func TestFlattenTolerations(t *testing.T) {
 			[]corev1.Toleration{
 				{
 					Effect:            "NoExecute",
-					TolerationSeconds: pointerOf(int64(120)),
+					TolerationSeconds: ptrToInt64(int64(120)),
 				},
 			},
 			[]interface{}{
@@ -133,7 +133,7 @@ func TestExpandTolerations(t *testing.T) {
 			[]*corev1.Toleration{
 				{
 					Effect:            "NoExecute",
-					TolerationSeconds: pointerOf(int64(120)),
+					TolerationSeconds: ptrToInt64(int64(120)),
 				},
 			},
 		},
@@ -162,13 +162,13 @@ func TestFlattenSecretVolumeSource(t *testing.T) {
 	}{
 		{
 			&corev1.SecretVolumeSource{
-				DefaultMode: pointerOf(int32(0644)),
+				DefaultMode: ptrToInt32(int32(0644)),
 				SecretName:  "secret1",
-				Optional:    pointerOf(true),
+				Optional:    ptrToBool(true),
 				Items: []corev1.KeyToPath{
 					{
 						Key:  "foo.txt",
-						Mode: pointerOf(int32(0600)),
+						Mode: ptrToInt32(int32(0600)),
 						Path: "etc/foo.txt",
 					},
 				},
@@ -190,7 +190,7 @@ func TestFlattenSecretVolumeSource(t *testing.T) {
 		},
 		{
 			&corev1.SecretVolumeSource{
-				DefaultMode: pointerOf(int32(0755)),
+				DefaultMode: ptrToInt32(int32(0755)),
 				SecretName:  "secret2",
 				Items: []corev1.KeyToPath{
 					{
@@ -248,13 +248,13 @@ func TestExpandSecretVolumeSource(t *testing.T) {
 				},
 			},
 			&corev1.SecretVolumeSource{
-				DefaultMode: pointerOf(int32(0644)),
+				DefaultMode: ptrToInt32(int32(0644)),
 				SecretName:  "secret1",
-				Optional:    pointerOf(true),
+				Optional:    ptrToBool(true),
 				Items: []corev1.KeyToPath{
 					{
 						Key:  "foo.txt",
-						Mode: pointerOf(int32(0600)),
+						Mode: ptrToInt32(int32(0600)),
 						Path: "etc/foo.txt",
 					},
 				},
@@ -274,7 +274,7 @@ func TestExpandSecretVolumeSource(t *testing.T) {
 				},
 			},
 			&corev1.SecretVolumeSource{
-				DefaultMode: pointerOf(int32(0755)),
+				DefaultMode: ptrToInt32(int32(0755)),
 				SecretName:  "secret2",
 				Items: []corev1.KeyToPath{
 					{
@@ -360,12 +360,12 @@ func TestFlattenConfigMapVolumeSource(t *testing.T) {
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: "configmap1",
 				},
-				DefaultMode: pointerOf(int32(0644)),
-				Optional:    pointerOf(true),
+				DefaultMode: ptrToInt32(int32(0644)),
+				Optional:    ptrToBool(true),
 				Items: []corev1.KeyToPath{
 					{
 						Key:  "foo.txt",
-						Mode: pointerOf(int32(0600)),
+						Mode: ptrToInt32(int32(0600)),
 						Path: "etc/foo.txt",
 					},
 				},
@@ -390,7 +390,7 @@ func TestFlattenConfigMapVolumeSource(t *testing.T) {
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: "configmap2",
 				},
-				DefaultMode: pointerOf(int32(0755)),
+				DefaultMode: ptrToInt32(int32(0755)),
 				Items: []corev1.KeyToPath{
 					{
 						Key:  "bar.txt",
@@ -450,12 +450,12 @@ func TestExpandConfigMapVolumeSource(t *testing.T) {
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: "configmap1",
 				},
-				DefaultMode: pointerOf(int32(0644)),
-				Optional:    pointerOf(true),
+				DefaultMode: ptrToInt32(int32(0644)),
+				Optional:    ptrToBool(true),
 				Items: []corev1.KeyToPath{
 					{
 						Key:  "foo.txt",
-						Mode: pointerOf(int32(0600)),
+						Mode: ptrToInt32(int32(0600)),
 						Path: "etc/foo.txt",
 					},
 				},
@@ -478,7 +478,7 @@ func TestExpandConfigMapVolumeSource(t *testing.T) {
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: "configmap2",
 				},
-				DefaultMode: pointerOf(int32(0755)),
+				DefaultMode: ptrToInt32(int32(0755)),
 				Items: []corev1.KeyToPath{
 					{
 						Key:  "bar.txt",
@@ -585,8 +585,8 @@ func TestExpandCSIVolumeSource(t *testing.T) {
 			},
 			ExpectedOutput: &corev1.CSIVolumeSource{
 				Driver:   "secrets-store.csi.k8s.io",
-				ReadOnly: pointerOf(true),
-				FSType:   pointerOf("nfs"),
+				ReadOnly: ptrToBool(true),
+				FSType:   ptrToString("nfs"),
 				VolumeAttributes: map[string]string{
 					"secretProviderClass": "azure-keyvault",
 				},
@@ -638,8 +638,8 @@ func TestFlattenCSIVolumeSource(t *testing.T) {
 		{
 			Input: &corev1.CSIVolumeSource{
 				Driver:   "secrets-store.csi.k8s.io",
-				ReadOnly: pointerOf(true),
-				FSType:   pointerOf("nfs"),
+				ReadOnly: ptrToBool(true),
+				FSType:   ptrToString("nfs"),
 				VolumeAttributes: map[string]string{
 					"secretProviderClass": "azure-keyvault",
 				},

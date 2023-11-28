@@ -125,7 +125,7 @@ func resourceKubernetesSecretV1Create(ctx context.Context, d *schema.ResourceDat
 	}
 
 	if v, ok := d.GetOkExists("immutable"); ok {
-		secret.Immutable = pointerOf(v.(bool))
+		secret.Immutable = ptrToBool(v.(bool))
 	}
 
 	log.Printf("[INFO] Creating new secret: %#v", secret)
@@ -268,7 +268,7 @@ func resourceKubernetesSecretV1Update(ctx context.Context, d *schema.ResourceDat
 	if d.HasChange("immutable") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/immutable",
-			Value: pointerOf(d.Get("immutable").(bool)),
+			Value: ptrToBool(d.Get("immutable").(bool)),
 		})
 	}
 

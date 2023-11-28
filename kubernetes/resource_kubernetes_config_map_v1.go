@@ -82,7 +82,7 @@ func resourceKubernetesConfigMapV1Create(ctx context.Context, d *schema.Resource
 		ObjectMeta: metadata,
 		BinaryData: expandBase64MapToByteMap(d.Get("binary_data").(map[string]interface{})),
 		Data:       expandStringMap(d.Get("data").(map[string]interface{})),
-		Immutable:  pointerOf(d.Get("immutable").(bool)),
+		Immutable:  ptrToBool(d.Get("immutable").(bool)),
 	}
 
 	log.Printf("[INFO] Creating new config map: %#v", cfgMap)
@@ -160,7 +160,7 @@ func resourceKubernetesConfigMapV1Update(ctx context.Context, d *schema.Resource
 	if d.HasChange("immutable") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/immutable",
-			Value: pointerOf(d.Get("immutable").(bool)),
+			Value: ptrToBool(d.Get("immutable").(bool)),
 		})
 	}
 

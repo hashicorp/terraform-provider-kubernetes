@@ -65,7 +65,7 @@ func expandTokenRequestV1Spec(p []interface{}) *authv1.TokenRequestSpec {
 	obj.BoundObjectRef = bdObjRef
 
 	if v, ok := in["expiration_seconds"].(int); v != 0 && ok {
-		obj.ExpirationSeconds = pointerOf(int64(v))
+		obj.ExpirationSeconds = ptrToInt64(int64(v))
 	}
 
 	return obj

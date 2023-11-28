@@ -227,8 +227,20 @@ func flattenByteMapToStringMap(m map[string][]byte) map[string]string {
 	return result
 }
 
-func pointerOf[A any](a A) *A {
-	return &a
+func ptrToString(s string) *string {
+	return &s
+}
+
+func ptrToBool(b bool) *bool {
+	return &b
+}
+
+func ptrToInt32(i int32) *int32 {
+	return &i
+}
+
+func ptrToInt64(i int64) *int64 {
+	return &i
 }
 
 func pointerOf[A any](a A) *A {

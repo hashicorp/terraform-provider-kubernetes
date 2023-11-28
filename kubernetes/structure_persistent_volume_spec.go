@@ -579,10 +579,10 @@ func expandAzureDiskVolumeSource(l []interface{}) *v1.AzureDiskVolumeSource {
 		DataDiskURI: in["data_disk_uri"].(string),
 	}
 	if v, ok := in["fs_type"].(string); ok {
-		obj.FSType = pointerOf(v)
+		obj.FSType = ptrToString(v)
 	}
 	if v, ok := in["read_only"].(bool); ok {
-		obj.ReadOnly = pointerOf(v)
+		obj.ReadOnly = ptrToBool(v)
 	}
 	if v, ok := in["kind"].(string); ok && in["kind"].(string) != "" {
 		kind := v1.AzureDataDiskKind(v)
@@ -717,7 +717,7 @@ func expandFCVolumeSource(l []interface{}) *v1.FCVolumeSource {
 	in := l[0].(map[string]interface{})
 	obj := &v1.FCVolumeSource{
 		TargetWWNs: sliceOfString(in["target_ww_ns"].(*schema.Set).List()),
-		Lun:        pointerOf(int32(in["lun"].(int))),
+		Lun:        ptrToInt32(int32(in["lun"].(int))),
 	}
 	if v, ok := in["fs_type"].(string); ok {
 		obj.FSType = v

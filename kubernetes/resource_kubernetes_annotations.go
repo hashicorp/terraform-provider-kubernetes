@@ -367,7 +367,7 @@ func resourceKubernetesAnnotationsUpdate(ctx context.Context, d *schema.Resource
 		patchbytes,
 		v1.PatchOptions{
 			FieldManager: d.Get("field_manager").(string),
-			Force:        pointerOf(d.Get("force").(bool)),
+			Force:        ptrToBool(d.Get("force").(bool)),
 		},
 	)
 	if err != nil {

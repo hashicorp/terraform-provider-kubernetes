@@ -21,7 +21,7 @@ func TestFlattenSecretKeyRef(t *testing.T) {
 					Name: "Secret1",
 				},
 				Key:      "key1",
-				Optional: pointerOf(true),
+				Optional: ptrToBool(true),
 			},
 			[]interface{}{
 				map[string]interface{}{
@@ -78,7 +78,7 @@ func TestExpandSecretKeyRef(t *testing.T) {
 					Name: "Secret1",
 				},
 				Key:      "key1",
-				Optional: pointerOf(true),
+				Optional: ptrToBool(true),
 			},
 		},
 		{
@@ -124,7 +124,7 @@ func TestFlattenConfigMapKeyRef(t *testing.T) {
 					Name: "configmap1",
 				},
 				Key:      "key1",
-				Optional: pointerOf(true),
+				Optional: ptrToBool(true),
 			},
 			[]interface{}{
 				map[string]interface{}{
@@ -181,7 +181,7 @@ func TestExpandConfigMapKeyRef(t *testing.T) {
 					Name: "configmap1",
 				},
 				Key:      "key1",
-				Optional: pointerOf(true),
+				Optional: ptrToBool(true),
 			},
 		},
 		{

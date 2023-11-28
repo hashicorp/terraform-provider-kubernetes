@@ -26,16 +26,16 @@ func expandEndpointSliceEndpoints(in []interface{}) []api.Endpoint {
 			r.Conditions = expandEndpointSliceConditions(v)
 		}
 		if v, ok := endpointConfig["hostname"].(string); ok && v != "" {
-			r.Hostname = pointerOf(v)
+			r.Hostname = ptrToString(v)
 		}
 		if v, ok := endpointConfig["node_name"].(string); ok && v != "" {
-			r.NodeName = pointerOf(v)
+			r.NodeName = ptrToString(v)
 		}
 		if v, ok := endpointConfig["target_ref"].([]interface{}); ok && len(v) != 0 {
 			r.TargetRef = expandObjectReference(v)
 		}
 		if v, ok := endpointConfig["zone"].(string); ok && v != "" {
-			r.Zone = pointerOf(v)
+			r.Zone = ptrToString(v)
 		}
 
 		endpoints[i] = r
@@ -78,20 +78,20 @@ func expandEndpointSlicePorts(in []interface{}) []api.EndpointPort {
 		r := api.EndpointPort{}
 		portCfg := port.(map[string]interface{})
 		if v, ok := portCfg["name"].(string); ok {
-			r.Name = pointerOf(v)
+			r.Name = ptrToString(v)
 		}
 		if v, ok := portCfg["port"].(string); ok {
 			if v == "" {
 				continue
 			}
 			v, _ := strconv.ParseInt(v, 10, 32)
-			r.Port = pointerOf(int32(v))
+			r.Port = ptrToInt32(int32(v))
 		}
 		if v, ok := portCfg["protocol"].(v1.Protocol); ok {
 			r.Protocol = &v
 		}
 		if v, ok := portCfg["app_protocol"].(string); ok {
-			r.AppProtocol = pointerOf(v)
+			r.AppProtocol = ptrToString(v)
 		}
 		ports[i] = r
 	}
@@ -107,13 +107,13 @@ func expandEndpointSliceConditions(in []interface{}) api.EndpointConditions {
 	cond := in[0].(map[string]interface{})
 
 	if v, ok := cond["ready"].(bool); ok {
-		obj.Ready = pointerOf(v)
+		obj.Ready = ptrToBool(v)
 	}
 	if v, ok := cond["serving"].(bool); ok {
-		obj.Serving = pointerOf(v)
+		obj.Serving = ptrToBool(v)
 	}
 	if v, ok := cond["terminating"].(bool); ok {
-		obj.Terminating = pointerOf(v)
+		obj.Terminating = ptrToBool(v)
 	}
 
 	return obj

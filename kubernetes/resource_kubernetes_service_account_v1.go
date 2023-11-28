@@ -88,7 +88,7 @@ func resourceKubernetesServiceAccountV1Create(ctx context.Context, d *schema.Res
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svcAcc := corev1.ServiceAccount{
-		AutomountServiceAccountToken: pointerOf(d.Get("automount_service_account_token").(bool)),
+		AutomountServiceAccountToken: ptrToBool(d.Get("automount_service_account_token").(bool)),
 		ObjectMeta:                   metadata,
 		ImagePullSecrets:             expandLocalObjectReferenceArray(d.Get("image_pull_secret").(*schema.Set).List()),
 		Secrets:                      expandServiceAccountSecrets(d.Get("secret").(*schema.Set).List(), ""),

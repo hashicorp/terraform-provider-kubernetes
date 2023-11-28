@@ -600,33 +600,33 @@ func expandContainerSecurityContext(l []interface{}) (*v1.SecurityContext, error
 	in := l[0].(map[string]interface{})
 	obj := v1.SecurityContext{}
 	if v, ok := in["allow_privilege_escalation"]; ok {
-		obj.AllowPrivilegeEscalation = pointerOf(v.(bool))
+		obj.AllowPrivilegeEscalation = ptrToBool(v.(bool))
 	}
 	if v, ok := in["capabilities"].([]interface{}); ok && len(v) > 0 {
 		obj.Capabilities = expandSecurityCapabilities(v)
 	}
 	if v, ok := in["privileged"]; ok {
-		obj.Privileged = pointerOf(v.(bool))
+		obj.Privileged = ptrToBool(v.(bool))
 	}
 	if v, ok := in["read_only_root_filesystem"]; ok {
-		obj.ReadOnlyRootFilesystem = pointerOf(v.(bool))
+		obj.ReadOnlyRootFilesystem = ptrToBool(v.(bool))
 	}
 	if v, ok := in["run_as_group"].(string); ok && v != "" {
 		i, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
 			return &obj, err
 		}
-		obj.RunAsGroup = pointerOf(int64(i))
+		obj.RunAsGroup = ptrToInt64(int64(i))
 	}
 	if v, ok := in["run_as_non_root"]; ok {
-		obj.RunAsNonRoot = pointerOf(v.(bool))
+		obj.RunAsNonRoot = ptrToBool(v.(bool))
 	}
 	if v, ok := in["run_as_user"].(string); ok && v != "" {
 		i, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
 			return &obj, err
 		}
-		obj.RunAsUser = pointerOf(int64(i))
+		obj.RunAsUser = ptrToInt64(int64(i))
 	}
 	if v, ok := in["seccomp_profile"].([]interface{}); ok && len(v) > 0 {
 		obj.SeccompProfile = expandSeccompProfile(v)
@@ -683,7 +683,7 @@ func expandGRPC(l []interface{}) *v1.GRPCAction {
 		obj.Port = int32(v)
 	}
 	if v, ok := in["service"].(string); ok {
-		obj.Service = pointerOf(v)
+		obj.Service = ptrToString(v)
 	}
 	return &obj
 }
@@ -910,7 +910,7 @@ func expandConfigMapKeyRef(r []interface{}) (*v1.ConfigMapKeySelector, error) {
 		obj.Name = v
 	}
 	if v, ok := in["optional"]; ok {
-		obj.Optional = pointerOf(v.(bool))
+		obj.Optional = ptrToBool(v.(bool))
 	}
 	return obj, nil
 
@@ -964,7 +964,7 @@ func expandSecretRef(r []interface{}) (*v1.SecretEnvSource, error) {
 		obj.Name = v
 	}
 	if v, ok := in["optional"]; ok {
-		obj.Optional = pointerOf(v.(bool))
+		obj.Optional = ptrToBool(v.(bool))
 	}
 
 	return obj, nil
@@ -984,7 +984,7 @@ func expandSecretKeyRef(r []interface{}) (*v1.SecretKeySelector, error) {
 		obj.Name = v
 	}
 	if v, ok := in["optional"]; ok {
-		obj.Optional = pointerOf(v.(bool))
+		obj.Optional = ptrToBool(v.(bool))
 	}
 	return obj, nil
 }
@@ -1036,7 +1036,7 @@ func expandConfigMapRef(r []interface{}) (*v1.ConfigMapEnvSource, error) {
 		obj.Name = v
 	}
 	if v, ok := in["optional"]; ok {
-		obj.Optional = pointerOf(v.(bool))
+		obj.Optional = ptrToBool(v.(bool))
 	}
 
 	return obj, nil

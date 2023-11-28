@@ -100,7 +100,7 @@ func expandValidatingWebhook(in map[string]interface{}) admissionregistrationv1.
 	}
 
 	if v, ok := in["timeout_seconds"].(int); ok {
-		obj.TimeoutSeconds = pointerOf(int32(v))
+		obj.TimeoutSeconds = ptrToInt32(int32(v))
 	}
 
 	return obj

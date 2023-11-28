@@ -23,7 +23,7 @@ func expandEndpointsAddresses(in *schema.Set) []api.EndpointAddress {
 			r.IP = v
 		}
 		if v, ok := addrCfg["node_name"].(string); ok && v != "" {
-			r.NodeName = pointerOf(v)
+			r.NodeName = ptrToString(v)
 		}
 		addresses[i] = r
 	}

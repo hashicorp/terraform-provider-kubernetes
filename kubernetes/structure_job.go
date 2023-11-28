@@ -66,15 +66,15 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 	in := j[0].(map[string]interface{})
 
 	if v, ok := in["active_deadline_seconds"].(int); ok && v > 0 {
-		obj.ActiveDeadlineSeconds = pointerOf(int64(v))
+		obj.ActiveDeadlineSeconds = ptrToInt64(int64(v))
 	}
 
 	if v, ok := in["backoff_limit"].(int); ok && v >= 0 {
-		obj.BackoffLimit = pointerOf(int32(v))
+		obj.BackoffLimit = ptrToInt32(int32(v))
 	}
 
 	if v, ok := in["completions"].(int); ok && v > 0 {
-		obj.Completions = pointerOf(int32(v))
+		obj.Completions = ptrToInt32(int32(v))
 	}
 
 	if v, ok := in["completion_mode"].(string); ok && v != "" {
@@ -83,11 +83,11 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 	}
 
 	if v, ok := in["manual_selector"]; ok {
-		obj.ManualSelector = pointerOf(v.(bool))
+		obj.ManualSelector = ptrToBool(v.(bool))
 	}
 
 	if v, ok := in["parallelism"].(int); ok && v >= 0 {
-		obj.Parallelism = pointerOf(int32(v))
+		obj.Parallelism = ptrToInt32(int32(v))
 	}
 
 	if v, ok := in["selector"].([]interface{}); ok && len(v) > 0 {
@@ -105,7 +105,7 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 		if err != nil {
 			return obj, err
 		}
-		obj.TTLSecondsAfterFinished = pointerOf(int32(i))
+		obj.TTLSecondsAfterFinished = ptrToInt32(int32(i))
 	}
 
 	return obj, nil

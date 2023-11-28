@@ -42,11 +42,11 @@ func expandServiceReference(l []interface{}) *admissionregistrationv1.ServiceRef
 	}
 
 	if v, ok := in["path"].(string); ok && v != "" {
-		obj.Path = pointerOf(v)
+		obj.Path = ptrToString(v)
 	}
 
 	if v, ok := in["port"].(int); ok {
-		obj.Port = pointerOf(int32(v))
+		obj.Port = ptrToInt32(int32(v))
 	}
 
 	return obj
@@ -88,7 +88,7 @@ func expandWebhookClientConfig(l []interface{}) admissionregistrationv1.WebhookC
 	}
 
 	if v, ok := in["url"].(string); ok && v != "" {
-		obj.URL = pointerOf(v)
+		obj.URL = ptrToString(v)
 	}
 
 	return obj

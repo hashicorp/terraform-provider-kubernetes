@@ -9,8 +9,5 @@ import (
 )
 
 func (r *{{ .ResourceConfig.Kind }}) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		MarkdownDescription: `{{ .Schema.Description }}`,
-		{{ .Schema.Attributes }}
-	}
+	resp.Schema = {{ .Schema }}
 }

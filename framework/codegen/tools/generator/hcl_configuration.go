@@ -27,6 +27,8 @@ type ResourceConfig struct {
 	Generate GenerateConfig `hcl:"generate,block"`
 
 	TerraformPluginGenOpenAPI TerraformPluginGenOpenAPIConfig `hcl:"tfplugingen_openapi,block"`
+
+	Disabled bool `hcl:"disabled,optional"`
 }
 
 // DataSourceConfig configures code generation for a Terraform data source

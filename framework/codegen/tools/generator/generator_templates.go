@@ -7,22 +7,25 @@ import (
 	"text/template"
 )
 
-//go:embed templates/attributes.go.tpl
+//go:embed templates/attributes.tpl
 var attributesTemplate string
 
-//go:embed templates/attribute.go.tpl
+//go:embed templates/attribute.tpl
 var attributeTemplate string
 
-//go:embed templates/schema_function.go.tpl
+//go:embed templates/schema.tpl
+var schemaTemplate string
+
+//go:embed templates/resource_schema.go.tpl
 var schemaFunctionTemplate string
 
 //go:embed templates/resource.go.tpl
 var resourceTemplate string
 
-//go:embed templates/crud_stubs.go.tpl
+//go:embed templates/resource_crud_stubs.go.tpl
 var crudStubsTemplate string
 
-//go:embed templates/model.go.tpl
+//go:embed templates/model.tpl
 var modelTemplate string
 
 func renderTemplate(path string, r any) string {

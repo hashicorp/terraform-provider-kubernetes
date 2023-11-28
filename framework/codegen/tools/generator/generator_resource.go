@@ -5,56 +5,9 @@ import (
 	specschema "github.com/hashicorp/terraform-plugin-codegen-spec/schema"
 )
 
-const (
-	BoolAttributeType         = "BoolAttribute"
-	StringAttributeType       = "StringAttribute"
-	NumberAttributeType       = "NumberAttribute"
-	Int64AttributeType        = "Int64Attribute"
-	MapAttributeType          = "MapAttribute"
-	ListAttributeType         = "ListAttribute"
-	ObjectAttributeType       = "ObjectAttribute"
-	SingleNestedAttributeType = "SingleNestedAttribute"
-	ListNestedAttributeType   = "ListNestedAttribute"
-)
-
-const (
-	BoolElementType   = "BoolType"
-	StringElementType = "StringType"
-	NumberElementType = "NumberType"
-	Int64ElementType  = "Int64Type"
-)
-
 type ResourceGenerator struct {
 	ResourceConfig ResourceConfig
 	Schema         SchemaGenerator
-}
-
-type SchemaGenerator struct {
-	Name        string
-	Description string
-	Attributes  AttributesGenerator
-}
-
-type AttributeGenerator struct {
-	Name          string
-	AttributeType string
-	ElementType   string
-	Required      bool
-	Description   string
-	Computed      bool
-	Sensitive     bool
-
-	NestedAttributes AttributesGenerator
-}
-
-func (g AttributeGenerator) String() string {
-	return renderTemplate(attributeTemplate, g)
-}
-
-type AttributesGenerator []AttributeGenerator
-
-func (g AttributesGenerator) String() string {
-	return renderTemplate(attributesTemplate, g)
 }
 
 func NewResourceGenerator(cfg ResourceConfig, spec specresource.Resource) ResourceGenerator {
@@ -84,8 +37,8 @@ func (g *ResourceGenerator) GenerateModelCode() string {
 	return renderTemplate(modelTemplate, g)
 }
 
-func generateAttributes(attrs specresource.Attributes) []AttributeGenerator {
-	generatedAttrs := []AttributeGenerator{}
+func generateAttributes(attrs specresource.Attributes) AttributesGenerator {
+	generatedAttrs := AttributesGenerator{}
 	for _, attr := range attrs {
 		generatedAttr := AttributeGenerator{
 			Name: attr.Name,

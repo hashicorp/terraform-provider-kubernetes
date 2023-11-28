@@ -23,7 +23,6 @@ func main() {
 		}),
 	))
 
-	// find all generate.hcl files
 	generateFiles := []string{}
 	filepath.Walk("./", func(path string, info fs.FileInfo, err error) error {
 		filename := filepath.Base(path)
@@ -51,6 +50,10 @@ func generateFrameworkCode(path string, config GeneratorConfig) error {
 	wd := filepath.Dir(path)
 
 	for _, r := range config.Resources {
+		if r.Disabled {
+			slog.Warn("Code generation is disabled, skipping", "resource", r.Name)
+			continue
+		}
 		slog.Info("Generating framework code", "resource", r.Name)
 		spec, err := generateResourceSpec(r)
 		if err != nil {

@@ -79,7 +79,7 @@ func generateResourceSpec(r ResourceConfig) (specresource.Resource, error) {
 		"--output", frameworkIRFilename,
 		r.TerraformPluginGenOpenAPI.OpenAPISpecFilename,
 	}
-	slog.Info(fmt.Sprintf("Executing %s", tfplugingenOpenAPIBinary), "args", args)
+	slog.Debug(fmt.Sprintf("Executing %s", tfplugingenOpenAPIBinary), "args", args)
 	cmd := exec.Command(tfplugingenopenapiPath, args...)
 
 	out, err := cmd.CombinedOutput()

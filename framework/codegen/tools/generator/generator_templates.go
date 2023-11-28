@@ -25,8 +25,14 @@ var resourceTemplate string
 //go:embed templates/resource_crud_stubs.go.tpl
 var crudStubsTemplate string
 
-//go:embed templates/model.tpl
+//go:embed templates/resource_model.go.tpl
 var modelTemplate string
+
+//go:embed templates/model_fields.tpl
+var modelFieldsTemplate string
+
+//go:embed templates/model_field.tpl
+var modelFieldTemplate string
 
 func renderTemplate(path string, r any) string {
 	tpl, err := template.New("").Parse(path)

@@ -1,8 +1,7 @@
 package main
 
 type AttributeGenerator struct {
-	Name             string
-	OpenAPIFieldName string
+	Name string
 
 	AttributeType string
 	ElementType   string

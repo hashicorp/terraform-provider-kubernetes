@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log/slog"
+
 	specresource "github.com/hashicorp/terraform-plugin-codegen-spec/resource"
 	specschema "github.com/hashicorp/terraform-plugin-codegen-spec/schema"
 )
@@ -8,11 +10,13 @@ import (
 type ResourceGenerator struct {
 	ResourceConfig ResourceConfig
 	Schema         SchemaGenerator
+	ModelFields    ModelFieldsGenerator
 }
 
 func NewResourceGenerator(cfg ResourceConfig, spec specresource.Resource) ResourceGenerator {
 	return ResourceGenerator{
 		ResourceConfig: cfg,
+		ModelFields:    generateModelFields(spec.Schema.Attributes),
 		Schema: SchemaGenerator{
 			Name:        cfg.Name,
 			Description: cfg.Description,
@@ -118,6 +122,53 @@ func generateAttributes(attrs specresource.Attributes) AttributesGenerator {
 	return generatedAttrs
 }
 
+func generateModelFields(attrs specresource.Attributes) ModelFieldsGenerator {
+	generatedModelFields := ModelFieldsGenerator{}
+	for _, attr := range attrs {
+		generatedModelField := ModelFieldGenerator{
+			FieldName:         UpperCamelize(attr.Name),
+			ManifestFieldName: Camelize(attr.Name),
+			AttributeName:     attr.Name,
+		}
+		switch {
+		case attr.Bool != nil:
+			generatedModelField.AttributeType = BoolAttributeType
+			generatedModelField.Type = BoolModelType
+		case attr.String != nil:
+			generatedModelField.AttributeType = StringAttributeType
+			generatedModelField.Type = StringModelType
+		case attr.Number != nil:
+			generatedModelField.AttributeType = NumberAttributeType
+			generatedModelField.Type = NumberModelType
+		case attr.Int64 != nil:
+			generatedModelField.AttributeType = Int64AttributeType
+			generatedModelField.Type = Int64ModelType
+		case attr.Map != nil:
+			generatedModelField.AttributeType = MapAttributeType
+			generatedModelField.ElementType = getModelElementType(attr.Map.ElementType)
+		case attr.List != nil:
+			generatedModelField.AttributeType = ListAttributeType
+			generatedModelField.ElementType = getModelElementType(attr.List.ElementType)
+		case attr.SingleNested != nil:
+			generatedModelField.AttributeType = SingleNestedAttributeType
+			generatedModelField.NestedFields = generateModelFields(attr.SingleNested.Attributes)
+			if len(generatedModelField.NestedFields) == 0 {
+				slog.Warn("Ignoring nested attribute with no schema", "name", attr.Name)
+				continue
+			}
+		case attr.ListNested != nil:
+			generatedModelField.AttributeType = ListNestedAttributeType
+			generatedModelField.NestedFields = generateModelFields(attr.ListNested.NestedObject.Attributes)
+			if len(generatedModelField.NestedFields) == 0 {
+				slog.Warn("Ignoring nested attribute with no schema", "name", attr.Name)
+				continue
+			}
+		}
+		generatedModelFields = append(generatedModelFields, generatedModelField)
+	}
+	return generatedModelFields
+}
+
 func isComputed(c specschema.ComputedOptionalRequired) bool {
 	return c == specschema.Computed || c == specschema.ComputedOptional
 }
@@ -140,6 +191,20 @@ func getElementType(e specschema.ElementType) string {
 		return NumberElementType
 	case e.Int64 != nil:
 		return Int64ElementType
+	}
+	panic("unsupported element type")
+}
+
+func getModelElementType(e specschema.ElementType) string {
+	switch {
+	case e.Bool != nil:
+		return BoolModelType
+	case e.String != nil:
+		return StringModelType
+	case e.Number != nil:
+		return NumberModelType
+	case e.Int64 != nil:
+		return Int64ModelType
 	}
 	panic("unsupported element type")
 }

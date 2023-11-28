@@ -18,3 +18,10 @@ const (
 	NumberElementType = "NumberType"
 	Int64ElementType  = "Int64Type"
 )
+
+const (
+	BoolModelType   = "Bool"
+	StringModelType = "String"
+	NumberModelType = "Number"
+	Int64ModelType  = "Int64"
+)

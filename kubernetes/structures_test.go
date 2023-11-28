@@ -4,6 +4,7 @@
 package kubernetes
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -12,7 +13,7 @@ import (
 )
 
 func TestIsInternalKey(t *testing.T) {
-	cases := []struct {
+	testCases := []struct {
 		Key      string
 		Expected bool
 	}{
@@ -26,14 +27,14 @@ func TestIsInternalKey(t *testing.T) {
 		{"kubectl.kubernetes.io", true},
 		{"pv.kubernetes.io/any/path", true},
 	}
-	for _, c := range cases {
-		t.Run(c.Key, func(t *testing.T) {
-			isInternal := isInternalKey(c.Key)
-			if c.Expected && isInternal != c.Expected {
-				t.Fatalf("Expected %q to be internal", c.Key)
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%s", tc.Key), func(t *testing.T) {
+			isInternal := isInternalKey(tc.Key)
+			if tc.Expected && isInternal != tc.Expected {
+				t.Fatalf("Expected %q to be internal", tc.Key)
 			}
-			if !c.Expected && isInternal != c.Expected {
-				t.Fatalf("Expected %q not to be internal", c.Key)
+			if !tc.Expected && isInternal != tc.Expected {
+				t.Fatalf("Expected %q not to be internal", tc.Key)
 			}
 		})
 	}

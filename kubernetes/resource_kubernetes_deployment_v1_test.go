@@ -1353,9 +1353,11 @@ func testAccKubernetesDeploymentV1Config_basic(name, imageName string) string {
           image = "%s"
           name  = "tf-acc-test"
           args  = ["test-webserver"]
+
           port {
             container_port = 80
           }
+
           readiness_probe {
             initial_delay_seconds = 3
             period_seconds        = 1
@@ -1572,7 +1574,7 @@ func testAccKubernetesDeploymentV1Config_modified(name, imageName string) string
         container {
           image = "%s"
           name  = "tf-acc-test"
-          args  = ["sleep", "infinity"]
+          args  = ["test-webserver"]
         }
         termination_grace_period_seconds = 1
       }

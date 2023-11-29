@@ -142,11 +142,13 @@ func TestFlattenMetadataFields(t *testing.T) {
 			}},
 		},
 	}
-	for _, c := range cases {
-		out := flattenMetadataFields(c.meta)
-		if !reflect.DeepEqual(out, c.expected) {
-			t.Fatalf("Error matching output and expected: %#v vs %#v", out, c.expected)
-		}
+	for n, c := range cases {
+		t.Run(n, func(t *testing.T) {
+			out := flattenMetadataFields(c.meta)
+			if !reflect.DeepEqual(out, c.expected) {
+				t.Fatalf("Error matching output and expected: %#v vs %#v", out, c.expected)
+			}
+		})
 	}
 }
 
@@ -280,10 +282,12 @@ func TestFlattenMetadata(t *testing.T) {
 		}},
 	}
 	d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{"metadata": namespacedMetadataSchema("fake", true)}, rawData)
-	for _, c := range cases {
-		out := flattenMetadata(c.meta, d, c.providerMeta)
-		if !reflect.DeepEqual(out, c.expected) {
-			t.Fatalf("Error matching output and expected: %#v vs %#v", out, c.expected)
-		}
+	for n, c := range cases {
+		t.Run(n, func(t *testing.T) {
+			out := flattenMetadata(c.meta, d, c.providerMeta)
+			if !reflect.DeepEqual(out, c.expected) {
+				t.Fatalf("Error matching output and expected: %#v vs %#v", out, c.expected)
+			}
+		})
 	}
 }

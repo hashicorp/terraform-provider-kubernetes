@@ -235,7 +235,7 @@ The following arguments are supported:
 - `condition` (Optional) A set of condition to wait for. You can specify multiple `condition` blocks and it will wait for all of them. 
 - `fields` (Optional) A map of field paths and a corresponding regular expression with a pattern to wait for. The provider will wait until the field's value matches the regular expression. Use `*` for any value.
 
-A field path is a string describing the fully qualified address of a field within the resource, including its parent fields all the way up to "object". The syntax of a path string follows the rules below:
+A field path is a string that describes the fully qualified address of a field within the resource, including its parent fields all the way up to "object". The syntax of a path string follows the rules below:
   * Fields of objects are addressed with `.`
   * Keys of a map field are addressed with `["<key-string>"]`
   * Elements of a list or tuple field are addresed with `[<index-numeral>]`

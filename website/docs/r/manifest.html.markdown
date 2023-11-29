@@ -240,7 +240,7 @@ A field path is a string that describes the fully qualified address of a field w
   * Keys of a map field are addressed with `["<key-string>"]`
   * Elements of a list or tuple field are addresed with `[<index-numeral>]`
 
-  For example, to wait for a ServiceAccount token to be created in a Secret, where the `data` field of Secret is a map, do the following:
+  The following example waits for Kubernetes to create a ServiceAccount token in a Secret, where the `data` field of the Secret is a map.
   ```hcl
   wait {
     fields = {

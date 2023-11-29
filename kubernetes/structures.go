@@ -129,7 +129,7 @@ func flattenMetadataFields(meta metav1.ObjectMeta) []interface{} {
 		m["namespace"] = meta.Namespace
 	}
 	m["resource_version"] = meta.ResourceVersion
-	m["uid"] = meta.UID
+	m["uid"] = string(meta.UID)
 
 	return []interface{}{m}
 }

@@ -5,9 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/dynamic"
+	"github.com/hashicorp/terraform-provider-kubernetes/framework/provider/client"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -25,14 +23,7 @@ type {{ .ResourceConfig.Kind }} struct {
 	APIVersion string
 	Kind       string
 
-	clientGetter KubernetesClientGetter
-}
-
-
-// FIXME move this
-type KubernetesClientGetter interface {
-	DynamicClient() (dynamic.Interface, error)
-	DiscoveryClient() (discovery.DiscoveryInterface, error)
+	clientGetter client.KubernetesClientGetter
 }
 
 func (r *{{ .ResourceConfig.Kind }}) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -45,7 +36,7 @@ func (r *{{ .ResourceConfig.Kind }}) Configure(ctx context.Context, req resource
 		return
 	}
 
-	clientGetter, ok := req.ProviderData.(KubernetesClientGetter)
+	clientGetter, ok := req.ProviderData.(client.KubernetesClientGetter)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",

@@ -1,4 +1,4 @@
-package provider
+package client
 
 import (
 	"fmt"
@@ -10,13 +10,19 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
-type KubernetesClientGetter struct {
+type kubernetesClientGetter struct {
 	config          *rest.Config
 	dynamicClient   dynamic.Interface
 	discoveryClient discovery.DiscoveryInterface
 }
 
-func (k KubernetesClientGetter) DynamicClient() (dynamic.Interface, error) {
+func NewKubernetesClientGetter(config *rest.Config) KubernetesClientGetter {
+	return &kubernetesClientGetter{
+		config: config,
+	}
+}
+
+func (k kubernetesClientGetter) DynamicClient() (dynamic.Interface, error) {
 	if k.dynamicClient != nil {
 		return k.dynamicClient, nil
 	}
@@ -31,7 +37,7 @@ func (k KubernetesClientGetter) DynamicClient() (dynamic.Interface, error) {
 	return k.dynamicClient, nil
 }
 
-func (k KubernetesClientGetter) DiscoveryClient() (discovery.DiscoveryInterface, error) {
+func (k kubernetesClientGetter) DiscoveryClient() (discovery.DiscoveryInterface, error) {
 	if k.discoveryClient != nil {
 		return k.discoveryClient, nil
 	}

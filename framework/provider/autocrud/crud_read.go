@@ -38,7 +38,7 @@ func Read(ctx context.Context, clientGetter KubernetesClientGetter, kind, apiVer
 
 	var resourceInterface dynamic.ResourceInterface
 	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
-		if namespace != "" {
+		if namespace == "" {
 			namespace = "default"
 		}
 		resourceInterface = client.Resource(mapping.Resource).Namespace(namespace)

@@ -14,16 +14,6 @@ import (
 
 const generateConfigFilename = "generate.hcl"
 
-type ResourcesListGenerator struct {
-	GeneratedTimestamp time.Time
-	Resources          []ResourceConfig
-	Packages           []string
-}
-
-func (p ResourcesListGenerator) String() string {
-	return renderTemplate(resourcesListTemplate, p)
-}
-
 func main() {
 	// setup slog with colour to make it easier to read
 	slog.SetDefault(slog.New(

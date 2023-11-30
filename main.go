@@ -15,9 +15,10 @@ import (
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
-	tf5server "github.com/hashicorp/terraform-plugin-go/tfprotov5/tf5server"
-	tf5muxserver "github.com/hashicorp/terraform-plugin-mux/tf5muxserver"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6/tf6server"
+	"github.com/hashicorp/terraform-plugin-mux/tf5to6server"
+	"github.com/hashicorp/terraform-plugin-mux/tf6muxserver"
 
 	framework "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -37,20 +38,30 @@ func main() {
 	debugFlag := flag.Bool("debug", false, "Start provider in stand-alone debug mode.")
 	flag.Parse()
 
-	providers := []func() tfprotov5.ProviderServer{
+	upgradedSdkServer, _ := tf5to6server.UpgradeServer(
+		context.Background(),
 		kubernetes.Provider().GRPCProvider,
+	)
+
+	upgradedManifestServer, _ := tf5to6server.UpgradeServer(
+		context.Background(),
 		manifest.Provider(),
-		providerserver.NewProtocol5(framework.New(Version)),
+	)
+
+	providers := []func() tfprotov6.ProviderServer{
+		func() tfprotov6.ProviderServer { return upgradedSdkServer },
+		func() tfprotov6.ProviderServer { return upgradedManifestServer },
+		providerserver.NewProtocol6(framework.New(Version)),
 	}
 
 	ctx := context.Background()
-	muxer, err := tf5muxserver.NewMuxServer(ctx, providers...)
+	muxer, err := tf6muxserver.NewMuxServer(ctx, providers...)
 	if err != nil {
 		log.Println(err.Error())
 		os.Exit(1)
 	}
 
-	opts := []tf5server.ServeOpt{}
+	opts := []tf6server.ServeOpt{}
 	if *debugFlag {
 		reattachConfigCh := make(chan *plugin.ReattachConfig)
 		go func() {
@@ -61,10 +72,10 @@ func main() {
 			}
 			printReattachConfig(reattachConfig)
 		}()
-		opts = append(opts, tf5server.WithDebug(ctx, reattachConfigCh, nil))
+		opts = append(opts, tf6server.WithDebug(ctx, reattachConfigCh, nil))
 	}
 
-	tf5server.Serve(providerName, muxer.ProviderServer, opts...)
+	tf6server.Serve(providerName, muxer.ProviderServer, opts...)
 }
 
 // convertReattachConfig converts plugin.ReattachConfig to tfexec.ReattachConfig

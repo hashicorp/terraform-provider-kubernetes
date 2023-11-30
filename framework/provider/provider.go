@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-provider-kubernetes/framework/provider/corev1"
 )
 
 // Ensure KubernetesProvider satisfies various provider interfaces.
@@ -180,9 +179,9 @@ func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequ
 }
 
 func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		corev1.NewNamespace,
-	}
+	resources := []func() resource.Resource{}
+	resources = append(resources, generatedResources...)
+	return resources
 }
 
 func (p *KubernetesProvider) DataSources(ctx context.Context) []func() datasource.DataSource {

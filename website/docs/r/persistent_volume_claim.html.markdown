@@ -86,7 +86,8 @@ The following arguments are supported:
 * `resources` - (Required) A list of the minimum resources the volume should have. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources)
 * `selector` - (Optional) A label query over volumes to consider for binding.
 * `volume_name` - (Optional) The binding reference to the PersistentVolume backing this claim.
-* `storage_class_name` - (Optional) Name of the storage class requested by the claim
+* `storage_class_name` - (Optional) Name of the storage class requested by the claim.
+* `volume_mode` - (Optional) Defines what type of volume is required by the claim. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#volume-mode)
 
 ### `match_expressions`
 

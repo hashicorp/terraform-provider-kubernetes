@@ -14,13 +14,28 @@ type ResourceGenerator struct {
 }
 
 func NewResourceGenerator(cfg ResourceConfig, spec specresource.Resource) ResourceGenerator {
+	attributes := AttributesGenerator{{
+		Name:          "id",
+		AttributeType: StringAttributeType,
+		Computed:      true,
+		Description:   "The unique ID for this terraform resource",
+	}}
+
+	modelFields := ModelFieldsGenerator{{
+		FieldName:         "ID",
+		Type:              StringModelType,
+		AttributeType:     StringAttributeType,
+		AttributeName:     "id",
+		ManifestFieldName: "id",
+	}}
+
 	return ResourceGenerator{
 		ResourceConfig: cfg,
-		ModelFields:    generateModelFields(spec.Schema.Attributes),
+		ModelFields:    append(modelFields, generateModelFields(spec.Schema.Attributes, cfg.IgnoreAttributes, "")...),
 		Schema: SchemaGenerator{
 			Name:        cfg.Name,
 			Description: cfg.Description,
-			Attributes:  generateAttributes(spec.Schema.Attributes),
+			Attributes:  append(attributes, generateAttributes(spec.Schema.Attributes, cfg.IgnoreAttributes, "")...),
 		},
 	}
 }
@@ -41,9 +56,22 @@ func (g *ResourceGenerator) GenerateModelCode() string {
 	return renderTemplate(modelTemplate, g)
 }
 
-func generateAttributes(attrs specresource.Attributes) AttributesGenerator {
+func (g *ResourceGenerator) GenerateAutoCRUDCode() string {
+	return renderTemplate(autocrudTemplate, g)
+}
+
+// TODO create a walkAttributes function that abstracts the logic of traversing
+// the spec for attributes
+
+func generateAttributes(attrs specresource.Attributes, ignore []string, path string) AttributesGenerator {
 	generatedAttrs := AttributesGenerator{}
 	for _, attr := range attrs {
+		attributePath := path + attr.Name
+
+		if ignoreAttribute(attributePath, ignore) {
+			continue
+		}
+
 		generatedAttr := AttributeGenerator{
 			Name: attr.Name,
 		}
@@ -106,7 +134,7 @@ func generateAttributes(attrs specresource.Attributes) AttributesGenerator {
 			generatedAttr.Required = isRequired(attr.SingleNested.ComputedOptionalRequired)
 			generatedAttr.Computed = isComputed(attr.SingleNested.ComputedOptionalRequired)
 			generatedAttr.Sensitive = isSensitive(attr.SingleNested.Sensitive)
-			generatedAttr.NestedAttributes = generateAttributes(attr.SingleNested.Attributes)
+			generatedAttr.NestedAttributes = generateAttributes(attr.SingleNested.Attributes, ignore, attributePath+".")
 		case attr.ListNested != nil:
 			if attr.ListNested.Description != nil {
 				generatedAttr.Description = *attr.ListNested.Description
@@ -115,16 +143,31 @@ func generateAttributes(attrs specresource.Attributes) AttributesGenerator {
 			generatedAttr.Required = isRequired(attr.ListNested.ComputedOptionalRequired)
 			generatedAttr.Computed = isComputed(attr.ListNested.ComputedOptionalRequired)
 			generatedAttr.Sensitive = isSensitive(attr.ListNested.Sensitive)
-			generatedAttr.NestedAttributes = generateAttributes(attr.ListNested.NestedObject.Attributes)
+			generatedAttr.NestedAttributes = generateAttributes(attr.ListNested.NestedObject.Attributes, ignore, attributePath+"[*].")
 		}
 		generatedAttrs = append(generatedAttrs, generatedAttr)
 	}
 	return generatedAttrs
 }
 
-func generateModelFields(attrs specresource.Attributes) ModelFieldsGenerator {
+func ignoreAttribute(path string, ignore []string) bool {
+	for _, v := range ignore {
+		if v == path {
+			return true
+		}
+	}
+	return false
+}
+
+func generateModelFields(attrs specresource.Attributes, ignore []string, path string) ModelFieldsGenerator {
 	generatedModelFields := ModelFieldsGenerator{}
 	for _, attr := range attrs {
+		attributePath := path + attr.Name
+
+		if ignoreAttribute(attributePath, ignore) {
+			continue
+		}
+
 		generatedModelField := ModelFieldGenerator{
 			FieldName:         UpperCamelize(attr.Name),
 			ManifestFieldName: Camelize(attr.Name),
@@ -151,14 +194,14 @@ func generateModelFields(attrs specresource.Attributes) ModelFieldsGenerator {
 			generatedModelField.ElementType = getModelElementType(attr.List.ElementType)
 		case attr.SingleNested != nil:
 			generatedModelField.AttributeType = SingleNestedAttributeType
-			generatedModelField.NestedFields = generateModelFields(attr.SingleNested.Attributes)
+			generatedModelField.NestedFields = generateModelFields(attr.SingleNested.Attributes, ignore, attributePath+".")
 			if len(generatedModelField.NestedFields) == 0 {
 				slog.Warn("Ignoring nested attribute with no schema", "name", attr.Name)
 				continue
 			}
 		case attr.ListNested != nil:
 			generatedModelField.AttributeType = ListNestedAttributeType
-			generatedModelField.NestedFields = generateModelFields(attr.ListNested.NestedObject.Attributes)
+			generatedModelField.NestedFields = generateModelFields(attr.ListNested.NestedObject.Attributes, ignore, attributePath+"[*].")
 			if len(generatedModelField.NestedFields) == 0 {
 				slog.Warn("Ignoring nested attribute with no schema", "name", attr.Name)
 				continue

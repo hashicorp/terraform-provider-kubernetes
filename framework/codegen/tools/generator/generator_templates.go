@@ -22,8 +22,14 @@ var schemaFunctionTemplate string
 //go:embed templates/resource.go.tpl
 var resourceTemplate string
 
+//go:embed templates/resources_list.go.tpl
+var resourcesListTemplate string
+
 //go:embed templates/resource_crud_stubs.go.tpl
 var crudStubsTemplate string
+
+//go:embed templates/resource_autocrud.go.tpl
+var autocrudTemplate string
 
 //go:embed templates/resource_model.go.tpl
 var modelTemplate string

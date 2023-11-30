@@ -32,10 +32,12 @@ func (p *KubernetesProvider) Configure(ctx context.Context, req provider.Configu
 		return
 	}
 
-	_, err := newKubernetesClientConfig(ctx, data)
+	cfg, err := newKubernetesClientConfig(ctx, data)
 	if err != nil {
 		resp.Diagnostics.Append(diag.NewErrorDiagnostic("failed to initilize Kubernetes client configuration", err.Error()))
 	}
+
+	resp.ResourceData = &KubernetesClientGetter{config: cfg}
 }
 
 func newKubernetesClientConfig(ctx context.Context, data KubernetesProviderModel) (*restclient.Config, error) {

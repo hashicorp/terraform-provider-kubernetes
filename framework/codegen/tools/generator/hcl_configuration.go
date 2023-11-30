@@ -20,36 +20,37 @@ type ResourceConfig struct {
 
 	Description string `hcl:"description"`
 
-	IgnoreFields    []string `hcl:"ignore_fields,optional"`
-	ComputedFields  []string `hcl:"computed_fields,optional"`
-	SensitiveFields []string `hcl:"sensitive_fields,optional"`
+	IgnoreAttributes    []string `hcl:"ignore_attributes,optional"`
+	ComputedAttributes  []string `hcl:"computed_attributes,optional"`
+	SensitiveAttributes []string `hcl:"sensitive_attributes,optional"`
 
 	Generate GenerateConfig `hcl:"generate,block"`
 
-	TerraformPluginGenOpenAPI TerraformPluginGenOpenAPIConfig `hcl:"tfplugingen_openapi,block"`
+	OpenAPIConfig TerraformPluginGenOpenAPIConfig `hcl:"openapi,block"`
 
 	Disabled bool `hcl:"disabled,optional"`
 }
 
 // DataSourceConfig configures code generation for a Terraform data source
 type DataSourceConfig struct {
+	// TODO implement data source generation
 }
 
 // TerraformPluginGenOpenAPIConfig supplies configuration to tfplugingen-openapi
 // See: https://github.com/hashicorp/terraform-plugin-codegen-openapi
 type TerraformPluginGenOpenAPIConfig struct {
-	OpenAPISpecFilename string `hcl:"openapi_spec_filename"`
-	CreatePath          string `hcl:"create_path"`
-	ReadPath            string `hcl:"read_path"`
+	Filename   string `hcl:"filename"`
+	CreatePath string `hcl:"create_path"`
+	ReadPath   string `hcl:"read_path"`
 }
 
 // GenerateConfig configures the options for what we should generate
 type GenerateConfig struct {
-	Schema        bool `hcl:"schema,optional"`
-	Overrides     bool `hcl:"overrides,optional"`
-	Model         bool `hcl:"model,optional"`
-	CRUDUNiversal bool `hcl:"crud_universal,optional"`
-	CRUDStubs     bool `hcl:"crud_stubs,optional"`
+	Schema    bool `hcl:"schema,optional"`
+	Overrides bool `hcl:"overrides,optional"`
+	Model     bool `hcl:"model,optional"`
+	CRUDAuto  bool `hcl:"autocrud,optional"`
+	CRUDStubs bool `hcl:"crud_stubs,optional"`
 }
 
 func parseGeneratorHCLConfig(filename string) (GeneratorConfig, error) {

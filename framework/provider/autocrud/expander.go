@@ -69,13 +69,17 @@ func expandValue(field reflect.Value) any {
 }
 
 func expand(model any) map[string]interface{} {
+	val := reflect.ValueOf(model)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+	t := val.Type()
 	m := map[string]interface{}{}
-	t := reflect.TypeOf(model)
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 		tag := f.Tag
 		manifestField := tag.Get("manifest")
-		field := reflect.ValueOf(model).Field(i)
+		field := val.Field(i)
 		m[manifestField] = expandValue(field)
 	}
 	return m

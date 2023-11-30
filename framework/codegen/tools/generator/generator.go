@@ -14,6 +14,16 @@ import (
 
 const generateConfigFilename = "generate.hcl"
 
+type ResourcesListGenerator struct {
+	GeneratedTimestamp time.Time
+	Resources          []ResourceConfig
+	Packages           []string
+}
+
+func (p ResourcesListGenerator) String() string {
+	return renderTemplate(resourcesListTemplate, p)
+}
+
 func main() {
 	// setup slog with colour to make it easier to read
 	slog.SetDefault(slog.New(
@@ -32,23 +42,49 @@ func main() {
 		return nil
 	})
 
+	generatedResources := []ResourceConfig{}
 	for _, f := range generateFiles {
 		config, err := parseGeneratorHCLConfig(f)
 		if err != nil {
 			slog.Error("Error parsing configuration", "filename", f, "err", err)
 			os.Exit(1)
 		}
-		err = generateFrameworkCode(f, config)
+		resources, err := generateFrameworkCode(f, config)
 		if err != nil {
 			slog.Error("Error generating framework code", "err", err)
 			os.Exit(1)
 		}
+		generatedResources = append(generatedResources, resources...)
 	}
+
+	// generate resources list file
+	resourcesList := ResourcesListGenerator{
+		time.Now(),
+		generatedResources,
+		generatePackageList(generatedResources),
+	}
+	outputFilename := "resources_list_gen.go"
+	outputFormattedGoFile("./provider", outputFilename, resourcesList.String())
+	slog.Info("Generated resources list source file", "filename", outputFilename)
+
 }
 
-func generateFrameworkCode(path string, config GeneratorConfig) error {
+func generatePackageList(resources []ResourceConfig) []string {
+	packages := []string{}
+	packageMap := map[string]struct{}{}
+	for _, r := range resources {
+		packageMap[r.Package] = struct{}{}
+	}
+	for k, _ := range packageMap {
+		packages = append(packages, k)
+	}
+	return packages
+}
+
+func generateFrameworkCode(path string, config GeneratorConfig) ([]ResourceConfig, error) {
 	wd := filepath.Dir(path)
 
+	generatedResources := []ResourceConfig{}
 	for _, r := range config.Resources {
 		if r.Disabled {
 			slog.Warn("Code generation is disabled, skipping", "resource", r.Name)
@@ -57,7 +93,7 @@ func generateFrameworkCode(path string, config GeneratorConfig) error {
 		slog.Info("Generating framework code", "resource", r.Name)
 		spec, err := generateResourceSpec(r)
 		if err != nil {
-			return fmt.Errorf("error generating provider spec: %v", err)
+			return nil, fmt.Errorf("error generating provider spec: %v", err)
 		}
 
 		gen := NewResourceGenerator(r, spec)
@@ -79,9 +115,17 @@ func generateFrameworkCode(path string, config GeneratorConfig) error {
 		// generate CRUD stubs
 		if r.Generate.CRUDStubs {
 			crudStubCode := gen.GenerateCRUDStubCode()
-			outputFilename = fmt.Sprintf("%s_crud_gen.go", r.OutputFilenamePrefix)
+			outputFilename = fmt.Sprintf("%s_crud.go", r.OutputFilenamePrefix)
 			outputFormattedGoFile(wd, outputFilename, crudStubCode)
 			slog.Info("Generated CRUD stub source file", "filename", outputFilename)
+		}
+
+		// generate auto CRUD functions
+		if r.Generate.CRUDAuto {
+			crudStubCode := gen.GenerateAutoCRUDCode()
+			outputFilename = fmt.Sprintf("%s_crud_gen.go", r.OutputFilenamePrefix)
+			outputFormattedGoFile(wd, outputFilename, crudStubCode)
+			slog.Info("Generated autocrud source file", "filename", outputFilename)
 		}
 
 		// generate model
@@ -91,6 +135,8 @@ func generateFrameworkCode(path string, config GeneratorConfig) error {
 			outputFormattedGoFile(wd, outputFilename, crudStubCode)
 			slog.Info("Generated model source file", "filename", outputFilename)
 		}
+
+		generatedResources = append(generatedResources, r)
 	}
-	return nil
+	return generatedResources, nil
 }

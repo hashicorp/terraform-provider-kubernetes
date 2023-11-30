@@ -30,11 +30,11 @@ func generateResourceSpec(r ResourceConfig) (specresource.Resource, error) {
 		"resources": map[string]any{
 			r.Name: map[string]any{
 				"create": map[string]any{
-					"path":   r.TerraformPluginGenOpenAPI.CreatePath,
+					"path":   r.OpenAPIConfig.CreatePath,
 					"method": "POST",
 				},
 				"read": map[string]any{
-					"path":   r.TerraformPluginGenOpenAPI.ReadPath,
+					"path":   r.OpenAPIConfig.ReadPath,
 					"method": "GET",
 				},
 			},
@@ -77,7 +77,7 @@ func generateResourceSpec(r ResourceConfig) (specresource.Resource, error) {
 		"generate",
 		"--config", yamlConfigFilename,
 		"--output", frameworkIRFilename,
-		r.TerraformPluginGenOpenAPI.OpenAPISpecFilename,
+		r.OpenAPIConfig.Filename,
 	}
 	slog.Debug(fmt.Sprintf("Executing %s", tfplugingenOpenAPIBinary), "args", args)
 	cmd := exec.Command(tfplugingenopenapiPath, args...)

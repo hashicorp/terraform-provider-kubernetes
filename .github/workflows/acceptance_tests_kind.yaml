@@ -54,7 +54,7 @@ jobs:
       - name: Run Acceptance Test Suite
         env:
           KUBE_CONFIG_PATH: ${{ env.KUBECONFIG }}
-          TESTARGS: -run '${{ github.event.inputs.runTests || "^TestAcc"}}'
+          TESTARGS: -run ${{ github.event.inputs.runTests || '^TestAcc' }}
           # Do not set TF_ACC_TERRAFORM_PATH or TF_ACC_TERRAFORM_VERSION.
           # In this case, the framework will search for the Terraform CLI binary based on the operating system PATH.
           # Eventually, it will use the one we set up.

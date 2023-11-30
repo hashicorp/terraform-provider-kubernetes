@@ -62,7 +62,7 @@ jobs:
           terraform apply -auto-approve
       - name: Run Tests  
         env: 
-          TESTARGS: -run '${{ github.event.inputs.runTests || "^TestAcc"}}'
+          TESTARGS: -run ${{ github.event.inputs.runTests || '^TestAcc' }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
         run: |
           make testacc

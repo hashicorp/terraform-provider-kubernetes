@@ -20,7 +20,7 @@ on:
         default: 1.5.6
       runTests:
         description: The regex passed to the -run option of `go test`
-        default: ".*"
+        default: "^TestAcc"
       parallelRuns:
         description: The maximum number of tests to run simultaneously
         default: 8
@@ -62,7 +62,7 @@ jobs:
           terraform apply -auto-approve
       - name: Run Tests  
         env: 
-          TESTARGS: -run '${{ inputs.runTests }}'
+          TESTARGS: -run '${{ github.event.inputs.runTests || "^TestAcc"}}'
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
         run: |
           make testacc

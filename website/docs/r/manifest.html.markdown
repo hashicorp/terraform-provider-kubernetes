@@ -251,11 +251,7 @@ A field path is a string that describes the fully qualified address of a field w
   }
   ```
 
-<<<<<<< HEAD
   You can use the [`type()`](https://developer.hashicorp.com/terraform/language/functions/type) Terraform function to determine the type of a field. With the resource created and present in state, run `terraform console` and then the following command:
-=======
-  You can use the [`type()`]() Terraform function to determine the type of a field. With the resource created and present in state, run `terraform console` and then the following command:
->>>>>>> fe1cf3535 (Fix linter complains)
 
   ```hcl
   > type(kubernetes_manifest.my-secret.object.data)

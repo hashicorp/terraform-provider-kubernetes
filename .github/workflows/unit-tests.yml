@@ -23,6 +23,6 @@ jobs:
         go-version-file: 'go.mod'
     - name: Run unit tests
       env: 
-       TESTARGS: -count 1 -run '^Test[^Acc]'
+       TESTARGS: -count 1
       run: |
         make test

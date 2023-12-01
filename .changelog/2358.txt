@@ -1,3 +1,3 @@
 ```release-note:bug
-`resource/kubernetes_manifest`: Waiter now stops on errors from invalid filed paths and outputs diagnostic message
+`resource/kubernetes_manifest`: Waiter now stops on errors from invalid field paths and outputs diagnostic message
 ```

@@ -182,7 +182,7 @@ func (w *FieldWaiter) Wait(ctx context.Context) error {
 			for _, m := range w.fieldMatchers {
 				vi, rp, err := tftypes.WalkAttributePath(obj, m.path)
 				if err != nil {
-					return false, err
+					return true, m.path.NewErrorf("%s", err)
 				}
 				if len(rp.Steps()) > 0 {
 					return false, fmt.Errorf("attribute not present at path '%s'", m.path.String())
@@ -218,6 +218,14 @@ func (w *FieldWaiter) Wait(ctx context.Context) error {
 
 			return true, nil
 		}(obj)
+
+		if err != nil {
+			if done {
+				w.logger.Debug("[ApplyResourceChange][Wait]", "fatal error", err)
+			} else {
+				w.logger.Debug("[ApplyResourceChange][Wait]", "retriable error", err)
+			}
+		}
 
 		if done {
 			w.logger.Info("[ApplyResourceChange][Wait] Done waiting.\n")

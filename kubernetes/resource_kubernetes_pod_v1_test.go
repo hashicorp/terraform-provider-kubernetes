@@ -1949,8 +1949,7 @@ func testAccKubernetesPodV1ConfigWithSecurityContextRunAsGroup(podName, imageNam
 }
 
 func testAccKubernetesPodV1ConfigWithSecurityContextSeccompProfile(podName, imageName, seccompProfileType string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1982,8 +1981,7 @@ resource "kubernetes_pod_v1" "test" {
 }
 
 func testAccKubernetesPodV1ConfigWithSecurityContextSeccompProfileLocalhost(podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"

@@ -14,14 +14,21 @@ import (
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/terraform-exec/tfexec"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	tf5server "github.com/hashicorp/terraform-plugin-go/tfprotov5/tf5server"
 	tf5muxserver "github.com/hashicorp/terraform-plugin-mux/tf5muxserver"
 
+	framework "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	manifest "github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 )
 
-const providerName = "registry.terraform.io/hashicorp/kubernetes"
+const (
+	providerName = "registry.terraform.io/hashicorp/kubernetes"
+
+	Version = "dev"
+)
 
 // Generate docs for website
 //go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
@@ -30,11 +37,14 @@ func main() {
 	debugFlag := flag.Bool("debug", false, "Start provider in stand-alone debug mode.")
 	flag.Parse()
 
-	mainProvider := kubernetes.Provider().GRPCProvider
-	manifestProvider := manifest.Provider()
+	providers := []func() tfprotov5.ProviderServer{
+		kubernetes.Provider().GRPCProvider,
+		manifest.Provider(),
+		providerserver.NewProtocol5(framework.New(Version)),
+	}
 
 	ctx := context.Background()
-	muxer, err := tf5muxserver.NewMuxServer(ctx, mainProvider, manifestProvider)
+	muxer, err := tf5muxserver.NewMuxServer(ctx, providers...)
 	if err != nil {
 		log.Println(err.Error())
 		os.Exit(1)

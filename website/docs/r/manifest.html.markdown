@@ -238,7 +238,7 @@ The following arguments are supported:
 A field path is a string that describes the fully qualified address of a field within the resource, including its parent fields all the way up to "object". The syntax of a path string follows the rules below:
   * Fields of objects are addressed with `.`
   * Keys of a map field are addressed with `["<key-string>"]`
-  * Elements of a list or tuple field are addresed with `[<index-numeral>]`
+  * Elements of a list or tuple field are addressed with `[<index-numeral>]`
 
   The following example waits for Kubernetes to create a ServiceAccount token in a Secret, where the `data` field of the Secret is a map.
   ```hcl

@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestAccKubernetesDataSourcePersistentVolumeClaimV1_basic(t *testing.T) {
@@ -32,7 +33,7 @@ func TestAccKubernetesDataSourcePersistentVolumeClaimV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.resources.0.requests.storage", "1Gi"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_mode", string(corev1.PersistentVolumeFilesystem)),
 				),
 			},
 			{
@@ -48,6 +49,7 @@ func TestAccKubernetesDataSourcePersistentVolumeClaimV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(dataSourceName, "spec.0.resources.#", "1"),
 					resource.TestCheckResourceAttr(dataSourceName, "spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr(dataSourceName, "spec.0.resources.0.requests.storage", "1Gi"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.volume_mode", string(corev1.PersistentVolumeFilesystem)),
 				),
 			},
 		},

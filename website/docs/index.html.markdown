@@ -136,7 +136,7 @@ For further reading, see these examples which demonstrate different approaches t
 
 ## Ignore Kubernetes annotations and labels
 
-In certain cases, external systems can add and modify resources annotations and labels for their own purposes. However, Terraform will remove them since they are not presented in the code. It also might be hard to update code accordingly to stay tuned with the changes that come outside. In order to address this `ignore_annotations` and `ignore_labels` attributes were introduced on the provider level. They allow Terraform to ignore certain annotations and labels across all resources.
+In certain cases, external systems can add and modify resources annotations and labels for their own purposes. However, Terraform will remove them since they are not presented in the code. It also might be hard to update code accordingly to stay tuned with the changes that come outside. In order to address this `ignore_annotations` and `ignore_labels` attributes were introduced on the provider level. They allow Terraform to ignore certain annotations and labels across all resources. Please bear in mind, that all data sources remain unaffected and the provider always returns all labels and annotations, in spite of the `ignore_annotations` and `ignore_labels` settings. The same is applicable for the pod and job definitions that fall under templates.
 
 Both attributes support RegExp to match metadata objects more effectively.
 

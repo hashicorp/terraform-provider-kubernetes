@@ -312,9 +312,9 @@ One or more `volume_claim_template` blocks can be specified.
 
 #### Arguments
 
-Each takes the same attibutes as a `kubernetes_persistent_volume_claim` resource.
+Each takes the same attibutes as a `kubernetes_persistent_volume_claim_v1` resource.
 
-Please see its [documentation](persistent_volume_claim.html#argument-reference) for reference.
+Please see its [documentation](persistent_volume_claim_v1.html#argument-reference) for reference.
 
 ### `spec.persistent_volume_claim_retention_policy`
 

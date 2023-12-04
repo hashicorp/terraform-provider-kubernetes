@@ -140,21 +140,8 @@ func resourceKubernetesJobV1Read(ctx context.Context, d *schema.ResourceData, me
 
 	// Remove server-generated labels unless using manual selector
 	if _, ok := d.GetOk("spec.0.manual_selector"); !ok {
-		labels := job.ObjectMeta.Labels
-
-		if _, ok := labels["controller-uid"]; ok {
-			delete(labels, "controller-uid")
-		}
-
-		if _, ok := labels["job-name"]; ok {
-			delete(labels, "job-name")
-		}
-
-		labels = job.Spec.Selector.MatchLabels
-
-		if _, ok := labels["controller-uid"]; ok {
-			delete(labels, "controller-uid")
-		}
+		removeGeneratedLabels(job.ObjectMeta.Labels)
+		removeGeneratedLabels(job.Spec.Selector.MatchLabels)
 	}
 
 	err = d.Set("metadata", flattenMetadata(job.ObjectMeta, d, meta))

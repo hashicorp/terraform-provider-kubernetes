@@ -5,6 +5,7 @@ package kubernetes
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -80,7 +81,50 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 
 	d.SetId(buildId(sa.ObjectMeta))
 
-	diagMsg = append(diagMsg, resourceKubernetesServiceAccountV1Read(ctx, d, meta)...)
+	log.Printf("[INFO] Reading service account %s", metadata.Name)
+	svcAcc, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
+	if err != nil {
+		log.Printf("[DEBUG] Received error: %#v", err)
+		diagMsg = append(diagMsg, diag.FromErr(err)...)
+		return diagMsg
+	}
+	log.Printf("[INFO] Received service account: %#v", svcAcc)
 
-	return diagMsg
+	err = d.Set("metadata", flattenMetadataFields(svcAcc.ObjectMeta))
+	if err != nil {
+		diagMsg = append(diagMsg, diag.FromErr(err)...)
+		return diagMsg
+	}
+
+	if svcAcc.AutomountServiceAccountToken == nil {
+		err = d.Set("automount_service_account_token", false)
+		if err != nil {
+			diagMsg = append(diagMsg, diag.FromErr(err)...)
+			return diagMsg
+		}
+	} else {
+		err = d.Set("automount_service_account_token", *svcAcc.AutomountServiceAccountToken)
+		if err != nil {
+			diagMsg = append(diagMsg, diag.FromErr(err)...)
+			return diagMsg
+		}
+	}
+
+	err = d.Set("image_pull_secret", flattenLocalObjectReferenceArray(svcAcc.ImagePullSecrets))
+	if err != nil {
+		diagMsg = append(diagMsg, diag.FromErr(err)...)
+		return diagMsg
+	}
+
+	defaultSecretName := d.Get("default_secret_name").(string)
+	log.Printf("[DEBUG] Default secret name is %q", defaultSecretName)
+	secrets := flattenServiceAccountSecrets(svcAcc.Secrets, defaultSecretName)
+	log.Printf("[DEBUG] Flattened secrets: %#v", secrets)
+	err = d.Set("secret", secrets)
+	if err != nil {
+		diagMsg = append(diagMsg, diag.FromErr(err)...)
+		return diagMsg
+	}
+
+	return nil
 }

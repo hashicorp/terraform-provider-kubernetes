@@ -522,7 +522,7 @@ func TestAccKubernetesPodV1_with_container_liveness_probe_using_exec(t *testing.
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.exec.0.command.0", "cat"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.exec.0.command.1", "/tmp/healthy"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.failure_threshold", "3"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.initial_delay_seconds", "5"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.initial_delay_seconds", "3"),
 				),
 			},
 			{
@@ -2036,9 +2036,8 @@ func testAccKubernetesPodV1ConfigWithLivenessProbeUsingExec(podName, imageName s
         exec {
           command = ["cat", "/tmp/healthy"]
         }
-
-        initial_delay_seconds = 5
-        period_seconds        = 5
+        initial_delay_seconds = 3
+        period_seconds        = 1
       }
     }
     termination_grace_period_seconds = 1
@@ -2073,9 +2072,8 @@ func testAccKubernetesPodV1ConfigWithLivenessProbeUsingHTTPGet(podName, imageNam
             value = "Awesome"
           }
         }
-
         initial_delay_seconds = 3
-        period_seconds        = 3
+        period_seconds        = 1
       }
     }
   }
@@ -2103,9 +2101,8 @@ func testAccKubernetesPodV1ConfigWithLivenessProbeUsingTCP(podName, imageName st
         tcp_socket {
           port = 8080
         }
-
         initial_delay_seconds = 3
-        period_seconds        = 3
+        period_seconds        = 1
       }
     }
   }
@@ -2134,9 +2131,8 @@ func testAccKubernetesPodV1ConfigWithLivenessProbeUsingGRPC(podName, imageName s
           port    = 8888
           service = "EchoService"
         }
-
-        initial_delay_seconds = 30
-        period_seconds        = 30
+        initial_delay_seconds = 3
+        period_seconds        = 1
       }
     }
   }

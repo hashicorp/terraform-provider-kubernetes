@@ -150,24 +150,10 @@ func resourceKubernetesCronJobV1Beta1Read(ctx context.Context, d *schema.Resourc
 	log.Printf("[INFO] Received cron job: %#v", job)
 
 	// Remove server-generated labels unless using manual selector
-	if _, ok := d.GetOk("spec.0.manual_selector"); !ok {
-		labels := job.ObjectMeta.Labels
-
-		if _, ok := labels["controller-uid"]; ok {
-			delete(labels, "controller-uid")
-		}
-
-		if _, ok := labels["cron-job-name"]; ok {
-			delete(labels, "cron-job-name")
-		}
-
-		if job.Spec.JobTemplate.Spec.Selector != nil &&
-			job.Spec.JobTemplate.Spec.Selector.MatchLabels != nil {
-			labels = job.Spec.JobTemplate.Spec.Selector.MatchLabels
-		}
-
-		if _, ok := labels["controller-uid"]; ok {
-			delete(labels, "controller-uid")
+	if _, ok := d.GetOk("spec.0.job_template.spec.0.manual_selector"); !ok {
+		removeGeneratedLabels(job.ObjectMeta.Labels)
+		if job.Spec.JobTemplate.Spec.Selector != nil {
+			removeGeneratedLabels(job.Spec.JobTemplate.Spec.Selector.MatchLabels)
 		}
 	}
 

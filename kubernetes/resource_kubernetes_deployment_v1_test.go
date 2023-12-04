@@ -398,7 +398,7 @@ func TestAccKubernetesDeploymentV1_with_container_liveness_probe_using_exec(t *t
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.exec.0.command.0", "cat"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.exec.0.command.1", "/tmp/healthy"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.failure_threshold", "3"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.initial_delay_seconds", "5"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.initial_delay_seconds", "3"),
 				),
 			},
 		},
@@ -1359,7 +1359,8 @@ func testAccKubernetesDeploymentV1Config_basic(name, imageName string) string {
           }
 
           readiness_probe {
-            initial_delay_seconds = 5
+            initial_delay_seconds = 3
+            period_seconds        = 1
             http_get {
               path = "/"
               port = 80
@@ -1857,9 +1858,8 @@ func testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingExec(deploymentNam
             exec {
               command = ["cat", "/tmp/healthy"]
             }
-
-            initial_delay_seconds = 5
-            period_seconds        = 5
+            initial_delay_seconds = 3
+            period_seconds        = 1
           }
         }
         termination_grace_period_seconds = 1
@@ -1910,9 +1910,8 @@ func testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingHTTPGet(deployment
                 value = "Awesome"
               }
             }
-
             initial_delay_seconds = 3
-            period_seconds        = 3
+            period_seconds        = 1
           }
         }
         termination_grace_period_seconds = 1
@@ -1957,9 +1956,8 @@ func testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingTCP(deploymentName
             tcp_socket {
               port = 8080
             }
-
             initial_delay_seconds = 3
-            period_seconds        = 3
+            period_seconds        = 1
           }
         }
         termination_grace_period_seconds = 1

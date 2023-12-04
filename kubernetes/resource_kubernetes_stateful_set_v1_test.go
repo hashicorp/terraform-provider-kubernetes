@@ -6,12 +6,14 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -351,6 +353,31 @@ func testAccCheckKubernetesStatefulSetV1Destroy(s *terraform.State) error {
 				return fmt.Errorf("StatefulSet still exists: %s: (Generation %#v)", rs.Primary.ID, resp.Status.ObservedGeneration)
 			}
 		}
+
+		// StatefulSet can create a PVC via volumeClaimTemplate. However, once the StatefulSet is removed, the PVC remains.
+		// There is a beta feature(persistentVolumeClaimRetentionPolicy) since 1.27 that aims to address this problem:
+		// - https://kubernetes.io/blog/2021/12/16/kubernetes-1-23-statefulset-pvc-auto-deletion/
+		// - https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#persistentvolumeclaim-retention
+		// By default, StatefulSetAutoDeletePVC feature is not enabled in the feature gate.
+		// That is why we clean up resources manually here.
+		pvc, err := conn.CoreV1().PersistentVolumeClaims(namespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return fmt.Errorf("Failed to list PVCs in %q namespace", namespace)
+		}
+		for _, p := range pvc.Items {
+			// PVC gets generated in the following format:
+			// *.volumeClaimTemplate.metatada.name-statefulSet.metatada.name
+			//
+			// Since statefulSet.metatada.name is uniq, we could use it as a match.
+			if strings.Contains(p.Name, name) {
+				err := conn.CoreV1().PersistentVolumeClaims(namespace).Delete(ctx, p.Name, metav1.DeleteOptions{})
+				if err != nil {
+					if !errors.IsNotFound(err) {
+						return fmt.Errorf("Failed to delete PVC %q in namespace %q", p.Name, namespace)
+					}
+				}
+			}
+		}
 	}
 
 	return nil
@@ -474,7 +501,8 @@ func testAccKubernetesStatefulSetV1ConfigBasic(name, imageName string) string {
           }
 
           readiness_probe {
-            initial_delay_seconds = 5
+            initial_delay_seconds = 3
+            period_seconds        = 1
             http_get {
               path = "/"
               port = 80
@@ -1089,7 +1117,8 @@ func testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, waitFor
           }
 
           readiness_probe {
-            initial_delay_seconds = 5
+            initial_delay_seconds = 3
+            period_seconds        = 1
             tcp_socket {
               port = 80
             }

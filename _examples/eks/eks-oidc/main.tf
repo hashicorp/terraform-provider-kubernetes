@@ -6,7 +6,7 @@ variable "cluster_name" {
 }
 
 variable "oidc_issuer_url" {
-    default = "https://app.terraform.io"
+  default = "https://app.terraform.io"
 }
 
 variable "oidc_audience" {
@@ -21,7 +21,7 @@ variable "rbac_group_oidc_claim" {
   default = "terraform_organization_name"
 }
 
-variable "rbac_admin_group_name" {
+variable "rbac_oidc_group_name" {
   type = string
 }
 
@@ -69,6 +69,6 @@ resource "kubernetes_cluster_role_binding_v1" "oidc_role" {
   subject {
     api_group = "rbac.authorization.k8s.io"
     kind      = "Group"
-    name      = var.rbac_admin_group_name
+    name      = var.rbac_oidc_group_name
   }
 }

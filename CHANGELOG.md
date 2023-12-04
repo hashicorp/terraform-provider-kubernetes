@@ -1,3 +1,25 @@
+## 2.24.0 (Nov 27, 2023)
+
+ENHANCEMENTS:
+
+`kubernetes/schema_affinity_spec.go`: Add `match_fields` to nodeAffinity [[GH-2296](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2296)]
+`kubernetes/schema_pod_spec.go`: Add `os` to podSpecFields [[GH-2290](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2290)]
+`resource/kubernetes_config_map_v1_data`: improve error handling while validating the existence of the target ConfigMap. [[GH-2230](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2230)]
+
+BUG FIXES:
+
+* `resource/kubernetes_labels`: Add ["f:metadata"] check in kubernetes_labels to prevent crash with kubernetes_node_taints [[GH-2246](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2246)]
+
+DOCS:
+
+* Add example module for configuring OIDC authentication on EKS [[GH-2287](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2287)]
+* Add example module for configuring OIDC authentication on GKE [[GH-2319](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2319)]
+
+NOTES:
+
+* Bump Go version from 1.20 to 1.21. [[GH-2337](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2337)]
+* Bump Kubernetes dependencies from x.25.11 to x.27.8.
+
 ## 2.23.0 (August 16, 2023)
 
 FEATURES:

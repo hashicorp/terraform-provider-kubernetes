@@ -52,6 +52,7 @@ The following arguments are supported:
 * `selector` - Claims can specify a label selector to further filter the set of volumes. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#selector)
 * `volume_name` - The binding reference to the PersistentVolume backing this claim.
 * `storage_class_name` - Name of the storage class requested by the claim.
+* `volume_mode` - (Optional) Defines what type of volume is required by the claim. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#volume-mode)
 
 ## Import
 

@@ -16,9 +16,9 @@ Once applied, the `object` attribute contains the state of the resource as retur
 
 ### Before you use this resource
 
-* This resource requires API access during planning time. This means the cluster has to be accessible at plan time and thus cannot be created in the same apply operation. We recommend only using this resource for custom resources or resources not yet fully supported by the provider.
+- This resource requires API access during planning time. This means the cluster has to be accessible at plan time and thus cannot be created in the same apply operation. We recommend only using this resource for custom resources or resources not yet fully supported by the provider.
 
-* This resource uses [Server-side Apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) to carry out apply operations. A minimum Kubernetes version of 1.16.x is required, but versions 1.17+ are strongly recommended as the SSA implementation in Kubernetes 1.16.x is incomplete and unstable.
+- This resource uses [Server-side Apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) to carry out apply operations. A minimum Kubernetes version of 1.16.x is required, but versions 1.17+ are strongly recommended as the SSA implementation in Kubernetes 1.16.x is incomplete and unstable.
 
 
 ### Example: Create a Kubernetes ConfigMap
@@ -223,7 +223,8 @@ The following arguments are supported:
 - `computed_fields` - (Optional) List of paths of fields to be handled as "computed". The user-configured value for the field will be overridden by any different value returned by the API after apply.
 - `manifest` (Required) An object Kubernetes manifest describing the desired state of the resource in HCL format.
 - `object` (Optional) The resulting resource state, as returned by the API server after applying the desired state from `manifest`.
-- `wait_for` (Optional) An object which allows you configure the provider to wait for certain conditions to be met. See below for schema. **DEPRECATED: use `wait` block**.
+- `wait` (Optional) An object which allows you configure the provider to wait for specific fields to reach a desired value or certain conditions to be met. See below for schema.
+- `wait_for` (Optional, Deprecated) An object which allows you configure the provider to wait for certain conditions to be met. See below for schema. **DEPRECATED: use `wait` block**.
 - `field_manager` (Optional) Configure field manager options. See below.
 
 ### `wait`
@@ -232,7 +233,30 @@ The following arguments are supported:
 
 - `rollout` (Optional) When set to `true` will wait for the resource to roll out, equivalent to `kubectl rollout status`. 
 - `condition` (Optional) A set of condition to wait for. You can specify multiple `condition` blocks and it will wait for all of them. 
-- `fields` (Optional) A map of fields and a corresponding regular expression with a pattern to wait for. The provider will wait until the field matches the regular expression. Use `*` for any value. 
+- `fields` (Optional) A map of field paths and a corresponding regular expression with a pattern to wait for. The provider will wait until the field's value matches the regular expression. Use `*` for any value.
+
+A field path is a string that describes the fully qualified address of a field within the resource, including its parent fields all the way up to "object". The syntax of a path string follows the rules below:
+
+- Fields of objects are addressed with `.`
+- Keys of a map field are addressed with `["<key-string>"]`
+- Elements of a list or tuple field are addressed with `[<index-numeral>]`
+
+  The following example waits for Kubernetes to create a ServiceAccount token in a Secret, where the `data` field of the Secret is a map.
+
+  ```hcl
+  wait {
+    fields = {
+      "data[\"token\"]" = ".+"
+    }
+  }
+  ```
+
+  You can use the [`type()`](https://developer.hashicorp.com/terraform/language/functions/type) Terraform function to determine the type of a field. With the resource created and present in state, run `terraform console` and then the following command:
+
+  ```hcl
+  > type(kubernetes_manifest.my-secret.object.data)
+    map(string)
+  ```
 
 ### `wait_for` (deprecated, use `wait`)
 

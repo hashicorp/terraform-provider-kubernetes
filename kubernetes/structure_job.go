@@ -40,18 +40,10 @@ func flattenJobV1Spec(in batchv1.JobSpec, d *schema.ResourceData, meta interface
 	if in.Selector != nil {
 		att["selector"] = flattenLabelSelector(in.Selector)
 	}
-	// Remove server-generated labels
-	labels := in.Template.ObjectMeta.Labels
 
-	if _, ok := labels["controller-uid"]; ok {
-		delete(labels, "controller-uid")
-	}
+	removeGeneratedLabels(in.Template.ObjectMeta.Labels)
 
-	if _, ok := labels["job-name"]; ok {
-		delete(labels, "job-name")
-	}
-
-	podSpec, err := flattenPodTemplateSpec(in.Template, d, meta, prefix...)
+	podSpec, err := flattenPodTemplateSpec(in.Template)
 	if err != nil {
 		return nil, err
 	}
@@ -155,4 +147,28 @@ func patchJobV1Spec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOpe
 	}
 
 	return ops, nil
+}
+
+// removeGeneratedLabels removes server-generated labels
+func removeGeneratedLabels(labels map[string]string) map[string]string {
+	// The Jobs controller adds the following labels to the template block dynamically
+	// and thus we have to ignore them to avoid perpetual diff:
+	// - 'batch.kubernetes.io/controller-uid'
+	// - 'batch.kubernetes.io/job-name'
+	// - 'controller-uid' // deprecated starting from Kubernetes 1.27
+	// - 'job-name'  // deprecated starting from Kubernetes 1.27
+	//
+	// More information: https://kubernetes.io/docs/reference/labels-annotations-taints/
+	generatedLabels := []string{
+		"batch.kubernetes.io/controller-uid",
+		"batch.kubernetes.io/job-name",
+		// Starting from Kubernetes 1.27, the following labels are deprecated.
+		"controller-uid",
+		"job-name",
+	}
+	for _, l := range generatedLabels {
+		delete(labels, l)
+	}
+
+	return labels
 }

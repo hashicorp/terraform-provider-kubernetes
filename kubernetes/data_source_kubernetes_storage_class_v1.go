@@ -5,9 +5,11 @@ package kubernetes
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesStorageClassV1() *schema.Resource {
@@ -87,7 +89,36 @@ func dataSourceKubernetesStorageClassV1() *schema.Resource {
 }
 
 func dataSourceKubernetesStorageClassV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	name := d.Get("metadata.0.name").(string)
-	d.SetId(name)
-	return resourceKubernetesStorageClassV1Read(ctx, d, meta)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	d.SetId(metadata.Name)
+
+	log.Printf("[INFO] Reading storage class %s", metadata.Name)
+	storageClass, err := conn.StorageV1().StorageClasses().Get(ctx, metadata.Name, metav1.GetOptions{})
+	if err != nil {
+		log.Printf("[DEBUG] Received error: %#v", err)
+		return diag.FromErr(err)
+	}
+	log.Printf("[INFO] Received storage class: %#v", storageClass)
+
+	diags := diag.Diagnostics{}
+
+	err = d.Set("metadata", flattenMetadataFields(storageClass.ObjectMeta))
+	if err != nil {
+		diags = append(diags, diag.FromErr(err)[0])
+	}
+
+	sc := flattenStorageClass(*storageClass)
+	for k, v := range sc {
+		err = d.Set(k, v)
+		if err != nil {
+			diags = append(diags, diag.FromErr(err)[0])
+		}
+	}
+
+	return diags
 }

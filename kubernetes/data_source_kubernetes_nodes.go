@@ -74,9 +74,9 @@ func dataSourceKubernetesNodesRead(ctx context.Context, d *schema.ResourceData, 
 
 	listOptions := metav1.ListOptions{}
 
-	m := d.Get("metadata").([]interface{})
-	if len(m) > 0 {
-		metadata := expandMetadata(m)
+	metadata := d.Get("metadata").([]interface{})
+	if len(metadata) > 0 {
+		metadata := expandMetadata(metadata)
 		labelMap, err := metav1.LabelSelectorAsMap(&metav1.LabelSelector{MatchLabels: metadata.Labels})
 		if err != nil {
 			return diag.FromErr(err)
@@ -94,13 +94,11 @@ func dataSourceKubernetesNodesRead(ctx context.Context, d *schema.ResourceData, 
 	nodes := make([]interface{}, len(nodesRaw.Items))
 	for i, v := range nodesRaw.Items {
 		log.Printf("[INFO] Received node: %s", v.Name)
-		prefix := fmt.Sprintf("nodes.%d.", i)
-		n := map[string]interface{}{
-			"metadata": flattenMetadata(v.ObjectMeta, d, meta, prefix),
+		nodes[i] = map[string]interface{}{
+			"metadata": flattenMetadataFields(v.ObjectMeta),
 			"spec":     flattenNodeSpec(v.Spec),
 			"status":   flattenNodeStatus(v.Status),
 		}
-		nodes[i] = n
 	}
 	if err := d.Set("nodes", nodes); err != nil {
 		return diag.FromErr(err)
@@ -113,5 +111,6 @@ func dataSourceKubernetesNodesRead(ctx context.Context, d *schema.ResourceData, 
 	}
 	id := fmt.Sprintf("%x", idsum.Sum(nil))
 	d.SetId(id)
+
 	return nil
 }

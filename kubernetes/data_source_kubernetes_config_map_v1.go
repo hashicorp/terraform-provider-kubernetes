@@ -5,10 +5,11 @@ package kubernetes
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesConfigMapV1() *schema.Resource {
@@ -37,11 +38,46 @@ func dataSourceKubernetesConfigMapV1() *schema.Resource {
 }
 
 func dataSourceKubernetesConfigMapV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	om := meta_v1.ObjectMeta{
-		Namespace: d.Get("metadata.0.namespace").(string),
-		Name:      d.Get("metadata.0.name").(string),
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+
+	om := metav1.ObjectMeta{
+		Namespace: metadata.Namespace,
+		Name:      metadata.Name,
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesConfigMapV1Read(ctx, d, meta)
+	log.Printf("[INFO] Reading config map %s", metadata.Name)
+	cfgMap, err := conn.CoreV1().ConfigMaps(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
+	if err != nil {
+		log.Printf("[DEBUG] Received error: %#v", err)
+		return diag.FromErr(err)
+	}
+	log.Printf("[INFO] Received config map: %#v", cfgMap)
+
+	err = d.Set("metadata", flattenMetadataFields(cfgMap.ObjectMeta))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("binary_data", flattenByteMapToBase64Map(cfgMap.BinaryData))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("data", cfgMap.Data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("immutable", cfgMap.Immutable)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
 }

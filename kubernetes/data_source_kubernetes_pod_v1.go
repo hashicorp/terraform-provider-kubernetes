@@ -5,7 +5,6 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -61,7 +60,7 @@ func dataSourceKubernetesPodV1Read(ctx context.Context, d *schema.ResourceData, 
 	}
 	log.Printf("[INFO] Received pod: %#v", pod)
 
-	err = d.Set("metadata", flattenMetadata(pod.ObjectMeta, d, meta))
+	err = d.Set("metadata", flattenMetadataFields(pod.ObjectMeta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -75,8 +74,10 @@ func dataSourceKubernetesPodV1Read(ctx context.Context, d *schema.ResourceData, 
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	statusPhase := fmt.Sprintf("%v", pod.Status.Phase)
-	d.Set("status", statusPhase)
+	err = d.Set("status", pod.Status.Phase)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 

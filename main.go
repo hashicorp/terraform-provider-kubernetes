@@ -19,7 +19,7 @@ import (
 	tf5server "github.com/hashicorp/terraform-plugin-go/tfprotov5/tf5server"
 	tf5muxserver "github.com/hashicorp/terraform-plugin-mux/tf5muxserver"
 
-	framework "github.com/hashicorp/terraform-provider-kubernetes/framework/provider"
+	framework "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	manifest "github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 )

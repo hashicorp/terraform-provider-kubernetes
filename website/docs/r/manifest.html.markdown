@@ -236,6 +236,7 @@ The following arguments are supported:
 - `fields` (Optional) A map of field paths and a corresponding regular expression with a pattern to wait for. The provider will wait until the field's value matches the regular expression. Use `*` for any value.
 
 A field path is a string that describes the fully qualified address of a field within the resource, including its parent fields all the way up to "object". The syntax of a path string follows the rules below:
+
 * Fields of objects are addressed with `.`
 * Keys of a map field are addressed with `["<key-string>"]`
 * Elements of a list or tuple field are addressed with `[<index-numeral>]`
@@ -250,7 +251,7 @@ A field path is a string that describes the fully qualified address of a field w
   }
   ```
 
-  You can use the [`type()`]() Terraform function to determine the type of a field. With the resource created and present in state, run `terraform console` and then the following command:
+  You can use the [`type()`](https://developer.hashicorp.com/terraform/language/functions/type) Terraform function to determine the type of a field. With the resource created and present in state, run `terraform console` and then the following command:
 
   ```hcl
   > type(kubernetes_manifest.my-secret.object.data)

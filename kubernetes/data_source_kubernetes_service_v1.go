@@ -5,12 +5,13 @@ package kubernetes
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	corev1 "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesServiceV1() *schema.Resource {
@@ -240,11 +241,45 @@ func dataSourceKubernetesServiceV1() *schema.Resource {
 }
 
 func dataSourceKubernetesServiceV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	om := meta_v1.ObjectMeta{
-		Namespace: d.Get("metadata.0.namespace").(string),
-		Name:      d.Get("metadata.0.name").(string),
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+
+	om := metav1.ObjectMeta{
+		Namespace: metadata.Namespace,
+		Name:      metadata.Name,
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesServiceV1Read(ctx, d, meta)
+	log.Printf("[INFO] Reading service %s", metadata.Name)
+	svc, err := conn.CoreV1().Services(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
+	if err != nil {
+		log.Printf("[DEBUG] Received error: %#v", err)
+		return diag.FromErr(err)
+	}
+	log.Printf("[INFO] Received service: %#v", svc)
+
+	err = d.Set("metadata", flattenMetadataFields(svc.ObjectMeta))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("status", []interface{}{
+		map[string][]interface{}{
+			"load_balancer": flattenLoadBalancerStatus(svc.Status.LoadBalancer),
+		},
+	})
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("spec", flattenServiceSpec(svc.Spec))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
 }

@@ -5,10 +5,11 @@ package kubernetes
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesPersistentVolumeClaimV1() *schema.Resource {
@@ -88,13 +89,36 @@ func dataSourceKubernetesPersistentVolumeClaimV1() *schema.Resource {
 }
 
 func dataSourceKubernetesPersistentVolumeClaimV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
-	om := meta_v1.ObjectMeta{
+	om := metav1.ObjectMeta{
 		Namespace: metadata.Namespace,
 		Name:      metadata.Name,
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesPersistentVolumeClaimV1Read(ctx, d, meta)
+	log.Printf("[INFO] Reading persistent volume claim %s", metadata.Name)
+	claim, err := conn.CoreV1().PersistentVolumeClaims(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
+	if err != nil {
+		log.Printf("[DEBUG] Received error: %#v", err)
+		return diag.FromErr(err)
+	}
+	log.Printf("[INFO] Received persistent volume claim: %#v", claim)
+
+	err = d.Set("metadata", flattenMetadataFields(claim.ObjectMeta))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("spec", flattenPersistentVolumeClaimSpec(claim.Spec))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
 }

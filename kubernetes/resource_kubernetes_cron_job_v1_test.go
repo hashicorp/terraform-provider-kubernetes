@@ -244,7 +244,9 @@ func testAccKubernetesCronJobV1Config_modified(name, imageName string) string {
   spec {
     schedule = "1 0 * * *"
     job_template {
-      metadata {}
+      metadata {
+		namespace = "ns-test"
+	  }
       spec {
         parallelism = 2
         template {

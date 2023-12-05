@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -128,6 +131,36 @@ func TestValidateNonNegativeInteger(t *testing.T) {
 		_, es := validateNonNegativeInteger(data, "replicas")
 		if len(es) == 0 {
 			t.Fatalf("Expected %#o to be invalid", data)
+		}
+	}
+}
+
+func TestValidateTypeStringNullableIntOrPercent(t *testing.T) {
+	validCases := []string{
+		"",
+		"1",
+		"100",
+		"1%",
+		"100%",
+	}
+	for _, data := range validCases {
+		_, es := validateTypeStringNullableIntOrPercent(data, "replicas")
+		if len(es) > 0 {
+			t.Fatalf("Expected %q to be valid: %#v", data, es)
+		}
+	}
+	invalidCases := []string{
+		" ",
+		"0.1",
+		"test",
+		"!@@#$",
+		"💣",
+		"%",
+	}
+	for _, data := range invalidCases {
+		_, es := validateTypeStringNullableIntOrPercent(data, "replicas")
+		if len(es) == 0 {
+			t.Fatalf("Expected %q to be invalid", data)
 		}
 	}
 }

@@ -13,14 +13,18 @@ Thank you for opening an issue. Please note that we try to keep the Terraform is
 --->
 
 
-### Terraform Version and Provider Version
+### Terraform Version, Provider Version and Kubernetes Version
 <!--- Run `terraform -v` to show the version. If you are not running the latest version of Terraform, please upgrade because your issue may have already been fixed. --->
+```
+Terraform version:
+Kubernetes provider version:
+Kubernetes version:
+```
 
 ### Affected Resource(s)
 <!-- Please list the resources as a list, for example:
 - opc_instance
 - opc_storage_volume
-
 If this issue appears to affect multiple resources, it may be an issue with Terraform's core, so please mention this. -->
 
 ### Terraform Configuration Files
@@ -36,15 +40,15 @@ If this issue appears to affect multiple resources, it may be an issue with Terr
 ### Panic Output
 <!--If Terraform produced a panic, please provide a link to a GitHub Gist containing the output of the `crash.log`.-->
 
+### Steps to Reproduce
+<!-- Please list the steps required to reproduce the issue, for example:
+1. `terraform apply` -->
+
 ### Expected Behavior
 What should have happened?
 
 ### Actual Behavior
 What actually happened?
-
-### Steps to Reproduce
-<!-- Please list the steps required to reproduce the issue, for example:
-1. `terraform apply` -->
 
 ### Important Factoids
 <!-- Are there anything atypical about your accounts that we should know? For example: Running in EC2 Classic? Custom version of OpenStack? Tight ACLs?-->

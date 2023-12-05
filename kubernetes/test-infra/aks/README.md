@@ -9,7 +9,7 @@ In addition, you will need the following environment variables to be set.
  - `TF_VAR_aks_client_secret`
  - `TF_VAR_location`
 
-Obtaining the values for  ***client id*** and ***client secret*** is detailed in the documentation linked above.
+Obtaining the values for ***client id*** and ***client secret*** is detailed in the documentation linked above.
 
 ## Versions
 

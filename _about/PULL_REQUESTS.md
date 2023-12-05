@@ -27,7 +27,7 @@ expect:
 1. One of Terraform's provider team members will look over your contribution and
    either approve it or provide comments letting you know if there is anything
    left to do. We do our best to keep up with the volume of PRs waiting for
-   review, but it will take some time for us to reach your PR based on the tasks we have in our backlog.
+   review, but it will take some time for us to reach your PR based on the tasks we have in our backlog. Please do not leave LGTM comments or approvals on PRs unless you are a maintainer on the repository.
 
 1. Once all outstanding comments and checklist items have been addressed, your
    contribution will be merged! Merged PRs will be included in the next

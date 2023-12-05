@@ -1,0 +1,3 @@
+```release-note:bug
+`resource/kubernetes_manifest`: Fix crash when manifest config contains unknown values of unknown type (DynamicPseudoType)
+```

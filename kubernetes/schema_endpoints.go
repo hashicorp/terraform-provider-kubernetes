@@ -1,7 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func schemaEndpointsSubset() *schema.Resource {
@@ -39,6 +42,10 @@ func hashEndpointsSubset() schema.SchemaSetFunc {
 	return schema.HashResource(schemaEndpointsSubset())
 }
 
+func hashEndpointsSubsetAddress() schema.SchemaSetFunc {
+	return schema.HashResource(schemaEndpointsSubsetAddress())
+}
+
 func schemaEndpointsSubsetAddress() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
@@ -59,10 +66,6 @@ func schemaEndpointsSubsetAddress() *schema.Resource {
 			},
 		},
 	}
-}
-
-func hashEndpointsSubsetAddress() schema.SchemaSetFunc {
-	return schema.HashResource(schemaEndpointsSubsetAddress())
 }
 
 func schemaEndpointsSubsetPort() *schema.Resource {

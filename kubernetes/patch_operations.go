@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -8,7 +11,7 @@ import (
 )
 
 func diffStringMap(pathPrefix string, oldV, newV map[string]interface{}) PatchOperations {
-	ops := make([]PatchOperation, 0, 0)
+	ops := make([]PatchOperation, 0)
 
 	pathPrefix = strings.TrimRight(pathPrefix, "/")
 

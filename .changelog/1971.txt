@@ -1,0 +1,7 @@
+```release-note:enhancement
+`resource/resource_kubernetes_cron_job_v1`: Add a new attribute `spec.timezone`.
+```
+
+```release-note:doc
+`resource/resource_kubernetes_cron_job_v1`: Add a new attribute `spec.timezone`.
+```

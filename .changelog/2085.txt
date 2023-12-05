@@ -1,0 +1,3 @@
+```release-note:enhancement
+`kubernetes/resource_kubernetes_service_account.go`: Remove `default_secret_name` warning
+```

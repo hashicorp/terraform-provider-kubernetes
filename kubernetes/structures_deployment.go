@@ -1,18 +1,23 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"strconv"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func flattenDeploymentSpec(in appsv1.DeploymentSpec, d *schema.ResourceData) ([]interface{}, error) {
+func flattenDeploymentSpec(in appsv1.DeploymentSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	att["min_ready_seconds"] = in.MinReadySeconds
 
 	if in.Replicas != nil {
-		att["replicas"] = *in.Replicas
+		att["replicas"] = strconv.Itoa(int(*in.Replicas))
 	}
 
 	if in.ProgressDeadlineSeconds != nil {
@@ -35,7 +40,7 @@ func flattenDeploymentSpec(in appsv1.DeploymentSpec, d *schema.ResourceData) ([]
 	}
 	template := make(map[string]interface{})
 	template["spec"] = podSpec
-	template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d, "spec.0.template.0.")
+	template["metadata"] = flattenMetadataFields(in.Template.ObjectMeta)
 	att["template"] = []interface{}{template}
 
 	return []interface{}{att}, nil
@@ -75,7 +80,13 @@ func expandDeploymentSpec(deployment []interface{}) (*appsv1.DeploymentSpec, err
 	obj.MinReadySeconds = int32(in["min_ready_seconds"].(int))
 	obj.Paused = in["paused"].(bool)
 	obj.ProgressDeadlineSeconds = ptrToInt32(int32(in["progress_deadline_seconds"].(int)))
-	obj.Replicas = ptrToInt32(int32(in["replicas"].(int)))
+	if v, ok := in["replicas"].(string); ok && v != "" {
+		i, err := strconv.ParseInt(v, 10, 32)
+		if err != nil {
+			return obj, err
+		}
+		obj.Replicas = ptrToInt32(int32(i))
+	}
 	obj.RevisionHistoryLimit = ptrToInt32(int32(in["revision_history_limit"].(int)))
 
 	if v, ok := in["selector"].([]interface{}); ok && len(v) > 0 {

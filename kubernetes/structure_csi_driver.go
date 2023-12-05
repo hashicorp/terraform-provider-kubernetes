@@ -1,7 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	storage "k8s.io/api/storage/v1beta1"
 )
 
@@ -28,7 +31,7 @@ func expandCSIDriverSpec(l []interface{}) storage.CSIDriverSpec {
 }
 
 func expandCSIDriverVolumeLifecycleModes(l []interface{}) []storage.VolumeLifecycleMode {
-	lifecycleModes := make([]storage.VolumeLifecycleMode, 0, 0)
+	lifecycleModes := make([]storage.VolumeLifecycleMode, 0)
 	for _, lifecycleMode := range l {
 		lifecycleModes = append(lifecycleModes, storage.VolumeLifecycleMode(lifecycleMode.(string)))
 	}
@@ -52,7 +55,7 @@ func flattenCSIDriverSpec(in storage.CSIDriverSpec) ([]interface{}, error) {
 }
 
 func patchCSIDriverSpec(keyPrefix, pathPrefix string, d *schema.ResourceData) (*PatchOperations, error) {
-	ops := make(PatchOperations, 0, 0)
+	ops := make(PatchOperations, 0)
 	if d.HasChange(keyPrefix + "attach_required") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/attachRequired",

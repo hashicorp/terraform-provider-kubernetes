@@ -1,0 +1,63 @@
+name: Acceptance Tests (kind)
+
+on:
+  workflow_dispatch:
+    inputs:
+      kindVersion:
+        description: The kind version
+        default: 0.20.0 # Kubernetes version: 1.27.X
+      runTests:
+        description: The regex passed to the -run option of `go test`
+        default: ".*"
+      terraformVersion:
+        description: Terraform version
+        default: 1.5.6
+      parallelRuns:
+        description: The maximum number of tests to run simultaneously
+        default: 8
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'kubernetes/*.go'
+      - 'go.mod'
+  schedule:
+    - cron: '0 21 * * *'
+
+env:
+  KUBECONFIG: ${{ github.workspace }}/.kube/config
+  KIND_VERSION: ${{ github.event.inputs.kindVersion || vars.KIND_VERSION }}
+  PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || vars.PARALLEL_RUNS }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
+
+jobs:
+  acceptance_tests_kind:
+    runs-on: [custom, linux, medium]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Set up Go
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: 'go.mod'
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+      - name: Setup kind
+        uses: helm/kind-action@fa81e57adff234b2908110485695db0f181f3c67 # v1.7.0
+        with:
+          wait: 2m
+          version: v${{ env.KIND_VERSION }}
+          config: .github/config/acceptance_tests_kind_config.yaml
+      - name: Run Acceptance Test Suite
+        env:
+          KUBE_CONFIG_PATH: ${{ env.KUBECONFIG }}
+          TESTARGS: -run '${{ github.event.inputs.runTests }}'
+          # Do not set TF_ACC_TERRAFORM_PATH or TF_ACC_TERRAFORM_VERSION.
+          # In this case, the framework will search for the Terraform CLI binary based on the operating system PATH.
+          # Eventually, it will use the one we set up.
+          # More information: https://developer.hashicorp.com/terraform/plugin/sdkv2/testing/acceptance-tests#terraform-cli-installation-behaviors
+        run: |
+          make testacc

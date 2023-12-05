@@ -1,9 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func podTemplateFields(owner string) map[string]*schema.Schema {
@@ -15,7 +18,7 @@ func podTemplateFields(owner string) map[string]*schema.Schema {
 			Optional:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: podSpecFields(true, false, false),
+				Schema: podSpecFields(true, false),
 			},
 		},
 	}

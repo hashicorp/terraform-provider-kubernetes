@@ -1,0 +1,3 @@
+```release-note:enhancement
+Add "field_manager" attribute to kubernetes_labels, kubernetes_annotations, kubernetes_config_map_v1_data
+```

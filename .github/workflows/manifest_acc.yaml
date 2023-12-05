@@ -1,0 +1,67 @@
+name: Manifest acceptance tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "manifest/**/*.go"
+      - "manifest/**/go.mod"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "manifest/**/*.go"
+      - "manifest/**/go.mod"
+  workflow_dispatch:
+
+env:
+  KUBECONFIG: ${{ github.workspace }}/.kube/config
+
+jobs:
+  acceptance_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      # Don't cancel all in-progress and queued jobs in the matrix if any job in the matrix fails.
+      # That will be helpful to catch any issues related to a particular Kubernetes version.
+      fail-fast: false
+      matrix:
+        kubernetes_version:
+          # kind images: https://github.com/kubernetes-sigs/kind/releases
+          - v1.26.6@sha256:f52781bc0d7a19fb6c405c2af83abfeb311f130707a0e219175677e366cc45d1
+          - v1.25.11@sha256:577c630ce8e509131eab1aea12c022190978dd2f745aac5eb1fe65c0807eb315
+          - v1.23.15@sha256:ef453bb7c79f0e3caba88d2067d4196f427794086a7d0df8df4f019d5e336b61
+        terraform_version:
+          - 1.5.7
+          - 1.4.7
+          - 1.3.10
+          - 1.2.9
+          - 1.1.9
+          - 1.0.11
+        # BONUS: Run tests on the latest available Kubernetes(1.X) and Terraform(1.X) versions.
+        include:
+          - kubernetes_version: v1.27.3@sha256:691e24bd2417609db7e589e1a479b902d2e209892a10ce375fab60a8407c7352
+            terraform_version: 1.6.1
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Set up Go
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: 'go.mod'
+      - name: Setup kind
+        uses: helm/kind-action@fa81e57adff234b2908110485695db0f181f3c67 # v1.7.0
+        with:
+          version: v0.20.0
+          node_image: kindest/node:${{ matrix.kubernetes_version }}
+          # By default, this action creates a cluster with the name 'chart-testing'
+          cluster_name: manifest
+      - name: Build annotations webhook
+        run: |
+          docker build --rm -t tf-k8s-acc-webhook ./manifest/test/acceptance/testdata/ComputedFields/webhook/
+          kind load docker-image tf-k8s-acc-webhook --name=manifest
+      - name: Run tests
+        env:
+          KUBE_CONFIG_PATH: ${{ env.KUBECONFIG }}
+          TF_ACC_TERRAFORM_VERSION: ${{ matrix.terraform_version }}
+        run: |
+          go test -count=1 -tags acceptance -v ./manifest/test/acceptance/... -timeout 120m

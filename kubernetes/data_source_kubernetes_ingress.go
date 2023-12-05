@@ -1,9 +1,16 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"context"
+	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	networking "k8s.io/api/networking/v1beta1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesIngress() *schema.Resource {
@@ -15,19 +22,21 @@ func dataSourceKubernetesIngress() *schema.Resource {
 	docIngressSpec := networking.IngressSpec{}.SwaggerDoc()
 
 	return &schema.Resource{
-		Read: dataSourceKubernetesIngressRead,
-
+		ReadContext: dataSourceKubernetesIngressRead,
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("ingress", false),
 			"spec": {
 				Type:        schema.TypeList,
 				Description: docIngress["spec"],
 				Computed:    true,
-				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"ingress_class_name": {
+							Type:        schema.TypeString,
+							Description: docIngressSpec["ingressClassName"],
+							Computed:    true,
+						},
 						"backend": backendSpecFields(defaultBackendDescription),
-						// FIXME: this field is inconsistent with the k8s API 'rules'
 						"rule": {
 							Type:        schema.TypeList,
 							Description: docIngressSpec["rules"],
@@ -42,11 +51,9 @@ func dataSourceKubernetesIngress() *schema.Resource {
 									"http": {
 										Type:        schema.TypeList,
 										Computed:    true,
-										MaxItems:    1,
 										Description: docIngressRule[""],
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
-												// FIXME: this field is inconsistent with the k8s API 'paths'
 												"path": {
 													Type:        schema.TypeList,
 													Computed:    true,
@@ -91,18 +98,34 @@ func dataSourceKubernetesIngress() *schema.Resource {
 					},
 				},
 			},
-			"load_balancer_ingress": {
+			"status": {
 				Type:     schema.TypeList,
 				Computed: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"ip": {
-							Type:     schema.TypeString,
+						"load_balancer": {
+							Type:     schema.TypeList,
 							Computed: true,
-						},
-						"hostname": {
-							Type:     schema.TypeString,
-							Computed: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"ingress": {
+										Type:     schema.TypeList,
+										Computed: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"ip": {
+													Type:     schema.TypeString,
+													Computed: true,
+												},
+												"hostname": {
+													Type:     schema.TypeString,
+													Computed: true,
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},
@@ -111,14 +134,46 @@ func dataSourceKubernetesIngress() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesIngressRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceKubernetesIngressRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
-	om := meta_v1.ObjectMeta{
+	om := metav1.ObjectMeta{
 		Namespace: metadata.Namespace,
 		Name:      metadata.Name,
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesIngressRead(d, meta)
+	log.Printf("[INFO] Reading ingress %s", metadata.Name)
+	ing, err := conn.ExtensionsV1beta1().Ingresses(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
+	if err != nil {
+		log.Printf("[DEBUG] Received error: %#v", err)
+		return diag.FromErr(err)
+	}
+	log.Printf("[INFO] Received ingress: %#v", ing)
+
+	err = d.Set("metadata", flattenMetadataFields(ing.ObjectMeta))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("spec", flattenIngressSpec(ing.Spec))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("status", []interface{}{
+		map[string][]interface{}{
+			"load_balancer": flattenIngressStatus(ing.Status.LoadBalancer),
+		},
+	})
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
 }

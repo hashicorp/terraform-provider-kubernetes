@@ -1,9 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/policy/v1beta1"
@@ -78,7 +81,7 @@ func flattenPodSecurityPolicySpec(in v1beta1.PodSecurityPolicySpec) []interface{
 }
 
 func flattenAllowedFlexVolumes(in []v1beta1.AllowedFlexVolume) []interface{} {
-	result := make([]interface{}, len(in), len(in))
+	result := make([]interface{}, len(in))
 
 	for k, v := range in {
 		result[k] = map[string]interface{}{
@@ -90,7 +93,7 @@ func flattenAllowedFlexVolumes(in []v1beta1.AllowedFlexVolume) []interface{} {
 }
 
 func flattenAllowedHostPaths(in []v1beta1.AllowedHostPath) []interface{} {
-	result := make([]interface{}, len(in), len(in))
+	result := make([]interface{}, len(in))
 
 	for k, v := range in {
 		result[k] = map[string]interface{}{
@@ -103,7 +106,7 @@ func flattenAllowedHostPaths(in []v1beta1.AllowedHostPath) []interface{} {
 }
 
 func flattenListOfStrings(in []string) []interface{} {
-	result := make([]interface{}, len(in), len(in))
+	result := make([]interface{}, len(in))
 
 	for k, v := range in {
 		result[k] = v
@@ -113,7 +116,7 @@ func flattenListOfStrings(in []string) []interface{} {
 }
 
 func flattenAllowedProcMountTypes(in []v1.ProcMountType) []interface{} {
-	result := make([]interface{}, len(in), len(in))
+	result := make([]interface{}, len(in))
 
 	for k, v := range in {
 		result[k] = fmt.Sprintf("%v", v)
@@ -132,7 +135,7 @@ func flattenFSGroup(in v1beta1.FSGroupStrategyOptions) []interface{} {
 }
 
 func flattenIDRangeSlice(in []v1beta1.IDRange) []interface{} {
-	result := make([]interface{}, len(in), len(in))
+	result := make([]interface{}, len(in))
 
 	for k, v := range in {
 		result[k] = map[string]interface{}{
@@ -145,7 +148,7 @@ func flattenIDRangeSlice(in []v1beta1.IDRange) []interface{} {
 }
 
 func flattenHostPortRangeSlice(in []v1beta1.HostPortRange) []interface{} {
-	result := make([]interface{}, len(in), len(in))
+	result := make([]interface{}, len(in))
 
 	for k, v := range in {
 		result[k] = map[string]interface{}{
@@ -197,7 +200,7 @@ func flattenSupplementalGroups(in v1beta1.SupplementalGroupsStrategyOptions) []i
 }
 
 func flattenFSTypes(in []v1beta1.FSType) []interface{} {
-	result := make([]interface{}, len(in), len(in))
+	result := make([]interface{}, len(in))
 
 	for k, v := range in {
 		result[k] = fmt.Sprintf("%v", v)
@@ -309,7 +312,7 @@ func expandPodSecurityPolicySpec(in []interface{}) (v1beta1.PodSecurityPolicySpe
 }
 
 func expandAllowedFlexVolumeSlice(in []interface{}) []v1beta1.AllowedFlexVolume {
-	result := make([]v1beta1.AllowedFlexVolume, len(in), len(in))
+	result := make([]v1beta1.AllowedFlexVolume, len(in))
 	for k, v := range in {
 		result[k] = v1beta1.AllowedFlexVolume{
 			Driver: v.(string),
@@ -319,7 +322,7 @@ func expandAllowedFlexVolumeSlice(in []interface{}) []v1beta1.AllowedFlexVolume 
 }
 
 func expandAllowedHostPathSlice(in []interface{}) []v1beta1.AllowedHostPath {
-	result := make([]v1beta1.AllowedHostPath, len(in), len(in))
+	result := make([]v1beta1.AllowedHostPath, len(in))
 	for k, v := range in {
 		if m, ok := v.(map[string]interface{}); ok {
 			hp := v1beta1.AllowedHostPath{
@@ -337,7 +340,7 @@ func expandAllowedHostPathSlice(in []interface{}) []v1beta1.AllowedHostPath {
 }
 
 func expandAllowedProcMountTypes(in []interface{}) []v1.ProcMountType {
-	result := make([]v1.ProcMountType, len(in), len(in))
+	result := make([]v1.ProcMountType, len(in))
 
 	for k, v := range in {
 		result[k] = v1.ProcMountType(v.(string))
@@ -363,7 +366,7 @@ func expandFSGroup(in []interface{}) v1beta1.FSGroupStrategyOptions {
 }
 
 func expandIDRangeSlice(in []interface{}) []v1beta1.IDRange {
-	result := make([]v1beta1.IDRange, len(in), len(in))
+	result := make([]v1beta1.IDRange, len(in))
 
 	for k, v := range in {
 		if m, ok := v.(map[string]interface{}); ok {
@@ -378,7 +381,7 @@ func expandIDRangeSlice(in []interface{}) []v1beta1.IDRange {
 }
 
 func expandHostPortRangeSlice(in []interface{}) []v1beta1.HostPortRange {
-	result := make([]v1beta1.HostPortRange, len(in), len(in))
+	result := make([]v1beta1.HostPortRange, len(in))
 
 	for k, v := range in {
 		if m, ok := v.(map[string]interface{}); ok {
@@ -481,7 +484,7 @@ func expandSupplementalGroup(in []interface{}) v1beta1.SupplementalGroupsStrateg
 }
 
 func expandVolumeFSTypeSlice(in []interface{}) []v1beta1.FSType {
-	result := make([]v1beta1.FSType, len(in), len(in))
+	result := make([]v1beta1.FSType, len(in))
 	for k, v := range in {
 		if s, ok := v.(string); ok {
 			result[k] = v1beta1.FSType(s)
@@ -494,7 +497,7 @@ func expandVolumeFSTypeSlice(in []interface{}) []v1beta1.FSType {
 // Patchers
 
 func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.ResourceData) (*PatchOperations, error) {
-	ops := make(PatchOperations, 0, 0)
+	ops := make(PatchOperations, 0)
 
 	if d.HasChange(keyPrefix + "allow_privilege_escalation") {
 		ops = append(ops, &ReplaceOperation{
@@ -518,9 +521,11 @@ func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.R
 	}
 
 	if d.HasChange(keyPrefix + "allowed_host_paths") {
+		n := d.Get(keyPrefix + "allowed_host_paths").([]interface{})
+		allowedHostPaths := expandAllowedHostPathSlice(n)
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/allowedHostPaths",
-			Value: d.Get(keyPrefix + "allowed_host_paths").([]interface{}),
+			Value: allowedHostPaths,
 		})
 	}
 

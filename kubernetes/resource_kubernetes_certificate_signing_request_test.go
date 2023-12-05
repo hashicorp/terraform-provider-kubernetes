@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -6,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -16,11 +19,17 @@ func TestAccKubernetesCertificateSigningRequest_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	usages := []string{"client auth"}
 	signerName := "kubernetes.io/legacy-unknown"
-	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_certificate_signing_request.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesCertificateSigningRequestDestroy,
+	resourceName := "kubernetes_certificate_signing_request.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCertificateSigningRequestConfig_basic(name, signerName, usages, true),
@@ -32,11 +41,17 @@ func TestAccKubernetesCertificateSigningRequest_basic(t *testing.T) {
 
 func TestAccKubernetesCertificateSigningRequest_generateName(t *testing.T) {
 	generateName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_certificate_signing_request.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesCertificateSigningRequestDestroy,
+	resourceName := "kubernetes_certificate_signing_request.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCertificateSigningRequestConfig_generateName(generateName),
@@ -63,6 +78,7 @@ func testAccCheckKubernetesCertificateSigningRequestValid(s *terraform.State) er
 
 func testAccCheckKubernetesCertificateSigningRequestRemoteResourceDeleted(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+
 	if err != nil {
 		return err
 	}

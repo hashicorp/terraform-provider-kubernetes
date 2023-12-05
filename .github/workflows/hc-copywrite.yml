@@ -1,0 +1,25 @@
+name: HashiCorp Copywrite
+
+on:
+  schedule:
+    - cron: '30 2 * * *'
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  copywrite:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+    - name: Install copywrite
+      uses: hashicorp/setup-copywrite@3ace06ad72e6ec679ea8572457b17dbc3960b8ce # v1.0.0
+
+    - name: Validate Header Compliance
+      run: copywrite headers --plan

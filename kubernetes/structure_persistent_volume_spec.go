@@ -1,9 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 // Flatteners
@@ -27,6 +30,9 @@ func flattenAzureDiskVolumeSource(in *v1.AzureDiskVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["disk_name"] = in.DiskName
 	att["data_disk_uri"] = in.DataDiskURI
+	if in.Kind != nil {
+		att["kind"] = string(*in.Kind)
+	}
 	att["caching_mode"] = string(*in.CachingMode)
 	if in.FSType != nil {
 		att["fs_type"] = *in.FSType
@@ -53,6 +59,9 @@ func flattenAzureFilePersistentVolumeSource(in *v1.AzureFilePersistentVolumeSour
 	att["share_name"] = in.ShareName
 	if in.ReadOnly != false {
 		att["read_only"] = in.ReadOnly
+	}
+	if in.SecretNamespace != nil {
+		att["secret_namespace"] = *in.SecretNamespace
 	}
 	return []interface{}{att}
 }
@@ -361,7 +370,7 @@ func flattenPersistentVolumeSource(in v1.PersistentVolumeSource) []interface{} {
 		att["photon_persistent_disk"] = flattenPhotonPersistentDiskVolumeSource(in.PhotonPersistentDisk)
 	}
 	if in.CSI != nil {
-		att["csi"] = flattenCSIVolumeSource(in.CSI)
+		att["csi"] = flattenCSIPersistentVolumeSource(in.CSI)
 	}
 	return []interface{}{att}
 }
@@ -391,6 +400,20 @@ func flattenPersistentVolumeSpec(in v1.PersistentVolumeSpec) []interface{} {
 	if in.VolumeMode != nil {
 		att["volume_mode"] = in.VolumeMode
 	}
+	if in.ClaimRef != nil {
+		att["claim_ref"] = flattenObjectRef(in.ClaimRef)
+	}
+	return []interface{}{att}
+}
+
+func flattenObjectRef(in *v1.ObjectReference) []interface{} {
+	att := make(map[string]interface{})
+	if in.Name != "" {
+		att["name"] = in.Name
+	}
+	if in.Namespace != "" {
+		att["namespace"] = in.Namespace
+	}
 	return []interface{}{att}
 }
 
@@ -403,7 +426,7 @@ func flattenPhotonPersistentDiskVolumeSource(in *v1.PhotonPersistentDiskVolumeSo
 	return []interface{}{att}
 }
 
-func flattenCSIVolumeSource(in *v1.CSIPersistentVolumeSource) []interface{} {
+func flattenCSIPersistentVolumeSource(in *v1.CSIPersistentVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["driver"] = in.Driver
 	att["volume_handle"] = in.VolumeHandle
@@ -425,6 +448,24 @@ func flattenCSIVolumeSource(in *v1.CSIPersistentVolumeSource) []interface{} {
 	}
 	if in.NodeStageSecretRef != nil {
 		att["node_stage_secret_ref"] = flattenSecretReference(in.NodeStageSecretRef)
+	}
+	return []interface{}{att}
+}
+
+func flattenCSIVolumeSource(in *v1.CSIVolumeSource) []interface{} {
+	att := make(map[string]interface{})
+	att["driver"] = in.Driver
+	if in.ReadOnly != nil {
+		att["read_only"] = *in.ReadOnly
+	}
+	if in.FSType != nil {
+		att["fs_type"] = *in.FSType
+	}
+	if len(in.VolumeAttributes) > 0 {
+		att["volume_attributes"] = in.VolumeAttributes
+	}
+	if in.NodePublishSecretRef != nil {
+		att["node_publish_secret_ref"] = flattenLocalObjectReference(in.NodePublishSecretRef)
 	}
 	return []interface{}{att}
 }
@@ -543,6 +584,10 @@ func expandAzureDiskVolumeSource(l []interface{}) *v1.AzureDiskVolumeSource {
 	if v, ok := in["read_only"].(bool); ok {
 		obj.ReadOnly = ptrToBool(v)
 	}
+	if v, ok := in["kind"].(string); ok && in["kind"].(string) != "" {
+		kind := v1.AzureDataDiskKind(v)
+		obj.Kind = &kind
+	}
 	return obj
 }
 
@@ -572,6 +617,9 @@ func expandAzureFilePersistentVolumeSource(l []interface{}) *v1.AzureFilePersist
 	}
 	if v, ok := in["read_only"].(bool); ok {
 		obj.ReadOnly = v
+	}
+	if v, ok := in["secret_namespace"].(string); ok && v != "" {
+		obj.SecretNamespace = &v
 	}
 	return obj
 }
@@ -1003,7 +1051,21 @@ func expandPersistentVolumeSpec(l []interface{}) (*v1.PersistentVolumeSpec, erro
 		volumeMode := v1.PersistentVolumeMode(v)
 		obj.VolumeMode = &volumeMode
 	}
+	if v, ok := in["claim_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.ClaimRef = expandClaimRef(v)
+	}
 	return obj, nil
+}
+
+func expandClaimRef(l []interface{}) *v1.ObjectReference {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.ObjectReference{}
+	}
+	o := l[0].(map[string]interface{})
+	return &v1.ObjectReference{
+		Name:      o["name"].(string),
+		Namespace: o["namespace"].(string),
+	}
 }
 
 func expandPhotonPersistentDiskVolumeSource(l []interface{}) *v1.PhotonPersistentDiskVolumeSource {
@@ -1049,6 +1111,29 @@ func expandCSIPersistentDiskVolumeSource(l []interface{}) *v1.CSIPersistentVolum
 	}
 	if v, ok := in["controller_expand_secret_ref"].([]interface{}); ok && len(v) > 0 {
 		obj.ControllerExpandSecretRef = expandSecretReference(v)
+	}
+	return obj
+}
+
+func expandCSIVolumeSource(l []interface{}) *v1.CSIVolumeSource {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.CSIVolumeSource{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.CSIVolumeSource{
+		Driver: in["driver"].(string),
+	}
+	if v, ok := in["read_only"].(bool); ok {
+		obj.ReadOnly = &v
+	}
+	if v, ok := in["fs_type"].(string); ok {
+		obj.FSType = &v
+	}
+	if v, ok := in["volume_attributes"].(map[string]interface{}); ok {
+		obj.VolumeAttributes = expandStringMap(v)
+	}
+	if v, ok := in["node_publish_secret_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.NodePublishSecretRef = expandLocalObjectReference(v)
 	}
 	return obj
 }
@@ -1148,6 +1233,38 @@ func expandVsphereVirtualDiskVolumeSource(l []interface{}) *v1.VsphereVirtualDis
 	return obj
 }
 
+func expandEphemeralVolumeClaimTemplate(l []interface{}) (*v1.PersistentVolumeClaimTemplate, error) {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.PersistentVolumeClaimTemplate{}, nil
+	}
+	in := l[0].(map[string]interface{})
+	pv, err := expandPersistentVolumeClaimSpec(in["spec"].([]interface{}))
+	if err != nil {
+		return &v1.PersistentVolumeClaimTemplate{}, err
+	}
+
+	return &v1.PersistentVolumeClaimTemplate{
+		ObjectMeta: expandMetadata(in["metadata"].([]interface{})),
+		Spec:       *pv,
+	}, nil
+}
+
+func expandEphemeralVolumeSource(l []interface{}) (*v1.EphemeralVolumeSource, error) {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.EphemeralVolumeSource{}, nil
+	}
+	in := l[0].(map[string]interface{})
+
+	t, err := expandEphemeralVolumeClaimTemplate(in["volume_claim_template"].([]interface{}))
+	if err != nil {
+		return &v1.EphemeralVolumeSource{}, err
+	}
+
+	return &v1.EphemeralVolumeSource{
+		VolumeClaimTemplate: t,
+	}, nil
+}
+
 func patchPersistentVolumeSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOperations, error) {
 	ops := make([]PatchOperation, 0)
 	prefix += ".0."
@@ -1215,7 +1332,13 @@ func patchPersistentVolumeSpec(pathPrefix, prefix string, d *schema.ResourceData
 			Value: expandPersistentVolumeAccessModes(v.List()),
 		})
 	}
-
+	if d.HasChange(prefix + "claim_ref") {
+		v := d.Get(prefix + "claim_ref").([]interface{})
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "/claimRef",
+			Value: expandClaimRef(v),
+		})
+	}
 	return ops, nil
 }
 

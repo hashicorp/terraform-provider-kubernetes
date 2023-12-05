@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -5,9 +8,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -17,97 +20,125 @@ func TestAccKubernetesMutatingWebhookConfiguration_basic(t *testing.T) {
 	name := fmt.Sprintf("acc-test-%v.terraform.io", acctest.RandString(10))
 	resourceName := "kubernetes_mutating_webhook_configuration.test"
 
-	resource.Test(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: "kubernetes_mutating_webhook_configuration.test",
-		Providers:     testAccProviders,
-		CheckDestroy:  testAccCheckKubernetesMutatingWebhookConfigurationDestroy,
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			// AKS sets up some namespaceSelectors and thus we have to skip these tests
+			skipIfRunningInAks(t)
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesMutatingWebhookConfigurationDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesMutatingWebhookConfigurationConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesMutatingWebhookConfigurationExists(resourceName),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_mutating_webhook_configuration.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_mutating_webhook_configuration.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_mutating_webhook_configuration.test", "metadata.0.self_link"),
-					resource.TestCheckResourceAttrSet("kubernetes_mutating_webhook_configuration.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.admission_review_versions.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.admission_review_versions.0", "v1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.admission_review_versions.1", "v1beta1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.service.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.service.0.name", "example-service"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.service.0.namespace", "example-namespace"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.service.0.port", "443"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.failure_policy", "Fail"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.match_policy", "Equivalent"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.name", name),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.namespace_selector.#", "0"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.object_selector.#", "0"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.api_groups.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.api_groups.0", "apps"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.api_versions.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.api_versions.0", "v1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.operations.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.operations.0", "CREATE"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.resources.0", "pods"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.scope", "Namespaced"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.reinvocation_policy", "IfNeeded"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.side_effects", "None"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.timeout_seconds", "10"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.0", "v1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.1", "v1beta1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.0.service.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.0.service.0.name", "example-service"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.0.service.0.namespace", "example-namespace"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.0.service.0.port", "443"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.failure_policy", "Fail"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.match_policy", "Equivalent"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.namespace_selector.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.object_selector.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.api_groups.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.api_groups.0", "apps"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.api_versions.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.api_versions.0", "v1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.operations.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.operations.0", "CREATE"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.resources.0", "pods"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.scope", "Namespaced"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.reinvocation_policy", "IfNeeded"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.side_effects", "None"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.timeout_seconds", "10"),
 				),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesMutatingWebhookConfigurationConfig_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_mutating_webhook_configuration.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_mutating_webhook_configuration.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_mutating_webhook_configuration.test", "metadata.0.self_link"),
-					resource.TestCheckResourceAttrSet("kubernetes_mutating_webhook_configuration.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.admission_review_versions.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.admission_review_versions.0", "v1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.admission_review_versions.1", "v1beta1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.service.#", "0"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.client_config.0.url", "https://test"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.failure_policy", "Ignore"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.match_policy", "Exact"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.name", name),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.namespace_selector.#", "0"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.object_selector.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.api_groups.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.api_groups.0", "apps"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.api_versions.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.api_versions.0", "v1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.operations.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.operations.0", "CREATE"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.resources.0", "pods"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.0.scope", "Namespaced"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.1.api_groups.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.1.api_groups.0", "batch"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.1.api_versions.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.1.api_versions.0", "v1beta1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.1.operations.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.1.operations.0", "CREATE"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.1.resources.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.1.resources.0", "cronjobs"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.rule.1.scope", "Namespaced"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.reinvocation_policy", "Never"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.side_effects", "NoneOnDryRun"),
-					resource.TestCheckResourceAttr("kubernetes_mutating_webhook_configuration.test", "webhook.0.timeout_seconds", "5"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.0", "v1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.1", "v1beta1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.0.service.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.0.url", "https://test"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.failure_policy", "Ignore"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.match_policy", "Exact"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.namespace_selector.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.object_selector.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.api_groups.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.api_groups.0", "apps"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.api_versions.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.api_versions.0", "v1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.operations.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.operations.0", "CREATE"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.resources.0", "pods"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.0.scope", "Namespaced"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.1.api_groups.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.1.api_groups.0", "batch"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.1.api_versions.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.1.api_versions.0", "v1beta1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.1.operations.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.1.operations.0", "CREATE"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.1.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.1.resources.0", "cronjobs"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.rule.1.scope", "Namespaced"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.reinvocation_policy", "Never"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.side_effects", "NoneOnDryRun"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.timeout_seconds", "5"),
+				),
+			},
+			{
+				Config: testAccKubernetesMutatingWebhookConfigurationConfig_without_rules(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.0", "v1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.admission_review_versions.1", "v1beta1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.0.service.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.client_config.0.url", "https://test"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.failure_policy", "Ignore"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.match_policy", "Exact"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.namespace_selector.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.object_selector.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.reinvocation_policy", "Never"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.side_effects", "NoneOnDryRun"),
+					resource.TestCheckResourceAttr(resourceName, "webhook.0.timeout_seconds", "5"),
 				),
 			},
 		},
@@ -116,6 +147,7 @@ func TestAccKubernetesMutatingWebhookConfiguration_basic(t *testing.T) {
 
 func testAccCheckKubernetesMutatingWebhookConfigurationDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+
 	if err != nil {
 		return err
 	}
@@ -139,7 +171,7 @@ func testAccCheckKubernetesMutatingWebhookConfigurationDestroy(s *terraform.Stat
 		}
 
 		if err != nil {
-			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
+			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
 			return err
@@ -255,6 +287,41 @@ func testAccKubernetesMutatingWebhookConfigurationConfig_modified(name string) s
       operations   = ["CREATE"]
       resources    = ["cronjobs"]
       scope        = "Namespaced"
+    }
+
+    object_selector {
+      match_labels = {
+        app = "test"
+      }
+    }
+
+    reinvocation_policy = "Never"
+    side_effects        = "NoneOnDryRun"
+    timeout_seconds     = 5
+  }
+}
+`, name, name)
+}
+
+func testAccKubernetesMutatingWebhookConfigurationConfig_without_rules(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_mutating_webhook_configuration" "test" {
+  metadata {
+    name = %q
+  }
+
+  webhook {
+    name = %q
+
+    failure_policy = "Ignore"
+    match_policy   = "Exact"
+
+    admission_review_versions = [
+      "v1",
+      "v1beta1"
+    ]
+
+    client_config {
+      url = "https://test"
     }
 
     object_selector {

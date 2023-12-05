@@ -1,11 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
-func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
+func statefulSetSpecFields() map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
 		"pod_management_policy": {
 			Type:        schema.TypeString,
@@ -19,11 +22,11 @@ func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
 			}, false),
 		},
 		"replicas": {
-			Type:         schema.TypeInt,
+			Type:         schema.TypeString,
 			Optional:     true,
-			Default:      1,
+			Computed:     true,
 			Description:  "The desired number of replicas of the given Template, in the sense that they are instantiations of the same Template. Value must be a positive integer.",
-			ValidateFunc: validateNonNegativeInteger,
+			ValidateFunc: validateTypeStringNullableInt,
 		},
 		"revision_history_limit": {
 			Type:         schema.TypeInt,
@@ -99,6 +102,36 @@ func statefulSetSpecFields(isUpdatable bool) map[string]*schema.Schema {
 			Description: "A list of claims that pods are allowed to reference. Every claim in this list must have at least one matching (by name) volumeMount in one container in the template.",
 			Elem: &schema.Resource{
 				Schema: persistentVolumeClaimFields(),
+			},
+		},
+		"persistent_volume_claim_retention_policy": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Computed:    true,
+			Description: "The field controls if and how PVCs are deleted during the lifecycle of a StatefulSet.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"when_deleted": {
+						Type:        schema.TypeString,
+						Description: "This field controls what happens when a Statefulset is deleted. Default is Retain.",
+						Optional:    true,
+						Default:     "Retain",
+						ValidateFunc: validation.StringInSlice([]string{
+							"Retain",
+							"Delete",
+						}, false),
+					},
+					"when_scaled": {
+						Type:        schema.TypeString,
+						Description: "This field controls what happens when a Statefulset is scaled. Default is Retain.",
+						Optional:    true,
+						Default:     "Retain",
+						ValidateFunc: validation.StringInSlice([]string{
+							"Retain",
+							"Delete",
+						}, false),
+					},
+				},
 			},
 		},
 	}

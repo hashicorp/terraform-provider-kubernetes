@@ -78,6 +78,8 @@ func TestAccKubernetesStatefulSetV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.replicas", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.revision_history_limit", "11"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.service_name", "ss-test-service"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_claim_retention_policy.0.when_deleted", "Delete"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_claim_retention_policy.0.when_scaled", "Delete"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_labels.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_labels.app", "ss-test"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.#", "1"),
@@ -271,6 +273,15 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.dns_config.0.option.1.name", "use-vc"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.dns_config.0.option.1.value", ""),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.dns_policy", "Default"),
+				),
+			},
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigUpdatePersistentVolumeClaimRetentionPolicy(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_claim_retention_policy.0.when_deleted", "Retain"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_claim_retention_policy.0.when_scaled", "Retain"),
 				),
 			},
 		},
@@ -481,6 +492,11 @@ func testAccKubernetesStatefulSetV1ConfigBasic(name, imageName string) string {
     }
 
     service_name = "ss-test-service"
+
+    persistent_volume_claim_retention_policy {
+      when_deleted = "Delete"
+      when_scaled  = "Delete"
+    }
 
     template {
       metadata {
@@ -1131,4 +1147,100 @@ func testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, waitFor
   wait_for_rollout = %s
 }
 `, name, imageName, waitForRollout)
+}
+
+func testAccKubernetesStatefulSetV1ConfigUpdatePersistentVolumeClaimRetentionPolicy(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
+  metadata {
+    annotations = {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels = {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    pod_management_policy  = "OrderedReady"
+    replicas               = 1
+    revision_history_limit = 11
+
+    selector {
+      match_labels = {
+        app = "ss-test"
+      }
+    }
+
+    service_name = "ss-test-service"
+
+    persistent_volume_claim_retention_policy {
+      when_deleted = "Retain"
+      when_scaled  = "Retain"
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "ss-test"
+        }
+      }
+
+      spec {
+        container {
+          name  = "ss-test"
+          image = %q
+          args  = ["test-webserver"]
+
+          port {
+            name           = "web"
+            container_port = 80
+          }
+
+          readiness_probe {
+            initial_delay_seconds = 5
+            http_get {
+              path = "/"
+              port = 80
+            }
+          }
+
+          volume_mount {
+            name       = "ss-test"
+            mount_path = "/work-dir"
+          }
+        }
+      }
+    }
+
+    update_strategy {
+      type = "RollingUpdate"
+
+      rolling_update {
+        partition = 1
+      }
+    }
+
+    volume_claim_template {
+      metadata {
+        name = "ss-test"
+      }
+
+      spec {
+        access_modes = ["ReadWriteOnce"]
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
+  }
+}
+`, name, imageName)
 }

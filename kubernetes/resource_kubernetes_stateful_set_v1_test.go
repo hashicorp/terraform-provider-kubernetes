@@ -85,6 +85,7 @@ func TestAccKubernetesStatefulSetV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.labels.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.labels.app", "ss-test"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.namespace", "ns-test"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.name", "ss-test"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.port.0.container_port", "80"),
@@ -503,6 +504,7 @@ func testAccKubernetesStatefulSetV1ConfigBasic(name, imageName string) string {
         labels = {
           app = "ss-test"
         }
+        namespace = "ns-test"
       }
 
       spec {

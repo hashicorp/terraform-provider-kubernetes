@@ -34,6 +34,8 @@ import (
 	aggregator "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
 
+const _ = "ignore this"
+
 const defaultFieldManagerName = "Terraform"
 
 func Provider() *schema.Provider {

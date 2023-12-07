@@ -1,3 +1,5 @@
+name: Essential checkers and linters
+
 on:
   push:
     branches:
@@ -5,12 +7,14 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  test:
+  checkers-and-linters:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+    - name: Checkout code
+      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
     - name: Set up Go
       uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
       with:
@@ -22,16 +26,15 @@ jobs:
       with:
         username: ${{ secrets.RO_DOCKERHUB_USER }}
         password: ${{ secrets.RO_DOCKERHUB_TOKEN }}
-    - name: Checkout code
-      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
     - name: Install cookie
       run: scripts/gogetcookie.sh
-    - name: Run tests
+    - name: Run checkers
       run: |
-        make website-lint
         make depscheck
         make fmtcheck
-        make test
         make test-compile
-        make tests-lint
         make vet
+    - name: Run linters
+      run: |
+        make website-lint
+        make tests-lint

@@ -23,7 +23,7 @@ on:
         default: 8
       runTests:
         description: The regex passed to the -run option of `go test`
-        default: ".*"
+        default: "^TestAcc"
       terraformVersion:
         description: Terraform version
         default: 1.5.6
@@ -77,7 +77,7 @@ jobs:
           terraform apply -auto-approve
       - name: Run Acceptance Test Suite
         env:
-          TESTARGS: -run '${{ github.event.inputs.runTests }}'
+          TESTARGS: -run ${{ github.event.inputs.runTests || '^TestAcc' }}
           # Do not set TF_ACC_TERRAFORM_PATH or TF_ACC_TERRAFORM_VERSION.
           # In this case, the framework will search for the Terraform CLI binary based on the operating system PATH.
           # Eventually, it will use the one we set up.

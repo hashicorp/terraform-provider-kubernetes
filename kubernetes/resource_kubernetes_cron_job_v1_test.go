@@ -212,7 +212,7 @@ func testAccKubernetesCronJobV1Config_basic(name, imageName string) string {
         annotations = {
           "cluster-autoscaler.kubernetes.io/safe-to-evict" = "false"
         }
-		namespace = "ns-test"
+        namespace = "ns-test"
       }
       spec {
         backoff_limit = 2
@@ -245,8 +245,8 @@ func testAccKubernetesCronJobV1Config_modified(name, imageName string) string {
     schedule = "1 0 * * *"
     job_template {
       metadata {
-		namespace = "ns-test"
-	  }
+        namespace = "ns-test"
+      }
       spec {
         parallelism = 2
         template {

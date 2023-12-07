@@ -52,6 +52,7 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.successful_jobs_history_limit", "10"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.suspend", "true"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.metadata.0.annotations.cluster-autoscaler.kubernetes.io/safe-to-evict", "false"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.metadata.0.namespace", "ns-test"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.parallelism", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.backoff_limit", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.template.0.metadata.0.annotations.controller.kubernetes.io/pod-deletion-cost", "10000"),
@@ -211,6 +212,7 @@ func testAccKubernetesCronJobV1Config_basic(name, imageName string) string {
         annotations = {
           "cluster-autoscaler.kubernetes.io/safe-to-evict" = "false"
         }
+        namespace = "ns-test"
       }
       spec {
         backoff_limit = 2
@@ -242,7 +244,9 @@ func testAccKubernetesCronJobV1Config_modified(name, imageName string) string {
   spec {
     schedule = "1 0 * * *"
     job_template {
-      metadata {}
+      metadata {
+        namespace = "ns-test"
+      }
       spec {
         parallelism = 2
         template {

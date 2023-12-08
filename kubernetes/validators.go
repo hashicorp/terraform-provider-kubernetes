@@ -258,7 +258,7 @@ func validatePath(v interface{}, k string) ([]string, []error) {
 		}
 	}
 
-	if strings.HasPrefix(targetPath, "..") && !strings.HasPrefix(targetPath, "../") {
+	if strings.HasPrefix(targetPath, "..") {
 		return []string{}, []error{fmt.Errorf("%q must not start with %q", k, "..")}
 	}
 

@@ -6,7 +6,8 @@ on:
     branches:
       - main
     paths:
-      - 'kubernetes/*.go'
+      - '**/*.go'
+      - '**/go.mod'
 
 jobs:
   golang_linter:

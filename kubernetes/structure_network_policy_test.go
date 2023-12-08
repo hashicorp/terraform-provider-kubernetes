@@ -130,8 +130,8 @@ func TestExpandNetworkPolicyIngressPorts(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output, _ := expandNetworkPolicyV1Ports(tc.Input)
-		if !reflect.DeepEqual(output, &tc.ExpectedOutput) {
+		output := expandNetworkPolicyV1Ports(tc.Input)
+		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)
 		}

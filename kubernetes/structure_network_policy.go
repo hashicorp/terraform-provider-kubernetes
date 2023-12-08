@@ -131,11 +131,8 @@ func expandNetworkPolicyV1Spec(in []interface{}) (*networkingv1.NetworkPolicySpe
 		}
 		spec.Egress = *egress
 	}
-	policyTypes, err := expandNetworkPolicyV1Types(m["policy_types"].([]interface{}))
-	if err != nil {
-		return nil, err
-	}
-	spec.PolicyTypes = *policyTypes
+
+	spec.PolicyTypes = expandNetworkPolicyV1Types(m["policy_types"].([]interface{}))
 
 	return &spec, nil
 }
@@ -152,11 +149,7 @@ func expandNetworkPolicyV1Ingress(l []interface{}) (*[]networkingv1.NetworkPolic
 		}
 		ingresses[i] = networkingv1.NetworkPolicyIngressRule{}
 		if v, ok := in["ports"].([]interface{}); ok && len(v) > 0 {
-			policyPorts, err := expandNetworkPolicyV1Ports(v)
-			if err != nil {
-				return nil, err
-			}
-			ingresses[i].Ports = *policyPorts
+			ingresses[i].Ports = expandNetworkPolicyV1Ports(v)
 		}
 		if v, ok := in["from"].([]interface{}); ok && len(v) > 0 {
 			policyPeers, err := expandNetworkPolicyV1Peer(v)
@@ -181,11 +174,7 @@ func expandNetworkPolicyV1Egress(l []interface{}) (*[]networkingv1.NetworkPolicy
 		}
 		egresses[i] = networkingv1.NetworkPolicyEgressRule{}
 		if v, ok := in["ports"].([]interface{}); ok && len(v) > 0 {
-			policyPorts, err := expandNetworkPolicyV1Ports(v)
-			if err != nil {
-				return nil, err
-			}
-			egresses[i].Ports = *policyPorts
+			egresses[i].Ports = expandNetworkPolicyV1Ports(v)
 		}
 		if v, ok := in["to"].([]interface{}); ok && len(v) > 0 {
 			policyPeers, err := expandNetworkPolicyV1Peer(v)
@@ -198,7 +187,7 @@ func expandNetworkPolicyV1Egress(l []interface{}) (*[]networkingv1.NetworkPolicy
 	return &egresses, nil
 }
 
-func expandNetworkPolicyV1Ports(l []interface{}) (*[]networkingv1.NetworkPolicyPort, error) {
+func expandNetworkPolicyV1Ports(l []interface{}) []networkingv1.NetworkPolicyPort {
 	policyPorts := make([]networkingv1.NetworkPolicyPort, len(l))
 	for i, port := range l {
 		in, ok := port.(map[string]interface{})
@@ -214,7 +203,7 @@ func expandNetworkPolicyV1Ports(l []interface{}) (*[]networkingv1.NetworkPolicyP
 			policyPorts[i].Protocol = &v
 		}
 	}
-	return &policyPorts, nil
+	return policyPorts
 }
 
 func expandNetworkPolicyV1Peer(l []interface{}) (*[]networkingv1.NetworkPolicyPeer, error) {
@@ -262,12 +251,12 @@ func expandIPBlock(l []interface{}) (*networkingv1.IPBlock, error) {
 	return &ipBlock, nil
 }
 
-func expandNetworkPolicyV1Types(l []interface{}) (*[]networkingv1.PolicyType, error) {
+func expandNetworkPolicyV1Types(l []interface{}) []networkingv1.PolicyType {
 	policyTypes := make([]networkingv1.PolicyType, 0)
 	for _, policyType := range l {
 		policyTypes = append(policyTypes, networkingv1.PolicyType(policyType.(string)))
 	}
-	return &policyTypes, nil
+	return policyTypes
 }
 
 // Patchers
@@ -317,13 +306,9 @@ func patchNetworkPolicyV1Spec(keyPrefix, pathPrefix string, d *schema.ResourceDa
 		})
 	}
 	if d.HasChange(keyPrefix + "policy_types") {
-		policyTypes, err := expandNetworkPolicyV1Types(d.Get(keyPrefix + "policy_types").([]interface{}))
-		if err != nil {
-			return nil, err
-		}
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/policyTypes",
-			Value: *policyTypes,
+			Value: expandNetworkPolicyV1Types(d.Get(keyPrefix + "policy_types").([]interface{})),
 		})
 	}
 	return &ops, nil

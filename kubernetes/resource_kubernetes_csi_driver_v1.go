@@ -119,10 +119,7 @@ func resourceKubernetesCSIDriverV1Read(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	spec, err := flattenCSIDriverV1Spec(CSIDriver.Spec)
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	spec := flattenCSIDriverV1Spec(CSIDriver.Spec)
 
 	err = d.Set("spec", spec)
 	if err != nil {
@@ -141,10 +138,7 @@ func resourceKubernetesCSIDriverV1Update(ctx context.Context, d *schema.Resource
 	name := d.Id()
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("spec") {
-		diffOps, err := patchCSIDriverV1Spec("spec.0.", "/spec", d)
-		if err != nil {
-			return diag.FromErr(err)
-		}
+		diffOps := patchCSIDriverV1Spec("spec.0.", "/spec", d)
 		ops = append(ops, *diffOps...)
 	}
 	data, err := ops.MarshalJSON()

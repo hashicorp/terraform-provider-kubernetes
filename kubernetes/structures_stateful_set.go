@@ -338,18 +338,14 @@ func patchUpdateStrategy(keyPrefix, pathPrefix string, d *schema.ResourceData) (
 		}
 
 		if len(o.([]interface{})) > 0 && len(n.([]interface{})) > 0 {
-			r, err := patchUpdateStrategyRollingUpdate(keyPrefix+"rolling_update.0.", pathPrefix+"rollingUpdate/", d)
-			if err != nil {
-				return ops, err
-			}
-			ops = append(ops, r...)
+			ops = append(ops, patchUpdateStrategyRollingUpdate(keyPrefix+"rolling_update.0.", pathPrefix+"rollingUpdate/", d)...)
 		}
 	}
 
 	return ops, nil
 }
 
-func patchUpdateStrategyRollingUpdate(keyPrefix, pathPrefix string, d *schema.ResourceData) (PatchOperations, error) {
+func patchUpdateStrategyRollingUpdate(keyPrefix, pathPrefix string, d *schema.ResourceData) PatchOperations {
 	ops := PatchOperations{}
 	if d.HasChange(keyPrefix + "partition") {
 		log.Printf("[TRACE] StatefulSet.Spec.UpdateStrategy.RollingUpdate.Partition has changes")
@@ -360,5 +356,5 @@ func patchUpdateStrategyRollingUpdate(keyPrefix, pathPrefix string, d *schema.Re
 			})
 		}
 	}
-	return ops, nil
+	return ops
 }

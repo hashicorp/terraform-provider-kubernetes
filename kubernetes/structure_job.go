@@ -111,7 +111,7 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 	return obj, nil
 }
 
-func patchJobV1Spec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOperations, error) {
+func patchJobV1Spec(pathPrefix, prefix string, d *schema.ResourceData) PatchOperations {
 	ops := make([]PatchOperation, 0)
 
 	if d.HasChange(prefix + "active_deadline_seconds") {
@@ -146,7 +146,7 @@ func patchJobV1Spec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOpe
 		})
 	}
 
-	return ops, nil
+	return ops
 }
 
 // removeGeneratedLabels removes server-generated labels

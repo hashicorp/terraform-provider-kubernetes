@@ -29,13 +29,13 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 	if in == nil {
 		return tftypes.NewValue(st, nil), nil
 	}
-	switch in.(type) {
+	switch t := in.(type) {
 	case string:
 		switch {
 		case st.Is(tftypes.String) || st.Is(tftypes.DynamicPseudoType):
-			return tftypes.NewValue(tftypes.String, in.(string)), nil
+			return tftypes.NewValue(tftypes.String, t), nil
 		case st.Is(tftypes.Number):
-			num, err := strconv.Atoi(in.(string))
+			num, err := strconv.Atoi(t)
 			if err != nil {
 				return tftypes.Value{}, err
 			}
@@ -53,11 +53,11 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 	case int:
 		switch {
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
-			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(int64(in.(int)))), nil
+			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(int64(t))), nil
 		case st.Is(tftypes.String):
 			ht, ok := th[morph.ValueToTypePath(at).String()]
 			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
-				return tftypes.NewValue(tftypes.String, strconv.FormatInt(int64(in.(int)), 10)), nil
+				return tftypes.NewValue(tftypes.String, strconv.FormatInt(int64(t), 10)), nil
 			}
 			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "int" to "tftypes.String"`, at.String())
 		default:
@@ -66,11 +66,11 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 	case int64:
 		switch {
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
-			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(in.(int64))), nil
+			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(t)), nil
 		case st.Is(tftypes.String):
 			ht, ok := th[morph.ValueToTypePath(at).String()]
 			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
-				return tftypes.NewValue(tftypes.String, strconv.FormatInt(in.(int64), 10)), nil
+				return tftypes.NewValue(tftypes.String, strconv.FormatInt(t, 10)), nil
 			}
 			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "int64" to "tftypes.String"`, at.String())
 		default:
@@ -79,11 +79,11 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 	case int32:
 		switch {
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
-			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(int64(in.(int32)))), nil
+			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(int64(t))), nil
 		case st.Is(tftypes.String):
 			ht, ok := th[morph.ValueToTypePath(at).String()]
 			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
-				return tftypes.NewValue(tftypes.String, strconv.FormatInt(int64(in.(int32)), 10)), nil
+				return tftypes.NewValue(tftypes.String, strconv.FormatInt(int64(t), 10)), nil
 			}
 			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "int32" to "tftypes.String"`, at.String())
 		default:
@@ -92,11 +92,11 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 	case int16:
 		switch {
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
-			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(int64(in.(int16)))), nil
+			return tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(int64(t))), nil
 		case st.Is(tftypes.String):
 			ht, ok := th[morph.ValueToTypePath(at).String()]
 			if ok && ht == "io.k8s.apimachinery.pkg.util.intstr.IntOrString" { // We store this in state as "string"
-				return tftypes.NewValue(tftypes.String, strconv.FormatInt(int64(in.(int16)), 10)), nil
+				return tftypes.NewValue(tftypes.String, strconv.FormatInt(int64(t), 10)), nil
 			}
 			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "int16" to "tftypes.String"`, at.String())
 		default:
@@ -105,31 +105,31 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 	case float64:
 		switch {
 		case st.Is(tftypes.Number) || st.Is(tftypes.DynamicPseudoType):
-			return tftypes.NewValue(tftypes.Number, new(big.Float).SetFloat64(in.(float64))), nil
+			return tftypes.NewValue(tftypes.Number, new(big.Float).SetFloat64(t)), nil
 		default:
 			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "float64" to "%s"`, at.String(), st.String())
 		}
 	case []interface{}:
 		switch {
 		case st.Is(tftypes.List{}):
-			return sliceToTFListValue(in.([]interface{}), st, th, at)
+			return sliceToTFListValue(t, st, th, at)
 		case st.Is(tftypes.Tuple{}):
-			return sliceToTFTupleValue(in.([]interface{}), st, th, at)
+			return sliceToTFTupleValue(t, st, th, at)
 		case st.Is(tftypes.Set{}):
-			return sliceToTFSetValue(in.([]interface{}), st, th, at)
+			return sliceToTFSetValue(t, st, th, at)
 		case st.Is(tftypes.DynamicPseudoType):
-			return sliceToTFDynamicValue(in.([]interface{}), st, th, at)
+			return sliceToTFDynamicValue(t, st, th, at)
 		default:
 			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "[]interface{}" to "%s"`, at.String(), st.String())
 		}
 	case map[string]interface{}:
 		switch {
 		case st.Is(tftypes.Object{}):
-			return mapToTFObjectValue(in.(map[string]interface{}), st, th, at)
+			return mapToTFObjectValue(t, st, th, at)
 		case st.Is(tftypes.Map{}):
-			return mapToTFMapValue(in.(map[string]interface{}), st, th, at)
+			return mapToTFMapValue(t, st, th, at)
 		case st.Is(tftypes.DynamicPseudoType):
-			return mapToTFDynamicValue(in.(map[string]interface{}), st, th, at)
+			return mapToTFDynamicValue(t, st, th, at)
 		default:
 			return tftypes.Value{}, at.NewErrorf(`[%s] cannot convert payload from "map[string]interface{}" to "%s"`, at.String(), st.String())
 		}

@@ -277,6 +277,9 @@ func getPrivateStateValue(p []byte) (ps map[string]tftypes.Value, err error) {
 		return
 	}
 	pv, err := tftypes.ValueFromMsgPack(p, privateStateSchema)
+	if err != nil {
+		return
+	}
 	err = pv.As(&ps)
 	return
 }

@@ -4,7 +4,7 @@
 package kubernetes
 
 import (
-	api "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -76,13 +76,13 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Optional:    true,
 			Computed:    isComputed,
 			ForceNew:    !isUpdatable,
-			Default:     conditionalDefault(!isComputed, string(api.DNSClusterFirst)),
+			Default:     conditionalDefault(!isComputed, string(corev1.DNSClusterFirst)),
 			Description: "Set DNS policy for containers within the pod. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'. Defaults to 'ClusterFirst'. More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy",
 			ValidateFunc: validation.StringInSlice([]string{
-				string(api.DNSClusterFirst),
-				string(api.DNSClusterFirstWithHostNet),
-				string(api.DNSDefault),
-				string(api.DNSNone),
+				string(corev1.DNSClusterFirst),
+				string(corev1.DNSClusterFirstWithHostNet),
+				string(corev1.DNSDefault),
+				string(corev1.DNSNone),
 			}, false),
 		},
 		"dns_config": {
@@ -211,7 +211,7 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 					"name": {
 						Type:         schema.TypeString,
 						Required:     true,
-						ValidateFunc: validation.StringInSlice([]string{string(api.Linux), string(api.Windows)}, false),
+						ValidateFunc: validation.StringInSlice([]string{string(corev1.Linux), string(corev1.Windows)}, false),
 						Description:  "Name is the name of the operating system. The currently supported values are linux and windows.",
 					},
 				},
@@ -266,12 +266,12 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Optional:    true,
 			Computed:    isComputed,
 			ForceNew:    !isUpdatable,
-			Default:     conditionalDefault(!isComputed, string(api.RestartPolicyAlways)),
+			Default:     conditionalDefault(!isComputed, string(corev1.RestartPolicyAlways)),
 			Description: "Restart policy for all containers within the pod. One of Always, OnFailure, Never. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy.",
 			ValidateFunc: validation.StringInSlice([]string{
-				string(api.RestartPolicyAlways),
-				string(api.RestartPolicyOnFailure),
-				string(api.RestartPolicyNever),
+				string(corev1.RestartPolicyAlways),
+				string(corev1.RestartPolicyOnFailure),
+				string(corev1.RestartPolicyNever),
 			}, false),
 		},
 		"security_context": {
@@ -332,8 +332,8 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						Description: "fsGroupChangePolicy defines behavior of changing ownership and permission of the volume before being exposed inside Pod. This field will only apply to volume types which support fsGroup based ownership(and permissions). It will have no effect on ephemeral volume types such as: secret, configmaps and emptydir.",
 						Optional:    true,
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.FSGroupChangeAlways),
-							string(api.FSGroupChangeOnRootMismatch),
+							string(corev1.FSGroupChangeAlways),
+							string(corev1.FSGroupChangeOnRootMismatch),
 						}, false),
 						ForceNew: !isUpdatable,
 					},
@@ -450,9 +450,9 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.TaintEffectNoSchedule),
-							string(api.TaintEffectPreferNoSchedule),
-							string(api.TaintEffectNoExecute),
+							string(corev1.TaintEffectNoSchedule),
+							string(corev1.TaintEffectPreferNoSchedule),
+							string(corev1.TaintEffectNoExecute),
 						}, false),
 					},
 					"key": {
@@ -464,12 +464,12 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 					"operator": {
 						Type:        schema.TypeString,
 						Description: "Operator represents a key's relationship to the value. Valid operators are Exists and Equal. Defaults to Equal. Exists is equivalent to wildcard for value, so that a pod can tolerate all taints of a particular category.",
-						Default:     string(api.TolerationOpEqual),
+						Default:     string(corev1.TolerationOpEqual),
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.TolerationOpExists),
-							string(api.TolerationOpEqual),
+							string(corev1.TolerationOpExists),
+							string(corev1.TolerationOpEqual),
 						}, false),
 					},
 					"toleration_seconds": {
@@ -510,11 +510,11 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 					"when_unsatisfiable": {
 						Type:        schema.TypeString,
 						Description: "indicates how to deal with a pod if it doesn't satisfy the spread constraint.",
-						Default:     string(api.DoNotSchedule),
+						Default:     string(corev1.DoNotSchedule),
 						Optional:    true,
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.DoNotSchedule),
-							string(api.ScheduleAnyway),
+							string(corev1.DoNotSchedule),
+							string(corev1.ScheduleAnyway),
 						}, false),
 					},
 					"label_selector": {
@@ -568,7 +568,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 							"path": {
 								Type:         schema.TypeString,
 								Optional:     true,
-								ValidateFunc: validateAttributeValueDoesNotContain(".."),
+								ValidateFunc: validatePath,
 								Description:  `The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.`,
 							},
 						},
@@ -606,7 +606,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 					Type:         schema.TypeString,
 					Description:  "Target directory name. Must not contain or start with '..'. If '.' is supplied, the volume directory will be the git repository. Otherwise, if specified, the volume will contain the git repository in the subdirectory with the given name.",
 					Optional:     true,
-					ValidateFunc: validateAttributeValueDoesNotContain(".."),
+					ValidateFunc: validatePath,
 				},
 				"repository": {
 					Type:        schema.TypeString,
@@ -671,7 +671,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 							"path": {
 								Type:         schema.TypeString,
 								Required:     true,
-								ValidateFunc: validateAttributeValueDoesNotContain(".."),
+								ValidateFunc: validatePath,
 								Description:  `Path is the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'`,
 							},
 							"resource_field_ref": {
@@ -715,12 +715,15 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"medium": {
-					Type:         schema.TypeString,
-					Description:  `What type of storage medium should back this directory. The default is "" which means to use the node's default medium. Must be an empty string (default) or Memory. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir`,
-					Optional:     true,
-					Default:      "",
-					ForceNew:     !isUpdatable,
-					ValidateFunc: validateAttributeValueIsIn([]string{"", "Memory"}),
+					Type:        schema.TypeString,
+					Description: `What type of storage medium should back this directory. The default is "" which means to use the node's default medium. Must be an empty string (default) or Memory. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir`,
+					Optional:    true,
+					Default:     "",
+					ForceNew:    !isUpdatable,
+					ValidateFunc: validation.StringInSlice([]string{
+						string(corev1.StorageMediumDefault),
+						string(corev1.StorageMediumMemory),
+					}, false),
 				},
 				"size_limit": {
 					Type:             schema.TypeString,
@@ -844,7 +847,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 							"path": {
 								Type:         schema.TypeString,
 								Optional:     true,
-								ValidateFunc: validateAttributeValueDoesNotContain(".."),
+								ValidateFunc: validatePath,
 								Description:  "The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.",
 							},
 						},
@@ -921,7 +924,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 													"path": {
 														Type:         schema.TypeString,
 														Optional:     true,
-														ValidateFunc: validateAttributeValueDoesNotContain(".."),
+														ValidateFunc: validatePath,
 														Description:  "The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.",
 													},
 												},
@@ -967,7 +970,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 													"path": {
 														Type:         schema.TypeString,
 														Optional:     true,
-														ValidateFunc: validateAttributeValueDoesNotContain(".."),
+														ValidateFunc: validatePath,
 														Description:  "The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.",
 													},
 												},
@@ -1025,7 +1028,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 													"path": {
 														Type:         schema.TypeString,
 														Required:     true,
-														ValidateFunc: validateAttributeValueDoesNotContain(".."),
+														ValidateFunc: validatePath,
 														Description:  "Path is the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'",
 													},
 													"resource_field_ref": {

@@ -101,9 +101,13 @@ tools:
 	go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@v0.28.1
 	go install github.com/bflad/tfproviderdocs@v0.9.1
 	go install github.com/katbyte/terrafmt@v0.5.2
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.0
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
 	go install github.com/hashicorp/go-changelog/cmd/changelog-build@latest
 	go install github.com/hashicorp/go-changelog/cmd/changelog-entry@latest
+
+go-lint: tools
+	@echo "==> Run Golang CLI linter..."
+	@golangci-lint run
 
 vet:
 	@echo "go vet ./..."

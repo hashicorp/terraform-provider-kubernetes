@@ -205,7 +205,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	if !providerConfig["client_certificate"].IsNull() && providerConfig["client_certificate"].IsKnown() {
 		err = providerConfig["client_certificate"].As(&clientCertificate)
 		if err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
+			response.Diagnostics = append(diags, &tfprotov5.Diagnostic{
 				Severity: tfprotov5.DiagnosticSeverityInvalid,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "'client_certificate' type cannot be asserted: " + err.Error(),
@@ -341,7 +341,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		}
 		hostURL, _, err := rest.DefaultServerURL(host, "", apimachineryschema.GroupVersion{}, defaultTLS)
 		if err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
+			response.Diagnostics = append(diags, &tfprotov5.Diagnostic{
 				Severity: tfprotov5.DiagnosticSeverityInvalid,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "Invalid value for 'host': " + err.Error(),

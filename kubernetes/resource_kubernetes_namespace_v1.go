@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -64,15 +64,15 @@ func resourceKubernetesNamespaceV1Create(ctx context.Context, d *schema.Resource
 
 	if d.Get("wait_for_default_service_account").(bool) {
 		log.Printf("[DEBUG] Waiting for default service account to be created")
-		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *retry.RetryError {
 			_, err := conn.CoreV1().ServiceAccounts(out.Name).Get(ctx, "default", metav1.GetOptions{})
 			if err != nil {
 				if errors.IsNotFound(err) {
 					log.Printf("[INFO] Default service account does not exist, will retry: %s", metadata.Namespace)
-					return resource.RetryableError(err)
+					return retry.RetryableError(err)
 				}
 
-				return resource.NonRetryableError(err)
+				return retry.NonRetryableError(err)
 			}
 
 			log.Printf("[INFO] Default service account exists: %s", metadata.Namespace)
@@ -154,7 +154,7 @@ func resourceKubernetesNamespaceV1Delete(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Target:  []string{},
 		Pending: []string{"Terminating"},
 		Timeout: d.Timeout(schema.TimeoutDelete),

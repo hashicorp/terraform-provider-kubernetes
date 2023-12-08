@@ -1,0 +1,22 @@
+run:
+  timeout: 5m
+
+issues:
+  max-per-linter: 0
+  max-same-issues: 0
+
+linters:
+  disable-all: true
+  enable:
+    - gosimple
+    - gofmt
+    - staticcheck
+
+linters-settings:
+  staticcheck:
+    checks:
+      - all
+  gosimple:
+    checks:
+      - all
+      - '-S1040' # Type assertion to current type: https://staticcheck.dev/docs/checks/#S1040

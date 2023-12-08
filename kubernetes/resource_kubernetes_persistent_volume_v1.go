@@ -13,7 +13,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	api "k8s.io/api/core/v1"
@@ -228,7 +228,7 @@ func resourceKubernetesPersistentVolumeV1Create(ctx context.Context, d *schema.R
 	}
 	log.Printf("[INFO] Submitted new persistent volume: %#v", out)
 
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Target:  []string{"Available", "Bound"},
 		Pending: []string{"Pending"},
 		Timeout: d.Timeout(schema.TimeoutCreate),
@@ -335,18 +335,18 @@ func resourceKubernetesPersistentVolumeV1Delete(ctx context.Context, d *schema.R
 		return diag.FromErr(err)
 	}
 
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *retry.RetryError {
 		out, err := conn.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if k8serrors.IsNotFound(err) {
 				return nil
 			}
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		log.Printf("[DEBUG] Current state of persistent volume: %#v", out.Status.Phase)
 		e := fmt.Errorf("Persistent volume %s still exists (%s)", name, out.Status.Phase)
-		return resource.RetryableError(e)
+		return retry.RetryableError(e)
 	})
 	if err != nil {
 		return diag.FromErr(err)

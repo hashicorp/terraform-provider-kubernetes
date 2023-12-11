@@ -46,7 +46,7 @@ func cronJobSpecFieldsV1Beta1() map[string]*schema.Schema {
 		"schedule": {
 			Type:         schema.TypeString,
 			Required:     true,
-			ValidateFunc: validateCronExpression(),
+			ValidateFunc: validateCronExpression,
 			Description:  "Cron format string, e.g. 0 * * * * or @hourly, as schedule time of its jobs to be created and executed.",
 		},
 		"starting_deadline_seconds": {

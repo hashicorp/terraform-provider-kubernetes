@@ -20,7 +20,7 @@ func flattenAWSElasticBlockStoreVolumeSource(in *v1.AWSElasticBlockStoreVolumeSo
 	if in.Partition != 0 {
 		att["partition"] = in.Partition
 	}
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	return []interface{}{att}
@@ -47,7 +47,7 @@ func flattenAzureFileVolumeSource(in *v1.AzureFileVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["secret_name"] = in.SecretName
 	att["share_name"] = in.ShareName
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	return []interface{}{att}
@@ -57,7 +57,7 @@ func flattenAzureFilePersistentVolumeSource(in *v1.AzureFilePersistentVolumeSour
 	att := make(map[string]interface{})
 	att["secret_name"] = in.SecretName
 	att["share_name"] = in.ShareName
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	if in.SecretNamespace != nil {
@@ -81,7 +81,7 @@ func flattenCephFSVolumeSource(in *v1.CephFSVolumeSource) []interface{} {
 	if in.SecretRef != nil {
 		att["secret_ref"] = flattenLocalObjectReference(in.SecretRef)
 	}
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	return []interface{}{att}
@@ -102,7 +102,7 @@ func flattenCephFSPersistentVolumeSource(in *v1.CephFSPersistentVolumeSource) []
 	if in.SecretRef != nil {
 		att["secret_ref"] = flattenSecretReference(in.SecretRef)
 	}
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	return []interface{}{att}
@@ -114,7 +114,7 @@ func flattenCinderPersistentVolumeSource(in *v1.CinderPersistentVolumeSource) []
 	if in.FSType != "" {
 		att["fs_type"] = in.FSType
 	}
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	return []interface{}{att}
@@ -126,7 +126,7 @@ func flattenCinderVolumeSource(in *v1.CinderVolumeSource) []interface{} {
 	if in.FSType != "" {
 		att["fs_type"] = in.FSType
 	}
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	return []interface{}{att}
@@ -139,7 +139,7 @@ func flattenFCVolumeSource(in *v1.FCVolumeSource) []interface{} {
 	if in.FSType != "" {
 		att["fs_type"] = in.FSType
 	}
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	return []interface{}{att}
@@ -154,7 +154,7 @@ func flattenFlexPersistentVolumeSource(in *v1.FlexPersistentVolumeSource) []inte
 	if in.SecretRef != nil {
 		att["secret_ref"] = flattenSecretReference(in.SecretRef)
 	}
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	if len(in.Options) > 0 {
@@ -172,7 +172,7 @@ func flattenFlexVolumeSource(in *v1.FlexVolumeSource) []interface{} {
 	if in.SecretRef != nil {
 		att["secret_ref"] = flattenLocalObjectReference(in.SecretRef)
 	}
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	if len(in.Options) > 0 {
@@ -197,7 +197,7 @@ func flattenGCEPersistentDiskVolumeSource(in *v1.GCEPersistentDiskVolumeSource) 
 	if in.Partition != 0 {
 		att["partition"] = in.Partition
 	}
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	return []interface{}{att}
@@ -207,7 +207,7 @@ func flattenGlusterfsPersistentVolumeSource(in *v1.GlusterfsPersistentVolumeSour
 	att := make(map[string]interface{})
 	att["endpoints_name"] = in.EndpointsName
 	att["path"] = in.Path
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	return []interface{}{att}
@@ -217,7 +217,7 @@ func flattenGlusterfsVolumeSource(in *v1.GlusterfsVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["endpoints_name"] = in.EndpointsName
 	att["path"] = in.Path
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	return []interface{}{att}
@@ -255,7 +255,7 @@ func flattenISCSIVolumeSource(in *v1.ISCSIVolumeSource) []interface{} {
 	if in.FSType != "" {
 		att["fs_type"] = in.FSType
 	}
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	return []interface{}{att}
@@ -278,7 +278,7 @@ func flattenISCSIPersistentVolumeSource(in *v1.ISCSIPersistentVolumeSource) []in
 	if in.FSType != "" {
 		att["fs_type"] = in.FSType
 	}
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	return []interface{}{att}
@@ -307,7 +307,7 @@ func flattenNFSVolumeSource(in *v1.NFSVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["server"] = in.Server
 	att["path"] = in.Path
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	return []interface{}{att}
@@ -474,7 +474,7 @@ func flattenQuobyteVolumeSource(in *v1.QuobyteVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["registry"] = in.Registry
 	att["volume"] = in.Volume
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	if in.User != "" {
@@ -505,7 +505,7 @@ func flattenRBDVolumeSource(in *v1.RBDVolumeSource) []interface{} {
 	if in.SecretRef != nil {
 		att["secret_ref"] = flattenLocalObjectReference(in.SecretRef)
 	}
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	return []interface{}{att}
@@ -530,7 +530,7 @@ func flattenRBDPersistentVolumeSource(in *v1.RBDPersistentVolumeSource) []interf
 	if in.SecretRef != nil {
 		att["secret_ref"] = flattenSecretReference(in.SecretRef)
 	}
-	if in.ReadOnly != false {
+	if in.ReadOnly {
 		att["read_only"] = in.ReadOnly
 	}
 	return []interface{}{att}

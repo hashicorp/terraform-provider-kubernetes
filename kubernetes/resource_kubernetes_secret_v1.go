@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -124,7 +124,7 @@ func resourceKubernetesSecretV1Create(ctx context.Context, d *schema.ResourceDat
 		secret.Type = corev1.SecretType(v.(string))
 	}
 
-	if v, ok := d.GetOkExists("immutable"); ok {
+	if v, ok := d.GetOk("immutable"); ok {
 		secret.Immutable = ptrToBool(v.(bool))
 	}
 
@@ -140,11 +140,11 @@ func resourceKubernetesSecretV1Create(ctx context.Context, d *schema.ResourceDat
 	if out.Type == corev1.SecretTypeServiceAccountToken && d.Get("wait_for_service_account_token").(bool) {
 		log.Printf("[DEBUG] Waiting for secret service account token to be created")
 
-		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *retry.RetryError {
 			secret, err := conn.CoreV1().Secrets(out.Namespace).Get(ctx, out.Name, metav1.GetOptions{})
 			if err != nil {
 				log.Printf("[DEBUG] Received error: %#v", err)
-				return resource.NonRetryableError(err)
+				return retry.NonRetryableError(err)
 			}
 
 			log.Printf("[INFO] Received secret: %#v", secret.Name)
@@ -153,7 +153,7 @@ func resourceKubernetesSecretV1Create(ctx context.Context, d *schema.ResourceDat
 				return nil
 			}
 
-			return resource.RetryableError(fmt.Errorf(
+			return retry.RetryableError(fmt.Errorf(
 				"Waiting for secret %q to create service account token", d.Id()))
 		})
 		if err != nil {

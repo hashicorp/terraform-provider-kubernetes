@@ -103,7 +103,7 @@ func (s *RawProviderServer) getFieldManagerConfig(v map[string]tftypes.Value) (s
 }
 
 func isImportedFlagFromPrivate(p []byte) (f bool, d []*tfprotov5.Diagnostic) {
-	if p == nil || len(p) == 0 {
+	if len(p) == 0 {
 		return
 	}
 	ps, err := getPrivateStateValue(p)
@@ -500,16 +500,4 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 
 	resp.PlannedState = &plannedState
 	return resp, nil
-}
-
-func getAttributeValue(v tftypes.Value, path string) (tftypes.Value, error) {
-	p, err := FieldPathToTftypesPath(path)
-	if err != nil {
-		return tftypes.Value{}, err
-	}
-	vv, _, err := tftypes.WalkAttributePath(v, p)
-	if err != nil {
-		return tftypes.Value{}, err
-	}
-	return vv.(tftypes.Value), nil
 }

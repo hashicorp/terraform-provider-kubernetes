@@ -8,7 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -36,9 +36,6 @@ type WorkingDir struct {
 	// configFilename is the full filename where the latest configuration
 	// was stored; empty until SetConfig is called.
 	configFilename string
-
-	// baseArgs is arguments that should be appended to all commands
-	baseArgs []string
 
 	// tf is the instance of tfexec.Terraform used for running Terraform commands
 	tf *tfexec.Terraform
@@ -87,7 +84,7 @@ func (wd *WorkingDir) SetConfig(ctx context.Context, cfg string) error {
 	if err := os.Remove(rmFilename); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("unable to remove %q: %w", rmFilename, err)
 	}
-	err := ioutil.WriteFile(outFilename, bCfg, 0700)
+	err := os.WriteFile(outFilename, bCfg, 0700)
 	if err != nil {
 		return err
 	}
@@ -266,7 +263,7 @@ func (wd *WorkingDir) SavedPlanRawStdout(ctx context.Context) (string, error) {
 	var ret bytes.Buffer
 
 	wd.tf.SetStdout(&ret)
-	defer wd.tf.SetStdout(ioutil.Discard)
+	defer wd.tf.SetStdout(io.Discard)
 
 	logging.HelperResourceTrace(ctx, "Calling Terraform CLI show command")
 

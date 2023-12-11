@@ -5,18 +5,18 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	certificates "k8s.io/api/certificates/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
+	kretry "k8s.io/client-go/util/retry"
 )
 
 func resourceKubernetesCertificateSigningRequestV1() *schema.Resource {
@@ -115,7 +115,7 @@ func resourceKubernetesCertificateSigningRequestV1Create(ctx context.Context, d 
 	defer conn.CertificatesV1().CertificateSigningRequests().Delete(ctx, csrName, metav1.DeleteOptions{})
 
 	if d.Get("auto_approve").(bool) {
-		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		retryErr := kretry.RetryOnConflict(kretry.DefaultRetry, func() error {
 			pendingCSR, getErr := conn.CertificatesV1().CertificateSigningRequests().Get(
 				ctx, csrName, metav1.GetOptions{})
 			if getErr != nil {
@@ -140,11 +140,11 @@ func resourceKubernetesCertificateSigningRequestV1Create(ctx context.Context, d 
 	}
 
 	log.Printf("[DEBUG] Waiting for certificate to be issued")
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *retry.RetryError {
 		out, err := conn.CertificatesV1().CertificateSigningRequests().Get(ctx, csrName, metav1.GetOptions{})
 		if err != nil {
 			log.Printf("[ERROR] Received error: %v", err)
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		// Check to see if a certificate has been issued, and update status accordingly,
@@ -159,8 +159,7 @@ func resourceKubernetesCertificateSigningRequestV1Create(ctx context.Context, d 
 			}
 		}
 		log.Printf("[DEBUG] CertificateSigningRequest %s status received: %#v", csrName, out.Status)
-		return resource.RetryableError(fmt.Errorf(
-			"Waiting for certificate to be issued"))
+		return retry.RetryableError(errors.New("Waiting for certificate to be issued"))
 	})
 	if err != nil {
 		return diag.FromErr(err)

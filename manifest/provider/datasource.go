@@ -166,7 +166,7 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 		}
 		d := tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  fmt.Sprintf("Failed to get data source"),
+			Summary:  "Failed to get data source",
 			Detail:   err.Error(),
 		}
 		resp.Diagnostics = append(resp.Diagnostics, &d)
@@ -357,7 +357,7 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 		}
 		d := tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  fmt.Sprintf("Failed to get data source"),
+			Summary:  "Failed to get data source",
 			Detail:   err.Error(),
 		}
 		resp.Diagnostics = append(resp.Diagnostics, &d)

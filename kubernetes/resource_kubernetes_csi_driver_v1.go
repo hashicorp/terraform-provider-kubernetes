@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
@@ -35,7 +35,7 @@ func resourceKubernetesCSIDriverV1() *schema.Resource {
 			"metadata": metadataSchema("csi driver", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: fmt.Sprintf("Spec of the CSIDriver"),
+				Description: "Spec of the CSIDriver",
 				Optional:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
@@ -174,17 +174,17 @@ func resourceKubernetesCSIDriverV1Delete(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *retry.RetryError {
 		_, err := conn.StorageV1().CSIDrivers().Get(ctx, d.Id(), metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		e := fmt.Errorf("CSIDriver (%s) still exists", d.Id())
-		return resource.RetryableError(e)
+		return retry.RetryableError(e)
 	})
 	if err != nil {
 		return diag.FromErr(err)

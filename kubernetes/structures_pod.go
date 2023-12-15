@@ -64,11 +64,7 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	}
 	att["container"] = containers
 
-	gates, err := flattenReadinessGates(in.ReadinessGates)
-	if err != nil {
-		return nil, err
-	}
-	att["readiness_gate"] = gates
+	att["readiness_gate"] = flattenReadinessGates(in.ReadinessGates)
 
 	initContainers, err := flattenContainers(in.InitContainers, serviceAccountRegex)
 	if err != nil {
@@ -164,11 +160,7 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 			}
 		}
 
-		v, err := flattenVolumes(in.Volumes)
-		if err != nil {
-			return []interface{}{att}, err
-		}
-		att["volume"] = v
+		att["volume"] = flattenVolumes(in.Volumes)
 	}
 	return []interface{}{att}, nil
 }
@@ -188,11 +180,7 @@ func flattenPodDNSConfig(in *v1.PodDNSConfig) ([]interface{}, error) {
 		att["searches"] = in.Searches
 	}
 	if len(in.Options) > 0 {
-		v, err := flattenPodDNSConfigOptions(in.Options)
-		if err != nil {
-			return []interface{}{att}, err
-		}
-		att["option"] = v
+		att["option"] = flattenPodDNSConfigOptions(in.Options)
 	}
 
 	if len(att) > 0 {
@@ -201,7 +189,7 @@ func flattenPodDNSConfig(in *v1.PodDNSConfig) ([]interface{}, error) {
 	return []interface{}{}, nil
 }
 
-func flattenPodDNSConfigOptions(options []v1.PodDNSConfigOption) ([]interface{}, error) {
+func flattenPodDNSConfigOptions(options []v1.PodDNSConfigOption) []interface{} {
 	att := make([]interface{}, len(options))
 	for i, v := range options {
 		obj := map[string]interface{}{}
@@ -214,7 +202,7 @@ func flattenPodDNSConfigOptions(options []v1.PodDNSConfigOption) ([]interface{},
 		}
 		att[i] = obj
 	}
-	return att, nil
+	return att
 }
 
 func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
@@ -356,7 +344,7 @@ func flattenTopologySpreadConstraints(tsc []v1.TopologySpreadConstraint) []inter
 	return att
 }
 
-func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
+func flattenVolumes(volumes []v1.Volume) []interface{} {
 	att := make([]interface{}, len(volumes))
 	for i, v := range volumes {
 		obj := map[string]interface{}{}
@@ -444,7 +432,7 @@ func flattenVolumes(volumes []v1.Volume) ([]interface{}, error) {
 		}
 		att[i] = obj
 	}
-	return att, nil
+	return att
 }
 
 func flattenPersistentVolumeClaimVolumeSource(in *v1.PersistentVolumeClaimVolumeSource) []interface{} {
@@ -666,14 +654,14 @@ func flattenServiceAccountTokenProjection(in *v1.ServiceAccountTokenProjection) 
 	return []interface{}{att}
 }
 
-func flattenReadinessGates(in []v1.PodReadinessGate) ([]interface{}, error) {
+func flattenReadinessGates(in []v1.PodReadinessGate) []interface{} {
 	att := make([]interface{}, len(in))
 	for i, v := range in {
 		c := make(map[string]interface{})
 		c["condition_type"] = v.ConditionType
 		att[i] = c
 	}
-	return att, nil
+	return att
 }
 
 func flattenPersistentVolumeClaimMetadata(in metav1.ObjectMeta) map[string]interface{} {
@@ -754,11 +742,7 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	}
 
 	if v, ok := in["readiness_gate"].([]interface{}); ok && len(v) > 0 {
-		cs, err := expandReadinessGates(v)
-		if err != nil {
-			return obj, err
-		}
-		obj.ReadinessGates = cs
+		obj.ReadinessGates = expandReadinessGates(v)
 	}
 
 	if v, ok := in["init_container"].([]interface{}); ok && len(v) > 0 {
@@ -786,11 +770,7 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	}
 
 	if v, ok := in["host_aliases"].([]interface{}); ok && len(v) > 0 {
-		hs, err := expandHostaliases(v)
-		if err != nil {
-			return obj, err
-		}
-		obj.HostAliases = hs
+		obj.HostAliases = expandHostaliases(v)
 	}
 
 	if v, ok := in["host_ipc"]; ok {
@@ -891,13 +871,7 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	}
 
 	if v, ok := in["topology_spread_constraint"].([]interface{}); ok && len(v) > 0 {
-		ts, err := expandTopologySpreadConstraints(v)
-		if err != nil {
-			return obj, err
-		}
-		for _, t := range ts {
-			obj.TopologySpreadConstraints = append(obj.TopologySpreadConstraints, *t)
-		}
+		obj.TopologySpreadConstraints = expandTopologySpreadConstraints(v)
 	}
 
 	return obj, nil
@@ -977,18 +951,14 @@ func expandPodDNSConfig(l []interface{}) (*v1.PodDNSConfig, error) {
 		obj.Searches = expandStringSlice(v)
 	}
 	if v, ok := in["option"].([]interface{}); ok {
-		opts, err := expandDNSConfigOptions(v)
-		if err != nil {
-			return obj, err
-		}
-		obj.Options = opts
+		obj.Options = expandDNSConfigOptions(v)
 	}
 	return obj, nil
 }
 
-func expandDNSConfigOptions(options []interface{}) ([]v1.PodDNSConfigOption, error) {
+func expandDNSConfigOptions(options []interface{}) []v1.PodDNSConfigOption {
 	if len(options) == 0 {
-		return []v1.PodDNSConfigOption{}, nil
+		return []v1.PodDNSConfigOption{}
 	}
 	opts := make([]v1.PodDNSConfigOption, len(options))
 	for i, c := range options {
@@ -1003,7 +973,7 @@ func expandDNSConfigOptions(options []interface{}) ([]v1.PodDNSConfigOption, err
 		opts[i] = opt
 	}
 
-	return opts, nil
+	return opts
 }
 
 func expandPodSecurityContext(l []interface{}) (*v1.PodSecurityContext, error) {
@@ -1157,10 +1127,7 @@ func expandDownwardAPIVolumeFile(in []interface{}) ([]v1.DownwardAPIVolumeFile, 
 			dapivf[i].Path = v
 		}
 		if v, ok := p["field_ref"].([]interface{}); ok && len(v) > 0 {
-			dapivf[i].FieldRef, err = expandFieldRef(v)
-			if err != nil {
-				return dapivf, err
-			}
+			dapivf[i].FieldRef = expandFieldRef(v)
 		}
 		if v, ok := p["resource_field_ref"].([]interface{}); ok && len(v) > 0 {
 			dapivf[i].ResourceFieldRef, err = expandResourceFieldRef(v)
@@ -1448,21 +1415,17 @@ func expandProjectedDownwardAPI(downwardAPI map[string]interface{}) (*v1.Downwar
 
 func expandProjectedServiceAccountTokens(sats []interface{}) ([]v1.VolumeProjection, error) {
 	out := make([]v1.VolumeProjection, 0, len(sats))
-	for i, in := range sats {
+	for _, in := range sats {
 		if v, ok := in.(map[string]interface{}); ok {
-			sat, err := expandProjectedServiceAccountToken(v)
-			if err != nil {
-				return nil, fmt.Errorf("expanding service account token #%d: %v", i+1, err)
-			}
 			out = append(out, v1.VolumeProjection{
-				ServiceAccountToken: sat,
+				ServiceAccountToken: expandProjectedServiceAccountToken(v),
 			})
 		}
 	}
 	return out, nil
 }
 
-func expandProjectedServiceAccountToken(sat map[string]interface{}) (*v1.ServiceAccountTokenProjection, error) {
+func expandProjectedServiceAccountToken(sat map[string]interface{}) *v1.ServiceAccountTokenProjection {
 	s := &v1.ServiceAccountTokenProjection{}
 	if value, ok := sat["audience"].(string); ok {
 		s.Audience = value
@@ -1473,7 +1436,7 @@ func expandProjectedServiceAccountToken(sat map[string]interface{}) (*v1.Service
 	if value, ok := sat["path"].(string); ok {
 		s.Path = value
 	}
-	return s, nil
+	return s
 }
 
 func expandTolerations(tolerations []interface{}) ([]*v1.Toleration, error) {
@@ -1508,14 +1471,14 @@ func expandTolerations(tolerations []interface{}) ([]*v1.Toleration, error) {
 	return ts, nil
 }
 
-func expandTopologySpreadConstraints(tsc []interface{}) ([]*v1.TopologySpreadConstraint, error) {
+func expandTopologySpreadConstraints(tsc []interface{}) []v1.TopologySpreadConstraint {
 	if len(tsc) == 0 {
-		return []*v1.TopologySpreadConstraint{}, nil
+		return []v1.TopologySpreadConstraint{}
 	}
-	ts := make([]*v1.TopologySpreadConstraint, len(tsc))
+	ts := make([]v1.TopologySpreadConstraint, len(tsc))
 	for i, t := range tsc {
 		m := t.(map[string]interface{})
-		ts[i] = &v1.TopologySpreadConstraint{}
+		ts[i] = v1.TopologySpreadConstraint{}
 
 		if value, ok := m["topology_key"].(string); ok {
 			ts[i].TopologyKey = value
@@ -1534,7 +1497,7 @@ func expandTopologySpreadConstraints(tsc []interface{}) ([]*v1.TopologySpreadCon
 		}
 
 	}
-	return ts, nil
+	return ts
 }
 
 func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
@@ -1657,9 +1620,9 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 	return vl, nil
 }
 
-func expandReadinessGates(gates []interface{}) ([]v1.PodReadinessGate, error) {
+func expandReadinessGates(gates []interface{}) []v1.PodReadinessGate {
 	if len(gates) == 0 || gates[0] == nil {
-		return []v1.PodReadinessGate{}, nil
+		return []v1.PodReadinessGate{}
 	}
 	cs := make([]v1.PodReadinessGate, len(gates))
 	for i, c := range gates {
@@ -1670,7 +1633,7 @@ func expandReadinessGates(gates []interface{}) ([]v1.PodReadinessGate, error) {
 			cs[i].ConditionType = conType
 		}
 	}
-	return cs, nil
+	return cs
 }
 
 func patchPodSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOperations, error) {

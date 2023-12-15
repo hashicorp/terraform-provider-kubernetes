@@ -93,10 +93,7 @@ func resourceKubernetesCertificateSigningRequestV1Create(ctx context.Context, d 
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	spec, err := expandCertificateSigningRequestV1Spec(d.Get("spec").([]interface{}))
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	spec := expandCertificateSigningRequestV1Spec(d.Get("spec").([]interface{}))
 
 	csr := certificates.CertificateSigningRequest{
 		ObjectMeta: metadata,

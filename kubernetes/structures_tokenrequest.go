@@ -17,11 +17,7 @@ func flattenTokenRequestV1Spec(in authv1.TokenRequestSpec, d *schema.ResourceDat
 	att["audiences"] = in.Audiences
 
 	if in.BoundObjectRef != nil {
-		bndObjRef, err := flattenBoundObjectReference(*in.BoundObjectRef, d, meta)
-		if err != nil {
-			return nil, err
-		}
-		att["bound_object_ref"] = bndObjRef
+		att["bound_object_ref"] = flattenBoundObjectReference(*in.BoundObjectRef, d, meta)
 	}
 
 	if in.ExpirationSeconds != nil {
@@ -31,7 +27,7 @@ func flattenTokenRequestV1Spec(in authv1.TokenRequestSpec, d *schema.ResourceDat
 	return []interface{}{att}, nil
 }
 
-func flattenBoundObjectReference(in authv1.BoundObjectReference, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
+func flattenBoundObjectReference(in authv1.BoundObjectReference, d *schema.ResourceData, meta interface{}) []interface{} {
 	att := make(map[string]interface{})
 
 	att["api_version"] = in.APIVersion
@@ -42,7 +38,7 @@ func flattenBoundObjectReference(in authv1.BoundObjectReference, d *schema.Resou
 
 	att["uid"] = in.UID
 
-	return []interface{}{att}, nil
+	return []interface{}{att}
 }
 
 // Expanders
@@ -58,11 +54,7 @@ func expandTokenRequestV1Spec(p []interface{}) *authv1.TokenRequestSpec {
 		obj.Audiences = expandStringSlice(v)
 	}
 
-	bdObjRef, err := expandBoundObjectReference(in["bound_object_ref"].([]interface{}))
-	if err != nil {
-		return obj
-	}
-	obj.BoundObjectRef = bdObjRef
+	obj.BoundObjectRef = expandBoundObjectReference(in["bound_object_ref"].([]interface{}))
 
 	if v, ok := in["expiration_seconds"].(int); v != 0 && ok {
 		obj.ExpirationSeconds = ptrToInt64(int64(v))
@@ -71,10 +63,10 @@ func expandTokenRequestV1Spec(p []interface{}) *authv1.TokenRequestSpec {
 	return obj
 }
 
-func expandBoundObjectReference(p []interface{}) (*authv1.BoundObjectReference, error) {
+func expandBoundObjectReference(p []interface{}) *authv1.BoundObjectReference {
 	obj := &authv1.BoundObjectReference{}
 	if len(p) == 0 || p[0] == nil {
-		return nil, nil
+		return nil
 	}
 	in := p[0].(map[string]interface{})
 
@@ -94,5 +86,5 @@ func expandBoundObjectReference(p []interface{}) (*authv1.BoundObjectReference, 
 		obj.UID = types.UID(v.(string))
 	}
 
-	return obj, nil
+	return obj
 }

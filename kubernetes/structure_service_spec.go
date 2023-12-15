@@ -286,7 +286,7 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 
 // Patch Ops
 
-func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, kv *gversion.Version) (PatchOperations, error) {
+func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, kv *gversion.Version) PatchOperations {
 	ops := make([]PatchOperation, 0)
 
 	if d.HasChange(keyPrefix + "allocate_load_balancer_node_ports") {
@@ -426,5 +426,5 @@ func patchServiceSpec(keyPrefix, pathPrefix string, d *schema.ResourceData, kv *
 			Value: int32(d.Get(keyPrefix + "health_check_node_port").(int)),
 		})
 	}
-	return ops, nil
+	return ops
 }

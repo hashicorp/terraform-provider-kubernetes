@@ -496,7 +496,7 @@ func expandVolumeFSTypeSlice(in []interface{}) []v1beta1.FSType {
 
 // Patchers
 
-func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.ResourceData) (*PatchOperations, error) {
+func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.ResourceData) *PatchOperations {
 	ops := make(PatchOperations, 0)
 
 	if d.HasChange(keyPrefix + "allow_privilege_escalation") {
@@ -659,5 +659,5 @@ func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.R
 		})
 	}
 
-	return &ops, nil
+	return &ops
 }

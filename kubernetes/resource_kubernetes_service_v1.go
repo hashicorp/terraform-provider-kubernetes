@@ -449,10 +449,7 @@ func resourceKubernetesServiceV1Update(ctx context.Context, d *schema.ResourceDa
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		diffOps, err := patchServiceSpec("spec.0.", "/spec/", d, serverVersion)
-		if err != nil {
-			return diag.FromErr(err)
-		}
+		diffOps := patchServiceSpec("spec.0.", "/spec/", d, serverVersion)
 		ops = append(ops, diffOps...)
 	}
 	data, err := ops.MarshalJSON()

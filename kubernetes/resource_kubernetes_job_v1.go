@@ -175,10 +175,7 @@ func resourceKubernetesJobV1Update(ctx context.Context, d *schema.ResourceData, 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("spec") {
-		specOps, err := patchJobV1Spec("/spec", "spec.0.", d)
-		if err != nil {
-			return diag.FromErr(err)
-		}
+		specOps := patchJobV1Spec("/spec", "spec.0.", d)
 		ops = append(ops, specOps...)
 	}
 

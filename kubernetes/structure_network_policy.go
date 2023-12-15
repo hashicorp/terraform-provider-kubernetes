@@ -149,7 +149,7 @@ func expandNetworkPolicyV1Ingress(l []interface{}) (*[]networkingv1.NetworkPolic
 		}
 		ingresses[i] = networkingv1.NetworkPolicyIngressRule{}
 		if v, ok := in["ports"].([]interface{}); ok && len(v) > 0 {
-			ingresses[i].Ports = expandNetworkPolicyV1Ports(v)
+			ingresses[i].Ports = *expandNetworkPolicyV1Ports(v)
 		}
 		if v, ok := in["from"].([]interface{}); ok && len(v) > 0 {
 			policyPeers, err := expandNetworkPolicyV1Peer(v)
@@ -174,7 +174,7 @@ func expandNetworkPolicyV1Egress(l []interface{}) (*[]networkingv1.NetworkPolicy
 		}
 		egresses[i] = networkingv1.NetworkPolicyEgressRule{}
 		if v, ok := in["ports"].([]interface{}); ok && len(v) > 0 {
-			egresses[i].Ports = expandNetworkPolicyV1Ports(v)
+			egresses[i].Ports = *expandNetworkPolicyV1Ports(v)
 		}
 		if v, ok := in["to"].([]interface{}); ok && len(v) > 0 {
 			policyPeers, err := expandNetworkPolicyV1Peer(v)
@@ -187,7 +187,7 @@ func expandNetworkPolicyV1Egress(l []interface{}) (*[]networkingv1.NetworkPolicy
 	return &egresses, nil
 }
 
-func expandNetworkPolicyV1Ports(l []interface{}) []networkingv1.NetworkPolicyPort {
+func expandNetworkPolicyV1Ports(l []interface{}) *[]networkingv1.NetworkPolicyPort {
 	policyPorts := make([]networkingv1.NetworkPolicyPort, len(l))
 	for i, port := range l {
 		in, ok := port.(map[string]interface{})
@@ -203,7 +203,7 @@ func expandNetworkPolicyV1Ports(l []interface{}) []networkingv1.NetworkPolicyPor
 			policyPorts[i].Protocol = &v
 		}
 	}
-	return policyPorts
+	return &policyPorts
 }
 
 func expandNetworkPolicyV1Peer(l []interface{}) (*[]networkingv1.NetworkPolicyPeer, error) {

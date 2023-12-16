@@ -18,9 +18,9 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 	if !v.IsKnown() {
 		return tftypes.NewValue(t, tftypes.UnknownValue), nil
 	}
-	switch {
-	case t.Is(tftypes.Object{}):
-		atts := t.(tftypes.Object).AttributeTypes
+	switch x := t.(type) {
+	case tftypes.Object:
+		atts := x.AttributeTypes
 		var vals map[string]tftypes.Value
 		ovals := make(map[string]tftypes.Value, len(atts))
 		err := v.As(&vals)
@@ -39,7 +39,7 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 			}
 		}
 		return tftypes.NewValue(tftypes.Object{AttributeTypes: atts}, ovals), nil
-	case t.Is(tftypes.Map{}):
+	case tftypes.Map:
 		if v.IsNull() {
 			return tftypes.NewValue(t, tftypes.UnknownValue), nil
 		}
@@ -50,18 +50,18 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 		}
 		for name, el := range vals {
 			np := p.WithElementKeyString(name)
-			nv, err := DeepUnknown(t.(tftypes.Map).ElementType, el, np)
+			nv, err := DeepUnknown(x.ElementType, el, np)
 			if err != nil {
 				return tftypes.Value{}, np.NewError(err)
 			}
 			vals[name] = nv
 		}
 		return tftypes.NewValue(t, vals), nil
-	case t.Is(tftypes.Tuple{}):
+	case tftypes.Tuple:
 		if v.IsNull() {
 			return tftypes.NewValue(t, tftypes.UnknownValue), nil
 		}
-		atts := t.(tftypes.Tuple).ElementTypes
+		atts := x.ElementTypes
 		if len(v.Type().(tftypes.Tuple).ElementTypes) != len(atts) {
 			if len(atts) != 1 {
 				return tftypes.Value{}, p.NewErrorf("[%s] incompatible tuple types", p.String())
@@ -85,7 +85,7 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 			vals[i] = nv
 		}
 		return tftypes.NewValue(tftypes.Tuple{ElementTypes: atts}, vals), nil
-	case t.Is(tftypes.List{}) || t.Is(tftypes.Set{}):
+	case tftypes.List, tftypes.Set:
 		if v.IsNull() {
 			return tftypes.NewValue(t, tftypes.UnknownValue), nil
 		}
@@ -95,11 +95,11 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 			return tftypes.Value{}, p.NewError(err)
 		}
 		var elt tftypes.Type
-		switch {
-		case t.Is(tftypes.List{}):
-			elt = t.(tftypes.List).ElementType
-		case t.Is(tftypes.Set{}):
-			elt = t.(tftypes.Set).ElementType
+		switch xt := x.(type) {
+		case tftypes.List:
+			elt = xt.ElementType
+		case tftypes.Set:
+			elt = xt.ElementType
 		}
 		for i, el := range vals {
 			np := p.WithElementKeyInt(i)

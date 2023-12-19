@@ -42,12 +42,6 @@ func TestDataSourceKubernetesResources_DiffTuples(t *testing.T) {
 	k8shelper.CreateNamespace(t, namespace)
 	defer k8shelper.DeleteResource(t, namespace, kubernetes.NewGroupVersionResource("v1", "namespaces"))
 
-	// Create a ConfigMap to use as volumes in pods.
-	k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "configmaps", namespace, name)
-	k8shelper.CreateConfigMap(t, name, namespace, map[string]interface{}{
-		"config": "config",
-	})
-
 	// Create Pods to use a data source.
 	// The only difference between the two pods is the number of VolumeMounts(tuples) that will be created.
 	// This is necessary to ensure that DeepUnknown doesn't mutate object type when iterates over items.
@@ -58,15 +52,7 @@ func TestDataSourceKubernetesResources_DiffTuples(t *testing.T) {
 		{
 			Name: "config",
 			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: name},
-					Items: []corev1.KeyToPath{
-						{
-							Key:  "config",
-							Path: "config.txt",
-						},
-					},
-				},
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
 		},
 	}

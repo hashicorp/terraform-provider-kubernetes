@@ -12,7 +12,9 @@ import (
 	"log"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -23,8 +25,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	k8sretry "k8s.io/client-go/util/retry"
 	"k8s.io/kubectl/pkg/scheme"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Helper is a Kubernetes dynamic client wrapped with a set of helper functions
@@ -116,6 +116,28 @@ func (k *Helper) CreateConfigMap(t *testing.T, name string, namespace string, da
 	_, err := k.dynClient.Resource(gvr).Namespace(namespace).Create(context.TODO(), cfgmap, metav1.CreateOptions{})
 	if err != nil {
 		t.Fatalf("Failed to create configmap %q/%q: %v", namespace, name, err)
+	}
+}
+
+// CreatePod creates a new Pod
+func (k *Helper) CreatePod(t *testing.T, name, namespace string, podSpec corev1.PodSpec) {
+	t.Helper()
+
+	pod := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Pod",
+			"metadata": map[string]interface{}{
+				"name":      name,
+				"namespace": namespace,
+			},
+			"spec": podSpec,
+		},
+	}
+	gvr := NewGroupVersionResource("v1", "pods")
+	_, err := k.dynClient.Resource(gvr).Namespace(namespace).Create(context.TODO(), pod, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create pod %q/%q: %v", namespace, name, err)
 	}
 }
 

@@ -31,7 +31,7 @@ resource "azurerm_kubernetes_cluster" "test" {
 }
 
 resource "azurerm_kubernetes_cluster_node_pool" "example" {
-  name                  = "spot-pool"
+  name                  = "spot"
   kubernetes_cluster_id = azurerm_kubernetes_cluster.test.id
   node_count            = var.node_count
   vm_size               = var.vm_size

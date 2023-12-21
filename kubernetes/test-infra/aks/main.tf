@@ -30,6 +30,16 @@ resource "azurerm_kubernetes_cluster" "test" {
   }
 }
 
+resource "azurerm_kubernetes_cluster_node_pool" "example" {
+  name                  = "spot-pool"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.test.id
+  node_count            = var.node_count
+  vm_size               = var.vm_size
+  priority              = "Spot"
+  eviction_policy       = "Delete"
+  spot_max_price        = -1
+}
+
 resource "local_file" "kubeconfig" {
   content  = azurerm_kubernetes_cluster.test.kube_config_raw
   filename = "${path.module}/kubeconfig"

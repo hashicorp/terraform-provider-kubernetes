@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/utils/ptr"
 
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -640,7 +641,7 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 	err = discovery.ServerSupportsVersion(d, v1)
 	if err == nil {
 		log.Printf("[INFO] Using %s/v1", group)
-		useadmissionregistrationv1beta1 = ptrToBool(false)
+		useadmissionregistrationv1beta1 = ptr.To(false)
 		return false, nil
 	}
 
@@ -655,7 +656,7 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 	}
 
 	log.Printf("[INFO] Using %s/v1beta1", group)
-	useadmissionregistrationv1beta1 = ptrToBool(true)
+	useadmissionregistrationv1beta1 = ptr.To(true)
 	return true, nil
 }
 

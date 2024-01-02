@@ -19,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/ptr"
 )
 
 func resourceKubernetesServiceAccountV1() *schema.Resource {
@@ -88,7 +89,7 @@ func resourceKubernetesServiceAccountV1Create(ctx context.Context, d *schema.Res
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svcAcc := corev1.ServiceAccount{
-		AutomountServiceAccountToken: ptrToBool(d.Get("automount_service_account_token").(bool)),
+		AutomountServiceAccountToken: ptr.To(d.Get("automount_service_account_token").(bool)),
 		ObjectMeta:                   metadata,
 		ImagePullSecrets:             expandLocalObjectReferenceArray(d.Get("image_pull_secret").(*schema.Set).List()),
 		Secrets:                      expandServiceAccountSecrets(d.Get("secret").(*schema.Set).List(), ""),

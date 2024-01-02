@@ -14,6 +14,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 // https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions
@@ -718,7 +719,7 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	in := p[0].(map[string]interface{})
 
 	if v, ok := in["active_deadline_seconds"].(int); ok && v > 0 {
-		obj.ActiveDeadlineSeconds = ptrToInt64(int64(v))
+		obj.ActiveDeadlineSeconds = ptr.To(int64(v))
 	}
 
 	if v, ok := in["affinity"].([]interface{}); ok && len(v) > 0 {
@@ -730,7 +731,7 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	}
 
 	if v, ok := in["automount_service_account_token"].(bool); ok {
-		obj.AutomountServiceAccountToken = ptrToBool(v)
+		obj.AutomountServiceAccountToken = ptr.To(v)
 	}
 
 	if v, ok := in["container"].([]interface{}); ok && len(v) > 0 {
@@ -766,7 +767,7 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	}
 
 	if v, ok := in["enable_service_links"].(bool); ok {
-		obj.EnableServiceLinks = ptrToBool(v)
+		obj.EnableServiceLinks = ptr.To(v)
 	}
 
 	if v, ok := in["host_aliases"].([]interface{}); ok && len(v) > 0 {
@@ -813,7 +814,7 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	}
 
 	if v, ok := in["runtime_class_name"].(string); ok && v != "" {
-		obj.RuntimeClassName = ptrToString(v)
+		obj.RuntimeClassName = ptr.To(v)
 	}
 
 	if v, ok := in["priority_class_name"].(string); ok {
@@ -841,7 +842,7 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	}
 
 	if v, ok := in["share_process_namespace"]; ok {
-		obj.ShareProcessNamespace = ptrToBool(v.(bool))
+		obj.ShareProcessNamespace = ptr.To(v.(bool))
 	}
 
 	if v, ok := in["subdomain"].(string); ok {
@@ -849,7 +850,7 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	}
 
 	if v, ok := in["termination_grace_period_seconds"].(int); ok {
-		obj.TerminationGracePeriodSeconds = ptrToInt64(int64(v))
+		obj.TerminationGracePeriodSeconds = ptr.To(int64(v))
 	}
 
 	if v, ok := in["toleration"].([]interface{}); ok && len(v) > 0 {
@@ -898,19 +899,19 @@ func expandWindowsOptions(l []interface{}) *v1.WindowsSecurityContextOptions {
 	obj := &v1.WindowsSecurityContextOptions{}
 
 	if v, ok := in["gmsa_credential_spec"].(string); ok {
-		obj.GMSACredentialSpec = ptrToString(v)
+		obj.GMSACredentialSpec = ptr.To(v)
 	}
 
 	if v, ok := in["host_process"].(bool); ok {
-		obj.HostProcess = ptrToBool(v)
+		obj.HostProcess = ptr.To(v)
 	}
 
 	if v, ok := in["gmsa_credential_spec_name"].(string); ok {
-		obj.GMSACredentialSpecName = ptrToString(v)
+		obj.GMSACredentialSpecName = ptr.To(v)
 	}
 
 	if v, ok := in["run_as_username"].(string); ok {
-		obj.RunAsUserName = ptrToString(v)
+		obj.RunAsUserName = ptr.To(v)
 	}
 
 	return obj
@@ -968,7 +969,7 @@ func expandDNSConfigOptions(options []interface{}) []v1.PodDNSConfigOption {
 			opt.Name = v
 		}
 		if v, ok := in["value"].(string); ok {
-			opt.Value = ptrToString(v)
+			opt.Value = ptr.To(v)
 		}
 		opts[i] = opt
 	}
@@ -987,24 +988,24 @@ func expandPodSecurityContext(l []interface{}) (*v1.PodSecurityContext, error) {
 		if err != nil {
 			return obj, err
 		}
-		obj.FSGroup = ptrToInt64(int64(i))
+		obj.FSGroup = ptr.To(int64(i))
 	}
 	if v, ok := in["run_as_group"].(string); ok && v != "" {
 		i, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
 			return obj, err
 		}
-		obj.RunAsGroup = ptrToInt64(int64(i))
+		obj.RunAsGroup = ptr.To(int64(i))
 	}
 	if v, ok := in["run_as_non_root"].(bool); ok {
-		obj.RunAsNonRoot = ptrToBool(v)
+		obj.RunAsNonRoot = ptr.To(v)
 	}
 	if v, ok := in["run_as_user"].(string); ok && v != "" {
 		i, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
 			return obj, err
 		}
-		obj.RunAsUser = ptrToInt64(int64(i))
+		obj.RunAsUser = ptr.To(int64(i))
 	}
 	if v, ok := in["seccomp_profile"].([]interface{}); ok && len(v) > 0 {
 		obj.SeccompProfile = expandSeccompProfile(v)
@@ -1097,7 +1098,7 @@ func expandKeyPath(in []interface{}) []v1.KeyToPath {
 		if v, ok := p["mode"].(string); ok {
 			m, err := strconv.ParseInt(v, 8, 32)
 			if err == nil {
-				keyPaths[i].Mode = ptrToInt32(int32(m))
+				keyPaths[i].Mode = ptr.To(int32(m))
 			}
 		}
 		if v, ok := p["path"].(string); ok {
@@ -1121,7 +1122,7 @@ func expandDownwardAPIVolumeFile(in []interface{}) ([]v1.DownwardAPIVolumeFile, 
 			if err != nil {
 				return dapivf, fmt.Errorf("DownwardAPI volume file: failed to parse 'mode' value: %s", err)
 			}
-			dapivf[i].Mode = ptrToInt32(int32(m))
+			dapivf[i].Mode = ptr.To(int32(m))
 		}
 		if v, ok := p["path"].(string); ok {
 			dapivf[i].Path = v
@@ -1151,7 +1152,7 @@ func expandConfigMapVolumeSource(l []interface{}) (*v1.ConfigMapVolumeSource, er
 		if err != nil {
 			return obj, fmt.Errorf("ConfigMap volume: failed to parse 'default_mode' value: %s", err)
 		}
-		obj.DefaultMode = ptrToInt32(int32(v))
+		obj.DefaultMode = ptr.To(int32(v))
 	}
 
 	if v, ok := in["name"].(string); ok {
@@ -1159,7 +1160,7 @@ func expandConfigMapVolumeSource(l []interface{}) (*v1.ConfigMapVolumeSource, er
 	}
 
 	if opt, ok := in["optional"].(bool); ok {
-		obj.Optional = ptrToBool(opt)
+		obj.Optional = ptr.To(opt)
 	}
 	if v, ok := in["items"].([]interface{}); ok && len(v) > 0 {
 		obj.Items = expandKeyPath(v)
@@ -1180,7 +1181,7 @@ func expandDownwardAPIVolumeSource(l []interface{}) (*v1.DownwardAPIVolumeSource
 		if err != nil {
 			return obj, fmt.Errorf("Downward API volume: failed to parse 'default_mode' value: %s", err)
 		}
-		obj.DefaultMode = ptrToInt32(int32(v))
+		obj.DefaultMode = ptr.To(int32(v))
 	}
 
 	if v, ok := in["items"].([]interface{}); ok && len(v) > 0 {
@@ -1257,7 +1258,7 @@ func expandSecretVolumeSource(l []interface{}) (*v1.SecretVolumeSource, error) {
 		if err != nil {
 			return obj, fmt.Errorf("Secret volume: failed to parse 'default_mode' value: %s", err)
 		}
-		obj.DefaultMode = ptrToInt32(int32(v))
+		obj.DefaultMode = ptr.To(int32(v))
 	}
 
 	if secret, ok := in["secret_name"].(string); ok {
@@ -1265,7 +1266,7 @@ func expandSecretVolumeSource(l []interface{}) (*v1.SecretVolumeSource, error) {
 	}
 
 	if opt, ok := in["optional"].(bool); ok {
-		obj.Optional = ptrToBool(opt)
+		obj.Optional = ptr.To(opt)
 	}
 	if v, ok := in["items"].([]interface{}); ok && len(v) > 0 {
 		obj.Items = expandKeyPath(v)
@@ -1286,7 +1287,7 @@ func expandProjectedVolumeSource(l []interface{}) (*v1.ProjectedVolumeSource, er
 		if err != nil {
 			return obj, fmt.Errorf("Projected volume: failed to parse 'default_mode' value: %s", err)
 		}
-		obj.DefaultMode = ptrToInt32(int32(v))
+		obj.DefaultMode = ptr.To(int32(v))
 	}
 	if v, ok := in["sources"].([]interface{}); ok && len(v) > 0 {
 		srcs, err := expandProjectedSources(v)
@@ -1354,7 +1355,7 @@ func expandProjectedSecret(secret map[string]interface{}) *v1.SecretProjection {
 		s.Items = expandKeyPath(values)
 	}
 	if value, ok := secret["optional"].(bool); ok {
-		s.Optional = ptrToBool(value)
+		s.Optional = ptr.To(value)
 	}
 	return s
 }
@@ -1380,7 +1381,7 @@ func expandProjectedConfigMap(configMap map[string]interface{}) *v1.ConfigMapPro
 		s.Items = expandKeyPath(values)
 	}
 	if value, ok := configMap["optional"].(bool); ok {
-		s.Optional = ptrToBool(value)
+		s.Optional = ptr.To(value)
 	}
 	return s
 }
@@ -1431,7 +1432,7 @@ func expandProjectedServiceAccountToken(sat map[string]interface{}) *v1.ServiceA
 		s.Audience = value
 	}
 	if value, ok := sat["expiration_seconds"].(int); ok {
-		s.ExpirationSeconds = ptrToInt64(int64(value))
+		s.ExpirationSeconds = ptr.To(int64(value))
 	}
 	if value, ok := sat["path"].(string); ok {
 		s.Path = value
@@ -1462,7 +1463,7 @@ func expandTolerations(tolerations []interface{}) ([]*v1.Toleration, error) {
 			if err != nil {
 				return nil, fmt.Errorf("invalid toleration_seconds must be int or \"\", got \"%s\"", value)
 			}
-			ts[i].TolerationSeconds = ptrToInt64(seconds)
+			ts[i].TolerationSeconds = ptr.To(seconds)
 		}
 		if value, ok := m["value"]; ok {
 			ts[i].Value = value.(string)

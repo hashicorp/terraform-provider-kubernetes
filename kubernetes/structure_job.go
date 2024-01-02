@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	batchv1 "k8s.io/api/batch/v1"
+	"k8s.io/utils/ptr"
 )
 
 func flattenJobV1Spec(in batchv1.JobSpec, d *schema.ResourceData, meta interface{}, prefix ...string) ([]interface{}, error) {
@@ -66,15 +67,15 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 	in := j[0].(map[string]interface{})
 
 	if v, ok := in["active_deadline_seconds"].(int); ok && v > 0 {
-		obj.ActiveDeadlineSeconds = ptrToInt64(int64(v))
+		obj.ActiveDeadlineSeconds = ptr.To(int64(v))
 	}
 
 	if v, ok := in["backoff_limit"].(int); ok && v >= 0 {
-		obj.BackoffLimit = ptrToInt32(int32(v))
+		obj.BackoffLimit = ptr.To(int32(v))
 	}
 
 	if v, ok := in["completions"].(int); ok && v > 0 {
-		obj.Completions = ptrToInt32(int32(v))
+		obj.Completions = ptr.To(int32(v))
 	}
 
 	if v, ok := in["completion_mode"].(string); ok && v != "" {
@@ -83,11 +84,11 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 	}
 
 	if v, ok := in["manual_selector"]; ok {
-		obj.ManualSelector = ptrToBool(v.(bool))
+		obj.ManualSelector = ptr.To(v.(bool))
 	}
 
 	if v, ok := in["parallelism"].(int); ok && v >= 0 {
-		obj.Parallelism = ptrToInt32(int32(v))
+		obj.Parallelism = ptr.To(int32(v))
 	}
 
 	if v, ok := in["selector"].([]interface{}); ok && len(v) > 0 {
@@ -105,7 +106,7 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 		if err != nil {
 			return obj, err
 		}
-		obj.TTLSecondsAfterFinished = ptrToInt32(int32(i))
+		obj.TTLSecondsAfterFinished = ptr.To(int32(i))
 	}
 
 	return obj, nil

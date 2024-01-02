@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 )
 
 func resourceKubernetesSecretV1() *schema.Resource {
@@ -125,7 +126,7 @@ func resourceKubernetesSecretV1Create(ctx context.Context, d *schema.ResourceDat
 	}
 
 	if v, ok := d.GetOk("immutable"); ok {
-		secret.Immutable = ptrToBool(v.(bool))
+		secret.Immutable = ptr.To(v.(bool))
 	}
 
 	log.Printf("[INFO] Creating new secret: %#v", secret)
@@ -268,7 +269,7 @@ func resourceKubernetesSecretV1Update(ctx context.Context, d *schema.ResourceDat
 	if d.HasChange("immutable") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/immutable",
-			Value: ptrToBool(d.Get("immutable").(bool)),
+			Value: ptr.To(d.Get("immutable").(bool)),
 		})
 	}
 

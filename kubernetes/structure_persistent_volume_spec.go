@@ -5,6 +5,7 @@ package kubernetes
 
 import (
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -579,10 +580,10 @@ func expandAzureDiskVolumeSource(l []interface{}) *v1.AzureDiskVolumeSource {
 		DataDiskURI: in["data_disk_uri"].(string),
 	}
 	if v, ok := in["fs_type"].(string); ok {
-		obj.FSType = ptrToString(v)
+		obj.FSType = ptr.To(v)
 	}
 	if v, ok := in["read_only"].(bool); ok {
-		obj.ReadOnly = ptrToBool(v)
+		obj.ReadOnly = ptr.To(v)
 	}
 	if v, ok := in["kind"].(string); ok && in["kind"].(string) != "" {
 		kind := v1.AzureDataDiskKind(v)
@@ -717,7 +718,7 @@ func expandFCVolumeSource(l []interface{}) *v1.FCVolumeSource {
 	in := l[0].(map[string]interface{})
 	obj := &v1.FCVolumeSource{
 		TargetWWNs: sliceOfString(in["target_ww_ns"].(*schema.Set).List()),
-		Lun:        ptrToInt32(int32(in["lun"].(int))),
+		Lun:        ptr.To(int32(in["lun"].(int))),
 	}
 	if v, ok := in["fs_type"].(string); ok {
 		obj.FSType = v

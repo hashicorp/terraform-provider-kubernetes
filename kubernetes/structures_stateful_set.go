@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 )
 
 // Expanders
@@ -32,11 +33,11 @@ func expandStatefulSetSpec(s []interface{}) (*v1.StatefulSetSpec, error) {
 		if err != nil {
 			return obj, err
 		}
-		obj.Replicas = ptrToInt32(int32(i))
+		obj.Replicas = ptr.To(int32(i))
 	}
 
 	if v, ok := in["revision_history_limit"].(int); ok {
-		obj.RevisionHistoryLimit = ptrToInt32(int32(v))
+		obj.RevisionHistoryLimit = ptr.To(int32(v))
 	}
 
 	if v, ok := in["selector"].([]interface{}); ok && len(v) > 0 {
@@ -112,7 +113,7 @@ func expandStatefulSetSpecUpdateStrategy(s []interface{}) (*v1.StatefulSetUpdate
 		if !ok {
 			return ust, errors.New("failed to expand 'spec.update_strategy.rolling_update.partition'")
 		}
-		u.Partition = ptrToInt32(int32(p))
+		u.Partition = ptr.To(int32(p))
 		ust.RollingUpdate = &u
 	}
 	log.Printf("[DEBUG] Expanded StatefulSet.Spec.UpdateStrategy: %#v", ust)

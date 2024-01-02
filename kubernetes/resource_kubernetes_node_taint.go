@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 )
 
 func resourceKubernetesNodeTaint() *schema.Resource {
@@ -172,7 +173,7 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 	}
 	patchOpts := metav1.PatchOptions{
 		FieldManager: d.Get("field_manager").(string),
-		Force:        ptrToBool(d.Get("force").(bool)),
+		Force:        ptr.To(d.Get("force").(bool)),
 	}
 	node, err := nodeApi.Patch(ctx, nodeName, types.ApplyPatchType, patchBytes, patchOpts)
 	if err != nil {

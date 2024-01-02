@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 )
 
 func TestFlattenSecretKeyRef(t *testing.T) {
@@ -21,7 +22,7 @@ func TestFlattenSecretKeyRef(t *testing.T) {
 					Name: "Secret1",
 				},
 				Key:      "key1",
-				Optional: ptrToBool(true),
+				Optional: ptr.To(true),
 			},
 			[]interface{}{
 				map[string]interface{}{
@@ -78,7 +79,7 @@ func TestExpandSecretKeyRef(t *testing.T) {
 					Name: "Secret1",
 				},
 				Key:      "key1",
-				Optional: ptrToBool(true),
+				Optional: ptr.To(true),
 			},
 		},
 		{
@@ -121,7 +122,7 @@ func TestFlattenConfigMapKeyRef(t *testing.T) {
 					Name: "configmap1",
 				},
 				Key:      "key1",
-				Optional: ptrToBool(true),
+				Optional: ptr.To(true),
 			},
 			[]interface{}{
 				map[string]interface{}{
@@ -178,7 +179,7 @@ func TestExpandConfigMapKeyRef(t *testing.T) {
 					Name: "configmap1",
 				},
 				Key:      "key1",
-				Optional: ptrToBool(true),
+				Optional: ptr.To(true),
 			},
 		},
 		{

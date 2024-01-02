@@ -6,6 +6,7 @@ package kubernetes
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	storage "k8s.io/api/storage/v1beta1"
+	"k8s.io/utils/ptr"
 )
 
 func expandCSIDriverSpec(l []interface{}) storage.CSIDriverSpec {
@@ -16,11 +17,11 @@ func expandCSIDriverSpec(l []interface{}) storage.CSIDriverSpec {
 	obj := storage.CSIDriverSpec{}
 
 	if v, ok := in["attach_required"].(bool); ok {
-		obj.AttachRequired = ptrToBool(v)
+		obj.AttachRequired = ptr.To(v)
 	}
 
 	if v, ok := in["pod_info_on_mount"].(bool); ok {
-		obj.PodInfoOnMount = ptrToBool(v)
+		obj.PodInfoOnMount = ptr.To(v)
 	}
 
 	if v, ok := in["volume_lifecycle_modes"].([]interface{}); ok && len(v) > 0 {

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 // Flatteners
@@ -188,7 +189,7 @@ func expandSessionAffinityConfigClientIP(l []interface{}) *v1.ClientIPConfig {
 
 	in := l[0].(map[string]interface{})
 	if v, ok := in["timeout_seconds"].(int); ok {
-		obj.TimeoutSeconds = ptrToInt32(int32(v))
+		obj.TimeoutSeconds = ptr.To(int32(v))
 	}
 
 	return obj

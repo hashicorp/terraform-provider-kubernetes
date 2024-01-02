@@ -11,6 +11,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 func flattenCapability(in []v1.Capability) []string {
@@ -588,33 +589,33 @@ func expandContainerSecurityContext(l []interface{}) (*v1.SecurityContext, error
 	in := l[0].(map[string]interface{})
 	obj := v1.SecurityContext{}
 	if v, ok := in["allow_privilege_escalation"]; ok {
-		obj.AllowPrivilegeEscalation = ptrToBool(v.(bool))
+		obj.AllowPrivilegeEscalation = ptr.To(v.(bool))
 	}
 	if v, ok := in["capabilities"].([]interface{}); ok && len(v) > 0 {
 		obj.Capabilities = expandSecurityCapabilities(v)
 	}
 	if v, ok := in["privileged"]; ok {
-		obj.Privileged = ptrToBool(v.(bool))
+		obj.Privileged = ptr.To(v.(bool))
 	}
 	if v, ok := in["read_only_root_filesystem"]; ok {
-		obj.ReadOnlyRootFilesystem = ptrToBool(v.(bool))
+		obj.ReadOnlyRootFilesystem = ptr.To(v.(bool))
 	}
 	if v, ok := in["run_as_group"].(string); ok && v != "" {
 		i, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
 			return &obj, err
 		}
-		obj.RunAsGroup = ptrToInt64(int64(i))
+		obj.RunAsGroup = ptr.To(int64(i))
 	}
 	if v, ok := in["run_as_non_root"]; ok {
-		obj.RunAsNonRoot = ptrToBool(v.(bool))
+		obj.RunAsNonRoot = ptr.To(v.(bool))
 	}
 	if v, ok := in["run_as_user"].(string); ok && v != "" {
 		i, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
 			return &obj, err
 		}
-		obj.RunAsUser = ptrToInt64(int64(i))
+		obj.RunAsUser = ptr.To(int64(i))
 	}
 	if v, ok := in["seccomp_profile"].([]interface{}); ok && len(v) > 0 {
 		obj.SeccompProfile = expandSeccompProfile(v)
@@ -671,7 +672,7 @@ func expandGRPC(l []interface{}) *v1.GRPCAction {
 		obj.Port = int32(v)
 	}
 	if v, ok := in["service"].(string); ok {
-		obj.Service = ptrToString(v)
+		obj.Service = ptr.To(v)
 	}
 	return &obj
 }
@@ -890,7 +891,7 @@ func expandConfigMapKeyRef(r []interface{}) *v1.ConfigMapKeySelector {
 		obj.Name = v
 	}
 	if v, ok := in["optional"]; ok {
-		obj.Optional = ptrToBool(v.(bool))
+		obj.Optional = ptr.To(v.(bool))
 	}
 	return obj
 
@@ -944,7 +945,7 @@ func expandSecretRef(r []interface{}) *v1.SecretEnvSource {
 		obj.Name = v
 	}
 	if v, ok := in["optional"]; ok {
-		obj.Optional = ptrToBool(v.(bool))
+		obj.Optional = ptr.To(v.(bool))
 	}
 
 	return obj
@@ -964,7 +965,7 @@ func expandSecretKeyRef(r []interface{}) *v1.SecretKeySelector {
 		obj.Name = v
 	}
 	if v, ok := in["optional"]; ok {
-		obj.Optional = ptrToBool(v.(bool))
+		obj.Optional = ptr.To(v.(bool))
 	}
 	return obj
 }
@@ -1007,7 +1008,7 @@ func expandConfigMapRef(r []interface{}) *v1.ConfigMapEnvSource {
 		obj.Name = v
 	}
 	if v, ok := in["optional"]; ok {
-		obj.Optional = ptrToBool(v.(bool))
+		obj.Optional = ptr.To(v.(bool))
 	}
 
 	return obj

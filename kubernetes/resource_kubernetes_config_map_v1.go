@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 )
 
 func resourceKubernetesConfigMapV1() *schema.Resource {
@@ -82,7 +83,7 @@ func resourceKubernetesConfigMapV1Create(ctx context.Context, d *schema.Resource
 		ObjectMeta: metadata,
 		BinaryData: expandBase64MapToByteMap(d.Get("binary_data").(map[string]interface{})),
 		Data:       expandStringMap(d.Get("data").(map[string]interface{})),
-		Immutable:  ptrToBool(d.Get("immutable").(bool)),
+		Immutable:  ptr.To(d.Get("immutable").(bool)),
 	}
 
 	log.Printf("[INFO] Creating new config map: %#v", cfgMap)
@@ -160,7 +161,7 @@ func resourceKubernetesConfigMapV1Update(ctx context.Context, d *schema.Resource
 	if d.HasChange("immutable") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  "/immutable",
-			Value: ptrToBool(d.Get("immutable").(bool)),
+			Value: ptr.To(d.Get("immutable").(bool)),
 		})
 	}
 

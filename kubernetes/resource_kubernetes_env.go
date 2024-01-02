@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -512,7 +513,7 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 		patchbytes,
 		v1.PatchOptions{
 			FieldManager: d.Get("field_manager").(string),
-			Force:        ptrToBool(d.Get("force").(bool)),
+			Force:        ptr.To(d.Get("force").(bool)),
 		},
 	)
 	if err != nil {

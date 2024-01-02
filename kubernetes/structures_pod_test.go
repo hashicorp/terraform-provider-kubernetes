@@ -10,6 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
 )
 
 func TestFlattenTolerations(t *testing.T) {
@@ -57,7 +58,7 @@ func TestFlattenTolerations(t *testing.T) {
 			[]corev1.Toleration{
 				{
 					Effect:            "NoExecute",
-					TolerationSeconds: ptrToInt64(int64(120)),
+					TolerationSeconds: ptr.To(int64(120)),
 				},
 			},
 			[]interface{}{
@@ -133,7 +134,7 @@ func TestExpandTolerations(t *testing.T) {
 			[]*corev1.Toleration{
 				{
 					Effect:            "NoExecute",
-					TolerationSeconds: ptrToInt64(int64(120)),
+					TolerationSeconds: ptr.To(int64(120)),
 				},
 			},
 		},
@@ -162,13 +163,13 @@ func TestFlattenSecretVolumeSource(t *testing.T) {
 	}{
 		{
 			&corev1.SecretVolumeSource{
-				DefaultMode: ptrToInt32(int32(0644)),
+				DefaultMode: ptr.To(int32(0644)),
 				SecretName:  "secret1",
-				Optional:    ptrToBool(true),
+				Optional:    ptr.To(true),
 				Items: []corev1.KeyToPath{
 					{
 						Key:  "foo.txt",
-						Mode: ptrToInt32(int32(0600)),
+						Mode: ptr.To(int32(0600)),
 						Path: "etc/foo.txt",
 					},
 				},
@@ -190,7 +191,7 @@ func TestFlattenSecretVolumeSource(t *testing.T) {
 		},
 		{
 			&corev1.SecretVolumeSource{
-				DefaultMode: ptrToInt32(int32(0755)),
+				DefaultMode: ptr.To(int32(0755)),
 				SecretName:  "secret2",
 				Items: []corev1.KeyToPath{
 					{
@@ -248,13 +249,13 @@ func TestExpandSecretVolumeSource(t *testing.T) {
 				},
 			},
 			&corev1.SecretVolumeSource{
-				DefaultMode: ptrToInt32(int32(0644)),
+				DefaultMode: ptr.To(int32(0644)),
 				SecretName:  "secret1",
-				Optional:    ptrToBool(true),
+				Optional:    ptr.To(true),
 				Items: []corev1.KeyToPath{
 					{
 						Key:  "foo.txt",
-						Mode: ptrToInt32(int32(0600)),
+						Mode: ptr.To(int32(0600)),
 						Path: "etc/foo.txt",
 					},
 				},
@@ -274,7 +275,7 @@ func TestExpandSecretVolumeSource(t *testing.T) {
 				},
 			},
 			&corev1.SecretVolumeSource{
-				DefaultMode: ptrToInt32(int32(0755)),
+				DefaultMode: ptr.To(int32(0755)),
 				SecretName:  "secret2",
 				Items: []corev1.KeyToPath{
 					{
@@ -360,12 +361,12 @@ func TestFlattenConfigMapVolumeSource(t *testing.T) {
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: "configmap1",
 				},
-				DefaultMode: ptrToInt32(int32(0644)),
-				Optional:    ptrToBool(true),
+				DefaultMode: ptr.To(int32(0644)),
+				Optional:    ptr.To(true),
 				Items: []corev1.KeyToPath{
 					{
 						Key:  "foo.txt",
-						Mode: ptrToInt32(int32(0600)),
+						Mode: ptr.To(int32(0600)),
 						Path: "etc/foo.txt",
 					},
 				},
@@ -390,7 +391,7 @@ func TestFlattenConfigMapVolumeSource(t *testing.T) {
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: "configmap2",
 				},
-				DefaultMode: ptrToInt32(int32(0755)),
+				DefaultMode: ptr.To(int32(0755)),
 				Items: []corev1.KeyToPath{
 					{
 						Key:  "bar.txt",
@@ -450,12 +451,12 @@ func TestExpandConfigMapVolumeSource(t *testing.T) {
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: "configmap1",
 				},
-				DefaultMode: ptrToInt32(int32(0644)),
-				Optional:    ptrToBool(true),
+				DefaultMode: ptr.To(int32(0644)),
+				Optional:    ptr.To(true),
 				Items: []corev1.KeyToPath{
 					{
 						Key:  "foo.txt",
-						Mode: ptrToInt32(int32(0600)),
+						Mode: ptr.To(int32(0600)),
 						Path: "etc/foo.txt",
 					},
 				},
@@ -478,7 +479,7 @@ func TestExpandConfigMapVolumeSource(t *testing.T) {
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: "configmap2",
 				},
-				DefaultMode: ptrToInt32(int32(0755)),
+				DefaultMode: ptr.To(int32(0755)),
 				Items: []corev1.KeyToPath{
 					{
 						Key:  "bar.txt",
@@ -585,8 +586,8 @@ func TestExpandCSIVolumeSource(t *testing.T) {
 			},
 			ExpectedOutput: &corev1.CSIVolumeSource{
 				Driver:   "secrets-store.csi.k8s.io",
-				ReadOnly: ptrToBool(true),
-				FSType:   ptrToString("nfs"),
+				ReadOnly: ptr.To(true),
+				FSType:   ptr.To("nfs"),
 				VolumeAttributes: map[string]string{
 					"secretProviderClass": "azure-keyvault",
 				},
@@ -638,8 +639,8 @@ func TestFlattenCSIVolumeSource(t *testing.T) {
 		{
 			Input: &corev1.CSIVolumeSource{
 				Driver:   "secrets-store.csi.k8s.io",
-				ReadOnly: ptrToBool(true),
-				FSType:   ptrToString("nfs"),
+				ReadOnly: ptr.To(true),
+				FSType:   ptr.To("nfs"),
 				VolumeAttributes: map[string]string{
 					"secretProviderClass": "azure-keyvault",
 				},

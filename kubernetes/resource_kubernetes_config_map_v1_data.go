@@ -15,6 +15,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 )
 
 func resourceKubernetesConfigMapV1Data() *schema.Resource {
@@ -194,7 +195,7 @@ func resourceKubernetesConfigMapV1DataUpdate(ctx context.Context, d *schema.Reso
 		patchbytes,
 		v1.PatchOptions{
 			FieldManager: d.Get("field_manager").(string),
-			Force:        ptrToBool(d.Get("force").(bool)),
+			Force:        ptr.To(d.Get("force").(bool)),
 		},
 	)
 	if err != nil {

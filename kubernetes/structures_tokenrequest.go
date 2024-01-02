@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	authv1 "k8s.io/api/authentication/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 )
 
 // Flatteners
@@ -57,7 +58,7 @@ func expandTokenRequestV1Spec(p []interface{}) *authv1.TokenRequestSpec {
 	obj.BoundObjectRef = expandBoundObjectReference(in["bound_object_ref"].([]interface{}))
 
 	if v, ok := in["expiration_seconds"].(int); v != 0 && ok {
-		obj.ExpirationSeconds = ptrToInt64(int64(v))
+		obj.ExpirationSeconds = ptr.To(int64(v))
 	}
 
 	return obj

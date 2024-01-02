@@ -21,7 +21,7 @@ Please note: We take Terraform's security and our users' trust very seriously. I
 ## Requirements
 
 -	[Terraform](https://www.terraform.io/downloads.html) 0.12.x
--	[Go](https://golang.org/doc/install) 1.16.x (to build the provider plugin)
+-	[Go](https://golang.org/doc/install) 1.18+ (to build the provider plugin)
 
 
 ## Contributing to the provider

@@ -12,11 +12,11 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/terraform-provider-kubernetes/internal/pointer"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
 	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 )
 
 func TestDataSourceKubernetesResources_DiffTuples(t *testing.T) {
@@ -58,7 +58,7 @@ func TestDataSourceKubernetesResources_DiffTuples(t *testing.T) {
 	}
 	podSpecs := []corev1.PodSpec{
 		{
-			TerminationGracePeriodSeconds: pointer.PointerOf(int64(1)),
+			TerminationGracePeriodSeconds: ptr.To(int64(1)),
 			Containers: []corev1.Container{
 				{
 					Name:    "this",
@@ -79,7 +79,7 @@ func TestDataSourceKubernetesResources_DiffTuples(t *testing.T) {
 			Volumes: volumes,
 		},
 		{
-			TerminationGracePeriodSeconds: pointer.PointerOf(int64(1)),
+			TerminationGracePeriodSeconds: ptr.To(int64(1)),
 			Containers: []corev1.Container{
 				{
 					Name:    "this",

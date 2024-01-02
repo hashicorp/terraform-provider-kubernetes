@@ -16,6 +16,7 @@ import (
 func TestFlattenTolerations(t *testing.T) {
 	cases := []struct {
 		Input          []corev1.Toleration
+		IsTeamplate    bool
 		ExpectedOutput []interface{}
 	}{
 		{
@@ -25,6 +26,7 @@ func TestFlattenTolerations(t *testing.T) {
 					Value: "true",
 				},
 			},
+			false,
 			[]interface{}{
 				map[string]interface{}{
 					"key":   "node-role.kubernetes.io/spot-worker",
@@ -43,6 +45,7 @@ func TestFlattenTolerations(t *testing.T) {
 					Value: "true",
 				},
 			},
+			false,
 			[]interface{}{
 				map[string]interface{}{
 					"key":      "node-role.kubernetes.io/other-worker",
@@ -61,6 +64,7 @@ func TestFlattenTolerations(t *testing.T) {
 					TolerationSeconds: ptr.To(int64(120)),
 				},
 			},
+			false,
 			[]interface{}{
 				map[string]interface{}{
 					"effect":             "NoExecute",
@@ -69,13 +73,50 @@ func TestFlattenTolerations(t *testing.T) {
 			},
 		},
 		{
-			[]corev1.Toleration{},
+			[]corev1.Toleration{
+				{
+					Effect:            "NoExecute",
+					Key:               "node.kubernetes.io/unreachable",
+					Operator:          "Exists",
+					TolerationSeconds: ptr.To(int64(120)),
+				},
+			},
+			false,
 			[]interface{}{},
+		},
+		{
+			[]corev1.Toleration{},
+			false,
+			[]interface{}{},
+		},
+		{
+			[]corev1.Toleration{},
+			true,
+			[]interface{}{},
+		},
+		{
+			[]corev1.Toleration{
+				{
+					Effect:            "NoExecute",
+					Key:               "node.kubernetes.io/unreachable",
+					Operator:          "Exists",
+					TolerationSeconds: ptr.To(int64(120)),
+				},
+			},
+			true,
+			[]interface{}{
+				map[string]interface{}{
+					"effect":             "NoExecute",
+					"key":                "node.kubernetes.io/unreachable",
+					"operator":           "Exists",
+					"toleration_seconds": "120",
+				},
+			},
 		},
 	}
 
 	for _, tc := range cases {
-		output := flattenTolerations(tc.Input)
+		output := flattenTolerations(tc.Input, tc.IsTeamplate)
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)

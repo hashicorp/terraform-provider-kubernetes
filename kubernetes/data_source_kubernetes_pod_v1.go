@@ -70,7 +70,7 @@ func dataSourceKubernetesPodV1Read(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	podSpec, err := flattenPodSpec(pod.Spec)
+	podSpec, err := flattenPodSpec(pod.Spec, true)
 	if err != nil {
 		return diag.FromErr(err)
 	}

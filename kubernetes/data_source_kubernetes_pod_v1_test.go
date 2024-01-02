@@ -5,6 +5,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -16,6 +17,7 @@ func TestAccKubernetesDataSourcePodV1_basic(t *testing.T) {
 	dataSourceName := "data.kubernetes_pod_v1.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := busyboxImage
+	oneOrMore := regexp.MustCompile(`^[1-9][0-9]*$`)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -34,6 +36,7 @@ func TestAccKubernetesDataSourcePodV1_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(dataSourceName, "spec.0.container.0.image", imageName),
+					resource.TestMatchResourceAttr(dataSourceName, "spec.0.toleration.#", oneOrMore),
 				),
 			},
 		},

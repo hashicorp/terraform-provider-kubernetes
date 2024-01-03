@@ -5,7 +5,7 @@ on:
     inputs:
       location:
         description: 'Location'
-        default: "Canada Central"
+        default: "Canada East"
       nodeCount:
         description: 'Number of nodes to provision'
         default: 2

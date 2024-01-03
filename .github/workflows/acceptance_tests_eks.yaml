@@ -5,7 +5,7 @@ on:
     inputs:
       region:
         description: The AWS region
-        default: us-east-1
+        default: ca-central-1
       azSpan:
         description: The number of AZs to spread cluster nodes across
         default: 2

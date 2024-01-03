@@ -5,10 +5,10 @@ on:
     inputs:
       region:
         description: The GKE region
-        default: us-west1
+        default: northamerica-northeast1
       zone:
         description: The GKE zone
-        default: us-west1-c
+        default: northamerica-northeast1-a
       clusterVersion:
         description: The GKE cluster version
         default: 1.27

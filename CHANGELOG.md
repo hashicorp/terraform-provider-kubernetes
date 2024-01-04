@@ -1,3 +1,9 @@
+## 2.25.1 (Jan 4, 2024)
+
+HOTFIX:
+
+* `kubernetes_manifest`: Implement response for GetMetadata protocol function [[GH-2384](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2384)]
+
 ## 2.25.0 (Jan 4, 2024)
 
 ENHANCEMENTS:

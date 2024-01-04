@@ -1,3 +1,34 @@
+## 2.25.0 (Jan 4, 2024)
+
+ENHANCEMENTS:
+
+* Add terraform-plugin-framework provider [[GH-2347](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2347)]
+* `data_source/kubernetes_persistent_volume_claim_v1`: add a new attribute `spec.volume_mode`. [[GH-2353](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2353)]
+* `data_source/kubernetes_persistent_volume_claim`: add a new attribute `spec.volume_mode`. [[GH-2353](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2353)]
+* `kubernetes/schema_stateful_set_spec.go`: Add `spec.persistentVolumeClaimRetentionPolicy` in `kubernetes_stateful_set` [[GH-2333](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2333)]
+* `resource/kubernetes_persistent_volume_claim_v1`: add a new attribute `spec.volume_mode`. [[GH-2353](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2353)]
+* `resource/kubernetes_persistent_volume_claim`: add a new attribute `spec.volume_mode`. [[GH-2353](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2353)]
+* `resource/kubernetes_stateful_set_v1`: add a new attribute `spec.volume_claim_template.spec.volume_mode`. [[GH-2353](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2353)]
+* `resource/kubernetes_stateful_set`: add a new attribute `spec.volume_claim_template.spec.volume_mode`. [[GH-2353](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2353)]
+
+BUG FIXES:
+
+* `resource/kubernetes_cron_job_v1`: Change the schema to include a namespace in `jobTemplate`
+`resource/kubernetes_stateful_set_v1`: Change the schema to include a namespace in `template` [[GH-2362](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2362)]
+* `resource/kubernetes_ingress_v1`: Fix an issue where the empty `tls` attribute in the configuration does not generate the corresponding Ingress object without any TLS configuration. [[GH-2344](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2344)]
+* `resource/kubernetes_ingress`: Fix an issue where the empty `tls` attribute in the configuration does not generate the corresponding Ingress object without any TLS configuration. [[GH-2344](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2344)]
+
+NOTES:
+
+* We have updated the logic of data sources and now the provider will return all annotations and labels attached to the object, regardless of the `ignore_annotations` and `ignore_labels` provider settings. In addition to that, a list of ignored labels when they are attached to `kubernetes_job(_v1)` and `kubernetes_cron_job(_v1)` resources were extended with labels `batch.kubernetes.io/controller-uid` and `batch.kubernetes.io/job-name` since they aim to replace `controller-uid` and `job-name` in the future Kubernetes releases. [[GH-2345](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2345)]
+
+## Community Contributors :raised_hands:
+
+- @tbobm made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/2348
+- @andremarianiello made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/2344
+- @adinhodovic made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/2333
+- @wonko made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/2362
+
 ## 2.24.0 (Nov 27, 2023)
 
 ENHANCEMENTS:

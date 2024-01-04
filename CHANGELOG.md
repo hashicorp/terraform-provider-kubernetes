@@ -22,6 +22,8 @@ NOTES:
 
 * We have updated the logic of data sources and now the provider will return all annotations and labels attached to the object, regardless of the `ignore_annotations` and `ignore_labels` provider settings. In addition to that, a list of ignored labels when they are attached to `kubernetes_job(_v1)` and `kubernetes_cron_job(_v1)` resources were extended with labels `batch.kubernetes.io/controller-uid` and `batch.kubernetes.io/job-name` since they aim to replace `controller-uid` and `job-name` in the future Kubernetes releases. [[GH-2345](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2345)]
 
+A special and warm welcome to the first contribution from our teammate @SarahFrench! 🚀
+
 ## Community Contributors :raised_hands:
 
 - @tbobm made their contribution in https://github.com/hashicorp/terraform-provider-kubernetes/pull/2348

@@ -403,7 +403,7 @@ func testAccKubernetesCronJobV1ConfigMinimal(name, imageName string) string {
               image   = "%s"
               command = ["sleep", "5"]
             }
-			termination_grace_period_seconds = 1
+            termination_grace_period_seconds = 1
           }
         }
       }
@@ -435,7 +435,7 @@ func testAccKubernetesCronJobV1ConfigMinimalWithJobTemplateNamespace(name, image
               image   = "%s"
               command = ["sleep", "1"]
             }
-			termination_grace_period_seconds = 1
+            termination_grace_period_seconds = 1
           }
         }
       }

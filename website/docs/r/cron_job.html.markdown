@@ -105,7 +105,7 @@ These arguments are the same as the for the `metadata` block of a Pod with a few
 
 * When `spec.template.metadata.namespace` does not have a default value, it is empty if not set.
 
-* The `spec.template.metadata.namespace` is a stub field that does not affect the namespace in which the Pod will be created. The Pod will be created in the same namespace as the main resource. However, modifying this field will necessitate the recreation of the resource.
+* The `spec.template.metadata.namespace` is a stub field that does not affect the namespace in which the Pod will be created. The Pod will be created in the same namespace as the main resource. However, modifying this field will force the resource recreation.
 
 ### `spec`
 

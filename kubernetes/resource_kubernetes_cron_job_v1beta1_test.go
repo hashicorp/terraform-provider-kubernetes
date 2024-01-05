@@ -130,11 +130,14 @@ func TestAccKubernetesCronJobV1Beta1_minimalWithTemplateNamespace(t *testing.T) 
 	var conf1, conf2 batchv1beta1.CronJob
 
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_cron_job_v1.test"
+	resourceName := "kubernetes_cron_job.test"
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.25.0")
+		},
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
@@ -148,7 +151,7 @@ func TestAccKubernetesCronJobV1Beta1_minimalWithTemplateNamespace(t *testing.T) 
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.namespace"),
-					resource.TestCheckNoResourceAttr(resourceName, "spec.0.job_template.0.spec.0.namespace"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.metadata.0.namespace", ""),
 				),
 			},
 			{
@@ -382,7 +385,6 @@ func testAccKubernetesCronJobV1Beta1ConfigMinimal(name, imageName string) string
               image   = "%s"
               command = ["sleep", "5"]
             }
-			termination_grace_period_seconds = 1
           }
         }
       }
@@ -416,7 +418,6 @@ func testAccKubernetesCronJobV1Beta1ConfigMinimalWithJobTemplateNamespace(name, 
               image   = "%s"
               command = ["sleep", "5"]
             }
-			termination_grace_period_seconds = 1
           }
         }
       }

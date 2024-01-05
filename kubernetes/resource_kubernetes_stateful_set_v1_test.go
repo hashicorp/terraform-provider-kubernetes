@@ -347,7 +347,7 @@ func TestAccKubernetesStatefulSetV1_minimalWithTemplateNamespace(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.namespace"),
-					resource.TestCheckNoResourceAttr(resourceName, "spec.0.template.0.spec.0.namespace"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.namespace", ""),
 				),
 			},
 			{

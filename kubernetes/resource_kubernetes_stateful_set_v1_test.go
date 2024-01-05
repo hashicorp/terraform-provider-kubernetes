@@ -85,7 +85,6 @@ func TestAccKubernetesStatefulSetV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.labels.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.labels.app", "ss-test"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.namespace", "ns-test"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.name", "ss-test"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.port.0.container_port", "80"),
@@ -326,6 +325,47 @@ func TestAccKubernetesStatefulSetV1_waitForRollout(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesStatefulSetV1_minimalWithTemplateNamespace(t *testing.T) {
+	var conf1, conf2 appsv1.StatefulSet
+
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_stateful_set_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigMinimal(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf1),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.namespace"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.template.0.spec.0.namespace"),
+				),
+			},
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigMinimalWithTemplateNamespace(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.namespace"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.template.0.metadata.0.namespace"),
+					testAccCheckKubernetesStatefulSetForceNew(&conf1, &conf2, true),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesStatefulSetForceNew(old, new *appsv1.StatefulSet, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {
@@ -504,7 +544,6 @@ func testAccKubernetesStatefulSetV1ConfigBasic(name, imageName string) string {
         labels = {
           app = "ss-test"
         }
-        namespace = "ns-test"
       }
 
       spec {
@@ -1240,6 +1279,41 @@ func testAccKubernetesStatefulSetV1ConfigUpdatePersistentVolumeClaimRetentionPol
             storage = "1Gi"
           }
         }
+      }
+    }
+  }
+}
+`, name, imageName)
+}
+
+func testAccKubernetesStatefulSetV1ConfigMinimalWithTemplateNamespace(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    selector {
+      match_labels = {
+        app = "ss-test"
+      }
+    }
+    service_name = "ss-test-service"
+    template {
+      metadata {
+        // The namespace field is just a stub and does not influence where the Pod will be created.
+        // The Pod will be created within the same Namespace as the Stateful Set resource.
+        namespace = "fake" // Doesn't have to exist.
+        labels = {
+          app = "ss-test"
+        }
+      }
+      spec {
+        container {
+          name    = "ss-test"
+          image   = "%s"
+          command = ["sleep", "300"]
+        }
+        termination_grace_period_seconds = 1
       }
     }
   }

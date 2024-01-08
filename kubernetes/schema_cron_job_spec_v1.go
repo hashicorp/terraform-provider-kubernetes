@@ -30,7 +30,7 @@ func cronJobSpecFieldsV1() map[string]*schema.Schema {
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
-					"metadata": namespacedMetadataSchema("jobTemplateSpec", true),
+					"metadata": namespacedMetadataSchemaIsTemplate("jobTemplateSpec", true, true),
 					"spec": {
 						Type:        schema.TypeList,
 						Description: "Specification of the desired behavior of the job",

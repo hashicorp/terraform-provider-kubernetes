@@ -40,7 +40,7 @@ require (
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect
-	github.com/cloudflare/circl v1.3.3 // indirect
+	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
 	github.com/google/gnostic v0.6.9 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect

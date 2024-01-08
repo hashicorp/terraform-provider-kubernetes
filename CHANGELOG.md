@@ -1,3 +1,19 @@
+## 2.25.2 (Jan 8, 2024)
+
+BUG FIXES:
+
+* `resource/kubernetes_cron_job_v1`: fix an issue when the provider forces a resource recreation after upgrading to `2.25.0` and `2.25.1` due to changes in the resource schema. [[GH-2387](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2387)]
+* `resource/kubernetes_cron_job`: fix an issue when the provider forces a resource recreation after upgrading to `2.25.0` and `2.25.1` due to changes in the resource schema. [[GH-2387](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2387)]
+* `resource/kubernetes_daemon_set_v1`: fix an issue when the provider forces a resource recreation after upgrading to `2.25.0` and `2.25.1` due to changes in the resource schema. [[GH-2387](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2387)]
+* `resource/kubernetes_daemonset`: fix an issue when the provider forces a resource recreation after upgrading to `2.25.0` and `2.25.1` due to changes in the resource schema. [[GH-2387](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2387)]
+* `resource/kubernetes_stateful_set_v1`: fix an issue when the provider forces a resource recreation after upgrading to `2.25.0` and `2.25.1` due to changes in the resource schema. [[GH-2387](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2387)]
+* `resource/kubernetes_stateful_set`: fix an issue when the provider forces a resource recreation after upgrading to `2.25.0` and `2.25.1` due to changes in the resource schema. [[GH-2387](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2387)]
+
+NOTES:
+
+* Resources `kubernetes_cron_job_v1` and `kubernetes_cron_job` got a new attribute `spec.job_template.metadata.namespace`. It is a stub attribute that does not affect the namespace in which the Pod will be created. The Pod will be created in the same namespace as the main resource. However, modifying this field will force the resource recreation. [[GH-2387](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2387)]
+* Resources `kubernetes_stateful_set_v1`, `kubernetes_stateful_set`, `kubernetes_daemon_set_v1`, and `kubernetes_daemonset` got a new attribute `spec.template.metadata.namespace`. It is a stub attribute that does not affect the namespace in which the Pod will be created. The Pod will be created in the same namespace as the main resource. However, modifying this field will force the resource recreation. [[GH-2387](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2387)]
+
 ## 2.25.1 (Jan 4, 2024)
 
 HOTFIX:

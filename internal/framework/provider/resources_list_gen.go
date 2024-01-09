@@ -10,5 +10,4 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 )
 
-var generatedResources = []func() resource.Resource{
-}
+var generatedResources = []func() resource.Resource{}

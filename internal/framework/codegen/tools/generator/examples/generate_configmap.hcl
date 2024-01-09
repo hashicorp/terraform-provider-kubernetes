@@ -9,9 +9,8 @@ resource "kubernetes_config_map_v1" {
 
   output_filename_prefix = "config_map"
 
-  tfplugingen_openapi {
-    openapi_spec_filename = "./codegen/data/kubernetes-v1.28.3/api/openapi-spec/v3/api__v1_openapi.json"
-    
+  openapi {
+    filename    = "./codegen/data/kubernetes-v1.28.3/api/openapi-spec/v3/api__v1_openapi.json"
     create_path = "/api/v1/namespaces/{namespace}/configmaps"
     read_path   = "/api/v1/namespaces/{namespace}/configmaps/{name}"
   }

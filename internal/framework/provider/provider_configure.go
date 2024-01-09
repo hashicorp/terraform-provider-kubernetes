@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/hashicorp/terraform-provider-kubernetes/framework/provider/client"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/client"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 

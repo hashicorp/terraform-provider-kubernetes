@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-provider-kubernetes/framework/provider/client"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/client"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.

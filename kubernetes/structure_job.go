@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	batchv1 "k8s.io/api/batch/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 )
 
@@ -36,6 +37,10 @@ func flattenJobV1Spec(in batchv1.JobSpec, d *schema.ResourceData, meta interface
 
 	if in.Parallelism != nil {
 		att["parallelism"] = *in.Parallelism
+	}
+
+	if in.Selector != nil {
+		att["pod_failure_policy"] = flattenPodFailurePolicy(in.PodFailurePolicy)
 	}
 
 	if in.Selector != nil {
@@ -91,6 +96,10 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 		obj.Parallelism = ptr.To(int32(v))
 	}
 
+	if v, ok := in["pod_failure_policy"].([]interface{}); ok && len(v) > 0 {
+		obj.PodFailurePolicy = expandPodFailurePolicy(v)
+	}
+
 	if v, ok := in["selector"].([]interface{}); ok && len(v) > 0 {
 		obj.Selector = expandLabelSelector(v)
 	}
@@ -110,6 +119,92 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 	}
 
 	return obj, nil
+}
+
+func expandPodFailurePolicy(l []interface{}) *batchv1.PodFailurePolicy {
+	obj := &batchv1.PodFailurePolicy{}
+	if len(l) == 0 || l[0] == nil {
+		return obj
+	}
+	in := l[0].(map[string]interface{})
+
+	if v, ok := in["rules"].([]interface{}); ok && len(v) > 0 {
+		rules := expandPodFailurePolicyRules(in["rules"].([]interface{}))
+		obj.Rules = rules
+	}
+	return obj
+}
+
+func expandPodFailurePolicyRules(l []interface{}) []batchv1.PodFailurePolicyRule {
+	obj := make([]batchv1.PodFailurePolicyRule, len(l))
+	if len(l) == 0 || l[0] == nil {
+		return obj
+	}
+	for i, rule := range l {
+		objRule := &batchv1.PodFailurePolicyRule{}
+
+		r := rule.(map[string]interface{})
+
+		if v, ok := r["action"].(string); ok && v != "" {
+			objRule.Action = batchv1.PodFailurePolicyAction(v)
+		}
+
+		if v, ok := r["on_exit_codes"].([]interface{}); ok && len(v) > 0 {
+			onExitCodes := expandPodFailurePolicyOnExitCodesRequirement(v)
+			objRule.OnExitCodes = *&onExitCodes
+		}
+
+		if v, ok := r["on_pod_conditions"].([]interface{}); ok && len(v) > 0 {
+			podConditions := expandPodFailurePolicyOnPodConditionsPattern(v)
+			objRule.OnPodConditions = podConditions
+		}
+
+		obj[i] = *objRule
+	}
+
+	return obj
+}
+
+func expandPodFailurePolicyOnExitCodesRequirement(l []interface{}) *batchv1.PodFailurePolicyOnExitCodesRequirement {
+	obj := &batchv1.PodFailurePolicyOnExitCodesRequirement{}
+	if len(l) == 0 || l[0] == nil {
+		return obj
+	}
+	in := l[0].(map[string]interface{})
+
+	if v, ok := in["container_name"].(string); ok && v != "" {
+		obj.ContainerName = &v
+	}
+
+	if v, ok := in["operator"].(string); ok && v != "" {
+		obj.Operator = batchv1.PodFailurePolicyOnExitCodesOperator(v)
+	}
+
+	if v, ok := in["values"].([]int32); ok && v != nil {
+		obj.Values = v
+	}
+
+	return obj
+}
+
+func expandPodFailurePolicyOnPodConditionsPattern(l []interface{}) []batchv1.PodFailurePolicyOnPodConditionsPattern {
+	obj := make([]batchv1.PodFailurePolicyOnPodConditionsPattern, len(l))
+	if len(l) == 0 || l[0] == nil {
+		return obj
+	}
+	for i, condition := range l {
+		objCondition := &batchv1.PodFailurePolicyOnPodConditionsPattern{}
+		c := condition.(map[string]interface{})
+		if v, ok := c["status"].(string); ok && v != "" {
+			objCondition.Status = v1.ConditionStatus(v)
+		}
+
+		if v, ok := c["operator"].(string); ok && v != "" {
+			objCondition.Type = v1.PodConditionType(v)
+		}
+		obj[i] = *objCondition
+	}
+	return obj
 }
 
 func patchJobV1Spec(pathPrefix, prefix string, d *schema.ResourceData) PatchOperations {

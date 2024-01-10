@@ -110,8 +110,8 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 									Type:     schema.TypeString,
 									Optional: true,
 								},
-								"on_exit_codes":     {
-									Type: schema.TypeList,
+								"on_exit_codes": {
+									Type:     schema.TypeList,
 									Required: true,
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
@@ -129,10 +129,9 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 											},
 										},
 									},
-									},
 								},
 								"on_pod_conditions": {
-									Type: schema.TypeList,
+									Type:     schema.TypeList,
 									Required: true,
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{

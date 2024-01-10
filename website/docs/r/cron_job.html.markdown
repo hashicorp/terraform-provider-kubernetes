@@ -15,7 +15,7 @@ description: |-
   Note: All CronJob `schedule` times are based on the timezone of the master where the job is initiated.
   For instructions on creating and working with cron jobs, and for an example of a spec file for a cron job, see [Kubernetes reference](https://kubernetes.io/docs/tasks/job/automated-tasks-with-cron-jobs/).
 
-~> NOTE: With the release of Kubernetes v1.25, CronJob batch/v1beta1 has been removed. You can read more information about migrating to batch/v1 in the [Kubernetes 1.25 migration guide](https://kubernetes.io/docs/reference/using-api/deprecation-guide/#cronjob-v125).
+~> NOTE: With the release of Kubernetes v1.25, CronJob batch/v1beta1 has been removed. You can read more information about migrating to batch/v1 in the [Kubernetes Migrate to non-deprecated APIs guide](https://kubernetes.io/docs/reference/using-api/deprecation-guide/#migrate-to-non-deprecated-apis).
 
 ## Example Usage
 

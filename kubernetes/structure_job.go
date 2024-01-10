@@ -207,6 +207,54 @@ func expandPodFailurePolicyOnPodConditionsPattern(l []interface{}) []batchv1.Pod
 	return obj
 }
 
+func flattenPodFailurePolicy(in *batchv1.PodFailurePolicy) []interface{} {
+	att := make(map[string]interface{})
+	if len(in.Rules) > 0 {
+		att["rules"] = flattenPodFailurePolicyRules(in.Rules)
+	}
+	return []interface{}{att}
+}
+
+func flattenPodFailurePolicyRules(in []batchv1.PodFailurePolicyRule) []interface{} {
+	att := make([]interface{}, len(in))
+
+	for i, r := range in {
+		m := make(map[string]interface{})
+		m["action"] = r.Action
+		m["on_exit_codes"] = flattenPodFailurePolicyOnExitCodes(r.OnExitCodes)
+		m["on_pod_conditions"] = flattenPodFailurePolicyOnPodConditions(r.OnPodConditions)
+
+		att[i] = m
+	}
+
+	return []interface{}{att}
+}
+
+func flattenPodFailurePolicyOnExitCodes(in *batchv1.PodFailurePolicyOnExitCodesRequirement) []interface{} {
+	att := make(map[string]interface{})
+	att["container_name"] = in.ContainerName
+	att["operator"] = in.Operator
+	if len(in.Values) != 0 {
+		att["values"] = in.Values
+	}
+
+	return []interface{}{att}
+}
+
+func flattenPodFailurePolicyOnPodConditions(in []batchv1.PodFailurePolicyOnPodConditionsPattern) []interface{} {
+	att := make([]interface{}, len(in))
+
+	for i, r := range in {
+		m := make(map[string]interface{})
+		m["status"] = r.Status
+		m["type"] = r.Type
+
+		att[i] = m
+	}
+
+	return att
+}
+
 func patchJobV1Spec(pathPrefix, prefix string, d *schema.ResourceData) PatchOperations {
 	ops := make([]PatchOperation, 0)
 

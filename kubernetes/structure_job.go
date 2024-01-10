@@ -128,8 +128,8 @@ func expandPodFailurePolicy(l []interface{}) *batchv1.PodFailurePolicy {
 	}
 	in := l[0].(map[string]interface{})
 
-	if v, ok := in["rules"].([]interface{}); ok && len(v) > 0 {
-		rules := expandPodFailurePolicyRules(in["rules"].([]interface{}))
+	if v, ok := in["rule"].([]interface{}); ok && len(v) > 0 {
+		rules := expandPodFailurePolicyRules(in["rule"].([]interface{}))
 		obj.Rules = rules
 	}
 	return obj
@@ -210,7 +210,7 @@ func expandPodFailurePolicyOnPodConditionsPattern(l []interface{}) []batchv1.Pod
 func flattenPodFailurePolicy(in *batchv1.PodFailurePolicy) []interface{} {
 	att := make(map[string]interface{})
 	if len(in.Rules) > 0 {
-		att["rules"] = flattenPodFailurePolicyRules(in.Rules)
+		att["rule"] = flattenPodFailurePolicyRules(in.Rules)
 	}
 	return []interface{}{att}
 }

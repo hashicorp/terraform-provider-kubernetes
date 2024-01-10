@@ -92,15 +92,14 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			Description:  "Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
 		},
 		"pod_failure_policy": {
-			Type:         schema.TypeList,
-			Optional:     true,
-			ForceNew:     false,
-			MaxItems:     1,
-			ValidateFunc: validateNonNegativeInteger,
-			Description:  "Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
+			Type:        schema.TypeList,
+			Optional:    true,
+			ForceNew:    false,
+			MaxItems:    1,
+			Description: "Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
-					"rules": {
+					"rule": {
 						Type:        schema.TypeList,
 						Description: "A label query over volumes to consider for binding.",
 						Required:    true,
@@ -112,7 +111,8 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 								},
 								"on_exit_codes": {
 									Type:     schema.TypeList,
-									Required: true,
+									Optional: true,
+									MaxItems: 1,
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"container_name": {
@@ -124,15 +124,16 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 												Optional: true,
 											},
 											"values": {
-												Type:     schema.TypeString,
+												Type:     schema.TypeList,
 												Optional: true,
+												Elem:     &schema.Schema{Type: schema.TypeInt},
 											},
 										},
 									},
 								},
 								"on_pod_conditions": {
 									Type:     schema.TypeList,
-									Required: true,
+									Optional: true,
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"status": {
@@ -141,7 +142,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 											},
 											"type": {
 												Type:     schema.TypeString,
-												Optional: true,
+												Required: true,
 											},
 										},
 									},

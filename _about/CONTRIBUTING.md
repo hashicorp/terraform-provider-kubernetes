@@ -2,70 +2,56 @@
 
 Thank you for your interest in contributing to the Kubernetes provider. We welcome your contributions. Here you'll find information to help you get started with provider development.
 
-## Documentation
+## Configuring Environment
 
-Our [provider development documentation](https://www.terraform.io/docs/extend/) provides a good start into developing an understanding of provider development. It's the best entry point if you are new to contributing to this provider.
+1. Install Golang
 
-To learn more about how to create issues and pull requests in this repository, and what happens after they are created, you may refer to the resources below:
-- [Issue creation and lifecycle](ISSUES.md)
-- [Pull Request creation and lifecycle](PULL_REQUESTS.md)
+    Install the version of [Golang](https://go.dev/) as indicated in the [go.mod](../go.mod) file. 
+
+1. [Clone](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) this repo
+
+    ```console
+    $ git clone https://github.com/hashicorp/terraform-provider-kubernetes.git
+    $ cd terraform-provider-kubernetes
+     ```
+
+1. Prepare a Kubernetes Cluster
+
+    While our preference is to use [kind](https://kind.sigs.k8s.io/) for setting up a Kubernetes cluster for development and test purposes, feel free to opt for the solution that best suits your preferences.
+
+    How to Provision a Cluster
+    ```console
+    $ kind create cluster --config=./.github/config/acceptance_tests_kind_config.yaml
+     ```
+    
+    Validating Cluster 
+        
+    Please refer to the [Writing Tests](#writing-tests) section.
 
 
-## Building the provider
+## Making Changes
+//TO-DO
 
-Clone repository to: `$GOPATH/src/github.com/hashicorp/terraform-provider-kubernetes`
+## Testing
 
-```sh
-$ mkdir -p $GOPATH/src/github.com/hashicorp; cd $GOPATH/src/github.com/hashicorp
-$ git clone git@github.com:hashicorp/terraform-provider-kubernetes
-```
-
-Enter the provider directory and build the provider
-
-```sh
-$ cd $GOPATH/src/github.com/hashicorp/terraform-provider-kubernetes
-$ make build
-```
-
-Statically linking binaries can be required for testing development builds in containers not providing all dependencies, e.g.:
-
-```
-# CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"'
-```
-
-## Contributing to the provider
-
-### Contributing Resources
-
-In order to prevent breaking changes and migration of user-created resources, resources included in this provider will be limited to stable (aka `v1`) and beta APIs (with beta resources, readiness for inclusion will be assessed individually). You can find `v1` resources in the Kubernetes [API documentation](https://kubernetes.io/docs/reference/#api-reference) for the appropriate version of Kubernetes.
-
-### Development Environment
-
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.9+ is *required*). You'll also need to correctly setup a [GOPATH](http://golang.org/doc/code.html#GOPATH), as well as adding `$GOPATH/bin` to your `$PATH`.
-
-To compile the provider, run `make build`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
-
-```sh
-$ make build
-...
-$ $GOPATH/bin/terraform-provider-kubernetes
-...
-```
-
-In order to test the provider, you can simply run `make test`.
-
-```sh
+```console
+$ export KUBE_CONFIG_PATH=~/.kube/config
+$ make testacc TESTARGS="-run ^TestAcc"
 $ make test
 ```
 
-In order to run the full suite of Acceptance tests, run `make testacc`.
+1. Run existing tests
+1. Write/Update tests
+1. Run tests with new changes
 
-*Note:* Acceptance tests create real resources, and often cost money to run.
+## Updating changelog
 
-```sh
-$ make testacc
-```
+Please refer to our [ChangeLog Guide](../CHANGELOG_GUIDE.md).
 
-### Tests
+## Creating & Submiting a PR
 
-In general, adding test coverage (unit tests and acceptance tests) to new features or bug fixes in your PRs, and sharing the logs of a successful test run on your branch will greatly speed up the acceptance of your PR. Most of our tests can be run against a `kind` cluster, so no additional infrastructure is required.
+Please refer to this [guide](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork).
+
+## Debug Guide
+
+//TO-DO

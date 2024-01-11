@@ -265,26 +265,6 @@ func validatePath(v interface{}, k string) ([]string, []error) {
 	return []string{}, []error{}
 }
 
-func validateAttributeValueIsInAndContain(validValues []string) schema.SchemaValidateFunc {
-	return func(v interface{}, k string) (ws []string, errors []error) {
-		input := v.(string)
-		isValid := false
-		for _, s := range validValues {
-			if strings.Contains(input, s) {
-				isValid = true
-				break
-			}
-		}
-		if !isValid {
-			errors = append(errors, fmt.Errorf(
-				"%q must contain a value containing %#v, got %q",
-				k, validValues, input))
-		}
-		return
-
-	}
-}
-
 func validateTypeStringNullableIntOrPercent(v interface{}, key string) (ws []string, es []error) {
 	value, ok := v.(string)
 	if !ok {

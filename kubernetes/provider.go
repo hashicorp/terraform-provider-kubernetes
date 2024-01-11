@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/utils/ptr"
 
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -338,7 +339,7 @@ func Provider() *schema.Provider {
 			// admission control
 			"kubernetes_validating_webhook_configuration":    resourceKubernetesValidatingWebhookConfigurationV1Beta1(),
 			"kubernetes_validating_webhook_configuration_v1": resourceKubernetesValidatingWebhookConfigurationV1(),
-			"kubernetes_mutating_webhook_configuration":      resourceKubernetesMutatingWebhookConfigurationV1(),
+			"kubernetes_mutating_webhook_configuration":      resourceKubernetesMutatingWebhookConfiguration(),
 			"kubernetes_mutating_webhook_configuration_v1":   resourceKubernetesMutatingWebhookConfigurationV1(),
 
 			// storage
@@ -464,7 +465,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 	if logging.IsDebugOrHigher() {
 		log.Printf("[DEBUG] Enabling HTTP requests/responses tracing")
 		cfg.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
-			return logging.NewTransport("Kubernetes", rt)
+			return logging.NewSubsystemLoggingHTTPTransport("Kubernetes", rt)
 		}
 	}
 
@@ -640,7 +641,7 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 	err = discovery.ServerSupportsVersion(d, v1)
 	if err == nil {
 		log.Printf("[INFO] Using %s/v1", group)
-		useadmissionregistrationv1beta1 = ptrToBool(false)
+		useadmissionregistrationv1beta1 = ptr.To(false)
 		return false, nil
 	}
 
@@ -655,7 +656,7 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 	}
 
 	log.Printf("[INFO] Using %s/v1beta1", group)
-	useadmissionregistrationv1beta1 = ptrToBool(true)
+	useadmissionregistrationv1beta1 = ptr.To(true)
 	return true, nil
 }
 

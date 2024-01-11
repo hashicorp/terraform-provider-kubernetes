@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	batch "k8s.io/api/batch/v1"
+	"k8s.io/utils/ptr"
 )
 
 func flattenCronJobSpecV1(in batch.CronJobSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
@@ -44,7 +45,7 @@ func flattenCronJobSpecV1(in batch.CronJobSpec, d *schema.ResourceData, meta int
 func flattenJobTemplateV1(in batch.JobTemplateSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
-	att["metadata"] = flattenMetadata(in.ObjectMeta, d, meta, "spec.0.job_template.0.")
+	att["metadata"] = flattenMetadataFields(in.ObjectMeta)
 
 	jobSpec, err := flattenJobV1Spec(in.Spec, d, meta, "spec.0.job_template.0.spec.0.template.0.")
 	if err != nil {
@@ -69,7 +70,7 @@ func expandCronJobSpecV1(j []interface{}) (batch.CronJobSpec, error) {
 	}
 
 	if v, ok := in["failed_jobs_history_limit"].(int); ok && v != 1 {
-		obj.FailedJobsHistoryLimit = ptrToInt32(int32(v))
+		obj.FailedJobsHistoryLimit = ptr.To(int32(v))
 	}
 
 	if v, ok := in["schedule"].(string); ok && v != "" {
@@ -87,15 +88,15 @@ func expandCronJobSpecV1(j []interface{}) (batch.CronJobSpec, error) {
 	obj.JobTemplate = jtSpec
 
 	if v, ok := in["starting_deadline_seconds"].(int); ok && v > 0 {
-		obj.StartingDeadlineSeconds = ptrToInt64(int64(v))
+		obj.StartingDeadlineSeconds = ptr.To(int64(v))
 	}
 
 	if v, ok := in["successful_jobs_history_limit"].(int); ok && v != 3 {
-		obj.SuccessfulJobsHistoryLimit = ptrToInt32(int32(v))
+		obj.SuccessfulJobsHistoryLimit = ptr.To(int32(v))
 	}
 
 	if v, ok := in["suspend"].(bool); ok {
-		obj.Suspend = ptrToBool(v)
+		obj.Suspend = ptr.To(v)
 	}
 
 	return obj, nil

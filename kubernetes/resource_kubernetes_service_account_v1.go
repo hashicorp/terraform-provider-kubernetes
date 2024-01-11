@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/ptr"
 )
 
 func resourceKubernetesServiceAccountV1() *schema.Resource {
@@ -88,7 +89,7 @@ func resourceKubernetesServiceAccountV1Create(ctx context.Context, d *schema.Res
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	svcAcc := corev1.ServiceAccount{
-		AutomountServiceAccountToken: ptrToBool(d.Get("automount_service_account_token").(bool)),
+		AutomountServiceAccountToken: ptr.To(d.Get("automount_service_account_token").(bool)),
 		ObjectMeta:                   metadata,
 		ImagePullSecrets:             expandLocalObjectReferenceArray(d.Get("image_pull_secret").(*schema.Set).List()),
 		Secrets:                      expandServiceAccountSecrets(d.Get("secret").(*schema.Set).List(), ""),
@@ -124,15 +125,15 @@ func getServiceAccountDefaultSecretV1(ctx context.Context, name string, config c
 	}
 
 	var svcAccTokens []corev1.Secret
-	err = resource.RetryContext(ctx, timeout, func() *resource.RetryError {
+	err = retry.RetryContext(ctx, timeout, func() *retry.RetryError {
 		resp, err := conn.CoreV1().ServiceAccounts(config.Namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		if len(resp.Secrets) == len(config.Secrets) {
 			log.Printf("[DEBUG] Configuration contains %d secrets, saw %d, expected %d", len(config.Secrets), len(resp.Secrets), len(config.Secrets)+1)
-			return resource.RetryableError(fmt.Errorf("Waiting for default secret of %q to appear", buildId(resp.ObjectMeta)))
+			return retry.RetryableError(fmt.Errorf("Waiting for default secret of %q to appear", buildId(resp.ObjectMeta)))
 		}
 
 		diff := diffObjectReferences(config.Secrets, resp.Secrets)
@@ -140,7 +141,7 @@ func getServiceAccountDefaultSecretV1(ctx context.Context, name string, config c
 			FieldSelector: fmt.Sprintf("type=%s", corev1.SecretTypeServiceAccountToken),
 		})
 		if err != nil {
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		for _, secret := range secretList.Items {
@@ -153,11 +154,11 @@ func getServiceAccountDefaultSecretV1(ctx context.Context, name string, config c
 		}
 
 		if len(svcAccTokens) == 0 {
-			return resource.RetryableError(fmt.Errorf("Expected 1 generated service account token, %d found", len(svcAccTokens)))
+			return retry.RetryableError(fmt.Errorf("Expected 1 generated service account token, %d found", len(svcAccTokens)))
 		}
 
 		if len(svcAccTokens) > 1 {
-			return resource.NonRetryableError(fmt.Errorf("Expected 1 generated service account token, %d found: %s", len(svcAccTokens), err))
+			return retry.NonRetryableError(fmt.Errorf("Expected 1 generated service account token, %d found: %s", len(svcAccTokens), err))
 		}
 
 		return nil

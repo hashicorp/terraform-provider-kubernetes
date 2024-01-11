@@ -10,6 +10,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/policy/v1beta1"
+	"k8s.io/utils/ptr"
 )
 
 func flattenPodSecurityPolicySpec(in v1beta1.PodSecurityPolicySpec) []interface{} {
@@ -221,7 +222,7 @@ func expandPodSecurityPolicySpec(in []interface{}) (v1beta1.PodSecurityPolicySpe
 	}
 
 	if v, ok := m["allow_privilege_escalation"].(bool); ok {
-		spec.AllowPrivilegeEscalation = ptrToBool(v)
+		spec.AllowPrivilegeEscalation = ptr.To(v)
 	}
 
 	if v, ok := m["allowed_capabilities"].([]interface{}); ok && len(v) > 0 {
@@ -249,7 +250,7 @@ func expandPodSecurityPolicySpec(in []interface{}) (v1beta1.PodSecurityPolicySpe
 	}
 
 	if v, ok := m["default_allow_privilege_escalation"].(bool); ok {
-		spec.DefaultAllowPrivilegeEscalation = ptrToBool(v)
+		spec.DefaultAllowPrivilegeEscalation = ptr.To(v)
 	}
 
 	if v, ok := m["forbidden_sysctls"].([]interface{}); ok && len(v) > 0 {
@@ -496,7 +497,7 @@ func expandVolumeFSTypeSlice(in []interface{}) []v1beta1.FSType {
 
 // Patchers
 
-func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.ResourceData) (*PatchOperations, error) {
+func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.ResourceData) *PatchOperations {
 	ops := make(PatchOperations, 0)
 
 	if d.HasChange(keyPrefix + "allow_privilege_escalation") {
@@ -659,5 +660,5 @@ func patchPodSecurityPolicySpec(keyPrefix string, pathPrefix string, d *schema.R
 		})
 	}
 
-	return &ops, nil
+	return &ops
 }

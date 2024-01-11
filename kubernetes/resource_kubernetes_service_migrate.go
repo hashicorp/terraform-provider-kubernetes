@@ -176,5 +176,6 @@ func resourceKubernetesServiceV0() *schema.Resource {
 func resourceKubernetesServiceStateUpgradeV0(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
 	log.Println("[INFO] Found Kubernetes Service state v0; upgrading state to v1")
 	delete(rawState, "load_balancer_ingress")
+	// Return a nil error here to satisfy StateUpgradeFunc signature
 	return rawState, nil
 }

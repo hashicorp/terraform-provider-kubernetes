@@ -1,0 +1,40 @@
+name: Essential checkers and linters
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  checkers-and-linters:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+    - name: Set up Go
+      uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      with:
+        go-version-file: 'go.mod'
+    # Secrets are not available on pull requests.
+    - name: Login to Docker Hub
+      if: github.ref == 'refs/heads/main'
+      uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
+      with:
+        username: ${{ secrets.RO_DOCKERHUB_USER }}
+        password: ${{ secrets.RO_DOCKERHUB_TOKEN }}
+    - name: Install cookie
+      run: scripts/gogetcookie.sh
+    - name: Run checkers
+      run: |
+        make depscheck
+        make fmtcheck
+        make test-compile
+        make vet
+    - name: Run linters
+      run: |
+        make website-lint
+        make tests-lint

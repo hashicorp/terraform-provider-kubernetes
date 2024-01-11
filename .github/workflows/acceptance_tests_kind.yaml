@@ -8,24 +8,30 @@ on:
         default: 0.20.0 # Kubernetes version: 1.27.X
       runTests:
         description: The regex passed to the -run option of `go test`
-        default: ".*"
+        default: "^TestAcc"
       terraformVersion:
         description: Terraform version
-        default: 1.5.3
+        default: 1.5.6
       parallelRuns:
         description: The maximum number of tests to run simultaneously
         default: 8
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'kubernetes/*.go'
+      - 'go.mod'
   schedule:
     - cron: '0 21 * * *'
 
 env:
   KUBECONFIG: ${{ github.workspace }}/.kube/config
-  KIND_VERSION: ${{ github.event.inputs.kind_version || vars.KIND_VERSION }}
+  KIND_VERSION: ${{ github.event.inputs.kindVersion || vars.KIND_VERSION }}
   PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || vars.PARALLEL_RUNS }}
   TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
 
 jobs:
-  acceptance_tests:
+  acceptance_tests_kind:
     runs-on: [custom, linux, medium]
     steps:
       - name: Checkout repository
@@ -48,7 +54,7 @@ jobs:
       - name: Run Acceptance Test Suite
         env:
           KUBE_CONFIG_PATH: ${{ env.KUBECONFIG }}
-          TESTARGS: -run '${{ github.event.inputs.runTests }}'
+          TESTARGS: -run ${{ github.event.inputs.runTests || '^TestAcc' }}
           # Do not set TF_ACC_TERRAFORM_PATH or TF_ACC_TERRAFORM_VERSION.
           # In this case, the framework will search for the Terraform CLI binary based on the operating system PATH.
           # Eventually, it will use the one we set up.

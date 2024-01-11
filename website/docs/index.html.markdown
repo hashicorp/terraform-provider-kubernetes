@@ -112,6 +112,8 @@ The provider uses the `KUBERNETES_SERVICE_HOST` and `KUBERNETES_SERVICE_PORT` en
 
 If you want to connect to a different cluster than the one terraform is running inside, configure the provider as [above](#credentials-config).
 
+Find more comprehensive `in-cluster` config example [here](https://github.com/hashicorp/terraform-provider-kubernetes/tree/main/_examples/in-cluster).
+
 ## Exec plugins
 
 Some cloud providers have short-lived authentication tokens that can expire relatively quickly. To ensure the Kubernetes provider is receiving valid credentials, an exec-based plugin can be used to fetch a new token before initializing the provider. For example, on EKS, the command `eks get-token` can be used:
@@ -134,7 +136,7 @@ For further reading, see these examples which demonstrate different approaches t
 
 ## Ignore Kubernetes annotations and labels
 
-In certain cases, external systems can add and modify resources annotations and labels for their own purposes. However, Terraform will remove them since they are not presented in the code. It also might be hard to update code accordingly to stay tuned with the changes that come outside. In order to address this `ignore_annotations` and `ignore_labels` attributes were introduced on the provider level. They allow Terraform to ignore certain annotations and labels across all resources.
+In certain cases, external systems can add and modify resources annotations and labels for their own purposes. However, Terraform will remove them since they are not presented in the code. It also might be hard to update code accordingly to stay tuned with the changes that come outside. In order to address this `ignore_annotations` and `ignore_labels` attributes were introduced on the provider level. They allow Terraform to ignore certain annotations and labels across all resources. Please bear in mind, that all data sources remain unaffected and the provider always returns all labels and annotations, in spite of the `ignore_annotations` and `ignore_labels` settings. The same is applicable for the pod and job definitions that fall under templates.
 
 Both attributes support RegExp to match metadata objects more effectively.
 

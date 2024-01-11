@@ -4,11 +4,8 @@
 package kubernetes
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/robfig/cron"
 )
 
 func cronJobSpecFieldsV1() map[string]*schema.Schema {
@@ -33,7 +30,7 @@ func cronJobSpecFieldsV1() map[string]*schema.Schema {
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
-					"metadata": metadataSchema("jobTemplateSpec", true),
+					"metadata": namespacedMetadataSchemaIsTemplate("jobTemplateSpec", true, true),
 					"spec": {
 						Type:        schema.TypeList,
 						Description: "Specification of the desired behavior of the job",
@@ -49,7 +46,7 @@ func cronJobSpecFieldsV1() map[string]*schema.Schema {
 		"schedule": {
 			Type:         schema.TypeString,
 			Required:     true,
-			ValidateFunc: validateCronExpression(),
+			ValidateFunc: validateCronExpression,
 			Description:  "Cron format string, e.g. 0 * * * * or @hourly, as schedule time of its jobs to be created and executed.",
 		},
 		"starting_deadline_seconds": {
@@ -75,20 +72,5 @@ func cronJobSpecFieldsV1() map[string]*schema.Schema {
 			Optional:    true,
 			Description: "The time zone for the given schedule. If not specified, this will rely on the time zone of the kube-controller-manager process. ",
 		},
-	}
-}
-
-func validateCronExpression() schema.SchemaValidateFunc {
-	return func(i interface{}, k string) (s []string, es []error) {
-		v, ok := i.(string)
-		if !ok {
-			es = append(es, fmt.Errorf("expected type of '%s' to be string", k))
-			return
-		}
-		_, err := cron.ParseStandard(v)
-		if err != nil {
-			es = append(es, fmt.Errorf("'%s' should be an valid Cron expression", k))
-		}
-		return
 	}
 }

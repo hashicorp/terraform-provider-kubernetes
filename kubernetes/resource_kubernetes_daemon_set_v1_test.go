@@ -393,6 +393,46 @@ func TestAccKubernetesDaemonSetV1_with_resource_requirements(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDaemonSetV1_minimalWithTemplateNamespace(t *testing.T) {
+	var conf1, conf2 appsv1.DaemonSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_daemon_set_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDaemonSetV1Config_minimal(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf1),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.namespace"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.namespace", ""),
+				),
+			},
+			{
+				Config: testAccKubernetesDaemonSetV1ConfigMinimalWithTemplateNamespace(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.namespace"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.template.0.metadata.0.namespace"),
+					testAccCheckKubernetesDaemonSetV1ForceNew(&conf1, &conf2, true),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesDaemonSetV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
@@ -445,6 +485,21 @@ func testAccCheckKubernetesDaemonSetV1Exists(n string, obj *appsv1.DaemonSet) re
 		}
 
 		*obj = *out
+		return nil
+	}
+}
+
+func testAccCheckKubernetesDaemonSetV1ForceNew(old, new *appsv1.DaemonSet, wantNew bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if wantNew {
+			if old.ObjectMeta.UID == new.ObjectMeta.UID {
+				return fmt.Errorf("Expecting new resource for DaemonSet %s", old.ObjectMeta.UID)
+			}
+		} else {
+			if old.ObjectMeta.UID != new.ObjectMeta.UID {
+				return fmt.Errorf("Expecting DaemonSet UIDs to be the same: expected %s got %s", old.ObjectMeta.UID, new.ObjectMeta.UID)
+			}
+		}
 		return nil
 	}
 }
@@ -1090,4 +1145,38 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirementsRequestsOnly(depl
   }
 }
 `, deploymentName, imageName)
+}
+
+func testAccKubernetesDaemonSetV1ConfigMinimalWithTemplateNamespace(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_daemon_set_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    selector {
+      match_labels = {
+        foo = "bar"
+      }
+    }
+    template {
+      metadata {
+        // The namespace field is just a stub and does not influence where the Pod will be created.
+        // The Pod will be created within the same Namespace as the Daemon Set resource.
+        namespace = "fake" // Doesn't have to exist.
+        labels = {
+          foo = "bar"
+        }
+      }
+      spec {
+        container {
+          image   = "%s"
+          name    = "tf-acc-test"
+          command = ["sleep", "300"]
+        }
+        termination_grace_period_seconds = 1
+      }
+    }
+  }
+}
+`, name, imageName)
 }

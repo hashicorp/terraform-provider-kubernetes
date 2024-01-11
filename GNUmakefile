@@ -2,7 +2,7 @@
 # This ensures docker volumes are mounted from within provider directory instead.
 PROVIDER_DIR := $(abspath $(lastword $(dir $(MAKEFILE_LIST))))
 TEST         := "$(PROVIDER_DIR)/kubernetes"
-GOFMT_FILES  := $$(find $(PROVIDER_DIR) -name '*.go' |grep -v vendor)
+GOFMT_FILES  := $$(find $(PROVIDER_DIR) -name '*.go')
 WEBSITE_REPO := github.com/hashicorp/terraform-website
 PKG_NAME     := kubernetes
 OS_ARCH      := $(shell go env GOOS)_$(shell go env GOARCH)
@@ -47,10 +47,6 @@ depscheck:
 	@go mod tidy
 	@git diff --exit-code -- go.mod go.sum || \
 		(echo; echo "Unexpected difference in go.mod/go.sum files. Run 'go mod tidy' command or revert any go.mod/go.sum changes and commit."; exit 1)
-	@echo "==> Checking source code with go mod vendor..."
-	@go mod vendor
-	@git diff --exit-code -- vendor || \
-		(echo; echo "Unexpected difference in vendor/ directory. Run 'go mod vendor' command or revert any go.mod/go.sum/vendor changes and commit."; exit 1)
 
 examples-lint: tools
 	@echo "==> Checking _examples dir formatting..."
@@ -72,13 +68,9 @@ fmtcheck:
 
 errcheck:
 	@./scripts/errcheck.sh
-	
 
-test: fmtcheck
-	go test $(TEST) || exit 1
-	echo $(TEST) | \
-		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
-	go test ./tools
+test: fmtcheck vet
+	go test $(TEST) -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) -timeout=30s
 
 testacc: fmtcheck vet
 	TF_ACC=1 go test $(TEST) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) -timeout 3h
@@ -109,13 +101,17 @@ tools:
 	go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@v0.28.1
 	go install github.com/bflad/tfproviderdocs@v0.9.1
 	go install github.com/katbyte/terrafmt@v0.5.2
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.0
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
 	go install github.com/hashicorp/go-changelog/cmd/changelog-build@latest
 	go install github.com/hashicorp/go-changelog/cmd/changelog-entry@latest
 
+go-lint: tools
+	@echo "==> Run Golang CLI linter..."
+	@golangci-lint run
+
 vet:
-	@echo "go vet ."
-	@go vet $$(go list ./... | grep -v vendor/) ; if [ $$? -eq 1 ]; then \
+	@echo "go vet ./..."
+	@go vet $$(go list ./...) ; if [ $$? -eq 1 ]; then \
 		echo ""; \
 		echo "Vet found suspicious constructs. Please check the reported constructs"; \
 		echo "and fix them if necessary before submitting the code for review."; \

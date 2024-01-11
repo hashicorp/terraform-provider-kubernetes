@@ -98,15 +98,15 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDeploymentV1Config_initContainer(
-					namespace, name, imageName, imageName1, "64Mi", "testvar",
-					"initcontainer2", initCommand, "IfNotPresent"),
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesDeploymentV1Config_initContainer(
+						namespace, name, imageName, imageName1, "64Mi", "testvar",
+						"initcontainer2", initCommand, "IfNotPresent"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.image", imageName),
@@ -119,15 +119,17 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 				),
 			},
 			{ // Test for non-empty plans. No modification.
-				Config: testAccKubernetesDeploymentV1Config_initContainer(
-					namespace, name, imageName, imageName1, "64Mi", "testvar",
-					"initcontainer2", initCommand, "IfNotPresent"),
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesDeploymentV1Config_initContainer(
+						namespace, name, imageName, imageName1, "64Mi", "testvar",
+						"initcontainer2", initCommand, "IfNotPresent"),
 				PlanOnly: true,
 			},
 			{ // Modify resources.limits.memory.
-				Config: testAccKubernetesDeploymentV1Config_initContainer(
-					namespace, name, imageName, imageName1, "80Mi", "testvar",
-					"initcontainer2", initCommand, "IfNotPresent"),
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesDeploymentV1Config_initContainer(
+						namespace, name, imageName, imageName1, "80Mi", "testvar",
+						"initcontainer2", initCommand, "IfNotPresent"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.resources.0.requests.memory", "80Mi"),
@@ -135,9 +137,10 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 				),
 			},
 			{ // Modify name of environment variable.
-				Config: testAccKubernetesDeploymentV1Config_initContainer(
-					namespace, name, imageName, imageName1, "64Mi", "testvar",
-					"initcontainer2", initCommand, "IfNotPresent"),
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesDeploymentV1Config_initContainer(
+						namespace, name, imageName, imageName1, "64Mi", "testvar",
+						"initcontainer2", initCommand, "IfNotPresent"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.env.2.value", "testvar"),
@@ -145,9 +148,10 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 				),
 			},
 			{ // Modify init_container's command.
-				Config: testAccKubernetesDeploymentV1Config_initContainer(
-					namespace, name, imageName, imageName1, "64Mi", "testvar",
-					"initcontainer2", "echo done", "IfNotPresent"),
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesDeploymentV1Config_initContainer(
+						namespace, name, imageName, imageName1, "64Mi", "testvar",
+						"initcontainer2", "echo done", "IfNotPresent"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.1.command.2", "echo done"),
@@ -155,9 +159,10 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 				),
 			},
 			{ // Modify init_container's image_pull_policy.
-				Config: testAccKubernetesDeploymentV1Config_initContainer(
-					namespace, name, imageName, imageName1, "64Mi", "testvar",
-					"initcontainer2", "echo done", "Never"),
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesDeploymentV1Config_initContainer(
+						namespace, name, imageName, imageName1, "64Mi", "testvar",
+						"initcontainer2", "echo done", "Never"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.1.image_pull_policy", "Never"),
@@ -165,9 +170,10 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 				),
 			},
 			{ // Modify init_container's image
-				Config: testAccKubernetesDeploymentV1Config_initContainer(
-					namespace, name, imageName, imageName, "64Mi", "testvar",
-					"initcontainer2", "echo done", "Never"),
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesDeploymentV1Config_initContainer(
+						namespace, name, imageName, imageName, "64Mi", "testvar",
+						"initcontainer2", "echo done", "Never"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.1.image", imageName),
@@ -175,9 +181,10 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 				),
 			},
 			{ // Modify init_container's name.
-				Config: testAccKubernetesDeploymentV1Config_initContainer(
-					namespace, name, imageName, imageName, "64Mi", "testvar",
-					"initcontainertwo", "echo done", "Never"),
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesDeploymentV1Config_initContainer(
+						namespace, name, imageName, imageName, "64Mi", "testvar",
+						"initcontainertwo", "echo done", "Never"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.1.name", "initcontainertwo"),
@@ -391,7 +398,7 @@ func TestAccKubernetesDeploymentV1_with_container_liveness_probe_using_exec(t *t
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.exec.0.command.0", "cat"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.exec.0.command.1", "/tmp/healthy"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.failure_threshold", "3"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.initial_delay_seconds", "5"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.initial_delay_seconds", "3"),
 				),
 			},
 		},
@@ -1352,7 +1359,8 @@ func testAccKubernetesDeploymentV1Config_basic(name, imageName string) string {
           }
 
           readiness_probe {
-            initial_delay_seconds = 5
+            initial_delay_seconds = 3
+            period_seconds        = 1
             http_get {
               path = "/"
               port = 80
@@ -1850,9 +1858,8 @@ func testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingExec(deploymentNam
             exec {
               command = ["cat", "/tmp/healthy"]
             }
-
-            initial_delay_seconds = 5
-            period_seconds        = 5
+            initial_delay_seconds = 3
+            period_seconds        = 1
           }
         }
         termination_grace_period_seconds = 1
@@ -1903,9 +1910,8 @@ func testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingHTTPGet(deployment
                 value = "Awesome"
               }
             }
-
             initial_delay_seconds = 3
-            period_seconds        = 3
+            period_seconds        = 1
           }
         }
         termination_grace_period_seconds = 1
@@ -1950,9 +1956,8 @@ func testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingTCP(deploymentName
             tcp_socket {
               port = 8080
             }
-
             initial_delay_seconds = 3
-            period_seconds        = 3
+            period_seconds        = 1
           }
         }
         termination_grace_period_seconds = 1

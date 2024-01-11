@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	batchv1 "k8s.io/api/batch/v1"
+	"k8s.io/utils/ptr"
 )
 
 func flattenJobV1Spec(in batchv1.JobSpec, d *schema.ResourceData, meta interface{}, prefix ...string) ([]interface{}, error) {
@@ -40,18 +41,10 @@ func flattenJobV1Spec(in batchv1.JobSpec, d *schema.ResourceData, meta interface
 	if in.Selector != nil {
 		att["selector"] = flattenLabelSelector(in.Selector)
 	}
-	// Remove server-generated labels
-	labels := in.Template.ObjectMeta.Labels
 
-	if _, ok := labels["controller-uid"]; ok {
-		delete(labels, "controller-uid")
-	}
+	removeGeneratedLabels(in.Template.ObjectMeta.Labels)
 
-	if _, ok := labels["job-name"]; ok {
-		delete(labels, "job-name")
-	}
-
-	podSpec, err := flattenPodTemplateSpec(in.Template, d, meta, prefix...)
+	podSpec, err := flattenPodTemplateSpec(in.Template)
 	if err != nil {
 		return nil, err
 	}
@@ -74,15 +67,15 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 	in := j[0].(map[string]interface{})
 
 	if v, ok := in["active_deadline_seconds"].(int); ok && v > 0 {
-		obj.ActiveDeadlineSeconds = ptrToInt64(int64(v))
+		obj.ActiveDeadlineSeconds = ptr.To(int64(v))
 	}
 
 	if v, ok := in["backoff_limit"].(int); ok && v >= 0 {
-		obj.BackoffLimit = ptrToInt32(int32(v))
+		obj.BackoffLimit = ptr.To(int32(v))
 	}
 
 	if v, ok := in["completions"].(int); ok && v > 0 {
-		obj.Completions = ptrToInt32(int32(v))
+		obj.Completions = ptr.To(int32(v))
 	}
 
 	if v, ok := in["completion_mode"].(string); ok && v != "" {
@@ -91,11 +84,11 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 	}
 
 	if v, ok := in["manual_selector"]; ok {
-		obj.ManualSelector = ptrToBool(v.(bool))
+		obj.ManualSelector = ptr.To(v.(bool))
 	}
 
 	if v, ok := in["parallelism"].(int); ok && v >= 0 {
-		obj.Parallelism = ptrToInt32(int32(v))
+		obj.Parallelism = ptr.To(int32(v))
 	}
 
 	if v, ok := in["selector"].([]interface{}); ok && len(v) > 0 {
@@ -113,13 +106,13 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 		if err != nil {
 			return obj, err
 		}
-		obj.TTLSecondsAfterFinished = ptrToInt32(int32(i))
+		obj.TTLSecondsAfterFinished = ptr.To(int32(i))
 	}
 
 	return obj, nil
 }
 
-func patchJobV1Spec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOperations, error) {
+func patchJobV1Spec(pathPrefix, prefix string, d *schema.ResourceData) PatchOperations {
 	ops := make([]PatchOperation, 0)
 
 	if d.HasChange(prefix + "active_deadline_seconds") {
@@ -154,5 +147,29 @@ func patchJobV1Spec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOpe
 		})
 	}
 
-	return ops, nil
+	return ops
+}
+
+// removeGeneratedLabels removes server-generated labels
+func removeGeneratedLabels(labels map[string]string) map[string]string {
+	// The Jobs controller adds the following labels to the template block dynamically
+	// and thus we have to ignore them to avoid perpetual diff:
+	// - 'batch.kubernetes.io/controller-uid'
+	// - 'batch.kubernetes.io/job-name'
+	// - 'controller-uid' // deprecated starting from Kubernetes 1.27
+	// - 'job-name'  // deprecated starting from Kubernetes 1.27
+	//
+	// More information: https://kubernetes.io/docs/reference/labels-annotations-taints/
+	generatedLabels := []string{
+		"batch.kubernetes.io/controller-uid",
+		"batch.kubernetes.io/job-name",
+		// Starting from Kubernetes 1.27, the following labels are deprecated.
+		"controller-uid",
+		"job-name",
+	}
+	for _, l := range generatedLabels {
+		delete(labels, l)
+	}
+
+	return labels
 }

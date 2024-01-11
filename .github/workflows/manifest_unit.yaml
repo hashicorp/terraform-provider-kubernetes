@@ -6,11 +6,13 @@ on:
       - main
     paths:
       - "manifest/**/*.go"
+      - "manifest/**/go.mod"
   pull_request:
     branches:
       - main
     paths:
       - "manifest/**/*.go"
+      - "manifest/**/go.mod"
   workflow_dispatch:
 
 jobs:

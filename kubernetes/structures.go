@@ -115,72 +115,60 @@ func expandStringSlice(s []interface{}) []string {
 	return result
 }
 
-func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMetadata interface{}, metaPrefix ...string) []interface{} {
+// flattenMetadataFields flattens all metadata fields.
+func flattenMetadataFields(meta metav1.ObjectMeta) []interface{} {
 	m := make(map[string]interface{})
-	prefix := ""
-	if len(metaPrefix) > 0 {
-		prefix = metaPrefix[0]
-	}
-
-	if prefix == "" {
-		configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
-		ignoreAnnotations := providerMetadata.(kubeClientsets).IgnoreAnnotations
-		annotations := removeInternalKeys(meta.Annotations, configAnnotations)
-		m["annotations"] = removeKeys(annotations, configAnnotations, ignoreAnnotations)
-	} else {
-		m["annotations"] = d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
-	}
-
+	m["annotations"] = meta.Annotations
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}
-
-	configLabels := d.Get(prefix + "metadata.0.labels").(map[string]interface{})
-	ignoreLabels := providerMetadata.(kubeClientsets).IgnoreLabels
-	labels := removeInternalKeys(meta.Labels, configLabels)
-	m["labels"] = removeKeys(labels, configLabels, ignoreLabels)
-	m["name"] = meta.Name
-	m["resource_version"] = meta.ResourceVersion
-	m["uid"] = fmt.Sprintf("%v", meta.UID)
 	m["generation"] = meta.Generation
-
+	m["labels"] = meta.Labels
+	m["name"] = meta.Name
 	if meta.Namespace != "" {
 		m["namespace"] = meta.Namespace
 	}
+	m["resource_version"] = meta.ResourceVersion
+	m["uid"] = string(meta.UID)
 
 	return []interface{}{m}
 }
 
-func removeInternalKeys(m map[string]string, d map[string]interface{}) map[string]string {
+func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMetadata interface{}) []interface{} {
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+
+	ignoreAnnotations := providerMetadata.(kubeClientsets).IgnoreAnnotations
+	removeInternalKeys(meta.Annotations, metadata.Annotations)
+	removeKeys(meta.Annotations, metadata.Annotations, ignoreAnnotations)
+
+	ignoreLabels := providerMetadata.(kubeClientsets).IgnoreLabels
+	removeInternalKeys(meta.Labels, metadata.Labels)
+	removeKeys(meta.Labels, metadata.Labels, ignoreLabels)
+
+	return flattenMetadataFields(meta)
+}
+
+func removeInternalKeys(m map[string]string, d map[string]string) {
 	for k := range m {
 		if isInternalKey(k) && !isKeyInMap(k, d) {
 			delete(m, k)
 		}
 	}
-	return m
 }
 
 // removeKeys removes given Kubernetes metadata(annotations and labels) keys.
 // In that case, they won't be available in the TF state file and will be ignored during apply/plan operations.
-func removeKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadataKeys []string) map[string]string {
+func removeKeys(m map[string]string, d map[string]string, ignoreKubernetesMetadataKeys []string) {
 	for k := range m {
 		if ignoreKey(k, ignoreKubernetesMetadataKeys) && !isKeyInMap(k, d) {
 			delete(m, k)
 		}
 	}
-	return m
 }
 
-func isKeyInMap(key string, d map[string]interface{}) bool {
-	if d == nil {
-		return false
-	}
-	for k := range d {
-		if k == key {
-			return true
-		}
-	}
-	return false
+func isKeyInMap(key string, d map[string]string) bool {
+	_, ok := d[key]
+	return ok
 }
 
 func isInternalKey(annotationKey string) bool {
@@ -237,22 +225,6 @@ func flattenByteMapToStringMap(m map[string][]byte) map[string]string {
 		result[k] = string(v)
 	}
 	return result
-}
-
-func ptrToString(s string) *string {
-	return &s
-}
-
-func ptrToBool(b bool) *bool {
-	return &b
-}
-
-func ptrToInt32(i int32) *int32 {
-	return &i
-}
-
-func ptrToInt64(i int64) *int64 {
-	return &i
 }
 
 func sliceOfString(slice []interface{}) []string {

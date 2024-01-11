@@ -164,6 +164,39 @@ func TestAccKubernetesIngressV1_TLS(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesIngressV1_emptyTLS(t *testing.T) {
+	var conf networking.Ingress
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_ingress_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.22.0")
+		},
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressV1Config_emptyTLS(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.tls.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.tls.0.hosts.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.tls.0.secret_name", ""),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesIngressV1_InternalKey(t *testing.T) {
 	var conf networking.Ingress
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -536,6 +569,26 @@ func testAccKubernetesIngressV1Config_TLS_modified(name string) string {
     tls {
       hosts       = ["host1", "host2"]
       secret_name = "super-sekret"
+    }
+  }
+}`, name)
+}
+
+func testAccKubernetesIngressV1Config_emptyTLS(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    default_backend {
+      service {
+        name = "app1"
+        port {
+          number = 443
+        }
+      }
+    }
+    tls {
     }
   }
 }`, name)

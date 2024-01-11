@@ -4,7 +4,7 @@
 package kubernetes
 
 import (
-	api "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -76,13 +76,13 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Optional:    true,
 			Computed:    isComputed,
 			ForceNew:    !isUpdatable,
-			Default:     conditionalDefault(!isComputed, string(api.DNSClusterFirst)),
+			Default:     conditionalDefault(!isComputed, string(corev1.DNSClusterFirst)),
 			Description: "Set DNS policy for containers within the pod. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'. Defaults to 'ClusterFirst'. More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy",
 			ValidateFunc: validation.StringInSlice([]string{
-				string(api.DNSClusterFirst),
-				string(api.DNSClusterFirstWithHostNet),
-				string(api.DNSDefault),
-				string(api.DNSNone),
+				string(corev1.DNSClusterFirst),
+				string(corev1.DNSClusterFirstWithHostNet),
+				string(corev1.DNSDefault),
+				string(corev1.DNSNone),
 			}, false),
 		},
 		"dns_config": {
@@ -201,6 +201,22 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			ForceNew:    !isUpdatable,
 			Description: "Specifies the hostname of the Pod If not specified, the pod's hostname will be set to a system-defined value.",
 		},
+		"os": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			MaxItems:    1,
+			Description: "Specifies the OS of the containers in the pod.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"name": {
+						Type:         schema.TypeString,
+						Required:     true,
+						ValidateFunc: validation.StringInSlice([]string{string(corev1.Linux), string(corev1.Windows)}, false),
+						Description:  "Name is the name of the operating system. The currently supported values are linux and windows.",
+					},
+				},
+			},
+		},
 		"image_pull_secrets": {
 			Type:        schema.TypeList,
 			Description: "ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. For example, in the case of docker, only DockerConfig type secrets are honored. More info: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod",
@@ -250,12 +266,12 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Optional:    true,
 			Computed:    isComputed,
 			ForceNew:    !isUpdatable,
-			Default:     conditionalDefault(!isComputed, string(api.RestartPolicyAlways)),
+			Default:     conditionalDefault(!isComputed, string(corev1.RestartPolicyAlways)),
 			Description: "Restart policy for all containers within the pod. One of Always, OnFailure, Never. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy.",
 			ValidateFunc: validation.StringInSlice([]string{
-				string(api.RestartPolicyAlways),
-				string(api.RestartPolicyOnFailure),
-				string(api.RestartPolicyNever),
+				string(corev1.RestartPolicyAlways),
+				string(corev1.RestartPolicyOnFailure),
+				string(corev1.RestartPolicyNever),
 			}, false),
 		},
 		"security_context": {
@@ -316,8 +332,8 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						Description: "fsGroupChangePolicy defines behavior of changing ownership and permission of the volume before being exposed inside Pod. This field will only apply to volume types which support fsGroup based ownership(and permissions). It will have no effect on ephemeral volume types such as: secret, configmaps and emptydir.",
 						Optional:    true,
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.FSGroupChangeAlways),
-							string(api.FSGroupChangeOnRootMismatch),
+							string(corev1.FSGroupChangeAlways),
+							string(corev1.FSGroupChangeOnRootMismatch),
 						}, false),
 						ForceNew: !isUpdatable,
 					},
@@ -328,6 +344,37 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						ForceNew:    !isUpdatable,
 						Elem: &schema.Schema{
 							Type: schema.TypeInt,
+						},
+					},
+					"windows_options": {
+						Type:        schema.TypeList,
+						MaxItems:    1,
+						Description: "The Windows specific settings applied to all containers. If unspecified, the options within a container's SecurityContext will be used. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. Note that this field cannot be set when spec.os.name is linux.",
+						Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"gmsa_credential_spec": {
+									Type:        schema.TypeString,
+									Description: "GMSACredentialSpec is where the GMSA admission webhook inlines the contents of the GMSA credential spec named by the GMSACredentialSpecName field",
+									Optional:    true,
+								},
+								"gmsa_credential_spec_name": {
+									Type:        schema.TypeString,
+									Description: "GMSACredentialSpecName is the name of the GMSA credential spec to use.",
+									Optional:    true,
+								},
+								"host_process": {
+									Type:        schema.TypeBool,
+									Description: "HostProcess determines if a container should be run as a 'Host Process' container. Default value is false.",
+									Default:     false,
+									Optional:    true,
+								},
+								"run_as_username": {
+									Type:        schema.TypeString,
+									Description: "The UserName in Windows to run the entrypoint of the container process. Defaults to the user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
+									Optional:    true,
+								},
+							},
 						},
 					},
 					"sysctl": {
@@ -403,9 +450,9 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.TaintEffectNoSchedule),
-							string(api.TaintEffectPreferNoSchedule),
-							string(api.TaintEffectNoExecute),
+							string(corev1.TaintEffectNoSchedule),
+							string(corev1.TaintEffectPreferNoSchedule),
+							string(corev1.TaintEffectNoExecute),
 						}, false),
 					},
 					"key": {
@@ -417,12 +464,12 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 					"operator": {
 						Type:        schema.TypeString,
 						Description: "Operator represents a key's relationship to the value. Valid operators are Exists and Equal. Defaults to Equal. Exists is equivalent to wildcard for value, so that a pod can tolerate all taints of a particular category.",
-						Default:     string(api.TolerationOpEqual),
+						Default:     string(corev1.TolerationOpEqual),
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.TolerationOpExists),
-							string(api.TolerationOpEqual),
+							string(corev1.TolerationOpExists),
+							string(corev1.TolerationOpEqual),
 						}, false),
 					},
 					"toleration_seconds": {
@@ -463,11 +510,11 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 					"when_unsatisfiable": {
 						Type:        schema.TypeString,
 						Description: "indicates how to deal with a pod if it doesn't satisfy the spread constraint.",
-						Default:     string(api.DoNotSchedule),
+						Default:     string(corev1.DoNotSchedule),
 						Optional:    true,
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.DoNotSchedule),
-							string(api.ScheduleAnyway),
+							string(corev1.DoNotSchedule),
+							string(corev1.ScheduleAnyway),
 						}, false),
 					},
 					"label_selector": {
@@ -521,7 +568,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 							"path": {
 								Type:         schema.TypeString,
 								Optional:     true,
-								ValidateFunc: validateAttributeValueDoesNotContain(".."),
+								ValidateFunc: validatePath,
 								Description:  `The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.`,
 							},
 						},
@@ -559,7 +606,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 					Type:         schema.TypeString,
 					Description:  "Target directory name. Must not contain or start with '..'. If '.' is supplied, the volume directory will be the git repository. Otherwise, if specified, the volume will contain the git repository in the subdirectory with the given name.",
 					Optional:     true,
-					ValidateFunc: validateAttributeValueDoesNotContain(".."),
+					ValidateFunc: validatePath,
 				},
 				"repository": {
 					Type:        schema.TypeString,
@@ -624,7 +671,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 							"path": {
 								Type:         schema.TypeString,
 								Required:     true,
-								ValidateFunc: validateAttributeValueDoesNotContain(".."),
+								ValidateFunc: validatePath,
 								Description:  `Path is the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'`,
 							},
 							"resource_field_ref": {
@@ -797,7 +844,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 							"path": {
 								Type:         schema.TypeString,
 								Optional:     true,
-								ValidateFunc: validateAttributeValueDoesNotContain(".."),
+								ValidateFunc: validatePath,
 								Description:  "The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.",
 							},
 						},
@@ -874,7 +921,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 													"path": {
 														Type:         schema.TypeString,
 														Optional:     true,
-														ValidateFunc: validateAttributeValueDoesNotContain(".."),
+														ValidateFunc: validatePath,
 														Description:  "The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.",
 													},
 												},
@@ -920,7 +967,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 													"path": {
 														Type:         schema.TypeString,
 														Optional:     true,
-														ValidateFunc: validateAttributeValueDoesNotContain(".."),
+														ValidateFunc: validatePath,
 														Description:  "The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.",
 													},
 												},
@@ -978,7 +1025,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 													"path": {
 														Type:         schema.TypeString,
 														Required:     true,
-														ValidateFunc: validateAttributeValueDoesNotContain(".."),
+														ValidateFunc: validatePath,
 														Description:  "Path is the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'",
 													},
 													"resource_field_ref": {

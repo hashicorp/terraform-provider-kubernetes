@@ -5,6 +5,7 @@ package kubernetes
 
 import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	"k8s.io/utils/ptr"
 )
 
 func flattenMutatingWebhook(in admissionregistrationv1.MutatingWebhook) map[string]interface{} {
@@ -109,7 +110,7 @@ func expandMutatingWebhook(in map[string]interface{}) admissionregistrationv1.Mu
 	}
 
 	if v, ok := in["timeout_seconds"].(int); ok {
-		obj.TimeoutSeconds = ptrToInt32(int32(v))
+		obj.TimeoutSeconds = ptr.To(int32(v))
 	}
 
 	return obj

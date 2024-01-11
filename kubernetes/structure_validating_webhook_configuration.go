@@ -5,6 +5,7 @@ package kubernetes
 
 import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	"k8s.io/utils/ptr"
 )
 
 func flattenValidatingWebhook(in admissionregistrationv1.ValidatingWebhook) map[string]interface{} {
@@ -100,7 +101,7 @@ func expandValidatingWebhook(in map[string]interface{}) admissionregistrationv1.
 	}
 
 	if v, ok := in["timeout_seconds"].(int); ok {
-		obj.TimeoutSeconds = ptrToInt32(int32(v))
+		obj.TimeoutSeconds = ptr.To(int32(v))
 	}
 
 	return obj

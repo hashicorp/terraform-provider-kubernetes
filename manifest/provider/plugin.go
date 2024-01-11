@@ -5,7 +5,6 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
@@ -80,19 +79,6 @@ func convertReattachConfig(reattachConfig *plugin.ReattachConfig) tfexec.Reattac
 			String:  reattachConfig.Addr.String(),
 		},
 	}
-}
-
-// printReattachConfig prints the line the user needs to copy and paste
-// to set the TF_REATTACH_PROVIDERS variable
-func printReattachConfig(config *plugin.ReattachConfig) {
-	reattachStr, err := json.Marshal(map[string]tfexec.ReattachConfig{
-		providerName: convertReattachConfig(config),
-	})
-	if err != nil {
-		fmt.Printf("Error building reattach string: %s", err)
-		return
-	}
-	fmt.Printf("# Provider server started\nexport TF_REATTACH_PROVIDERS='%s'\n", string(reattachStr))
 }
 
 // waitForReattachConfig blocks until a ReattachConfig is recieved on the

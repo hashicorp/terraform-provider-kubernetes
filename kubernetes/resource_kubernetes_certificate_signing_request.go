@@ -6,15 +6,16 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"k8s.io/api/certificates/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 	"log"
 	"reflect"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"k8s.io/api/certificates/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kretry "k8s.io/client-go/util/retry"
 )
 
 func resourceKubernetesCertificateSigningRequest() *schema.Resource {
@@ -115,7 +116,7 @@ func resourceKubernetesCertificateSigningRequestCreate(ctx context.Context, d *s
 	defer conn.CertificatesV1beta1().CertificateSigningRequests().Delete(ctx, csrName, metav1.DeleteOptions{})
 
 	if d.Get("auto_approve").(bool) {
-		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		retryErr := kretry.RetryOnConflict(kretry.DefaultRetry, func() error {
 			pendingCSR, getErr := conn.CertificatesV1beta1().CertificateSigningRequests().Get(ctx, csrName, metav1.GetOptions{})
 			if getErr != nil {
 				return getErr
@@ -137,7 +138,7 @@ func resourceKubernetesCertificateSigningRequestCreate(ctx context.Context, d *s
 	}
 
 	log.Printf("[DEBUG] Waiting for certificate to be issued")
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Target:  []string{"Issued"},
 		Pending: []string{"", "Approved"},
 		Timeout: d.Timeout(schema.TimeoutCreate),

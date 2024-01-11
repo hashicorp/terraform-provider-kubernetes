@@ -5,11 +5,13 @@ package kubernetes
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesMutatingWebhookConfigurationV1() *schema.Resource {
@@ -111,8 +113,33 @@ func dataSourceKubernetesMutatingWebhookConfigurationV1() *schema.Resource {
 }
 
 func dataSourceKubernetesMutatingWebhookConfigurationV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	name := d.Get("metadata.0.name").(string)
-	d.SetId(name)
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	return resourceKubernetesMutatingWebhookConfigurationV1Read(ctx, d, meta)
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	d.SetId(metadata.Name)
+
+	log.Printf("[INFO] Reading mutating webhook configuration %s", metadata.Name)
+	cfg, err := conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(ctx, metadata.Name, metav1.GetOptions{})
+	if err != nil {
+		log.Printf("[DEBUG] Received error: %#v", err)
+		return diag.FromErr(err)
+	}
+	log.Printf("[INFO] Received mutating webhook configuration: %#v", cfg)
+
+	err = d.Set("metadata", flattenMetadataFields(cfg.ObjectMeta))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	log.Printf("[DEBUG] Setting mutating webhook configuration to: %#v", cfg.Webhooks)
+
+	err = d.Set("webhook", flattenMutatingWebhooks(cfg.Webhooks))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
 }

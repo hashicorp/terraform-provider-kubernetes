@@ -136,6 +136,16 @@ The following arguments are supported:
 * `metadata` - (Required) Standard object's metadata. For more info see https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata.
 * `spec` - (Required) Specification of the desired behavior of the pod. For more info see https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status.
 
+### template `metadata`
+
+These arguments are the same as the for the `metadata` block of a Pod with a few exceptions:
+
+* When `spec.template.metadata.namespace` does not have a default value, it is empty if not set.
+
+* The `spec.template.metadata.namespace` is a stub field that does not affect the namespace in which the Pod will be created. The Pod will be created in the same namespace as the main resource. However, modifying this field will force the resource recreation.
+
+Please see the [Pod resource](pod_v1.html#metadata) for reference.
+
 ### template `spec`
 
 #### Arguments

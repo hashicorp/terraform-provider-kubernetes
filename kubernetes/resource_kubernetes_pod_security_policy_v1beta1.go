@@ -448,10 +448,7 @@ func resourceKubernetesPodSecurityPolicyV1Beta1Update(ctx context.Context, d *sc
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("spec") {
-		diffOps, err := patchPodSecurityPolicySpec("spec.0.", "/spec", d)
-		if err != nil {
-			return diag.FromErr(err)
-		}
+		diffOps := patchPodSecurityPolicySpec("spec.0.", "/spec", d)
 		ops = append(ops, *diffOps...)
 	}
 	data, err := ops.MarshalJSON()

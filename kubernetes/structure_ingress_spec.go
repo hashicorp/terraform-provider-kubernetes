@@ -90,6 +90,22 @@ func flattenIngressTLS(in []v1beta1.IngressTLS) []interface{} {
 	return att
 }
 
+func flattenIngressStatus(in v1beta1.IngressLoadBalancerStatus) []interface{} {
+	out := make([]interface{}, len(in.Ingress))
+	for i, ingress := range in.Ingress {
+		out[i] = map[string]interface{}{
+			"ip":       ingress.IP,
+			"hostname": ingress.Hostname,
+		}
+	}
+
+	return []interface{}{
+		map[string][]interface{}{
+			"ingress": out,
+		},
+	}
+}
+
 // Expanders
 
 func expandIngressRule(l []interface{}) []v1beta1.IngressRule {
@@ -178,12 +194,15 @@ func expandIngressBackend(l []interface{}) *v1beta1.IngressBackend {
 }
 
 func expandIngressTLS(l []interface{}) []v1beta1.IngressTLS {
-	if len(l) == 0 || l[0] == nil {
+	if len(l) == 0 {
 		return nil
 	}
 
 	tlsList := make([]v1beta1.IngressTLS, len(l))
 	for i, t := range l {
+		if t == nil {
+			t = map[string]interface{}{}
+		}
 		in := t.(map[string]interface{})
 		obj := v1beta1.IngressTLS{}
 

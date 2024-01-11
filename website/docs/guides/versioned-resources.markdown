@@ -47,6 +47,9 @@ We will continue to bring support for API resources which reach `beta` however i
 
 We will continue our policy of not building support for `alpha` versioned resources into the provider. Please use the [kubernetes_manifest](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/manifest) resource to manage those resources. 
 
+## How to migrate to the most up to date version of the resource?
+
+If it's desired to migrate to a newer version of a resource, such as switching from v1beta to v1, the recommended method is to use `kubectl convert`. The [Kubernetes Migrate to non-deprecated APIs guide](https://kubernetes.io/docs/reference/using-api/deprecation-guide/#migrate-to-non-deprecated-apis) goes over how to setup the command as well as the steps to follow for converting to the latest resource version.
 
 ## How can I move a resource without a version to its versioned resource name?
 

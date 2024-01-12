@@ -323,7 +323,7 @@ func testAccKubernetesJobV1Config_basic(name, imageName string) string {
       }
       rule {
         action = "Ignore"
-        on_pod_conditions{
+        on_pod_conditions {
           type = "DisruptionTarget"
         }
       }

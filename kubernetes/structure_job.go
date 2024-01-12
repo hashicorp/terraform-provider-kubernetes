@@ -151,7 +151,7 @@ func expandPodFailurePolicyRules(l []interface{}) []batchv1.PodFailurePolicyRule
 
 		if v, ok := r["on_exit_codes"].([]interface{}); ok && len(v) > 0 {
 			onExitCodes := expandPodFailurePolicyOnExitCodesRequirement(v)
-			objRule.OnExitCodes = *&onExitCodes
+			objRule.OnExitCodes = onExitCodes
 		}
 
 		if v, ok := r["on_pod_conditions"].([]interface{}); ok && len(v) > 0 {

@@ -2646,7 +2646,7 @@ func testAccKubernetesDeploymentV1ConfigWithEmptyDirHugePage(deploymentName, ima
   }
 
   spec {
-    replicas = 0  # We request zero replicas, since the K8S backing this test may not have huge pages available.
+    replicas = 0 # We request zero replicas, since the K8S backing this test may not have huge pages available.
     selector {
       match_labels = {
         Test = "TfAcceptanceTest"

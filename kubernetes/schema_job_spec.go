@@ -124,8 +124,9 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 												Optional: true,
 											},
 											"values": {
-												Type:     schema.TypeList,
+												Type:     schema.TypeSet,
 												Optional: true,
+												MinItems: 1,
 												Elem:     &schema.Schema{Type: schema.TypeInt},
 											},
 										},
@@ -139,10 +140,11 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 											"status": {
 												Type:     schema.TypeString,
 												Optional: true,
+												Default:  "True",
 											},
 											"type": {
 												Type:     schema.TypeString,
-												Required: true,
+												Optional: true,
 											},
 										},
 									},

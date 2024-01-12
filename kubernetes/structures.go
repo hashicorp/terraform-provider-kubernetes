@@ -450,6 +450,14 @@ func newInt64Set(f schema.SchemaSetFunc, in []int64) *schema.Set {
 	return schema.NewSet(f, out)
 }
 
+func newInt32Set(f schema.SchemaSetFunc, in []int32) *schema.Set {
+	var out = make([]interface{}, len(in))
+	for i, v := range in {
+		out[i] = int(v)
+	}
+	return schema.NewSet(f, out)
+}
+
 func resourceListEquals(x, y api.ResourceList) bool {
 	for k, v := range x {
 		yValue, ok := y[k]
@@ -584,6 +592,15 @@ func schemaSetToInt64Array(set *schema.Set) []int64 {
 	for _, elem := range set.List() {
 		e := elem.(int)
 		array = append(array, int64(e))
+	}
+	return array
+}
+
+func schemaSetToInt32Array(set *schema.Set) []int32 {
+	array := make([]int32, 0, set.Len())
+	for _, elem := range set.List() {
+		e := elem.(int)
+		array = append(array, int32(e))
 	}
 	return array
 }

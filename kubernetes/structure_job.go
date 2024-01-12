@@ -39,7 +39,7 @@ func flattenJobV1Spec(in batchv1.JobSpec, d *schema.ResourceData, meta interface
 		att["parallelism"] = *in.Parallelism
 	}
 
-	if in.Selector != nil {
+	if in.PodFailurePolicy != nil {
 		att["pod_failure_policy"] = flattenPodFailurePolicy(in.PodFailurePolicy)
 	}
 
@@ -129,7 +129,7 @@ func expandPodFailurePolicy(l []interface{}) *batchv1.PodFailurePolicy {
 	in := l[0].(map[string]interface{})
 
 	if v, ok := in["rule"].([]interface{}); ok && len(v) > 0 {
-		rules := expandPodFailurePolicyRules(in["rule"].([]interface{}))
+		rules := expandPodFailurePolicyRules(v)
 		obj.Rules = rules
 	}
 	return obj
@@ -180,8 +180,8 @@ func expandPodFailurePolicyOnExitCodesRequirement(l []interface{}) *batchv1.PodF
 		obj.Operator = batchv1.PodFailurePolicyOnExitCodesOperator(v)
 	}
 
-	if v, ok := in["values"].([]int32); ok && v != nil {
-		obj.Values = v
+	if v, ok := in["values"].(*schema.Set); ok && v != nil {
+		obj.Values = schemaSetToInt32Array(v)
 	}
 
 	return obj
@@ -199,7 +199,7 @@ func expandPodFailurePolicyOnPodConditionsPattern(l []interface{}) []batchv1.Pod
 			objCondition.Status = v1.ConditionStatus(v)
 		}
 
-		if v, ok := c["operator"].(string); ok && v != "" {
+		if v, ok := c["type"].(string); ok && v != "" {
 			objCondition.Type = v1.PodConditionType(v)
 		}
 		obj[i] = *objCondition
@@ -221,21 +221,28 @@ func flattenPodFailurePolicyRules(in []batchv1.PodFailurePolicyRule) []interface
 	for i, r := range in {
 		m := make(map[string]interface{})
 		m["action"] = r.Action
-		m["on_exit_codes"] = flattenPodFailurePolicyOnExitCodes(r.OnExitCodes)
-		m["on_pod_conditions"] = flattenPodFailurePolicyOnPodConditions(r.OnPodConditions)
-
+		if r.OnExitCodes != nil {
+			m["on_exit_codes"] = flattenPodFailurePolicyOnExitCodes(r.OnExitCodes)
+		}
+		if r.OnPodConditions != nil {
+			m["on_pod_conditions"] = flattenPodFailurePolicyOnPodConditions(r.OnPodConditions)
+		}
 		att[i] = m
 	}
 
-	return []interface{}{att}
+	return att
 }
 
 func flattenPodFailurePolicyOnExitCodes(in *batchv1.PodFailurePolicyOnExitCodesRequirement) []interface{} {
 	att := make(map[string]interface{})
-	att["container_name"] = in.ContainerName
+	if *in.ContainerName != "" {
+		att["container_name"] = *in.ContainerName
+	}
 	att["operator"] = in.Operator
-	if len(in.Values) != 0 {
-		att["values"] = in.Values
+	if len(in.Values) > 0 {
+		att["values"] = newInt32Set(schema.HashSchema(&schema.Schema{
+			Type: schema.TypeInt,
+		}), in.Values)
 	}
 
 	return []interface{}{att}
@@ -246,9 +253,12 @@ func flattenPodFailurePolicyOnPodConditions(in []batchv1.PodFailurePolicyOnPodCo
 
 	for i, r := range in {
 		m := make(map[string]interface{})
-		m["status"] = r.Status
-		m["type"] = r.Type
-
+		if r.Status != "" {
+			m["status"] = r.Status
+		}
+		if r.Type != "" {
+			m["type"] = r.Type
+		}
 		att[i] = m
 	}
 

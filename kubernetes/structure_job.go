@@ -6,6 +6,8 @@ package kubernetes
 import (
 	"strconv"
 
+	"slices"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -154,7 +156,7 @@ func expandPodFailurePolicyRules(l []interface{}) []batchv1.PodFailurePolicyRule
 			objRule.OnExitCodes = onExitCodes
 		}
 
-		if v, ok := r["on_pod_conditions"].([]interface{}); ok && len(v) > 0 {
+		if v, ok := r["on_pod_condition"].([]interface{}); ok && len(v) > 0 {
 			podConditions := expandPodFailurePolicyOnPodConditionsPattern(v)
 			objRule.OnPodConditions = podConditions
 		}
@@ -181,7 +183,9 @@ func expandPodFailurePolicyOnExitCodesRequirement(l []interface{}) *batchv1.PodF
 	}
 
 	if v, ok := in["values"].(*schema.Set); ok && v != nil {
-		obj.Values = schemaSetToInt32Array(v)
+		v := schemaSetToInt32Array(v)
+		slices.Sort(v)
+		obj.Values = v
 	}
 
 	return obj
@@ -225,7 +229,7 @@ func flattenPodFailurePolicyRules(in []batchv1.PodFailurePolicyRule) []interface
 			m["on_exit_codes"] = flattenPodFailurePolicyOnExitCodes(r.OnExitCodes)
 		}
 		if r.OnPodConditions != nil {
-			m["on_pod_conditions"] = flattenPodFailurePolicyOnPodConditions(r.OnPodConditions)
+			m["on_pod_condition"] = flattenPodFailurePolicyOnPodConditions(r.OnPodConditions)
 		}
 		att[i] = m
 	}

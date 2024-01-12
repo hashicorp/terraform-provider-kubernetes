@@ -127,12 +127,14 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 												Type:     schema.TypeSet,
 												Optional: true,
 												MinItems: 1,
-												Elem:     &schema.Schema{Type: schema.TypeInt},
+												MaxItems: 255,
+												Elem: &schema.Schema{Type: schema.TypeInt,
+													ValidateFunc: validation.IntNotInSlice([]int{0})},
 											},
 										},
 									},
 								},
-								"on_pod_conditions": {
+								"on_pod_condition": {
 									Type:     schema.TypeList,
 									Optional: true,
 									Elem: &schema.Resource{

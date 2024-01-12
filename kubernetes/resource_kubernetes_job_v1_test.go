@@ -80,8 +80,10 @@ func TestAccKubernetesJobV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.0.action", "FailJob"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.container_name", "hello"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.values.#", "3"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.action", "Ignore"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.on_pod_conditions.0.type", "DisruptionTarget"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.on_pod_condition.0.type", "DisruptionTarget"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.on_pod_condition.0.status", "False"),
 				),
 			},
 			{
@@ -318,12 +320,13 @@ func testAccKubernetesJobV1Config_basic(name, imageName string) string {
         on_exit_codes {
           container_name = "hello"
           operator       = "In"
-          values         = [42]
+          values         = [2,1,42]
         }
       }
       rule {
         action = "Ignore"
-        on_pod_conditions {
+        on_pod_condition {
+          status = "False"
           type = "DisruptionTarget"
         }
       }

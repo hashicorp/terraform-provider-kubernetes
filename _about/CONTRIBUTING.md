@@ -1,8 +1,19 @@
-## Developing the provider
+# Contributor Guide
 
 Thank you for your interest in contributing to the Kubernetes provider. We welcome your contributions. Here you'll find information to help you get started with provider development.
 
+If you want to know more about how to develop a Terraform provider, please refer to the [Plugin Development documentation](https://developer.hashicorp.com/terraform/plugin).
+
 ## Configuring Environment
+
+<!-- TODO:
+- Add cluster name to the config
+- Add an example of how to use Kustomize to tune the cluster config and provision different Kubernetes version
+- Once we move on with more automation, we need to update this section too
+- We might want to add an example of how to provision a KinD cluster with Terraform
+- We might want to add a few words on how to use kubectl command to validate the cluster
+- We might want to mention here or in a different place that some tests we can only run on a specific managed cluster, such as AKS, GKE, or AWS and how to do that
+-->
 
 1. Install Golang
 
@@ -33,20 +44,22 @@ Thank you for your interest in contributing to the Kubernetes provider. We welco
 
     Once the Kubernetes cluster is up and running we strongly advise you to run acceptance tests before making any changes to make sure that they work with your setup. Please refer to the [Testing](#testing) section for more details.
 
-    <!-- TODO
-    - Add cluster name to the config
-    - Add an example of how to use Kustomize to tune the cluster config and provision different Kubernetes version
-    - Once we move on with more automation, we need to update this section too
-    - We might want to add an example of how to provision a KinD cluster with Terraform
-    - We might want to add a few words on how to use kubectl command to validate the cluster
-    - We might want to mention here or in a different place that some tests we can only run on a specific managed cluster, such as AKS, GKE, or AWS and how to do that
-    -->
 
 ## Making Changes
 
-<!-- TODO THIS SECTION -->
+<!-- TODO:
+- We need to mention here linters that we have and how to run them
+- Break down changes into categories, such as adding, updating, removing(???) or fixing resource, data source, provider block, attribute, documentation or making a small change
+- We might want to mention here some best practices that are specfic to the Kubernete provider, such as reuse constatns from the Kuberentes packages as a default value in an attribute or within a validation function
+-->
 
 ## Testing
+
+<!-- TODO:
+- We need to explain here that the provider has unit and acceptance tests and when they need to be added or updated
+- We need to explain here how to run a specific test or group of tests
+- We need to explain here how to build a provider binary and run it
+-->
 
 ```console
 $ export KUBE_CONFIG_PATH=~/.kube/config
@@ -60,9 +73,17 @@ $ make test
 
 ## Updating changelog
 
+<!-- TODO:
+- We need to explain here when a change log is necessary to add
+-->
+
 Please refer to our [ChangeLog Guide](../CHANGELOG_GUIDE.md).
 
 ## Creating & Submiting a PR
+
+<!--
+- We need to explain here what do we expect to see in a PR, the same should be reflected in a PR template
+-->
 
 Please refer to this [guide](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork).
 

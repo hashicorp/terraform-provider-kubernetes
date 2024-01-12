@@ -431,8 +431,15 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 				nowCfg, restPath, err := tftypes.WalkAttributePath(ppMan, ap)
 				hasChanged = err == nil && len(restPath.Steps()) == 0 && wasCfg.(tftypes.Value).IsKnown() && !wasCfg.(tftypes.Value).Equal(nowCfg.(tftypes.Value))
 				if hasChanged {
+					forceUpdate := false
 					h, ok := hints[morph.ValueToTypePath(ap).String()]
-					if ok && h == manifest.PreserveUnknownFieldsLabel {
+					if !proposedVal["force_update"].IsNull() && proposedVal["force_update"].IsKnown() {
+						err = proposedVal["force_update"].As(&forceUpdate)
+						if err != nil {
+							s.logger.Error("[force_update] error setting force_update value")
+						}
+					}
+					if ok && h == manifest.PreserveUnknownFieldsLabel && !forceUpdate {
 						apm := append(tftypes.NewAttributePath().WithAttributeName("manifest").Steps(), ap.Steps()...)
 						resp.RequiresReplace = append(resp.RequiresReplace, tftypes.NewAttributePathWithSteps(apm))
 					}

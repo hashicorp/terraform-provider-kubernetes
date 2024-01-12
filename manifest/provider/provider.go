@@ -185,6 +185,17 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 						Description: "A Kubernetes manifest describing the desired state of the resource in HCL format.",
 					},
 					{
+						Name:            "force_update",
+						Type:            tftypes.Bool,
+						Required:        false,
+						Optional:        true,
+						Computed:        false,
+						Sensitive:       false,
+						Description:     "Force update will replace destroy + create with just a replacement.",
+						DescriptionKind: 0,
+						Deprecated:      false,
+					},
+					{
 						Name:        "object",
 						Type:        tftypes.DynamicPseudoType,
 						Optional:    true,

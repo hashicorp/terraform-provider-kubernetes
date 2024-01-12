@@ -1,8 +1,8 @@
 # Contributor Guide
 
-Thank you for your interest in contributing to the Kubernetes provider. We welcome your contributions. Here you'll find information to help you get started with provider development.
+Thank you for your interest in contributing to the Kubernetes provider. We welcome your contributions. Here, you'll find information to help you get started with provider development.
 
-If you want to know more about how to develop a Terraform provider, please refer to the [Plugin Development documentation](https://developer.hashicorp.com/terraform/plugin).
+If you want to learn more about developing a Terraform provider, please refer to the [Plugin Development documentation](https://developer.hashicorp.com/terraform/plugin).
 
 ## Configuring Environment
 
@@ -23,26 +23,28 @@ If you want to know more about how to develop a Terraform provider, please refer
 
     [Fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) the provider repository and clone it on your computer.
 
-    Here is an example of how to clone this repository and switch to the directory.
+    Here is an example of how to clone this repository and switch to the directory:
 
     ```console
     $ git clone https://github.com/<YOUR-USERNAME>/terraform-provider-kubernetes.git
     $ cd terraform-provider-kubernetes
     ```
 
-    From now on we are going to assume that you have a copy of the repository on your computer and work within the `terraform-provider-kubernetes` directory.
+    From now on, we are going to assume that you have a copy of the repository on your computer and work within the `terraform-provider-kubernetes` directory.
 
 1. Prepare a Kubernetes Cluster
 
-    While our preference is to use [kind](https://kind.sigs.k8s.io/) for setting up a Kubernetes cluster for development and test purposes, feel free to opt for the solution that best suits your preferences. Please, bear in mind that some acceptance tests might require specific cluster settings that we maintain in the KinD [configuration file](../.github/config/acceptance_tests_kind_config.yaml).
+    While our preference is to use [kind](https://kind.sigs.k8s.io/) for setting up a Kubernetes cluster for development and test purposes, feel free to opt for the solution that best suits your preferences. Please bear in mind that some acceptance tests might require specific cluster settings, which we maintain in the KinD [configuration file](../.github/config/acceptance_tests_kind_config.yaml).
 
-    Here is an example of how to provision a Kubernetes cluster with the configuration file:
+    Here is an example of how to provision a Kubernetes cluster using the configuration file:
 
     ```console
     $ kind create cluster --config=./.github/config/acceptance_tests_kind_config.yaml
     ```
 
-    Once the Kubernetes cluster is up and running we strongly advise you to run acceptance tests before making any changes to make sure that they work with your setup. Please refer to the [Testing](#testing) section for more details.
+    From now on, we are going to assume that the Kubernetes configuration is stored in the `$HOME/.kube/config` file, and the current context is set to a newly created KinD cluster.
+
+    Once the Kubernetes cluster is up and running, we strongly advise you to run acceptance tests before making any changes to ensure they work with your setup. Please refer to the [Testing](#testing) section for more details.
 
 
 ## Making Changes

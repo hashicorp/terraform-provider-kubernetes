@@ -6,31 +6,45 @@ Thank you for your interest in contributing to the Kubernetes provider. We welco
 
 1. Install Golang
 
-    Install the version of [Golang](https://go.dev/) as indicated in the [go.mod](../go.mod) file. 
+    [Install](https://go.dev/doc/install) the version of Golang as indicated in the [go.mod](../go.mod) file.
 
-1. [Clone](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) this repo
+1. Fork this repo
+
+    [Fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) the provider repository and clone it on your computer.
+
+    Here is an example of how to clone this repository and switch to the directory.
 
     ```console
-    $ git clone https://github.com/hashicorp/terraform-provider-kubernetes.git
+    $ git clone https://github.com/<YOUR-USERNAME>/terraform-provider-kubernetes.git
     $ cd terraform-provider-kubernetes
-     ```
+    ```
+
+    From now on we are going to assume that you have a copy of the repository on your computer and work within the `terraform-provider-kubernetes` directory.
 
 1. Prepare a Kubernetes Cluster
 
-    While our preference is to use [kind](https://kind.sigs.k8s.io/) for setting up a Kubernetes cluster for development and test purposes, feel free to opt for the solution that best suits your preferences.
+    While our preference is to use [kind](https://kind.sigs.k8s.io/) for setting up a Kubernetes cluster for development and test purposes, feel free to opt for the solution that best suits your preferences. Please, bear in mind that some acceptance tests might require specific cluster settings that we maintain in the KinD [configuration file](../.github/config/acceptance_tests_kind_config.yaml).
 
-    How to Provision a Cluster
+    Here is an example of how to provision a Kubernetes cluster with the configuration file:
+
     ```console
     $ kind create cluster --config=./.github/config/acceptance_tests_kind_config.yaml
-     ```
-    
-    Validating Cluster 
-        
-    Please refer to the [Writing Tests](#writing-tests) section.
+    ```
 
+    Once the Kubernetes cluster is up and running we strongly advise you to run acceptance tests before making any changes to make sure that they work with your setup. Please refer to the [Testing](#testing) section for more details.
+
+    <!-- TODO
+    - Add cluster name to the config
+    - Add an example of how to use Kustomize to tune the cluster config and provision different Kubernetes version
+    - Once we move on with more automation, we need to update this section too
+    - We might want to add an example of how to provision a KinD cluster with Terraform
+    - We might want to add a few words on how to use kubectl command to validate the cluster
+    - We might want to mention here or in a different place that some tests we can only run on a specific managed cluster, such as AKS, GKE, or AWS and how to do that
+    -->
 
 ## Making Changes
-//TO-DO
+
+<!-- TODO THIS SECTION -->
 
 ## Testing
 
@@ -54,4 +68,4 @@ Please refer to this [guide](https://docs.github.com/en/pull-requests/collaborat
 
 ## Debug Guide
 
-//TO-DO
+<!-- TODO THIS SECTION -->

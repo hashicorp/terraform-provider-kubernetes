@@ -105,6 +105,13 @@ func TestAccKubernetesJobV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_completion", "false"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.0.action", "FailJob"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.container_name", "hello"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.values.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.action", "Ignore"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.on_pod_condition.0.type", "DisruptionTarget"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.on_pod_condition.0.status", "False"),
 				),
 			},
 		},
@@ -358,6 +365,23 @@ func testAccKubernetesJobV1Config_updateMutableFields(name, imageName, activeDea
     completions             = 4
     manual_selector         = %s
     parallelism             = %s
+	pod_failure_policy {
+		rule {
+		  action = "FailJob"
+		  on_exit_codes {
+			container_name = "hello"
+			operator       = "In"
+			values         = [2, 1, 42]
+		  }
+		}
+		rule {
+		  action = "Ignore"
+		  on_pod_condition {
+			status = "False"
+			type   = "DisruptionTarget"
+		  }
+		}
+	  }
     template {
       metadata {}
       spec {

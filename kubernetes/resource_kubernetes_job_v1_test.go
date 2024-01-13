@@ -365,23 +365,23 @@ func testAccKubernetesJobV1Config_updateMutableFields(name, imageName, activeDea
     completions             = 4
     manual_selector         = %s
     parallelism             = %s
-	pod_failure_policy {
-		rule {
-		  action = "FailJob"
-		  on_exit_codes {
-			container_name = "hello"
-			operator       = "In"
-			values         = [2, 1, 42]
-		  }
-		}
-		rule {
-		  action = "Ignore"
-		  on_pod_condition {
-			status = "False"
-			type   = "DisruptionTarget"
-		  }
-		}
-	  }
+    pod_failure_policy {
+      rule {
+        action = "FailJob"
+        on_exit_codes {
+          container_name = "hello"
+          operator       = "In"
+          values         = [2, 1, 42]
+        }
+      }
+      rule {
+        action = "Ignore"
+        on_pod_condition {
+          status = "False"
+          type   = "DisruptionTarget"
+        }
+      }
+    }
     template {
       metadata {}
       spec {

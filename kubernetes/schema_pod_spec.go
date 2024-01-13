@@ -4,6 +4,8 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -707,6 +709,15 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 		},
 	}
 
+	validEmptyDirMediums := []string{
+		string(corev1.StorageMediumDefault),
+		string(corev1.StorageMediumMemory),
+		string(corev1.StorageMediumHugePages),
+		// This is possibly not an exhaustive list, but it does cover the
+		// common cases from x86_64 architectures.
+		string(corev1.StorageMediumHugePagesPrefix) + "2Mi",
+		string(corev1.StorageMediumHugePagesPrefix) + "1Gi",
+	}
 	v["empty_dir"] = &schema.Schema{
 		Type:        schema.TypeList,
 		Description: "EmptyDir represents a temporary directory that shares a pod's lifetime. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir",
@@ -715,15 +726,12 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"medium": {
-					Type:        schema.TypeString,
-					Description: `What type of storage medium should back this directory. The default is "" which means to use the node's default medium. Must be an empty string (default) or Memory. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir`,
-					Optional:    true,
-					Default:     "",
-					ForceNew:    !isUpdatable,
-					ValidateFunc: validation.StringInSlice([]string{
-						string(corev1.StorageMediumDefault),
-						string(corev1.StorageMediumMemory),
-					}, false),
+					Type:         schema.TypeString,
+					Description:  fmt.Sprintf(`What type of storage medium should back this directory. The default is "" which means to use the node's default medium. Must be one of %q. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir`, validEmptyDirMediums),
+					Optional:     true,
+					Default:      "",
+					ForceNew:     !isUpdatable,
+					ValidateFunc: validation.StringInSlice(validEmptyDirMediums, false),
 				},
 				"size_limit": {
 					Type:             schema.TypeString,

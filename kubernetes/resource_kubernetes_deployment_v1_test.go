@@ -820,6 +820,33 @@ func TestAccKubernetesDeploymentV1_with_empty_dir_volume(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDeploymentV1_with_empty_dir_huge_page(t *testing.T) {
+	var conf appsv1.Deployment
+
+	imageName := busyboxImage
+	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_deployment_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentV1ConfigWithEmptyDirHugePage(deploymentName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.mount_path", "/cache"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.name", "cache-volume"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.empty_dir.0.medium", "HugePages-1Gi"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesDeploymentV1Update_basic(t *testing.T) {
 	var conf1, conf2 appsv1.Deployment
 	resourceName := "kubernetes_deployment_v1.test"
@@ -2597,6 +2624,59 @@ func testAccKubernetesDeploymentV1ConfigWithEmptyDirVolumes(deploymentName, imag
 
           empty_dir {
             medium = "Memory"
+          }
+        }
+
+        termination_grace_period_seconds = 1
+      }
+    }
+  }
+}
+`, deploymentName, imageName)
+}
+
+func testAccKubernetesDeploymentV1ConfigWithEmptyDirHugePage(deploymentName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_deployment_v1" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    replicas = 0 # We request zero replicas, since the K8S backing this test may not have huge pages available.
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "300"]
+
+          volume_mount {
+            mount_path = "/cache"
+            name       = "cache-volume"
+          }
+        }
+
+        volume {
+          name = "cache-volume"
+
+          empty_dir {
+            medium = "HugePages-1Gi"
           }
         }
 

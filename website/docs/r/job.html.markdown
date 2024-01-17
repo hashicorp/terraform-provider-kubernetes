@@ -136,7 +136,7 @@ The following arguments are supported:
 
 * `container_name` - (Optional) Restricts the check for exit codes to the container with the specified name. When null, the rule applies to all containers. When specified, it should match one the container or initContainer names in the pod template.
 * `operator` - (Optional) Represents the relationship between the container exit code(s) and the specified values.
-* `values` - (Optional) Specifies the set of values. Each returned container exit code (might be multiple in case of multiple containers) is checked against this set of values with respect to the operator.
+* `values` - (Required) Specifies the set of values. Each returned container exit code (might be multiple in case of multiple containers) is checked against this set of values with respect to the operator.
 
 ### `on_pod_conditions`
 

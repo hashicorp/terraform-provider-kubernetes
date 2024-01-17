@@ -8,7 +8,6 @@ If you want to learn more about developing a Terraform provider, please refer to
 
 <!-- TODO:
 - Add cluster name to the config
-- Add an example of how to use Kustomize to tune the cluster config and provision different Kubernetes version
 - Once we move on with more automation, we need to update this section too
 - We might want to add an example of how to provision a KinD cluster with Terraform
 - We might want to add a few words on how to use kubectl command to validate the cluster
@@ -34,13 +33,23 @@ If you want to learn more about developing a Terraform provider, please refer to
 
 1. Prepare a Kubernetes Cluster
 
-    While our preference is to use [kind](https://kind.sigs.k8s.io/) for setting up a Kubernetes cluster for development and test purposes, feel free to opt for the solution that best suits your preferences. Please bear in mind that some acceptance tests might require specific cluster settings, which we maintain in the KinD [configuration file](../.github/config/acceptance_tests_kind_config.yaml).
+    While our preference is to use [KinD](https://kind.sigs.k8s.io/) for setting up a Kubernetes cluster for development and test purposes, feel free to opt for the solution that best suits your preferences. Please bear in mind that some acceptance tests might require specific cluster settings, which we maintain in the KinD [configuration file](../.github/config/acceptance_tests_kind_config.yaml).
 
     Here is an example of how to provision a Kubernetes cluster using the configuration file:
 
     ```console
     $ kind create cluster --config=./.github/config/acceptance_tests_kind_config.yaml
     ```
+
+    KinD comes with a default Node image version that depends on the KinD version and thus might not be always the one you want to use. The above command can be extended with the `--image` option to spin up a particular Kubernetes version:
+
+    ```console
+    $ kind create cluster \
+      --config=./.github/config/acceptance_tests_kind_config.yaml \
+      --image kindest/node:v1.28.0@sha256:b7a4cad12c197af3ba43202d3efe03246b3f0793f162afb40a33c923952d5b31
+    ```
+
+    Refer to the KinD [releases](https://github.com/kubernetes-sigs/kind/releases) to get the right image.
 
     From now on, we are going to assume that the Kubernetes configuration is stored in the `$HOME/.kube/config` file, and the current context is set to a newly created KinD cluster.
 
@@ -57,16 +66,25 @@ If you want to learn more about developing a Terraform provider, please refer to
 
 ## Testing
 
+The Kubernetes provider includes two types of tests: [unit](https://developer.hashicorp.com/terraform/plugin/sdkv2/testing/unit-testing) tests and [acceptance](https://developer.hashicorp.com/terraform/plugin/sdkv2/testing/acceptance-tests) tests.
+
+Before running any tests, make sure that the `KUBE_CONFIG_PATH` environment variable points to the Kubernetes configuration file:
+
+```console
+$ export KUBE_CONFIG_PATH=$HOME/.kube/config
+```
+
 <!-- TODO:
 - We need to explain here that the provider has unit and acceptance tests and when they need to be added or updated
 - We need to explain here how to run a specific test or group of tests
 - We need to explain here how to build a provider binary and run it
 -->
 
+The following commands demonstrate how to run unit and acceptance tests respectively.
+
 ```console
-$ export KUBE_CONFIG_PATH=~/.kube/config
-$ make testacc TESTARGS="-run ^TestAcc"
-$ make test
+$ make test # unit tests
+$ make testacc TESTARGS="-run ^TestAcc" # acceptance tests
 ```
 
 1. Run existing tests

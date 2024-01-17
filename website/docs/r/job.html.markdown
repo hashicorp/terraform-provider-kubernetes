@@ -109,11 +109,41 @@ The following arguments are supported:
 * `backoff_limit` - (Optional) Specifies the number of retries before marking this job failed. Defaults to 6
 * `completions` - (Optional) Specifies the desired number of successfully finished pods the job should be run with. Setting to nil means that the success of any pod signals the success of all pods, and allows parallelism to have any positive value. Setting to 1 means that parallelism is limited to 1 and the success of that pod signals the success of the job. For more info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
 * `completion_mode` - (Optional) Specifies how Pod completions are tracked. It can be `NonIndexed` (default) or `Indexed`. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/controllers/job/#completion-mode).
+* `pod_failure_policy` - (Optional) Specifies the policy of handling failed pods. In particular, it allows to specify the set of actions and conditions which need to be satisfied to take the associated action. If empty, the default behaviour applies - the counter of failed pods, represented by the jobs's .status.failed field, is incremented and it is checked against the backoffLimit. This field cannot be used in combination with restartPolicy=OnFailure.
 * `manual_selector` - (Optional) Controls generation of pod labels and pod selectors. Leave `manualSelector` unset unless you are certain what you are doing. When false or unset, the system pick labels unique to this job and appends those labels to the pod template. When true, the user is responsible for picking unique labels and specifying the selector. Failure to pick a unique label may cause this and other jobs to not function correctly. However, You may see `manualSelector=true` in jobs that were created with the old `extensions/v1beta1` API. For more info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/#specifying-your-own-pod-selector
 * `parallelism` - (Optional) Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when `((.spec.completions - .status.successful) < .spec.parallelism)`, i.e. when the work left to do is less than max parallelism. For more info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
 * `selector` - (Optional) A label query over pods that should match the pod count. Normally, the system sets this field for you. For more info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
 * `template` - (Optional) Describes the pod that will be created when executing a job. For more info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
 * `ttl_seconds_after_finished` - (Optional) ttlSecondsAfterFinished limits the lifetime of a Job that has finished execution (either Complete or Failed). If this field is set, ttlSecondsAfterFinished after the Job finishes, it is eligible to be automatically deleted. When the Job is being deleted, its lifecycle guarantees (e.g. finalizers) will be honored. If this field is unset, the Job won't be automatically deleted. If this field is set to zero, the Job becomes eligible to be deleted immediately after it finishes.
+
+### `pod_failure_policy`
+
+#### Arguments
+
+* `rules` - (Required) A list of pod failure policy rules. The rules are evaluated in order. Once a rule matches a Pod failure, the remaining of the rules are ignored.
+
+### `rules`
+
+#### Arguments
+
+* `action` - (Optional) Specifies the action taken on a pod failure when the requirements are satisfied. Possible values are: - FailJob: indicates that the pod's job is marked as Failed and all running pods are terminated. - FailIndex: indicates that the pod's index is marked as Failed and will not be restarted.
+* `on_exit_codes` - (Optional) Represents the requirement on the container exit codes.
+* `on_pod_conditions` - (Optional) Represents the requirement on the pod conditions. The requirement is represented as a list of pod condition patterns. The requirement is satisfied if at least one pattern matches an actual pod condition.
+
+### `on_exit_codes`
+
+#### Arguments
+
+* `container_name` - (Optional) Restricts the check for exit codes to the container with the specified name. When null, the rule applies to all containers. When specified, it should match one the container or initContainer names in the pod template.
+* `operator` - (Optional) Represents the relationship between the container exit code(s) and the specified values.
+* `values` - (Optional) Specifies the set of values. Each returned container exit code (might be multiple in case of multiple containers) is checked against this set of values with respect to the operator.
+
+### `on_pod_conditions`
+
+#### Arguments
+
+* `status` - (Optional) Specifies the required Pod condition status. To match a pod condition it is required that the specified status equals the pod condition status. Defaults to True.
+* `type` - (Optional) Specifies the required Pod condition type. To match a pod condition it is required that specified type equals the pod condition type.
 
 ### `selector`
 

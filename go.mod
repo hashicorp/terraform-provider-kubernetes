@@ -21,15 +21,15 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/hashstructure v1.1.0
 	github.com/robfig/cron v1.2.0
-	github.com/stretchr/testify v1.8.1
-	golang.org/x/mod v0.13.0
-	k8s.io/api v0.27.8
-	k8s.io/apiextensions-apiserver v0.27.8
-	k8s.io/apimachinery v0.27.8
-	k8s.io/client-go v0.27.8
-	k8s.io/kube-aggregator v0.27.8
-	k8s.io/kubectl v0.27.8
-	k8s.io/kubernetes v1.27.8
+	github.com/stretchr/testify v1.8.2
+	golang.org/x/mod v0.14.0
+	k8s.io/api v0.28.6
+	k8s.io/apiextensions-apiserver v0.28.6
+	k8s.io/apimachinery v0.28.6
+	k8s.io/client-go v0.28.6
+	k8s.io/kube-aggregator v0.28.6
+	k8s.io/kubectl v0.28.6
+	k8s.io/kubernetes v1.28.6
 )
 
 require (
@@ -42,7 +42,7 @@ require (
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
-	github.com/google/gnostic v0.6.9 // indirect
+	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/invopop/yaml v0.2.0 // indirect
 	github.com/mitchellh/cli v1.1.5 // indirect
@@ -55,6 +55,7 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/exp v0.0.0-20230809150735-7b3493d9a819 // indirect
+	golang.org/x/sync v0.5.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
 )
 
@@ -69,9 +70,9 @@ require (
 	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
-	github.com/go-logr/logr v1.2.3 // indirect
+	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
-	github.com/go-openapi/jsonreference v0.20.1 // indirect
+	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
@@ -113,14 +114,14 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
-	github.com/spf13/cobra v1.6.1 // indirect
+	github.com/spf13/cobra v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	github.com/xlab/treeprint v1.1.0 // indirect
+	github.com/xlab/treeprint v1.2.0 // indirect
 	github.com/zclconf/go-cty v1.14.0
-	go.starlark.net v0.0.0-20221205180719-3fd0dac74452 // indirect
+	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
 	golang.org/x/crypto v0.17.0 // indirect
-	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.11.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/term v0.15.0 // indirect
@@ -132,25 +133,16 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/cli-runtime v0.27.8 // indirect
-	k8s.io/component-base v0.27.8 // indirect
-	k8s.io/klog/v2 v2.90.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f // indirect
+	k8s.io/cli-runtime v0.28.6 // indirect
+	k8s.io/component-base v0.28.6 // indirect
+	k8s.io/klog/v2 v2.100.1 // indirect
+	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
 	k8s.io/utils v0.0.0-20231127182322-b307cd553661
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
-	sigs.k8s.io/kustomize/api v0.13.2 // indirect
-	sigs.k8s.io/kustomize/kyaml v0.14.1 // indirect
+	sigs.k8s.io/kustomize/api v0.13.5-0.20230601165947-6ce0bf390ce3 // indirect
+	sigs.k8s.io/kustomize/kyaml v0.14.3-0.20230601165947-6ce0bf390ce3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
-)
-
-// kustomize needs to be kept in sync with the cli-runtime.
-// go-openapi needs to be locked at a version that is compatible with kustomize
-replace (
-	github.com/go-openapi/spec => github.com/go-openapi/spec v0.20.9
-	k8s.io/client-go => k8s.io/client-go v0.27.7
-// sigs.k8s.io/kustomize/pkg/transformers => ./vendor/k8s.io/cli-runtime/pkg/kustomize/k8sdeps/transformer
-// sigs.k8s.io/kustomize/pkg/transformers/config => ./vendor/k8s.io/cli-runtime/pkg/kustomize/k8sdeps/transformer/config
 )
 
 go 1.21

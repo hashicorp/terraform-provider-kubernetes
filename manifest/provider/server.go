@@ -56,17 +56,8 @@ func (s *RawProviderServer) GetMetadata(ctx context.Context, req *tfprotov5.GetM
 	s.logger.Trace("[GetMetadata][Request]\n%s\n", dump(*req))
 
 	resp := &tfprotov5.GetMetadataResponse{
-		Resources: []tfprotov5.ResourceMetadata{{
-			TypeName: "kubernetes_manifest",
-		}},
-		DataSources: []tfprotov5.DataSourceMetadata{
-			{
-				TypeName: "kubernetes_resource",
-			},
-			{
-				TypeName: "kubernetes_resources",
-			},
-		},
+		Resources:   resources["getMetadata"].([]tfprotov5.ResourceMetadata),
+		DataSources: dataSources["getMetadata"].([]tfprotov5.DataSourceMetadata),
 	}
 	return resp, nil
 }

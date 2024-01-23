@@ -10,62 +10,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
-// GetObjectTypeFromSchema returns a tftypes.Type that can wholy represent the schema input
-func GetObjectTypeFromSchema(schema *tfprotov5.Schema) tftypes.Type {
-	bm := map[string]tftypes.Type{}
-
-	for _, att := range schema.Block.Attributes {
-		bm[att.Name] = att.Type
-	}
-
-	for _, b := range schema.Block.BlockTypes {
-		a := map[string]tftypes.Type{}
-		for _, att := range b.Block.Attributes {
-			a[att.Name] = att.Type
-		}
-		bm[b.TypeName] = tftypes.List{
-			ElementType: tftypes.Object{AttributeTypes: a},
-		}
-
-		// FIXME we can make this function recursive to handle
-		// n levels of nested blocks
-		for _, bb := range b.Block.BlockTypes {
-			aa := map[string]tftypes.Type{}
-			for _, att := range bb.Block.Attributes {
-				aa[att.Name] = att.Type
-			}
-			a[bb.TypeName] = tftypes.List{
-				ElementType: tftypes.Object{AttributeTypes: aa},
-			}
-		}
-	}
-
-	return tftypes.Object{AttributeTypes: bm}
-}
-
-// GetResourceType returns the tftypes.Type of a resource of type 'name'
-func GetResourceType(name string) (tftypes.Type, error) {
-	sch := GetProviderResourceSchema()
-	rsch, ok := sch[name]
-	if !ok {
-		return tftypes.DynamicPseudoType, fmt.Errorf("unknown resource %s - cannot find schema", name)
-	}
-	return GetObjectTypeFromSchema(rsch), nil
-}
-
-// GetDataSourceType returns the tftypes.Type of a datasource of type 'name'
-func GetDataSourceType(name string) (tftypes.Type, error) {
-	sch := GetProviderDataSourceSchema()
-	rsch, ok := sch[name]
-	if !ok {
-		return tftypes.DynamicPseudoType, fmt.Errorf("unknown data source %q: cannot find schema", name)
-	}
-	return GetObjectTypeFromSchema(rsch), nil
-}
-
-// GetProviderResourceSchema contains the definitions of all supported resources
-func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
-	return map[string]*tfprotov5.Schema{
+var resources = map[string]interface{}{
+	"getMetadata": []tfprotov5.ResourceMetadata{{
+		TypeName: "kubernetes_manifest",
+	}},
+	"providerSchema": map[string]*tfprotov5.Schema{
 		"kubernetes_manifest": {
 			Version: 1,
 			Block: &tfprotov5.SchemaBlock{
@@ -213,12 +162,18 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 				},
 			},
 		},
-	}
+	},
 }
-
-// GetProviderDataSourceSchema contains the definitions of all supported data sources
-func GetProviderDataSourceSchema() map[string]*tfprotov5.Schema {
-	return map[string]*tfprotov5.Schema{
+var dataSources = map[string]interface{}{
+	"getMetadata": []tfprotov5.DataSourceMetadata{
+		{
+			TypeName: "kubernetes_resource",
+		},
+		{
+			TypeName: "kubernetes_resources",
+		},
+	},
+	"providerSchema": map[string]*tfprotov5.Schema{
 		"kubernetes_resource": {
 			Version: 1,
 			Block: &tfprotov5.SchemaBlock{
@@ -320,5 +275,68 @@ func GetProviderDataSourceSchema() map[string]*tfprotov5.Schema {
 				},
 			},
 		},
+	},
+}
+
+// GetObjectTypeFromSchema returns a tftypes.Type that can wholy represent the schema input
+func GetObjectTypeFromSchema(schema *tfprotov5.Schema) tftypes.Type {
+	bm := map[string]tftypes.Type{}
+
+	for _, att := range schema.Block.Attributes {
+		bm[att.Name] = att.Type
 	}
+
+	for _, b := range schema.Block.BlockTypes {
+		a := map[string]tftypes.Type{}
+		for _, att := range b.Block.Attributes {
+			a[att.Name] = att.Type
+		}
+		bm[b.TypeName] = tftypes.List{
+			ElementType: tftypes.Object{AttributeTypes: a},
+		}
+
+		// FIXME we can make this function recursive to handle
+		// n levels of nested blocks
+		for _, bb := range b.Block.BlockTypes {
+			aa := map[string]tftypes.Type{}
+			for _, att := range bb.Block.Attributes {
+				aa[att.Name] = att.Type
+			}
+			a[bb.TypeName] = tftypes.List{
+				ElementType: tftypes.Object{AttributeTypes: aa},
+			}
+		}
+	}
+
+	return tftypes.Object{AttributeTypes: bm}
+}
+
+// GetResourceType returns the tftypes.Type of a resource of type 'name'
+func GetResourceType(name string) (tftypes.Type, error) {
+	sch := GetProviderResourceSchema()
+	rsch, ok := sch[name]
+	if !ok {
+		return tftypes.DynamicPseudoType, fmt.Errorf("unknown resource %s - cannot find schema", name)
+	}
+	return GetObjectTypeFromSchema(rsch), nil
+}
+
+// GetDataSourceType returns the tftypes.Type of a datasource of type 'name'
+func GetDataSourceType(name string) (tftypes.Type, error) {
+	sch := GetProviderDataSourceSchema()
+	rsch, ok := sch[name]
+	if !ok {
+		return tftypes.DynamicPseudoType, fmt.Errorf("unknown data source %q: cannot find schema", name)
+	}
+	return GetObjectTypeFromSchema(rsch), nil
+}
+
+// GetProviderResourceSchema contains the definitions of all supported resources
+func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
+	return resource["providerSchema"].(map[string]*tfprotov5.Schema)
+}
+
+// GetProviderDataSourceSchema contains the definitions of all supported data sources
+func GetProviderDataSourceSchema() map[string]*tfprotov5.Schema {
+	return dataSources["providerSchema"].(map[string]*tfprotov5.Schema)
 }

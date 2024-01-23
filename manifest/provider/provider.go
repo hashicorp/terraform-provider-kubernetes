@@ -333,7 +333,7 @@ func GetDataSourceType(name string) (tftypes.Type, error) {
 
 // GetProviderResourceSchema contains the definitions of all supported resources
 func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
-	return resource["providerSchema"].(map[string]*tfprotov5.Schema)
+	return resources["providerSchema"].(map[string]*tfprotov5.Schema)
 }
 
 // GetProviderDataSourceSchema contains the definitions of all supported data sources

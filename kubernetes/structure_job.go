@@ -182,8 +182,7 @@ func expandPodFailurePolicyOnExitCodesRequirement(l []interface{}) *batchv1.PodF
 		obj.Operator = batchv1.PodFailurePolicyOnExitCodesOperator(v)
 	}
 
-	if v, ok := in["values"].(*schema.Set); ok && v != nil {
-		v := schemaSetToInt32Array(v)
+	if v, ok := in["values"].([]int32); ok && len(v) > 0 {
 		slices.Sort(v)
 		obj.Values = v
 	}
@@ -244,9 +243,7 @@ func flattenPodFailurePolicyOnExitCodes(in *batchv1.PodFailurePolicyOnExitCodesR
 	}
 	att["operator"] = in.Operator
 	if len(in.Values) > 0 {
-		att["values"] = newInt32Set(schema.HashSchema(&schema.Schema{
-			Type: schema.TypeInt,
-		}), in.Values)
+		att["values"] = in.Values
 	}
 
 	return []interface{}{att}

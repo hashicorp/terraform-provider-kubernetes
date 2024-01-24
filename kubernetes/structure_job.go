@@ -182,9 +182,13 @@ func expandPodFailurePolicyOnExitCodesRequirement(l []interface{}) *batchv1.PodF
 		obj.Operator = batchv1.PodFailurePolicyOnExitCodesOperator(v)
 	}
 
-	if v, ok := in["values"].([]int32); ok && len(v) > 0 {
-		slices.Sort(v)
-		obj.Values = v
+	if v, ok := in["values"].([]interface{}); ok && len(v) > 0 {
+		vals := make([]int32, len(v))
+		for i := 0; i < len(v); i++ {
+			vals[i] = int32(v[i].(int))
+		}
+		slices.Sort(vals)
+		obj.Values = vals
 	}
 
 	return obj
@@ -243,7 +247,11 @@ func flattenPodFailurePolicyOnExitCodes(in *batchv1.PodFailurePolicyOnExitCodesR
 	}
 	att["operator"] = in.Operator
 	if len(in.Values) > 0 {
-		att["values"] = in.Values
+		vals := make([]int, len(in.Values))
+		for i := 0; i < len(vals); i++ {
+			vals[i] = int(in.Values[i])
+		}
+		att["values"] = vals
 	}
 
 	return []interface{}{att}

@@ -145,6 +145,9 @@ func TestAccKubernetesJobV1_update(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.0.action", "FailJob"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.container_name", "hello"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.values.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.values.0", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.values.1", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.values.2", "42"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.action", "Ignore"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.on_pod_condition.0.type", "DisruptionTarget"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.on_pod_condition.0.status", "False"),
@@ -330,7 +333,7 @@ func testAccKubernetesJobV1Config_basic(name, imageName string) string {
         on_exit_codes {
           container_name = "hello"
           operator       = "In"
-          values         = [2, 1, 42]
+          values         = [1, 2, 42]
         }
       }
       rule {
@@ -374,7 +377,7 @@ func testAccKubernetesJobV1Config_updateMutableFields(name, imageName, activeDea
         on_exit_codes {
           container_name = "hello"
           operator       = "In"
-          values         = [2, 1, 42]
+          values         = [1, 2, 42]
         }
       }
       rule {

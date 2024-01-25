@@ -271,7 +271,7 @@ func testAccKubernetesCronJobV1Config_basic(name, imageName string) string {
             on_exit_codes {
               container_name = "hello"
               operator       = "In"
-              values         = [2, 1, 42]
+              values         = [1, 2, 42]
             }
           }
           rule {

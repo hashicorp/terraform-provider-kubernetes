@@ -6,8 +6,6 @@ package kubernetes
 import (
 	"strconv"
 
-	"slices"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -187,7 +185,7 @@ func expandPodFailurePolicyOnExitCodesRequirement(l []interface{}) *batchv1.PodF
 		for i := 0; i < len(v); i++ {
 			vals[i] = int32(v[i].(int))
 		}
-		slices.Sort(vals)
+
 		obj.Values = vals
 	}
 

@@ -55,9 +55,21 @@ func (s *RawProviderServer) PrepareProviderConfig(ctx context.Context, req *tfpr
 func (s *RawProviderServer) GetMetadata(ctx context.Context, req *tfprotov5.GetMetadataRequest) (*tfprotov5.GetMetadataResponse, error) {
 	s.logger.Trace("[GetMetadata][Request]\n%s\n", dump(*req))
 
+	sch := GetProviderResourceSchema()
+	rs := make([]tfprotov5.ResourceMetadata, 0, len(sch))
+	for k := range sch {
+		rs = append(rs, tfprotov5.ResourceMetadata{TypeName: k})
+	}
+
+	sch = GetProviderDataSourceSchema()
+	ds := make([]tfprotov5.DataSourceMetadata, 0, len(sch))
+	for k := range sch {
+		ds = append(ds, tfprotov5.DataSourceMetadata{TypeName: k})
+	}
+
 	resp := &tfprotov5.GetMetadataResponse{
-		Resources:   resources["getMetadata"].([]tfprotov5.ResourceMetadata),
-		DataSources: dataSources["getMetadata"].([]tfprotov5.DataSourceMetadata),
+		Resources:   rs,
+		DataSources: ds,
 	}
 	return resp, nil
 }

@@ -120,15 +120,15 @@ The following arguments are supported:
 
 #### Arguments
 
-* `rules` - (Required) A list of pod failure policy rules. The rules are evaluated in order. Once a rule matches a Pod failure, the remaining of the rules are ignored.
+* `rule` - (Required) A list of pod failure policy rules. The rules are evaluated in order. Once a rule matches a Pod failure, the remaining of the rules are ignored.
 
-### `rules`
+### `rule`
 
 #### Arguments
 
 * `action` - (Optional) Specifies the action taken on a pod failure when the requirements are satisfied. Possible values are: - FailJob: indicates that the pod's job is marked as Failed and all running pods are terminated. - FailIndex: indicates that the pod's index is marked as Failed and will not be restarted.
 * `on_exit_codes` - (Optional) Represents the requirement on the container exit codes.
-* `on_pod_conditions` - (Optional) Represents the requirement on the pod conditions. The requirement is represented as a list of pod condition patterns. The requirement is satisfied if at least one pattern matches an actual pod condition.
+* `on_pod_condition` - (Optional) Represents the requirement on the pod conditions. The requirement is represented as a list of pod condition patterns. The requirement is satisfied if at least one pattern matches an actual pod condition.
 
 ### `on_exit_codes`
 
@@ -138,7 +138,7 @@ The following arguments are supported:
 * `operator` - (Optional) Represents the relationship between the container exit code(s) and the specified values.
 * `values` - (Required) Specifies the set of values. Each returned container exit code (might be multiple in case of multiple containers) is checked against this set of values with respect to the operator.
 
-### `on_pod_conditions`
+### `on_pod_condition`
 
 #### Arguments
 

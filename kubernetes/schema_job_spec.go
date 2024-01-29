@@ -94,7 +94,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 		"pod_failure_policy": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			ForceNew:    false,
+			ForceNew:    true,
 			MaxItems:    1,
 			Description: "Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
 			Elem: &schema.Resource{

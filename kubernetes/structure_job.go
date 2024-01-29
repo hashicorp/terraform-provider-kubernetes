@@ -307,6 +307,13 @@ func patchJobV1Spec(pathPrefix, prefix string, d *schema.ResourceData) PatchOper
 		})
 	}
 
+	if d.HasChange(prefix + "pod_failure_policy") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "/pod_failure_policy",
+			Value: expandPodFailurePolicy(d.Get(prefix + "pod_failure_policy").([]interface{})),
+		})
+	}
+
 	return ops
 }
 

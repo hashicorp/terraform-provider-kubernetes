@@ -468,27 +468,27 @@ func testAccKubernetesCronJobV1ConfigMinimalWithPodFailurePolicy(name, imageName
     job_template {
       metadata {}
       spec {
-		pod_failure_policy {
-				rule {
-				  action = "FailJob"
-				  on_exit_codes {
-					container_name = "test"
-					operator       = "In"
-					values         = [1, 2, 42]
-				  }
-				}
-				rule {
-				  action = "Ignore"
-				  on_pod_condition {
-					status = "False"
-					type   = "DisruptionTarget"
-				  }
-				}
-			  }
+        pod_failure_policy {
+          rule {
+            action = "FailJob"
+            on_exit_codes {
+              container_name = "test"
+              operator       = "In"
+              values         = [1, 2, 42]
+            }
+          }
+          rule {
+            action = "Ignore"
+            on_pod_condition {
+              status = "False"
+              type   = "DisruptionTarget"
+            }
+          }
+        }
         template {
           metadata {}
           spec {
-			
+
             container {
               name    = "test"
               image   = "%s"

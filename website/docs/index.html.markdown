@@ -136,9 +136,24 @@ For further reading, see these examples which demonstrate different approaches t
 
 ## Ignore Kubernetes annotations and labels
 
-In certain cases, external systems can add and modify resources annotations and labels for their own purposes. However, Terraform will remove them since they are not presented in the code. It also might be hard to update code accordingly to stay tuned with the changes that come outside. In order to address this `ignore_annotations` and `ignore_labels` attributes were introduced on the provider level. They allow Terraform to ignore certain annotations and labels across all resources. Please bear in mind, that all data sources remain unaffected and the provider always returns all labels and annotations, in spite of the `ignore_annotations` and `ignore_labels` settings. The same is applicable for the pod and job definitions that fall under templates.
+In certain cases, external systems can add and modify resources annotations and labels for their own purposes. However, Terraform will remove them since they are not presented in the code. It also might be hard to update code accordingly to stay tuned with the changes that come outside. In order to address this `ignore_annotations` and `ignore_labels` attributes were introduced on the provider level. They allow Terraform to ignore certain annotations and labels across all resources.
 
 Both attributes support RegExp to match metadata objects more effectively.
+
+Please keep in mind that all data sources remain unaffected, and the provider always returns all labels and annotations, despite the `ignore_annotations` and `ignore_labels` settings. The same applies to the pod and job definitions that fall under templates. To ignore certain annotations and/or labels on the template level, please use the `ignore_changes` feature of the [lifecycle](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle) meta-argument.
+
+The following example demonstrates how to ignore changes related to the `kubectl.kubernetes.io/restartedAt` annotation that were made in the upstream Kubernetes object:
+
+```hcl
+resource "kubernetes_deployment_v1" "this" {
+  ...
+  lifecycle {
+    ignore_changes = [
+      spec[0].template[0].metadata[0].annotations["kubectl.kubernetes.io/restartedAt"],
+    ]
+  }
+}
+```
 
 ### Examples
 
@@ -189,5 +204,5 @@ The following arguments are supported:
     * `command` - (Required) Command to execute.
     * `args` - (Optional) List of arguments to pass when executing the plugin.
     * `env` - (Optional) Map of environment variables to set when executing the plugin.
-* `ignore_annotations` - (Optional) List of Kubernetes metadata annotations to ignore across all resources handled by this provider for situations where external systems are managing certain resource annotations. Each item is a regular expression.
-* `ignore_labels` - (Optional) List of Kubernetes metadata labels to ignore across all resources handled by this provider for situations where external systems are managing certain resource labels. Each item is a regular expression.
+* `ignore_annotations` - (Optional) List of Kubernetes metadata annotations to ignore across all resources handled by this provider for situations where external systems are managing certain resource annotations. This option does not affect annotations within a template block. Each item is a regular expression.
+* `ignore_labels` - (Optional) List of Kubernetes metadata labels to ignore across all resources handled by this provider for situations where external systems are managing certain resource labels. This option does not affect annotations within a template block. Each item is a regular expression.

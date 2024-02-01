@@ -142,6 +142,8 @@ Both attributes support RegExp to match metadata objects more effectively.
 
 Please keep in mind that all data sources remain unaffected, and the provider always returns all labels and annotations, despite the `ignore_annotations` and `ignore_labels` settings. The same applies to the pod and job definitions that fall under templates. To ignore certain annotations and/or labels on the template level, please use the `ignore_changes` feature of the [lifecycle](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle) meta-argument.
 
+### Examples
+
 The following example demonstrates how to ignore changes related to the `kubectl.kubernetes.io/restartedAt` annotation that were made in the upstream Kubernetes object:
 
 ```hcl
@@ -154,8 +156,6 @@ resource "kubernetes_deployment_v1" "this" {
   }
 }
 ```
-
-### Examples
 
 The following example demonstrates how to ignore particular annotation keys:
 

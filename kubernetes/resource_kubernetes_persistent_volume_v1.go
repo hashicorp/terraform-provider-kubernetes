@@ -229,8 +229,8 @@ func resourceKubernetesPersistentVolumeV1Create(ctx context.Context, d *schema.R
 	log.Printf("[INFO] Submitted new persistent volume: %#v", out)
 
 	stateConf := &retry.StateChangeConf{
-		Target:  []string{"Available", "Bound"},
-		Pending: []string{"Pending"},
+		Target:  []string{"Bound"},
+		Pending: []string{"Available", "Pending"},
 		Timeout: d.Timeout(schema.TimeoutCreate),
 		Refresh: func() (interface{}, string, error) {
 			out, err := conn.CoreV1().PersistentVolumes().Get(ctx, metadata.Name, metav1.GetOptions{})
@@ -240,13 +240,17 @@ func resourceKubernetesPersistentVolumeV1Create(ctx context.Context, d *schema.R
 			}
 
 			statusPhase := fmt.Sprintf("%v", out.Status.Phase)
-			log.Printf("[DEBUG] Persistent volume %s status received: %#v", out.Name, statusPhase)
+			statusMessage := fmt.Sprintf("%v", out.Status.Message)
+			log.Printf("[DEBUG] Persistent volume %s status received: %#v, message received: %#v", out.Name, statusPhase, statusMessage)
 			return out, statusPhase, nil
 		},
 	}
 	_, err = stateConf.WaitForStateContext(ctx)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+	if out.Status.LastPhaseTransitionTime != nil {
+		log.Printf("[DEBUG] Persistent volume last phrase transition time: %v", out.Status.LastPhaseTransitionTime)
 	}
 	log.Printf("[INFO] Persistent volume %s created", out.Name)
 

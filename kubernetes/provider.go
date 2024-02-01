@@ -6,6 +6,7 @@ package kubernetes
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"net/http"
@@ -129,6 +130,12 @@ func Provider() *schema.Provider {
 				Optional:    true,
 				Description: "URL to the proxy to be used for all API requests",
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_PROXY_URL", ""),
+			},
+			"kubeconfig_base64": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Kubeconfig content in base64 format.",
+				DefaultFunc: schema.EnvDefaultFunc("KUBECONFIG_BASE64", ""),
 			},
 			"exec": {
 				Type:     schema.TypeList,
@@ -612,7 +619,21 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		overrides.ClusterDefaults.ProxyURL = v.(string)
 	}
 
-	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
+	var cc clientcmd.ClientConfig
+
+	if v, ok := d.GetOk("kubeconfig_base64"); ok {
+		k, err := base64.StdEncoding.DecodeString(v.(string))
+		if err != nil {
+			return nil, fmt.Errorf("Failed to decode kubeconfig_base64: %s", err)
+		}
+		cc, err = clientcmd.NewClientConfigFromBytes(k)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create ClientConfig: %s", err)
+		}
+	} else {
+		cc = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
+	}
+
 	cfg, err := cc.ClientConfig()
 	if err != nil {
 		log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail: %v", err)

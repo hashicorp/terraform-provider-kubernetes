@@ -5,6 +5,7 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/url"
@@ -93,6 +94,28 @@ func TestProvider_configure_paths(t *testing.T) {
 		"test-fixtures/kube-config-secondary.yaml",
 	}, string(os.PathListSeparator)))
 	os.Setenv("KUBE_CTX", "oidc")
+
+	rc := terraform.NewResourceConfigRaw(map[string]interface{}{})
+	p := Provider()
+	diags := p.Configure(ctx, rc)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+}
+
+func TestProvider_configure_kubeconfig_base64(t *testing.T) {
+	ctx := context.TODO()
+	resetEnv := unsetEnv(t)
+	defer resetEnv()
+
+	k, err := os.ReadFile("test-fixtures/kube-config-sa-token.yaml") // just pass the file name
+	if err != nil {
+		t.Fatal("Can't read kube-config")
+	}
+
+	k64 := base64.StdEncoding.EncodeToString(k)
+
+	os.Setenv("KUBECONFIG_BASE64", string(k64))
 
 	rc := terraform.NewResourceConfigRaw(map[string]interface{}{})
 	p := Provider()

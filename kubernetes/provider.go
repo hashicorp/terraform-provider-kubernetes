@@ -134,7 +134,7 @@ func Provider() *schema.Provider {
 			"kubeconfig_base64": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Kubeconfig content in base64 format.",
+				Description: "Kubeconfig content in base64 format",
 				DefaultFunc: schema.EnvDefaultFunc("KUBECONFIG_BASE64", ""),
 			},
 			"exec": {

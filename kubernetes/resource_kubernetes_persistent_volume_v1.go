@@ -360,7 +360,6 @@ func resourceKubernetesPersistentVolumeV1Delete(ctx context.Context, d *schema.R
 		} else {
 			log.Printf("[DEBUG] Current state of persistent volume: %#v, message received: %#v", out.Status.Phase, out.Status.Message)
 		}
-		log.Printf("[DEBUG] Current state of persistent volume: %#v", out.Status.Phase)
 		e := fmt.Errorf("Persistent volume %s still exists (%s)", name, out.Status.Phase)
 		return retry.RetryableError(e)
 	})

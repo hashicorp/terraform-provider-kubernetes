@@ -285,8 +285,8 @@ func resourceKubernetesPersistentVolumeV1Read(ctx context.Context, d *schema.Res
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received persistent volume: %#v", volume)
-	if out.Status.LastPhaseTransitionTime != nil {
-		log.Printf("[DEBUG] Persistent volume last phrase transition time: %v", out.Status.LastPhaseTransitionTime)
+	if volume.Status.LastPhaseTransitionTime != nil {
+		log.Printf("[DEBUG] Persistent volume last phrase transition time: %v", volume.Status.LastPhaseTransitionTime)
 	}
 	err = d.Set("metadata", flattenMetadata(volume.ObjectMeta, d, meta))
 	if err != nil {

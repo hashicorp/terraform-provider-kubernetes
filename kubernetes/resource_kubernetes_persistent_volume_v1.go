@@ -229,8 +229,8 @@ func resourceKubernetesPersistentVolumeV1Create(ctx context.Context, d *schema.R
 	log.Printf("[INFO] Submitted new persistent volume: %#v", out)
 
 	stateConf := &retry.StateChangeConf{
-		Target:  []string{"Bound"},
-		Pending: []string{"Available", "Pending"},
+		Target:  []string{"Available", "Bound"},
+		Pending: []string{"Pending"},
 		Timeout: d.Timeout(schema.TimeoutCreate),
 		Refresh: func() (interface{}, string, error) {
 			out, err := conn.CoreV1().PersistentVolumes().Get(ctx, metadata.Name, metav1.GetOptions{})
@@ -241,7 +241,11 @@ func resourceKubernetesPersistentVolumeV1Create(ctx context.Context, d *schema.R
 
 			statusPhase := fmt.Sprintf("%v", out.Status.Phase)
 			statusMessage := fmt.Sprintf("%v", out.Status.Message)
-			log.Printf("[DEBUG] Persistent volume %s status received: %#v, message received: %#v", out.Name, statusPhase, statusMessage)
+			if statusMessage == "" {
+				log.Printf("[DEBUG] Persistent volume %s status received: %#v", out.Name, statusPhase)
+			} else {
+				log.Printf("[DEBUG] Persistent volume %s status received: %#v, message received: %#v", out.Name, statusPhase, statusMessage)
+			}
 			return out, statusPhase, nil
 		},
 	}
@@ -281,6 +285,9 @@ func resourceKubernetesPersistentVolumeV1Read(ctx context.Context, d *schema.Res
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received persistent volume: %#v", volume)
+	if out.Status.LastPhaseTransitionTime != nil {
+		log.Printf("[DEBUG] Persistent volume last phrase transition time: %v", out.Status.LastPhaseTransitionTime)
+	}
 	err = d.Set("metadata", flattenMetadata(volume.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
@@ -347,7 +354,12 @@ func resourceKubernetesPersistentVolumeV1Delete(ctx context.Context, d *schema.R
 			}
 			return retry.NonRetryableError(err)
 		}
-
+		statusMessage := fmt.Sprintf("%v", out.Status.Message)
+		if statusMessage == "" {
+			log.Printf("[DEBUG] Current state of persistent volume: %#v", out.Status.Phase)
+		} else {
+			log.Printf("[DEBUG] Current state of persistent volume: %#v, message received: %#v", out.Status.Phase, out.Status.Message)
+		}
 		log.Printf("[DEBUG] Current state of persistent volume: %#v", out.Status.Phase)
 		e := fmt.Errorf("Persistent volume %s still exists (%s)", name, out.Status.Phase)
 		return retry.RetryableError(e)

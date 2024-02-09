@@ -163,7 +163,7 @@ func resourceKubernetesDaemonSetV1Create(ctx context.Context, d *schema.Resource
 
 	if d.Get("wait_for_rollout").(bool) {
 		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
-			waitForDaemonSetReplicasFunc(ctx, conn, metadata.Namespace, metadata.Name))
+			waitForDaemonSetPodsFunc(ctx, conn, metadata.Namespace, metadata.Name))
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -214,7 +214,7 @@ func resourceKubernetesDaemonSetV1Update(ctx context.Context, d *schema.Resource
 
 	if d.Get("wait_for_rollout").(bool) {
 		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
-			waitForDaemonSetReplicasFunc(ctx, conn, namespace, name))
+			waitForDaemonSetPodsFunc(ctx, conn, namespace, name))
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -320,22 +320,31 @@ func resourceKubernetesDaemonSetV1Exists(ctx context.Context, d *schema.Resource
 	return true, err
 }
 
-func waitForDaemonSetReplicasFunc(ctx context.Context, conn *kubernetes.Clientset, ns, name string) retry.RetryFunc {
+func waitForDaemonSetPodsFunc(ctx context.Context, conn *kubernetes.Clientset, ns, name string) retry.RetryFunc {
 	return func() *retry.RetryError {
 		daemonSet, err := conn.AppsV1().DaemonSets(ns).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return retry.NonRetryableError(err)
 		}
 
-		desiredReplicas := daemonSet.Status.DesiredNumberScheduled
-		log.Printf("[DEBUG] Current number of labelled replicas of %q: %d (of %d)\n",
-			daemonSet.GetName(), daemonSet.Status.CurrentNumberScheduled, desiredReplicas)
+		desiredPods := daemonSet.Status.DesiredNumberScheduled
 
-		if daemonSet.Status.CurrentNumberScheduled == desiredReplicas {
-			return nil
+		log.Printf("[DEBUG] Current number of %q daemonset pods: %d (of %d).",
+			daemonSet.GetName(), daemonSet.Status.NumberReady, desiredPods)
+
+		if daemonSet.Generation > daemonSet.Status.ObservedGeneration {
+			log.Printf("[DEBUG] DaemonSet generation: %d. Observed generation %d",
+				daemonSet.Generation, daemonSet.Status.ObservedGeneration)
+			return retry.RetryableError(fmt.Errorf("Waiting for rollout to start."))
 		}
 
-		return retry.RetryableError(fmt.Errorf("Waiting for %d replicas of %q to be scheduled (%d)",
-			desiredReplicas, daemonSet.GetName(), daemonSet.Status.CurrentNumberScheduled))
+		if daemonSet.Generation == daemonSet.Status.ObservedGeneration {
+			if daemonSet.Status.NumberReady == desiredPods {
+				return nil
+			}
+			return retry.RetryableError(fmt.Errorf("Waiting for rollout to finish: %d pods desired; %d pods ready",
+				desiredPods, daemonSet.Status.NumberReady))
+		}
+		return retry.NonRetryableError(fmt.Errorf("Observed generation %d is not expected to be greater than generation %d", daemonSet.Status.ObservedGeneration, daemonSet.Generation))
 	}
 }

@@ -2,6 +2,9 @@ package provider
 
 import (
 	"context"
+	"fmt"
+
+	"sigs.k8s.io/yaml"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -33,16 +36,42 @@ func (s *RawProviderServer) GetFunctions(ctx context.Context, req *tfprotov5.Get
 	return resp, nil
 }
 
-func (s *RawProviderServer) CallFunction(ctx context.Context, req *tfprotov5.CallFunctionRequest) (*tfprotov5.CallFunctionResponse, error) {
-	v, _ := tfprotov5.NewDynamicValue(tftypes.DynamicPseudoType, tftypes.NewValue(tftypes.Object{
+func manifestDecode(input string) (tfprotov5.DynamicValue, error) {
+	var data map[string]any
+
+	err := yaml.Unmarshal([]byte(input), &data)
+	if err != nil {
+		// FIXME: handle this error
+	}
+
+	// TODO: validate supplied text is a Kubernetes manifest
+	// TODO: convert data to tftypes.Value
+
+	return tfprotov5.NewDynamicValue(tftypes.DynamicPseudoType, tftypes.NewValue(tftypes.Object{
 		AttributeTypes: map[string]tftypes.Type{
 			"test": tftypes.String,
 		},
 	}, map[string]tftypes.Value{
-		"test": tftypes.NewValue(tftypes.String, "hello"),
+		"test": tftypes.NewValue(tftypes.String, fmt.Sprintf("%#v", data)),
 	}))
-	resp := &tfprotov5.CallFunctionResponse{
-		Result: &v,
+}
+
+func (s *RawProviderServer) CallFunction(ctx context.Context, req *tfprotov5.CallFunctionRequest) (*tfprotov5.CallFunctionResponse, error) {
+	resp := &tfprotov5.CallFunctionResponse{}
+
+	switch req.Name {
+	case "manifest_decode":
+		manifestValue, err := req.Arguments[0].Unmarshal(tftypes.String)
+		if err != nil {
+			// FIXME handle this error
+		}
+		var manifest string
+		manifestValue.As(&manifest)
+		v, err := manifestDecode(manifest)
+		if err != nil {
+			// FIXME handle this error
+		}
+		resp.Result = &v
 	}
 	return resp, nil
 }

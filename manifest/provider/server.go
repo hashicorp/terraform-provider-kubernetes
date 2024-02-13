@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/openapi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -86,4 +87,27 @@ func (s *RawProviderServer) StopProvider(ctx context.Context, req *tfprotov5.Sto
 	s.logger.Trace("[StopProvider][Request]\n%s\n", dump(*req))
 
 	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
+}
+
+func (s *RawProviderServer) GetFunctions(ctx context.Context, req *tfprotov5.GetFunctionsRequest) (*tfprotov5.GetFunctionsResponse, error) {
+	resp := &tfprotov5.GetFunctionsResponse{
+		Functions: map[string]*tfprotov5.Function{
+			"hello_world2": {
+				Return: &tfprotov5.FunctionReturn{
+					Type: tftypes.DynamicPseudoType,
+				},
+				Summary:     "test",
+				Description: "test",
+			},
+		},
+	}
+	return resp, nil
+}
+
+func (s *RawProviderServer) CallFunction(ctx context.Context, req *tfprotov5.CallFunctionRequest) (*tfprotov5.CallFunctionResponse, error) {
+	v, _ := tfprotov5.NewDynamicValue(tftypes.String, tftypes.NewValue(tftypes.String, "hello world 2"))
+	resp := &tfprotov5.CallFunctionResponse{
+		Result: &v,
+	}
+	return resp, nil
 }

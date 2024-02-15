@@ -1,5 +1,7 @@
 module github.com/hashicorp/terraform-provider-kubernetes
 
+go 1.21
+
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/getkin/kin-openapi v0.111.0
@@ -13,7 +15,7 @@ require (
 	github.com/hashicorp/terraform-json v0.21.0
 	github.com/hashicorp/terraform-plugin-docs v0.16.0
 	github.com/hashicorp/terraform-plugin-framework v1.5.0
-	github.com/hashicorp/terraform-plugin-go v0.21.0
+	github.com/hashicorp/terraform-plugin-go v0.21.1-0.20240208230929-a2221dfc8d5f
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-mux v0.14.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.32.0
@@ -30,6 +32,7 @@ require (
 	k8s.io/kube-aggregator v0.28.6
 	k8s.io/kubectl v0.28.6
 	k8s.io/kubernetes v1.28.6
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -142,7 +145,9 @@ require (
 	sigs.k8s.io/kustomize/api v0.13.5-0.20230601165947-6ce0bf390ce3 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.14.3-0.20230601165947-6ce0bf390ce3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-go 1.21
+replace (
+	github.com/hashicorp/terraform-plugin-framework => github.com/hashicorp/terraform-plugin-framework v1.5.1-0.20240214003922-7f3e68882d1d
+	github.com/hashicorp/terraform-plugin-go => github.com/hashicorp/terraform-plugin-go v0.21.1-0.20240208230929-a2221dfc8d5f
+)

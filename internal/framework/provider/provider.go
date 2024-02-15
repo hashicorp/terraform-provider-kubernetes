@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	kfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/functions"
+	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/functions"
 )
 
 // Ensure KubernetesProvider satisfies various provider interfaces.
@@ -190,7 +190,7 @@ func (p *KubernetesProvider) DataSources(ctx context.Context) []func() datasourc
 
 func (p *KubernetesProvider) Functions(ctx context.Context) []func() function.Function {
 	return []func() function.Function{
-		kfunctions.NewHelloWorldFunction,
+		pfunctions.NewManifestDecodeFunction,
 	}
 }
 

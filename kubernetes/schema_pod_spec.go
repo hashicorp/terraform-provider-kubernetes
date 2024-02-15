@@ -504,6 +504,13 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						Default:      1,
 						ValidateFunc: validation.IntAtLeast(1),
 					},
+					"min_domains": {
+						Type:         schema.TypeInt,
+						Description:  "indicates a minimum number of eligible domains.",
+						Optional:     true,
+						ForceNew:     !isUpdatable,
+						ValidateFunc: validation.IntAtLeast(1),
+					},
 					"topology_key": {
 						Type:        schema.TypeString,
 						Description: "the key of node labels. Nodes that have a label with this key and identical values are considered to be in the same topology.",

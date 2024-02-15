@@ -1465,6 +1465,38 @@ func TestAccKubernetesPodV1_topologySpreadConstraint(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPodV1_topologySpreadConstraintMinDomains(t *testing.T) {
+	var conf1 api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1TopologySpreadConstraintConfigMinDomains(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf1),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.min_domains", "1"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
 func TestAccKubernetesPodV1_runtimeClassName(t *testing.T) {
 	var conf1 api.Pod
 
@@ -3223,6 +3255,30 @@ func testAccKubernetesPodV1TopologySpreadConstraintConfig(podName, imageName str
       topology_key       = "topology.kubernetes.io/zone"
       when_unsatisfiable = "ScheduleAnyway"
       label_selector {
+        match_labels = {
+          "app.kubernetes.io/instance" = "terraform-example"
+        }
+      }
+    }
+  }
+}
+`, podName, imageName)
+}
+
+func testAccKubernetesPodV1TopologySpreadConstraintConfigMinDomains(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+    topology_spread_constraint {
+	  min_domains        = 1
+	  topology_key       = "topology.kubernetes.io/zone"
+	  label_selector {
         match_labels = {
           "app.kubernetes.io/instance" = "terraform-example"
         }

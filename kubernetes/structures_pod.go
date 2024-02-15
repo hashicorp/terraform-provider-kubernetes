@@ -334,6 +334,9 @@ func flattenTopologySpreadConstraints(tsc []v1.TopologySpreadConstraint) []inter
 		if v.MaxSkew != 0 {
 			obj["max_skew"] = v.MaxSkew
 		}
+		if v.MinDomains != nil && *v.MinDomains != 0 {
+			obj["min_domains"] = int(*v.MinDomains)
+		}
 		if v.WhenUnsatisfiable != "" {
 			obj["when_unsatisfiable"] = string(v.WhenUnsatisfiable)
 		}
@@ -1495,6 +1498,9 @@ func expandTopologySpreadConstraints(tsc []interface{}) []v1.TopologySpreadConst
 
 		if value, ok := m["max_skew"].(int); ok {
 			ts[i].MaxSkew = int32(value)
+		}
+		if value, ok := m["min_domains"].(int); ok && value != 0 {
+			ts[i].MinDomains = ptr.To(int32(value))
 		}
 
 	}

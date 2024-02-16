@@ -53,7 +53,7 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 		// FIXME: handle this error
 	}
 
-    dynamObj, objDiags := manifestToValue(data)
+    dynamObj, objDiags := manifestToObjectValue(data)
 
 	resp.Diagnostics.Append(objDiags...)
 	if resp.Diagnostics.HasError() {
@@ -64,62 +64,69 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &dynamResp)...)
 }
 
-func manifestToValue(manifest map[string]any) (basetypes.ObjectValue, diag.Diagnostics) {
-	v := make(map[string]attr.Value)
-	t := make(map[string]attr.Type)
-	for k, vv := range manifest {
-		switch value := vv.(type) {
-		case float64:
-			t[k] = types.NumberType
-			v[k] = types.NumberValue(big.NewFloat(float64(value)))
-		case bool:
-			t[k] = types.BoolType
-			v[k] = types.BoolValue(value)
-		case string:
-			t[k] = types.StringType
-			v[k] = types.StringValue(value)
+func manifestToObjectValue(manifest map[string]any) (basetypes.ObjectValue, diag.Diagnostics) {
+	val := make(map[string]attr.Value)
+	typ := make(map[string]attr.Type)
+
+	for mk, mv := range manifest {
+		switch value := mv.(type) {
+		case bool, float64, string:
+			typ[mk], val[mk] = manifestToBaseValue(value)
 		case []any:
-			tv, _ := manifestToValueList(value)
+			v, _ := manifestToTupleValue(value)
 			// FIXME handle error here
-			t[k] = tv.Type(context.TODO())
-			v[k] = tv
+			typ[mk] = v.Type(context.TODO())
+			val[mk] = v
 		case map[string]any:
-			ov, _ := manifestToValue(value)
+			v, _ := manifestToObjectValue(value)
 			// FIXME handle error here
-			t[k] = ov.Type(context.TODO())
-			v[k] = ov
+			typ[mk] = v.Type(context.TODO())
+			val[mk] = v
 		}
 	}
 
-	return types.ObjectValue(t, v)
+	return types.ObjectValue(typ, val)
 }
 
-func manifestToValueList(manifest []any) (basetypes.TupleValue, diag.Diagnostics) {
-	v := make([]attr.Value, len(manifest))
-	t := make([]attr.Type, len(manifest))
-	for i, vv := range manifest {
-		switch value := vv.(type) {
-		case float64:
-			t[i] = types.NumberType
-			v[i] = types.NumberValue(big.NewFloat(float64(value)))
-		case bool:
-			t[i] = types.BoolType
-			v[i] = types.BoolValue(value)
-		case string:
-			t[i] = types.StringType
-			v[i] = types.StringValue(value)
+func manifestToTupleValue(manifest []any) (basetypes.TupleValue, diag.Diagnostics) {
+	val := make([]attr.Value, len(manifest))
+	typ := make([]attr.Type, len(manifest))
+
+	for mi, mv := range manifest {
+		switch value := mv.(type) {
+		case bool, float64, string:
+			typ[mi], val[mi] = manifestToBaseValue(value)
 		case []any:
-			tv, _ := manifestToValueList(value)
+			v, _ := manifestToTupleValue(value)
 			// FIXME handle error here
-			t[i] = tv.Type(context.TODO())
-			v[i] = tv
+			typ[mi] = v.Type(context.TODO())
+			val[mi] = v
 		case map[string]any:
-			ov, _ := manifestToValue(value)
+			v, _ := manifestToObjectValue(value)
 			// FIXME handle error here
-			t[i] = ov.Type(context.TODO())
-			v[i] = ov
+			typ[mi] = v.Type(context.TODO())
+			val[mi] = v
 		}
 	}
 
-	return types.TupleValue(t, v)
+	return types.TupleValue(typ, val)
+}
+
+func manifestToBaseValue(manifest any) (attr.Type, attr.Value) {
+	var val attr.Value
+	var typ attr.Type
+
+	switch value := manifest.(type) {
+	case float64:
+		typ = types.NumberType
+		val = types.NumberValue(big.NewFloat(float64(value)))
+	case bool:
+		typ = types.BoolType
+		val = types.BoolValue(value)
+	case string:
+		typ = types.StringType
+		val = types.StringValue(value)
+	}
+
+	return typ, val
 }

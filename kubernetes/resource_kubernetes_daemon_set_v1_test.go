@@ -683,8 +683,9 @@ func testAccKubernetesDaemonSetV1ConfigWithTemplateMetadata(depName, imageName s
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "infinity"]
         }
         termination_grace_period_seconds = 1
       }
@@ -770,8 +771,9 @@ func testAccKubernetesDaemonSetV1WithInitContainer(depName, imageName string) st
         }
 
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "infinity"]
         }
         termination_grace_period_seconds = 1
       }
@@ -803,8 +805,9 @@ func testAccKubernetesDaemonSetV1WithNoTopLevelLabels(depName, imageName string)
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "infinity"]
         }
         termination_grace_period_seconds = 1
       }
@@ -857,8 +860,9 @@ func testAccKubernetesDaemonSetV1ConfigWithTolerations(rcName, imageName string,
         }
 
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "infinity"]
         }
         termination_grace_period_seconds = 1
       }
@@ -912,6 +916,7 @@ func testAccKubernetesDaemonSetV1ConfigWithContainerSecurityContextSeccompProfil
       }
     }
   }
+  wait_for_rollout = false
 }
 `, deploymentName, seccompProfileType, imageName, seccompProfileType)
 }
@@ -962,6 +967,7 @@ func testAccKubernetesDaemonSetV1ConfigWithContainerSecurityContextSeccompProfil
       }
     }
   }
+  wait_for_rollout = false
 }
 `, deploymentName, imageName)
 }
@@ -992,20 +998,19 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirements(deploymentName, 
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "infinity"]
 
           resources {
             limits = {
-              cpu          = "0.5"
-              memory       = "512Mi"
-              "nvidia/gpu" = "1"
+              cpu    = "0.5"
+              memory = "512Mi"
             }
 
             requests = {
-              cpu          = "250m"
-              memory       = "50Mi"
-              "nvidia/gpu" = "1"
+              cpu    = "250m"
+              memory = "50Mi"
             }
           }
         }
@@ -1043,8 +1048,9 @@ func testAccKubernetesDaemonSetV1ConfigWithEmptyResourceRequirements(deploymentN
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "infinity"]
 
           resources {
             limits   = {}
@@ -1085,8 +1091,9 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirementsLimitsOnly(deploy
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "infinity"]
 
           resources {
             limits = {

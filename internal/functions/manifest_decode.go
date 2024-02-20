@@ -3,6 +3,7 @@ package functions
 import (
 	"context"
 	"math/big"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -12,6 +13,14 @@ import (
 
 	"sigs.k8s.io/yaml"
 )
+
+// TODO:
+// - [ ] handle errors
+// - [ ] happy path test case
+// - [ ] edge case test case
+// - [ ] error handling test case
+// - [ ] manifest_decode_multi
+// - [ ] manifest_decode
 
 var _ function.Function = ManifestDecodeFunction{}
 
@@ -39,28 +48,46 @@ func (f ManifestDecodeFunction) Definition(_ context.Context, req function.Defin
 	}
 }
 
+// TODO: change this to a regex to handle corner cases
+//
+//	like first and last line of document, whitespace after separator
+var documentSeparator = regexp.MustCompile(`(:?^|\s*\n)---\s*`)
+
 func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest, resp *function.RunResponse) {
-    var manifest string
+	var manifest string
 
-    resp.Diagnostics.Append(req.Arguments.Get(ctx, &manifest)...)
-    if resp.Diagnostics.HasError() {
-        return
-    }
-
-	var data map[string]any
-	err := yaml.Unmarshal([]byte(manifest), &data)
-	if err != nil {
-		// FIXME: handle this error
-	}
-
-    dynamObj, objDiags := manifestToObjectValue(data)
-
-	resp.Diagnostics.Append(objDiags...)
+	resp.Diagnostics.Append(req.Arguments.Get(ctx, &manifest)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	dynamResp := types.DynamicValue(dynamObj)
+	documents := documentSeparator.Split(manifest, -1)
+	documentsType := []attr.Type{}
+	documentsValue := []attr.Value{}
+
+	for _, d := range documents {
+		var data map[string]any
+		err := yaml.Unmarshal([]byte(d), &data)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		if len(data) == 0 {
+			continue
+		}
+
+		dynamObj, objDiags := manifestToObjectValue(data)
+		resp.Diagnostics.Append(objDiags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		documentsType = append(documentsType, dynamObj.Type(ctx))
+		documentsValue = append(documentsValue, dynamObj)
+	}
+
+	tuplValue, _ := types.TupleValue(documentsType, documentsValue)
+
+	dynamResp := types.DynamicValue(tuplValue)
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &dynamResp)...)
 }
 

@@ -22,7 +22,7 @@ import (
 // - [ ] manifest_decode_multi
 // - [ ] manifest_decode
 // - [ ] documentation page
-
+// - [ ] move functions directory into provider dir
 var _ function.Function = ManifestDecodeFunction{}
 
 func NewManifestDecodeFunction() function.Function {

@@ -21,6 +21,7 @@ import (
 // - [ ] error handling test case
 // - [ ] manifest_decode_multi
 // - [ ] manifest_decode
+// - [ ] documentation page
 
 var _ function.Function = ManifestDecodeFunction{}
 
@@ -86,8 +87,12 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 	}
 
 	tuplValue, _ := types.TupleValue(documentsType, documentsValue)
-
-	dynamResp := types.DynamicValue(tuplValue)
+	var dynamResp types.Dynamic
+	if len(documentsValue) == 1 {
+		dynamResp = types.DynamicValue(documentsValue[0])
+	} else {
+		dynamResp = types.DynamicValue(tuplValue)
+	}
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &dynamResp)...)
 }
 

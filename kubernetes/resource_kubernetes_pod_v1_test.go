@@ -1440,7 +1440,6 @@ func TestAccKubernetesPodV1_topologySpreadConstraint(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			skipIfClusterVersionGreaterThanOrEqual(t, "1.17.0")
 		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
@@ -1451,6 +1450,8 @@ func TestAccKubernetesPodV1_topologySpreadConstraint(t *testing.T) {
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.max_skew", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.node_affinity_policy", "Ignore"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.node_taints_policy", "Honor"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.topology_key", "topology.kubernetes.io/zone"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.when_unsatisfiable", "ScheduleAnyway"),
 				),
@@ -3251,9 +3252,11 @@ func testAccKubernetesPodV1TopologySpreadConstraintConfig(podName, imageName str
       name  = "containername"
     }
     topology_spread_constraint {
-      max_skew           = 1
-      topology_key       = "topology.kubernetes.io/zone"
-      when_unsatisfiable = "ScheduleAnyway"
+      max_skew             = 1
+	  node_affinity_policy = "Ignore"
+	  node_taints_policy   = "Honor"
+      topology_key         = "topology.kubernetes.io/zone"
+      when_unsatisfiable   = "ScheduleAnyway"
       label_selector {
         match_labels = {
           "app.kubernetes.io/instance" = "terraform-example"
@@ -3277,10 +3280,10 @@ func testAccKubernetesPodV1TopologySpreadConstraintConfigMinDomains(podName, ima
     }
     topology_spread_constraint {
 	  min_domains        = 1
-	  topology_key       = "topology.kubernetes.io/zone"
+	  topology_key       = "kubernetes.io/hostname"
 	  label_selector {
         match_labels = {
-          "app.kubernetes.io/instance" = "terraform-example"
+          "kubernetes.io/os" = "linux"
         }
       }
     }

@@ -337,6 +337,12 @@ func flattenTopologySpreadConstraints(tsc []v1.TopologySpreadConstraint) []inter
 		if v.MinDomains != nil && *v.MinDomains != 0 {
 			obj["min_domains"] = int(*v.MinDomains)
 		}
+		if v.NodeAffinityPolicy != nil && *v.NodeAffinityPolicy != "" {
+			obj["node_affinity_policy"] = string(*v.NodeAffinityPolicy)
+		}
+		if v.NodeTaintsPolicy != nil && *v.NodeAffinityPolicy != "" {
+			obj["node_taints_policy"] = string(*v.NodeTaintsPolicy)
+		}
 		if v.WhenUnsatisfiable != "" {
 			obj["when_unsatisfiable"] = string(v.WhenUnsatisfiable)
 		}
@@ -1501,6 +1507,12 @@ func expandTopologySpreadConstraints(tsc []interface{}) []v1.TopologySpreadConst
 		}
 		if value, ok := m["min_domains"].(int); ok && value != 0 {
 			ts[i].MinDomains = ptr.To(int32(value))
+		}
+		if value, ok := m["node_affinity_policy"].(string); ok && value != "" {
+			ts[i].NodeAffinityPolicy = ptr.To(v1.NodeInclusionPolicy(value))
+		}
+		if value, ok := m["node_taints_policy"].(string); ok && value != "" {
+			ts[i].NodeTaintsPolicy = ptr.To(v1.NodeInclusionPolicy(value))
 		}
 
 	}

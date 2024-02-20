@@ -511,6 +511,20 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						ForceNew:     !isUpdatable,
 						ValidateFunc: validation.IntAtLeast(1),
 					},
+					"node_affinity_policy": {
+						Type:         schema.TypeString,
+						Description:  "indicates how we will treat Pod's nodeAffinity/nodeSelector when calculating pod topology spread skew.",
+						Optional:     true,
+						ForceNew:     !isUpdatable,
+						ValidateFunc: validation.StringInSlice([]string{string(corev1.NodeInclusionPolicyHonor), string(corev1.NodeInclusionPolicyIgnore)}, false),
+					},
+					"node_taints_policy": {
+						Type:         schema.TypeString,
+						Description:  "indicates how we will treat node taints when calculating pod topology spread skew.",
+						Optional:     true,
+						ForceNew:     !isUpdatable,
+						ValidateFunc: validation.StringInSlice([]string{string(corev1.NodeInclusionPolicyHonor), string(corev1.NodeInclusionPolicyIgnore)}, false),
+					},
 					"topology_key": {
 						Type:        schema.TypeString,
 						Description: "the key of node labels. Nodes that have a label with this key and identical values are considered to be in the same topology.",

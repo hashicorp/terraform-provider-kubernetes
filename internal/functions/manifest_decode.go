@@ -49,9 +49,6 @@ func (f ManifestDecodeFunction) Definition(_ context.Context, req function.Defin
 	}
 }
 
-// TODO: change this to a regex to handle corner cases
-//
-//	like first and last line of document, whitespace after separator
 var documentSeparator = regexp.MustCompile(`(:?^|\s*\n)---\s*`)
 
 func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest, resp *function.RunResponse) {

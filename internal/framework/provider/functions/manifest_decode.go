@@ -15,6 +15,7 @@ import (
 )
 
 // TODO:
+// - [ ] validate that it's a manifest
 // - [ ] handle errors
 // - [ ] happy path test case
 // - [ ] edge case test case
@@ -59,34 +60,40 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 		return
 	}
 
-	documents := documentSeparator.Split(manifest, -1)
-	documentsType := []attr.Type{}
-	documentsValue := []attr.Value{}
+	docs := documentSeparator.Split(manifest, -1)
+	dtypes := []attr.Type{}
+	dvalues := []attr.Value{}
 
-	for _, d := range documents {
+	for _, d := range docs {
 		var data map[string]any
 		err := yaml.Unmarshal([]byte(d), &data)
 		if err != nil {
-			panic(err.Error())
+			resp.Diagnostics.Append(diag.NewArgumentErrorDiagnostic(1, "Invalid YAML document", err.Error()))
 		}
 
 		if len(data) == 0 {
+			// NOTE: here we are silently ignoring empty documents
+			// perhaps we should produce a diagnostic warning?
 			continue
 		}
 
-		dynamObj, objDiags := manifestToObjectValue(data)
-		resp.Diagnostics.Append(objDiags...)
+		obj, diags := manifestToObjectValue(data)
+		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		documentsType = append(documentsType, dynamObj.Type(ctx))
-		documentsValue = append(documentsValue, dynamObj)
+		dtypes = append(dtypes, obj.Type(ctx))
+		dvalues = append(dvalues, obj)
 	}
 
-	tuplValue, _ := types.TupleValue(documentsType, documentsValue)
+	tuplValue, diags := types.TupleValue(dtypes, dvalues)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	var dynamResp types.Dynamic
-	if len(documentsValue) == 1 {
-		dynamResp = types.DynamicValue(documentsValue[0])
+	if len(dvalues) == 1 {
+		dynamResp = types.DynamicValue(dvalues[0])
 	} else {
 		dynamResp = types.DynamicValue(tuplValue)
 	}

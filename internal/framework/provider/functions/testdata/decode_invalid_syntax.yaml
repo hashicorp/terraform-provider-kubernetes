@@ -1,0 +1,11 @@
+--
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap
+  labels:
+    test: "test---label"
+ &data:
+  configfile: |
+    ---
+    test: document

@@ -3253,10 +3253,10 @@ func testAccKubernetesPodV1TopologySpreadConstraintConfig(podName, imageName str
       name  = "containername"
     }
     topology_spread_constraint {
-	  match_label_keys     = ["pod-template-hash"]
+      match_label_keys     = ["pod-template-hash"]
       max_skew             = 1
-	  node_affinity_policy = "Ignore"
-	  node_taints_policy   = "Honor"
+      node_affinity_policy = "Ignore"
+      node_taints_policy   = "Honor"
       topology_key         = "topology.kubernetes.io/zone"
       when_unsatisfiable   = "ScheduleAnyway"
       label_selector {
@@ -3281,9 +3281,9 @@ func testAccKubernetesPodV1TopologySpreadConstraintConfigMinDomains(podName, ima
       name  = "containername"
     }
     topology_spread_constraint {
-	  min_domains        = 1
-	  topology_key       = "kubernetes.io/hostname"
-	  label_selector {
+      min_domains  = 1
+      topology_key = "kubernetes.io/hostname"
+      label_selector {
         match_labels = {
           "test" = "test"
         }

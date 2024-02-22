@@ -331,6 +331,9 @@ func flattenTopologySpreadConstraints(tsc []v1.TopologySpreadConstraint) []inter
 		if v.TopologyKey != "" {
 			obj["topology_key"] = v.TopologyKey
 		}
+		if len(v.MatchLabelKeys) != 0 {
+			obj["match_label_keys"] = newStringSet(schema.HashString, v.MatchLabelKeys)
+		}
 		if v.MaxSkew != 0 {
 			obj["max_skew"] = v.MaxSkew
 		}
@@ -1502,6 +1505,9 @@ func expandTopologySpreadConstraints(tsc []interface{}) []v1.TopologySpreadConst
 			ts[i].WhenUnsatisfiable = v1.UnsatisfiableConstraintAction(value)
 		}
 
+		if value, ok := m["match_label_keys"].(*schema.Set); ok && value != nil {
+			ts[i].MatchLabelKeys = sliceOfString(value.List())
+		}
 		if value, ok := m["max_skew"].(int); ok {
 			ts[i].MaxSkew = int32(value)
 		}

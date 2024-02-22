@@ -497,6 +497,15 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Description: "describes how a group of pods ought to spread across topology domains. Scheduler will schedule pods in a way which abides by the constraints.",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
+					"match_label_keys": {
+						Type:        schema.TypeSet,
+						Description: "is a set of pod label keys to select the pods over which spreading will be calculated.",
+						Optional:    true,
+						ForceNew:    !isUpdatable,
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
 					"max_skew": {
 						Type:         schema.TypeInt,
 						Description:  "describes the degree to which pods may be unevenly distributed.",

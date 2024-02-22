@@ -1449,6 +1449,7 @@ func TestAccKubernetesPodV1_topologySpreadConstraint(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "spec.0.topology_spread_constraint.0.match_label_keys.*", "pod-template-hash"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.max_skew", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.node_affinity_policy", "Ignore"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.node_taints_policy", "Honor"),
@@ -3252,6 +3253,7 @@ func testAccKubernetesPodV1TopologySpreadConstraintConfig(podName, imageName str
       name  = "containername"
     }
     topology_spread_constraint {
+	  match_label_keys     = ["pod-template-hash"]
       max_skew             = 1
 	  node_affinity_policy = "Ignore"
 	  node_taints_policy   = "Honor"
@@ -3283,7 +3285,7 @@ func testAccKubernetesPodV1TopologySpreadConstraintConfigMinDomains(podName, ima
 	  topology_key       = "kubernetes.io/hostname"
 	  label_selector {
         match_labels = {
-          "kubernetes.io/os" = "linux"
+          "test" = "test"
         }
       }
     }

@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/functions"
+	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
 )
 
 // Ensure KubernetesProvider satisfies various provider interfaces.

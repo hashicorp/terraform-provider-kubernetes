@@ -5,7 +5,7 @@ metadata:
   name: test-configmap
   labels:
     test: "test---label"
- &data:
+data:
   configfile: |
     ---
     test: document

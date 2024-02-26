@@ -33,9 +33,10 @@ spec:
         image: quay.io/fluentd_elasticsearch/fluentd:v2.5.2
         resources:
           limits:
+            cpu: 1.5
             memory: 200Mi
           requests:
-            cpu: 100m
+            cpu: 1
             memory: 200Mi
         volumeMounts:
         - name: varlog
@@ -56,6 +57,7 @@ metadata:
   labels:
     test: "test---label"
 data:
+  immutable: false
   configfile: |
     ---
     test: document

@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	"sigs.k8s.io/yaml"
 )
@@ -88,7 +87,7 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 			return
 		}
 
-		obj, diags := manifestToObjectValue(data)
+		obj, diags := decode(data)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -111,69 +110,52 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &dynamResp)...)
 }
 
-func manifestToObjectValue(manifest map[string]any) (basetypes.ObjectValue, diag.Diagnostics) {
-	val := make(map[string]attr.Value)
-	typ := make(map[string]attr.Type)
+func decodeMap(m map[string]any) (attr.Value, diag.Diagnostics) {
+	vm := make(map[string]attr.Value, len(m))
+	tm := make(map[string]attr.Type, len(m))
 
-	for mk, mv := range manifest {
-		switch value := mv.(type) {
-		case bool, float64, string:
-			typ[mk], val[mk] = manifestToBaseValue(value)
-		case []any:
-			v, _ := manifestToTupleValue(value)
-			// FIXME handle error here
-			typ[mk] = v.Type(context.TODO())
-			val[mk] = v
-		case map[string]any:
-			v, _ := manifestToObjectValue(value)
-			// FIXME handle error here
-			typ[mk] = v.Type(context.TODO())
-			val[mk] = v
+	for k, v := range m {
+		vv, diags := decode(v)
+		if diags.HasError() {
+			return nil, diags
 		}
+		vm[k] = vv
+		tm[k] = vv.Type(context.TODO())
 	}
 
-	return types.ObjectValue(typ, val)
+	return types.ObjectValue(tm, vm)
 }
 
-func manifestToTupleValue(manifest []any) (basetypes.TupleValue, diag.Diagnostics) {
-	val := make([]attr.Value, len(manifest))
-	typ := make([]attr.Type, len(manifest))
+func decodeList(l []any) (attr.Value, diag.Diagnostics) {
+	vl := make([]attr.Value, len(l))
+	tl := make([]attr.Type, len(l))
 
-	for mi, mv := range manifest {
-		switch value := mv.(type) {
-		case bool, float64, string:
-			typ[mi], val[mi] = manifestToBaseValue(value)
-		case []any:
-			v, _ := manifestToTupleValue(value)
-			// FIXME handle error here
-			typ[mi] = v.Type(context.TODO())
-			val[mi] = v
-		case map[string]any:
-			v, _ := manifestToObjectValue(value)
-			// FIXME handle error here
-			typ[mi] = v.Type(context.TODO())
-			val[mi] = v
+	for i, v := range l {
+		vv, diags := decode(v)
+		if diags.HasError() {
+			return nil, diags
 		}
+		vl[i] = vv
+		tl[i] = vv.Type(context.TODO())
 	}
 
-	return types.TupleValue(typ, val)
+	return types.TupleValue(tl, vl)
 }
 
-func manifestToBaseValue(manifest any) (attr.Type, attr.Value) {
-	var val attr.Value
-	var typ attr.Type
-
-	switch value := manifest.(type) {
+func decode(m any) (value attr.Value, diags diag.Diagnostics) {
+	switch v := m.(type) {
 	case float64:
-		typ = types.NumberType
-		val = types.NumberValue(big.NewFloat(float64(value)))
+		value = types.NumberValue(big.NewFloat(float64(v)))
 	case bool:
-		typ = types.BoolType
-		val = types.BoolValue(value)
+		value = types.BoolValue(v)
 	case string:
-		typ = types.StringType
-		val = types.StringValue(value)
+		value = types.StringValue(v)
+	case []any:
+		return decodeList(v)
+	case map[string]any:
+		return decodeMap(v)
+	default:
+		diags.Append(diag.NewErrorDiagnostic("failed to decode", fmt.Sprintf("unexpected type: %T", v)))
 	}
-
-	return typ, val
+	return
 }

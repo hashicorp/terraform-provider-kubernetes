@@ -15,16 +15,6 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// TODO:
-// - [ ] validate that it's a manifest
-// - [ ] handle errors
-// - [ ] happy path test case
-// - [ ] edge case test case
-// - [ ] error handling test case
-// - [ ] manifest_decode_multi
-// - [ ] manifest_decode
-// - [ ] documentation page
-// - [ ] move functions directory into provider dir
 var _ function.Function = ManifestDecodeFunction{}
 
 func NewManifestDecodeFunction() function.Function {
@@ -94,7 +84,7 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 		}
 
 		if err := validateKubernetesManifest(data); err != nil {
-			resp.Diagnostics.Append(diag.NewArgumentErrorDiagnostic(1, "Invalid Kubernetes Manifest", err.Error()))
+			resp.Diagnostics.Append(diag.NewArgumentErrorDiagnostic(1, "Invalid Kubernetes manifest", err.Error()))
 			return
 		}
 

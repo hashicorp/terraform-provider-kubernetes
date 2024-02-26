@@ -155,7 +155,7 @@ func decode(m any) (value attr.Value, diags diag.Diagnostics) {
 	case map[string]any:
 		return decodeMap(v)
 	default:
-		diags.Append(diag.NewErrorDiagnostic("failed to decode", fmt.Sprintf("unexpected type: %T", v)))
+		diags.Append(diag.NewErrorDiagnostic("failed to decode", fmt.Sprintf("unexpected type: %T for value %#v", v, v)))
 	}
 	return
 }

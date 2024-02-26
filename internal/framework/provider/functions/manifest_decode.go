@@ -2,6 +2,7 @@ package functions
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"regexp"
 
@@ -52,6 +53,20 @@ func (f ManifestDecodeFunction) Definition(_ context.Context, req function.Defin
 
 var documentSeparator = regexp.MustCompile(`(:?^|\s*\n)---\s*`)
 
+func validateKubernetesManifest(m map[string]any) error {
+	// NOTE: a Kubernetes manifest should have:
+	//       - an apiVersion
+	//       - a kind
+	//       - a metadata field
+	for _, k := range []string{"apiVersion", "kind", "metadata"} {
+		_, ok := m[k]
+		if !ok {
+			return fmt.Errorf("missing field %q", k)
+		}
+	}
+	return nil
+}
+
 func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest, resp *function.RunResponse) {
 	var manifest string
 
@@ -69,12 +84,18 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 		err := yaml.Unmarshal([]byte(d), &data)
 		if err != nil {
 			resp.Diagnostics.Append(diag.NewArgumentErrorDiagnostic(1, "Invalid YAML document", err.Error()))
+			return
 		}
 
 		if len(data) == 0 {
 			// NOTE: here we are silently ignoring empty documents
 			// perhaps we should produce a diagnostic warning?
 			continue
+		}
+
+		if err := validateKubernetesManifest(data); err != nil {
+			resp.Diagnostics.Append(diag.NewArgumentErrorDiagnostic(1, "Invalid Kubernetes Manifest", err.Error()))
+			return
 		}
 
 		obj, diags := manifestToObjectValue(data)
@@ -86,7 +107,7 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 		dvalues = append(dvalues, obj)
 	}
 
-	tuplValue, diags := types.TupleValue(dtypes, dvalues)
+	tv, diags := types.TupleValue(dtypes, dvalues)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -95,7 +116,7 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 	if len(dvalues) == 1 {
 		dynamResp = types.DynamicValue(dvalues[0])
 	} else {
-		dynamResp = types.DynamicValue(tuplValue)
+		dynamResp = types.DynamicValue(tv)
 	}
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &dynamResp)...)
 }

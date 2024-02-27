@@ -77,8 +77,7 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 		}
 
 		if len(data) == 0 {
-			// NOTE: here we are silently ignoring empty documents
-			// perhaps we should produce a diagnostic warning?
+			resp.Diagnostics.Append(diag.NewArgumentWarningDiagnostic(1, "Empty document", "encountered a YAML document with no values"))
 			continue
 		}
 

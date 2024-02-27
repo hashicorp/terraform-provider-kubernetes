@@ -852,7 +852,11 @@ The `items` block supports the following:
 
 #### Arguments
 
+* `match_label_keys` - (Optional) Is a set of pod label keys to select the pods over which spreading will be calculated. The keys are used to lookup values from the incoming pod labels, those key-value labels are ANDed with labelSelector to select the group of existing pods over which spreading will be calculated for the incoming pod. The same key is forbidden to exist in both `match_label_keys` and `label_selector`. `match_label_keys` cannot be set when `label_selector` isn't set. Keys that don't exist in the incoming pod labels will be ignored. A null or empty list means only match against `label_selector`.
 * `max_skew` - (Optional) Describes the degree to which pods may be unevenly distributed. Default value is `1`.
+* `min_domains` - (Optional) Indicates a minimum number of eligible domains. Must be number greater than `0`. When set, `when_unsatisfiable` must be set to `DoNotSchedule`.
+* `node_affinity_policy` - (Optional) Indicates how we will treat Pod's nodeAffinity/nodeSelector when calculating pod topology spread skew. Valid values are `Honor` and `Ignore`. When unset, behavior defaults to `Honor`.
+* `node_taints_policy` - (Optional) Indicates how we will treat node taints when calculating pod topology spread skew. Valid values are `Honor` and `Ignore`. When unset, behavior defaults to `Ignore`.
 * `topology_key` - (Optional) The key of node labels. Nodes that have a label with this key and identical values are considered to be in the same topology.
 * `when_unsatisfiable` - (Optional) Indicates how to deal with a pod if it doesn't satisfy the spread constraint. Valid values are `DoNotSchedule` and `ScheduleAnyway`. Default value is `DoNotSchedule`.
 * `label_selector` - (Optional) A label query over a set of resources, in this case pods.

@@ -135,7 +135,8 @@ func TestManifestDecode(t *testing.T) {
 									"labels": map[string]any{
 										"test": "test---label",
 									},
-									"name": "test-configmap",
+									"name":      "test-configmap",
+									"namespace": "kube-system",
 								},
 							},
 							map[string]any{

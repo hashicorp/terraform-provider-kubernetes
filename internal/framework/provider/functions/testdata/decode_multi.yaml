@@ -54,6 +54,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: test-configmap
+  namespace: kube-system
   labels:
     test: "test---label"
 data:

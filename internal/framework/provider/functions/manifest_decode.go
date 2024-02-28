@@ -40,8 +40,6 @@ func (f ManifestDecodeFunction) Definition(_ context.Context, req function.Defin
 	}
 }
 
-var documentSeparator = regexp.MustCompile(`(:?^|\s*\n)---\s*`)
-
 func validateKubernetesManifest(m map[string]any) error {
 	// NOTE: a Kubernetes manifest should have:
 	//       - an apiVersion
@@ -55,6 +53,8 @@ func validateKubernetesManifest(m map[string]any) error {
 	}
 	return nil
 }
+
+var documentSeparator = regexp.MustCompile(`(:?^|\s*\n)---\s*`)
 
 func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest, resp *function.RunResponse) {
 	var manifest string
@@ -86,7 +86,7 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 			return
 		}
 
-		obj, diags := decode(data)
+		obj, diags := decodeScalar(data)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -109,12 +109,12 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &dynamResp)...)
 }
 
-func decodeMap(m map[string]any) (attr.Value, diag.Diagnostics) {
+func decodeMapping(m map[string]any) (attr.Value, diag.Diagnostics) {
 	vm := make(map[string]attr.Value, len(m))
 	tm := make(map[string]attr.Type, len(m))
 
 	for k, v := range m {
-		vv, diags := decode(v)
+		vv, diags := decodeScalar(v)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -125,12 +125,12 @@ func decodeMap(m map[string]any) (attr.Value, diag.Diagnostics) {
 	return types.ObjectValue(tm, vm)
 }
 
-func decodeList(l []any) (attr.Value, diag.Diagnostics) {
-	vl := make([]attr.Value, len(l))
-	tl := make([]attr.Type, len(l))
+func decodeSequence(s []any) (attr.Value, diag.Diagnostics) {
+	vl := make([]attr.Value, len(s))
+	tl := make([]attr.Type, len(s))
 
-	for i, v := range l {
-		vv, diags := decode(v)
+	for i, v := range s {
+		vv, diags := decodeScalar(v)
 		if diags.HasError() {
 			return nil, diags
 		}
@@ -141,7 +141,7 @@ func decodeList(l []any) (attr.Value, diag.Diagnostics) {
 	return types.TupleValue(tl, vl)
 }
 
-func decode(m any) (value attr.Value, diags diag.Diagnostics) {
+func decodeScalar(m any) (value attr.Value, diags diag.Diagnostics) {
 	switch v := m.(type) {
 	case float64:
 		value = types.NumberValue(big.NewFloat(float64(v)))
@@ -150,9 +150,9 @@ func decode(m any) (value attr.Value, diags diag.Diagnostics) {
 	case string:
 		value = types.StringValue(v)
 	case []any:
-		return decodeList(v)
+		return decodeSequence(v)
 	case map[string]any:
-		return decodeMap(v)
+		return decodeMapping(v)
 	default:
 		diags.Append(diag.NewErrorDiagnostic("failed to decode", fmt.Sprintf("unexpected type: %T for value %#v", v, v)))
 	}

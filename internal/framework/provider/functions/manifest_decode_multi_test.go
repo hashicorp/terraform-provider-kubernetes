@@ -31,7 +31,7 @@ func TestManifestDecode(t *testing.T) {
 						if !ok {
 							return fmt.Errorf("no output value for %q", outputName)
 						}
-						expectedOutput := map[string]any{
+						expectedOutput := []interface{}{map[string]any{
 							"apiVersion": "v1",
 							"data": map[string]any{
 								"configfile": "---\ntest: document\n",
@@ -43,7 +43,7 @@ func TestManifestDecode(t *testing.T) {
 								},
 								"name": "test-configmap",
 							},
-						}
+						}}
 						assert.Equal(t, expectedOutput, rs.Value)
 						return nil
 					},
@@ -228,6 +228,6 @@ func testManifestDecodeConfig(filename string) string {
 	cwd, _ := os.Getwd()
 	return fmt.Sprintf(`
 output "test" {
-  value = provider::kubernetes::manifest_decode(file(%q))
+  value = provider::kubernetes::manifest_decode_multi(file(%q))
 }`, path.Join(cwd, filename))
 }

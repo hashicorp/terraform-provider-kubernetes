@@ -14,22 +14,22 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-var _ function.Function = ManifestDecodeFunction{}
+var _ function.Function = ManifestDecodeMultiFunction{}
 
-func NewManifestDecodeFunction() function.Function {
-	return &ManifestDecodeFunction{}
+func NewManifestDecodeMultiFunction() function.Function {
+	return &ManifestDecodeMultiFunction{}
 }
 
-type ManifestDecodeFunction struct{}
+type ManifestDecodeMultiFunction struct{}
 
-func (f ManifestDecodeFunction) Metadata(_ context.Context, req function.MetadataRequest, resp *function.MetadataResponse) {
-	resp.Name = "manifest_decode"
+func (f ManifestDecodeMultiFunction) Metadata(_ context.Context, req function.MetadataRequest, resp *function.MetadataResponse) {
+	resp.Name = "manifest_decode_multi"
 }
 
-func (f ManifestDecodeFunction) Definition(_ context.Context, req function.DefinitionRequest, resp *function.DefinitionResponse) {
+func (f ManifestDecodeMultiFunction) Definition(_ context.Context, req function.DefinitionRequest, resp *function.DefinitionResponse) {
 	resp.Definition = function.Definition{
-		Summary:             "manifest_decode Function",
-		MarkdownDescription: "Decode a Kubernetes manifest from YAML",
+		Summary:             "manifest_decode_multi Function",
+		MarkdownDescription: "Decode a Kubernetes manifest from a YAML containing multiple documents",
 		Parameters: []function.Parameter{
 			function.StringParameter{
 				Name:                "manifest",
@@ -56,7 +56,7 @@ func validateKubernetesManifest(m map[string]any) error {
 
 var documentSeparator = regexp.MustCompile(`(:?^|\s*\n)---\s*`)
 
-func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest, resp *function.RunResponse) {
+func (f ManifestDecodeMultiFunction) Run(ctx context.Context, req function.RunRequest, resp *function.RunResponse) {
 	var manifest string
 
 	resp.Diagnostics.Append(req.Arguments.Get(ctx, &manifest)...)
@@ -100,12 +100,7 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	var dynamResp types.Dynamic
-	if len(dvalues) == 1 {
-		dynamResp = types.DynamicValue(dvalues[0])
-	} else {
-		dynamResp = types.DynamicValue(tv)
-	}
+	dynamResp := types.DynamicValue(tv)
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &dynamResp)...)
 }
 

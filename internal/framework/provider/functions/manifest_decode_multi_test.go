@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestManifestDecode(t *testing.T) {
+func TestManifestDecodeMulti(t *testing.T) {
 	t.Parallel()
 
 	outputName := "test"
@@ -22,7 +22,7 @@ func TestManifestDecode(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testManifestDecodeConfig("testdata/decode_single.yaml"),
+				Config: testManifestDecodeMultiConfig("testdata/decode_single.yaml"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// FIXME: terraform-plugin-testing doesn't support dynamic yet
 					func(s *terraform.State) error {
@@ -50,7 +50,7 @@ func TestManifestDecode(t *testing.T) {
 				),
 			},
 			{
-				Config: testManifestDecodeConfig("testdata/decode_multi.yaml"),
+				Config: testManifestDecodeMultiConfig("testdata/decode_multi.yaml"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// FIXME: terraform-plugin-testing doesn't support dynamic yet
 					func(s *terraform.State) error {
@@ -213,18 +213,18 @@ func TestManifestDecode(t *testing.T) {
 				),
 			},
 			{
-				Config:      testManifestDecodeConfig("testdata/decode_manifest_invalid.yaml"),
+				Config:      testManifestDecodeMultiConfig("testdata/decode_manifest_invalid.yaml"),
 				ExpectError: regexp.MustCompile(`Invalid\s+Kubernetes\s+manifest`),
 			},
 			{
-				Config:      testManifestDecodeConfig("testdata/decode_manifest_invalid_syntax.yaml"),
+				Config:      testManifestDecodeMultiConfig("testdata/decode_manifest_invalid_syntax.yaml"),
 				ExpectError: regexp.MustCompile(`Invalid\s+YAML\s+document`),
 			},
 		},
 	})
 }
 
-func testManifestDecodeConfig(filename string) string {
+func testManifestDecodeMultiConfig(filename string) string {
 	cwd, _ := os.Getwd()
 	return fmt.Sprintf(`
 output "test" {

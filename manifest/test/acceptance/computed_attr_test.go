@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
 	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
 )
 
@@ -70,6 +71,8 @@ func TestKubernetesManifest_ComputedFields(t *testing.T) {
 		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "configmaps", namespace, name)
 	}()
 
+	k8shelper.CreateNamespace(t, namespace)
+	defer k8shelper.DeleteResource(t, namespace, kubernetes.NewGroupVersionResource("v1", "namespaces"))
 	tfconfig = loadTerraformConfig(t, "ComputedFields/computed.tf", tfvars)
 	step2.SetConfig(ctx, string(tfconfig))
 	step2.Init(ctx)

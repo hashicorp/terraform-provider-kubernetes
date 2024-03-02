@@ -433,7 +433,6 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 				}
 				nowCfg, restPath, err := tftypes.WalkAttributePath(ppMan, ap)
 				hasChanged = err == nil && len(restPath.Steps()) == 0 && wasCfg.(tftypes.Value).IsKnown() && !wasCfg.(tftypes.Value).Equal(nowCfg.(tftypes.Value))
-
 				if hasChanged {
 					h, ok := hints[morph.ValueToTypePath(ap).String()]
 					if ok && h == manifest.PreserveUnknownFieldsLabel {

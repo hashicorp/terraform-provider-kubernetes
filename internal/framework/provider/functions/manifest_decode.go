@@ -22,12 +22,12 @@ func (f ManifestDecodeFunction) Metadata(_ context.Context, req function.Metadat
 
 func (f ManifestDecodeFunction) Definition(_ context.Context, req function.DefinitionRequest, resp *function.DefinitionResponse) {
 	resp.Definition = function.Definition{
-		Summary:             "manifest_decode Function",
-		MarkdownDescription: "Decode a single Kubernetes manifest from a YAML document",
+		Summary:             "Decode a Kubernetes YAML manifest",
+		MarkdownDescription: "Given a YAML text containing a Kubernetes manifest, will decode and return an object representation of that resource.",
 		Parameters: []function.Parameter{
 			function.StringParameter{
 				Name:                "manifest",
-				MarkdownDescription: "The YAML plaintext for a Kubernetes manifest",
+				MarkdownDescription: "The YAML text for a Kubernetes manifest",
 			},
 		},
 		Return: function.DynamicReturn{},

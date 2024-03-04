@@ -21,8 +21,8 @@ func (f ManifestDecodeMultiFunction) Metadata(_ context.Context, req function.Me
 
 func (f ManifestDecodeMultiFunction) Definition(_ context.Context, req function.DefinitionRequest, resp *function.DefinitionResponse) {
 	resp.Definition = function.Definition{
-		Summary:             "manifest_decode_multi Function",
-		MarkdownDescription: "Decode a Kubernetes manifest from a YAML containing multiple documents",
+		Summary:             "Decode a Kubernetes YAML manifest containing multiple resources",
+		MarkdownDescription: "Given a YAML text containing a Kubernetes manifest with multiple resources, will decode the manifest and return a tuple of object representations for each resource.",
 		Parameters: []function.Parameter{
 			function.StringParameter{
 				Name:                "manifest",

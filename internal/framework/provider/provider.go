@@ -190,6 +190,7 @@ func (p *KubernetesProvider) DataSources(ctx context.Context) []func() datasourc
 
 func (p *KubernetesProvider) Functions(ctx context.Context) []func() function.Function {
 	return []func() function.Function{
+		pfunctions.NewManifestDecodeFunction,
 		pfunctions.NewManifestDecodeMultiFunction,
 	}
 }

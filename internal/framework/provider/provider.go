@@ -192,6 +192,7 @@ func (p *KubernetesProvider) Functions(ctx context.Context) []func() function.Fu
 	return []func() function.Function{
 		pfunctions.NewManifestDecodeFunction,
 		pfunctions.NewManifestDecodeMultiFunction,
+		pfunctions.NewManifestEncodeFunction,
 	}
 }
 

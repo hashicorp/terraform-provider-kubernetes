@@ -1,3 +1,9 @@
+## 2.27.0 (Mar, 6 2024)
+
+ENHANCEMENTS:
+
+* `resource/kubernetes_pod_v1`: add missing `topology_spread_constraints`: `node_affinity_policy`, `node_taints_policy`, `match_label_keys`, `min_domains` [[GH-2429](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2429)]
+
 ## 2.26.0 (Feb 15, 2024)
 
 ENHANCEMENTS:

@@ -1,71 +1,112 @@
-## Developing the provider
+# Contributor Guide
 
-Thank you for your interest in contributing to the Kubernetes provider. We welcome your contributions. Here you'll find information to help you get started with provider development.
+Thank you for your interest in contributing to the Kubernetes provider. We welcome your contributions. Here, you'll find information to help you get started with provider development.
 
-## Documentation
+If you want to learn more about developing a Terraform provider, please refer to the [Plugin Development documentation](https://developer.hashicorp.com/terraform/plugin).
 
-Our [provider development documentation](https://www.terraform.io/docs/extend/) provides a good start into developing an understanding of provider development. It's the best entry point if you are new to contributing to this provider.
+## Configuring Environment
 
-To learn more about how to create issues and pull requests in this repository, and what happens after they are created, you may refer to the resources below:
-- [Issue creation and lifecycle](ISSUES.md)
-- [Pull Request creation and lifecycle](PULL_REQUESTS.md)
+<!-- TODO:
+- Add cluster name to the config
+- Once we move on with more automation, we need to update this section too
+- We might want to add an example of how to provision a KinD cluster with Terraform
+- We might want to add a few words on how to use kubectl command to validate the cluster
+- We might want to mention here or in a different place that some tests we can only run on a specific managed cluster, such as AKS, GKE, or AWS and how to do that
+-->
+
+1. Install Golang
+
+    [Install](https://go.dev/doc/install) the version of Golang as indicated in the [go.mod](../go.mod) file.
+
+1. Fork this repo
+
+    [Fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) the provider repository and clone it on your computer.
+
+    Here is an example of how to clone this repository and switch to the directory:
+
+    ```console
+    $ git clone https://github.com/<YOUR-USERNAME>/terraform-provider-kubernetes.git
+    $ cd terraform-provider-kubernetes
+    ```
+
+    From now on, we are going to assume that you have a copy of the repository on your computer and work within the `terraform-provider-kubernetes` directory.
+
+1. Prepare a Kubernetes Cluster
+
+    While our preference is to use [KinD](https://kind.sigs.k8s.io/) for setting up a Kubernetes cluster for development and test purposes, feel free to opt for the solution that best suits your preferences. Please bear in mind that some acceptance tests might require specific cluster settings, which we maintain in the KinD [configuration file](../.github/config/acceptance_tests_kind_config.yaml).
+
+    Here is an example of how to provision a Kubernetes cluster using the configuration file:
+
+    ```console
+    $ kind create cluster --config=./.github/config/acceptance_tests_kind_config.yaml
+    ```
+
+    KinD comes with a default Node image version that depends on the KinD version and thus might not be always the one you want to use. The above command can be extended with the `--image` option to spin up a particular Kubernetes version:
+
+    ```console
+    $ kind create cluster \
+      --config=./.github/config/acceptance_tests_kind_config.yaml \
+      --image kindest/node:v1.28.0@sha256:b7a4cad12c197af3ba43202d3efe03246b3f0793f162afb40a33c923952d5b31
+    ```
+
+    Refer to the KinD [releases](https://github.com/kubernetes-sigs/kind/releases) to get the right image.
+
+    From now on, we are going to assume that the Kubernetes configuration is stored in the `$HOME/.kube/config` file, and the current context is set to a newly created KinD cluster.
+
+    Once the Kubernetes cluster is up and running, we strongly advise you to run acceptance tests before making any changes to ensure they work with your setup. Please refer to the [Testing](#testing) section for more details.
 
 
-## Building the provider
+## Making Changes
 
-Clone repository to: `$GOPATH/src/github.com/hashicorp/terraform-provider-kubernetes`
+<!-- TODO:
+- We need to mention here linters that we have and how to run them
+- Break down changes into categories, such as adding, updating, removing(???) or fixing resource, data source, provider block, attribute, documentation or making a small change
+- We might want to mention here some best practices that are specfic to the Kubernete provider, such as reuse constatns from the Kuberentes packages as a default value in an attribute or within a validation function
+-->
 
-```sh
-$ mkdir -p $GOPATH/src/github.com/hashicorp; cd $GOPATH/src/github.com/hashicorp
-$ git clone git@github.com:hashicorp/terraform-provider-kubernetes
+## Testing
+
+The Kubernetes provider includes two types of tests: [unit](https://developer.hashicorp.com/terraform/plugin/sdkv2/testing/unit-testing) tests and [acceptance](https://developer.hashicorp.com/terraform/plugin/sdkv2/testing/acceptance-tests) tests.
+
+Before running any tests, make sure that the `KUBE_CONFIG_PATH` environment variable points to the Kubernetes configuration file:
+
+```console
+$ export KUBE_CONFIG_PATH=$HOME/.kube/config
 ```
 
-Enter the provider directory and build the provider
+<!-- TODO:
+- We need to explain here that the provider has unit and acceptance tests and when they need to be added or updated
+- We need to explain here how to run a specific test or group of tests
+- We need to explain here how to build a provider binary and run it
+-->
 
-```sh
-$ cd $GOPATH/src/github.com/hashicorp/terraform-provider-kubernetes
-$ make build
+The following commands demonstrate how to run unit and acceptance tests respectively.
+
+```console
+$ make test # unit tests
+$ make testacc TESTARGS="-run ^TestAcc" # acceptance tests
 ```
 
-Statically linking binaries can be required for testing development builds in containers not providing all dependencies, e.g.:
+1. Run existing tests
+1. Write/Update tests
+1. Run tests with new changes
 
-```
-# CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"'
-```
+## Updating changelog
 
-## Contributing to the provider
+<!-- TODO:
+- We need to explain here when a change log is necessary to add
+-->
 
-### Contributing Resources
+Please refer to our [ChangeLog Guide](../CHANGELOG_GUIDE.md).
 
-In order to prevent breaking changes and migration of user-created resources, resources included in this provider will be limited to stable (aka `v1`) and beta APIs (with beta resources, readiness for inclusion will be assessed individually). You can find `v1` resources in the Kubernetes [API documentation](https://kubernetes.io/docs/reference/#api-reference) for the appropriate version of Kubernetes.
+## Creating & Submiting a PR
 
-### Development Environment
+<!--
+- We need to explain here what do we expect to see in a PR, the same should be reflected in a PR template
+-->
 
-If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (version 1.9+ is *required*). You'll also need to correctly setup a [GOPATH](http://golang.org/doc/code.html#GOPATH), as well as adding `$GOPATH/bin` to your `$PATH`.
+Please refer to this [guide](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork).
 
-To compile the provider, run `make build`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
+## Debug Guide
 
-```sh
-$ make build
-...
-$ $GOPATH/bin/terraform-provider-kubernetes
-...
-```
-
-In order to test the provider, you can simply run `make test`.
-
-```sh
-$ make test
-```
-
-In order to run the full suite of Acceptance tests, run `make testacc`.
-
-*Note:* Acceptance tests create real resources, and often cost money to run.
-
-```sh
-$ make testacc
-```
-
-### Tests
-
-In general, adding test coverage (unit tests and acceptance tests) to new features or bug fixes in your PRs, and sharing the logs of a successful test run on your branch will greatly speed up the acceptance of your PR. Most of our tests can be run against a `kind` cluster, so no additional infrastructure is required.
+<!-- TODO THIS SECTION -->

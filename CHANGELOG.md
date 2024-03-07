@@ -1,3 +1,20 @@
+## 2.27.0 (Mar, 6 2024)
+
+ENHANCEMENTS:
+
+* `resource/kubernetes_pod_v1`: add missing `topology_spread_constraints`: `node_affinity_policy`, `node_taints_policy`, `match_label_keys`, `min_domains` [[GH-2429](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2429)]
+
+## 2.26.0 (Feb 15, 2024)
+
+ENHANCEMENTS:
+
+* `kubernetes/kubernetes_deployment_v1`: Add support for `HugePages` in `emptyDir.medium` [[GH-2395](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2395)]
+* `resource/kubernetes_job_v1`: add new attribute `spec.pod_failure_policy` to job spec [[GH-2394](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2394)]
+
+NOTES:
+
+* Bump Kubernetes dependencies from x.27.8 to x.28.6. [[GH-2404](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2404)]
+
 ## 2.25.2 (Jan 8, 2024)
 
 BUG FIXES:

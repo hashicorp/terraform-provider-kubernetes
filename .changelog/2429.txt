@@ -1,0 +1,3 @@
+```release-note:enhancement
+`resource/kubernetes_pod_v1`: add missing `topology_spread_constraints`: `node_affinity_policy`, `node_taints_policy`, `match_label_keys`, `min_domains`
+```

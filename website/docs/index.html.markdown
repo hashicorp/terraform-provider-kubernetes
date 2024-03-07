@@ -116,7 +116,9 @@ Find more comprehensive `in-cluster` config example [here](https://github.com/ha
 
 ## Exec plugins
 
-Some cloud providers have short-lived authentication tokens that can expire relatively quickly. To ensure the Kubernetes provider is receiving valid credentials, an exec-based plugin can be used to fetch a new token before initializing the provider. For example, on EKS, the command `eks get-token` can be used:
+Some cloud providers have short-lived authentication tokens that can expire relatively quickly. To ensure the Kubernetes provider is receiving valid credentials, an exec-based plugin can be used to fetch a new token before each Terraform operation. For example, on EKS, the command `eks get-token` can be used:
+
+~> IMPORTANT: DO NOT mix `exec` blocks with other credential attributes such as `token` or `client_certificate` in the provider configuration. This leads to undefined behaviour and there is no guarantee about which credential will actually be used.
 
 ```hcl
 provider "kubernetes" {

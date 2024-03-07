@@ -246,15 +246,15 @@ func resourceKubernetesPersistentVolumeV1Create(ctx context.Context, d *schema.R
 			} else {
 				log.Printf("[DEBUG] Persistent volume %s status received: %#v, message received: %#v", out.Name, statusPhase, statusMessage)
 			}
+			if out.Status.LastPhaseTransitionTime != nil {
+				log.Printf("[DEBUG] Persistent volume last phrase transition time: %v", out.Status.LastPhaseTransitionTime)
+			}
 			return out, statusPhase, nil
 		},
 	}
 	_, err = stateConf.WaitForStateContext(ctx)
 	if err != nil {
 		return diag.FromErr(err)
-	}
-	if out.Status.LastPhaseTransitionTime != nil {
-		log.Printf("[DEBUG] Persistent volume last phrase transition time: %v", out.Status.LastPhaseTransitionTime)
 	}
 	log.Printf("[INFO] Persistent volume %s created", out.Name)
 

@@ -384,7 +384,7 @@ func resourceKubernetesPersistentVolumeV1Exists(ctx context.Context, d *schema.R
 
 	name := d.Id()
 	log.Printf("[INFO] Checking persistent volume %s", name)
-	out, err = conn.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
+	out, err := conn.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return false, nil

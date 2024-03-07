@@ -2,6 +2,7 @@ package functions
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -27,18 +28,24 @@ func encodeValue(v attr.Value) (any, error) {
 		return encodeObject(vv)
 	case basetypes.TupleValue:
 		return encodeTuple(vv)
-		// FIXME: we should support map, list here too
+	case basetypes.MapValue:
+		return encodeMap(vv)
+	case basetypes.ListValue:
+		return encodeList(vv)
+	case basetypes.SetValue:
+		return encodeSet(vv)
 	default:
 		return nil, fmt.Errorf("tried to encode unsupported type: %T: %v", v, vv)
 	}
 }
 
-func encodeTuple(t basetypes.TupleValue) ([]any, error) {
-	size := len(t.Elements())
+func encodeSet(sv basetypes.SetValue) ([]any, error) {
+	elems := sv.Elements()
+	size := len(elems)
 	l := make([]any, size)
 	for i := 0; i < size; i++ {
 		var err error
-		l[i], err = encodeValue(t.Elements()[i])
+		l[i], err = encodeValue(elems[i])
 		if err != nil {
 			return nil, err
 		}
@@ -46,9 +53,38 @@ func encodeTuple(t basetypes.TupleValue) ([]any, error) {
 	return l, nil
 }
 
-func encodeObject(o basetypes.ObjectValue) (map[string]any, error) {
-	m := map[string]any{}
-	for k, v := range o.Attributes() {
+func encodeList(lv basetypes.ListValue) ([]any, error) {
+	elems := lv.Elements()
+	size := len(elems)
+	l := make([]any, size)
+	for i := 0; i < size; i++ {
+		var err error
+		l[i], err = encodeValue(elems[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return l, nil
+}
+
+func encodeTuple(tv basetypes.TupleValue) ([]any, error) {
+	elems := tv.Elements()
+	size := len(elems)
+	l := make([]any, size)
+	for i := 0; i < size; i++ {
+		var err error
+		l[i], err = encodeValue(elems[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return l, nil
+}
+
+func encodeObject(ov basetypes.ObjectValue) (map[string]any, error) {
+	attrs := ov.Attributes()
+	m := make(map[string]any, len(attrs))
+	for k, v := range attrs {
 		var err error
 		m[k], err = encodeValue(v)
 		if err != nil {
@@ -58,27 +94,57 @@ func encodeObject(o basetypes.ObjectValue) (map[string]any, error) {
 	return m, nil
 }
 
-func encode(v attr.Value) (string, diag.Diagnostics) {
+func encodeMap(mv basetypes.MapValue) (map[string]any, error) {
+	elems := mv.Elements()
+	m := make(map[string]any, len(elems))
+	for k, v := range elems {
+		var err error
+		m[k], err = encodeValue(v)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return m, nil
+}
+
+func marshal(m map[string]any) (encoded string, diags diag.Diagnostics) {
+	if err := validateKubernetesManifest(m); err != nil {
+		diags.Append(diag.NewErrorDiagnostic("Invalid Kubernetes manifest", err.Error()))
+		return
+	}
+	b, err := yaml.Marshal(m)
+	if err != nil {
+		diags.Append(diag.NewErrorDiagnostic("Error marshalling yaml", err.Error()))
+		return
+	}
+	return string(b), nil
+}
+
+func encode(v attr.Value) (encoded string, diags diag.Diagnostics) {
 	val, err := encodeValue(v)
 	if err != nil {
 		return "", diag.Diagnostics{diag.NewErrorDiagnostic("Error decoding manifest", err.Error())}
 	}
-	encoded := []byte{}
-	if l, ok := val.([]any); ok {
+
+	if m, ok := val.(map[string]any); ok {
+		return marshal(m)
+	} else if l, ok := val.([]any); ok {
 		for _, vv := range l {
-			e, err := yaml.Marshal(vv)
-			if err != nil {
-				return "", diag.Diagnostics{diag.NewErrorDiagnostic("Error marshalling yaml", err.Error())}
+			m, ok := vv.(map[string]any)
+			if !ok {
+				diags.Append(diag.NewErrorDiagnostic(
+					"List of manifests contained an invalid resource", fmt.Sprintf("value doesn't seem to be a manifest: %#v", vv)))
 			}
-			encoded = append(encoded, []byte("---\n")...)
-			encoded = append(encoded, e...)
+			s, diags := marshal(m)
+			if diags.HasError() {
+				return "", diags
+			}
+			encoded = strings.Join([]string{encoded, s}, "---\n")
 		}
 		return string(encoded), nil
 	}
 
-	encoded, err = yaml.Marshal(val)
-	if err != nil {
-		return "", diag.Diagnostics{diag.NewErrorDiagnostic("Error marshalling yaml", err.Error())}
-	}
-	return string(encoded), nil
+	diags.Append(diag.NewErrorDiagnostic(
+		"Invalid manifest", fmt.Sprintf("value doesn't seem to be a manifest: %#v", val)))
+	return
 }

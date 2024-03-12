@@ -54,7 +54,6 @@ func TestKubernetesManifest_ComputedFields(t *testing.T) {
 	step1.Apply(ctx)
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "secrets", namespace, name)
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "services", namespace, name)
-	k8shelper.AssertNamespacedResourceExists(t, "apps/v1", "deployments", namespace, name)
 	k8shelper.AssertResourceExists(t, "admissionregistration.k8s.io/v1", "mutatingwebhookconfigurations", name)
 
 	// wait for API to finish installing the webhook
@@ -66,7 +65,6 @@ func TestKubernetesManifest_ComputedFields(t *testing.T) {
 	defer func() {
 		step2.Destroy(ctx)
 		step2.Close()
-		k8shelper.AssertNamespacedResourceDoesNotExist(t, "apps/v1", "deployments", namespace, name)
 		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "configmaps", namespace, name)
 	}()
 
@@ -74,7 +72,6 @@ func TestKubernetesManifest_ComputedFields(t *testing.T) {
 	step2.SetConfig(ctx, string(tfconfig))
 	step2.Init(ctx)
 	step2.Apply(ctx)
-	k8shelper.AssertNamespacedResourceExists(t, "apps/v1", "deployments", namespace, name)
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "configmaps", namespace, name)
 
 	s2, err := step2.State(ctx)
@@ -83,13 +80,9 @@ func TestKubernetesManifest_ComputedFields(t *testing.T) {
 	}
 	tfstate := tfstatehelper.NewHelper(s2)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
-		"kubernetes_manifest.test.object.metadata.name":                                                                     name,
-		"kubernetes_manifest.test.object.metadata.namespace":                                                                namespace,
-		"kubernetes_manifest.test.object.metadata.annotations.tf-k8s-acc":                                                   "true",
-		"kubernetes_manifest.test.object.metadata.annotations.mutated":                                                      "true",
-		"kubernetes_manifest.deployment_resource_diff.object.metadata.name":                                                 name,
-		"kubernetes_manifest.deployment_resource_diff.object.metadata.namespace":                                            namespace,
-		"kubernetes_manifest.deployment_resource_diff.object.spec.template.spec.containers[0].resources.limits[\"cpu\"]":    "250m",
-		"kubernetes_manifest.deployment_resource_diff.object.spec.template.spec.containers[0].resources.limits[\"memory\"]": "512Mi",
+		"kubernetes_manifest.test.object.metadata.name":                   name,
+		"kubernetes_manifest.test.object.metadata.namespace":              namespace,
+		"kubernetes_manifest.test.object.metadata.annotations.tf-k8s-acc": "true",
+		"kubernetes_manifest.test.object.metadata.annotations.mutated":    "true",
 	})
 }

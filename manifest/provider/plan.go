@@ -464,7 +464,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 						resp.RequiresReplace = append(resp.RequiresReplace, tftypes.NewAttributePathWithSteps(apm))
 						resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 							Severity: tfprotov5.DiagnosticSeverityWarning,
-							Summary:  "This value's type has changed",
+							Summary:  fmt.Sprintf("The attribute path %v value's type has changed", morph.ValueToTypePath(ap).String()),
 							Detail:   "Changes to the type will cause a forced replacement.",
 						})
 					}

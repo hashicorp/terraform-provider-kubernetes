@@ -432,9 +432,15 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 				hasChanged = err == nil && len(restPath.Steps()) == 0 && wasCfg.(tftypes.Value).IsKnown() && !wasCfg.(tftypes.Value).Equal(nowCfg.(tftypes.Value))
 				if hasChanged {
 					h, ok := hints[morph.ValueToTypePath(ap).String()]
-					if ok && h == manifest.PreserveUnknownFieldsLabel {
+					typeChanged := !(wasCfg.(tftypes.Value).Type().Equal(nowCfg.(tftypes.Value).Type()))
+					if ok && h == manifest.PreserveUnknownFieldsLabel && typeChanged {
 						apm := append(tftypes.NewAttributePath().WithAttributeName("manifest").Steps(), ap.Steps()...)
 						resp.RequiresReplace = append(resp.RequiresReplace, tftypes.NewAttributePathWithSteps(apm))
+						resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+							Severity: tfprotov5.DiagnosticSeverityWarning,
+							Summary:  fmt.Sprintf("The attribute path %v value's type has changed", morph.ValueToTypePath(ap).String()),
+							Detail:   "Changes to the type will cause a forced replacement.",
+						})
 					}
 				}
 				if isComputed {

@@ -1,0 +1,3 @@
+```release-note
+`kubernetes_manifest`: add TypeCheck for `x-kubernetes-preserve-unknown-fields` to prevent unnecessary replacement
+```

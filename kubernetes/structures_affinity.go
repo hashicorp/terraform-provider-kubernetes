@@ -89,6 +89,9 @@ func flattenPodAffinityTerms(in []v1.PodAffinityTerm) []interface{} {
 		if n.LabelSelector != nil {
 			m["label_selector"] = flattenLabelSelector(n.LabelSelector)
 		}
+		if n.NamespaceSelector != nil {
+			m["namespace_selector"] = flattenLabelSelector(n.NamespaceSelector)
+		}
 		att[i] = m
 	}
 	return att
@@ -219,6 +222,9 @@ func expandPodAffinityTerms(t []interface{}) []v1.PodAffinityTerm {
 		in := n.(map[string]interface{})
 		if v, ok := in["label_selector"].([]interface{}); ok && len(v) > 0 {
 			obj[i].LabelSelector = expandLabelSelector(v)
+		}
+		if v, ok := in["namespace_selector"].([]interface{}); ok && len(v) > 0 {
+			obj[i].NamespaceSelector = expandLabelSelector(v)
 		}
 		if v, ok := in["namespaces"].(*schema.Set); ok {
 			obj[i].Namespaces = sliceOfString(v.List())

@@ -192,9 +192,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			if !isComputed {
 				return v, nil
 			}
-			if v.IsKnown() {
-				return v, nil
-			}
+
 			ppMan, restPath, err := tftypes.WalkAttributePath(plannedStateVal["manifest"], ap)
 			if err != nil {
 				if len(restPath.Steps()) > 0 {

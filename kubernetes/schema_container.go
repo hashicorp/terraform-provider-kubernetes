@@ -582,7 +582,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			MaxItems:    1,
 			ForceNew:    !isUpdatable,
 			Computed:    true,
-			Description: "Compute Resources required by this container. Cannot be updated. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources",			
+			Description: "Compute Resources required by this container. Cannot be updated. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources",
 			Elem: &schema.Resource{
 				Schema: resourcesFieldV1(isUpdatable),
 			},

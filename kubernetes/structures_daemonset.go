@@ -52,6 +52,9 @@ func flattenDaemonSetStrategyRollingUpdate(in *appsv1.RollingUpdateDaemonSet) []
 	if in.MaxUnavailable != nil {
 		att["max_unavailable"] = in.MaxUnavailable.String()
 	}
+	if in.MaxSurge != nil {
+		att["max_surge"] = in.MaxSurge.String()
+	}
 	return []interface{}{att}
 }
 
@@ -109,6 +112,10 @@ func expandRollingUpdateDaemonSet(p []interface{}) *appsv1.RollingUpdateDaemonSe
 	}
 	in := p[0].(map[string]interface{})
 
+	if v, ok := in["max_surge"].(string); ok {
+		val := intstr.Parse(v)
+		obj.MaxSurge = &val
+	}
 	if v, ok := in["max_unavailable"].(string); ok {
 		val := intstr.Parse(v)
 		obj.MaxUnavailable = &val

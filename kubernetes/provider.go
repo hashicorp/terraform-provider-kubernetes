@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-kubernetes/util"
 	"log"
 	"net/http"
 	"os"
@@ -21,7 +22,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -129,6 +129,13 @@ func Provider() *schema.Provider {
 				Optional:    true,
 				Description: "URL to the proxy to be used for all API requests",
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_PROXY_URL", ""),
+			},
+			"config_data_base64": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Kubeconfig content in base64 format",
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CONFIG_DATA_BASE64", nil),
+				ConflictsWith: []string{"config_path", "config_paths"},
 			},
 			"exec": {
 				Type:     schema.TypeList,
@@ -500,9 +507,9 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.Diagnostics) {
 	diags := make(diag.Diagnostics, 0)
 	overrides := &clientcmd.ConfigOverrides{}
-	loader := &clientcmd.ClientConfigLoadingRules{}
+	fileLoader := &clientcmd.ClientConfigLoadingRules{}
 
-	configPaths := []string{}
+	var configPaths []string
 
 	if v, ok := d.Get("config_path").(string); ok && v != "" {
 		configPaths = []string{v}
@@ -517,7 +524,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
 	}
 
 	if len(configPaths) > 0 {
-		expandedPaths := []string{}
+		var expandedPaths []string
 		for _, p := range configPaths {
 			path, err := homedir.Expand(p)
 			if err != nil {
@@ -529,9 +536,9 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
 		}
 
 		if len(expandedPaths) == 1 {
-			loader.ExplicitPath = expandedPaths[0]
+			fileLoader.ExplicitPath = expandedPaths[0]
 		} else {
-			loader.Precedence = expandedPaths
+			fileLoader.Precedence = expandedPaths
 		}
 
 		ctxSuffix := "; default context"
@@ -558,7 +565,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
 			}
 			log.Printf("[DEBUG] Using overridden context: %#v", overrides.Context)
 		}
-	}
+
 
 	// Overriding with static configuration
 	if v, ok := d.GetOk("insecure"); ok {
@@ -631,7 +638,14 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
 		overrides.ClusterDefaults.ProxyURL = v.(string)
 	}
 
+	var configDataBase64 string
+	if v, ok := d.GetOk("config_data_base64"); ok {
+		configDataBase64 = v.(string)
+	}
+
+	loader := util.NewConfigLoader(fileLoader, configDataBase64)
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
+
 	cfg, err := cc.ClientConfig()
 	if err != nil {
 		nd := diag.Diagnostic{

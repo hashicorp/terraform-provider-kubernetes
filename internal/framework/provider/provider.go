@@ -47,6 +47,8 @@ type KubernetesProviderModel struct {
 
 	ProxyURL types.String `tfsdk:"proxy_url"`
 
+	ConfigDataBase64 types.String `tfsdk:"config_data_base64"`
+
 	IgnoreAnnotations types.List `tfsdk:"ignore_annotations"`
 	IgnoreLabels      types.List `tfsdk:"ignore_labels"`
 
@@ -129,6 +131,10 @@ func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequ
 			},
 			"proxy_url": schema.StringAttribute{
 				Description: "URL to the proxy to be used for all API requests",
+				Optional:    true,
+			},
+			"config_data_base64": schema.StringAttribute{
+				Description: "Kubeconfig content in base64 format",
 				Optional:    true,
 			},
 			"ignore_annotations": schema.ListAttribute{

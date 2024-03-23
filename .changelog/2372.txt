@@ -1,0 +1,3 @@
+```release-note:bug
+`data_source/kubernetes_resources`: fix an issue where the provider exit with an error when the data source `kubernetes_resources` receives multiple Kubernetes objects containing tuples with different numbers of elements.
+```

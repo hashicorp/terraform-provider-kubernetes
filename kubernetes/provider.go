@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-kubernetes/util"
 	"log"
 	"net/http"
 	"os"
@@ -21,7 +22,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -129,6 +129,13 @@ func Provider() *schema.Provider {
 				Optional:    true,
 				Description: "URL to the proxy to be used for all API requests",
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_PROXY_URL", ""),
+			},
+			"config_data_base64": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Kubeconfig content in base64 format",
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CONFIG_DATA_BASE64", nil),
+				ConflictsWith: []string{"config_path", "config_paths"},
 			},
 			"exec": {
 				Type:     schema.TypeList,
@@ -491,9 +498,9 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 
 func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error) {
 	overrides := &clientcmd.ConfigOverrides{}
-	loader := &clientcmd.ClientConfigLoadingRules{}
+	fileLoader := &clientcmd.ClientConfigLoadingRules{}
 
-	configPaths := []string{}
+	var configPaths []string
 
 	if v, ok := d.Get("config_path").(string); ok && v != "" {
 		configPaths = []string{v}
@@ -508,7 +515,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	}
 
 	if len(configPaths) > 0 {
-		expandedPaths := []string{}
+		var expandedPaths []string
 		for _, p := range configPaths {
 			path, err := homedir.Expand(p)
 			if err != nil {
@@ -520,38 +527,32 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		}
 
 		if len(expandedPaths) == 1 {
-			loader.ExplicitPath = expandedPaths[0]
+			fileLoader.ExplicitPath = expandedPaths[0]
 		} else {
-			loader.Precedence = expandedPaths
-		}
-
-		ctxSuffix := "; default context"
-
-		kubectx, ctxOk := d.GetOk("config_context")
-		authInfo, authInfoOk := d.GetOk("config_context_auth_info")
-		cluster, clusterOk := d.GetOk("config_context_cluster")
-		if ctxOk || authInfoOk || clusterOk {
-			ctxSuffix = "; overridden context"
-			if ctxOk {
-				overrides.CurrentContext = kubectx.(string)
-				ctxSuffix += fmt.Sprintf("; config ctx: %s", overrides.CurrentContext)
-				log.Printf("[DEBUG] Using custom current context: %q", overrides.CurrentContext)
-			}
-
-			overrides.Context = clientcmdapi.Context{}
-			if authInfoOk {
-				overrides.Context.AuthInfo = authInfo.(string)
-				ctxSuffix += fmt.Sprintf("; auth_info: %s", overrides.Context.AuthInfo)
-			}
-			if clusterOk {
-				overrides.Context.Cluster = cluster.(string)
-				ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
-			}
-			log.Printf("[DEBUG] Using overridden context: %#v", overrides.Context)
+			fileLoader.Precedence = expandedPaths
 		}
 	}
 
 	// Overriding with static configuration
+	kubeCtx, ctxOk := d.GetOk("config_context")
+	authInfo, authInfoOk := d.GetOk("config_context_auth_info")
+	cluster, clusterOk := d.GetOk("config_context_cluster")
+	if ctxOk || authInfoOk || clusterOk {
+		if ctxOk {
+			overrides.CurrentContext = kubeCtx.(string)
+			log.Printf("[DEBUG] Using custom current context: %q", overrides.CurrentContext)
+		}
+
+		overrides.Context = clientcmdapi.Context{}
+		if authInfoOk {
+			overrides.Context.AuthInfo = authInfo.(string)
+		}
+		if clusterOk {
+			overrides.Context.Cluster = cluster.(string)
+		}
+		log.Printf("[DEBUG] Using overridden context: %#v", overrides.Context)
+	}
+
 	if v, ok := d.GetOk("insecure"); ok {
 		overrides.ClusterInfo.InsecureSkipTLSVerify = v.(bool)
 	}
@@ -574,7 +575,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		defaultTLS := hasCA || hasCert || overrides.ClusterInfo.InsecureSkipTLSVerify
 		host, _, err := restclient.DefaultServerURL(v.(string), "", apimachineryschema.GroupVersion{}, defaultTLS)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to parse host: %s", err)
+			return nil, fmt.Errorf("failed to parse host: %s", err)
 		}
 
 		overrides.ClusterInfo.Server = host.String()
@@ -603,7 +604,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 				exec.Env = append(exec.Env, clientcmdapi.ExecEnvVar{Name: kk, Value: vv.(string)})
 			}
 		} else {
-			return nil, fmt.Errorf("Failed to parse exec")
+			return nil, fmt.Errorf("failed to parse exec")
 		}
 		overrides.AuthInfo.Exec = exec
 	}
@@ -612,13 +613,19 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		overrides.ClusterDefaults.ProxyURL = v.(string)
 	}
 
+	var configDataBase64 string
+	if v, ok := d.GetOk("config_data_base64"); ok {
+		configDataBase64 = v.(string)
+	}
+
+	loader := util.NewConfigLoader(fileLoader, configDataBase64)
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
+
 	cfg, err := cc.ClientConfig()
 	if err != nil {
 		log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail: %v", err)
 		return nil, nil
 	}
-
 	return cfg, nil
 }
 

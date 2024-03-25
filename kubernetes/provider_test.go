@@ -5,6 +5,7 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/url"
@@ -102,6 +103,24 @@ func TestProvider_configure_paths(t *testing.T) {
 	}
 }
 
+func TestProvider_configure_config_data_base64(t *testing.T) {
+	ctx := context.TODO()
+	resetEnv := unsetEnv(t)
+	defer resetEnv()
+	data, err := os.ReadFile("test-fixtures/kube-config-sa-token.yaml")
+	if err != nil {
+		t.Fatal("Cannot read kubeconfig")
+	}
+	data64 := base64.StdEncoding.EncodeToString(data)
+	os.Setenv("KUBE_CONFIG_DATA_BASE64", data64)
+	rc := terraform.NewResourceConfigRaw(map[string]interface{}{})
+	p := Provider()
+	diags := p.Configure(ctx, rc)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+}
+
 func unsetEnv(t *testing.T) func() {
 	e := getEnv()
 
@@ -120,6 +139,7 @@ func unsetEnv(t *testing.T) func() {
 		"KUBE_INSECURE":             e.Insecure,
 		"KUBE_TLS_SERVER_NAME":      e.TLSServerName,
 		"KUBE_TOKEN":                e.Token,
+		"KUBE_CONFIG_DATA_BASE64":   e.ConfigDataBase64,
 	}
 
 	for k := range envVars {
@@ -157,6 +177,9 @@ func getEnv() *currentEnv {
 	}
 	if v := os.Getenv("KUBE_CONFIG_PATH"); v != "" {
 		e.ConfigPaths = filepath.SplitList(v)
+	}
+	if v := os.Getenv("KUBE_CONFIG_DATA_BASE64"); v != "" {
+		e.ConfigDataBase64 = v
 	}
 	return e
 }
@@ -482,6 +505,7 @@ func clusterVersionGreaterThanOrEqual(vs string) bool {
 
 type currentEnv struct {
 	ConfigPath        string
+	ConfigDataBase64  string
 	ConfigPaths       []string
 	Ctx               string
 	CtxAuthInfo       string

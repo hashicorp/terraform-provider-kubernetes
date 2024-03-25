@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-kubernetes/util"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -121,7 +122,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	}
 
 	overrides := &clientcmd.ConfigOverrides{}
-	loader := &clientcmd.ClientConfigLoadingRules{}
+	fileLoader := &clientcmd.ClientConfigLoadingRules{}
 
 	// Handle 'config_path' attribute
 	//
@@ -154,8 +155,30 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 				Detail:   fmt.Sprintf("'config_path' refers to an invalid path: %q: %v", configPathAbs, err),
 			})
 		}
-		loader.ExplicitPath = configPathAbs
+		fileLoader.ExplicitPath = configPathAbs
 	}
+	// Handle 'config_data_base64' attribute
+	//
+	var configDataBase64 string
+
+	if !providerConfig["config_data_base64"].IsNull() && providerConfig["config_data_base64"].IsKnown() {
+
+		err = providerConfig["config_data_base64"].As(&configDataBase64)
+		if err != nil {
+			// invalid attribute - this shouldn't happen, bail out now
+			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Provider configuration: failed to extract 'config_data_base64' value",
+				Detail:   err.Error(),
+			})
+			return response, nil
+		}
+	}
+	// check environment - this overrides any value found in provider configuration
+	if configBase64Env, ok := os.LookupEnv("KUBE_CONFIG_DATA_BASE64"); ok && configBase64Env != "" {
+		configDataBase64 = configBase64Env
+	}
+
 	// Handle 'config_paths' attribute
 	//
 	var precedence []string
@@ -196,7 +219,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			}
 			precedence[i] = absPath
 		}
-		loader.Precedence = precedence
+		fileLoader.Precedence = precedence
 	}
 
 	// Handle 'client_certificate' attribute
@@ -642,7 +665,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			overrides.AuthInfo.Exec = &execCfg
 		}
 	}
-
+	loader := util.NewConfigLoader(fileLoader, configDataBase64)
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 	clientConfig, err := cc.ClientConfig()
 	if err != nil {

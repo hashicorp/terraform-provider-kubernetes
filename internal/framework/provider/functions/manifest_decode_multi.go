@@ -36,17 +36,17 @@ func (f ManifestDecodeMultiFunction) Definition(_ context.Context, req function.
 func (f ManifestDecodeMultiFunction) Run(ctx context.Context, req function.RunRequest, resp *function.RunResponse) {
 	var manifest string
 
-	resp.Diagnostics.Append(req.Arguments.Get(ctx, &manifest)...)
-	if resp.Diagnostics.HasError() {
+	resp.Error = req.Arguments.Get(ctx, &manifest)
+	if resp.Error != nil {
 		return
 	}
 
 	tv, diags := decode(manifest)
-	resp.Diagnostics = append(resp.Diagnostics, diags...)
-	if resp.Diagnostics.HasError() {
+	if diags.HasError() {
+		resp.Error = function.FuncErrorFromDiags(ctx, diags)
 		return
 	}
 
 	dynamResp := types.DynamicValue(tv)
-	resp.Diagnostics.Append(resp.Result.Set(ctx, &dynamResp)...)
+	resp.Error = resp.Result.Set(ctx, &dynamResp)
 }

@@ -36,18 +36,18 @@ func (f ManifestEncodeFunction) Definition(_ context.Context, req function.Defin
 func (f ManifestEncodeFunction) Run(ctx context.Context, req function.RunRequest, resp *function.RunResponse) {
 	var manifest types.Dynamic
 
-	resp.Diagnostics.Append(req.Arguments.Get(ctx, &manifest)...)
-	if resp.Diagnostics.HasError() {
+	resp.Error = req.Arguments.Get(ctx, &manifest)
+	if resp.Error != nil {
 		return
 	}
 
 	uv := manifest.UnderlyingValue()
 	s, diags := encode(uv)
-	resp.Diagnostics = append(resp.Diagnostics, diags...)
-	if resp.Diagnostics.HasError() {
+	if diags.HasError() {
+		resp.Error = function.FuncErrorFromDiags(ctx, diags)
 		return
 	}
 
 	svalue := types.StringValue(s)
-	resp.Diagnostics.Append(resp.Result.Set(ctx, &svalue)...)
+	resp.Error = resp.Result.Set(ctx, &svalue)
 }

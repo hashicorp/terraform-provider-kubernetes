@@ -24,17 +24,17 @@ func decode(manifest string) (v types.Tuple, diags diag.Diagnostics) {
 		var data map[string]any
 		err := yaml.Unmarshal([]byte(d), &data)
 		if err != nil {
-			diags.Append(diag.NewArgumentErrorDiagnostic(1, "Invalid YAML document", err.Error()))
+			diags.Append(diag.NewErrorDiagnostic("Invalid YAML document", err.Error()))
 			return
 		}
 
 		if len(data) == 0 {
-			diags.Append(diag.NewArgumentWarningDiagnostic(1, "Empty document", "encountered a YAML document with no values"))
+			diags.Append(diag.NewWarningDiagnostic("Empty document", "encountered a YAML document with no values"))
 			continue
 		}
 
 		if err := validateKubernetesManifest(data); err != nil {
-			diags.Append(diag.NewArgumentErrorDiagnostic(1, "Invalid Kubernetes manifest", err.Error()))
+			diags.Append(diag.NewErrorDiagnostic("Invalid Kubernetes manifest", err.Error()))
 			return
 		}
 

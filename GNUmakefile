@@ -8,6 +8,8 @@ PKG_NAME     := kubernetes
 OS_ARCH      := $(shell go env GOOS)_$(shell go env GOARCH)
 TF_PROV_DOCS := $(PWD)/kubernetes/test-infra/tfproviderdocs
 
+PROVIDER_FUNCTIONS_DIR := "$(PROVIDER_DIR)/internal/framework/provider/functions"
+
 ifneq ($(PWD),$(PROVIDER_DIR))
 $(error "Makefile must be run from the provider directory")
 endif
@@ -74,6 +76,9 @@ test: fmtcheck vet
 
 testacc: fmtcheck vet
 	TF_ACC=1 go test $(TEST) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) -timeout 3h
+
+testfuncs: fmtcheck 
+	go test $(PROVIDER_FUNCTIONS_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) 
 
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \

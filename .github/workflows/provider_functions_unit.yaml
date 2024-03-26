@@ -1,4 +1,4 @@
-name: Manifest unit tests
+name: Provider Functions Unit Tests
 
 on:
   push:

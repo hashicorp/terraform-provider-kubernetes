@@ -41,7 +41,7 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 		return
 	}
 
-	tv, diags := decode(manifest)
+	tv, diags := decode(ctx, manifest)
 	if diags.HasError() {
 		resp.Error = function.FuncErrorFromDiags(ctx, diags)
 		return

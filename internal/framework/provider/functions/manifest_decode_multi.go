@@ -41,7 +41,7 @@ func (f ManifestDecodeMultiFunction) Run(ctx context.Context, req function.RunRe
 		return
 	}
 
-	tv, diags := decode(manifest)
+	tv, diags := decode(ctx, manifest)
 	if diags.HasError() {
 		resp.Error = function.FuncErrorFromDiags(ctx, diags)
 		return

@@ -14,7 +14,7 @@ import (
 
 var documentSeparator = regexp.MustCompile(`(:?^|\s*\n)---\s*`)
 
-func decode(manifest string) (v types.Tuple, diags diag.Diagnostics) {
+func decode(ctx context.Context, manifest string) (v types.Tuple, diags diag.Diagnostics) {
 	docs := documentSeparator.Split(manifest, -1)
 	dtypes := []attr.Type{}
 	dvalues := []attr.Value{}
@@ -38,51 +38,51 @@ func decode(manifest string) (v types.Tuple, diags diag.Diagnostics) {
 			return
 		}
 
-		obj, d := decodeScalar(data)
+		obj, d := decodeScalar(ctx, data)
 		diags.Append(d...)
 		if diags.HasError() {
 			return
 		}
-		dtypes = append(dtypes, obj.Type(context.TODO()))
+		dtypes = append(dtypes, obj.Type(ctx))
 		dvalues = append(dvalues, obj)
 	}
 
 	return types.TupleValue(dtypes, dvalues)
 }
 
-func decodeMapping(m map[string]any) (attr.Value, diag.Diagnostics) {
+func decodeMapping(ctx context.Context, m map[string]any) (attr.Value, diag.Diagnostics) {
 	vm := make(map[string]attr.Value, len(m))
 	tm := make(map[string]attr.Type, len(m))
 
 	for k, v := range m {
-		vv, diags := decodeScalar(v)
+		vv, diags := decodeScalar(ctx, v)
 		if diags.HasError() {
 			return nil, diags
 		}
 		vm[k] = vv
-		tm[k] = vv.Type(context.TODO())
+		tm[k] = vv.Type(ctx)
 	}
 
 	return types.ObjectValue(tm, vm)
 }
 
-func decodeSequence(s []any) (attr.Value, diag.Diagnostics) {
+func decodeSequence(ctx context.Context, s []any) (attr.Value, diag.Diagnostics) {
 	vl := make([]attr.Value, len(s))
 	tl := make([]attr.Type, len(s))
 
 	for i, v := range s {
-		vv, diags := decodeScalar(v)
+		vv, diags := decodeScalar(ctx, v)
 		if diags.HasError() {
 			return nil, diags
 		}
 		vl[i] = vv
-		tl[i] = vv.Type(context.TODO())
+		tl[i] = vv.Type(ctx)
 	}
 
 	return types.TupleValue(tl, vl)
 }
 
-func decodeScalar(m any) (value attr.Value, diags diag.Diagnostics) {
+func decodeScalar(ctx context.Context, m any) (value attr.Value, diags diag.Diagnostics) {
 	switch v := m.(type) {
 	case float64:
 		value = types.NumberValue(big.NewFloat(float64(v)))
@@ -91,9 +91,9 @@ func decodeScalar(m any) (value attr.Value, diags diag.Diagnostics) {
 	case string:
 		value = types.StringValue(v)
 	case []any:
-		return decodeSequence(v)
+		return decodeSequence(ctx, v)
 	case map[string]any:
-		return decodeMapping(v)
+		return decodeMapping(ctx, v)
 	default:
 		diags.Append(diag.NewErrorDiagnostic("failed to decode", fmt.Sprintf("unexpected type: %T for value %#v", v, v)))
 	}

@@ -16,7 +16,10 @@ import (
 )
 
 // Ensure KubernetesProvider satisfies various provider interfaces.
-var _ provider.Provider = &KubernetesProvider{}
+var (
+	_ provider.Provider              = &KubernetesProvider{}
+	_ provider.ProviderWithFunctions = &KubernetesProvider{}
+)
 
 // KubernetesProvider defines the provider implementation.
 type KubernetesProvider struct {

@@ -1,16 +1,16 @@
 package functions_test
 
 import (
-	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
 	"path"
 	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stretchr/testify/assert"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 )
 
 func TestManifestDecodeMulti(t *testing.T) {
@@ -23,194 +23,177 @@ func TestManifestDecodeMulti(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testManifestDecodeMultiConfig("testdata/decode_single.yaml"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					// FIXME: terraform-plugin-testing doesn't support dynamic yet
-					func(s *terraform.State) error {
-						ms := s.RootModule()
-						rs, ok := ms.Outputs[outputName]
-						if !ok {
-							return fmt.Errorf("no output value for %q", outputName)
-						}
-						expectedOutput := []interface{}{map[string]any{
-							"apiVersion": "v1",
-							"data": map[string]any{
-								"configfile": "---\ntest: document\n",
-							},
-							"kind": "ConfigMap",
-							"metadata": map[string]any{
-								"labels": map[string]any{
-									"test": "test---label",
-								},
-								"name": "test-configmap",
-							},
-						}}
-						assert.Equal(t, expectedOutput, rs.Value)
-						return nil
-					},
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownOutputValue(outputName, knownvalue.ListExact([]knownvalue.Check{
+						knownvalue.ObjectExact(map[string]knownvalue.Check{
+							"apiVersion": knownvalue.StringExact("v1"),
+							"data": knownvalue.ObjectExact(map[string]knownvalue.Check{
+								"configfile": knownvalue.StringExact("---\ntest: document\n"),
+							}),
+							"kind": knownvalue.StringExact("ConfigMap"),
+							"metadata": knownvalue.ObjectExact(map[string]knownvalue.Check{
+								"labels": knownvalue.ObjectExact(map[string]knownvalue.Check{
+									"test": knownvalue.StringExact("test---label"),
+								}),
+								"name": knownvalue.StringExact("test-configmap"),
+							}),
+						}),
+					})),
+				},
 			},
 			{
 				Config: testManifestDecodeMultiConfig("testdata/decode_multi.yaml"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					// FIXME: terraform-plugin-testing doesn't support dynamic yet
-					func(s *terraform.State) error {
-						ms := s.RootModule()
-						rs, ok := ms.Outputs[outputName]
-						if !ok {
-							return fmt.Errorf("no output value for %q", outputName)
-						}
-						expectedOutput := []any{
-							map[string]any{
-								"apiVersion": "apps/v1",
-								"kind":       "DaemonSet",
-								"metadata": map[string]any{
-									"labels": map[string]any{
-										"k8s-app": "fluentd-logging",
-									},
-									"name":      "fluentd-elasticsearch",
-									"namespace": "kube-system",
-								},
-								"spec": map[string]any{
-									"selector": map[string]any{
-										"matchLabels": map[string]any{
-											"name": "fluentd-elasticsearch",
-										},
-									},
-									"template": map[string]any{
-										"metadata": map[string]any{
-											"labels": map[string]any{
-												"name": "fluentd-elasticsearch",
-											},
-										},
-										"spec": map[string]any{
-											"containers": []any{map[string]any{
-												"image": "quay.io/fluentd_elasticsearch/fluentd:v2.5.2",
-												"name":  "fluentd-elasticsearch",
-												"resources": map[string]any{
-													"limits": map[string]any{
-														"cpu":    json.Number("1.5"),
-														"memory": "200Mi",
-													},
-													"requests": map[string]any{
-														"cpu":    json.Number("1"),
-														"memory": "200Mi",
-													},
-												},
-												"volumeMounts": []any{map[string]any{
-													"mountPath": "/var/log",
-													"name":      "varlog",
-												}},
-											}},
-											"terminationGracePeriodSeconds": json.Number("30"),
-											"tolerations": []any{
-												map[string]any{
-													"effect":   "NoSchedule",
-													"key":      "node-role.kubernetes.io/control-plane",
-													"operator": "Exists",
-												},
-												map[string]any{
-													"effect":   "NoSchedule",
-													"key":      "node-role.kubernetes.io/master",
-													"operator": "Exists",
-												},
-											},
-											"volumes": []any{map[string]any{
-												"hostPath": map[string]any{
-													"path": "/var/log",
-												},
-												"name": "varlog",
-											}},
-										},
-									},
-								},
-							},
-							map[string]any{
-								"apiVersion": "v1",
-								"data": map[string]any{
-									"configfile": "---\ntest: document",
-									"immutable":  false,
-								},
-								"kind": "ConfigMap",
-								"metadata": map[string]any{
-									"labels": map[string]any{
-										"test": "test---label",
-									},
-									"name":      "test-configmap",
-									"namespace": "kube-system",
-								},
-							},
-							map[string]any{
-								"apiVersion": "apps/v1",
-								"kind":       "DaemonSet",
-								"metadata": map[string]any{
-									"labels": map[string]any{
-										"k8s-app": "fluentd-logging",
-									},
-									"name":      "fluentd-elasticsearch2",
-									"namespace": "kube-system",
-								},
-								"spec": map[string]any{
-									"selector": map[string]any{
-										"matchLabels": map[string]any{
-											"name": "fluentd-elasticsearch",
-										},
-									},
-									"template": map[string]any{
-										"metadata": map[string]any{
-											"labels": map[string]any{
-												"name":      "fluentd-elasticsearch",
-												"something": "helloworld",
-											},
-										},
-										"spec": map[string]any{
-											"containers": []any{map[string]any{
-												"image": "quay.io/fluentd_elasticsearch/fluentd:v2.5.2",
-												"name":  "fluentd-elasticsearch",
-												"resources": map[string]any{
-													"limits": map[string]any{
-														"memory": "200Mi",
-													},
-													"requests": map[string]any{
-														"cpu":    "100m",
-														"memory": "200Mi",
-													},
-												},
-												"volumeMounts": []any{map[string]any{
-													"mountPath": "/var/log",
-													"name":      "varlog",
-												}},
-											}},
-											"terminationGracePeriodSeconds": json.Number("30"),
-											"tolerations": []any{
-												map[string]any{
-													"effect":   "NoSchedule",
-													"key":      "node-role.kubernetes.io/control-plane",
-													"operator": "Exists",
-												},
-												map[string]any{
-													"effect":   "NoSchedule",
-													"key":      "node-role.kubernetes.io/master",
-													"operator": "Exists",
-												},
-											},
-											"volumes": []any{
-												map[string]any{
-													"hostPath": map[string]any{
-														"path": "/var/log",
-													},
-													"name": "varlog",
-												},
-											},
-										},
-									},
-								},
-							},
-						}
-
-						assert.Equal(t, expectedOutput, rs.Value)
-						return nil
-					},
-				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownOutputValue(outputName, knownvalue.ListExact([]knownvalue.Check{
+						knownvalue.ObjectExact(map[string]knownvalue.Check{
+							"apiVersion": knownvalue.StringExact("apps/v1"),
+							"kind":       knownvalue.StringExact("DaemonSet"),
+							"metadata": knownvalue.ObjectExact(map[string]knownvalue.Check{
+								"labels": knownvalue.ObjectExact(map[string]knownvalue.Check{
+									"k8s-app": knownvalue.StringExact("fluentd-logging"),
+								}),
+								"name":      knownvalue.StringExact("fluentd-elasticsearch"),
+								"namespace": knownvalue.StringExact("kube-system"),
+							}),
+							"spec": knownvalue.ObjectExact(map[string]knownvalue.Check{
+								"selector": knownvalue.ObjectExact(map[string]knownvalue.Check{
+									"matchLabels": knownvalue.ObjectExact(map[string]knownvalue.Check{
+										"name": knownvalue.StringExact("fluentd-elasticsearch"),
+									}),
+								}),
+								"template": knownvalue.ObjectExact(map[string]knownvalue.Check{
+									"metadata": knownvalue.ObjectExact(map[string]knownvalue.Check{
+										"labels": knownvalue.ObjectExact(map[string]knownvalue.Check{
+											"name": knownvalue.StringExact("fluentd-elasticsearch"),
+										}),
+									}),
+									"spec": knownvalue.ObjectExact(map[string]knownvalue.Check{
+										"containers": knownvalue.ListExact([]knownvalue.Check{knownvalue.ObjectExact(map[string]knownvalue.Check{
+											"image": knownvalue.StringExact("quay.io/fluentd_elasticsearch/fluentd:v2.5.2"),
+											"name":  knownvalue.StringExact("fluentd-elasticsearch"),
+											"resources": knownvalue.ObjectExact(map[string]knownvalue.Check{
+												"limits": knownvalue.ObjectExact(map[string]knownvalue.Check{
+													"cpu":    knownvalue.NumberExact(big.NewFloat(1.5)),
+													"memory": knownvalue.StringExact("200Mi"),
+												}),
+												"requests": knownvalue.ObjectExact(map[string]knownvalue.Check{
+													"cpu":    knownvalue.Int64Exact(1),
+													"memory": knownvalue.StringExact("200Mi"),
+												}),
+											}),
+											"volumeMounts": knownvalue.ListExact([]knownvalue.Check{knownvalue.ObjectExact(map[string]knownvalue.Check{
+												"mountPath": knownvalue.StringExact("/var/log"),
+												"name":      knownvalue.StringExact("varlog"),
+											})}),
+										})}),
+										"terminationGracePeriodSeconds": knownvalue.Int64Exact(30),
+										"tolerations": knownvalue.ListExact([]knownvalue.Check{
+											knownvalue.ObjectExact(map[string]knownvalue.Check{
+												"effect":   knownvalue.StringExact("NoSchedule"),
+												"key":      knownvalue.StringExact("node-role.kubernetes.io/control-plane"),
+												"operator": knownvalue.StringExact("Exists"),
+											}),
+											knownvalue.ObjectExact(map[string]knownvalue.Check{
+												"effect":   knownvalue.StringExact("NoSchedule"),
+												"key":      knownvalue.StringExact("node-role.kubernetes.io/master"),
+												"operator": knownvalue.StringExact("Exists"),
+											}),
+										}),
+										"volumes": knownvalue.ListExact([]knownvalue.Check{
+											knownvalue.ObjectExact(map[string]knownvalue.Check{
+												"hostPath": knownvalue.ObjectExact(map[string]knownvalue.Check{
+													"path": knownvalue.StringExact("/var/log"),
+												}),
+												"name": knownvalue.StringExact("varlog"),
+											}),
+										}),
+									}),
+								}),
+							}),
+						}),
+						knownvalue.ObjectExact(map[string]knownvalue.Check{
+							"apiVersion": knownvalue.StringExact("v1"),
+							"data": knownvalue.ObjectExact(map[string]knownvalue.Check{
+								"configfile": knownvalue.StringExact("---\ntest: document"),
+								"immutable":  knownvalue.Bool(false),
+							}),
+							"kind": knownvalue.StringExact("ConfigMap"),
+							"metadata": knownvalue.ObjectExact(map[string]knownvalue.Check{
+								"labels": knownvalue.ObjectExact(map[string]knownvalue.Check{
+									"test": knownvalue.StringExact("test---label"),
+								}),
+								"name":      knownvalue.StringExact("test-configmap"),
+								"namespace": knownvalue.StringExact("kube-system"),
+							}),
+						}),
+						knownvalue.ObjectExact(map[string]knownvalue.Check{
+							"apiVersion": knownvalue.StringExact("apps/v1"),
+							"kind":       knownvalue.StringExact("DaemonSet"),
+							"metadata": knownvalue.ObjectExact(map[string]knownvalue.Check{
+								"labels": knownvalue.ObjectExact(map[string]knownvalue.Check{
+									"k8s-app": knownvalue.StringExact("fluentd-logging"),
+								}),
+								"name":      knownvalue.StringExact("fluentd-elasticsearch2"),
+								"namespace": knownvalue.StringExact("kube-system"),
+							}),
+							"spec": knownvalue.ObjectExact(map[string]knownvalue.Check{
+								"selector": knownvalue.ObjectExact(map[string]knownvalue.Check{
+									"matchLabels": knownvalue.ObjectExact(map[string]knownvalue.Check{
+										"name": knownvalue.StringExact("fluentd-elasticsearch"),
+									}),
+								}),
+								"template": knownvalue.ObjectExact(map[string]knownvalue.Check{
+									"metadata": knownvalue.ObjectExact(map[string]knownvalue.Check{
+										"labels": knownvalue.ObjectExact(map[string]knownvalue.Check{
+											"name":      knownvalue.StringExact("fluentd-elasticsearch"),
+											"something": knownvalue.StringExact("helloworld"),
+										}),
+									}),
+									"spec": knownvalue.ObjectExact(map[string]knownvalue.Check{
+										"containers": knownvalue.ListExact([]knownvalue.Check{knownvalue.ObjectExact(map[string]knownvalue.Check{
+											"image": knownvalue.StringExact("quay.io/fluentd_elasticsearch/fluentd:v2.5.2"),
+											"name":  knownvalue.StringExact("fluentd-elasticsearch"),
+											"resources": knownvalue.ObjectExact(map[string]knownvalue.Check{
+												"limits": knownvalue.ObjectExact(map[string]knownvalue.Check{
+													"memory": knownvalue.StringExact("200Mi"),
+												}),
+												"requests": knownvalue.ObjectExact(map[string]knownvalue.Check{
+													"cpu":    knownvalue.StringExact("100m"),
+													"memory": knownvalue.StringExact("200Mi"),
+												}),
+											}),
+											"volumeMounts": knownvalue.ListExact([]knownvalue.Check{knownvalue.ObjectExact(map[string]knownvalue.Check{
+												"mountPath": knownvalue.StringExact("/var/log"),
+												"name":      knownvalue.StringExact("varlog"),
+											})}),
+										})}),
+										"terminationGracePeriodSeconds": knownvalue.Int64Exact(30),
+										"tolerations": knownvalue.ListExact([]knownvalue.Check{
+											knownvalue.ObjectExact(map[string]knownvalue.Check{
+												"effect":   knownvalue.StringExact("NoSchedule"),
+												"key":      knownvalue.StringExact("node-role.kubernetes.io/control-plane"),
+												"operator": knownvalue.StringExact("Exists"),
+											}),
+											knownvalue.ObjectExact(map[string]knownvalue.Check{
+												"effect":   knownvalue.StringExact("NoSchedule"),
+												"key":      knownvalue.StringExact("node-role.kubernetes.io/master"),
+												"operator": knownvalue.StringExact("Exists"),
+											}),
+										}),
+										"volumes": knownvalue.ListExact([]knownvalue.Check{
+											knownvalue.ObjectExact(map[string]knownvalue.Check{
+												"hostPath": knownvalue.ObjectExact(map[string]knownvalue.Check{
+													"path": knownvalue.StringExact("/var/log"),
+												}),
+												"name": knownvalue.StringExact("varlog"),
+											}),
+										}),
+									}),
+								}),
+							}),
+						}),
+					})),
+				},
 			},
 			{
 				Config:      testManifestDecodeMultiConfig("testdata/decode_manifest_invalid.yaml"),

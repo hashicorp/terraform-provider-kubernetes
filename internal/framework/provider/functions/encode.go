@@ -25,10 +25,6 @@ func encodeValue(v attr.Value) (any, error) {
 	case basetypes.NumberValue:
 		f, _ := vv.ValueBigFloat().Float64()
 		return f, nil
-	/*case basetypes.Float64Value:
-		return vv.ValueFloat64(), nil
-	case basetypes.Int64Value:
-		return vv.ValueInt64(), nil*/
 	case basetypes.BoolValue:
 		return vv.ValueBool(), nil
 	case basetypes.ObjectValue:

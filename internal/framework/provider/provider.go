@@ -7,14 +7,19 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
 )
 
 // Ensure KubernetesProvider satisfies various provider interfaces.
-var _ provider.Provider = &KubernetesProvider{}
+var (
+	_ provider.Provider              = &KubernetesProvider{}
+	_ provider.ProviderWithFunctions = &KubernetesProvider{}
+)
 
 // KubernetesProvider defines the provider implementation.
 type KubernetesProvider struct {
@@ -184,6 +189,14 @@ func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Re
 
 func (p *KubernetesProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{}
+}
+
+func (p *KubernetesProvider) Functions(ctx context.Context) []func() function.Function {
+	return []func() function.Function{
+		pfunctions.NewManifestDecodeFunction,
+		pfunctions.NewManifestDecodeMultiFunction,
+		pfunctions.NewManifestEncodeFunction,
+	}
 }
 
 func New(version string) provider.Provider {

@@ -26,6 +26,7 @@ data:
 kind: ConfigMap
 metadata:
   name: test
+  namespace: null
 `),
 				),
 			},
@@ -110,6 +111,7 @@ locals {
     kind       = "ConfigMap"
     metadata   = {
       name = "test"
+      namespace = null
     }
     data = {
       "test" = "test"

@@ -15,6 +15,10 @@ import (
 )
 
 func encodeValue(v attr.Value) (any, error) {
+	if v.IsNull() {
+		return nil, nil
+	}
+
 	switch vv := v.(type) {
 	case basetypes.StringValue:
 		return vv.ValueString(), nil

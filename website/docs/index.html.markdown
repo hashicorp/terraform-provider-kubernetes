@@ -142,7 +142,7 @@ In certain cases, external systems can add and modify resources annotations and 
 
 Both attributes support RegExp to match metadata objects more effectively.
 
-~> **Note:** RegExp will only work on root metadata objects. This makes using RegExp for ignoring annotations/labels in metadata objects that are nested such as `spec.template.metadata[0].annotations["..."]` not possible.
+~> **Note:** RegExp will only work on root metadata objects. It's currently not possible to use RegExp for ignoring annotations/labels in metadata objects that are nested such as `spec.template.metadata[0].annotations["..."]`.
 
 Please keep in mind that all data sources remain unaffected, and the provider always returns all labels and annotations, despite the `ignore_annotations` and `ignore_labels` settings. The same applies to the pod and job definitions that fall under templates. To ignore certain annotations and/or labels on the template level, please use the `ignore_changes` feature of the [lifecycle](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle) meta-argument.
 

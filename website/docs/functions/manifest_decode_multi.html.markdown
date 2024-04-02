@@ -1,6 +1,7 @@
 ---
-page_title: "manifest_decode_multi function"
 subcategory: ""
+layout: "kubernetes"
+page_title: "manifest_decode_multi function"
 description: |-
   Decode a Kubernetes YAML manifest containing multiple resources
 ---

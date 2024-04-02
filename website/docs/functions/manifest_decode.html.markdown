@@ -1,6 +1,7 @@
 ---
-page_title: "manifest_decode function"
 subcategory: ""
+layout: "kubernetes"
+page_title: "manifest_decode function"
 description: |-
   Decode a Kubernetes YAML manifest 
 ---

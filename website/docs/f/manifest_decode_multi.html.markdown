@@ -1,3 +1,4 @@
+---
 page_title: "manifest_decode_multi function"
 subcategory: ""
 description: |-
@@ -10,7 +11,7 @@ Given a YAML text containing a Kubernetes manifest with multiple resources, will
 
 ## Example Usage
 
-```terraform
+```hcl
 # Configuration using provider functions must include required_providers configuration.
 terraform {
   required_providers {

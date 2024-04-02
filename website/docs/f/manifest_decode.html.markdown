@@ -1,3 +1,4 @@
+---
 page_title: "manifest_decode function"
 subcategory: ""
 description: |-
@@ -10,7 +11,7 @@ Given a YAML text containing a Kubernetes manifest, will decode and return an ob
 
 ## Example Usage
 
-```terraform
+```hcl
 # Configuration using provider functions must include required_providers configuration.
 terraform {
   required_providers {

@@ -1,3 +1,4 @@
+---
 page_title: "manifest_encode function"
 subcategory: ""
 description: |-
@@ -10,7 +11,7 @@ Given an object representation of a Kubernetes manifest, will encode and return 
 
 ## Example Usage
 
-```terraform
+```hcl
 # Configuration using provider functions must include required_providers configuration.
 terraform {
   required_providers {
@@ -24,17 +25,21 @@ terraform {
   required_version = ">= 1.8.0"
 }
 
-output "example_output" {
-  value = provider::kubernetes::manifest_encode({
+locals {
+  manifest = {
     apiVersion = "v1"
-    kind = "ConfigMap"
+    kind       = "ConfigMap"
     metadata = {
-      name = "example
+      name = "example"
     }
     data = {
       EXAMPLE = "example"
     }
-  })
+  }
+}
+
+output "example_output" {
+  value = provider::kubernetes::manifest_encode(local.manifest)
 }
 ```
 

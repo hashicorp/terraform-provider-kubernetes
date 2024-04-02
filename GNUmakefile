@@ -104,7 +104,7 @@ tests-lint-fix: tools
 tools:
 	go install github.com/client9/misspell/cmd/misspell@v0.3.4
 	go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@v0.28.1
-	go install github.com/bflad/tfproviderdocs@v0.9.1
+	go install github.com/bflad/tfproviderdocs@v0.12.0
 	go install github.com/katbyte/terrafmt@v0.5.3
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
 	go install github.com/hashicorp/go-changelog/cmd/changelog-build@latest

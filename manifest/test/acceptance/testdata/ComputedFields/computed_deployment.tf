@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 resource "kubernetes_manifest" "deployment_resource_diff" {
-computed_fields = ["spec.template.spec.containers[0].resources.limits"]
+computed_fields = ["spec.template.spec.containers[0].resources.limits[\"cpu\"]"]
     manifest = {
         apiVersion = "apps/v1"
         kind       = "Deployment"

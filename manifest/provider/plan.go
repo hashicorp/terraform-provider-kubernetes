@@ -458,8 +458,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 				hasChanged = err == nil && len(restPath.Steps()) == 0 && wasCfg.(tftypes.Value).IsKnown() && !wasCfg.(tftypes.Value).Equal(nowCfg.(tftypes.Value))
 				if hasChanged {
 					h, ok := hints[morph.ValueToTypePath(ap).String()]
-					typeChanged := !(wasCfg.(tftypes.Value).Type().Equal(nowCfg.(tftypes.Value).Type()))
-					if ok && h == manifest.PreserveUnknownFieldsLabel && typeChanged {
+					_, diff := wasCfg.(tftypes.Value).Diff(nowCfg.(tftypes.Value)) // passing values of two different types will result in an error.
+					if ok && h == manifest.PreserveUnknownFieldsLabel && diff != nil {
 						apm := append(tftypes.NewAttributePath().WithAttributeName("manifest").Steps(), ap.Steps()...)
 						resp.RequiresReplace = append(resp.RequiresReplace, tftypes.NewAttributePathWithSteps(apm))
 						resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{

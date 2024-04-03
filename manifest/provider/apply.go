@@ -24,6 +24,43 @@ var defaultCreateTimeout = "10m"
 var defaultUpdateTimeout = "10m"
 var defaultDeleteTimeout = "10m"
 
+// findBackfillValue tries to optimistically find an attribute value pointed to by an attribute path (ap) inside
+// a complex type container value (m) by making semantically equivalent adaptations to the attribute path steps.
+// It considers Object and Map types as semantically equivalent AFA indexing attributes goes.
+func findBackfillValue(m interface{}, ap *tftypes.AttributePath) (interface{}, *tftypes.AttributePath, error) {
+	v, restPath, err := tftypes.WalkAttributePath(m, ap)
+	if err != nil {
+		if len(restPath.Steps()) > 0 {
+			// Attribute might not be found, because the attribute path step type  doesn't matcht
+			// the container type being indexed (core parses HCL to only Object and Tupple, but not Map and List).
+			// In that case, the attribute paths constructed for values in "object"
+			// will need adjusting for type differences between "manifest"
+			fs := restPath.Steps()[0]
+			switch e := fs.(type) {
+			case tftypes.ElementKeyString:
+				// if expecting a Map, try indexing with AttributeName instead
+				tp := tftypes.NewAttributePath().WithAttributeName(string(e))
+				tv, rp, err := tftypes.WalkAttributePath(v, tp)
+				if err != nil {
+					return v, rp, err
+				}
+				return findBackfillValue(tv, tftypes.NewAttributePathWithSteps(restPath.Steps()[1:]))
+
+			case tftypes.AttributeName:
+				// if expecting an Object, try indexing with ElementKeyString instead
+				tp := tftypes.NewAttributePath().WithElementKeyString(string(e))
+				tv, rp, err := tftypes.WalkAttributePath(v, tp)
+				if err != nil {
+					return v, rp, err
+				}
+				return findBackfillValue(tv, tftypes.NewAttributePathWithSteps(restPath.Steps()[1:]))
+			}
+		}
+		return nil, nil, err
+	}
+	return v, restPath, err
+}
+
 // ApplyResourceChange function
 func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprotov5.ApplyResourceChangeRequest) (*tfprotov5.ApplyResourceChangeResponse, error) {
 	resp := &tfprotov5.ApplyResourceChangeResponse{}
@@ -194,13 +231,6 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			}
 
 			ppMan, restPath, err := findBackfillValue(plannedStateVal["manifest"], ap)
-			if err != nil {
-				if len(restPath.Steps()) > 0 {
-					// attribute not in manifest
-					return v, nil
-				}
-				return v, ap.NewError(err)
-			}
 			nv, d := morph.ValueToType(ppMan.(tftypes.Value), v.Type(), tftypes.NewAttributePath())
 			if len(d) > 0 {
 				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{

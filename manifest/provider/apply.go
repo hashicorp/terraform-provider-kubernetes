@@ -230,7 +230,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 				return v, nil
 			}
 
-			ppMan, restPath, err := findBackfillValue(plannedStateVal["manifest"], ap)
+			// the use of restpath and err are used in recursive calls of findBackfillValue
+			ppMan, _, _ := findBackfillValue(plannedStateVal["manifest"], ap)
 			nv, d := morph.ValueToType(ppMan.(tftypes.Value), v.Type(), tftypes.NewAttributePath())
 			if len(d) > 0 {
 				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{

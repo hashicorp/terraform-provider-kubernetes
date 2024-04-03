@@ -193,7 +193,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 				return v, nil
 			}
 
-			ppMan, restPath, err := tftypes.WalkAttributePath(plannedStateVal["manifest"], ap)
+			ppMan, restPath, err := findBackfillValue(plannedStateVal["manifest"], ap)
 			if err != nil {
 				if len(restPath.Steps()) > 0 {
 					// attribute not in manifest

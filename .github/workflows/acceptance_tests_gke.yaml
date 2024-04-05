@@ -26,7 +26,7 @@ on:
         default: "^TestAcc"
       terraformVersion:
         description: Terraform version
-        default: 1.5.6
+        default: 1.7.5
   schedule:
     - cron: '0 23 * * *'
 
@@ -47,18 +47,18 @@ jobs:
     runs-on: [custom, linux, medium]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.2
       - name: Set up Go
-        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
           go-version-file: 'go.mod'
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@35b0e87d162680511bf346c299f71c9c5c379033 # v1.1.1
+        uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c # v2.1.2
         with:
           credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
           access_token_lifetime: '14400s'
       - name: Set up gcloud SDK
-        uses: google-github-actions/setup-gcloud@e30db14379863a8c79331b04a9969f4c1e225e0b # v1.1.1
+        uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200 # v2.1.0
         with:
           install_components: 'beta,gke-gcloud-auth-plugin'
       - name: Initialize gcloud SDK
@@ -66,7 +66,7 @@ jobs:
           gcloud init
           gcloud info
       - name: Install Terraform
-        uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
+        uses: hashicorp/setup-terraform@a1502cd9e758c50496cc9ac5308c4843bcd56d36 # v3.0.0
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: false

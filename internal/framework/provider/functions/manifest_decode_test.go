@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -39,6 +40,20 @@ func TestManifestDecode(t *testing.T) {
 						}),
 					})),
 				},
+			},
+		},
+	})
+}
+
+func TestManifestDecode_ErrorOnMulti(t *testing.T) {
+	t.Parallel()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testManifestDecodeConfig("testdata/decode_multi.yaml"),
+				ExpectError: regexp.MustCompile(`YAML\s+manifest\s+contains\s+multiple\s+resources`),
 			},
 		},
 	})

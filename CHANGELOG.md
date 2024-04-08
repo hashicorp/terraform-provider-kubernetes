@@ -1,3 +1,11 @@
+## 2.28.0 (April 8, 2024)
+
+ENHANCEMENTS:
+
+**NOTE: Using [Provider Defined Functions](https://developer.hashicorp.com/terraform/plugin/framework/functions/concepts) requires Terraform version 1.8.0.**
+
+* Add provider defined functions: `manifest_encode`, `manifest_decode`, `manifest_decode_multi` [[GH-2428](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2428)]
+
 ## 2.27.0 (Mar, 6 2024)
 
 ENHANCEMENTS:

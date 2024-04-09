@@ -6,6 +6,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: test-configmap
+  annotations: null
   labels:
     test: "test---label"
 data:

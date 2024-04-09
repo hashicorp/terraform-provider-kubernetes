@@ -87,6 +87,8 @@ func decodeSequence(ctx context.Context, s []any) (attr.Value, diag.Diagnostics)
 
 func decodeScalar(ctx context.Context, m any) (value attr.Value, diags diag.Diagnostics) {
 	switch v := m.(type) {
+	case nil:
+		value = types.DynamicNull()
 	case float64:
 		value = types.NumberValue(big.NewFloat(float64(v)))
 	case bool:

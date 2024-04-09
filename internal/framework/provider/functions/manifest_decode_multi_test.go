@@ -35,6 +35,7 @@ func TestManifestDecodeMulti(t *testing.T) {
 							}),
 							"kind": knownvalue.StringExact("ConfigMap"),
 							"metadata": knownvalue.ObjectExact(map[string]knownvalue.Check{
+								"annotations": knownvalue.Null(),
 								"labels": knownvalue.ObjectExact(map[string]knownvalue.Check{
 									"test": knownvalue.StringExact("test---label"),
 								}),

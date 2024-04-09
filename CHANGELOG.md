@@ -1,3 +1,9 @@
+## 2.28.1 (April 9, 2024)
+
+HOTFIX:
+
+* `manifest_decode()`: fix handling of manifests containing null values [[GH-2461](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2461)]
+
 ## 2.28.0 (April 8, 2024)
 
 ENHANCEMENTS:

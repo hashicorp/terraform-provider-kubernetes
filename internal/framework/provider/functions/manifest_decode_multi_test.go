@@ -41,6 +41,7 @@ func TestManifestDecodeMulti(t *testing.T) {
 								}),
 								"name": knownvalue.StringExact("test-configmap"),
 							}),
+							"status": knownvalue.Null(),
 						}),
 					})),
 				},

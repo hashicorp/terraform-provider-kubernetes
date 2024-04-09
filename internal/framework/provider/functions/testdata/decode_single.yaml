@@ -13,3 +13,4 @@ data:
   configfile: |
     ---
     test: document
+status:

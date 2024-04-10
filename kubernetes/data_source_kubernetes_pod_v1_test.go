@@ -89,5 +89,5 @@ func testAccKubernetesDataSourcePodV1_nonexistent(name string) string {
     name = "%s"
   }
 }
-`,name)
+`, name)
 }

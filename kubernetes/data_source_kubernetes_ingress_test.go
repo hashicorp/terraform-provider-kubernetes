@@ -130,7 +130,7 @@ func testAccKubernetesDataSourceIngress_read() string {
 func testAccKubernetesDataSourceIngress_nonexistent(name string) string {
 	return fmt.Sprintf(`data "kubernetes_ingress" "test" {
   metadata {
-    name      = "%s"
+    name = "%s"
   }
 }
 `, name)

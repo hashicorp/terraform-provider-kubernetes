@@ -160,6 +160,9 @@ func testAccKubernetesDataSourceSecretV1_read() string {
   metadata {
     name = kubernetes_secret_v1.test.metadata.0.name
   }
+  binary_data = {
+    raw = ""
+  }
 }
 `
 }

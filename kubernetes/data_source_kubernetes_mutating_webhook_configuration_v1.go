@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -124,6 +125,9 @@ func dataSourceKubernetesMutatingWebhookConfigurationV1Read(ctx context.Context,
 	log.Printf("[INFO] Reading mutating webhook configuration %s", metadata.Name)
 	cfg, err := conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}

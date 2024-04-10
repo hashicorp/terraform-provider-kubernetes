@@ -70,6 +70,28 @@ func TestAccKubernetesDataSourceIngressV1_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDataSourceIngressV1_not_found(t *testing.T) {
+	dataSourceName := "data.kubernetes_ingress_v1.test"
+	name := fmt.Sprintf("ceci-n.est-pas-une-ingress-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.22.0")
+		},
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDataSourceIngressV1_nonexistent(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.#", "0"),
+				),
+			},
+		},
+	})
+}
+
 func testAccKubernetesDataSourceIngressV1_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
   metadata {
@@ -114,4 +136,13 @@ func testAccKubernetesDataSourceIngressV1_read() string {
   }
 }
 `
+}
+
+func testAccKubernetesDataSourceIngressV1_nonexistent(name string) string {
+	return fmt.Sprintf(`data "kubernetes_ingress_v1" "test" {
+  metadata {
+    name      = "%s"
+  }
+}
+`, name)
 }

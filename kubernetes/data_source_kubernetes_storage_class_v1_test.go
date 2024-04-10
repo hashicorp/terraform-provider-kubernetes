@@ -73,6 +73,26 @@ func TestAccKubernetesDataSourceStorageClassV1_minikube(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDataSourceStorageClassV1_not_found(t *testing.T) {
+	dataSourceName := "data.kubernetes_storage_class_v1.test"
+	name := fmt.Sprintf("ceci-n.est-pas-une-storage-class-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInKind(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDataSourceStorageClassV1_nonexistent(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(dataSourceName, "mount_options.#", "0"),
+					resource.TestCheckResourceAttr(dataSourceName, "parameters.%", "0"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesDataSourceStorageClassV1_gke(t *testing.T) {
 	resourceName := "kubernetes_storage_class_v1.test"
 	dataSourceName := "data.kubernetes_storage_class_v1.test"
@@ -177,4 +197,13 @@ func testAccKubernetesDataSourceStorageClassV1_read() string {
   }
 }
 `
+}
+
+func testAccKubernetesDataSourceStorageClassV1_nonexistent(name string) string {
+	return fmt.Sprintf(`data "kubernetes_storage_class_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+}
+`, name)
 }

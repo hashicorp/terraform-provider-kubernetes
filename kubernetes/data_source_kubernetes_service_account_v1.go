@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -69,6 +70,10 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	sa, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			d.SetId(buildId(sa.ObjectMeta))
+			return nil
+		}
 		return diag.Errorf("Unable to fetch service account from Kubernetes: %s", err)
 	}
 
@@ -84,6 +89,9 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 	log.Printf("[INFO] Reading service account %s", metadata.Name)
 	svcAcc, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		log.Printf("[DEBUG] Received error: %#v", err)
 		diagMsg = append(diagMsg, diag.FromErr(err)...)
 		return diagMsg

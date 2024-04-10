@@ -40,6 +40,25 @@ func TestAccKubernetesDataSourcePodV1_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDataSourcePodV1_not_found(t *testing.T) {
+	dataSourceName := "data.kubernetes_pod_v1.test"
+	name := fmt.Sprintf("ceci-n.est-pas-une-pod-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDataSourcePodV1_nonexistent(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.#", "0"),
+				),
+			},
+		},
+	})
+}
+
 func testAccKubernetesDataSourcePodV1_basic(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
@@ -62,4 +81,13 @@ func testAccKubernetesDataSourcePodV1_read() string {
   }
 }
 `
+}
+
+func testAccKubernetesDataSourcePodV1_nonexistent(name string) string {
+	return fmt.Sprintf(`data "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+}
+`,name)
 }

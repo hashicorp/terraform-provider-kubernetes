@@ -60,6 +60,26 @@ func TestAccKubernetesDataSourceEndpointsV1_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDataSourceEndpointsV1_not_found(t *testing.T) {
+	dataSourceName := "data.kubernetes_endpoints_v1.test"
+	name := fmt.Sprintf("ceci-n.est-pas-une-endpoint-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesEndpointV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDataSourceEndpointsV1_nonexistent(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(dataSourceName, "subset.#", "0"),
+				),
+			},
+		},
+	})
+}
+
 func testAccKubernetesDataSourceEndpointsV1_read() string {
 	return `data "kubernetes_endpoints_v1" "test" {
   metadata {
@@ -67,4 +87,13 @@ func testAccKubernetesDataSourceEndpointsV1_read() string {
   }
 }
 `
+}
+
+func testAccKubernetesDataSourceEndpointsV1_nonexistent(name string) string {
+	return fmt.Sprintf(`data "kubernetes_endpoints_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+}
+`, name)
 }

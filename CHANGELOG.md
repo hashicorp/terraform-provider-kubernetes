@@ -1,3 +1,9 @@
+## 2.29.0 (April 11, 2024)
+
+BUG FIXES:
+
+* data-sources: revert a recently introduced deviation on datasources where querying a non-existent resource would cause an error (#2434). [[GH-2464](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2464)]
+
 ## 2.28.1 (April 9, 2024)
 
 HOTFIX:

@@ -27,7 +27,6 @@ jobs:
         run: go mod verify
       - name: Run unit tests
         env:
-          # FIXME this needs to be changed once the 1.8 release goes out
-          TF_ACC_TERRAFORM_VERSION: 1.8.0-rc1
+          TF_ACC_TERRAFORM_VERSION: 1.8.0
         run: |
           make testfuncs

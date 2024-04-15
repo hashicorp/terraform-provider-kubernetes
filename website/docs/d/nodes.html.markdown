@@ -107,7 +107,7 @@ The following arguments are supported:
 * `machine_id` - Machine ID reported by the node see [main(5)
   machine-id](http://man7.org/linux/man-pages/man5/machine-id.5.html) for more info.
 * `system_uuid` - System UUID reported by the node. This field is
-  specific to [Red Hat hosts](https://access.redhat.com/documentation/en-us/red_hat_subscription_management/1/html/rhsm/uuid)
+  specific to Red Hat hosts.
 * `boot_id` - Boot ID reported by the node.
 * `kernel_version` - Kernel Version reported by the node from `uname -r`
 * `os_image` - OS Image reported by the node from `/etc/os-release`

@@ -1,3 +1,23 @@
+## 2.29.0 (April 11, 2024)
+
+BUG FIXES:
+
+* data-sources: revert a recently introduced deviation on datasources where querying a non-existent resource would cause an error (#2434). [[GH-2464](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2464)]
+
+## 2.28.1 (April 9, 2024)
+
+HOTFIX:
+
+* `manifest_decode()`: fix handling of manifests containing null values [[GH-2461](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2461)]
+
+## 2.28.0 (April 8, 2024)
+
+ENHANCEMENTS:
+
+**NOTE: Using [Provider Defined Functions](https://developer.hashicorp.com/terraform/plugin/framework/functions/concepts) requires Terraform version 1.8.0.**
+
+* Add provider defined functions: `manifest_encode`, `manifest_decode`, `manifest_decode_multi` [[GH-2428](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2428)]
+
 ## 2.27.0 (Mar, 6 2024)
 
 ENHANCEMENTS:

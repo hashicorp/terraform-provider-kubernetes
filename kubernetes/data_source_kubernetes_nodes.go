@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -89,6 +90,9 @@ func dataSourceKubernetesNodesRead(ctx context.Context, d *schema.ResourceData, 
 	log.Printf("[INFO] Listing nodes")
 	nodesRaw, err := conn.CoreV1().Nodes().List(ctx, listOptions)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 	nodes := make([]interface{}, len(nodesRaw.Items))

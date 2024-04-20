@@ -69,6 +69,11 @@ func resourceKubernetesLabels() *schema.Resource {
 				Description: "A map of labels to apply to the resource.",
 				Required:    true,
 			},
+			"template_labels": {
+				Type:        schema.TypeMap,
+				Description: "A map of labels to apply to the resource template.",
+				Optional:    true,
+			},
 			"force": {
 				Type:        schema.TypeBool,
 				Description: "Force overwriting labels that were created or edited outside of Terraform.",
@@ -165,6 +170,30 @@ func resourceKubernetesLabelsRead(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	d.Set("labels", labels)
+
+	kind := d.Get("kind").(string)
+	configuredTemplateLabels := d.Get("template_labels").(map[string]interface{})
+	managedTemplateLabels, err := getTemplateManagedLabels(res.GetManagedFields(), fieldManagerName, kind)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	var templateLabels map[string]string
+	if kind == "CronJob" {
+		templateLabels, _, err = unstructured.NestedStringMap(res.Object, "spec", "jobTemplate", "spec", "template", "metadata", "labels")
+	} else {
+		templateLabels, _, err = unstructured.NestedStringMap(res.Object, "spec", "template", "metadata", "labels")
+	}
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	for k := range templateLabels {
+		_, managed := managedTemplateLabels["f:"+k]
+		_, configured := configuredTemplateLabels[k]
+		if !managed && !configured {
+			delete(templateLabels, k)
+		}
+	}
+	d.Set("template_labels", templateLabels)
 	return nil
 }
 
@@ -186,6 +215,42 @@ func getManagedLabels(managedFields []v1.ManagedFieldsEntry, manager string) (ma
 			}
 		}
 
+	}
+	return labels, nil
+}
+
+// getTemplateManagedLabels reads the field manager metadata to discover which fields we're managing
+func getTemplateManagedLabels(managedFields []v1.ManagedFieldsEntry, manager string, kind string) (map[string]interface{}, error) {
+	var labels map[string]interface{}
+	for _, m := range managedFields {
+		if m.Manager != manager {
+			continue
+		}
+		var mm map[string]interface{}
+		err := json.Unmarshal(m.FieldsV1.Raw, &mm)
+		if err != nil {
+			return nil, err
+		}
+		var spec map[string]interface{}
+		if s, ok := mm["f:spec"].(map[string]interface{}); ok {
+			spec = s
+		}
+		if kind == "CronJob" {
+			if jt, ok := spec["f:jobTemplate"].(map[string]interface{}); ok {
+				spec = jt["f:spec"].(map[string]interface{})
+			}
+		}
+		var template map[string]interface{}
+		if t, ok := spec["f:template"].(map[string]interface{}); ok {
+			template = t
+		}
+		var metadata map[string]interface{}
+		if mmm, ok := template["f:metadata"].(map[string]interface{}); ok {
+			metadata = mmm
+		}
+		if l, ok := metadata["f:labels"].(map[string]interface{}); ok {
+			labels = l
+		}
 	}
 	return labels, nil
 }

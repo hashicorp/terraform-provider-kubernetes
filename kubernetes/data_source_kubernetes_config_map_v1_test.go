@@ -47,6 +47,25 @@ func TestAccKubernetesDataSourceConfigMapV1_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDataSourceConfigMapV1_not_found(t *testing.T) {
+	dataSourceName := "data.kubernetes_config_map_v1.test"
+	name := fmt.Sprintf("ceci-n.est-pas-une-config-map-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{ // Use the data source to read the existing resource.
+				Config: testAccKubernetesDataSourceConfigMapV1_nonexistent(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(dataSourceName, "data.%", "0"),
+				),
+			},
+		},
+	})
+}
+
 // testAccKubernetesDataSourceConfigMapConfig_basic provides the terraform config
 // used to test basic functionality of the config_map data source.
 func testAccKubernetesDataSourceConfigMapV1_basic(name string) string {
@@ -81,4 +100,13 @@ func testAccKubernetesDataSourceConfigMapV1_read() string {
   }
 }
 `
+}
+
+func testAccKubernetesDataSourceConfigMapV1_nonexistent(name string) string {
+	return fmt.Sprintf(`data "kubernetes_config_map_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+}
+`, name)
 }

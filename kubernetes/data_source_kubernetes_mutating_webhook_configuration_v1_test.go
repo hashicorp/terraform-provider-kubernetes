@@ -101,6 +101,26 @@ func TestAccKubernetesDataSourceMutatingWebhookConfigurationV1_basic(t *testing.
 	})
 }
 
+func TestAccKubernetesDataSourceMutatingWebhookConfigurationV1_not_found(t *testing.T) {
+	dataSourceName := "data.kubernetes_mutating_webhook_configuration_v1.test"
+	name := fmt.Sprintf("ceci-n.est-pas-une-webhook-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDataSourceMutatingWebhookConfigurationV1_nonexistent(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(dataSourceName, "webhook.#", "0"),
+				),
+			},
+		},
+	})
+}
+
 func testAccKubernetesDataSourceMutatingWebhookConfigurationV1_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_mutating_webhook_configuration_v1" "test" {
   metadata {
@@ -140,4 +160,13 @@ func testAccKubernetesDataSourceMutatingWebhookConfigurationV1_read() string {
   }
 }
 `
+}
+
+func testAccKubernetesDataSourceMutatingWebhookConfigurationV1_nonexistent(name string) string {
+	return fmt.Sprintf(`data "kubernetes_mutating_webhook_configuration_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+}
+`, name)
 }

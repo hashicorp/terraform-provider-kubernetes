@@ -1,3 +1,40 @@
+## 2.29.0 (April 11, 2024)
+
+BUG FIXES:
+
+* data-sources: revert a recently introduced deviation on datasources where querying a non-existent resource would cause an error (#2434). [[GH-2464](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2464)]
+
+## 2.28.1 (April 9, 2024)
+
+HOTFIX:
+
+* `manifest_decode()`: fix handling of manifests containing null values [[GH-2461](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2461)]
+
+## 2.28.0 (April 8, 2024)
+
+ENHANCEMENTS:
+
+**NOTE: Using [Provider Defined Functions](https://developer.hashicorp.com/terraform/plugin/framework/functions/concepts) requires Terraform version 1.8.0.**
+
+* Add provider defined functions: `manifest_encode`, `manifest_decode`, `manifest_decode_multi` [[GH-2428](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2428)]
+
+## 2.27.0 (Mar, 6 2024)
+
+ENHANCEMENTS:
+
+* `resource/kubernetes_pod_v1`: add missing `topology_spread_constraints`: `node_affinity_policy`, `node_taints_policy`, `match_label_keys`, `min_domains` [[GH-2429](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2429)]
+
+## 2.26.0 (Feb 15, 2024)
+
+ENHANCEMENTS:
+
+* `kubernetes/kubernetes_deployment_v1`: Add support for `HugePages` in `emptyDir.medium` [[GH-2395](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2395)]
+* `resource/kubernetes_job_v1`: add new attribute `spec.pod_failure_policy` to job spec [[GH-2394](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2394)]
+
+NOTES:
+
+* Bump Kubernetes dependencies from x.27.8 to x.28.6. [[GH-2404](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2404)]
+
 ## 2.25.2 (Jan 8, 2024)
 
 BUG FIXES:

@@ -116,7 +116,9 @@ Find more comprehensive `in-cluster` config example [here](https://github.com/ha
 
 ## Exec plugins
 
-Some cloud providers have short-lived authentication tokens that can expire relatively quickly. To ensure the Kubernetes provider is receiving valid credentials, an exec-based plugin can be used to fetch a new token before initializing the provider. For example, on EKS, the command `eks get-token` can be used:
+Some cloud providers have short-lived authentication tokens that can expire relatively quickly. To ensure the Kubernetes provider is receiving valid credentials, an exec-based plugin can be used to fetch a new token before each Terraform operation. For example, on EKS, the command `eks get-token` can be used:
+
+~> IMPORTANT: DO NOT mix `exec` blocks with other credential attributes such as `token` or `client_certificate` in the provider configuration. This leads to undefined behaviour and there is no guarantee about which credential will actually be used.
 
 ```hcl
 provider "kubernetes" {
@@ -139,6 +141,8 @@ For further reading, see these examples which demonstrate different approaches t
 In certain cases, external systems can add and modify resources annotations and labels for their own purposes. However, Terraform will remove them since they are not presented in the code. It also might be hard to update code accordingly to stay tuned with the changes that come outside. In order to address this `ignore_annotations` and `ignore_labels` attributes were introduced on the provider level. They allow Terraform to ignore certain annotations and labels across all resources.
 
 Both attributes support RegExp to match metadata objects more effectively.
+
+~> **Note:** RegExp will only work on root metadata objects. It's currently not possible to use RegExp for ignoring annotations/labels in metadata objects that are nested such as `spec.template.metadata[0].annotations["..."]`.
 
 Please keep in mind that all data sources remain unaffected, and the provider always returns all labels and annotations, despite the `ignore_annotations` and `ignore_labels` settings. The same applies to the pod and job definitions that fall under templates. To ignore certain annotations and/or labels on the template level, please use the `ignore_changes` feature of the [lifecycle](https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle) meta-argument.
 

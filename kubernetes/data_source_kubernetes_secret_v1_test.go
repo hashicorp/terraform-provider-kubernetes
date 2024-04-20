@@ -81,6 +81,25 @@ func TestAccKubernetesDataSourceSecretV1_generateName(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDataSourceSecretV1_not_found(t *testing.T) {
+	name := fmt.Sprintf("ceci-n.est-pas-une-secret-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	datasourceName := "data.kubernetes_secret_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDataSourceSecretV1_nonexistent(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(datasourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(datasourceName, "data.%", "0"),
+				),
+			},
+		},
+	})
+}
+
 func testAccKubernetesDataSourceSecretV1_generateName(generate_name string) string {
 	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
@@ -146,4 +165,13 @@ func testAccKubernetesDataSourceSecretV1_read() string {
   }
 }
 `
+}
+
+func testAccKubernetesDataSourceSecretV1_nonexistent(name string) string {
+	return fmt.Sprintf(`data "kubernetes_secret_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+}
+`, name)
 }

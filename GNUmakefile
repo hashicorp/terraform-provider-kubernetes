@@ -8,6 +8,8 @@ PKG_NAME     := kubernetes
 OS_ARCH      := $(shell go env GOOS)_$(shell go env GOARCH)
 TF_PROV_DOCS := $(PWD)/kubernetes/test-infra/tfproviderdocs
 
+PROVIDER_FUNCTIONS_DIR := "$(PROVIDER_DIR)/internal/framework/provider/functions"
+
 ifneq ($(PWD),$(PROVIDER_DIR))
 $(error "Makefile must be run from the provider directory")
 endif
@@ -75,6 +77,9 @@ test: fmtcheck vet
 testacc: fmtcheck vet
 	TF_ACC=1 go test $(TEST) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) -timeout 3h
 
+testfuncs: fmtcheck 
+	go test $(PROVIDER_FUNCTIONS_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) 
+
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \
 		echo "ERROR: Set TEST to a specific package. For example,"; \
@@ -99,8 +104,8 @@ tests-lint-fix: tools
 tools:
 	go install github.com/client9/misspell/cmd/misspell@v0.3.4
 	go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@v0.28.1
-	go install github.com/bflad/tfproviderdocs@v0.9.1
-	go install github.com/katbyte/terrafmt@v0.5.2
+	go install github.com/bflad/tfproviderdocs@v0.12.0
+	go install github.com/katbyte/terrafmt@v0.5.3
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
 	go install github.com/hashicorp/go-changelog/cmd/changelog-build@latest
 	go install github.com/hashicorp/go-changelog/cmd/changelog-entry@latest

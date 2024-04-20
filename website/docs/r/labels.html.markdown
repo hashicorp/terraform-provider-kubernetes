@@ -20,11 +20,11 @@ resource "kubernetes_labels" "example" {
   metadata {
     name = "my-config"
   }
-  # These annotations will be applied to the Deployment resource itself
+  # These labels will be applied to the Deployment resource itself
   labels = {
     "owner" = "myteam"
   }
-  # These annotations will be applied to the Pods created by the Deployment
+  # These labels will be applied to the Pods created by the Deployment
   template_labels = {
     "owner" = "myteam"
   }

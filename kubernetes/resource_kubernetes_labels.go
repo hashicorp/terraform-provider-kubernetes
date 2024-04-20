@@ -65,14 +65,16 @@ func resourceKubernetesLabels() *schema.Resource {
 				},
 			},
 			"labels": {
-				Type:        schema.TypeMap,
-				Description: "A map of labels to apply to the resource.",
-				Required:    true,
+				Type:         schema.TypeMap,
+				Description:  "A map of labels to apply to the resource.",
+				Optional:     true,
+				AtLeastOneOf: []string{"template_labels", "labels"},
 			},
 			"template_labels": {
-				Type:        schema.TypeMap,
-				Description: "A map of labels to apply to the resource template.",
-				Optional:    true,
+				Type:         schema.TypeMap,
+				Description:  "A map of labels to apply to the resource template.",
+				Optional:     true,
+				AtLeastOneOf: []string{"template_labels", "labels"},
 			},
 			"force": {
 				Type:        schema.TypeBool,
@@ -312,10 +314,12 @@ func resourceKubernetesLabelsUpdate(ctx context.Context, d *schema.ResourceData,
 
 	// craft the patch to update the labels
 	labels := d.Get("labels")
+	templateLabels := d.Get("template_labels")
 	if d.Id() == "" {
 		// if we're deleting then just we just patch
 		// with an empty labels map
 		labels = map[string]interface{}{}
+		templateLabels = map[string]interface{}{}
 	}
 
 	patchmeta := map[string]interface{}{
@@ -329,6 +333,24 @@ func resourceKubernetesLabelsUpdate(ctx context.Context, d *schema.ResourceData,
 		"apiVersion": apiVersion,
 		"kind":       kind,
 		"metadata":   patchmeta,
+	}
+	if _, ok := d.GetOk("template_labels"); ok {
+		spec := map[string]interface{}{
+			"template": map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"labels": templateLabels,
+				},
+			},
+		}
+		if kind == "CronJob" {
+			patchobj["spec"] = map[string]interface{}{
+				"jobTemplate": map[string]interface{}{
+					"spec": spec,
+				},
+			}
+		} else {
+			patchobj["spec"] = spec
+		}
 	}
 	patch := unstructured.Unstructured{}
 	patch.Object = patchobj

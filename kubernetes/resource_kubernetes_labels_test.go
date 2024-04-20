@@ -151,6 +151,141 @@ func TestAccKubernetesLabels_template_cronjob(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesLabels_template_deployment(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	namespace := "default"
+	resourceName := "kubernetes_labels.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createDeployment(name, namespace)
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy: func(s *terraform.State) error {
+			return destroyDeployment(name, namespace)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesLabels_template_deployment_empty(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
+					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "template_labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
+				),
+			},
+			{
+				Config: testAccKubernetesLabels_template_deployment_basic(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
+					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "labels.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "labels.test1", "one"),
+					resource.TestCheckResourceAttr(resourceName, "template_labels.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "template_labels.test2", "two"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
+				),
+			},
+			{
+				Config: testAccKubernetesLabels_template_deployment_modified(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
+					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "labels.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "labels.test1", "one"),
+					resource.TestCheckResourceAttr(resourceName, "labels.test2", "two"),
+					resource.TestCheckResourceAttr(resourceName, "template_labels.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "template_labels.test3", "three"),
+					resource.TestCheckResourceAttr(resourceName, "template_labels.test4", "four"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
+				),
+			},
+			{
+				Config: testAccKubernetesLabels_template_deployment_empty(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
+					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "template_labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesLabels_template_only(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	namespace := "default"
+	resourceName := "kubernetes_labels.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createDeployment(name, namespace)
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy: func(s *terraform.State) error {
+			return destroyDeployment(name, namespace)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesLabels_template_only(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
+					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "template_labels.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "template_labels.test", "test"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesLabels_resource_only(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	namespace := "default"
+	resourceName := "kubernetes_labels.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createDeployment(name, namespace)
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy: func(s *terraform.State) error {
+			return destroyDeployment(name, namespace)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesLabels_resource_only(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "api_version", "apps/v1"),
+					resource.TestCheckResourceAttr(resourceName, "kind", "Deployment"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "labels.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "labels.test", "test"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
+				),
+			},
+		},
+	})
+}
+
 func createConfigMap(name, namespace string) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
@@ -265,6 +400,88 @@ func testAccKubernetesLabels_template_modified(name string) string {
   template_labels = {
     "test3" = "three"
     "test4" = "four"
+  }
+  field_manager = "tftest"
+}
+`, name)
+}
+
+func testAccKubernetesLabels_template_deployment_empty(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_labels" "test" {
+  api_version = "apps/v1"
+  kind        = "Deployment"
+  metadata {
+    name = %q
+  }
+  labels          = {}
+  template_labels = {}
+  field_manager        = "tftest"
+}
+`, name)
+}
+
+func testAccKubernetesLabels_template_deployment_basic(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_labels" "test" {
+  api_version = "apps/v1"
+  kind        = "Deployment"
+  metadata {
+    name = %q
+  }
+  labels = {
+    "test1" = "one"
+  }
+  template_labels = {
+    "test2" = "two"
+  }
+  field_manager = "tftest"
+}
+`, name)
+}
+
+func testAccKubernetesLabels_template_deployment_modified(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_labels" "test" {
+  api_version = "apps/v1"
+  kind        = "Deployment"
+  metadata {
+    name = %q
+  }
+  labels = {
+    "test1" = "one"
+    "test2" = "two"
+  }
+  template_labels = {
+    "test3" = "three"
+    "test4" = "four"
+  }
+  field_manager = "tftest"
+}
+`, name)
+}
+
+func testAccKubernetesLabels_template_only(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_labels" "test" {
+  api_version = "apps/v1"
+  kind        = "Deployment"
+  metadata {
+    name = %q
+  }
+  template_labels = {
+    "test" = "test"
+  }
+  field_manager = "tftest"
+}
+`, name)
+}
+
+func testAccKubernetesLabels_resource_only(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_labels" "test" {
+  api_version = "apps/v1"
+  kind        = "Deployment"
+  metadata {
+    name = %q
+  }
+  labels = {
+    "test" = "test"
   }
   field_manager = "tftest"
 }

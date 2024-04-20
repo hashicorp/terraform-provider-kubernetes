@@ -20,7 +20,12 @@ resource "kubernetes_labels" "example" {
   metadata {
     name = "my-config"
   }
+  # These annotations will be applied to the Deployment resource itself
   labels = {
+    "owner" = "myteam"
+  }
+  # These annotations will be applied to the Pods created by the Deployment
+  template_labels = {
     "owner" = "myteam"
   }
 }
@@ -30,10 +35,13 @@ resource "kubernetes_labels" "example" {
 
 The following arguments are supported:
 
+~> NOTE: At least one of `labels` or `template_labels` is required.
+
 * `api_version` - (Required) The apiVersion of the resource to be labelled.
 * `kind` - (Required) The kind of the resource to be labelled.
 * `metadata` - (Required) Standard metadata of the resource to be labelled. 
-* `labels` - (Required) A map of labels to apply to the resource.
+* `labels` - (Optional) A map of labels to apply to the resource.
+* `template_labels` - (Optional) A map of labels to apply to the pod template within the resource.
 * `force` - (Optional) Force management of labels if there is a conflict.
 * `field_manager` - (Optional) The name of the [field manager](https://kubernetes.io/docs/reference/using-api/server-side-apply/#field-management). Defaults to `Terraform`.
 

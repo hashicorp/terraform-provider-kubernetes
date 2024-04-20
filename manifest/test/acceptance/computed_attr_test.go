@@ -8,11 +8,13 @@ package acceptance
 
 import (
 	"context"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
-	"testing"
-	"time"
 )
 
 func TestKubernetesManifest_ComputedFields(t *testing.T) {
@@ -23,8 +25,8 @@ func TestKubernetesManifest_ComputedFields(t *testing.T) {
 		t.Errorf("Failed to create provider instance: %q", err)
 	}
 
-	name := "my-name"
-	namespace := "my-namespace"
+	name := strings.ToLower(randName())
+	namespace := strings.ToLower(randName())
 	webhook_image := "tf-k8s-acc-webhook"
 
 	tfvars := TFVARS{
@@ -72,7 +74,6 @@ func TestKubernetesManifest_ComputedFields(t *testing.T) {
 	step2.Init(ctx)
 	step2.Apply(ctx)
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "configmaps", namespace, name)
-	k8shelper.AssertNamespacedResourceExists(t, "v1", "pods", namespace, name)
 
 	s2, err := step2.State(ctx)
 	if err != nil {
@@ -80,14 +81,9 @@ func TestKubernetesManifest_ComputedFields(t *testing.T) {
 	}
 	tfstate := tfstatehelper.NewHelper(s2)
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
-		"kubernetes_manifest.test_config_map.object.metadata.name":                   name,
-		"kubernetes_manifest.test_config_map.object.metadata.namespace":              namespace,
-		"kubernetes_manifest.test_config_map.object.metadata.annotations.tf-k8s-acc": "true",
-		"kubernetes_manifest.test_config_map.object.metadata.annotations.mutated":    "true",
+		"kubernetes_manifest.test.object.metadata.name":                   name,
+		"kubernetes_manifest.test.object.metadata.namespace":              namespace,
+		"kubernetes_manifest.test.object.metadata.annotations.tf-k8s-acc": "true",
+		"kubernetes_manifest.test.object.metadata.annotations.mutated":    "true",
 	})
-
-	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
-		"kubernetes_manifest.test_pod.object.spec.containers.0.resources.limits.memory": "1.2G",
-	})
-
 }

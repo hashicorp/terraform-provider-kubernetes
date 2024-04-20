@@ -171,13 +171,7 @@ func testAccPreCheck(t *testing.T) {
 	hasStaticCfg := (os.Getenv("KUBE_HOST") != "" &&
 		os.Getenv("KUBE_CLUSTER_CA_CERT_DATA") != "") &&
 		(hasUserCredentials || hasClientCert || os.Getenv("KUBE_TOKEN") != "")
-	msg1 := fmt.Sprintf("hasFileCfg: %v", os.Getenv("KUBE_CLIENT_CERT_DATA"))
-	msg2 := fmt.Sprintf("hasStaticCfg: %v", os.Getenv("KUBE_CLIENT_KEY_DATA"))
-	msg3 := fmt.Sprintf("hasUserCredentials: %v", hasUserCredentials)
 
-	fmt.Println(msg1)
-	fmt.Println(msg2)
-	fmt.Println(msg3)
 	if !hasFileCfg && !hasStaticCfg && !hasUserCredentials {
 		t.Fatalf("File config (KUBE_CTX_AUTH_INFO and KUBE_CTX_CLUSTER) or static configuration"+
 			"(%s) or (%s) must be set for acceptance tests",

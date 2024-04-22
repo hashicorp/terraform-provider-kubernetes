@@ -1,9 +1,9 @@
 archives:
   - files:
-        # Ensure only built binary and license file are archived
-        - 'LICENSE'
-      format: zip
-      name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+       # Ensure only built binary and license file are archived
+       - 'LICENSE'
+    format: zip
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
 before:
   hooks:
     - 'go mod download'

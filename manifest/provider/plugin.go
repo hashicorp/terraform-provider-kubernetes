@@ -13,19 +13,19 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/terraform-exec/tfexec"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
-	tf5server "github.com/hashicorp/terraform-plugin-go/tfprotov5/tf5server"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	tf6server "github.com/hashicorp/terraform-plugin-go/tfprotov6/tf6server"
 )
 
 var providerName = "registry.terraform.io/hashicorp/kubernetes"
 
 // Serve is the default entrypoint for the provider.
 func Serve(ctx context.Context, logger hclog.Logger) error {
-	return tf5server.Serve(providerName, func() tfprotov5.ProviderServer { return &(RawProviderServer{logger: logger}) })
+	return tf6server.Serve(providerName, func() tfprotov6.ProviderServer { return &(RawProviderServer{logger: logger}) })
 }
 
 // Provider
-func Provider() func() tfprotov5.ProviderServer {
+func Provider() func() tfprotov6.ProviderServer {
 	var logLevel string
 	var ok bool = false
 	for _, ev := range []string{"TF_LOG_PROVIDER_KUBERNETES", "TF_LOG_PROVIDER", "TF_LOG"} {
@@ -38,7 +38,7 @@ func Provider() func() tfprotov5.ProviderServer {
 		logLevel = "off"
 	}
 
-	return func() tfprotov5.ProviderServer {
+	return func() tfprotov6.ProviderServer {
 		return &(RawProviderServer{logger: hclog.New(&hclog.LoggerOptions{
 			Level:  hclog.LevelFromString(logLevel),
 			Output: os.Stderr,
@@ -51,11 +51,11 @@ func Provider() func() tfprotov5.ProviderServer {
 func ServeTest(ctx context.Context, logger hclog.Logger, t *testing.T) (tfexec.ReattachInfo, error) {
 	reattachConfigCh := make(chan *plugin.ReattachConfig)
 
-	go tf5server.Serve(providerName,
-		func() tfprotov5.ProviderServer { return &(RawProviderServer{logger: logger}) },
-		tf5server.WithDebug(ctx, reattachConfigCh, nil),
-		tf5server.WithLoggingSink(t),
-		tf5server.WithGoPluginLogger(logger),
+	go tf6server.Serve(providerName,
+		func() tfprotov6.ProviderServer { return &(RawProviderServer{logger: logger}) },
+		tf6server.WithDebug(ctx, reattachConfigCh, nil),
+		tf6server.WithLoggingSink(t),
+		tf6server.WithGoPluginLogger(logger),
 	)
 
 	reattachConfig, err := waitForReattachConfig(reattachConfigCh)

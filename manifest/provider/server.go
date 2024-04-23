@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/openapi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -45,29 +45,29 @@ func dump(v interface{}) hclog.Format {
 }
 
 // PrepareProviderConfig function
-func (s *RawProviderServer) PrepareProviderConfig(ctx context.Context, req *tfprotov5.PrepareProviderConfigRequest) (*tfprotov5.PrepareProviderConfigResponse, error) {
+func (s *RawProviderServer) ValidateProviderConfig(ctx context.Context, req *tfprotov6.ValidateProviderConfigRequest) (*tfprotov6.ValidateProviderConfigResponse, error) {
 	s.logger.Trace("[PrepareProviderConfig][Request]\n%s\n", dump(*req))
-	resp := &tfprotov5.PrepareProviderConfigResponse{}
+	resp := &tfprotov6.ValidateProviderConfigResponse{}
 	return resp, nil
 }
 
 // GetMetadata function
-func (s *RawProviderServer) GetMetadata(ctx context.Context, req *tfprotov5.GetMetadataRequest) (*tfprotov5.GetMetadataResponse, error) {
+func (s *RawProviderServer) GetMetadata(ctx context.Context, req *tfprotov6.GetMetadataRequest) (*tfprotov6.GetMetadataResponse, error) {
 	s.logger.Trace("[GetMetadata][Request]\n%s\n", dump(*req))
 
 	sch := GetProviderResourceSchema()
-	rs := make([]tfprotov5.ResourceMetadata, 0, len(sch))
+	rs := make([]tfprotov6.ResourceMetadata, 0, len(sch))
 	for k := range sch {
-		rs = append(rs, tfprotov5.ResourceMetadata{TypeName: k})
+		rs = append(rs, tfprotov6.ResourceMetadata{TypeName: k})
 	}
 
 	sch = GetProviderDataSourceSchema()
-	ds := make([]tfprotov5.DataSourceMetadata, 0, len(sch))
+	ds := make([]tfprotov6.DataSourceMetadata, 0, len(sch))
 	for k := range sch {
-		ds = append(ds, tfprotov5.DataSourceMetadata{TypeName: k})
+		ds = append(ds, tfprotov6.DataSourceMetadata{TypeName: k})
 	}
 
-	resp := &tfprotov5.GetMetadataResponse{
+	resp := &tfprotov6.GetMetadataResponse{
 		Resources:   rs,
 		DataSources: ds,
 	}
@@ -75,14 +75,14 @@ func (s *RawProviderServer) GetMetadata(ctx context.Context, req *tfprotov5.GetM
 }
 
 // ValidateDataSourceConfig function
-func (s *RawProviderServer) ValidateDataSourceConfig(ctx context.Context, req *tfprotov5.ValidateDataSourceConfigRequest) (*tfprotov5.ValidateDataSourceConfigResponse, error) {
+func (s *RawProviderServer) ValidateDataResourceConfig(ctx context.Context, req *tfprotov6.ValidateDataResourceConfigRequest) (*tfprotov6.ValidateDataResourceConfigResponse, error) {
 	s.logger.Trace("[ValidateDataSourceConfig][Request]\n%s\n", dump(*req))
-	resp := &tfprotov5.ValidateDataSourceConfigResponse{}
+	resp := &tfprotov6.ValidateDataResourceConfigResponse{}
 	return resp, nil
 }
 
 // StopProvider function
-func (s *RawProviderServer) StopProvider(ctx context.Context, req *tfprotov5.StopProviderRequest) (*tfprotov5.StopProviderResponse, error) {
+func (s *RawProviderServer) StopProvider(ctx context.Context, req *tfprotov6.StopProviderRequest) (*tfprotov6.StopProviderResponse, error) {
 	s.logger.Trace("[StopProvider][Request]\n%s\n", dump(*req))
 
 	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")

@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/payload"
@@ -17,8 +17,8 @@ import (
 )
 
 // ReadResource function
-func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.ReadResourceRequest) (*tfprotov5.ReadResourceResponse, error) {
-	resp := &tfprotov5.ReadResourceResponse{}
+func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov6.ReadResourceRequest) (*tfprotov6.ReadResourceResponse, error) {
+	resp := &tfprotov6.ReadResourceResponse{}
 
 	// loop private state back in - ATM it's not needed here
 	resp.Private = req.Private
@@ -33,8 +33,8 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 	var err error
 	rt, err := GetResourceType(req.TypeName)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to determine resource type",
 			Detail:   err.Error(),
 		})
@@ -43,16 +43,16 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 
 	currentState, err := req.CurrentState.Unmarshal(rt)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to decode current state",
 			Detail:   err.Error(),
 		})
 		return resp, nil
 	}
 	if currentState.IsNull() {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to read resource",
 			Detail:   "Incomplete of missing state",
 		})
@@ -60,8 +60,8 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 	}
 	err = currentState.As(&resState)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to extract resource from current state",
 			Detail:   err.Error(),
 		})
@@ -70,8 +70,8 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 
 	co, hasOb := resState["object"]
 	if !hasOb || co.IsNull() {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Current state of resource has no 'object' attribute",
 			Detail:   "This should not happen. The state may be incomplete or corrupted.\nIf this error is reproducible, plese report issue to provider maintainers.",
 		})
@@ -79,8 +79,8 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 	}
 	rm, err := s.getRestMapper()
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to get RESTMapper client",
 			Detail:   err.Error(),
 		})
@@ -88,8 +88,8 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 	}
 	gvk, err := GVKFromTftypesObject(&co, rm)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to determine GroupVersionResource for manifest",
 			Detail:   err.Error(),
 		})
@@ -98,8 +98,8 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 
 	objectType, th, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  fmt.Sprintf("Failed to determine resource type from GVK: %s", gvk),
 			Detail:   err.Error(),
 		})
@@ -108,8 +108,8 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 
 	cu, err := payload.FromTFValue(co, th, tftypes.NewAttributePath())
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed encode 'object' attribute to Unstructured",
 			Detail:   err.Error(),
 		})
@@ -119,8 +119,8 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 
 	client, err := s.getDynamicClient()
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "failed to get Dynamic client",
 			Detail:   err.Error(),
 		})
@@ -151,8 +151,8 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 		if apierrors.IsNotFound(err) {
 			return resp, nil
 		}
-		d := tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		d := tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  fmt.Sprintf("Cannot GET resource %s", dump(co)),
 			Detail:   err.Error(),
 		}
@@ -179,7 +179,7 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 	rawState["object"] = morph.UnknownToNull(nobj)
 
 	nsVal := tftypes.NewValue(currentState.Type(), rawState)
-	newState, err := tfprotov5.NewDynamicValue(nsVal.Type(), nsVal)
+	newState, err := tfprotov6.NewDynamicValue(nsVal.Type(), nsVal)
 	if err != nil {
 		return resp, err
 	}

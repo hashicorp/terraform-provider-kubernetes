@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/openapi"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -145,11 +145,11 @@ func (t *loggingRountTripper) RoundTrip(req *http.Request) (*http.Response, erro
 	return t.lt.RoundTrip(req)
 }
 
-func (ps *RawProviderServer) checkValidCredentials(ctx context.Context) (diags []*tfprotov5.Diagnostic) {
+func (ps *RawProviderServer) checkValidCredentials(ctx context.Context) (diags []*tfprotov6.Diagnostic) {
 	rc, err := ps.getRestClient()
 	if err != nil {
-		diags = append(diags, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		diags = append(diags, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to construct REST client",
 			Detail:   err.Error(),
 		})
@@ -160,14 +160,14 @@ func (ps *RawProviderServer) checkValidCredentials(ctx context.Context) (diags [
 	if rs.Error() != nil {
 		switch {
 		case apierrors.IsUnauthorized(rs.Error()):
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			diags = append(diags, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Invalid credentials",
 				Detail:   fmt.Sprintf("The credentials configured in the provider block are not accepted by the API server. Error: %s\n\nSet TF_LOG=debug and look for '[InvalidClientConfiguration]' in the log to see actual configuration.", rs.Error().Error()),
 			})
 		default:
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			diags = append(diags, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Invalid configuration for API client",
 				Detail:   rs.Error().Error(),
 			})

@@ -7,23 +7,23 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
 )
 
 // UpgradeResourceState isn't really useful in this provider, but we have to loop the state back through to keep Terraform happy.
-func (s *RawProviderServer) UpgradeResourceState(ctx context.Context, req *tfprotov5.UpgradeResourceStateRequest) (*tfprotov5.UpgradeResourceStateResponse, error) {
-	resp := &tfprotov5.UpgradeResourceStateResponse{}
-	resp.Diagnostics = []*tfprotov5.Diagnostic{}
+func (s *RawProviderServer) UpgradeResourceState(ctx context.Context, req *tfprotov6.UpgradeResourceStateRequest) (*tfprotov6.UpgradeResourceStateResponse, error) {
+	resp := &tfprotov6.UpgradeResourceStateResponse{}
+	resp.Diagnostics = []*tfprotov6.Diagnostic{}
 
 	sch := GetProviderResourceSchema()
 	rt := GetObjectTypeFromSchema(sch[req.TypeName])
 
 	rv, err := req.RawState.Unmarshal(rt)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to unmarshal old state during upgrade",
 			Detail:   err.Error(),
 		})
@@ -35,10 +35,10 @@ func (s *RawProviderServer) UpgradeResourceState(ctx context.Context, req *tfpro
 	// we do this to work around https://github.com/hashicorp/terraform/issues/30460
 	cd := s.checkValidCredentials(ctx)
 	if len(cd) > 0 {
-		us, err := tfprotov5.NewDynamicValue(rt, rv)
+		us, err := tfprotov6.NewDynamicValue(rt, rv)
 		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Failed to encode new state during upgrade",
 				Detail:   err.Error(),
 			})
@@ -51,8 +51,8 @@ func (s *RawProviderServer) UpgradeResourceState(ctx context.Context, req *tfpro
 	var cs map[string]tftypes.Value
 	err = rv.As(&cs)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to extract values from old state during upgrade",
 			Detail:   err.Error(),
 		})
@@ -61,8 +61,8 @@ func (s *RawProviderServer) UpgradeResourceState(ctx context.Context, req *tfpro
 
 	obj, ok := cs["object"]
 	if !ok {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to find object value in existing resource state",
 		})
 		return resp, nil
@@ -71,8 +71,8 @@ func (s *RawProviderServer) UpgradeResourceState(ctx context.Context, req *tfpro
 	m, err := s.getRestMapper()
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics,
-			&tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			&tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Failed to retrieve Kubernetes RESTMapper client during state upgrade",
 				Detail:   err.Error(),
 			})
@@ -93,7 +93,7 @@ func (s *RawProviderServer) UpgradeResourceState(ctx context.Context, req *tfpro
 	if len(d) > 0 {
 		resp.Diagnostics = append(resp.Diagnostics, d...)
 		for i := range d {
-			if d[i].Severity == tfprotov5.DiagnosticSeverityError {
+			if d[i].Severity == tfprotov6.DiagnosticSeverityError {
 				return resp, nil
 			}
 		}
@@ -104,10 +104,10 @@ func (s *RawProviderServer) UpgradeResourceState(ctx context.Context, req *tfpro
 
 	newStateVal := tftypes.NewValue(rv.Type(), cs)
 
-	us, err := tfprotov5.NewDynamicValue(rt, newStateVal)
+	us, err := tfprotov6.NewDynamicValue(rt, newStateVal)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to encode new state during upgrade",
 			Detail:   err.Error(),
 		})

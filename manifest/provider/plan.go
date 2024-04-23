@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
@@ -102,22 +102,22 @@ func (s *RawProviderServer) getFieldManagerConfig(v map[string]tftypes.Value) (s
 	return fieldManagerName, forceConflicts, nil
 }
 
-func isImportedFlagFromPrivate(p []byte) (f bool, d []*tfprotov5.Diagnostic) {
+func isImportedFlagFromPrivate(p []byte) (f bool, d []*tfprotov6.Diagnostic) {
 	if len(p) == 0 {
 		return
 	}
 	ps, err := getPrivateStateValue(p)
 	if err != nil {
-		d = append(d, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		d = append(d, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Unexpected format for private state",
 			Detail:   err.Error(),
 		})
 	}
 	err = ps["IsImported"].As(&f)
 	if err != nil {
-		d = append(d, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		d = append(d, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Unexpected format for import flag in private state",
 			Detail:   err.Error(),
 		})
@@ -126,8 +126,8 @@ func isImportedFlagFromPrivate(p []byte) (f bool, d []*tfprotov5.Diagnostic) {
 }
 
 // PlanResourceChange function
-func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfprotov5.PlanResourceChangeRequest) (*tfprotov5.PlanResourceChangeResponse, error) {
-	resp := &tfprotov5.PlanResourceChangeResponse{}
+func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfprotov6.PlanResourceChangeRequest) (*tfprotov6.PlanResourceChangeResponse, error) {
+	resp := &tfprotov6.PlanResourceChangeResponse{}
 
 	isImported, d := isImportedFlagFromPrivate(req.PriorPrivate)
 	resp.Diagnostics = append(resp.Diagnostics, d...)
@@ -155,8 +155,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 
 	rt, err := GetResourceType(req.TypeName)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to determine planned resource type",
 			Detail:   err.Error(),
 		})
@@ -165,8 +165,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	// Decode proposed resource state
 	proposedState, err := req.ProposedNewState.Unmarshal(rt)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to unmarshal planned resource state",
 			Detail:   err.Error(),
 		})
@@ -177,8 +177,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	proposedVal := make(map[string]tftypes.Value)
 	err = proposedState.As(&proposedVal)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to extract planned resource state from tftypes.Value",
 			Detail:   err.Error(),
 		})
@@ -201,8 +201,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 			atp, err := FieldPathToTftypesPath(vs)
 			if err != nil {
 				s.logger.Error("[Configure]", "[computed_fields] cannot parse filed path element", err)
-				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
+				resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Summary:  "[computed_fields] cannot parse field path element: " + vs,
 					Detail:   err.Error(),
 				})
@@ -222,8 +222,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	// Decode prior resource state
 	priorState, err := req.PriorState.Unmarshal(rt)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to unmarshal prior resource state",
 			Detail:   err.Error(),
 		})
@@ -234,8 +234,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	priorVal := make(map[string]tftypes.Value)
 	err = priorState.As(&priorVal)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to extract prior resource state from tftypes.Value",
 			Detail:   err.Error(),
 		})
@@ -245,8 +245,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	if proposedState.IsNull() {
 		// we plan to delete the resource
 		if _, ok := priorVal["object"]; ok {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Invalid prior state while planning for destroy",
 				Detail:   fmt.Sprintf("'object' attribute missing from state: %s", err),
 			})
@@ -258,8 +258,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 
 	ppMan, ok := proposedVal["manifest"]
 	if !ok {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity:  tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity:  tfprotov6.DiagnosticSeverityError,
 			Summary:   "Invalid proposed state during planning",
 			Detail:    "Missing 'manifest' attribute",
 			Attribute: tftypes.NewAttributePath().WithAttributeName("manifest"),
@@ -269,8 +269,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 
 	rm, err := s.getRestMapper()
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to create K8s RESTMapper client",
 			Detail:   err.Error(),
 		})
@@ -278,8 +278,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	}
 	gvk, err := GVKFromTftypesObject(&ppMan, rm)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to determine GroupVersionResource for manifest",
 			Detail:   err.Error(),
 		})
@@ -294,8 +294,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 
 	ns, err := IsResourceNamespaced(gvk, rm)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to discover scope of resource",
 			Detail:   err.Error(),
 		})
@@ -318,16 +318,16 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		// type information we can get from the config
 		objectType = ppMan.Type()
 
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityWarning,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityWarning,
 			Summary:  "This custom resource does not have an associated OpenAPI schema.",
 			Detail:   "We could not find an OpenAPI schema for this custom resource. Updates to this resource will cause a forced replacement.",
 		})
 
 		fieldManagerName, forceConflicts, err := s.getFieldManagerConfig(proposedVal)
 		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Could not extract field_manager config",
 				Detail:   err.Error(),
 			})
@@ -336,8 +336,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 
 		err = s.dryRun(ctx, ppMan, fieldManagerName, forceConflicts, ns)
 		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Dry-run failed for non-structured resource",
 				Detail:   fmt.Sprintf("A dry-run apply was performed for this resource but was unsuccessful: %v", err),
 			})
@@ -356,8 +356,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	// Transform the input manifest to adhere to the type model from the OpenAPI spec
 	morphedManifest, d := morph.ValueToType(ppMan, objectType, tftypes.NewAttributePath().WithAttributeName("object"))
 	if len(d) > 0 {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Manifest configuration incompatible with resource schema",
 			Detail:   "Detailed descriptions of errors will follow below.",
 		})
@@ -368,8 +368,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 
 	completePropMan, err := morph.DeepUnknown(objectType, morphedManifest, tftypes.NewAttributePath().WithAttributeName("object"))
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity:  tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity:  tfprotov6.DiagnosticSeverityError,
 			Summary:   "Failed to backfill manifest from OpenAPI type",
 			Detail:    fmt.Sprintf("This usually happens when the provider cannot fully process the schema retrieved from cluster. Please report this to the provider maintainers.\nError: %s", err.Error()),
 			Attribute: tftypes.NewAttributePath().WithAttributeName("object"),
@@ -389,8 +389,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 			return v, nil
 		})
 		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity:  tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity:  tfprotov6.DiagnosticSeverityError,
 				Summary:   "Failed to set computed attributes in new resource state",
 				Detail:    err.Error(),
 				Attribute: tftypes.NewAttributePath().WithAttributeName("object"),
@@ -402,8 +402,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		// plan for Update
 		priorObj, ok := priorVal["object"]
 		if !ok {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity:  tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity:  tfprotov6.DiagnosticSeverityError,
 				Summary:   "Invalid prior state during planning",
 				Detail:    "Missing 'object' attribute",
 				Attribute: tftypes.NewAttributePath().WithAttributeName("object"),
@@ -412,8 +412,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		}
 		priorMan, ok := priorVal["manifest"]
 		if !ok {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity:  tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity:  tfprotov6.DiagnosticSeverityError,
 				Summary:   "Invalid prior state during planning",
 				Detail:    "Missing 'manifest' attribute",
 				Attribute: tftypes.NewAttributePath().WithAttributeName("manifest"),
@@ -473,8 +473,8 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 			return priorAtrVal.(tftypes.Value), nil
 		})
 		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity:  tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity:  tfprotov6.DiagnosticSeverityError,
 				Summary:   "Failed to update proposed state from prior state",
 				Detail:    err.Error(),
 				Attribute: tftypes.NewAttributePath().WithAttributeName("object"),
@@ -488,10 +488,10 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	propStateVal := tftypes.NewValue(proposedState.Type(), proposedVal)
 	s.logger.Trace("[PlanResourceChange]", "new planned state", dump(propStateVal))
 
-	plannedState, err := tfprotov5.NewDynamicValue(propStateVal.Type(), propStateVal)
+	plannedState, err := tfprotov6.NewDynamicValue(propStateVal.Type(), propStateVal)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to assemble proposed state during plan",
 			Detail:   err.Error(),
 		})

@@ -4,15 +4,15 @@
 package provider
 
 import (
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
 // GetProviderConfigSchema contains the definitions of all configuration attributes
-func GetProviderConfigSchema() *tfprotov5.Schema {
-	b := tfprotov5.SchemaBlock{
+func GetProviderConfigSchema() *tfprotov6.Schema {
+	b := tfprotov6.SchemaBlock{
 
-		Attributes: []*tfprotov5.SchemaAttribute{
+		Attributes: []*tfprotov6.SchemaAttribute{
 			{
 				Name:            "host",
 				Type:            tftypes.String,
@@ -201,14 +201,14 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 				Deprecated:      false,
 			},
 		},
-		BlockTypes: []*tfprotov5.SchemaNestedBlock{
+		BlockTypes: []*tfprotov6.SchemaNestedBlock{
 			{
 				TypeName: "exec",
-				Nesting:  tfprotov5.SchemaNestedBlockNestingModeList,
+				Nesting:  tfprotov6.SchemaNestedBlockNestingModeList,
 				MinItems: 0,
 				MaxItems: 1,
-				Block: &tfprotov5.SchemaBlock{
-					Attributes: []*tfprotov5.SchemaAttribute{
+				Block: &tfprotov6.SchemaBlock{
+					Attributes: []*tfprotov6.SchemaAttribute{
 						{
 							Name:            "api_version",
 							Type:            tftypes.String,
@@ -254,12 +254,12 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 			},
 			{
 				TypeName: "experiments",
-				Nesting:  tfprotov5.SchemaNestedBlockNestingModeList,
+				Nesting:  tfprotov6.SchemaNestedBlockNestingModeList,
 				MinItems: 0,
 				MaxItems: 1,
-				Block: &tfprotov5.SchemaBlock{
+				Block: &tfprotov6.SchemaBlock{
 					Description: "Enable and disable experimental features.",
-					Attributes: []*tfprotov5.SchemaAttribute{
+					Attributes: []*tfprotov6.SchemaAttribute{
 						{
 							Name:            "manifest_resource",
 							Type:            tftypes.Bool,
@@ -277,7 +277,7 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 		},
 	}
 
-	return &tfprotov5.Schema{
+	return &tfprotov6.Schema{
 		Version: 0,
 		Block:   &b,
 	}

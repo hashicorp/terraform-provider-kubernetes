@@ -36,5 +36,5 @@ jobs:
         make vet
     - name: Run linters
       run: |
-        make website-lint
+        make docs-lint
         make tests-lint

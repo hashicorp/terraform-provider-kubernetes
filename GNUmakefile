@@ -142,19 +142,19 @@ endif
 
 website-lint: tools
 	@echo "==> Checking website against linters..."
-	@misspell -error -source=text ./website || (echo; \
+	@misspell -error -source=text ./docs || (echo; \
 		echo "Unexpected mispelling found in website files."; \
 		echo "To automatically fix the misspelling, run 'make website-lint-fix' and commit the changes."; \
 		exit 1)
 	@echo "==> Running markdownlint-cli using DOCKER='$(DOCKER)', DOCKER_RUN_OPTS='$(DOCKER_RUN_OPTS)' and DOCKER_VOLUME_OPTS='$(DOCKER_VOLUME_OPTS)'"
-	@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(PROVIDER_DIR):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace 06kellyjac/markdownlint-cli ./website || (echo; \
+	@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(PROVIDER_DIR):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace 06kellyjac/markdownlint-cli ./docs || (echo; \
 		echo "Unexpected issues found in website Markdown files."; \
 		echo "To apply any automatic fixes, run 'make website-lint-fix' and commit the changes."; \
 		exit 1)
 	@echo "==> Running terrafmt diff..."
-	@terrafmt diff ./website --check --pattern '*.markdown' --quiet || (echo; \
+	@terrafmt diff ./docs --check --pattern '*.markdown' --quiet || (echo; \
 		echo "Unexpected differences in website HCL formatting."; \
-		echo "To see the full differences, run: terrafmt diff ./website --pattern '*.markdown'"; \
+		echo "To see the full differences, run: terrafmt diff ./docs --pattern '*.markdown'"; \
 		echo "To automatically fix the formatting, run 'make website-lint-fix' and commit the changes."; \
 		exit 1)
 	@echo "==> Statically compiling provider for tfproviderdocs..."
@@ -170,10 +170,10 @@ website-lint: tools
 
 website-lint-fix: tools
 	@echo "==> Applying automatic website linter fixes..."
-	@misspell -w -source=text ./website
+	@misspell -w -source=text ./docs
 	@echo "==> Running markdownlint-cli --fix using DOCKER='$(DOCKER)', DOCKER_RUN_OPTS='$(DOCKER_RUN_OPTS)' and DOCKER_VOLUME_OPTS='$(DOCKER_VOLUME_OPTS)'"
-	@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(PROVIDER_DIR):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace 06kellyjac/markdownlint-cli --fix ./website
+	@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(PROVIDER_DIR):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace 06kellyjac/markdownlint-cli --fix ./docs
 	@echo "==> Fixing website terraform blocks code with terrafmt..."
-	@terrafmt fmt ./website --pattern '*.markdown'
+	@terrafmt fmt ./docs --pattern '*.markdown'
 
 .PHONY: build test testacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix website-lint website-lint-fix changelog changelog-entry

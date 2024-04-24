@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_cron_job_v1" "demo" {
   metadata {
     name = "demo"

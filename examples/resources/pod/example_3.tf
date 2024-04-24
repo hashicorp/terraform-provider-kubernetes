@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_pod" "with_pod_affinity" {
   metadata {
     name = "with-pod-affinity"

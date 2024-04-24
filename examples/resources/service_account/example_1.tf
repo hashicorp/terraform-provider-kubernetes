@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_service_account" "example" {
   metadata {
     name = "terraform-example"

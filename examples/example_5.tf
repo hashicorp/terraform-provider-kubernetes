@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 provider "kubernetes" {
   host                   = var.cluster_endpoint
   cluster_ca_certificate = base64decode(var.cluster_ca_cert)

@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_horizontal_pod_autoscaler_v2beta2" "example" {
   metadata {
     name = "test"

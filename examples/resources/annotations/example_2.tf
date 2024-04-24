@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_annotations" "example" {
   api_version = "apps/v1"
   kind        = "Deployment"

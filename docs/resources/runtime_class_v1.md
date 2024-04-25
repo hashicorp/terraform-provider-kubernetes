@@ -5,7 +5,7 @@ description: |-
   A runtime class is used to determine which container runtime is used to run all containers in a pod. 
 ---
 
-## kubernetes_runtime_class_v1
+# kubernetes_runtime_class_v1
 
 A runtime class is used to determine which container runtime is used to run all containers in a pod.
 

@@ -24,7 +24,7 @@ jobs:
           base-branch: main
           config-file: '.github/workflows/markdown.links.config.json'
           file-extension: '.markdown'
-          folder-path: 'website/docs'
+          folder-path: 'docs'
           use-verbose-mode: yes
           use-quiet-mode: yes
           max-depth: 2

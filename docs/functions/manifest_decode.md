@@ -12,6 +12,9 @@ Given a YAML text containing a Kubernetes manifest, will decode and return an ob
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 # Configuration using provider functions must include required_providers configuration.
 terraform {
   required_providers {

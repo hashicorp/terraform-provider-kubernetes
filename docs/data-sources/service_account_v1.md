@@ -14,6 +14,9 @@ Read more at [Kubernetes reference](https://kubernetes.io/docs/reference/access-
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 data "kubernetes_service_account_v1" "example" {
   metadata {
     name = "terraform-example"

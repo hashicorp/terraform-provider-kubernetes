@@ -16,6 +16,9 @@ Note: All CronJob `schedule` times are based on the timezone of the master where
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_cron_job_v1" "demo" {
   metadata {
     name = "demo"

@@ -16,6 +16,9 @@ A StatefulSet operates under the same pattern as any other Controller. You defin
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_stateful_set_v1" "prometheus" {
   metadata {
     annotations = {

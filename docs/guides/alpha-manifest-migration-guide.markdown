@@ -1,5 +1,5 @@
 ---
-subcategory: ""
+layout: "kubernetes"
 page_title: "Migrating `kubernetes_manifest` resources from the kubernetes-alpha provider"
 description: |-
   This guide covers adopting `kubernetes_manifest` resources created using the kubernetes-alpha provider.

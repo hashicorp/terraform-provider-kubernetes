@@ -12,6 +12,9 @@ The resource provides a piece of networked storage in the cluster provisioned by
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_persistent_volume" "example" {
   metadata {
     name = "terraform-example"
@@ -33,6 +36,9 @@ resource "kubernetes_persistent_volume" "example" {
 ## Example: Persistent Volume using Azure Managed Disk
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_persistent_volume" "example" {
   metadata {
     name = "example"

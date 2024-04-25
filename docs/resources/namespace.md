@@ -12,6 +12,9 @@ Kubernetes supports multiple virtual clusters backed by the same physical cluste
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_namespace" "example" {
   metadata {
     annotations = {

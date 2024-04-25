@@ -12,6 +12,9 @@ Given an object representation of a Kubernetes manifest, will encode and return 
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 # Configuration using provider functions must include required_providers configuration.
 terraform {
   required_providers {

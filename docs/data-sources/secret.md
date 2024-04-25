@@ -16,6 +16,9 @@ The resource provides mechanisms to inject containers with sensitive information
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 data "kubernetes_secret" "example" {
   metadata {
     name = "basic-auth"
@@ -52,6 +55,9 @@ The following arguments are supported:
 ~> In case the secret has been created outside terraform in order to retrieve binary data from the secret in base64 format you need to define a `binary_data` map with data to retrieve as key and an empty string as a value
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 data "kubernetes_secret" "example" {
   metadata {
     name      = "example-secret"

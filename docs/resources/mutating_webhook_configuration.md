@@ -12,6 +12,9 @@ Mutating Webhook Configuration configures a [mutating admission webhook](https:/
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_mutating_webhook_configuration" "example" {
   metadata {
     name = "test.terraform.io"

@@ -12,6 +12,9 @@ This data source is a generic way to retrieve resources from the Kubernetes API.
 ### Example: Get data from a ConfigMap
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 data "kubernetes_resource" "example" {
   api_version = "v1"
   kind        = "ConfigMap"

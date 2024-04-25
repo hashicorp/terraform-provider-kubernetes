@@ -12,6 +12,9 @@ A PriorityClass is a non-namespaced object that defines a mapping from a priorit
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_priority_class" "example" {
   metadata {
     name = "terraform-example"

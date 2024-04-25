@@ -13,6 +13,9 @@ Kubernetes supports network policies to specify how groups of pods are allowed t
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_network_policy" "example" {
   metadata {
     name      = "terraform-example-network-policy"

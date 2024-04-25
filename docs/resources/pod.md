@@ -14,6 +14,9 @@ Read more at [Kubernetes reference](https://kubernetes.io/docs/concepts/workload
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_pod" "test" {
   metadata {
     name = "terraform-example"
@@ -71,6 +74,9 @@ resource "kubernetes_pod" "test" {
 terraform version of the [pods/pod-with-node-affinity.yaml](https://raw.githubusercontent.com/kubernetes/website/master/content/en/examples/pods/pod-with-node-affinity.yaml) example.
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_pod" "with_node_affinity" {
   metadata {
     name = "with-node-affinity"
@@ -114,6 +120,9 @@ resource "kubernetes_pod" "with_node_affinity" {
 terraform version of the [pods/pod-with-pod-affinity.yaml](https://raw.githubusercontent.com/kubernetes/website/master/content/en/examples/pods/pod-with-pod-affinity.yaml) example.
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_pod" "with_pod_affinity" {
   metadata {
     name = "with-pod-affinity"
@@ -733,6 +742,9 @@ The `option` block supports the following:
 Please, look at the example below:
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resources {
   limits   = {}
   requests = {}
@@ -752,9 +764,9 @@ resources {
 #### Attributes
 
 * `type` - Indicates which kind of seccomp profile will be applied. Valid options are:
-    * `Localhost` - a profile defined in a file on the node should be used.
-    * `RuntimeDefault` - the container runtime default profile should be used.
-    * `Unconfined` - (Default) no profile should be applied.
+  * `Localhost` - a profile defined in a file on the node should be used.
+  * `RuntimeDefault` - the container runtime default profile should be used.
+  * `Unconfined` - (Default) no profile should be applied.
 * `localhost_profile` - Indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work. Must be a descending path, relative to the kubelet's configured seccomp profile location. Must only be set if `type` is `Localhost`.
 
 ### `se_linux_options`

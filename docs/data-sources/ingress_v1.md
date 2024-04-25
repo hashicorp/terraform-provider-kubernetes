@@ -12,6 +12,9 @@ Ingress is a collection of rules that allow inbound connections to reach the end
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 data "kubernetes_ingress_v1" "example" {
   metadata {
     name = "terraform-example"

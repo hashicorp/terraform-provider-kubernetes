@@ -12,6 +12,9 @@ An Endpoints resource is an abstraction, linked to a Service, which defines the 
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_endpoints_v1" "example" {
   metadata {
     name = "terraform-example"

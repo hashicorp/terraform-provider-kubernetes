@@ -12,6 +12,9 @@ The resource provides mechanisms to inject containers with configuration data wh
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_config_map_v1" "example" {
   metadata {
     name = "my-config"

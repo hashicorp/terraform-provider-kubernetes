@@ -12,6 +12,9 @@ Validating Webhook Configuration configures a [validating admission webhook](htt
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_validating_webhook_configuration_v1" "example" {
   metadata {
     name = "test.terraform.io"

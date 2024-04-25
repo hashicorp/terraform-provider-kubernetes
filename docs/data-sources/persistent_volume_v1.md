@@ -12,6 +12,9 @@ A PersistentVolume (PV) is a piece of networked storage in the cluster provision
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 data "kubernetes_persistent_volume_v1" "example" {
   metadata {
     name = "terraform-example"

@@ -12,6 +12,9 @@ A resource quota provides constraints that limit aggregate resource consumption 
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_resource_quota" "example" {
   metadata {
     name = "terraform-example"

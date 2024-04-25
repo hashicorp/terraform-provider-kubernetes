@@ -14,6 +14,9 @@ A Pod Security Policy is a cluster-level resource that controls security sensiti
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_pod_security_policy_v1beta1" "example" {
   metadata {
     name = "terraform-example"

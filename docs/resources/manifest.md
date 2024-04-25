@@ -22,6 +22,9 @@ Once applied, the `object` attribute contains the state of the resource as retur
 ### Example: Create a Kubernetes ConfigMap
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_manifest" "test-configmap" {
   manifest = {
     "apiVersion" = "v1"
@@ -40,6 +43,9 @@ resource "kubernetes_manifest" "test-configmap" {
 ### Example: Create a Kubernetes Custom Resource Definition
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_manifest" "test-crd" {
   manifest = {
     apiVersion = "apiextensions.k8s.io/v1"
@@ -107,6 +113,9 @@ The `kubernetes_manifest` resource supports the ability to block create and upda
 `wait` supports supports a `fields` attribute which allows you specify a map of fields paths to regular expressions. You can also specify `*` if you just want to wait for a field to have any value.
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_manifest" "test" {
   manifest = {
     // ...
@@ -139,6 +148,9 @@ resource "kubernetes_manifest" "test" {
 The `wait` block also supports a `rollout` attribute which will wait for rollout to complete on Deployment, StatefulSet, and DaemonSet resources.
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_manifest" "test" {
   manifest = {
     // ...
@@ -153,6 +165,9 @@ resource "kubernetes_manifest" "test" {
 You can also wait for specified conditions to be met by specifying a `condition` block.
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_manifest" "test" {
   manifest = {
     // ...
@@ -172,6 +187,9 @@ resource "kubernetes_manifest" "test" {
 The `kubernetes_manifest` exposes configuration of the field manager through the optional `field_manager` block.
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_manifest" "test" {
   provider = kubernetes-alpha
 

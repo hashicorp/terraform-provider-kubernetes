@@ -12,6 +12,9 @@ A Service is an abstraction which defines a logical set of pods and a policy by 
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 data "kubernetes_service" "example" {
   metadata {
     name = "terraform-example"

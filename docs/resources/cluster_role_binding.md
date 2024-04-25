@@ -12,6 +12,9 @@ A ClusterRoleBinding may be used to grant permission at the cluster level and in
 ## Example Usage
 
 ```terraform
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_cluster_role_binding" "example" {
   metadata {
     name = "terraform-example"

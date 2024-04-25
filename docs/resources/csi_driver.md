@@ -12,9 +12,6 @@ The [Container Storage Interface](https://kubernetes-csi.github.io/docs/introduc
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_csi_driver" "example" {
   metadata {
     name = "terraform-example"

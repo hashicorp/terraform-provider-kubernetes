@@ -12,9 +12,6 @@ An EndpointSlice contains references to a set of network endpoints.
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_endpoint_slice_v1" "test" {
   metadata {
     name = "test"

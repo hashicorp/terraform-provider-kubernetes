@@ -14,9 +14,6 @@ For example, a quorum-based application would like to ensure that the number of 
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_pod_disruption_budget_v1" "demo" {
   metadata {
     name = "demo"

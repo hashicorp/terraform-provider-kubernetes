@@ -14,9 +14,6 @@ Read more at https://kubernetes.io/blog/2017/03/dynamic-provisioning-and-storage
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_storage_class" "example" {
   metadata {
     name = "terraform-example"

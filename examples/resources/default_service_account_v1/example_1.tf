@@ -1,6 +1,3 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_default_service_account_v1" "example" {
   metadata {
     namespace = "terraform-example"

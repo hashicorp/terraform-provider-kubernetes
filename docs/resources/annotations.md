@@ -12,9 +12,6 @@ This resource allows Terraform to manage the annotations for a resource that alr
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_annotations" "example" {
   api_version = "v1"
   kind        = "ConfigMap"
@@ -30,9 +27,6 @@ resource "kubernetes_annotations" "example" {
 ## Example Usage: Patching resources which contain a pod template, e.g Deployment, Job
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_annotations" "example" {
   api_version = "apps/v1"
   kind        = "Deployment"

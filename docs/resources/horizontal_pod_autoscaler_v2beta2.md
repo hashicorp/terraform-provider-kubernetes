@@ -12,9 +12,6 @@ Horizontal Pod Autoscaler automatically scales the number of pods in a replicati
 ## Example Usage, with `metric`
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_horizontal_pod_autoscaler_v2beta2" "example" {
   metadata {
     name = "test"
@@ -53,9 +50,6 @@ resource "kubernetes_horizontal_pod_autoscaler_v2beta2" "example" {
 ## Example Usage, with `behavior`
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_horizontal_pod_autoscaler_v2beta2" "example" {
   metadata {
     name = "test"

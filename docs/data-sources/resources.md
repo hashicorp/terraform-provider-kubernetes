@@ -12,9 +12,6 @@ This data source is a generic way to query for a list of Kubernetes resources an
 ### Example: Get a list of namespaces excluding "kube-system" using `field_selector`
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 data "kubernetes_resources" "example" {
   api_version    = "v1"
   kind           = "Namespace"
@@ -29,9 +26,6 @@ output "test" {
 ### Example: Get a list of namespaces excluding "kube-system" using `label_selector`
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 data "kubernetes_resources" "example" {
   api_version    = "v1"
   kind           = "Namespace"

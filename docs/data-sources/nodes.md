@@ -18,9 +18,6 @@ It can be used to check for the existence of a specific node or to lookup a node
 ### All nodes
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 data "kubernetes_nodes" "example" {}
 
 output "node-ids" {
@@ -31,9 +28,6 @@ output "node-ids" {
 ### By label
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 data "kubernetes_nodes" "example" {
   metadata {
     labels = {

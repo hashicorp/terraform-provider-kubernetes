@@ -12,9 +12,6 @@ This resource allows Terraform to manage the labels for a resource that already 
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_labels" "example" {
   api_version = "v1"
   kind        = "ConfigMap"

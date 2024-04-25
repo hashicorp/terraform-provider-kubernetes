@@ -14,9 +14,6 @@ Config Maps are key-value pairs containing configuration data. The Config Map da
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 data "kubernetes_config_map_v1" "example" {
   metadata {
     name = "my-config"

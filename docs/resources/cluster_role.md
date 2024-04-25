@@ -12,9 +12,6 @@ A ClusterRole creates a role at the cluster level and in all namespaces.
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_cluster_role" "example" {
   metadata {
     name = "terraform-example"
@@ -31,9 +28,6 @@ resource "kubernetes_cluster_role" "example" {
 ## Aggregation Rule Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_cluster_role" "example" {
   metadata {
     name = "terraform-example"

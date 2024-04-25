@@ -16,9 +16,6 @@ The resource provides mechanisms to inject containers with sensitive information
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_secret_v1" "example" {
   metadata {
     name = "basic-auth"
@@ -38,9 +35,6 @@ resource "kubernetes_secret_v1" "example" {
 ### Docker config file
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_secret_v1" "example" {
   metadata {
     name = "docker-cfg"
@@ -57,9 +51,6 @@ resource "kubernetes_secret_v1" "example" {
 ### Username and password
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_secret_v1" "example" {
   metadata {
     name = "docker-cfg"
@@ -91,9 +82,6 @@ $ kubectl create secret docker-registry docker-cfg --docker-server=${registry_se
 ## Example Usage (Service account token)
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_secret_v1" "example" {
   metadata {
     annotations = {

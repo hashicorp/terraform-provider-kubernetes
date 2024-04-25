@@ -12,9 +12,6 @@ A DaemonSet ensures that all (or some) Nodes run a copy of a Pod. As nodes are a
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_daemon_set_v1" "example" {
   metadata {
     name      = "terraform-example"
@@ -666,9 +663,6 @@ The `option` block supports the following:
 Please, look at the example below:
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resources {
   limits   = {}
   requests = {}
@@ -688,9 +682,9 @@ resources {
 #### Attributes
 
 * `type` - Indicates which kind of seccomp profile will be applied. Valid options are:
-    * `Localhost` - a profile defined in a file on the node should be used.
-    * `RuntimeDefault` - the container runtime default profile should be used.
-    * `Unconfined` - (Default) no profile should be applied.
+  * `Localhost` - a profile defined in a file on the node should be used.
+  * `RuntimeDefault` - the container runtime default profile should be used.
+  * `Unconfined` - (Default) no profile should be applied.
 * `localhost_profile` - Indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work. Must be a descending path, relative to the kubelet's configured seccomp profile location. Must only be set if `type` is `Localhost`.
 
 ### `se_linux_options`

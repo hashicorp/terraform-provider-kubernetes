@@ -12,9 +12,6 @@ A RoleBinding may be used to grant permission at the namespace level
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_role_binding_v1" "example" {
   metadata {
     name      = "terraform-example"

@@ -12,9 +12,6 @@ Ingresses can be implemented by different controllers, often with different conf
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_ingress_class" "example" {
   metadata {
     name = "example"

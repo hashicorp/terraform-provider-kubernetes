@@ -14,9 +14,6 @@ Read more in [the official docs](https://kubernetes.io/docs/concepts/policy/limi
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_limit_range" "example" {
   metadata {
     name = "terraform-example"

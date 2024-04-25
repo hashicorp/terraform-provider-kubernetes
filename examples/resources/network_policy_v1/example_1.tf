@@ -1,6 +1,3 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_network_policy_v1" "example" {
   metadata {
     name      = "terraform-example-network-policy"

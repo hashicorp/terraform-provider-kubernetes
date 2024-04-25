@@ -16,9 +16,6 @@ You can also use a Job to run multiple Pods in parallel.
 ## Example Usage - No waiting
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_job" "demo" {
   metadata {
     name = "demo"
@@ -44,9 +41,6 @@ resource "kubernetes_job" "demo" {
 ## Example Usage - waiting for job successful completion
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_job" "demo" {
   metadata {
     name = "demo"

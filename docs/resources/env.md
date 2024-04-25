@@ -12,9 +12,6 @@ This resource provides a way to manage environment variables in resources that w
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_env" "example" {
   container = "nginx"
   metadata {

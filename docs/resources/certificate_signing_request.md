@@ -16,9 +16,6 @@ This resource enables automation of [X.509](https://www.itu.int/rec/T-REC-X.509)
 ## Example Usage
 
 ```terraform
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_certificate_signing_request" "example" {
   metadata {
     name = "example"

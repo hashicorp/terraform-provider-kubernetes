@@ -1,11 +1,10 @@
-
 resource "kubernetes_secret_v1_gen" {
   package = "corev1"
 
   api_version = "v1"
   kind        = "Secret"
 
-  description = "configmaps store information for pods"
+  description = "secrets store secret information for pods"
 
   output_filename_prefix = "secret"
 
@@ -14,8 +13,28 @@ resource "kubernetes_secret_v1_gen" {
     create_path = "/api/v1/namespaces/{namespace}/secrets"
     read_path   = "/api/v1/namespaces/{namespace}/secrets/{name}"
   }
+  
+  generate {
+    schema     = true
+    model      = true
+    autocrud   = true
+    
+    autocrud_options {
+      hooks {
+        before {
+          create = true
+          update = true
+        }
+        after {
+          create = true
+          update = true
+          read   = true
+        }
+      }
+    }
+  }
 
-ignored_attributes = [
+  ignored_attributes = [
     "api_version",
     "kind",
     "metadata.finalizers",
@@ -25,36 +44,25 @@ ignored_attributes = [
     "metadata.creation_timestamp",
     "metadata.deletion_timestamp",
     "metadata.deletion_grace_period_seconds",
-    "name",
-    "namespace",
-    "pretty"
   ]
 
-computed_attributes = [
+  required_attributes = [
+    "metadata"
+  ]
+
+  computed_attributes = [
     "metadata.uid",
     "metadata.resource_version",
     "metadata.generation",
     "metadata.name",
-    "type"
-]
+  ]
 
-// default_values = {
-//     "id" = "testing"
-// }
+  sensitive_attributes = [
+    "data"
+  ]
 
-  generate {
-    schema     = true
-    model      = true
-    autocrud = true
-    autocrud_options {
-        hooks{
-            before{
-                create = true
-            }
-            after{
-
-            }
-        }
-    }
-  }
+  immutable_attributes = [
+    "metadata.name",
+    "metadata.namespace"
+  ]
 }

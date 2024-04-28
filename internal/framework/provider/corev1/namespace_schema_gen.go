@@ -11,9 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func (r *Secret) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *Namespace) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `secrets store secret information for pods`,
+		MarkdownDescription: `namespace`,
 		Blocks: map[string]schema.Block{
 			"timeouts": timeouts.BlockAll(ctx),
 		},
@@ -22,16 +22,6 @@ func (r *Secret) Schema(ctx context.Context, req resource.SchemaRequest, resp *r
 				MarkdownDescription: `The unique ID for this terraform resource`,
 				Optional:            true,
 				Computed:            true,
-			},
-			"data": schema.MapAttribute{
-				MarkdownDescription: `Data contains the secret data. Each key must consist of alphanumeric characters, '-', '_' or '.'. The serialized form of the secret data is a base64 encoded string, representing the arbitrary (possibly non-string) data value here. Described in https://tools.ietf.org/html/rfc4648#section-4`,
-				ElementType:         types.StringType,
-				Optional:            true,
-				Sensitive:           true,
-			},
-			"immutable": schema.BoolAttribute{
-				MarkdownDescription: `Immutable, if set to true, ensures that data stored in the Secret cannot be updated (only object metadata can be modified). If not set to true, the field can be modified at any time. Defaulted to nil.`,
-				Optional:            true,
 			},
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: `Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata`,
@@ -73,9 +63,6 @@ Applied only if Name is not specified. More info: https://git.k8s.io/community/c
 
 Must be a DNS_LABEL. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces`,
 						Optional: true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
 					},
 					"resource_version": schema.StringAttribute{
 						MarkdownDescription: `An opaque value that represents the internal version of this object that can be used by clients to determine when objects have changed. May be used for optimistic concurrency, change detection, and the watch operation on a resource or set of resources. Clients must treat these values as opaque and passed unmodified back to the server. They may only be valid for a particular resource or set of resources.
@@ -92,15 +79,6 @@ Populated by the system. Read-only. More info: https://kubernetes.io/docs/concep
 						Computed: true,
 					},
 				},
-			},
-			"string_data": schema.MapAttribute{
-				MarkdownDescription: `stringData allows specifying non-binary secret data in string form. It is provided as a write-only input field for convenience. All keys and values are merged into the data field on write, overwriting any existing values. The stringData field is never output when reading from the API.`,
-				ElementType:         types.StringType,
-				Optional:            true,
-			},
-			"type": schema.StringAttribute{
-				MarkdownDescription: `Used to facilitate programmatic handling of secret data. More info: https://kubernetes.io/docs/concepts/configuration/secret/#secret-types`,
-				Optional:            true,
 			},
 		},
 	}

@@ -10,15 +10,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-codegen-kubernetes/autocrud"
 )
 
-func (r *Secret) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var dataModel SecretModel
+func (r *Namespace) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var dataModel NamespaceModel
 
 	diag := req.Config.Get(ctx, &dataModel)
 	resp.Diagnostics.Append(diag...)
 	if diag.HasError() {
 		return
 	}
-	r.BeforeCreate(ctx, req, resp, &dataModel)
 
 	defaultTimeout, err := time.ParseDuration("20m")
 	if err != nil {
@@ -39,8 +38,6 @@ func (r *Secret) Create(ctx context.Context, req resource.CreateRequest, resp *r
 		return
 	}
 
-	r.AfterCreate(ctx, req, resp, &dataModel)
-
 	diags := resp.State.Set(ctx, &dataModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -48,8 +45,8 @@ func (r *Secret) Create(ctx context.Context, req resource.CreateRequest, resp *r
 	}
 }
 
-func (r *Secret) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var dataModel SecretModel
+func (r *Namespace) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var dataModel NamespaceModel
 
 	diag := req.State.Get(ctx, &dataModel)
 	resp.Diagnostics.Append(diag...)
@@ -76,8 +73,6 @@ func (r *Secret) Read(ctx context.Context, req resource.ReadRequest, resp *resou
 		return
 	}
 
-	r.AfterRead(ctx, req, resp, &dataModel)
-
 	diags := resp.State.Set(ctx, &dataModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -85,16 +80,14 @@ func (r *Secret) Read(ctx context.Context, req resource.ReadRequest, resp *resou
 	}
 }
 
-func (r *Secret) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var dataModel SecretModel
+func (r *Namespace) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var dataModel NamespaceModel
 
 	diag := req.Config.Get(ctx, &dataModel)
 	resp.Diagnostics.Append(diag...)
 	if diag.HasError() {
 		return
 	}
-
-	r.BeforeUpdate(ctx, req, resp, &dataModel)
 
 	defaultTimeout, err := time.ParseDuration("20m")
 	if err != nil {
@@ -115,8 +108,6 @@ func (r *Secret) Update(ctx context.Context, req resource.UpdateRequest, resp *r
 		return
 	}
 
-	r.AfterUpdate(ctx, req, resp, &dataModel)
-
 	diags := resp.State.Set(ctx, &dataModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -124,10 +115,10 @@ func (r *Secret) Update(ctx context.Context, req resource.UpdateRequest, resp *r
 	}
 }
 
-func (r *Secret) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	waitForDeletion := false
+func (r *Namespace) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	waitForDeletion := true
 
-	var dataModel SecretModel
+	var dataModel NamespaceModel
 
 	diag := req.State.Get(ctx, &dataModel)
 	resp.Diagnostics.Append(diag...)
@@ -156,6 +147,6 @@ func (r *Secret) Delete(ctx context.Context, req resource.DeleteRequest, resp *r
 
 }
 
-func (r *Secret) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *Namespace) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

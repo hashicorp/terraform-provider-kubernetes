@@ -3,7 +3,7 @@
 // This file contains function signatures for implementing CRUD hooks.
 // You need to provide the implementation for these functions.
 //
-// This code was written by a robot on Mar 26, 2024 15:25:45 UTC.
+// This code was written by a robot on Apr 09, 2024 10:24:24 UTC.
 
 package corev1
 
@@ -14,5 +14,21 @@ import (
 )
 
 func (r *Secret) BeforeCreate(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse, m *SecretModel) {
-	// TODO: Add BeforeCreate logic
+	m.Data = base64EncodeStringMap(m.Data)
+}
+
+func (r *Secret) AfterCreate(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse, m *SecretModel) {
+	m.Data = base64DecodeStringMap(m.Data)
+}
+
+func (r *Secret) AfterRead(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse, m *SecretModel) {
+	m.Data = base64DecodeStringMap(m.Data)
+}
+
+func (r *Secret) BeforeUpdate(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse, m *SecretModel) {
+	m.Data = base64EncodeStringMap(m.Data)
+}
+
+func (r *Secret) AfterUpdate(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse, m *SecretModel) {
+	m.Data = base64DecodeStringMap(m.Data)
 }

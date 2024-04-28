@@ -15,8 +15,12 @@ import (
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov5/tf5server"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6/tf6server"
+
+	"github.com/hashicorp/terraform-plugin-mux/tf5muxserver"
 	"github.com/hashicorp/terraform-plugin-mux/tf5to6server"
 	"github.com/hashicorp/terraform-plugin-mux/tf6muxserver"
 
@@ -35,6 +39,45 @@ const (
 //go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
 
 func main() {
+	if os.Getenv("TF_X_KUBERNETES_CODEGEN_PLUGIN6") == "1" {
+		plugin6main()
+		return
+	}
+
+	debugFlag := flag.Bool("debug", false, "Start provider in stand-alone debug mode.")
+	flag.Parse()
+
+	providers := []func() tfprotov5.ProviderServer{
+		kubernetes.Provider().GRPCProvider,
+		manifest.Provider(),
+		providerserver.NewProtocol5(framework.New(Version)),
+	}
+
+	ctx := context.Background()
+	muxer, err := tf5muxserver.NewMuxServer(ctx, providers...)
+	if err != nil {
+		log.Println(err.Error())
+		os.Exit(1)
+	}
+
+	opts := []tf5server.ServeOpt{}
+	if *debugFlag {
+		reattachConfigCh := make(chan *plugin.ReattachConfig)
+		go func() {
+			reattachConfig, err := waitForReattachConfig(reattachConfigCh)
+			if err != nil {
+				fmt.Printf("Error getting reattach config: %s\n", err)
+				return
+			}
+			printReattachConfig(reattachConfig)
+		}()
+		opts = append(opts, tf5server.WithDebug(ctx, reattachConfigCh, nil))
+	}
+
+	tf5server.Serve(providerName, muxer.ProviderServer, opts...)
+}
+
+func plugin6main() {
 	debugFlag := flag.Bool("debug", false, "Start provider in stand-alone debug mode.")
 	flag.Parse()
 

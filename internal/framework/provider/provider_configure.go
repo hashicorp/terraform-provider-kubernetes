@@ -28,6 +28,11 @@ import (
 )
 
 func (p *KubernetesProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	if os.Getenv("TF_X_KUBERNETES_CODEGEN_PLUGIN6") == "1" {
+		// NOTE don't configure the client unless the plugin6 experiment is enabled
+		return
+	}
+
 	var data KubernetesProviderModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {

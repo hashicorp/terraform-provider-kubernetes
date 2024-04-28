@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
@@ -186,7 +187,10 @@ func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequ
 
 func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Resource {
 	resources := []func() resource.Resource{}
-	resources = append(resources, generatedResources...)
+	if os.Getenv("TF_X_KUBERNETES_CODEGEN_PLUGIN6") == "1" {
+		// NOTE only add resources if plugin6 experiment is enabled
+		resources = append(resources, generatedResources...)
+	}
 	return resources
 }
 

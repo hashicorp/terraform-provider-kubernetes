@@ -5,13 +5,11 @@ description: |-
   Horizontal Pod Autoscaler automatically scales the number of pods in a replication controller, deployment or replica set based on observed CPU utilization.
 ---
 
-{{/* This template serves as a starting point for documentation generation, and can be customized with hardcoded values and/or doc gen templates.
+# {{ .Name }}
 
-For example, the {{ .SchemaMarkdown }} template can be used to replace manual schema documentation if descriptions of schema attributes are added in the provider source code. */ -}}
+{{ .Description }}
 
-# kubernetes_horizontal_pod_autoscaler_v2beta2
-
-Horizontal Pod Autoscaler automatically scales the number of pods in a replication controller, deployment or replica set based on observed CPU utilization.
+{{ .SchemaMarkdown }}
 
 ## Example Usage, with `metric`
 

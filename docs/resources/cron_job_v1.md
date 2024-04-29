@@ -49,7 +49,7 @@ Read-Only:
 Required:
 
 - `job_template` (Block List, Min: 1, Max: 1) Describes the pod that will be created when executing a cron job. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/ (see [below for nested schema](#nestedblock--spec--job_template))
-- `schedule` (String) Cron format string, e.g. 0 ** ** or @hourly, as schedule time of its jobs to be created and executed.
+- `schedule` (String) Cron format string, e.g. 0 * * * * or @hourly, as schedule time of its jobs to be created and executed.
 
 Optional:
 

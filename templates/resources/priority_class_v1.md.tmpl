@@ -5,13 +5,11 @@ description: |-
   A PriorityClass is a non-namespaced object that defines a mapping from a priority class name to the integer value of the priority.
 ---
 
-{{/* This template serves as a starting point for documentation generation, and can be customized with hardcoded values and/or doc gen templates.
+# {{ .Name }}
 
-For example, the {{ .SchemaMarkdown }} template can be used to replace manual schema documentation if descriptions of schema attributes are added in the provider source code. */ -}}
+{{ .Description }}
 
-# kubernetes_priority_class_v1
-
-A PriorityClass is a non-namespaced object that defines a mapping from a priority class name to the integer value of the priority.
+{{ .SchemaMarkdown }}
 
 ## Example Usage
 

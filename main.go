@@ -70,9 +70,10 @@ func main() {
 // convertReattachConfig converts plugin.ReattachConfig to tfexec.ReattachConfig
 func convertReattachConfig(reattachConfig *plugin.ReattachConfig) tfexec.ReattachConfig {
 	return tfexec.ReattachConfig{
-		Protocol: string(reattachConfig.Protocol),
-		Pid:      reattachConfig.Pid,
-		Test:     true,
+		Protocol:        string(reattachConfig.Protocol),
+		ProtocolVersion: reattachConfig.ProtocolVersion,
+		Pid:             reattachConfig.Pid,
+		Test:            true,
 		Addr: tfexec.ReattachConfigAddr{
 			Network: reattachConfig.Addr.Network(),
 			String:  reattachConfig.Addr.String(),

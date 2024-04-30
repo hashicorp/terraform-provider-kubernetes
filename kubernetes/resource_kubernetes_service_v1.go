@@ -22,6 +22,7 @@ import (
 
 func resourceKubernetesServiceV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "A Service is an abstraction which defines a logical set of pods and a policy by which to access them - sometimes called a micro-service.",
 		CreateContext: resourceKubernetesServiceV1Create,
 		ReadContext:   resourceKubernetesServiceV1Read,
 		UpdateContext: resourceKubernetesServiceV1Update,

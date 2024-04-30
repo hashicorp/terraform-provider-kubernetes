@@ -9,13 +9,11 @@ description: |-
 
 For example, the {{ .SchemaMarkdown }} template can be used to replace manual schema documentation if descriptions of schema attributes are added in the provider source code. */ -}}
 
-# kubernetes_certificate_signing_request_v1
+# {{ .Name }}
 
-Use this resource to generate TLS certificates using Kubernetes.
+{{ .Description }}
 
-This is a *logical resource*, so it contributes only to the current Terraform state and does not persist any external managed resources.
-
-This resource enables automation of [X.509](https://www.itu.int/rec/T-REC-X.509) credential provisioning (including TLS/SSL certificates). It does this by creating a CertificateSigningRequest using the Kubernetes API, which generates a certificate from the Certificate Authority (CA) configured in the Kubernetes cluster. The CSR can be approved automatically by Terraform, or it can be approved by a custom controller running in Kubernetes. See [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/) for all available options pertaining to CertificateSigningRequests.
+{{ .SchemaMarkdown }}
 
 ## Example Usage
 

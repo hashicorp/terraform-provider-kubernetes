@@ -20,6 +20,7 @@ import (
 
 func resourceKubernetesConfigMapV1Data() *schema.Resource {
 	return &schema.Resource{
+		Description:   "This resource allows Terraform to manage data within a pre-existing ConfigMap. This resource uses [field management](https://kubernetes.io/docs/reference/using-api/server-side-apply/#field-management) and [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) to manage only the data that is defined in the Terraform configuration. Existing data not specified in the configuration will be ignored. If data specified in the config and is already managed by another client it will cause a conflict which can be overridden by setting `force` to true.",
 		CreateContext: resourceKubernetesConfigMapV1DataCreate,
 		ReadContext:   resourceKubernetesConfigMapV1DataRead,
 		UpdateContext: resourceKubernetesConfigMapV1DataUpdate,

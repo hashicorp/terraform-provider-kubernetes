@@ -5,17 +5,11 @@ description: |-
     A Cron Job creates Jobs on a time-based schedule. One CronJob object is like one line of a crontab (cron table) file.
 ---
 
-{{/* This template serves as a starting point for documentation generation, and can be customized with hardcoded values and/or doc gen templates.
+# {{ .Name }}
 
-For example, the {{ .SchemaMarkdown }} template can be used to replace manual schema documentation if descriptions of schema attributes are added in the provider source code. */ -}}
+{{ .Description }}
 
-# kubernetes_cron_job_v1
-
-A Cron Job creates Jobs on a time-based schedule.
-
-One CronJob object is like one line of a crontab (cron table) file. It runs a job periodically on a given schedule, written in Cron format.
-
-Note: All CronJob `schedule` times are based on the timezone of the master where the job is initiated. For instructions on creating and working with cron jobs, and for an example of a spec file for a cron job, see [Kubernetes reference](https://kubernetes.io/docs/tasks/job/automated-tasks-with-cron-jobs/).
+{{ .SchemaMarkdown }}
 
 ## Example Usage
 

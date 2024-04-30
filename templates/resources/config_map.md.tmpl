@@ -5,13 +5,11 @@ description: |-
   The resource provides mechanisms to inject containers with configuration data while keeping containers agnostic of Kubernetes.
 ---
 
-{{/* This template serves as a starting point for documentation generation, and can be customized with hardcoded values and/or doc gen templates.
-
-For example, the {{ .SchemaMarkdown }} template can be used to replace manual schema documentation if descriptions of schema attributes are added in the provider source code. */ -}}
-
-# kubernetes_config_map
+# {{ .Name }}
 
 The resource provides mechanisms to inject containers with configuration data while keeping containers agnostic of Kubernetes. Config Map can be used to store fine-grained information like individual properties or coarse-grained information like entire config files or JSON blobs.
+
+{{ .SchemaMarkdown }}
 
 ## Example Usage
 

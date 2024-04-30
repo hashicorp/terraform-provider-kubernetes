@@ -5,15 +5,11 @@ description: |-
   A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context.
 ---
 
-{{/* This template serves as a starting point for documentation generation, and can be customized with hardcoded values and/or doc gen templates.
+# {{ .Name }}
 
-For example, the {{ .SchemaMarkdown }} template can be used to replace manual schema documentation if descriptions of schema attributes are added in the provider source code. */ -}}
+{{ .Description }}
 
-# kubernetes_pod_v1
-
-A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context.
-
-Read more at [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/pods/pod/)
+{{ .SchemaMarkdown }}
 
 ## Example Usage
 

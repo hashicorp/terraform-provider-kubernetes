@@ -95,7 +95,7 @@ Default to the empty LabelSelector, which matches everything. (see [below for ne
 
 Never: the webhook will not be called more than once in a single admission evaluation.
 
-IfNeeded: the webhook will be called at least one additional time as part of the admission evaluation if the object being admitted is modified by other admission plugins after the initial webhook call. Webhooks that specify this option *must* be idempotent, able to process objects they previously admitted. Note: * the number of additional invocations is not guaranteed to be exactly one. * if additional invocations result in further modifications to the object, webhooks are not guaranteed to be invoked again. * webhooks that use this option may be reordered to minimize the number of additional invocations. * to validate an object after all mutations are guaranteed complete, use a validating admission webhook instead.
+IfNeeded: the webhook will be called at least one additional time as part of the admission evaluation if the object being admitted is modified by other admission plugins after the initial webhook call. Webhooks that specify this option *must* be idempotent, able to process objects they previously admitted. Note: *the number of additional invocations is not guaranteed to be exactly one.* if additional invocations result in further modifications to the object, webhooks are not guaranteed to be invoked again. *webhooks that use this option may be reordered to minimize the number of additional invocations.* to validate an object after all mutations are guaranteed complete, use a validating admission webhook instead.
 
 Defaults to "Never".
 
@@ -185,7 +185,7 @@ Required:
 
 - `api_groups` (List of String)
 - `api_versions` (List of String)
-- `operations` (List of String) Operations is the operations the admission hook cares about - CREATE, UPDATE, DELETE, CONNECT or * for all of those operations and any future admission operations that are added. If '*' is present, the length of the slice must be one. Required.
+- `operations` (List of String) Operations is the operations the admission hook cares about - CREATE, UPDATE, DELETE, CONNECT or *for all of those operations and any future admission operations that are added. If '*' is present, the length of the slice must be one. Required.
 - `resources` (List of String)
 
 Optional:

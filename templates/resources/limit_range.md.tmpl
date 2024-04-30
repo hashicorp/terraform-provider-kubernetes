@@ -5,15 +5,13 @@ description: |-
   Limit Range sets resource usage limits (e.g. memory, cpu, storage) for supported kinds of resources in a namespace.
 ---
 
-{{/* This template serves as a starting point for documentation generation, and can be customized with hardcoded values and/or doc gen templates.
-
-For example, the {{ .SchemaMarkdown }} template can be used to replace manual schema documentation if descriptions of schema attributes are added in the provider source code. */ -}}
-
-# kubernetes_limit_range
+# {{ .Name }}
 
 Limit Range sets resource usage limits (e.g. memory, cpu, storage) for supported kinds of resources in a namespace.
 
 Read more in [the official docs](https://kubernetes.io/docs/concepts/policy/limit-range/).
+
+{{ .SchemaMarkdown }}
 
 ## Example Usage
 

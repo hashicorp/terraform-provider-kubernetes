@@ -5,17 +5,15 @@ description: |-
   The resource provides a way to create and manage custom resources 
 ---
 
-{{/* This template serves as a starting point for documentation generation, and can be customized with hardcoded values and/or doc gen templates.
-
-For example, the {{ .SchemaMarkdown }} template can be used to replace manual schema documentation if descriptions of schema attributes are added in the provider source code. */ -}}
-
-# kubernetes_manifest
+# {{ .Name }}
 
 Represents one Kubernetes resource by supplying a `manifest` attribute. The manifest value is the HCL representation of a Kubernetes YAML manifest. To convert an existing manifest from YAML to HCL, you can use the Terraform built-in function [`yamldecode()`](https://www.terraform.io/docs/configuration/functions/yamldecode.html) or [tfk8s](https://github.com/jrhouston/tfk8s).
 
 Once applied, the `object` attribute contains the state of the resource as returned by the Kubernetes API, including all default values.
 
 ~> A minimum Terraform version of 0.14.8 is required to use this resource.
+
+{{ .SchemaMarkdown }}
 
 ### Before you use this resource
 

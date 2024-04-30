@@ -27,6 +27,7 @@ import (
 
 func resourceKubernetesEnv() *schema.Resource {
 	return &schema.Resource{
+		Description:   "This resource provides a way to manage environment variables in resources that were created outside of Terraform. This resource provides functionality similar to the `kubectl set env` command.",
 		CreateContext: resourceKubernetesEnvCreate,
 		ReadContext:   resourceKubernetesEnvRead,
 		UpdateContext: resourceKubernetesEnvUpdate,

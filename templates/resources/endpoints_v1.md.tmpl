@@ -5,13 +5,11 @@ description: |-
   An Endpoints resource is an abstraction, linked to a Service, which defines the list of endpoints that actually implement the service.
 ---
 
-{{/* This template serves as a starting point for documentation generation, and can be customized with hardcoded values and/or doc gen templates.
+# {{ .Name }}
 
-For example, the {{ .SchemaMarkdown }} template can be used to replace manual schema documentation if descriptions of schema attributes are added in the provider source code. */ -}}
+{{ .Description }}
 
-# kubernetes_endpoints_v1
-
-An Endpoints resource is an abstraction, linked to a Service, which defines the list of endpoints that actually implement the service.
+{{ .SchemaMarkdown }}
 
 ## Example Usage
 

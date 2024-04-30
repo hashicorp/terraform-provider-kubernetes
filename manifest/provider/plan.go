@@ -129,6 +129,15 @@ func isImportedFlagFromPrivate(p []byte) (f bool, d []*tfprotov5.Diagnostic) {
 func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfprotov5.PlanResourceChangeRequest) (*tfprotov5.PlanResourceChangeResponse, error) {
 	resp := &tfprotov5.PlanResourceChangeResponse{}
 
+	cp := req.ClientCapabilities
+	if cp != nil && cp.DeferralAllowed && s.clientConfigUnknown {
+		// if client support it, request deferral when client configuration not fully known
+		resp.Deferred = &tfprotov5.Deferred{
+			Reason: tfprotov5.DeferredReasonProviderConfigUnknown,
+		}
+		return resp, nil
+	}
+
 	isImported, d := isImportedFlagFromPrivate(req.PriorPrivate)
 	resp.Diagnostics = append(resp.Diagnostics, d...)
 	if !isImported {

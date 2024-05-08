@@ -50,7 +50,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		return response, nil
 	}
 
-	if req.ClientCapabilities.DeferralAllowed && !cfgVal.IsFullyKnown() {
+	clcp := req.ClientCapabilities
+	if !cfgVal.IsFullyKnown() && clcp != nil && clcp.DeferralAllowed {
 		// need to deferr actions
 		s.clientConfigUnknown = true
 	}

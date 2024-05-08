@@ -523,7 +523,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		}
 		overrides.ClusterDefaults.ProxyURL = proxyURL
 	}
-	if proxyUrl, ok := os.LookupEnv("KUBE_PROXY_URL"); ok && proxyUrl != "" {
+	if proxyURL, ok := os.LookupEnv("KUBE_PROXY_URL"); ok && proxyURL != "" {
 		overrides.ClusterDefaults.ProxyURL = proxyURL
 	}
 

@@ -190,7 +190,7 @@ func Provider() *schema.Provider {
 								return true, nil
 							},
 							Description: "Enable the `kubernetes_manifest` resource.",
-							Deprecated: "The kubernetes_manifest resource is now permanently enabled and no longer considered an experiment. This flag has no effect and will be removed in the near future.",
+							Deprecated:  "The kubernetes_manifest resource is now permanently enabled and no longer considered an experiment. This flag has no effect and will be removed in the near future.",
 						},
 					},
 				},

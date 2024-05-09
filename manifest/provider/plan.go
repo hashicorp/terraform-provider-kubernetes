@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/payload"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -129,9 +130,10 @@ func isImportedFlagFromPrivate(p []byte) (f bool, d []*tfprotov5.Diagnostic) {
 func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfprotov5.PlanResourceChangeRequest) (*tfprotov5.PlanResourceChangeResponse, error) {
 	resp := &tfprotov5.PlanResourceChangeResponse{}
 
-	cp := req.ClientCapabilities
-	if cp != nil && cp.DeferralAllowed && s.clientConfigUnknown {
-		// if client support it, request deferral when client configuration not fully known
+	canDeferr := req.ClientCapabilities != nil && req.ClientCapabilities.DeferralAllowed
+
+	if canDeferr && s.clientConfigUnknown {
+		// if client supports it, request deferral when client configuration not fully known
 		resp.Deferred = &tfprotov5.Deferred{
 			Reason: tfprotov5.DeferredReasonProviderConfigUnknown,
 		}
@@ -287,11 +289,19 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	}
 	gvk, err := GVKFromTftypesObject(&ppMan, rm)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+		rd := &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to determine GroupVersionResource for manifest",
+			Summary:  "API did not recognize GroupVersionKind from manifest (CRD may not be installed)",
 			Detail:   err.Error(),
-		})
+		}
+		resp.Diagnostics = append(resp.Diagnostics, rd)
+		if canDeferr && meta.IsNoMatchError(err) {
+			// request deferral when client configuration not fully known
+			resp.Deferred = &tfprotov5.Deferred{
+				Reason: tfprotov5.DeferredReasonResourceConfigUnknown,
+			}
+			rd.Severity = tfprotov5.DiagnosticSeverityWarning
+		}
 		return resp, nil
 	}
 

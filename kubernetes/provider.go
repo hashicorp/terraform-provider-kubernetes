@@ -363,8 +363,8 @@ func Provider() *schema.Provider {
 
 	p.ConfigureProvider = func(ctx context.Context, req schema.ConfigureProviderRequest, res *schema.ConfigureProviderResponse) {
 		if req.DeferralAllowed && !req.ResourceData.GetRawConfig().IsWhollyKnown() {
-			res.DeferralResponse = &schema.DeferralResponse{
-				Reason: schema.DeferralReasonProviderConfigUnknown,
+			res.Deferred = &schema.Deferred{
+				Reason: schema.DeferredReasonProviderConfigUnknown,
 			}
 		}
 		res.Meta, res.Diagnostics = providerConfigure(ctx, req.ResourceData, p.TerraformVersion)

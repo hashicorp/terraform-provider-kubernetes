@@ -184,6 +184,9 @@ func RemoveServerSideFields(in map[string]interface{}) map[string]interface{} {
 	// Remove "status" attribute
 	delete(in, "status")
 
+	// Remove ArgoCD "operation" attribute
+	delete(in, "operation")
+
 	meta := in["metadata"].(map[string]interface{})
 
 	// Remove "uid", "creationTimestamp", "resourceVersion" as

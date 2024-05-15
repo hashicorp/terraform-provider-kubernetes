@@ -19,7 +19,7 @@ jobs:
       uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
     - name: Install copywrite
-      uses: hashicorp/setup-copywrite@3ace06ad72e6ec679ea8572457b17dbc3960b8ce # v1.0.0
+      uses: hashicorp/setup-copywrite@32638da2d4e81d56a0764aa1547882fc4d209636 # v1.1.3
 
     - name: Validate Header Compliance
       run: copywrite headers --plan

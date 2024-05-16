@@ -13,7 +13,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.20.1
 	github.com/hashicorp/terraform-exec v0.21.0
 	github.com/hashicorp/terraform-json v0.22.1
-	github.com/hashicorp/terraform-plugin-codegen-kubernetes v0.0.0-00010101000000-000000000000
+	github.com/hashicorp/terraform-plugin-codegen-kubernetes v0.1.0
 	github.com/hashicorp/terraform-plugin-docs v0.16.0
 	github.com/hashicorp/terraform-plugin-framework v1.7.0
 	github.com/hashicorp/terraform-plugin-framework-timeouts v0.4.1
@@ -150,5 +150,3 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.14.3-0.20230601165947-6ce0bf390ce3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
-
-replace github.com/hashicorp/terraform-plugin-codegen-kubernetes => /Users/john/dev/hashicorp/terraform-plugin-codegen-kubernetes

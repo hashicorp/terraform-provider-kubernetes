@@ -134,6 +134,13 @@ func statefulSetSpecFields() map[string]*schema.Schema {
 				},
 			},
 		},
+		"min_ready_seconds": {
+			Type:         schema.TypeInt,
+			Description:  "This is an optional field that specifies the minimum number of seconds for which a newly created Pod should be running and ready without any of its containers crashing, for it to be considered available. This field defaults to 0 (the Pod will be considered available as soon as it is ready).",
+			Optional:     true,
+			Default:      0,
+			ValidateFunc: validateNonNegativeInteger,
+		},
 	}
 	return s
 }

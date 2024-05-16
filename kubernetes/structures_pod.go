@@ -343,7 +343,7 @@ func flattenTopologySpreadConstraints(tsc []v1.TopologySpreadConstraint) []inter
 		if v.NodeAffinityPolicy != nil && *v.NodeAffinityPolicy != "" {
 			obj["node_affinity_policy"] = string(*v.NodeAffinityPolicy)
 		}
-		if v.NodeTaintsPolicy != nil && *v.NodeAffinityPolicy != "" {
+		if v.NodeTaintsPolicy != nil && *v.NodeTaintsPolicy != "" {
 			obj["node_taints_policy"] = string(*v.NodeTaintsPolicy)
 		}
 		if v.WhenUnsatisfiable != "" {

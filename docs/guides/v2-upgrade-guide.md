@@ -1,5 +1,5 @@
 ---
-layout: "kubernetes"
+subcategory: ""
 page_title: "Kubernetes: Upgrade Guide for Kubernetes Provider v2.0.0"
 description: |-
   This guide covers the changes introduced in v2.0.0 of the Kubernetes provider and what you may need to do to upgrade your configuration.

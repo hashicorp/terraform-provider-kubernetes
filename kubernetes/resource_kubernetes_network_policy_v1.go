@@ -25,6 +25,7 @@ var (
 	networkPolicyV1EgressRulePortsDoc       = networking.NetworkPolicyEgressRule{}.SwaggerDoc()["ports"]
 	networkPolicyV1EgressRuleToDoc          = networking.NetworkPolicyEgressRule{}.SwaggerDoc()["to"]
 	networkPolicyV1PortPortDoc              = networking.NetworkPolicyPort{}.SwaggerDoc()["port"]
+	networkPolicyV1PortEndPortDoc           = networking.NetworkPolicyPort{}.SwaggerDoc()["endPort"]
 	networkPolicyV1PortProtocolDoc          = networking.NetworkPolicyPort{}.SwaggerDoc()["protocol"]
 	networkPolicyV1PeerIpBlockDoc           = networking.NetworkPolicyPeer{}.SwaggerDoc()["ipBlock"]
 	ipBlockCidrDoc                          = networking.IPBlock{}.SwaggerDoc()["cidr"]
@@ -69,6 +70,11 @@ func resourceKubernetesNetworkPolicyV1() *schema.Resource {
 												"port": {
 													Type:        schema.TypeString,
 													Description: networkPolicyV1PortPortDoc,
+													Optional:    true,
+												},
+												"end_port": {
+													Type:        schema.TypeInt,
+													Description: networkPolicyV1PortEndPortDoc,
 													Optional:    true,
 												},
 												"protocol": {
@@ -146,6 +152,11 @@ func resourceKubernetesNetworkPolicyV1() *schema.Resource {
 												"port": {
 													Type:        schema.TypeString,
 													Description: networkPolicyV1PortPortDoc,
+													Optional:    true,
+												},
+												"end_port": {
+													Type:        schema.TypeInt,
+													Description: networkPolicyV1PortEndPortDoc,
 													Optional:    true,
 												},
 												"protocol": {

@@ -277,25 +277,6 @@ resource "kubernetes_manifest" "test-ns" {
 
 The syntax for the field paths is the same as the one used in the `wait` block.
 
-## Argument Reference
-
-The following arguments are supported:
-
-- `computed_fields` - (Optional) List of paths of fields to be handled as "computed". The user-configured value for the field will be overridden by any different value returned by the API after apply.
-- `manifest` (Required) An object Kubernetes manifest describing the desired state of the resource in HCL format.
-- `object` (Optional) The resulting resource state, as returned by the API server after applying the desired state from `manifest`.
-- `wait` (Optional) An object which allows you configure the provider to wait for specific fields to reach a desired value or certain conditions to be met. See below for schema.
-- `wait_for` (Optional, Deprecated) An object which allows you configure the provider to wait for certain conditions to be met. See below for schema. **DEPRECATED: use `wait` block**.
-- `field_manager` (Optional) Configure field manager options. See below.
-
-### `wait`
-
-#### Arguments
-
-- `rollout` (Optional) When set to `true` will wait for the resource to roll out, equivalent to `kubectl rollout status`.
-- `condition` (Optional) A set of condition to wait for. You can specify multiple `condition` blocks and it will wait for all of them.
-- `fields` (Optional) A map of field paths and a corresponding regular expression with a pattern to wait for. The provider will wait until the field's value matches the regular expression. Use `*` for any value.
-
 A field path is a string that describes the fully qualified address of a field within the resource, including its parent fields all the way up to "object". The syntax of a path string follows the rules below:
 
 - Fields of objects are addressed with `.`
@@ -318,20 +299,3 @@ A field path is a string that describes the fully qualified address of a field w
   > type(kubernetes_manifest.my-secret.object.data)
     map(string)
   ```
-
-### `wait_for` (deprecated, use `wait`)
-
-#### Arguments
-
-- `fields` (Optional) A map of fields and a corresponding regular expression with a pattern to wait for. The provider will wait until the field matches the regular expression. Use `*` for any value.
-
-### `field_manager`
-
-#### Arguments
-
-- `name` (Optional) The name of the field manager to use when applying the resource. Defaults to `Terraform`.
-- `force_conflicts` (Optional) Forcibly override any field manager conflicts when applying the resource. Defaults to `false`.
-
-### `timeouts`
-
-See [Operation Timeouts](https://www.terraform.io/docs/language/resources/syntax.html#operation-timeouts)

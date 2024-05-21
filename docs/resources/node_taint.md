@@ -61,31 +61,6 @@ resource "kubernetes_node_taint" "example" {
 }
 ```
 
-## Argument Reference
-
-The following arguments are supported:
-
-* `metadata` - (Required) Metadata describing which Kubernetes node to apply the taint to.
-* `field_manager` - (Optional) Set the name of the field manager for the node taint.
-* `force` - (Optional) Force overwriting annotations that were created or edited outside of Terraform.
-* `taint` - (Required) The taint configuration to apply to the node. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
-
-## Nested Blocks
-
-### `metadata`
-
-#### Arguments
-
-* `name` - (Required) The name of the node to apply the taint to
-
-### `taint`
-
-#### Arguments
-
-* `key` - (Required, Forces new resource) The key of this node taint.
-* `value` - (Required) The value of this node taint. Can be empty string.
-* `effect` - (Required, Forces new resource) The scheduling effect to apply with this taint. Must be one of: `NoSchedule`, `PreferNoSchedule`, `NoExecute`.
-
 ## Import
 
 This resource does not support the `import` command. As this resource operates on Kubernetes resources that already exist, creating the resource is equivalent to importing it.

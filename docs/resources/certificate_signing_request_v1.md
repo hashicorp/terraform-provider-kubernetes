@@ -18,6 +18,7 @@ Use this resource to generate TLS certificates using Kubernetes. This is a *logi
 - `spec` (Block List, Min: 1, Max: 1) CertificateSigningRequest objects provide a mechanism to obtain x509 certificates by submitting a certificate signing request, and having it asynchronously approved and issued.
 
 Kubelets use this API to obtain:
+
  1. client certificates to authenticate to kube-apiserver (with the "kubernetes.io/kube-apiserver-client-kubelet" signerName).
  2. serving certificates for TLS endpoints kube-apiserver can connect to securely (with the "kubernetes.io/kubelet-serving" signerName).
 
@@ -35,6 +36,7 @@ This API can be used to request client certificates to authenticate to kube-apis
 If the certificate signing request is denied, a condition of type "Denied" is added and this field remains empty. If the signer cannot issue the certificate, a condition of type "Failed" is added and this field remains empty.
 
 Validation requirements:
+
  1. certificate must contain one or more PEM blocks.
  2. All PEM blocks must have the "CERTIFICATE" label, contain no headers, and the encoded data
   must be a BER-encoded ASN.1 Certificate structure as described in section 4 of RFC5280.
@@ -48,6 +50,7 @@ The certificate is encoded in PEM format.
 When serialized as JSON or YAML, the data is additionally base64-encoded, so it consists of:
 
     base64(
+
 - `id` (String) The ID of this resource.
 
 <a id="nestedblock--metadata"></a>
@@ -78,6 +81,7 @@ Required:
 List/watch requests for CertificateSigningRequests can filter on this field using a "spec.signerName=NAME" fieldSelector.
 
 Well-known Kubernetes signers are:
+
  1. "kubernetes.io/kube-apiserver-client": issues client certificates that can be used to authenticate to kube-apiserver.
   Requests for this signer are never auto-approved by kube-controller-manager, can be issued by the "csrsigning" controller in kube-controller-manager.
  2. "kubernetes.io/kube-apiserver-client-kubelet": issues client certificates that kubelets use to authenticate to kube-apiserver.
@@ -88,6 +92,7 @@ Well-known Kubernetes signers are:
 More details are available at https://k8s.io/docs/reference/access-authn-authz/certificate-signing-requests/#kubernetes-signers
 
 Custom signerNames can also be specified. The signer defines:
+
  1. Trust distribution: how trust (CA bundles) are distributed.
  2. Permitted subjects: and behavior when a disallowed subject is requested.
  3. Required, permitted, or forbidden x509 extensions in the request (including whether subjectAltNames are allowed, which types, restrictions on allowed values) and behavior when a disallowed extension is requested.

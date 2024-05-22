@@ -56,11 +56,13 @@ Optional:
 - `allowed_unsafe_sysctls` (List of String) allowedUnsafeSysctls is a list of explicitly allowed unsafe sysctls, defaults to none. Each entry is either a plain sysctl name or ends in "*" in which case it is considered as a prefix of allowed sysctls. Single * means all unsafe sysctls are allowed. Kubelet has to allowlist all allowed unsafe sysctls explicitly to avoid rejection.
 
 Examples: e.g. "foo/*" allows "foo/bar", "foo/baz", etc. e.g. "foo.*" allows "foo.bar", "foo.baz", etc.
+
 - `default_add_capabilities` (List of String) defaultAddCapabilities is the default set of capabilities that will be added to the container unless the pod spec specifically drops the capability.  You may not list a capability in both defaultAddCapabilities and requiredDropCapabilities. Capabilities added here are implicitly allowed, and need not be included in the allowedCapabilities list.
 - `default_allow_privilege_escalation` (Boolean) defaultAllowPrivilegeEscalation controls the default setting for whether a process can gain more privileges than its parent process.
 - `forbidden_sysctls` (List of String) forbiddenSysctls is a list of explicitly forbidden sysctls, defaults to none. Each entry is either a plain sysctl name or ends in "*" in which case it is considered as a prefix of forbidden sysctls. Single * means all sysctls are forbidden.
 
 Examples: e.g. "foo/*" forbids "foo/bar", "foo/baz", etc. e.g. "foo.*" forbids "foo.bar", "foo.baz", etc.
+
 - `host_ipc` (Boolean) hostIPC determines if the policy allows the use of HostIPC in the pod spec.
 - `host_network` (Boolean) hostNetwork determines if the policy allows the use of HostNetwork in the pod spec.
 - `host_pid` (Boolean) hostPID determines if the policy allows the use of HostPID in the pod spec.

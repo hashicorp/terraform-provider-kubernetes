@@ -195,9 +195,9 @@ The following arguments are supported:
 * `token` - (Optional) Token of your service account. Can be sourced from `KUBE_TOKEN`.
 * `proxy_url` - (Optional) URL to the proxy to be used for all API requests. URLs with "http", "https", and "socks5" schemes are supported. Can be sourced from `KUBE_PROXY_URL`.
 * `exec` - (Optional) Configuration block to use an [exec-based credential plugin] (https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins), e.g. call an external command to receive user credentials.
-  * `api_version` - (Required) API version to use when decoding the ExecCredentials resource, e.g. `client.authentication.k8s.io/v1beta1`.
-  * `command` - (Required) Command to execute.
-  * `args` - (Optional) List of arguments to pass when executing the plugin.
-  * `env` - (Optional) Map of environment variables to set when executing the plugin.
+    * `api_version` - (Required) API version to use when decoding the ExecCredentials resource, e.g. `client.authentication.k8s.io/v1beta1`.
+    * `command` - (Required) Command to execute.
+    * `args` - (Optional) List of arguments to pass when executing the plugin.
+    * `env` - (Optional) Map of environment variables to set when executing the plugin.
 * `ignore_annotations` - (Optional) List of Kubernetes metadata annotations to ignore across all resources handled by this provider for situations where external systems are managing certain resource annotations. This option does not affect annotations within a template block. Each item is a regular expression.
 * `ignore_labels` - (Optional) List of Kubernetes metadata labels to ignore across all resources handled by this provider for situations where external systems are managing certain resource labels. This option does not affect annotations within a template block. Each item is a regular expression.

@@ -1,6 +1,3 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_persistent_volume_claim" "example" {
   metadata {
     name = "exampleclaimname"

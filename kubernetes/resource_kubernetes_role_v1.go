@@ -18,6 +18,7 @@ import (
 
 func resourceKubernetesRoleV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "A role contains rules that represent a set of permissions. Permissions are purely additive (there are no “deny” rules).",
 		CreateContext: resourceKubernetesRoleV1Create,
 		ReadContext:   resourceKubernetesRoleV1Read,
 		UpdateContext: resourceKubernetesRoleV1Update,

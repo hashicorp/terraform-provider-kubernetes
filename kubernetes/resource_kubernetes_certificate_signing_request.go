@@ -24,6 +24,7 @@ func resourceKubernetesCertificateSigningRequest() *schema.Resource {
 	apiDocStatus := v1beta1.CertificateSigningRequestStatus{}.SwaggerDoc()
 
 	return &schema.Resource{
+		Description:   "Use this resource to generate TLS certificates using Kubernetes. This is a *logical resource*, so it contributes only to the current Terraform state and does not persist any external managed resources. This resource enables automation of [X.509](https://www.itu.int/rec/T-REC-X.509) credential provisioning (including TLS/SSL certificates). It does this by creating a CertificateSigningRequest using the Kubernetes API, which generates a certificate from the Certificate Authority (CA) configured in the Kubernetes cluster. The CSR can be approved automatically by Terraform, or it can be approved by a custom controller running in Kubernetes. See [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/) for all available options pertaining to CertificateSigningRequests.",
 		CreateContext: resourceKubernetesCertificateSigningRequestCreate,
 		ReadContext:   resourceKubernetesCertificateSigningRequestRead,
 		DeleteContext: resourceKubernetesCertificateSigningRequestDelete,

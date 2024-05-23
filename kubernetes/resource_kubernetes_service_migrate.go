@@ -1,10 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"context"
+	"log"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"log"
 )
 
 // resourceKubernetesServiceV0 is a copy of the Kubernetes Service schema (before migration).
@@ -14,14 +18,14 @@ func resourceKubernetesServiceV0() *schema.Resource {
 			"metadata": namespacedMetadataSchema("service", true),
 			"spec": {
 				Type:        schema.TypeList,
-				Description: "Spec defines the behavior of a service. https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
+				Description: "Spec defines the behavior of a service. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"cluster_ip": {
 							Type:        schema.TypeString,
-							Description: "The IP address of the service. It is usually assigned randomly by the master. If an address is specified manually and is not in use by others, it will be allocated to the service; otherwise, creation of the service will fail. `None` can be specified for headless services when proxying is not required. Ignored if type is `ExternalName`. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",
+							Description: "The IP address of the service. It is usually assigned randomly by the master. If an address is specified manually and is not in use by others, it will be allocated to the service; otherwise, creation of the service will fail. `None` can be specified for headless services when proxying is not required. Ignored if type is `ExternalName`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies",
 							Optional:    true,
 							ForceNew:    true,
 							Computed:    true,
@@ -59,7 +63,7 @@ func resourceKubernetesServiceV0() *schema.Resource {
 						},
 						"port": {
 							Type:        schema.TypeList,
-							Description: "The list of ports that are exposed by this service. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",
+							Description: "The list of ports that are exposed by this service. More info: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies",
 							Optional:    true,
 							MinItems:    1,
 							Elem: &schema.Resource{
@@ -71,7 +75,7 @@ func resourceKubernetesServiceV0() *schema.Resource {
 									},
 									"node_port": {
 										Type:        schema.TypeInt,
-										Description: "The port on each node on which this service is exposed when `type` is `NodePort` or `LoadBalancer`. Usually assigned by the system. If specified, it will be allocated to the service if unused or else creation of the service will fail. Default is to auto-allocate a port if the `type` of this service requires one. More info: http://kubernetes.io/docs/user-guide/services#type--nodeport",
+										Description: "The port on each node on which this service is exposed when `type` is `NodePort` or `LoadBalancer`. Usually assigned by the system. If specified, it will be allocated to the service if unused or else creation of the service will fail. Default is to auto-allocate a port if the `type` of this service requires one. More info: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport",
 										Computed:    true,
 										Optional:    true,
 									},
@@ -93,7 +97,7 @@ func resourceKubernetesServiceV0() *schema.Resource {
 									},
 									"target_port": {
 										Type:        schema.TypeString,
-										Description: "Number or name of the port to access on the pods targeted by the service. Number must be in the range 1 to 65535. This field is ignored for services with `cluster_ip = \"None\"`. More info: http://kubernetes.io/docs/user-guide/services#defining-a-service",
+										Description: "Number or name of the port to access on the pods targeted by the service. Number must be in the range 1 to 65535. This field is ignored for services with `cluster_ip = \"None\"`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service",
 										Optional:    true,
 										Computed:    true,
 									},
@@ -108,12 +112,12 @@ func resourceKubernetesServiceV0() *schema.Resource {
 						},
 						"selector": {
 							Type:        schema.TypeMap,
-							Description: "Route service traffic to pods with label keys and values matching this selector. Only applies to types `ClusterIP`, `NodePort`, and `LoadBalancer`. More info: http://kubernetes.io/docs/user-guide/services#overview",
+							Description: "Route service traffic to pods with label keys and values matching this selector. Only applies to types `ClusterIP`, `NodePort`, and `LoadBalancer`. More info: https://kubernetes.io/docs/concepts/services-networking/service/",
 							Optional:    true,
 						},
 						"session_affinity": {
 							Type:        schema.TypeString,
-							Description: "Used to maintain session affinity. Supports `ClientIP` and `None`. Defaults to `None`. More info: http://kubernetes.io/docs/user-guide/services#virtual-ips-and-service-proxies",
+							Description: "Used to maintain session affinity. Supports `ClientIP` and `None`. Defaults to `None`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies",
 							Optional:    true,
 							Default:     "None",
 							ValidateFunc: validation.StringInSlice([]string{
@@ -123,7 +127,7 @@ func resourceKubernetesServiceV0() *schema.Resource {
 						},
 						"type": {
 							Type:        schema.TypeString,
-							Description: "Determines how the service is exposed. Defaults to `ClusterIP`. Valid options are `ExternalName`, `ClusterIP`, `NodePort`, and `LoadBalancer`. `ExternalName` maps to the specified `external_name`. More info: http://kubernetes.io/docs/user-guide/services#overview",
+							Description: "Determines how the service is exposed. Defaults to `ClusterIP`. Valid options are `ExternalName`, `ClusterIP`, `NodePort`, and `LoadBalancer`. `ExternalName` maps to the specified `external_name`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types",
 							Optional:    true,
 							Default:     "ClusterIP",
 							ValidateFunc: validation.StringInSlice([]string{
@@ -172,5 +176,6 @@ func resourceKubernetesServiceV0() *schema.Resource {
 func resourceKubernetesServiceStateUpgradeV0(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
 	log.Println("[INFO] Found Kubernetes Service state v0; upgrading state to v1")
 	delete(rawState, "load_balancer_ingress")
+	// Return a nil error here to satisfy StateUpgradeFunc signature
 	return rawState, nil
 }

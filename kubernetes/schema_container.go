@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -7,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
-func handlerFields() map[string]*schema.Schema {
+func lifecycleHandlerFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"exec": {
 			Type:        schema.TypeList,
@@ -98,13 +101,14 @@ func handlerFields() map[string]*schema.Schema {
 	}
 }
 
-func resourcesFieldV1() map[string]*schema.Schema {
+func resourcesFieldV1(isUpdatable bool) map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"limits": {
 			Type:        schema.TypeMap,
 			Optional:    true,
 			Computed:    true,
-			Description: "Describes the maximum amount of compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
+			ForceNew:    !isUpdatable,
+			Description: "Describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/",
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
@@ -114,6 +118,7 @@ func resourcesFieldV1() map[string]*schema.Schema {
 			Type:        schema.TypeMap,
 			Optional:    true,
 			Computed:    true,
+			ForceNew:    !isUpdatable,
 			Description: "Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/",
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
@@ -158,6 +163,30 @@ func resourcesFieldV0() map[string]*schema.Schema {
 					},
 				},
 			},
+		},
+	}
+}
+
+func seccompProfileField(isUpdatable bool) map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"localhost_profile": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			ForceNew:    !isUpdatable,
+			Default:     "",
+			Description: "Localhost Profile indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work.",
+		},
+		"type": {
+			Type:     schema.TypeString,
+			Optional: true,
+			ForceNew: !isUpdatable,
+			Default:  string(api.SeccompProfileTypeUnconfined),
+			ValidateFunc: validation.StringInSlice([]string{
+				string(api.SeccompProfileTypeLocalhost),
+				string(api.SeccompProfileTypeRuntimeDefault),
+				string(api.SeccompProfileTypeUnconfined),
+			}, false),
+			Description: "Type indicates which kind of seccomp profile will be applied. Valid options are: Localhost, RuntimeDefault, Unconfined.",
 		},
 	}
 }
@@ -231,14 +260,14 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Optional:    true,
 			ForceNew:    !isUpdatable,
 			Elem:        &schema.Schema{Type: schema.TypeString},
-			Description: "Arguments to the entrypoint. The docker image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/containers#containers-and-commands",
+			Description: "Arguments to the entrypoint. The docker image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell",
 		},
 		"command": {
 			Type:        schema.TypeList,
 			Optional:    true,
 			ForceNew:    !isUpdatable,
 			Elem:        &schema.Schema{Type: schema.TypeString},
-			Description: "Entrypoint array. Not executed within a shell. The docker image's ENTRYPOINT is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/containers#containers-and-commands",
+			Description: "Entrypoint array. Not executed within a shell. The docker image's ENTRYPOINT is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell",
 		},
 		"env": {
 			Type:        schema.TypeList,
@@ -282,7 +311,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 												Type:        schema.TypeString,
 												Optional:    true,
 												ForceNew:    !isUpdatable,
-												Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+												Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 											},
 											"optional": {
 												Type:        schema.TypeBool,
@@ -361,7 +390,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 												Type:        schema.TypeString,
 												Optional:    true,
 												ForceNew:    !isUpdatable,
-												Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+												Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 											},
 											"optional": {
 												Type:        schema.TypeBool,
@@ -395,7 +424,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 									Type:        schema.TypeString,
 									Required:    true,
 									ForceNew:    !isUpdatable,
-									Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+									Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 								},
 								"optional": {
 									Type:        schema.TypeBool,
@@ -441,14 +470,14 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Optional:    true,
 			ForceNew:    !isUpdatable,
-			Description: "Docker image name. More info: http://kubernetes.io/docs/user-guide/images",
+			Description: "Docker image name. More info: https://kubernetes.io/docs/concepts/containers/images/",
 		},
 		"image_pull_policy": {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Computed:    true,
 			ForceNew:    !isUpdatable,
-			Description: "Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/images#updating-images",
+			Description: "Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images/#updating-images",
 		},
 		"lifecycle": {
 			Type:        schema.TypeList,
@@ -459,20 +488,20 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 				Schema: map[string]*schema.Schema{
 					"post_start": {
 						Type:        schema.TypeList,
-						Description: `post_start is called immediately after a container is created. If the handler fails, the container is terminated and restarted according to its restart policy. Other management of the container blocks until the hook completes. More info: http://kubernetes.io/docs/user-guide/container-environment#hook-details`,
+						Description: `post_start is called immediately after a container is created. If the handler fails, the container is terminated and restarted according to its restart policy. Other management of the container blocks until the hook completes. More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks`,
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						Elem: &schema.Resource{
-							Schema: handlerFields(),
+							Schema: lifecycleHandlerFields(),
 						},
 					},
 					"pre_stop": {
 						Type:        schema.TypeList,
-						Description: `pre_stop is called immediately before a container is terminated. The container is terminated after the handler completes. The reason for termination is passed to the handler. Regardless of the outcome of the handler, the container is eventually terminated. Other management of the container blocks until the hook completes. More info: http://kubernetes.io/docs/user-guide/container-environment#hook-details`,
+						Description: `pre_stop is called immediately before a container is terminated. The container is terminated after the handler completes. The reason for termination is passed to the handler. Regardless of the outcome of the handler, the container is eventually terminated. Other management of the container blocks until the hook completes. More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks`,
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						Elem: &schema.Resource{
-							Schema: handlerFields(),
+							Schema: lifecycleHandlerFields(),
 						},
 					},
 				},
@@ -483,7 +512,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Optional:    true,
 			MaxItems:    1,
 			ForceNew:    !isUpdatable,
-			Description: "Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/pod-states#container-probes",
+			Description: "Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes",
 			Elem:        probeSchema(),
 		},
 		"name": {
@@ -544,7 +573,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Optional:    true,
 			MaxItems:    1,
 			ForceNew:    !isUpdatable,
-			Description: "Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/pod-states#container-probes",
+			Description: "Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes",
 			Elem:        probeSchema(),
 		},
 		"resources": {
@@ -553,9 +582,9 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			MaxItems:    1,
 			ForceNew:    !isUpdatable,
 			Computed:    true,
-			Description: "Compute Resources required by this container. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#resources",
+			Description: "Compute Resources required by this container. Cannot be updated. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources",
 			Elem: &schema.Resource{
-				Schema: resourcesFieldV1(),
+				Schema: resourcesFieldV1(isUpdatable),
 			},
 		},
 		"security_context": {
@@ -563,7 +592,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Optional:    true,
 			MaxItems:    1,
 			ForceNew:    !isUpdatable,
-			Description: "Security options the pod should run with. More info: http://releases.k8s.io/HEAD/docs/design/security_context.md",
+			Description: "Security options the pod should run with. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/",
 			Elem:        securityContextSchema(isUpdatable),
 		},
 		"startup_probe": {
@@ -633,7 +662,27 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 }
 
 func probeSchema() *schema.Resource {
-	h := handlerFields()
+	h := lifecycleHandlerFields()
+	h["grpc"] = &schema.Schema{
+		Type:        schema.TypeList,
+		Optional:    true,
+		Description: "GRPC specifies an action involving a GRPC port.",
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"port": {
+					Type:         schema.TypeInt,
+					Required:     true,
+					ValidateFunc: validatePortNum,
+					Description:  "Number of the port to access on the container. Number must be in the range 1 to 65535.",
+				},
+				"service": {
+					Type:        schema.TypeString,
+					Optional:    true,
+					Description: "Name of the service to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is not specified, the default behavior is defined by gRPC.",
+				},
+			},
+		},
+	}
 	h["failure_threshold"] = &schema.Schema{
 		Type:         schema.TypeInt,
 		Optional:     true,
@@ -644,7 +693,7 @@ func probeSchema() *schema.Resource {
 	h["initial_delay_seconds"] = &schema.Schema{
 		Type:        schema.TypeInt,
 		Optional:    true,
-		Description: "Number of seconds after the container has started before liveness probes are initiated. More info: http://kubernetes.io/docs/user-guide/pod-states#container-probes",
+		Description: "Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes",
 	}
 	h["period_seconds"] = &schema.Schema{
 		Type:         schema.TypeInt,
@@ -666,7 +715,7 @@ func probeSchema() *schema.Resource {
 		Optional:     true,
 		Default:      1,
 		ValidateFunc: validatePositiveInteger,
-		Description:  "Number of seconds after which the probe times out. More info: http://kubernetes.io/docs/user-guide/pod-states#container-probes",
+		Description:  "Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes",
 	}
 	return &schema.Resource{
 		Schema: h,
@@ -740,6 +789,15 @@ func securityContextSchema(isUpdatable bool) *schema.Resource {
 			Optional:     true,
 			ForceNew:     !isUpdatable,
 			ValidateFunc: validateTypeStringNullableInt,
+		},
+		"seccomp_profile": {
+			Type:        schema.TypeList,
+			Description: "The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows.",
+			Optional:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: seccompProfileField(isUpdatable),
+			},
 		},
 		"se_linux_options": {
 			Type:        schema.TypeList,

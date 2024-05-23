@@ -1,0 +1,3 @@
+```release-note
+`kubernetes/schema_pod_spec.go`: Add `scheduler_name` attribute
+```

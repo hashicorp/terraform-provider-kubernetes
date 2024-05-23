@@ -1,0 +1,7 @@
+```release-note:doc
+`resource/kubernetes_job`: Add documentation for the attribute `spec.completion_mode`.
+```
+
+```release-note:doc
+`resource/kubernetes_job_v1`: Add documentation for the attribute `spec.completion_mode`.
+```

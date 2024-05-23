@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -31,7 +34,7 @@ func GVRFromUnstructured(o *unstructured.Unstructured, m meta.RESTMapper) (schem
 }
 
 // GVKFromTftypesObject extracts a canonical schema.GroupVersionKind out of the resource's
-// metadata by checking it agaings the discovery API via a RESTMapper
+// metadata by checking it against the discovery API via a RESTMapper
 func GVKFromTftypesObject(in *tftypes.Value, m meta.RESTMapper) (schema.GroupVersionKind, error) {
 	var obj map[string]tftypes.Value
 	err := in.As(&obj)
@@ -79,37 +82,38 @@ func IsResourceNamespaced(gvk schema.GroupVersionKind, m meta.RESTMapper) (bool,
 
 // TFTypeFromOpenAPI generates a tftypes.Type representation of a Kubernetes resource
 // designated by the supplied GroupVersionKind resource id
-func (ps *RawProviderServer) TFTypeFromOpenAPI(ctx context.Context, gvk schema.GroupVersionKind, status bool) (tftypes.Type, error) {
+func (ps *RawProviderServer) TFTypeFromOpenAPI(ctx context.Context, gvk schema.GroupVersionKind, status bool) (tftypes.Type, map[string]string, error) {
 	var tsch tftypes.Type
+	var hints map[string]string
 
 	oapi, err := ps.getOAPIv2Foundry()
 	if err != nil {
-		return nil, fmt.Errorf("cannot get OpenAPI foundry: %s", err)
+		return nil, hints, fmt.Errorf("cannot get OpenAPI foundry: %s", err)
 	}
 	// check if GVK is from a CRD
 	crdSchema, err := ps.lookUpGVKinCRDs(ctx, gvk)
 	if err != nil {
-		return nil, fmt.Errorf("failed to look up GVK [%s] among available CRDs: %s", gvk.String(), err)
+		return nil, hints, fmt.Errorf("failed to look up GVK [%s] among available CRDs: %s", gvk.String(), err)
 	}
 	if crdSchema != nil {
 		js, err := json.Marshal(openapi.SchemaToSpec("", crdSchema.(map[string]interface{})))
 		if err != nil {
-			return nil, fmt.Errorf("CRD schema fails to marshal into JSON: %s", err)
+			return nil, hints, fmt.Errorf("CRD schema fails to marshal into JSON: %s", err)
 		}
 		oapiv3, err := openapi.NewFoundryFromSpecV3(js)
 		if err != nil {
-			return nil, err
+			return nil, hints, err
 		}
-		tsch, err = oapiv3.GetTypeByGVK(gvk)
+		tsch, hints, err = oapiv3.GetTypeByGVK(gvk)
 		if err != nil {
-			return nil, fmt.Errorf("failed to generate tftypes for GVK [%s] from CRD schema: %s", gvk.String(), err)
+			return nil, hints, fmt.Errorf("failed to generate tftypes for GVK [%s] from CRD schema: %s", gvk.String(), err)
 		}
 	}
 	if tsch == nil {
 		// Not a CRD type - look GVK up in cluster OpenAPI spec
-		tsch, err = oapi.GetTypeByGVK(gvk)
+		tsch, hints, err = oapi.GetTypeByGVK(gvk)
 		if err != nil {
-			return nil, fmt.Errorf("cannot get resource type from OpenAPI (%s): %s", gvk.String(), err)
+			return nil, hints, fmt.Errorf("cannot get resource type from OpenAPI (%s): %s", gvk.String(), err)
 		}
 	}
 	// remove "status" attribute from resource type
@@ -129,18 +133,16 @@ func (ps *RawProviderServer) TFTypeFromOpenAPI(ctx context.Context, gvk schema.G
 		if _, ok := atts["kind"]; !ok {
 			atts["kind"] = tftypes.String
 		}
-		if _, ok := atts["metadata"]; !ok {
-			metaType, err := oapi.GetTypeByGVK(openapi.ObjectMetaGVK)
-			if err != nil {
-				return nil, fmt.Errorf("failed to generate tftypes for v1.ObjectMeta: %s", err)
-			}
-			atts["metadata"] = metaType.(tftypes.Object)
+		metaType, _, err := oapi.GetTypeByGVK(openapi.ObjectMetaGVK)
+		if err != nil {
+			return nil, hints, fmt.Errorf("failed to generate tftypes for v1.ObjectMeta: %s", err)
 		}
+		atts["metadata"] = metaType.(tftypes.Object)
 
 		tsch = tftypes.Object{AttributeTypes: atts}
 	}
 
-	return tsch, nil
+	return tsch, hints, nil
 }
 
 func mapRemoveNulls(in map[string]interface{}) map[string]interface{} {
@@ -204,11 +206,19 @@ func (ps *RawProviderServer) lookUpGVKinCRDs(ctx context.Context, gvk schema.Gro
 	if err != nil {
 		return nil, err
 	}
-	crd := schema.GroupResource{Group: "apiextensions.k8s.io", Resource: "customresourcedefinitions"}
+	m, err := ps.getRestMapper()
+	if err != nil {
+		return nil, err
+	}
 
+	crd := schema.GroupKind{Group: "apiextensions.k8s.io", Kind: "CustomResourceDefinition"}
+	crms, err := m.RESTMappings(crd)
+	if err != nil {
+		return nil, fmt.Errorf("could not extract resource version mappings for apiextensions.k8s.io.CustomResourceDefinition: %s", err)
+	}
 	// check  CRD versions
-	for _, crdv := range []string{"v1", "v1beta1"} {
-		crdRes, err := c.Resource(crd.WithVersion(crdv)).List(ctx, v1.ListOptions{})
+	for _, crm := range crms {
+		crdRes, err := c.Resource(crm.Resource).List(ctx, v1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -253,4 +263,23 @@ func (ps *RawProviderServer) lookUpGVKinCRDs(ctx context.Context, gvk schema.Gro
 		}
 	}
 	return nil, nil
+}
+
+// privateStateSchema describes the structure of the private state payload that
+// Terraform can store along with the "regular" resource state state.
+var privateStateSchema tftypes.Object = tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+	"IsImported": tftypes.Bool,
+}}
+
+func getPrivateStateValue(p []byte) (ps map[string]tftypes.Value, err error) {
+	if p == nil {
+		err = errors.New("private state value is nil")
+		return
+	}
+	pv, err := tftypes.ValueFromMsgPack(p, privateStateSchema)
+	if err != nil {
+		return
+	}
+	err = pv.As(&ps)
+	return
 }

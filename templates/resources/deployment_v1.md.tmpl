@@ -1,0 +1,24 @@
+---
+subcategory: "apps/v1"
+page_title: "Kubernetes: kubernetes_deployment_v1"
+description: |-
+  A Deployment ensures that a specified number of pod “replicas” are running at any one time. In other words, a Deployment makes sure that a pod or homogeneous set of pods are always up and available. If there are too many pods, it will kill some. If there are too few, the Deployment will start more.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/deployment_v1/example_1.tf"}}
+
+## Import
+
+Deployment can be imported using the namespace and name, e.g.
+
+```
+$ terraform import kubernetes_deployment_v1.example default/terraform-example
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -9,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 )
 
 // Expanders
@@ -29,11 +33,11 @@ func expandStatefulSetSpec(s []interface{}) (*v1.StatefulSetSpec, error) {
 		if err != nil {
 			return obj, err
 		}
-		obj.Replicas = ptrToInt32(int32(i))
+		obj.Replicas = ptr.To(int32(i))
 	}
 
 	if v, ok := in["revision_history_limit"].(int); ok {
-		obj.RevisionHistoryLimit = ptrToInt32(int32(v))
+		obj.RevisionHistoryLimit = ptr.To(int32(v))
 	}
 
 	if v, ok := in["selector"].([]interface{}); ok && len(v) > 0 {
@@ -50,6 +54,14 @@ func expandStatefulSetSpec(s []interface{}) (*v1.StatefulSetSpec, error) {
 			return obj, err
 		}
 		obj.UpdateStrategy = *us
+	}
+
+	if v, ok := in["persistent_volume_claim_retention_policy"].([]interface{}); ok {
+		ret, err := expandStatefulSetSpecPersistentVolumeClaimRetentionPolicy(v)
+		if err != nil {
+			return obj, err
+		}
+		obj.PersistentVolumeClaimRetentionPolicy = ret
 	}
 
 	template, err := expandPodTemplate(in["template"].([]interface{}))
@@ -101,14 +113,39 @@ func expandStatefulSetSpecUpdateStrategy(s []interface{}) (*v1.StatefulSetUpdate
 		if !ok {
 			return ust, errors.New("failed to expand 'spec.update_strategy.rolling_update.partition'")
 		}
-		u.Partition = ptrToInt32(int32(p))
+		u.Partition = ptr.To(int32(p))
 		ust.RollingUpdate = &u
 	}
 	log.Printf("[DEBUG] Expanded StatefulSet.Spec.UpdateStrategy: %#v", ust)
 	return ust, nil
 }
 
-func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData) ([]interface{}, error) {
+func expandStatefulSetSpecPersistentVolumeClaimRetentionPolicy(s []interface{}) (*v1.StatefulSetPersistentVolumeClaimRetentionPolicy, error) {
+	retPolicySpec := &v1.StatefulSetPersistentVolumeClaimRetentionPolicy{}
+	if len(s) == 0 {
+		return retPolicySpec, nil
+	}
+	retPolicy, ok := s[0].(map[string]interface{})
+	if !ok {
+		return retPolicySpec, errors.New("failed to expand 'spec.persistent_volume_claim_retention_policy'")
+	}
+	retWd, ok := retPolicy["when_deleted"].(string)
+	if !ok {
+		return retPolicySpec, errors.New("failed to expand 'spec.persistent_volume_claim_retention_policy.when_deleted'")
+	}
+	retPolicySpec.WhenDeleted = v1.PersistentVolumeClaimRetentionPolicyType(retWd)
+
+	retWs, ok := retPolicy["when_scaled"].(string)
+	if !ok {
+		return retPolicySpec, errors.New("failed to expand 'spec.persistent_volume_claim_retention_policy.when_scaled'")
+	}
+	retPolicySpec.WhenScaled = v1.PersistentVolumeClaimRetentionPolicyType(retWs)
+
+	log.Printf("[DEBUG] Expanded StatefulSet.Spec.PersistentVolumeClaimRetentionPolicy: %#v", retPolicySpec)
+	return retPolicySpec, nil
+}
+
+func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
 	if spec.PodManagementPolicy != "" {
@@ -126,12 +163,12 @@ func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData) ([]
 	if spec.ServiceName != "" {
 		att["service_name"] = spec.ServiceName
 	}
-	template, err := flattenPodTemplateSpec(spec.Template, d)
+	template, err := flattenPodTemplateSpec(spec.Template)
 	if err != nil {
 		return []interface{}{att}, err
 	}
 	att["template"] = template
-	att["volume_claim_template"] = flattenPersistentVolumeClaim(spec.VolumeClaimTemplates, d)
+	att["volume_claim_template"] = flattenPersistentVolumeClaim(spec.VolumeClaimTemplates, d, meta)
 
 	// Only write update_strategy to state if the user has defined it,
 	// otherwise we get a perpetual diff.
@@ -140,17 +177,17 @@ func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData) ([]
 		att["update_strategy"] = flattenStatefulSetSpecUpdateStrategy(spec.UpdateStrategy)
 	}
 
+	if spec.PersistentVolumeClaimRetentionPolicy != nil {
+		att["persistent_volume_claim_retention_policy"] = flattenStatefulSetSpecPersistentVolumeClaimRetentionPolicy(*spec.PersistentVolumeClaimRetentionPolicy)
+	}
+
 	return []interface{}{att}, nil
 }
 
-func flattenPodTemplateSpec(t corev1.PodTemplateSpec, d *schema.ResourceData, prefix ...string) ([]interface{}, error) {
+func flattenPodTemplateSpec(t corev1.PodTemplateSpec) ([]interface{}, error) {
 	template := make(map[string]interface{})
 
-	metaPrefix := "spec.0.template.0."
-	if len(prefix) > 0 {
-		metaPrefix = prefix[0]
-	}
-	template["metadata"] = flattenMetadata(t.ObjectMeta, d, metaPrefix)
+	template["metadata"] = flattenMetadataFields(t.ObjectMeta)
 	spec, err := flattenPodSpec(t.Spec)
 	if err != nil {
 		return []interface{}{template}, err
@@ -160,14 +197,14 @@ func flattenPodTemplateSpec(t corev1.PodTemplateSpec, d *schema.ResourceData, pr
 	return []interface{}{template}, nil
 }
 
-func flattenPersistentVolumeClaim(in []corev1.PersistentVolumeClaim, d *schema.ResourceData) []interface{} {
-	pvcs := make([]interface{}, 0, len(in))
+func flattenPersistentVolumeClaim(in []corev1.PersistentVolumeClaim, d *schema.ResourceData, meta interface{}) []interface{} {
+	pvcs := make([]interface{}, len(in))
 
 	for i, pvc := range in {
-		p := make(map[string]interface{})
-		p["metadata"] = flattenMetadata(pvc.ObjectMeta, d, fmt.Sprintf("spec.0.volume_claim_template.%d.", i))
-		p["spec"] = flattenPersistentVolumeClaimSpec(pvc.Spec)
-		pvcs = append(pvcs, p)
+		pvcs[i] = map[string]interface{}{
+			"metadata": flattenMetadataFields(pvc.ObjectMeta),
+			"spec":     flattenPersistentVolumeClaimSpec(pvc.Spec),
+		}
 	}
 	return pvcs
 }
@@ -184,6 +221,18 @@ func flattenStatefulSetSpecUpdateStrategy(s v1.StatefulSetUpdateStrategy) []inte
 		att["rolling_update"] = []interface{}{ru}
 	}
 	return []interface{}{att}
+}
+
+func flattenStatefulSetSpecPersistentVolumeClaimRetentionPolicy(s v1.StatefulSetPersistentVolumeClaimRetentionPolicy) []interface{} {
+	ret := make(map[string]interface{})
+
+	if s.WhenDeleted != "" {
+		ret["when_deleted"] = s.WhenDeleted
+	}
+	if s.WhenScaled != "" {
+		ret["when_scaled"] = s.WhenScaled
+	}
+	return []interface{}{ret}
 }
 
 // Patchers
@@ -224,6 +273,22 @@ func patchStatefulSetSpec(d *schema.ResourceData) (PatchOperations, error) {
 			return ops, err
 		}
 		ops = append(ops, u...)
+	}
+
+	if d.HasChange("spec.0.persistent_volume_claim_retention_policy") {
+		log.Printf("[TRACE] StatefulSet.Spec.PersistentVolumeClaimRetentionPolicy has changes")
+		if wd, ok := d.Get("spec.0.persistent_volume_claim_retention_policy.0.when_deleted").(string); ok && wd != "" {
+			ops = append(ops, &ReplaceOperation{
+				Path:  "/spec/persistentVolumeClaimRetentionPolicy/whenDeleted",
+				Value: wd,
+			})
+		}
+		if ws, ok := d.Get("spec.0.persistent_volume_claim_retention_policy.0.when_scaled").(string); ok && ws != "" {
+			ops = append(ops, &ReplaceOperation{
+				Path:  "/spec/persistentVolumeClaimRetentionPolicy/whenScaled",
+				Value: ws,
+			})
+		}
 	}
 	return ops, nil
 }
@@ -274,18 +339,14 @@ func patchUpdateStrategy(keyPrefix, pathPrefix string, d *schema.ResourceData) (
 		}
 
 		if len(o.([]interface{})) > 0 && len(n.([]interface{})) > 0 {
-			r, err := patchUpdateStrategyRollingUpdate(keyPrefix+"rolling_update.0.", pathPrefix+"rollingUpdate/", d)
-			if err != nil {
-				return ops, err
-			}
-			ops = append(ops, r...)
+			ops = append(ops, patchUpdateStrategyRollingUpdate(keyPrefix+"rolling_update.0.", pathPrefix+"rollingUpdate/", d)...)
 		}
 	}
 
 	return ops, nil
 }
 
-func patchUpdateStrategyRollingUpdate(keyPrefix, pathPrefix string, d *schema.ResourceData) (PatchOperations, error) {
+func patchUpdateStrategyRollingUpdate(keyPrefix, pathPrefix string, d *schema.ResourceData) PatchOperations {
 	ops := PatchOperations{}
 	if d.HasChange(keyPrefix + "partition") {
 		log.Printf("[TRACE] StatefulSet.Spec.UpdateStrategy.RollingUpdate.Partition has changes")
@@ -296,5 +357,5 @@ func patchUpdateStrategyRollingUpdate(keyPrefix, pathPrefix string, d *schema.Re
 			})
 		}
 	}
-	return ops, nil
+	return ops
 }

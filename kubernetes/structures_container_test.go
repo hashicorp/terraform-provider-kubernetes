@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -5,6 +8,7 @@ import (
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 )
 
 func TestFlattenSecretKeyRef(t *testing.T) {
@@ -18,7 +22,7 @@ func TestFlattenSecretKeyRef(t *testing.T) {
 					Name: "Secret1",
 				},
 				Key:      "key1",
-				Optional: ptrToBool(true),
+				Optional: ptr.To(true),
 			},
 			[]interface{}{
 				map[string]interface{}{
@@ -75,7 +79,7 @@ func TestExpandSecretKeyRef(t *testing.T) {
 					Name: "Secret1",
 				},
 				Key:      "key1",
-				Optional: ptrToBool(true),
+				Optional: ptr.To(true),
 			},
 		},
 		{
@@ -99,10 +103,7 @@ func TestExpandSecretKeyRef(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output, err := expandSecretKeyRef(tc.Input)
-		if err != nil {
-			t.Fatalf("Unexpected failure in expander.\nInput: %#v, error: %#v", tc.Input, err)
-		}
+		output := expandSecretKeyRef(tc.Input)
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)
@@ -121,7 +122,7 @@ func TestFlattenConfigMapKeyRef(t *testing.T) {
 					Name: "configmap1",
 				},
 				Key:      "key1",
-				Optional: ptrToBool(true),
+				Optional: ptr.To(true),
 			},
 			[]interface{}{
 				map[string]interface{}{
@@ -178,7 +179,7 @@ func TestExpandConfigMapKeyRef(t *testing.T) {
 					Name: "configmap1",
 				},
 				Key:      "key1",
-				Optional: ptrToBool(true),
+				Optional: ptr.To(true),
 			},
 		},
 		{
@@ -202,13 +203,112 @@ func TestExpandConfigMapKeyRef(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output, err := expandConfigMapKeyRef(tc.Input)
+		output := expandConfigMapKeyRef(tc.Input)
+		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
+			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
+				tc.ExpectedOutput, output)
+		}
+	}
+}
+
+func TestExpandContainerEnv(t *testing.T) {
+	cases := []struct {
+		Input          []interface{}
+		ExpectedOutput []v1.EnvVar
+	}{
+		{
+			[]interface{}{
+				map[string]interface{}{
+					"name":  "PGUSER",
+					"value": "postgres",
+				},
+				map[string]interface{}{
+					"name":  "PGHOST",
+					"value": "localhost",
+				},
+			},
+			[]v1.EnvVar{
+				{
+					Name:  "PGUSER",
+					Value: "postgres",
+				},
+				{
+					Name:  "PGHOST",
+					Value: "localhost",
+				},
+			},
+		},
+		{
+			[]interface{}{nil},
+			[]v1.EnvVar{},
+		},
+	}
+
+	for _, tc := range cases {
+		output, err := expandContainerEnv(tc.Input)
 		if err != nil {
 			t.Fatalf("Unexpected failure in expander.\nInput: %#v, error: %#v", tc.Input, err)
 		}
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)
+		}
+	}
+}
+
+func TestFlattenContainerVolumeMounts_mountPropogation(t *testing.T) {
+	bidimode := v1.MountPropagationBidirectional
+
+	cases := []struct {
+		Input    []v1.VolumeMount
+		Expected []interface{}
+	}{
+		{
+			[]v1.VolumeMount{
+				{
+					Name:      "cache",
+					MountPath: "/cache",
+					ReadOnly:  false,
+				},
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"mount_path":        "/cache",
+					"mount_propagation": "None",
+					"name":              "cache",
+					"read_only":         false,
+				},
+			},
+		},
+		{
+			[]v1.VolumeMount{
+				{
+					Name:             "cache",
+					MountPath:        "/cache",
+					MountPropagation: &bidimode,
+					ReadOnly:         true,
+				},
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"mount_path":        "/cache",
+					"mount_propagation": "Bidirectional",
+					"name":              "cache",
+					"read_only":         true,
+				},
+			},
+		},
+		{
+			[]v1.VolumeMount{},
+			[]interface{}{},
+		},
+	}
+
+	for _, tc := range cases {
+		output := flattenContainerVolumeMounts(tc.Input)
+		if !reflect.DeepEqual(output, tc.Expected) {
+			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
+				tc.Expected, output)
 		}
 	}
 }

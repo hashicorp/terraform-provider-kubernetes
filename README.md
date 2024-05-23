@@ -1,9 +1,8 @@
+<a href="https://terraform.io">
+    <img src=".github/tf.png" alt="Terraform logo" title="Terraform" align="left" height="50" />
+</a>
 
 # Kubernetes Provider for Terraform [![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/hashicorp/terraform-provider-kubernetes?label=release)](https://github.com/hashicorp/terraform-provider-kubernetes/releases) [![license](https://img.shields.io/github/license/hashicorp/terraform-provider-kubernetes.svg)]()
-
-<a href="https://terraform.io">
-    <img src="https://cdn.rawgit.com/hashicorp/terraform-website/master/content/source/assets/images/logo-hashicorp.svg" alt="Terraform logo" title="Terrafpr," align="right" height="50" />
-</a>
 
 - [Getting Started](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/guides/getting-started)
 - [Interactive Tutorial](https://learn.hashicorp.com/tutorials/terraform/kubernetes-provider?in=terraform/kubernetes)
@@ -22,7 +21,7 @@ Please note: We take Terraform's security and our users' trust very seriously. I
 ## Requirements
 
 -	[Terraform](https://www.terraform.io/downloads.html) 0.12.x
--	[Go](https://golang.org/doc/install) 1.16.x (to build the provider plugin)
+-	[Go](https://golang.org/doc/install) 1.18+ (to build the provider plugin)
 
 
 ## Contributing to the provider

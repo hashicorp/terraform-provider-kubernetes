@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,11 +24,8 @@ import (
 
 // Global constants for testing images (reduces the number of docker pulls).
 const (
-	nginxImageVersion    = "nginx:1.19.4"
-	nginxImageVersion1   = "nginx:1.19.3"
-	busyboxImageVersion  = "busybox:1.32.0"
-	busyboxImageVersion1 = "busybox:1.31"
-	alpineImageVersion   = "alpine:3.12.1"
+	busyboxImage = "busybox:1.36"
+	agnhostImage = "registry.k8s.io/e2e-test-images/agnhost:2.43"
 )
 
 var testAccProvider *schema.Provider
@@ -43,14 +44,6 @@ func init() {
 		},
 	}
 	testAccExternalProviders = map[string]resource.ExternalProvider{
-		"kubernetes-local": {
-			VersionConstraint: "9.9.9",
-			Source:            "localhost/test/kubernetes",
-		},
-		"kubernetes-released": {
-			VersionConstraint: "~> 1.13.2",
-			Source:            "hashicorp/kubernetes",
-		},
 		"aws": {
 			Source: "hashicorp/aws",
 		},
@@ -125,10 +118,11 @@ func unsetEnv(t *testing.T) func() {
 		"KUBE_CLIENT_KEY_DATA":      e.ClientKeyData,
 		"KUBE_CLUSTER_CA_CERT_DATA": e.ClusterCACertData,
 		"KUBE_INSECURE":             e.Insecure,
+		"KUBE_TLS_SERVER_NAME":      e.TLSServerName,
 		"KUBE_TOKEN":                e.Token,
 	}
 
-	for k, _ := range envVars {
+	for k := range envVars {
 		if err := os.Unsetenv(k); err != nil {
 			t.Fatalf("Error unsetting env var %s: %s", k, err)
 		}
@@ -155,6 +149,7 @@ func getEnv() *currentEnv {
 		ClientKeyData:     os.Getenv("KUBE_CLIENT_KEY_DATA"),
 		ClusterCACertData: os.Getenv("KUBE_CLUSTER_CA_CERT_DATA"),
 		Insecure:          os.Getenv("KUBE_INSECURE"),
+		TLSServerName:     os.Getenv("KUBE_TLS_SERVER_NAME"),
 		Token:             os.Getenv("KUBE_TOKEN"),
 	}
 	if v := os.Getenv("KUBE_CONFIG_PATH"); v != "" {
@@ -199,7 +194,6 @@ func testAccPreCheck(t *testing.T) {
 	if diags.HasError() {
 		t.Fatal(diags[0].Summary)
 	}
-	return
 }
 
 func getClusterVersion() (*gversion.Version, error) {
@@ -222,9 +216,23 @@ func getClusterVersion() (*gversion.Version, error) {
 	return gversion.NewVersion(serverVersion.String())
 }
 
+func setClusterVersionVar(t *testing.T, varName string) {
+	cv, err := getClusterVersion()
+	if err != nil {
+		t.Skipf("Could not get cluster version")
+	}
+	os.Setenv(varName, fmt.Sprintf("v%s", cv.Core().Original()))
+}
+
 func skipIfClusterVersionLessThan(t *testing.T, vs string) {
 	if clusterVersionLessThan(vs) {
-		t.Skip(fmt.Sprintf("This test will only run on cluster versions %v and above", vs))
+		t.Skipf("This test does not run on cluster versions below %v", vs)
+	}
+}
+
+func skipIfClusterVersionGreaterThanOrEqual(t *testing.T, vs string) {
+	if clusterVersionGreaterThanOrEqual(vs) {
+		t.Skipf("This test does not run on cluster versions %v and above", vs)
 	}
 }
 
@@ -251,8 +259,10 @@ func skipIfNotRunningInGke(t *testing.T) {
 	if !isInGke {
 		t.Skip("The Kubernetes endpoint must come from GKE for this test to run - skipping")
 	}
-	if os.Getenv("GOOGLE_PROJECT") == "" || os.Getenv("GOOGLE_REGION") == "" || os.Getenv("GOOGLE_ZONE") == "" {
-		t.Fatal("GOOGLE_PROJECT, GOOGLE_REGION, and GOOGLE_ZONE must be set for GoogleCloud tests")
+	for _, ev := range []string{"GOOGLE_PROJECT", "GOOGLE_REGION", "GOOGLE_ZONE"} {
+		if os.Getenv(ev) == "" {
+			t.Skipf("%s must be set for GoogleCloud tests", ev)
+		}
 	}
 }
 
@@ -279,8 +289,38 @@ func skipIfNotRunningInEks(t *testing.T) {
 	if !isInEks {
 		t.Skip("The Kubernetes endpoint must come from EKS for this test to run - skipping")
 	}
-	if os.Getenv("AWS_DEFAULT_REGION") == "" || os.Getenv("AWS_ZONE") == "" || os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-		t.Fatal("AWS_DEFAULT_REGION, AWS_ZONE, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set for AWS tests")
+	if os.Getenv("AWS_DEFAULT_REGION") == "" || os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
+		t.Fatal("AWS_DEFAULT_REGION, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set for AWS tests")
+	}
+}
+
+func skipIfRunningInAks(t *testing.T) {
+	isInAks, err := isRunningInAks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isInAks {
+		t.Skip("This test cannot be run in AKS cluster")
+	}
+}
+
+func skipIfRunningInEks(t *testing.T) {
+	isInEks, err := isRunningInEks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isInEks {
+		t.Skip("This test cannot be run in EKS cluster")
+	}
+}
+
+func skipIfRunningInGke(t *testing.T) {
+	isInGke, err := isRunningInGke()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isInGke {
+		t.Skip("This test cannot be run in GKE cluster")
 	}
 }
 
@@ -291,6 +331,16 @@ func skipIfNotRunningInMinikube(t *testing.T) {
 	}
 	if !isInMinikube {
 		t.Skip("The Kubernetes endpoint must come from Minikube for this test to run - skipping")
+	}
+}
+
+func skipIfNotRunningInKind(t *testing.T) {
+	isRunningInKind, err := isRunningInKind()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !isRunningInKind {
+		t.Skip("The Kubernetes endpoint must come from Kind for this test to run - skipping")
 	}
 }
 
@@ -316,6 +366,21 @@ func isRunningInMinikube() (bool, error) {
 
 	labels := node.GetLabels()
 	if v, ok := labels["kubernetes.io/hostname"]; ok && v == "minikube" {
+		return true, nil
+	}
+	return false, nil
+}
+
+func isRunningInKind() (bool, error) {
+	node, err := getFirstNode()
+	if err != nil {
+		return false, err
+	}
+	u, err := url.Parse(node.Spec.ProviderID)
+	if err != nil {
+		return false, err
+	}
+	if u.Scheme == "kind" {
 		return true, nil
 	}
 	return false, nil
@@ -391,18 +456,28 @@ func getFirstNode() (api.Node, error) {
 
 func clusterVersionLessThan(vs string) bool {
 	cv, err := getClusterVersion()
-
 	if err != nil {
 		return false
 	}
 
 	v, err := gversion.NewVersion(vs)
+	if err != nil {
+		return false
+	}
+	return cv.LessThan(v)
+}
 
+func clusterVersionGreaterThanOrEqual(vs string) bool {
+	cv, err := getClusterVersion()
 	if err != nil {
 		return false
 	}
 
-	return cv.LessThan(v)
+	v, err := gversion.NewVersion(vs)
+	if err != nil {
+		return false
+	}
+	return cv.GreaterThanOrEqual(v)
 }
 
 type currentEnv struct {
@@ -418,21 +493,6 @@ type currentEnv struct {
 	ClientKeyData     string
 	ClusterCACertData string
 	Insecure          string
+	TLSServerName     string
 	Token             string
-}
-
-func requiredProviders() string {
-	return fmt.Sprintf(`terraform {
-  required_providers {
-    kubernetes-local = {
-      source  = "localhost/test/kubernetes"
-      version = "9.9.9"
-    }
-    kubernetes-released = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 1.13.2"
-    }
-  }
-}
-`)
 }

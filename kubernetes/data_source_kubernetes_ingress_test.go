@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -9,87 +12,85 @@ import (
 )
 
 func TestAccKubernetesDataSourceIngress_basic(t *testing.T) {
+	resourceName := "kubernetes_ingress.test"
+	dataSourceName := "data.kubernetes_ingress.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
+		},
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{ // Create the ingress resource in the first apply. Then check it in the second apply.
-				Config: testAccKubernetesDataSourceIngressConfig_basic(name),
+				Config: testAccKubernetesDataSourceIngress_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_name", "app1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.backend.0.service_port", "443"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.host", "server.domain.com"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.path", "/.*"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service_name", "app2"),
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service_port", "80"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backend.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backend.0.service_name", "app1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.backend.0.service_port", "443"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.host", "server.domain.com"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.path", "/.*"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.0.service_name", "app2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.0.service_port", "80"),
 				),
 			},
 			{
-				Config: testAccKubernetesDataSourceIngressConfig_basic(name) +
-					testAccKubernetesDataSourceIngressConfig_read(),
+				Config: testAccKubernetesDataSourceIngress_basic(name) +
+					testAccKubernetesDataSourceIngress_read(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet("data.kubernetes_ingress.test", "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet("data.kubernetes_ingress.test", "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet("data.kubernetes_ingress.test", "metadata.0.uid"),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.#", "1"),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.backend.0.service_name", "app1"),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.backend.0.service_port", "443"),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.#", "1"),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.0.host", "server.domain.com"),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.0.http.#", "1"),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.path", "/.*"),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.#", "1"),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service_name", "app2"),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "spec.0.rule.0.http.0.path.0.backend.0.service_port", "80"),
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(dataSourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.backend.#", "1"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.backend.0.service_name", "app1"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.backend.0.service_port", "443"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.rule.#", "1"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.rule.0.host", "server.domain.com"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.rule.0.http.#", "1"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.rule.0.http.0.path.0.path", "/.*"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.rule.0.http.0.path.0.backend.#", "1"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.rule.0.http.0.path.0.backend.0.service_name", "app2"),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.0.rule.0.http.0.path.0.backend.0.service_port", "80"),
 				),
 			},
 		},
 	})
 }
 
-func TestAccKubernetesDataSourceIngress_regression(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+func TestAccKubernetesDataSourceIngress_not_found(t *testing.T) {
+	dataSourceName := "data.kubernetes_ingress.test"
+	name := fmt.Sprintf("ceci-n.est-pas-une-ingress-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInEks(t) },
-		IDRefreshName:     "kubernetes_ingress.test",
-		ExternalProviders: testAccExternalProviders,
-		CheckDestroy:      testAccCheckKubernetesIngressDestroy,
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
+		},
+		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
-			{ // Create resource and data source using schema v0.
-				Config: requiredProviders() + testAccKubernetesDataSourceIngressConfig_regression("kubernetes-released", name),
+			{
+				Config: testAccKubernetesDataSourceIngress_nonexistent(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("kubernetes_ingress.test", "metadata.0.name", name),
-					resource.TestCheckResourceAttr("data.kubernetes_ingress.test", "metadata.0.name", name),
-				),
-			},
-			{ // Apply StateUpgrade to resource. This will cause data source to re-read the data.
-				Config: requiredProviders() + testAccKubernetesDataSourceIngressConfig_regression("kubernetes-local", name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet("kubernetes_ingress.test", "status.0.load_balancer.0.ingress.0.hostname"),
-					resource.TestCheckNoResourceAttr("kubernetes_ingress.test", "load_balancer_ingress.0.hostname"),
-					resource.TestCheckNoResourceAttr("data.kubernetes_ingress.test", "load_balancer_ingress.0.hostname"),
-					resource.TestCheckResourceAttrSet("data.kubernetes_ingress.test", "status.0.load_balancer.0.ingress.0.hostname"),
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.#", "0"),
 				),
 			},
 		},
 	})
 }
 
-func testAccKubernetesDataSourceIngressConfig_basic(name string) string {
+func testAccKubernetesDataSourceIngress_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
   metadata {
     name = "%s"
@@ -116,75 +117,21 @@ func testAccKubernetesDataSourceIngressConfig_basic(name string) string {
 `, name)
 }
 
-func testAccKubernetesDataSourceIngressConfig_read() string {
-	return fmt.Sprintf(`data "kubernetes_ingress" "test" {
+func testAccKubernetesDataSourceIngress_read() string {
+	return `data "kubernetes_ingress" "test" {
   metadata {
-    name = "${kubernetes_ingress.test.metadata.0.name}"
+    name      = "${kubernetes_ingress.test.metadata.0.name}"
     namespace = "${kubernetes_ingress.test.metadata.0.namespace}"
   }
 }
-`)
+`
 }
 
-// Note: this test uses a unique namespace in order to avoid name collisions in AWS.
-// This ensures a unique TargetGroup for each test run.
-func testAccKubernetesDataSourceIngressConfig_regression(provider, name string) string {
+func testAccKubernetesDataSourceIngress_nonexistent(name string) string {
 	return fmt.Sprintf(`data "kubernetes_ingress" "test" {
-  provider = %s
-  metadata {
-    name      = kubernetes_ingress.test.metadata.0.name
-    namespace = kubernetes_ingress.test.metadata.0.namespace
-  }
-}
-
-resource "kubernetes_namespace" "test" {
-  provider = %s
   metadata {
     name = "%s"
   }
 }
-
-resource "kubernetes_service" "test" {
-  provider = %s
-  metadata {
-    name = "%s"
-    namespace = kubernetes_namespace.test.metadata.0.name
-  }
-  spec {
-    port {
-      port = 80
-      target_port = 80
-      protocol = "TCP"
-    }
-    type = "NodePort"
-  }
-}
-
-resource "kubernetes_ingress" "test" {
-  provider = %s
-  wait_for_load_balancer = true
-  metadata {
-    name = "%s"
-    namespace = kubernetes_namespace.test.metadata.0.name
-    annotations = {
-      "kubernetes.io/ingress.class" = "alb"
-      "alb.ingress.kubernetes.io/scheme" = "internet-facing"
-      "alb.ingress.kubernetes.io/target-type" = "ip"
-    }
-  }
-  spec {
-    rule {
-      http {
-        path {
-          path = "/*"
-          backend {
-            service_name = kubernetes_service.test.metadata.0.name
-            service_port = 80
-          }
-        }
-      }
-    }
-  }
-}
-`, provider, provider, name, provider, name, provider, name)
+`, name)
 }

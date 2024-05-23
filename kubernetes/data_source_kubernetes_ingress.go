@@ -1,12 +1,17 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	networking "k8s.io/api/networking/v1beta1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesIngress() *schema.Resource {
@@ -27,6 +32,11 @@ func dataSourceKubernetesIngress() *schema.Resource {
 				Computed:    true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"ingress_class_name": {
+							Type:        schema.TypeString,
+							Description: docIngressSpec["ingressClassName"],
+							Computed:    true,
+						},
 						"backend": backendSpecFields(defaultBackendDescription),
 						"rule": {
 							Type:        schema.TypeList,
@@ -126,13 +136,48 @@ func dataSourceKubernetesIngress() *schema.Resource {
 }
 
 func dataSourceKubernetesIngressRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
-	om := meta_v1.ObjectMeta{
+	om := metav1.ObjectMeta{
 		Namespace: metadata.Namespace,
 		Name:      metadata.Name,
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesIngressRead(ctx, d, meta)
+	log.Printf("[INFO] Reading ingress %s", metadata.Name)
+	ing, err := conn.ExtensionsV1beta1().Ingresses(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		log.Printf("[DEBUG] Received error: %#v", err)
+		return diag.FromErr(err)
+	}
+	log.Printf("[INFO] Received ingress: %#v", ing)
+
+	err = d.Set("metadata", flattenMetadataFields(ing.ObjectMeta))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("spec", flattenIngressSpec(ing.Spec))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("status", []interface{}{
+		map[string][]interface{}{
+			"load_balancer": flattenIngressStatus(ing.Status.LoadBalancer),
+		},
+	})
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
 }

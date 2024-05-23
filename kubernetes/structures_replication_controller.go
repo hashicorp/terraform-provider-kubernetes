@@ -1,11 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 )
 
-func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec, d *schema.ResourceData) ([]interface{}, error) {
+func flattenReplicationControllerSpec(in corev1.ReplicationControllerSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	att["min_ready_seconds"] = in.MinReadySeconds
 
@@ -24,21 +28,21 @@ func flattenReplicationControllerSpec(in v1.ReplicationControllerSpec, d *schema
 		}
 		template := make(map[string]interface{})
 		template["spec"] = podSpec
-		template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d)
+		template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d, meta)
 		att["template"] = []interface{}{template}
 	}
 
 	return []interface{}{att}, nil
 }
 
-func expandReplicationControllerSpec(rc []interface{}) (*v1.ReplicationControllerSpec, error) {
-	obj := &v1.ReplicationControllerSpec{}
+func expandReplicationControllerSpec(rc []interface{}) (*corev1.ReplicationControllerSpec, error) {
+	obj := &corev1.ReplicationControllerSpec{}
 	if len(rc) == 0 || rc[0] == nil {
 		return obj, nil
 	}
 	in := rc[0].(map[string]interface{})
 	obj.MinReadySeconds = int32(in["min_ready_seconds"].(int))
-	obj.Replicas = ptrToInt32(int32(in["replicas"].(int)))
+	obj.Replicas = ptr.To(int32(in["replicas"].(int)))
 	obj.Selector = expandStringMap(in["selector"].(map[string]interface{}))
 
 	template, err := expandReplicationControllerTemplate(in["template"].([]interface{}))
@@ -51,8 +55,8 @@ func expandReplicationControllerSpec(rc []interface{}) (*v1.ReplicationControlle
 	return obj, nil
 }
 
-func expandReplicationControllerTemplate(rct []interface{}) (*v1.PodTemplateSpec, error) {
-	obj := &v1.PodTemplateSpec{}
+func expandReplicationControllerTemplate(rct []interface{}) (*corev1.PodTemplateSpec, error) {
+	obj := &corev1.PodTemplateSpec{}
 	in := rct[0].(map[string]interface{})
 	metadata := in["metadata"].([]interface{})
 	obj.ObjectMeta = expandMetadata(metadata)

@@ -1,7 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	"k8s.io/utils/ptr"
 )
 
 func flattenServiceReference(in admissionregistrationv1.ServiceReference) []interface{} {
@@ -39,11 +43,11 @@ func expandServiceReference(l []interface{}) *admissionregistrationv1.ServiceRef
 	}
 
 	if v, ok := in["path"].(string); ok && v != "" {
-		obj.Path = ptrToString(v)
+		obj.Path = ptr.To(v)
 	}
 
 	if v, ok := in["port"].(int); ok {
-		obj.Port = ptrToInt32(int32(v))
+		obj.Port = ptr.To(int32(v))
 	}
 
 	return obj
@@ -85,7 +89,7 @@ func expandWebhookClientConfig(l []interface{}) admissionregistrationv1.WebhookC
 	}
 
 	if v, ok := in["url"].(string); ok && v != "" {
-		obj.URL = ptrToString(v)
+		obj.URL = ptr.To(v)
 	}
 
 	return obj

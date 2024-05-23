@@ -1,8 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
-	api "k8s.io/api/core/v1"
-	"k8s.io/api/networking/v1"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 
 	"reflect"
 	"testing"
@@ -11,8 +14,8 @@ import (
 )
 
 var (
-	protoTCP      = api.ProtocolTCP
-	protoUDP      = api.ProtocolUDP
+	protoTCP      = corev1.ProtocolTCP
+	protoUDP      = corev1.ProtocolUDP
 	portName      = intstr.FromString("http")
 	portNumerical = intstr.FromInt(8125)
 )
@@ -20,11 +23,11 @@ var (
 func TestFlattenNetworkPolicyIngressPorts(t *testing.T) {
 
 	cases := []struct {
-		Input          []v1.NetworkPolicyPort
+		Input          []networkingv1.NetworkPolicyPort
 		ExpectedOutput []interface{}
 	}{
 		{
-			[]v1.NetworkPolicyPort{{
+			[]networkingv1.NetworkPolicyPort{{
 				Port:     &portName,
 				Protocol: &protoTCP,
 			}},
@@ -36,7 +39,7 @@ func TestFlattenNetworkPolicyIngressPorts(t *testing.T) {
 			},
 		},
 		{
-			[]v1.NetworkPolicyPort{{
+			[]networkingv1.NetworkPolicyPort{{
 				Port: &portName,
 			}},
 			[]interface{}{
@@ -46,7 +49,7 @@ func TestFlattenNetworkPolicyIngressPorts(t *testing.T) {
 			},
 		},
 		{
-			[]v1.NetworkPolicyPort{{
+			[]networkingv1.NetworkPolicyPort{{
 				Port:     &portNumerical,
 				Protocol: &protoUDP,
 			}},
@@ -58,17 +61,17 @@ func TestFlattenNetworkPolicyIngressPorts(t *testing.T) {
 			},
 		},
 		{
-			[]v1.NetworkPolicyPort{{}},
+			[]networkingv1.NetworkPolicyPort{{}},
 			[]interface{}{map[string]interface{}{}},
 		},
 		{
-			[]v1.NetworkPolicyPort{},
+			[]networkingv1.NetworkPolicyPort{},
 			[]interface{}{},
 		},
 	}
 
 	for _, tc := range cases {
-		output := flattenNetworkPolicyPorts(tc.Input)
+		output := flattenNetworkPolicyV1Ports(tc.Input)
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)
@@ -80,7 +83,7 @@ func TestExpandNetworkPolicyIngressPorts(t *testing.T) {
 
 	cases := []struct {
 		Input          []interface{}
-		ExpectedOutput []v1.NetworkPolicyPort
+		ExpectedOutput *[]networkingv1.NetworkPolicyPort
 	}{
 		{
 			[]interface{}{
@@ -89,7 +92,7 @@ func TestExpandNetworkPolicyIngressPorts(t *testing.T) {
 					"protocol": "TCP",
 				},
 			},
-			[]v1.NetworkPolicyPort{{
+			&[]networkingv1.NetworkPolicyPort{{
 				Port:     &portName,
 				Protocol: &protoTCP,
 			}},
@@ -100,7 +103,7 @@ func TestExpandNetworkPolicyIngressPorts(t *testing.T) {
 					"port": "http",
 				},
 			},
-			[]v1.NetworkPolicyPort{{
+			&[]networkingv1.NetworkPolicyPort{{
 				Port: &portName,
 			}},
 		},
@@ -111,24 +114,24 @@ func TestExpandNetworkPolicyIngressPorts(t *testing.T) {
 					"protocol": "UDP",
 				},
 			},
-			[]v1.NetworkPolicyPort{{
+			&[]networkingv1.NetworkPolicyPort{{
 				Port:     &portNumerical,
 				Protocol: &protoUDP,
 			}},
 		},
 		{
 			[]interface{}{map[string]interface{}{}},
-			[]v1.NetworkPolicyPort{{}},
+			&[]networkingv1.NetworkPolicyPort{{}},
 		},
 		{
 			[]interface{}{},
-			[]v1.NetworkPolicyPort{},
+			&[]networkingv1.NetworkPolicyPort{},
 		},
 	}
 
 	for _, tc := range cases {
-		output, _ := expandNetworkPolicyPorts(tc.Input)
-		if !reflect.DeepEqual(output, &tc.ExpectedOutput) {
+		output := expandNetworkPolicyV1Ports(tc.Input)
+		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)
 		}

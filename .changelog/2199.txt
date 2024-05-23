@@ -1,0 +1,39 @@
+```release-note:feature
+`resource/kubernetes_pod`: add a new volume type `ephemeral` to `spec.volume` to support generic ephemeral volumes.
+```
+
+```release-note:feature
+`resource/kubernetes_pod_v1`: add a new volume type `ephemeral` to `spec.volume` to support generic ephemeral volumes.
+```
+
+```release-note:feature
+`resource/kubernetes_deployment`: add a new volume type `ephemeral` to `spec.template.spec.volume` to support generic ephemeral volumes.
+```
+
+```release-note:feature
+`resource/kubernetes_deployment_v1`: add a new volume type `ephemeral` to `spec.template.spec.volume` to support generic ephemeral volumes.
+```
+
+```release-note:feature
+`resource/kubernetes_daemonset`: add a new volume type `ephemeral` to `spec.template.spec..volume` to support generic ephemeral volumes.
+```
+
+```release-note:feature
+`resource/kubernetes_daemon_set_v1`: add a new volume type `ephemeral` to `spec.template.spec.volume` to support generic ephemeral volumes.
+```
+
+```release-note:feature
+`resource/kubernetes_job`: add a new volume type `ephemeral` to `spec.template.spec.volume` to support generic ephemeral volumes.
+```
+
+```release-note:feature
+`resource/kubernetes_job_v1`: add a new volume type `ephemeral` to `spec.template.spec.volume` to support generic ephemeral volumes.
+```
+
+```release-note:feature
+`resource/kubernetes_cron_job`: add a new volume type `ephemeral` to `spec.job_template.spec.template.spec.volume` to support generic ephemeral volumes.
+```
+
+```release-note:feature
+`resource/kubernetes_cron_job_v1`: add a new volume type `ephemeral` to `spec.job_template.spec.template.spec.volume` to support generic ephemeral volumes.
+```

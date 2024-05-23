@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 # These variable declarations are only used for interactive testing.
 # The test code will template in different variable declarations with a default value when running the test.
 #

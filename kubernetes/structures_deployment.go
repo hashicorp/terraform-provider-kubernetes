@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -7,9 +10,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
-func flattenDeploymentSpec(in appsv1.DeploymentSpec, d *schema.ResourceData) ([]interface{}, error) {
+func flattenDeploymentSpec(in appsv1.DeploymentSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	att["min_ready_seconds"] = in.MinReadySeconds
 
@@ -37,7 +41,7 @@ func flattenDeploymentSpec(in appsv1.DeploymentSpec, d *schema.ResourceData) ([]
 	}
 	template := make(map[string]interface{})
 	template["spec"] = podSpec
-	template["metadata"] = flattenMetadata(in.Template.ObjectMeta, d, "spec.0.template.0.")
+	template["metadata"] = flattenMetadataFields(in.Template.ObjectMeta)
 	att["template"] = []interface{}{template}
 
 	return []interface{}{att}, nil
@@ -76,15 +80,15 @@ func expandDeploymentSpec(deployment []interface{}) (*appsv1.DeploymentSpec, err
 
 	obj.MinReadySeconds = int32(in["min_ready_seconds"].(int))
 	obj.Paused = in["paused"].(bool)
-	obj.ProgressDeadlineSeconds = ptrToInt32(int32(in["progress_deadline_seconds"].(int)))
+	obj.ProgressDeadlineSeconds = ptr.To(int32(in["progress_deadline_seconds"].(int)))
 	if v, ok := in["replicas"].(string); ok && v != "" {
 		i, err := strconv.ParseInt(v, 10, 32)
 		if err != nil {
 			return obj, err
 		}
-		obj.Replicas = ptrToInt32(int32(i))
+		obj.Replicas = ptr.To(int32(i))
 	}
-	obj.RevisionHistoryLimit = ptrToInt32(int32(in["revision_history_limit"].(int)))
+	obj.RevisionHistoryLimit = ptr.To(int32(in["revision_history_limit"].(int)))
 
 	if v, ok := in["selector"].([]interface{}); ok && len(v) > 0 {
 		obj.Selector = expandLabelSelector(v)

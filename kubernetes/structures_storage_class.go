@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -46,7 +49,7 @@ func expandStorageClassMatchLabelExpressions(l []interface{}) []v1.TopologySelec
 	if len(l) == 0 || l[0] == nil {
 		return []v1.TopologySelectorLabelRequirement{}
 	}
-	obj := make([]v1.TopologySelectorLabelRequirement, len(l), len(l))
+	obj := make([]v1.TopologySelectorLabelRequirement, len(l))
 	for i, n := range l {
 		in := n.(map[string]interface{})
 		obj[i] = v1.TopologySelectorLabelRequirement{
@@ -68,7 +71,7 @@ func flattenStorageClassAllowedTopologies(in []v1.TopologySelectorTerm) []interf
 }
 
 func flattenStorageClassMatchLabelExpressions(in []v1.TopologySelectorLabelRequirement) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
 		m["key"] = n.Key

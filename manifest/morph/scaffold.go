@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package morph
 
 import (
@@ -13,13 +16,14 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 		return tftypes.Value{}, fmt.Errorf("type cannot be nil")
 	}
 	if !v.IsKnown() {
-		return v, nil
+		return tftypes.NewValue(t, tftypes.UnknownValue), nil
 	}
 	switch {
 	case t.Is(tftypes.Object{}):
 		atts := t.(tftypes.Object).AttributeTypes
 		var vals map[string]tftypes.Value
 		ovals := make(map[string]tftypes.Value, len(atts))
+		otypes := make(map[string]tftypes.Type, len(atts))
 		err := v.As(&vals)
 		if err != nil {
 			return tftypes.Value{}, p.NewError(err)
@@ -31,11 +35,9 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 				return tftypes.Value{}, np.NewError(err)
 			}
 			ovals[name] = nv
-			if nv.Type().Is(tftypes.Tuple{}) {
-				atts[name] = nv.Type()
-			}
+			otypes[name] = nv.Type()
 		}
-		return tftypes.NewValue(tftypes.Object{AttributeTypes: atts}, ovals), nil
+		return tftypes.NewValue(tftypes.Object{AttributeTypes: otypes}, ovals), nil
 	case t.Is(tftypes.Map{}):
 		if v.IsNull() {
 			return tftypes.NewValue(t, tftypes.UnknownValue), nil
@@ -47,7 +49,7 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 		}
 		for name, el := range vals {
 			np := p.WithElementKeyString(name)
-			nv, err := DeepUnknown(t.(tftypes.Map).AttributeType, el, np)
+			nv, err := DeepUnknown(t.(tftypes.Map).ElementType, el, np)
 			if err != nil {
 				return tftypes.Value{}, np.NewError(err)
 			}
@@ -65,7 +67,7 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 			}
 			atts = make([]tftypes.Type, len(v.Type().(tftypes.Tuple).ElementTypes))
 			for i := range v.Type().(tftypes.Tuple).ElementTypes {
-				atts[i] = t.(tftypes.Tuple).ElementTypes[0]
+				atts[i] = v.Type().(tftypes.Tuple).ElementTypes[i]
 			}
 		}
 		var vals []tftypes.Value
@@ -74,7 +76,7 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 			return tftypes.Value{}, p.NewError(err)
 		}
 		for i, et := range atts {
-			np := p.WithElementKeyInt(int64(i))
+			np := p.WithElementKeyInt(i)
 			nv, err := DeepUnknown(et, vals[i], np)
 			if err != nil {
 				return tftypes.Value{}, np.NewError(err)
@@ -99,7 +101,7 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 			elt = t.(tftypes.Set).ElementType
 		}
 		for i, el := range vals {
-			np := p.WithElementKeyInt(int64(i))
+			np := p.WithElementKeyInt(i)
 			nv, err := DeepUnknown(elt, el, np)
 			if err != nil {
 				return tftypes.Value{}, np.NewError(err)

@@ -1,0 +1,28 @@
+---
+subcategory: "admissionregistration/v1"
+page_title: "Kubernetes: kubernetes_mutating_webhook_configuration_v1"
+description: |-
+  Mutating Webhook Configuration configures a mutating admission webhook
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/mutating_webhook_configuration_v1/example_1.tf"}}
+
+## API version support
+
+The provider supports clusters running either `v1` or `v1beta1` of the Admission Registration API.
+
+## Import
+
+Mutating Webhook Configuration can be imported using the name, e.g.
+
+```
+$ terraform import kubernetes_mutating_webhook_configuration_v1.example terraform-example
+```

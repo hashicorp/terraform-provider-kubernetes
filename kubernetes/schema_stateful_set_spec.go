@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -99,6 +102,36 @@ func statefulSetSpecFields() map[string]*schema.Schema {
 			Description: "A list of claims that pods are allowed to reference. Every claim in this list must have at least one matching (by name) volumeMount in one container in the template.",
 			Elem: &schema.Resource{
 				Schema: persistentVolumeClaimFields(),
+			},
+		},
+		"persistent_volume_claim_retention_policy": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Computed:    true,
+			Description: "The field controls if and how PVCs are deleted during the lifecycle of a StatefulSet.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"when_deleted": {
+						Type:        schema.TypeString,
+						Description: "This field controls what happens when a Statefulset is deleted. Default is Retain.",
+						Optional:    true,
+						Default:     "Retain",
+						ValidateFunc: validation.StringInSlice([]string{
+							"Retain",
+							"Delete",
+						}, false),
+					},
+					"when_scaled": {
+						Type:        schema.TypeString,
+						Description: "This field controls what happens when a Statefulset is scaled. Default is Retain.",
+						Optional:    true,
+						Default:     "Retain",
+						ValidateFunc: validation.StringInSlice([]string{
+							"Retain",
+							"Delete",
+						}, false),
+					},
+				},
 			},
 		},
 	}

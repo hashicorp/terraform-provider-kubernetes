@@ -1,0 +1,3 @@
+```release-note:feature
+`kubernetes/resource_kubernetes_pod.go`: add `ephemeral` volume type to pod specification [GH-2032]
+```

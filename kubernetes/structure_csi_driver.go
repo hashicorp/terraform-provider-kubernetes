@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	storage "k8s.io/api/storage/v1beta1"
+	"k8s.io/utils/ptr"
 )
 
 func expandCSIDriverSpec(l []interface{}) storage.CSIDriverSpec {
@@ -13,11 +17,11 @@ func expandCSIDriverSpec(l []interface{}) storage.CSIDriverSpec {
 	obj := storage.CSIDriverSpec{}
 
 	if v, ok := in["attach_required"].(bool); ok {
-		obj.AttachRequired = ptrToBool(v)
+		obj.AttachRequired = ptr.To(v)
 	}
 
 	if v, ok := in["pod_info_on_mount"].(bool); ok {
-		obj.PodInfoOnMount = ptrToBool(v)
+		obj.PodInfoOnMount = ptr.To(v)
 	}
 
 	if v, ok := in["volume_lifecycle_modes"].([]interface{}); ok && len(v) > 0 {
@@ -28,14 +32,14 @@ func expandCSIDriverSpec(l []interface{}) storage.CSIDriverSpec {
 }
 
 func expandCSIDriverVolumeLifecycleModes(l []interface{}) []storage.VolumeLifecycleMode {
-	lifecycleModes := make([]storage.VolumeLifecycleMode, 0, 0)
+	lifecycleModes := make([]storage.VolumeLifecycleMode, 0)
 	for _, lifecycleMode := range l {
 		lifecycleModes = append(lifecycleModes, storage.VolumeLifecycleMode(lifecycleMode.(string)))
 	}
 	return lifecycleModes
 }
 
-func flattenCSIDriverSpec(in storage.CSIDriverSpec) ([]interface{}, error) {
+func flattenCSIDriverSpec(in storage.CSIDriverSpec) []interface{} {
 	att := make(map[string]interface{})
 
 	att["attach_required"] = in.AttachRequired
@@ -48,11 +52,11 @@ func flattenCSIDriverSpec(in storage.CSIDriverSpec) ([]interface{}, error) {
 		att["volume_lifecycle_modes"] = in.VolumeLifecycleModes
 	}
 
-	return []interface{}{att}, nil
+	return []interface{}{att}
 }
 
-func patchCSIDriverSpec(keyPrefix, pathPrefix string, d *schema.ResourceData) (*PatchOperations, error) {
-	ops := make(PatchOperations, 0, 0)
+func patchCSIDriverSpec(keyPrefix, pathPrefix string, d *schema.ResourceData) *PatchOperations {
+	ops := make(PatchOperations, 0)
 	if d.HasChange(keyPrefix + "attach_required") {
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/attachRequired",
@@ -74,5 +78,5 @@ func patchCSIDriverSpec(keyPrefix, pathPrefix string, d *schema.ResourceData) (*
 		})
 	}
 
-	return &ops, nil
+	return &ops
 }

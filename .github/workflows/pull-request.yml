@@ -6,12 +6,14 @@ jobs:
   triage:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/labeler@v3
+    - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3 
+      with:
+        repository: "hashicorp/terraform-provider-kubernetes"
+    - uses: actions/labeler@8558fd74291d67161a8a78ce36a881fa63b766a9 # v5.0.0
       with:
         configuration-path: .github/labeler-pull-request-triage.yml
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
-    # See also: https://github.com/CodelyTV/pr-size-labeler/pull/26
-    - uses: bflad/pr-size-labeler@7df62b12a176513631973abfe151d2b6213c3f12
+    - uses: CodelyTV/pr-size-labeler@54ef36785e9f4cb5ecf1949cfc9b00dbb621d761 # v1.8.1
       with:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         xs_label: 'size/XS'

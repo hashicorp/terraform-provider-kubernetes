@@ -1,8 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -99,6 +104,60 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 				Attribute: kp,
 			})
 		}
+	}
+
+	// validate timeouts block
+	timeouts := s.getTimeouts(configVal)
+	path := tftypes.NewAttributePath().WithAttributeName("timeouts")
+	for k, v := range timeouts {
+		_, err := time.ParseDuration(v)
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity:  tfprotov5.DiagnosticSeverityError,
+				Summary:   fmt.Sprintf("Error parsing timeout for %q", k),
+				Detail:    err.Error(),
+				Attribute: path.WithAttributeName(k),
+			})
+		}
+	}
+
+	// validate wait block
+	if wait, ok := configVal["wait"]; ok && !wait.IsNull() {
+		var waitBlock []tftypes.Value
+		wait.As(&waitBlock)
+		if len(waitBlock) > 0 {
+			var w map[string]tftypes.Value
+			waitBlock[0].As(&w)
+			waiters := []string{}
+			for k, ww := range w {
+				if !ww.IsNull() {
+					if k == "condition" {
+						var cb []tftypes.Value
+						ww.As(&cb)
+						if len(cb) == 0 {
+							continue
+						}
+					}
+					waiters = append(waiters, k)
+				}
+			}
+			if len(waiters) > 1 {
+				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+					Severity:  tfprotov5.DiagnosticSeverityError,
+					Summary:   "Invalid wait configuration",
+					Detail:    fmt.Sprintf(`You may only set one of "%s".`, strings.Join(waiters, "\", \"")),
+					Attribute: tftypes.NewAttributePath().WithAttributeName("wait"),
+				})
+			}
+		}
+	}
+	if waitFor, ok := configVal["wait_for"]; ok && !waitFor.IsNull() {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity:  tfprotov5.DiagnosticSeverityWarning,
+			Summary:   "Deprecated Attribute",
+			Detail:    `The "wait_for" attribute has been deprecated. Please use the "wait" block instead.`,
+			Attribute: tftypes.NewAttributePath().WithAttributeName("wait_for"),
+		})
 	}
 
 	return resp, nil

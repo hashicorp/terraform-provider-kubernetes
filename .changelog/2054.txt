@@ -1,0 +1,3 @@
+```release-note:bug
+`resource/kubernetes_manifest`: Fix a panic when constructing the diagnostic message about incompatible attribute types
+```

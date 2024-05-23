@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package morph
 
 import (
@@ -96,6 +99,205 @@ func TestDeepUnknown(t *testing.T) {
 					}),
 				}),
 			}),
+		},
+		"unequal-tuples": {
+			In: deepUnknownTestSampleInput{
+				T: tftypes.Tuple{ElementTypes: []tftypes.Type{
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"first": tftypes.Tuple{ElementTypes: []tftypes.Type{
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+								"second": tftypes.Number,
+							}},
+						}},
+					}},
+				}},
+				V: tftypes.NewValue(
+					tftypes.Tuple{ElementTypes: []tftypes.Type{
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+							"first": tftypes.Tuple{ElementTypes: []tftypes.Type{
+								tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+									"second": tftypes.Number,
+								}},
+							}},
+						}},
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+							"first": tftypes.Tuple{ElementTypes: []tftypes.Type{
+								tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+									"second": tftypes.Number,
+								}},
+								tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+									"second": tftypes.Number,
+								}},
+							}},
+						}},
+					}},
+					[]tftypes.Value{
+						tftypes.NewValue(
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+								"first": tftypes.Tuple{ElementTypes: []tftypes.Type{
+									tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+										"second": tftypes.Number,
+									}},
+								}},
+							}},
+							map[string]tftypes.Value{
+								"first": tftypes.NewValue(
+									tftypes.Tuple{ElementTypes: []tftypes.Type{
+										tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+											"second": tftypes.Number,
+										}},
+									}},
+									[]tftypes.Value{
+										tftypes.NewValue(
+											tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+												"second": tftypes.Number,
+											}},
+											map[string]tftypes.Value{
+												"second": tftypes.NewValue(tftypes.Number, 10),
+											},
+										),
+									},
+								),
+							},
+						),
+						tftypes.NewValue(
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+								"first": tftypes.Tuple{ElementTypes: []tftypes.Type{
+									tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+										"second": tftypes.Number,
+									}},
+									tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+										"second": tftypes.Number,
+									}},
+								}},
+							}},
+							map[string]tftypes.Value{
+								"first": tftypes.NewValue(
+									tftypes.Tuple{ElementTypes: []tftypes.Type{
+										tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+											"second": tftypes.Number,
+										}},
+										tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+											"second": tftypes.Number,
+										}},
+									}},
+									[]tftypes.Value{
+										tftypes.NewValue(
+											tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+												"second": tftypes.Number,
+											}},
+											map[string]tftypes.Value{
+												"second": tftypes.NewValue(tftypes.Number, 10),
+											},
+										),
+										tftypes.NewValue(
+											tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+												"second": tftypes.Number,
+											}},
+											map[string]tftypes.Value{
+												"second": tftypes.NewValue(tftypes.Number, 10),
+											},
+										),
+									},
+								),
+							},
+						),
+					},
+				),
+			},
+			Out: tftypes.NewValue(
+				tftypes.Tuple{ElementTypes: []tftypes.Type{
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"first": tftypes.Tuple{ElementTypes: []tftypes.Type{
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+								"second": tftypes.Number,
+							}},
+						}},
+					}},
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"first": tftypes.Tuple{ElementTypes: []tftypes.Type{
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+								"second": tftypes.Number,
+							}},
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+								"second": tftypes.Number,
+							}},
+						}},
+					}},
+				}},
+				[]tftypes.Value{
+					tftypes.NewValue(
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+							"first": tftypes.Tuple{ElementTypes: []tftypes.Type{
+								tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+									"second": tftypes.Number,
+								}},
+							}},
+						}},
+						map[string]tftypes.Value{
+							"first": tftypes.NewValue(
+								tftypes.Tuple{ElementTypes: []tftypes.Type{
+									tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+										"second": tftypes.Number,
+									}},
+								}},
+								[]tftypes.Value{
+									tftypes.NewValue(
+										tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+											"second": tftypes.Number,
+										}},
+										map[string]tftypes.Value{
+											"second": tftypes.NewValue(tftypes.Number, 10),
+										},
+									),
+								},
+							),
+						},
+					),
+					tftypes.NewValue(
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+							"first": tftypes.Tuple{ElementTypes: []tftypes.Type{
+								tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+									"second": tftypes.Number,
+								}},
+								tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+									"second": tftypes.Number,
+								}},
+							}},
+						}},
+						map[string]tftypes.Value{
+							"first": tftypes.NewValue(
+								tftypes.Tuple{ElementTypes: []tftypes.Type{
+									tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+										"second": tftypes.Number,
+									}},
+									tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+										"second": tftypes.Number,
+									}},
+								}},
+								[]tftypes.Value{
+									tftypes.NewValue(
+										tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+											"second": tftypes.Number,
+										}},
+										map[string]tftypes.Value{
+											"second": tftypes.NewValue(tftypes.Number, 10),
+										},
+									),
+									tftypes.NewValue(
+										tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+											"second": tftypes.Number,
+										}},
+										map[string]tftypes.Value{
+											"second": tftypes.NewValue(tftypes.Number, 10),
+										},
+									),
+								},
+							),
+						},
+					),
+				},
+			),
 		},
 	}
 	for n, s := range samples {

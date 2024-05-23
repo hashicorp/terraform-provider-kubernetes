@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -5,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/autoscaling/v1"
+	"k8s.io/utils/ptr"
 )
 
 func expandHorizontalPodAutoscalerSpec(in []interface{}) (*api.HorizontalPodAutoscalerSpec, error) {
@@ -17,13 +21,13 @@ func expandHorizontalPodAutoscalerSpec(in []interface{}) (*api.HorizontalPodAuto
 		spec.MaxReplicas = int32(v.(int))
 	}
 	if v, ok := m["min_replicas"].(int); ok && v > 0 {
-		spec.MinReplicas = ptrToInt32(int32(v))
+		spec.MinReplicas = ptr.To(int32(v))
 	}
 	if v, ok := m["scale_target_ref"]; ok {
 		spec.ScaleTargetRef = expandCrossVersionObjectReference(v.([]interface{}))
 	}
 	if v, ok := m["target_cpu_utilization_percentage"].(int); ok && v > 0 {
-		spec.TargetCPUUtilizationPercentage = ptrToInt32(int32(v))
+		spec.TargetCPUUtilizationPercentage = ptr.To(int32(v))
 	}
 
 	return spec, nil

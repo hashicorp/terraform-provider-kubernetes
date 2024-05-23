@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 data "aws_region" "current" {
 }
 
@@ -9,7 +12,7 @@ resource "aws_vpc" "k8s-acc" {
   enable_dns_support   = true
   enable_dns_hostnames = true
   tags = {
-    "Name"                                        = "terraform-eks-k8s-acc-node"
+    "Name"                                      = "terraform-eks-k8s-acc-node"
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
   }
 }

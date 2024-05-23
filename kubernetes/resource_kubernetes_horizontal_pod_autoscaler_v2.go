@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -7,11 +10,26 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	"k8s.io/apimachinery/pkg/api/errors"
+
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 )
+
+func resourceKubernetesHorizontalPodAutoscalerV2() *schema.Resource {
+	return &schema.Resource{
+		Description:   "Horizontal Pod Autoscaler automatically scales the number of pods in a replication controller, deployment or replica set based on observed CPU utilization.",
+		CreateContext: resourceKubernetesHorizontalPodAutoscalerV2Create,
+		ReadContext:   resourceKubernetesHorizontalPodAutoscalerV2Read,
+		UpdateContext: resourceKubernetesHorizontalPodAutoscalerV2Update,
+		DeleteContext: resourceKubernetesHorizontalPodAutoscalerV2Delete,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
+		Schema: horizontalPodAutoscalerSchemaV2(),
+	}
+}
 
 func resourceKubernetesHorizontalPodAutoscalerV2Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -25,12 +43,12 @@ func resourceKubernetesHorizontalPodAutoscalerV2Create(ctx context.Context, d *s
 		return diag.FromErr(err)
 	}
 
-	hpa := autoscalingv2beta2.HorizontalPodAutoscaler{
+	hpa := autoscalingv2.HorizontalPodAutoscaler{
 		ObjectMeta: metadata,
 		Spec:       *spec,
 	}
 	log.Printf("[INFO] Creating new horizontal pod autoscaler: %#v", hpa)
-	out, err := conn.AutoscalingV2beta2().HorizontalPodAutoscalers(metadata.Namespace).Create(ctx, &hpa, metav1.CreateOptions{})
+	out, err := conn.AutoscalingV2().HorizontalPodAutoscalers(metadata.Namespace).Create(ctx, &hpa, metav1.CreateOptions{})
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -60,13 +78,13 @@ func resourceKubernetesHorizontalPodAutoscalerV2Read(ctx context.Context, d *sch
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Reading horizontal pod autoscaler %s", name)
-	hpa, err := conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
+	hpa, err := conn.AutoscalingV2().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received horizontal pod autoscaler: %#v", hpa)
-	err = d.Set("metadata", flattenMetadata(hpa.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(hpa.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -102,7 +120,7 @@ func resourceKubernetesHorizontalPodAutoscalerV2Update(ctx context.Context, d *s
 		return diag.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating horizontal pod autoscaler %q: %v", name, string(data))
-	out, err := conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Patch(ctx, name, types.JSONPatchType, data, metav1.PatchOptions{})
+	out, err := conn.AutoscalingV2().HorizontalPodAutoscalers(namespace).Patch(ctx, name, types.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return diag.Errorf("Failed to update horizontal pod autoscaler: %s", err)
 	}
@@ -123,8 +141,11 @@ func resourceKubernetesHorizontalPodAutoscalerV2Delete(ctx context.Context, d *s
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Deleting horizontal pod autoscaler: %#v", name)
-	err = conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	err = conn.AutoscalingV2().HorizontalPodAutoscalers(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 
@@ -146,7 +167,7 @@ func resourceKubernetesHorizontalPodAutoscalerV2Exists(ctx context.Context, d *s
 	}
 
 	log.Printf("[INFO] Checking horizontal pod autoscaler %s", name)
-	_, err = conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
+	_, err = conn.AutoscalingV2().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			return false, nil

@@ -1,0 +1,3 @@
+```release-note:bug
+`kubernetes/schema_pod_spec.go`: Fix unexpected volumes appearing on plan
+```

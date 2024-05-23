@@ -1,12 +1,18 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/robfig/cron"
 	"k8s.io/apimachinery/pkg/api/resource"
 	apiValidation "k8s.io/apimachinery/pkg/api/validation"
 	utilValidation "k8s.io/apimachinery/pkg/util/validation"
@@ -118,9 +124,9 @@ func validatePortName(value interface{}, key string) (ws []string, es []error) {
 	return
 }
 func validatePortNumOrName(value interface{}, key string) (ws []string, es []error) {
-	switch value.(type) {
+	switch t := value.(type) {
 	case string:
-		intVal, err := strconv.Atoi(value.(string))
+		intVal, err := strconv.Atoi(t)
 		if err != nil {
 			return validatePortName(value, key)
 		}
@@ -233,36 +239,30 @@ func validateModeBits(value interface{}, key string) (ws []string, es []error) {
 	return
 }
 
-func validateAttributeValueDoesNotContain(searchString string) schema.SchemaValidateFunc {
-	return func(v interface{}, k string) (ws []string, errors []error) {
-		input := v.(string)
-		if strings.Contains(input, searchString) {
-			errors = append(errors, fmt.Errorf(
-				"%q must not contain %q",
-				k, searchString))
-		}
-		return
-	}
-}
+// validatePath makes sure path:
+//   - is not abs path
+//   - does not contain any '..' elements
+//   - does not start with '..'
+func validatePath(v interface{}, k string) ([]string, []error) {
+	// inherit logic from the Kubernetes API validation: https://github.com/kubernetes/kubernetes/blob/master/pkg/apis/core/validation/validation.go
+	targetPath := v.(string)
 
-func validateAttributeValueIsIn(validValues []string) schema.SchemaValidateFunc {
-	return func(v interface{}, k string) (ws []string, errors []error) {
-		input := v.(string)
-		isValid := false
-		for _, s := range validValues {
-			if s == input {
-				isValid = true
-				break
-			}
-		}
-		if !isValid {
-			errors = append(errors, fmt.Errorf(
-				"%q must contain a value from %#v, got %q",
-				k, validValues, input))
-		}
-		return
-
+	if path.IsAbs(targetPath) {
+		return []string{}, []error{errors.New("must be a relative path")}
 	}
+
+	parts := strings.Split(filepath.ToSlash(targetPath), "/")
+	for _, part := range parts {
+		if part == ".." {
+			return []string{}, []error{fmt.Errorf("%q must not contain %q", k, "..")}
+		}
+	}
+
+	if strings.HasPrefix(targetPath, "..") {
+		return []string{}, []error{fmt.Errorf("%q must not start with %q", k, "..")}
+	}
+
+	return []string{}, []error{}
 }
 
 func validateTypeStringNullableIntOrPercent(v interface{}, key string) (ws []string, es []error) {
@@ -289,4 +289,15 @@ func validateTypeStringNullableIntOrPercent(v interface{}, key string) (ws []str
 	}
 
 	return
+}
+
+func validateCronExpression(v interface{}, k string) ([]string, []error) {
+	errors := make([]error, 0)
+
+	_, err := cron.ParseStandard(v.(string))
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q should be an valid Cron expression", k))
+	}
+
+	return []string{}, errors
 }

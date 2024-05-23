@@ -1,12 +1,16 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	v1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
+	"k8s.io/utils/ptr"
 )
 
 // Flatteners
 
-func flattenAPIServiceSpec(in v1.APIServiceSpec) []interface{} {
+func flattenAPIServiceV1Spec(in v1.APIServiceSpec) []interface{} {
 	att := make(map[string]interface{})
 
 	att["ca_bundle"] = string(in.CABundle)
@@ -32,7 +36,7 @@ func flattenAPIServiceSpec(in v1.APIServiceSpec) []interface{} {
 
 // Expanders
 
-func expandAPIServiceSpec(l []interface{}) v1.APIServiceSpec {
+func expandAPIServiceV1Spec(l []interface{}) v1.APIServiceSpec {
 	if len(l) == 0 || l[0] == nil {
 		return v1.APIServiceSpec{}
 	}
@@ -59,7 +63,7 @@ func expandAPIServiceSpec(l []interface{}) v1.APIServiceSpec {
 		}
 
 		if v, ok := m["port"].(int); ok && v > 0 {
-			obj.Service.Port = ptrToInt32(int32(v))
+			obj.Service.Port = ptr.To(int32(v))
 		}
 	}
 	if v, ok := in["version"].(string); ok {

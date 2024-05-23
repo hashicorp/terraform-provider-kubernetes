@@ -1,17 +1,21 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"k8s.io/api/certificates/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 	"log"
 	"reflect"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"k8s.io/api/certificates/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kretry "k8s.io/client-go/util/retry"
 )
 
 func resourceKubernetesCertificateSigningRequest() *schema.Resource {
@@ -20,6 +24,7 @@ func resourceKubernetesCertificateSigningRequest() *schema.Resource {
 	apiDocStatus := v1beta1.CertificateSigningRequestStatus{}.SwaggerDoc()
 
 	return &schema.Resource{
+		Description:   "Use this resource to generate TLS certificates using Kubernetes. This is a *logical resource*, so it contributes only to the current Terraform state and does not persist any external managed resources. This resource enables automation of [X.509](https://www.itu.int/rec/T-REC-X.509) credential provisioning (including TLS/SSL certificates). It does this by creating a CertificateSigningRequest using the Kubernetes API, which generates a certificate from the Certificate Authority (CA) configured in the Kubernetes cluster. The CSR can be approved automatically by Terraform, or it can be approved by a custom controller running in Kubernetes. See [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/) for all available options pertaining to CertificateSigningRequests.",
 		CreateContext: resourceKubernetesCertificateSigningRequestCreate,
 		ReadContext:   resourceKubernetesCertificateSigningRequestRead,
 		DeleteContext: resourceKubernetesCertificateSigningRequestDelete,
@@ -112,7 +117,7 @@ func resourceKubernetesCertificateSigningRequestCreate(ctx context.Context, d *s
 	defer conn.CertificatesV1beta1().CertificateSigningRequests().Delete(ctx, csrName, metav1.DeleteOptions{})
 
 	if d.Get("auto_approve").(bool) {
-		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		retryErr := kretry.RetryOnConflict(kretry.DefaultRetry, func() error {
 			pendingCSR, getErr := conn.CertificatesV1beta1().CertificateSigningRequests().Get(ctx, csrName, metav1.GetOptions{})
 			if getErr != nil {
 				return getErr
@@ -134,7 +139,7 @@ func resourceKubernetesCertificateSigningRequestCreate(ctx context.Context, d *s
 	}
 
 	log.Printf("[DEBUG] Waiting for certificate to be issued")
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Target:  []string{"Issued"},
 		Pending: []string{"", "Approved"},
 		Timeout: d.Timeout(schema.TimeoutCreate),
@@ -173,7 +178,7 @@ func resourceKubernetesCertificateSigningRequestCreate(ctx context.Context, d *s
 			return out, csrStatus, nil
 		},
 	}
-	_, err = stateConf.WaitForState()
+	_, err = stateConf.WaitForStateContext(ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}

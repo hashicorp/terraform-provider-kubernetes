@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -8,7 +11,7 @@ import (
 
 func podTemplateFields(owner string) map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
-		"metadata": metadataSchema(owner, true),
+		"metadata": namespacedMetadataSchemaIsTemplate(owner, true, true),
 		"spec": {
 			Type:        schema.TypeList,
 			Description: fmt.Sprintf("Spec of the pods owned by the %s", owner),

@@ -1,0 +1,4 @@
+```release-note:bug
+`resource/kubernetes_node_taint`: Fix an issue when updating taint does not update the ID in the state file.
+
+```

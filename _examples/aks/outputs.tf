@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 output "kubeconfig_path" {
   value = abspath("${path.root}/kubeconfig")
 }

@@ -1,20 +1,23 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	api "k8s.io/api/core/v1"
-	"k8s.io/api/networking/v1"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // Flatteners
 
-func flattenNetworkPolicySpec(in v1.NetworkPolicySpec) []interface{} {
+func flattenNetworkPolicyV1Spec(in networkingv1.NetworkPolicySpec) []interface{} {
 	att := make(map[string]interface{})
-	att["ingress"] = flattenNetworkPolicyIngress(in.Ingress)
-	att["egress"] = flattenNetworkPolicyEgress(in.Egress)
+	att["ingress"] = flattenNetworkPolicyV1Ingress(in.Ingress)
+	att["egress"] = flattenNetworkPolicyV1Egress(in.Egress)
 	if len(in.PodSelector.MatchExpressions) > 0 || len(in.PodSelector.MatchLabels) > 0 {
 		att["pod_selector"] = flattenLabelSelector(&in.PodSelector)
 	} else {
@@ -26,38 +29,38 @@ func flattenNetworkPolicySpec(in v1.NetworkPolicySpec) []interface{} {
 	return []interface{}{att}
 }
 
-func flattenNetworkPolicyIngress(in []v1.NetworkPolicyIngressRule) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+func flattenNetworkPolicyV1Ingress(in []networkingv1.NetworkPolicyIngressRule) []interface{} {
+	att := make([]interface{}, len(in))
 	for i, ingress := range in {
 		m := make(map[string]interface{})
 		if ingress.Ports != nil && len(ingress.Ports) > 0 {
-			m["ports"] = flattenNetworkPolicyPorts(ingress.Ports)
+			m["ports"] = flattenNetworkPolicyV1Ports(ingress.Ports)
 		}
 		if ingress.From != nil && len(ingress.From) > 0 {
-			m["from"] = flattenNetworkPolicyPeer(ingress.From)
+			m["from"] = flattenNetworkPolicyV1Peer(ingress.From)
 		}
 		att[i] = m
 	}
 	return att
 }
 
-func flattenNetworkPolicyEgress(in []v1.NetworkPolicyEgressRule) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+func flattenNetworkPolicyV1Egress(in []networkingv1.NetworkPolicyEgressRule) []interface{} {
+	att := make([]interface{}, len(in))
 	for i, egress := range in {
 		m := make(map[string]interface{})
 		if egress.Ports != nil && len(egress.Ports) > 0 {
-			m["ports"] = flattenNetworkPolicyPorts(egress.Ports)
+			m["ports"] = flattenNetworkPolicyV1Ports(egress.Ports)
 		}
 		if egress.To != nil && len(egress.To) > 0 {
-			m["to"] = flattenNetworkPolicyPeer(egress.To)
+			m["to"] = flattenNetworkPolicyV1Peer(egress.To)
 		}
 		att[i] = m
 	}
 	return att
 }
 
-func flattenNetworkPolicyPorts(in []v1.NetworkPolicyPort) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+func flattenNetworkPolicyV1Ports(in []networkingv1.NetworkPolicyPort) []interface{} {
+	att := make([]interface{}, len(in))
 	for i, port := range in {
 		m := make(map[string]interface{})
 		if port.Port != nil {
@@ -71,8 +74,8 @@ func flattenNetworkPolicyPorts(in []v1.NetworkPolicyPort) []interface{} {
 	return att
 }
 
-func flattenNetworkPolicyPeer(in []v1.NetworkPolicyPeer) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+func flattenNetworkPolicyV1Peer(in []networkingv1.NetworkPolicyPeer) []interface{} {
+	att := make([]interface{}, len(in))
 	for i, peer := range in {
 		m := make(map[string]interface{})
 		if peer.IPBlock != nil {
@@ -89,7 +92,7 @@ func flattenNetworkPolicyPeer(in []v1.NetworkPolicyPeer) []interface{} {
 	return att
 }
 
-func flattenIPBlock(in *v1.IPBlock) []interface{} {
+func flattenIPBlock(in *networkingv1.IPBlock) []interface{} {
 	att := make(map[string]interface{})
 	if in.CIDR != "" {
 		att["cidr"] = in.CIDR
@@ -102,8 +105,8 @@ func flattenIPBlock(in *v1.IPBlock) []interface{} {
 
 // Expanders
 
-func expandNetworkPolicySpec(in []interface{}) (*v1.NetworkPolicySpec, error) {
-	spec := v1.NetworkPolicySpec{}
+func expandNetworkPolicyV1Spec(in []interface{}) (*networkingv1.NetworkPolicySpec, error) {
+	spec := networkingv1.NetworkPolicySpec{}
 
 	if len(in) == 0 || in[0] == nil {
 		return nil, fmt.Errorf("failed to expand NetworkPolicy.Spec: null or empty input")
@@ -115,30 +118,27 @@ func expandNetworkPolicySpec(in []interface{}) (*v1.NetworkPolicySpec, error) {
 	}
 	spec.PodSelector = *expandLabelSelector(m["pod_selector"].([]interface{}))
 	if v, ok := m["ingress"].([]interface{}); ok && len(v) > 0 {
-		ingress, err := expandNetworkPolicyIngress(v)
+		ingress, err := expandNetworkPolicyV1Ingress(v)
 		if err != nil {
 			return nil, err
 		}
 		spec.Ingress = *ingress
 	}
 	if v, ok := m["egress"].([]interface{}); ok && len(v) > 0 {
-		egress, err := expandNetworkPolicyEgress(v)
+		egress, err := expandNetworkPolicyV1Egress(v)
 		if err != nil {
 			return nil, err
 		}
 		spec.Egress = *egress
 	}
-	policyTypes, err := expandNetworkPolicyTypes(m["policy_types"].([]interface{}))
-	if err != nil {
-		return nil, err
-	}
-	spec.PolicyTypes = *policyTypes
+
+	spec.PolicyTypes = expandNetworkPolicyV1Types(m["policy_types"].([]interface{}))
 
 	return &spec, nil
 }
 
-func expandNetworkPolicyIngress(l []interface{}) (*[]v1.NetworkPolicyIngressRule, error) {
-	ingresses := make([]v1.NetworkPolicyIngressRule, len(l), len(l))
+func expandNetworkPolicyV1Ingress(l []interface{}) (*[]networkingv1.NetworkPolicyIngressRule, error) {
+	ingresses := make([]networkingv1.NetworkPolicyIngressRule, len(l))
 	for i, ingress := range l {
 		if ingress == nil {
 			continue
@@ -147,16 +147,12 @@ func expandNetworkPolicyIngress(l []interface{}) (*[]v1.NetworkPolicyIngressRule
 		if !ok {
 			continue
 		}
-		ingresses[i] = v1.NetworkPolicyIngressRule{}
+		ingresses[i] = networkingv1.NetworkPolicyIngressRule{}
 		if v, ok := in["ports"].([]interface{}); ok && len(v) > 0 {
-			policyPorts, err := expandNetworkPolicyPorts(v)
-			if err != nil {
-				return nil, err
-			}
-			ingresses[i].Ports = *policyPorts
+			ingresses[i].Ports = *expandNetworkPolicyV1Ports(v)
 		}
 		if v, ok := in["from"].([]interface{}); ok && len(v) > 0 {
-			policyPeers, err := expandNetworkPolicyPeer(v)
+			policyPeers, err := expandNetworkPolicyV1Peer(v)
 			if err != nil {
 				return nil, err
 			}
@@ -166,8 +162,8 @@ func expandNetworkPolicyIngress(l []interface{}) (*[]v1.NetworkPolicyIngressRule
 	return &ingresses, nil
 }
 
-func expandNetworkPolicyEgress(l []interface{}) (*[]v1.NetworkPolicyEgressRule, error) {
-	egresses := make([]v1.NetworkPolicyEgressRule, len(l), len(l))
+func expandNetworkPolicyV1Egress(l []interface{}) (*[]networkingv1.NetworkPolicyEgressRule, error) {
+	egresses := make([]networkingv1.NetworkPolicyEgressRule, len(l))
 	for i, egress := range l {
 		if egress == nil {
 			continue
@@ -176,16 +172,12 @@ func expandNetworkPolicyEgress(l []interface{}) (*[]v1.NetworkPolicyEgressRule, 
 		if !ok {
 			continue
 		}
-		egresses[i] = v1.NetworkPolicyEgressRule{}
+		egresses[i] = networkingv1.NetworkPolicyEgressRule{}
 		if v, ok := in["ports"].([]interface{}); ok && len(v) > 0 {
-			policyPorts, err := expandNetworkPolicyPorts(v)
-			if err != nil {
-				return nil, err
-			}
-			egresses[i].Ports = *policyPorts
+			egresses[i].Ports = *expandNetworkPolicyV1Ports(v)
 		}
 		if v, ok := in["to"].([]interface{}); ok && len(v) > 0 {
-			policyPeers, err := expandNetworkPolicyPeer(v)
+			policyPeers, err := expandNetworkPolicyV1Peer(v)
 			if err != nil {
 				return nil, err
 			}
@@ -195,8 +187,8 @@ func expandNetworkPolicyEgress(l []interface{}) (*[]v1.NetworkPolicyEgressRule, 
 	return &egresses, nil
 }
 
-func expandNetworkPolicyPorts(l []interface{}) (*[]v1.NetworkPolicyPort, error) {
-	policyPorts := make([]v1.NetworkPolicyPort, len(l), len(l))
+func expandNetworkPolicyV1Ports(l []interface{}) *[]networkingv1.NetworkPolicyPort {
+	policyPorts := make([]networkingv1.NetworkPolicyPort, len(l))
 	for i, port := range l {
 		in, ok := port.(map[string]interface{})
 		if !ok {
@@ -207,15 +199,15 @@ func expandNetworkPolicyPorts(l []interface{}) (*[]v1.NetworkPolicyPort, error) 
 			policyPorts[i].Port = &val
 		}
 		if in["protocol"] != nil && in["protocol"] != "" {
-			v := api.Protocol(in["protocol"].(string))
+			v := corev1.Protocol(in["protocol"].(string))
 			policyPorts[i].Protocol = &v
 		}
 	}
-	return &policyPorts, nil
+	return &policyPorts
 }
 
-func expandNetworkPolicyPeer(l []interface{}) (*[]v1.NetworkPolicyPeer, error) {
-	policyPeers := make([]v1.NetworkPolicyPeer, len(l), len(l))
+func expandNetworkPolicyV1Peer(l []interface{}) (*[]networkingv1.NetworkPolicyPeer, error) {
+	policyPeers := make([]networkingv1.NetworkPolicyPeer, len(l))
 	for i, peer := range l {
 		if peer == nil {
 			continue
@@ -241,8 +233,8 @@ func expandNetworkPolicyPeer(l []interface{}) (*[]v1.NetworkPolicyPeer, error) {
 	return &policyPeers, nil
 }
 
-func expandIPBlock(l []interface{}) (*v1.IPBlock, error) {
-	ipBlock := v1.IPBlock{}
+func expandIPBlock(l []interface{}) (*networkingv1.IPBlock, error) {
+	ipBlock := networkingv1.IPBlock{}
 	if len(l) == 0 || l[0] == nil {
 		return nil, fmt.Errorf("failed to expand IPBlock: null or empty input")
 	}
@@ -259,21 +251,21 @@ func expandIPBlock(l []interface{}) (*v1.IPBlock, error) {
 	return &ipBlock, nil
 }
 
-func expandNetworkPolicyTypes(l []interface{}) (*[]v1.PolicyType, error) {
-	policyTypes := make([]v1.PolicyType, 0, 0)
+func expandNetworkPolicyV1Types(l []interface{}) []networkingv1.PolicyType {
+	policyTypes := make([]networkingv1.PolicyType, 0)
 	for _, policyType := range l {
-		policyTypes = append(policyTypes, v1.PolicyType(policyType.(string)))
+		policyTypes = append(policyTypes, networkingv1.PolicyType(policyType.(string)))
 	}
-	return &policyTypes, nil
+	return policyTypes
 }
 
 // Patchers
 
-func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData) (*PatchOperations, error) {
-	ops := make(PatchOperations, 0, 0)
+func patchNetworkPolicyV1Spec(keyPrefix, pathPrefix string, d *schema.ResourceData) (*PatchOperations, error) {
+	ops := make(PatchOperations, 0)
 	if d.HasChange(keyPrefix + "ingress") {
 		oldV, _ := d.GetChange(keyPrefix + "ingress")
-		ingress, err := expandNetworkPolicyIngress(d.Get(keyPrefix + "ingress").([]interface{}))
+		ingress, err := expandNetworkPolicyV1Ingress(d.Get(keyPrefix + "ingress").([]interface{}))
 		if err != nil {
 			return nil, err
 		}
@@ -291,7 +283,7 @@ func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData
 	}
 	if d.HasChange(keyPrefix + "egress") {
 		oldV, _ := d.GetChange(keyPrefix + "egress")
-		egress, err := expandNetworkPolicyEgress(d.Get(keyPrefix + "egress").([]interface{}))
+		egress, err := expandNetworkPolicyV1Egress(d.Get(keyPrefix + "egress").([]interface{}))
 		if err != nil {
 			return nil, err
 		}
@@ -314,13 +306,9 @@ func patchNetworkPolicySpec(keyPrefix, pathPrefix string, d *schema.ResourceData
 		})
 	}
 	if d.HasChange(keyPrefix + "policy_types") {
-		policyTypes, err := expandNetworkPolicyTypes(d.Get(keyPrefix + "policy_types").([]interface{}))
-		if err != nil {
-			return nil, err
-		}
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/policyTypes",
-			Value: *policyTypes,
+			Value: expandNetworkPolicyV1Types(d.Get(keyPrefix + "policy_types").([]interface{})),
 		})
 	}
 	return &ops, nil

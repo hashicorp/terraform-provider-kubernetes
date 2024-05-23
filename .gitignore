@@ -5,6 +5,7 @@ example.tf
 kubeconfig
 terraform.tfplan
 terraform.tfstate
+.terraform.tfstate.lock.info
 bin/
 modules-dev/
 /pkg/
@@ -25,9 +26,13 @@ website/node_modules
 *.iml
 *.test
 *.iml
-
+.terraform.lock.hcl
 website/vendor
 
 # Test exclusions
 !command/test-fixtures/**/*.tfstate
 !command/test-fixtures/**/.terraform/
+
+# output binary
+terraform-provider-kubernetes
+__debug_bin

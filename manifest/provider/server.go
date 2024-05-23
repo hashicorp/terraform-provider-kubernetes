@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -48,57 +51,34 @@ func (s *RawProviderServer) PrepareProviderConfig(ctx context.Context, req *tfpr
 	return resp, nil
 }
 
+// GetMetadata function
+func (s *RawProviderServer) GetMetadata(ctx context.Context, req *tfprotov5.GetMetadataRequest) (*tfprotov5.GetMetadataResponse, error) {
+	s.logger.Trace("[GetMetadata][Request]\n%s\n", dump(*req))
+
+	sch := GetProviderResourceSchema()
+	rs := make([]tfprotov5.ResourceMetadata, 0, len(sch))
+	for k := range sch {
+		rs = append(rs, tfprotov5.ResourceMetadata{TypeName: k})
+	}
+
+	sch = GetProviderDataSourceSchema()
+	ds := make([]tfprotov5.DataSourceMetadata, 0, len(sch))
+	for k := range sch {
+		ds = append(ds, tfprotov5.DataSourceMetadata{TypeName: k})
+	}
+
+	resp := &tfprotov5.GetMetadataResponse{
+		Resources:   rs,
+		DataSources: ds,
+	}
+	return resp, nil
+}
+
 // ValidateDataSourceConfig function
 func (s *RawProviderServer) ValidateDataSourceConfig(ctx context.Context, req *tfprotov5.ValidateDataSourceConfigRequest) (*tfprotov5.ValidateDataSourceConfigResponse, error) {
 	s.logger.Trace("[ValidateDataSourceConfig][Request]\n%s\n", dump(*req))
 	resp := &tfprotov5.ValidateDataSourceConfigResponse{}
 	return resp, nil
-}
-
-// UpgradeResourceState isn't really useful in this provider, but we have to loop the state back through to keep Terraform happy.
-func (s *RawProviderServer) UpgradeResourceState(ctx context.Context, req *tfprotov5.UpgradeResourceStateRequest) (*tfprotov5.UpgradeResourceStateResponse, error) {
-	resp := &tfprotov5.UpgradeResourceStateResponse{}
-	resp.Diagnostics = []*tfprotov5.Diagnostic{}
-
-	sch := GetProviderResourceSchema()
-	rt := GetObjectTypeFromSchema(sch[req.TypeName])
-
-	rv, err := req.RawState.Unmarshal(rt)
-	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to decode old state during upgrade",
-			Detail:   err.Error(),
-		})
-		return resp, nil
-	}
-	us, err := tfprotov5.NewDynamicValue(rt, rv)
-	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to encode new state during upgrade",
-			Detail:   err.Error(),
-		})
-	}
-	resp.UpgradedState = &us
-
-	return resp, nil
-}
-
-// ImportResourceState function
-func (*RawProviderServer) ImportResourceState(ctx context.Context, req *tfprotov5.ImportResourceStateRequest) (*tfprotov5.ImportResourceStateResponse, error) {
-	// Terraform only gives us the schema name of the resource and an ID string, as passed by the user on the command line.
-	// The ID should be a combination of a Kubernetes GRV and a namespace/name type of resource identifier.
-	// Without the user supplying the GRV there is no way to fully identify the resource when making the Get API call to K8s.
-	// Presumably the Kubernetes API machinery already has a standard for expressing such a group. We should look there first.
-	return nil, status.Errorf(codes.Unimplemented, "method ImportResourceState not implemented")
-}
-
-// ReadDataSource function
-func (s *RawProviderServer) ReadDataSource(ctx context.Context, req *tfprotov5.ReadDataSourceRequest) (*tfprotov5.ReadDataSourceResponse, error) {
-	s.logger.Trace("[ReadDataSource][Request]\n%s\n", dump(*req))
-
-	return nil, status.Errorf(codes.Unimplemented, "method ReadDataSource not implemented")
 }
 
 // StopProvider function

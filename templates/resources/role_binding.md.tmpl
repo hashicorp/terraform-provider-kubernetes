@@ -1,0 +1,24 @@
+---
+subcategory: "rbac/v1"
+page_title: "Kubernetes: kubernetes_role_binding"
+description: |-
+  A RoleBinding may be used to grant permission at the namespace level.
+---
+
+# {{ .Name }} 
+
+{{ .SchemaMarkdown }}
+
+A RoleBinding may be used to grant permission at the namespace level
+
+## Example Usage
+
+{{tffile "examples/resources/role_binding/example_1.tf"}}
+
+## Import
+
+RoleBinding can be imported using the name, e.g.
+
+```
+$ terraform import kubernetes_role_binding.example default/terraform-name
+```

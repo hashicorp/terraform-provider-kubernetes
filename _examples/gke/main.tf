@@ -1,7 +1,10 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 terraform {
   required_providers {
     kubernetes = {
-      source = "hashicorp/kubernetes"
+      source  = "hashicorp/kubernetes"
       version = ">= 2.0.3"
     }
     google = {
@@ -29,7 +32,7 @@ data "google_client_config" "default" {
 
 # Defer reading the cluster data until the GKE cluster exists.
 data "google_container_cluster" "default" {
-  name = local.cluster_name
+  name       = local.cluster_name
   depends_on = [module.gke-cluster]
 }
 
@@ -57,8 +60,8 @@ module "gke-cluster" {
 }
 
 module "kubernetes-config" {
-  depends_on       = [module.gke-cluster]
-  source           = "./kubernetes-config"
-  cluster_name     = local.cluster_name
+  depends_on   = [module.gke-cluster]
+  source       = "./kubernetes-config"
+  cluster_name = local.cluster_name
 }
 

@@ -1,3 +1,7 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+//go:build acceptance
 // +build acceptance
 
 package state
@@ -22,6 +26,11 @@ type Helper struct {
 func NewHelper(tfstate *tfjson.State) *Helper {
 	return &Helper{tfstate}
 }
+func (s *Helper) ResourceExists(t *testing.T, resourceAddress string) bool {
+	t.Helper()
+	_, err := getAttributesValuesFromResource(s, resourceAddress)
+	return err == nil
+}
 
 // getAttributesValuesFromResource pulls out the AttributeValues field from the resource at the given address
 func getAttributesValuesFromResource(state *Helper, address string) (interface{}, error) {
@@ -31,6 +40,17 @@ func getAttributesValuesFromResource(state *Helper, address string) (interface{}
 		}
 	}
 	return nil, fmt.Errorf("Could not find resource %q in state", address)
+}
+
+// getOutputValues gets the given output name value from the state
+func getOutputValues(state *Helper, name string) (interface{}, error) {
+	for n, v := range state.Values.Outputs {
+		if n == name {
+			return v.Value, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Could not find output %q in state", name)
 }
 
 var errFieldNotFound = fmt.Errorf("Field not found")
@@ -98,6 +118,18 @@ func (s *Helper) GetAttributeValue(t *testing.T, address string) interface{} {
 	value, err := findAttributeValue(attrs, attributeAddress)
 	if err != nil {
 		t.Fatalf("%q does not exist", address)
+	}
+
+	return value
+}
+
+// GetOutputValue gets the given output name value from the state
+func (s *Helper) GetOutputValue(t *testing.T, name string) interface{} {
+	t.Helper()
+
+	value, err := getOutputValues(s, name)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	return value
@@ -202,4 +234,11 @@ func (s *Helper) AssertAttributeFalse(t *testing.T, address string) {
 	} else {
 		assert.False(t, v, fmt.Sprintf("Address: %q", address))
 	}
+}
+
+// AssertOutputExists will fail the test if the output does not exist
+func (s *Helper) AssertOutputExists(t *testing.T, name string) {
+	t.Helper()
+
+	s.GetOutputValue(t, name)
 }

@@ -1,0 +1,3 @@
+```release-note:new-resource
+`kubernetes/resource_kubernetes_endpointslice.go`: Add kubernetes_endpoint_slice resource
+```

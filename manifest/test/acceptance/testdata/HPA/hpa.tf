@@ -1,8 +1,11 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 
 resource "kubernetes_manifest" "test" {
 
   manifest = {
-    apiVersion = "autoscaling/v2beta2"
+    apiVersion = "autoscaling/v2"
     kind       = "HorizontalPodAutoscaler"
     metadata = {
       name      = var.name

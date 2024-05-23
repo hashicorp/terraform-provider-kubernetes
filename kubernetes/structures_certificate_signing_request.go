@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -19,7 +22,7 @@ func expandCertificateSigningRequestSpec(csr []interface{}) (*v1beta1.Certificat
 }
 
 func expandCertificateSigningRequestUsages(s []interface{}) []v1beta1.KeyUsage {
-	out := make([]v1beta1.KeyUsage, len(s), len(s))
+	out := make([]v1beta1.KeyUsage, len(s))
 	for i, v := range s {
 		out[i] = v1beta1.KeyUsage(v.(string))
 	}

@@ -1,0 +1,3 @@
+```release-note:bug
+`resource/kubernetes_cron_job_v1`: Fix annotation logic to prevent internalkeys from being removed in templates
+```

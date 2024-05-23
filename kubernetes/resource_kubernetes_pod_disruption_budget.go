@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
@@ -23,6 +26,7 @@ var (
 
 func resourceKubernetesPodDisruptionBudget() *schema.Resource {
 	return &schema.Resource{
+		Description:   "A Pod Disruption Budget limits the number of pods of a replicated application that are down simultaneously from voluntary disruptions. For example, a quorum-based application would like to ensure that the number of replicas running is never brought below the number needed for a quorum. A web front end might want to ensure that the number of replicas serving load never falls below a certain percentage of the total.",
 		CreateContext: resourceKubernetesPodDisruptionBudgetCreate,
 		ReadContext:   resourceKubernetesPodDisruptionBudgetRead,
 		UpdateContext: resourceKubernetesPodDisruptionBudgetUpdate,
@@ -159,7 +163,7 @@ func resourceKubernetesPodDisruptionBudgetRead(ctx context.Context, d *schema.Re
 	}
 
 	log.Printf("[INFO] Received pod disruption budget: %#v", pdb)
-	err = d.Set("metadata", flattenMetadata(pdb.ObjectMeta, d))
+	err = d.Set("metadata", flattenMetadata(pdb.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -186,6 +190,9 @@ func resourceKubernetesPodDisruptionBudgetDelete(ctx context.Context, d *schema.
 	log.Printf("[INFO] Deleting pod disruption budget %#v", name)
 	err = conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return nil
+		}
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}

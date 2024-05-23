@@ -1,17 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
-	tf5server "github.com/hashicorp/terraform-plugin-go/tfprotov5/server"
+	tf5server "github.com/hashicorp/terraform-plugin-go/tfprotov5/tf5server"
 )
 
 var providerName = "registry.terraform.io/hashicorp/kubernetes"
@@ -24,9 +27,15 @@ func Serve(ctx context.Context, logger hclog.Logger) error {
 // Provider
 func Provider() func() tfprotov5.ProviderServer {
 	var logLevel string
-	logLevel, ok := os.LookupEnv("TF_LOG")
+	var ok bool = false
+	for _, ev := range []string{"TF_LOG_PROVIDER_KUBERNETES", "TF_LOG_PROVIDER", "TF_LOG"} {
+		logLevel, ok = os.LookupEnv(ev)
+		if ok {
+			break
+		}
+	}
 	if !ok {
-		logLevel = "info"
+		logLevel = "off"
 	}
 
 	return func() tfprotov5.ProviderServer {
@@ -39,12 +48,13 @@ func Provider() func() tfprotov5.ProviderServer {
 
 // ServeTest is for serving the provider in-process when testing.
 // Returns a ReattachInfo or an error.
-func ServeTest(ctx context.Context, logger hclog.Logger) (tfexec.ReattachInfo, error) {
+func ServeTest(ctx context.Context, logger hclog.Logger, t *testing.T) (tfexec.ReattachInfo, error) {
 	reattachConfigCh := make(chan *plugin.ReattachConfig)
 
 	go tf5server.Serve(providerName,
 		func() tfprotov5.ProviderServer { return &(RawProviderServer{logger: logger}) },
 		tf5server.WithDebug(ctx, reattachConfigCh, nil),
+		tf5server.WithLoggingSink(t),
 		tf5server.WithGoPluginLogger(logger),
 	)
 
@@ -69,19 +79,6 @@ func convertReattachConfig(reattachConfig *plugin.ReattachConfig) tfexec.Reattac
 			String:  reattachConfig.Addr.String(),
 		},
 	}
-}
-
-// printReattachConfig prints the line the user needs to copy and paste
-// to set the TF_REATTACH_PROVIDERS variable
-func printReattachConfig(config *plugin.ReattachConfig) {
-	reattachStr, err := json.Marshal(map[string]tfexec.ReattachConfig{
-		providerName: convertReattachConfig(config),
-	})
-	if err != nil {
-		fmt.Printf("Error building reattach string: %s", err)
-		return
-	}
-	fmt.Printf("# Provider server started\nexport TF_REATTACH_PROVIDERS='%s'\n", string(reattachStr))
 }
 
 // waitForReattachConfig blocks until a ReattachConfig is recieved on the

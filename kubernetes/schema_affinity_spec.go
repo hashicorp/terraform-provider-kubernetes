@@ -1,8 +1,9 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
-	"regexp"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
@@ -122,6 +123,15 @@ func nodeSelectorRequirementsFields() map[string]*schema.Schema {
 				},
 			},
 		},
+		"match_fields": {
+			Type:        schema.TypeList,
+			Description: "A list of node selector requirements by node's fields. The requirements are ANDed.",
+			Optional:    true,
+			ForceNew:    true,
+			Elem: &schema.Resource{
+				Schema: nodeSelectorRequirementFields(),
+			},
+		},
 	}
 }
 
@@ -164,10 +174,9 @@ func podAffinityTermFields() map[string]*schema.Schema {
 			Set:         schema.HashString,
 		},
 		"topology_key": {
-			Type:         schema.TypeString,
-			Description:  "empty topology key is interpreted by the scheduler as 'all topologies'",
-			Optional:     true,
-			ValidateFunc: validation.StringMatch(regexp.MustCompile(`^.+$`), "value cannot be empty"),
+			Type:        schema.TypeString,
+			Description: "empty topology key is interpreted by the scheduler as 'all topologies'",
+			Required:    true,
 		},
 	}
 }

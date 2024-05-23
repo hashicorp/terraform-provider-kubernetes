@@ -1,91 +1,109 @@
-provider "google" {
-  // Provider settings to be provided via ENV variables
-}
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
 
 data "google_compute_zones" "available" {
+}
+
+data "google_container_engine_versions" "supported" {
+  location       = data.google_compute_zones.available.names[0]
+  version_prefix = var.cluster_version
 }
 
 resource "random_id" "cluster_name" {
   byte_length = 10
 }
 
-resource "random_id" "username" {
-  byte_length = 14
-}
-
-resource "random_id" "password" {
-  byte_length = 16
-}
-
-variable "kubernetes_version" {
-  default = ""
-}
-
-variable "workers_count" {
-  default = "3"
-}
-
-data "google_container_engine_versions" "supported" {
-  location           = data.google_compute_zones.available.names[0]
-  version_prefix = var.kubernetes_version
+resource "google_service_account" "default" {
+  account_id   = "tf-k8s-${random_id.cluster_name.hex}"
+  display_name = "Kubernetes provider SA"
 }
 
 resource "google_container_cluster" "primary" {
-  name               = "tf-acc-test-${random_id.cluster_name.hex}"
+  provider           = google-beta
+  name               = var.cluster_name != "" ? var.cluster_name : "tf-acc-test-${random_id.cluster_name.hex}"
   location           = data.google_compute_zones.available.names[0]
-  initial_node_count = var.workers_count
   node_version       = data.google_container_engine_versions.supported.latest_node_version
   min_master_version = data.google_container_engine_versions.supported.latest_master_version
+
+  // Alpha features are disabled by default and can be enabled by GKE for a particular GKE control plane version.
+  // Creating an alpha cluster enables all alpha features by default.
+  // Ref: https://cloud.google.com/kubernetes-engine/docs/concepts/feature-gates
+  enable_kubernetes_alpha = var.enable_alpha
+
+  service_external_ips_config {
+    enabled = true
+  }
 
   node_locations = [
     data.google_compute_zones.available.names[1],
   ]
 
-  master_auth {
-    username = random_id.username.hex
-    password = random_id.password.hex
+  node_pool {
+    initial_node_count = var.node_count
+    management {
+      auto_repair  = var.enable_alpha ? false : true
+      auto_upgrade = var.enable_alpha ? false : true
+    }
+    node_config {
+      machine_type    = var.instance_type
+      service_account = google_service_account.default.email
+      oauth_scopes = [
+        "https://www.googleapis.com/auth/cloud-platform",
+        "https://www.googleapis.com/auth/compute",
+        "https://www.googleapis.com/auth/devstorage.read_only",
+        "https://www.googleapis.com/auth/logging.write",
+        "https://www.googleapis.com/auth/monitoring",
+      ]
+    }
   }
 
-  node_config {
-    machine_type = "n1-standard-4"
+  deletion_protection = false
+}
 
-    oauth_scopes = [
-      "https://www.googleapis.com/auth/compute",
-      "https://www.googleapis.com/auth/devstorage.read_only",
-      "https://www.googleapis.com/auth/logging.write",
-      "https://www.googleapis.com/auth/monitoring",
+locals {
+  kubeconfig = {
+    apiVersion = "v1"
+    kind       = "Config"
+    preferences = {
+      colors = true
+    }
+    current-context = google_container_cluster.primary.name
+    contexts = [
+      {
+        name = google_container_cluster.primary.name
+        context = {
+          cluster   = google_container_cluster.primary.name
+          user      = google_service_account.default.email
+          namespace = "default"
+        }
+      }
+    ]
+    clusters = [
+      {
+        name = google_container_cluster.primary.name
+        cluster = {
+          server                     = "https://${google_container_cluster.primary.endpoint}"
+          certificate-authority-data = google_container_cluster.primary.master_auth[0].cluster_ca_certificate
+        }
+      }
+    ]
+    users = [
+      {
+        name = google_service_account.default.email
+        user = {
+          exec = {
+            apiVersion         = "client.authentication.k8s.io/v1beta1"
+            command            = "gke-gcloud-auth-plugin"
+            interactiveMode    = "Never"
+            provideClusterInfo = true
+          }
+        }
+      }
     ]
   }
 }
 
-data "template_file" "kubeconfig" {
-  template = file("${path.module}/kubeconfig-template.yaml")
-
-  vars = {
-    cluster_name    = google_container_cluster.primary.name
-    user_name       = google_container_cluster.primary.master_auth[0].username
-    user_password   = google_container_cluster.primary.master_auth[0].password
-    endpoint        = google_container_cluster.primary.endpoint
-    cluster_ca      = google_container_cluster.primary.master_auth[0].cluster_ca_certificate
-    client_cert     = google_container_cluster.primary.master_auth[0].client_certificate
-    client_cert_key = google_container_cluster.primary.master_auth[0].client_key
-  }
-}
-
 resource "local_file" "kubeconfig" {
-  content  = data.template_file.kubeconfig.rendered
+  content  = yamlencode(local.kubeconfig)
   filename = "${path.module}/kubeconfig"
 }
-
-output "google_zone" {
-  value = data.google_compute_zones.available.names[0]
-}
-
-output "node_version" {
-  value = google_container_cluster.primary.node_version
-}
-
-output "kubeconfig_path" {
-  value = local_file.kubeconfig.filename
-}
-

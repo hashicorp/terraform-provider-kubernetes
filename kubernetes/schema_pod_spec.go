@@ -1,7 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
-	api "k8s.io/api/core/v1"
+	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -38,7 +43,7 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Type:        schema.TypeList,
 			Optional:    true,
 			ForceNew:    false, // always updatable
-			Description: "List of containers belonging to the pod. Containers cannot currently be added or removed. There must be at least one container in a Pod. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/containers",
+			Description: "List of containers belonging to the pod. Containers cannot currently be added or removed. There must be at least one container in a Pod. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/",
 			Elem: &schema.Resource{
 				Schema: containerFields(isUpdatable),
 			},
@@ -73,13 +78,13 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Optional:    true,
 			Computed:    isComputed,
 			ForceNew:    !isUpdatable,
-			Default:     conditionalDefault(!isComputed, string(api.DNSClusterFirst)),
-			Description: "Set DNS policy for containers within the pod. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'. Optional: Defaults to 'ClusterFirst', see [Kubernetes reference](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy).",
+			Default:     conditionalDefault(!isComputed, string(corev1.DNSClusterFirst)),
+			Description: "Set DNS policy for containers within the pod. Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'. Defaults to 'ClusterFirst'. More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy",
 			ValidateFunc: validation.StringInSlice([]string{
-				string(api.DNSClusterFirst),
-				string(api.DNSClusterFirstWithHostNet),
-				string(api.DNSDefault),
-				string(api.DNSNone),
+				string(corev1.DNSClusterFirst),
+				string(corev1.DNSClusterFirstWithHostNet),
+				string(corev1.DNSDefault),
+				string(corev1.DNSNone),
 			}, false),
 		},
 		"dns_config": {
@@ -198,16 +203,32 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			ForceNew:    !isUpdatable,
 			Description: "Specifies the hostname of the Pod If not specified, the pod's hostname will be set to a system-defined value.",
 		},
+		"os": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			MaxItems:    1,
+			Description: "Specifies the OS of the containers in the pod.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"name": {
+						Type:         schema.TypeString,
+						Required:     true,
+						ValidateFunc: validation.StringInSlice([]string{string(corev1.Linux), string(corev1.Windows)}, false),
+						Description:  "Name is the name of the operating system. The currently supported values are linux and windows.",
+					},
+				},
+			},
+		},
 		"image_pull_secrets": {
 			Type:        schema.TypeList,
-			Description: "ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. For example, in the case of docker, only DockerConfig type secrets are honored. More info: http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod",
+			Description: "ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. For example, in the case of docker, only DockerConfig type secrets are honored. More info: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod",
 			Optional:    true,
 			Computed:    true,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"name": {
 						Type:        schema.TypeString,
-						Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+						Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 						Required:    true,
 						ForceNew:    !isUpdatable,
 					},
@@ -226,7 +247,14 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Optional:    true,
 			Computed:    isComputed,
 			ForceNew:    !isUpdatable,
-			Description: "NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node. More info: http://kubernetes.io/docs/user-guide/node-selection.",
+			Description: "NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/.",
+		},
+		"runtime_class_name": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    isComputed,
+			ForceNew:    !isUpdatable,
+			Description: "RuntimeClassName is a feature for selecting the container runtime configuration. The container runtime configuration is used to run a Pod's containers. More info: https://kubernetes.io/docs/concepts/containers/runtime-class",
 		},
 		"priority_class_name": {
 			Type:        schema.TypeString,
@@ -240,12 +268,12 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Optional:    true,
 			Computed:    isComputed,
 			ForceNew:    !isUpdatable,
-			Default:     conditionalDefault(!isComputed, string(api.RestartPolicyAlways)),
-			Description: "Restart policy for all containers within the pod. One of Always, OnFailure, Never. More info: http://kubernetes.io/docs/user-guide/pod-states#restartpolicy.",
+			Default:     conditionalDefault(!isComputed, string(corev1.RestartPolicyAlways)),
+			Description: "Restart policy for all containers within the pod. One of Always, OnFailure, Never. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy.",
 			ValidateFunc: validation.StringInSlice([]string{
-				string(api.RestartPolicyAlways),
-				string(api.RestartPolicyOnFailure),
-				string(api.RestartPolicyNever),
+				string(corev1.RestartPolicyAlways),
+				string(corev1.RestartPolicyOnFailure),
+				string(corev1.RestartPolicyNever),
 			}, false),
 		},
 		"security_context": {
@@ -283,6 +311,15 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						ValidateFunc: validateTypeStringNullableInt,
 						ForceNew:     !isUpdatable,
 					},
+					"seccomp_profile": {
+						Type:        schema.TypeList,
+						Description: "The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows.",
+						Optional:    true,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: seccompProfileField(isUpdatable),
+						},
+					},
 					"se_linux_options": {
 						Type:        schema.TypeList,
 						Description: "The SELinux context to be applied to all containers. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.",
@@ -292,6 +329,16 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 							Schema: seLinuxOptionsField(isUpdatable),
 						},
 					},
+					"fs_group_change_policy": {
+						Type:        schema.TypeString,
+						Description: "fsGroupChangePolicy defines behavior of changing ownership and permission of the volume before being exposed inside Pod. This field will only apply to volume types which support fsGroup based ownership(and permissions). It will have no effect on ephemeral volume types such as: secret, configmaps and emptydir.",
+						Optional:    true,
+						ValidateFunc: validation.StringInSlice([]string{
+							string(corev1.FSGroupChangeAlways),
+							string(corev1.FSGroupChangeOnRootMismatch),
+						}, false),
+						ForceNew: !isUpdatable,
+					},
 					"supplemental_groups": {
 						Type:        schema.TypeSet,
 						Description: "A list of groups applied to the first process run in each container, in addition to the container's primary GID. If unspecified, no groups will be added to any container.",
@@ -299,6 +346,37 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						ForceNew:    !isUpdatable,
 						Elem: &schema.Schema{
 							Type: schema.TypeInt,
+						},
+					},
+					"windows_options": {
+						Type:        schema.TypeList,
+						MaxItems:    1,
+						Description: "The Windows specific settings applied to all containers. If unspecified, the options within a container's SecurityContext will be used. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. Note that this field cannot be set when spec.os.name is linux.",
+						Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"gmsa_credential_spec": {
+									Type:        schema.TypeString,
+									Description: "GMSACredentialSpec is where the GMSA admission webhook inlines the contents of the GMSA credential spec named by the GMSACredentialSpecName field",
+									Optional:    true,
+								},
+								"gmsa_credential_spec_name": {
+									Type:        schema.TypeString,
+									Description: "GMSACredentialSpecName is the name of the GMSA credential spec to use.",
+									Optional:    true,
+								},
+								"host_process": {
+									Type:        schema.TypeBool,
+									Description: "HostProcess determines if a container should be run as a 'Host Process' container. Default value is false.",
+									Default:     false,
+									Optional:    true,
+								},
+								"run_as_username": {
+									Type:        schema.TypeString,
+									Description: "The UserName in Windows to run the entrypoint of the container process. Defaults to the user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
+									Optional:    true,
+								},
+							},
 						},
 					},
 					"sysctl": {
@@ -324,6 +402,13 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 					},
 				},
 			},
+		},
+		"scheduler_name": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			ForceNew:    !isUpdatable,
+			Description: "If specified, the pod will be dispatched by specified scheduler. If not specified, the pod will be dispatched by default scheduler.",
 		},
 		"service_account_name": {
 			Type:        schema.TypeString,
@@ -367,9 +452,9 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.TaintEffectNoSchedule),
-							string(api.TaintEffectPreferNoSchedule),
-							string(api.TaintEffectNoExecute),
+							string(corev1.TaintEffectNoSchedule),
+							string(corev1.TaintEffectPreferNoSchedule),
+							string(corev1.TaintEffectNoExecute),
 						}, false),
 					},
 					"key": {
@@ -381,12 +466,12 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 					"operator": {
 						Type:        schema.TypeString,
 						Description: "Operator represents a key's relationship to the value. Valid operators are Exists and Equal. Defaults to Equal. Exists is equivalent to wildcard for value, so that a pod can tolerate all taints of a particular category.",
-						Default:     string(api.TolerationOpEqual),
+						Default:     string(corev1.TolerationOpEqual),
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.TolerationOpExists),
-							string(api.TolerationOpEqual),
+							string(corev1.TolerationOpExists),
+							string(corev1.TolerationOpEqual),
 						}, false),
 					},
 					"toleration_seconds": {
@@ -412,12 +497,42 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Description: "describes how a group of pods ought to spread across topology domains. Scheduler will schedule pods in a way which abides by the constraints.",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
+					"match_label_keys": {
+						Type:        schema.TypeSet,
+						Description: "is a set of pod label keys to select the pods over which spreading will be calculated.",
+						Optional:    true,
+						ForceNew:    !isUpdatable,
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
 					"max_skew": {
 						Type:         schema.TypeInt,
 						Description:  "describes the degree to which pods may be unevenly distributed.",
 						Optional:     true,
 						Default:      1,
 						ValidateFunc: validation.IntAtLeast(1),
+					},
+					"min_domains": {
+						Type:         schema.TypeInt,
+						Description:  "indicates a minimum number of eligible domains.",
+						Optional:     true,
+						ForceNew:     !isUpdatable,
+						ValidateFunc: validation.IntAtLeast(1),
+					},
+					"node_affinity_policy": {
+						Type:         schema.TypeString,
+						Description:  "indicates how we will treat Pod's nodeAffinity/nodeSelector when calculating pod topology spread skew.",
+						Optional:     true,
+						ForceNew:     !isUpdatable,
+						ValidateFunc: validation.StringInSlice([]string{string(corev1.NodeInclusionPolicyHonor), string(corev1.NodeInclusionPolicyIgnore)}, false),
+					},
+					"node_taints_policy": {
+						Type:         schema.TypeString,
+						Description:  "indicates how we will treat node taints when calculating pod topology spread skew.",
+						Optional:     true,
+						ForceNew:     !isUpdatable,
+						ValidateFunc: validation.StringInSlice([]string{string(corev1.NodeInclusionPolicyHonor), string(corev1.NodeInclusionPolicyIgnore)}, false),
 					},
 					"topology_key": {
 						Type:        schema.TypeString,
@@ -427,11 +542,11 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 					"when_unsatisfiable": {
 						Type:        schema.TypeString,
 						Description: "indicates how to deal with a pod if it doesn't satisfy the spread constraint.",
-						Default:     string(api.DoNotSchedule),
+						Default:     string(corev1.DoNotSchedule),
 						Optional:    true,
 						ValidateFunc: validation.StringInSlice([]string{
-							string(api.DoNotSchedule),
-							string(api.ScheduleAnyway),
+							string(corev1.DoNotSchedule),
+							string(corev1.ScheduleAnyway),
 						}, false),
 					},
 					"label_selector": {
@@ -448,8 +563,7 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 		"volume": {
 			Type:        schema.TypeList,
 			Optional:    true,
-			Computed:    true,
-			Description: "List of volumes that can be mounted by containers belonging to the pod. More info: http://kubernetes.io/docs/user-guide/volumes",
+			Description: "List of volumes that can be mounted by containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes",
 			Elem:        volumeSchema(isUpdatable),
 		},
 	}
@@ -486,7 +600,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 							"path": {
 								Type:         schema.TypeString,
 								Optional:     true,
-								ValidateFunc: validateAttributeValueDoesNotContain(".."),
+								ValidateFunc: validatePath,
 								Description:  `The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.`,
 							},
 						},
@@ -506,7 +620,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 				},
 				"name": {
 					Type:        schema.TypeString,
-					Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+					Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 					Optional:    true,
 				},
 			},
@@ -524,7 +638,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 					Type:         schema.TypeString,
 					Description:  "Target directory name. Must not contain or start with '..'. If '.' is supplied, the volume directory will be the git repository. Otherwise, if specified, the volume will contain the git repository in the subdirectory with the given name.",
 					Optional:     true,
-					ValidateFunc: validateAttributeValueDoesNotContain(".."),
+					ValidateFunc: validatePath,
 				},
 				"repository": {
 					Type:        schema.TypeString,
@@ -589,7 +703,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 							"path": {
 								Type:         schema.TypeString,
 								Required:     true,
-								ValidateFunc: validateAttributeValueDoesNotContain(".."),
+								ValidateFunc: validatePath,
 								Description:  `Path is the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'`,
 							},
 							"resource_field_ref": {
@@ -625,20 +739,29 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 		},
 	}
 
+	validEmptyDirMediums := []string{
+		string(corev1.StorageMediumDefault),
+		string(corev1.StorageMediumMemory),
+		string(corev1.StorageMediumHugePages),
+		// This is possibly not an exhaustive list, but it does cover the
+		// common cases from x86_64 architectures.
+		string(corev1.StorageMediumHugePagesPrefix) + "2Mi",
+		string(corev1.StorageMediumHugePagesPrefix) + "1Gi",
+	}
 	v["empty_dir"] = &schema.Schema{
 		Type:        schema.TypeList,
-		Description: "EmptyDir represents a temporary directory that shares a pod's lifetime. More info: http://kubernetes.io/docs/user-guide/volumes#emptydir",
+		Description: "EmptyDir represents a temporary directory that shares a pod's lifetime. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir",
 		Optional:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"medium": {
 					Type:         schema.TypeString,
-					Description:  `What type of storage medium should back this directory. The default is "" which means to use the node's default medium. Must be an empty string (default) or Memory. More info: http://kubernetes.io/docs/user-guide/volumes#emptydir`,
+					Description:  fmt.Sprintf(`What type of storage medium should back this directory. The default is "" which means to use the node's default medium. Must be one of %q. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir`, validEmptyDirMediums),
 					Optional:     true,
 					Default:      "",
 					ForceNew:     !isUpdatable,
-					ValidateFunc: validateAttributeValueIsIn([]string{"", "Memory"}),
+					ValidateFunc: validation.StringInSlice(validEmptyDirMediums, false),
 				},
 				"size_limit": {
 					Type:             schema.TypeString,
@@ -647,6 +770,60 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 					ForceNew:         !isUpdatable,
 					ValidateFunc:     validateResourceQuantity,
 					DiffSuppressFunc: suppressEquivalentResourceQuantity,
+				},
+			},
+		},
+	}
+
+	v["ephemeral"] = &schema.Schema{
+		Type:        schema.TypeList,
+		Description: "Represents an ephemeral volume that is handled by a normal storage driver. More info: https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#generic-ephemeral-volumes",
+		Optional:    true,
+		MaxItems:    1,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"volume_claim_template": {
+					Type:        schema.TypeList,
+					Description: "Will be used to create a stand-alone PVC to provision the volume. The pod in which this EphemeralVolumeSource is embedded will be the owner of the PVC.",
+					Required:    true,
+					MaxItems:    1,
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"metadata": {
+								Type:        schema.TypeList,
+								Description: "May contain labels and annotations that will be copied into the PVC when creating it. No other fields are allowed and will be rejected during validation.",
+								Optional:    true,
+								MaxItems:    1,
+								Elem: &schema.Resource{
+									Schema: map[string]*schema.Schema{
+										"annotations": {
+											Type:         schema.TypeMap,
+											Description:  "An unstructured key value map stored with the persistent volume claim that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/",
+											Optional:     true,
+											Elem:         &schema.Schema{Type: schema.TypeString},
+											ValidateFunc: validateAnnotations,
+										},
+										"labels": {
+											Type:         schema.TypeMap,
+											Description:  "Map of string keys and values that can be used to organize and categorize (scope and select) the persistent volume claim. May match selectors of replication controllers and services. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/",
+											Optional:     true,
+											Elem:         &schema.Schema{Type: schema.TypeString},
+											ValidateFunc: validateLabels,
+										},
+									},
+								},
+							},
+							"spec": {
+								Type:        schema.TypeList,
+								Description: "The specification for the PersistentVolumeClaim. The entire content is copied unchanged into the PVC that gets created from this template. The same fields as in a PersistentVolumeClaim are also valid here.",
+								Required:    true,
+								MaxItems:    1,
+								Elem: &schema.Resource{
+									Schema: persistentVolumeClaimSpecFields(),
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -676,7 +853,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 
 	v["secret"] = &schema.Schema{
 		Type:        schema.TypeList,
-		Description: "Secret represents a secret that should populate this volume. More info: http://kubernetes.io/docs/user-guide/volumes#secrets",
+		Description: "Secret represents a secret that should populate this volume. More info: https://kubernetes.io/docs/concepts/storage/volumes#secrets",
 		Optional:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{
@@ -708,7 +885,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 							"path": {
 								Type:         schema.TypeString,
 								Optional:     true,
-								ValidateFunc: validateAttributeValueDoesNotContain(".."),
+								ValidateFunc: validatePath,
 								Description:  "The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.",
 							},
 						},
@@ -721,7 +898,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 				},
 				"secret_name": {
 					Type:        schema.TypeString,
-					Description: "Name of the secret in the pod's namespace to use. More info: http://kubernetes.io/docs/user-guide/volumes#secrets",
+					Description: "Name of the secret in the pod's namespace to use. More info: https://kubernetes.io/docs/concepts/storage/volumes#secrets",
 					Optional:    true,
 				},
 			},
@@ -729,7 +906,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 	}
 	v["name"] = &schema.Schema{
 		Type:        schema.TypeString,
-		Description: "Volume's name. Must be a DNS_LABEL and unique within the pod. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+		Description: "Volume's name. Must be a DNS_LABEL and unique within the pod. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 		Optional:    true,
 	}
 
@@ -754,15 +931,15 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 					Elem: &schema.Resource{
 						Schema: map[string]*schema.Schema{
 							// identical to SecretVolumeSource but without the default mode and uses a local object reference as name instead of a secret name.
-							"secret": &schema.Schema{
+							"secret": {
 								Type:        schema.TypeList,
-								Description: "Secret represents a secret that should populate this volume. More info: http://kubernetes.io/docs/user-guide/volumes#secrets",
+								Description: "Secret represents a secret that should populate this volume. More info: https://kubernetes.io/docs/concepts/storage/volumes#secrets",
 								Optional:    true,
 								Elem: &schema.Resource{
 									Schema: map[string]*schema.Schema{
 										"name": {
 											Type:        schema.TypeString,
-											Description: "Name of the secret in the pod's namespace to use. More info: http://kubernetes.io/docs/user-guide/volumes#secrets",
+											Description: "Name of the secret in the pod's namespace to use. More info: https://kubernetes.io/docs/concepts/storage/volumes#secrets",
 											Optional:    true,
 										},
 										"items": {
@@ -785,7 +962,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 													"path": {
 														Type:         schema.TypeString,
 														Optional:     true,
-														ValidateFunc: validateAttributeValueDoesNotContain(".."),
+														ValidateFunc: validatePath,
 														Description:  "The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.",
 													},
 												},
@@ -800,7 +977,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 								},
 							},
 							// identical to ConfigMapVolumeSource but without the default mode and uses a local object reference as name instead of a secret name.
-							"config_map": &schema.Schema{
+							"config_map": {
 								Type:        schema.TypeList,
 								Description: "ConfigMap represents a configMap that should populate this volume",
 								Optional:    true,
@@ -808,7 +985,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 									Schema: map[string]*schema.Schema{
 										"name": {
 											Type:        schema.TypeString,
-											Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+											Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 											Optional:    true,
 										},
 										"items": {
@@ -831,7 +1008,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 													"path": {
 														Type:         schema.TypeString,
 														Optional:     true,
-														ValidateFunc: validateAttributeValueDoesNotContain(".."),
+														ValidateFunc: validatePath,
 														Description:  "The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.",
 													},
 												},
@@ -846,7 +1023,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 								},
 							},
 							// identical to DownwardAPIVolumeSource but without the default mode.
-							"downward_api": &schema.Schema{
+							"downward_api": {
 								Type:        schema.TypeList,
 								Description: "DownwardAPI represents downward API about the pod that should populate this volume",
 								Optional:    true,
@@ -889,7 +1066,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 													"path": {
 														Type:         schema.TypeString,
 														Required:     true,
-														ValidateFunc: validateAttributeValueDoesNotContain(".."),
+														ValidateFunc: validatePath,
 														Description:  "Path is the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'",
 													},
 													"resource_field_ref": {
@@ -924,7 +1101,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 									},
 								},
 							},
-							"service_account_token": &schema.Schema{
+							"service_account_token": {
 								Type:        schema.TypeList,
 								Description: "A projected service account token volume",
 								Optional:    true,
@@ -950,6 +1127,51 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 										},
 									},
 								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	v["csi"] = &schema.Schema{
+		Type:        schema.TypeList,
+		Description: "Represents a CSI Volume. More info: https://kubernetes.io/docs/concepts/storage/volumes#csi",
+		Optional:    true,
+		MaxItems:    1,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"driver": {
+					Type:        schema.TypeString,
+					Description: "the name of the volume driver to use. More info: https://kubernetes.io/docs/concepts/storage/volumes/#csi",
+					Required:    true,
+				},
+				"volume_attributes": {
+					Type:        schema.TypeMap,
+					Description: "Attributes of the volume to publish.",
+					Optional:    true,
+				},
+				"fs_type": {
+					Type:        schema.TypeString,
+					Description: "Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified.",
+					Optional:    true,
+				},
+				"read_only": {
+					Type:        schema.TypeBool,
+					Description: "Whether to set the read-only property in VolumeMounts to \"true\". If omitted, the default is \"false\". More info: https://kubernetes.io/docs/concepts/storage/volumes#csi",
+					Optional:    true,
+				},
+				"node_publish_secret_ref": {
+					Type:        schema.TypeList,
+					Description: "A reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodePublishVolume and NodeUnpublishVolume calls.",
+					Optional:    true,
+					MaxItems:    1,
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"name": {
+								Type:        schema.TypeString,
+								Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+								Optional:    true,
 							},
 						},
 					},

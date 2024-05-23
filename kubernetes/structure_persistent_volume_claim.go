@@ -1,16 +1,19 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package kubernetes
 
 import (
 	"errors"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 )
 
 // Flatteners
 
-func flattenPersistentVolumeClaimSpec(in v1.PersistentVolumeClaimSpec) []interface{} {
+func flattenPersistentVolumeClaimSpec(in corev1.PersistentVolumeClaimSpec) []interface{} {
 	att := make(map[string]interface{})
 	att["access_modes"] = flattenPersistentVolumeAccessModes(in.AccessModes)
 	att["resources"] = flattenResourceRequirements(in.Resources)
@@ -23,10 +26,13 @@ func flattenPersistentVolumeClaimSpec(in v1.PersistentVolumeClaimSpec) []interfa
 	if in.StorageClassName != nil {
 		att["storage_class_name"] = *in.StorageClassName
 	}
+	if in.VolumeMode != nil {
+		att["volume_mode"] = in.VolumeMode
+	}
 	return []interface{}{att}
 }
 
-func flattenResourceRequirements(in v1.ResourceRequirements) []interface{} {
+func flattenResourceRequirements(in corev1.ResourceRequirements) []interface{} {
 	att := make(map[string]interface{})
 	if len(in.Limits) > 0 {
 		att["limits"] = flattenResourceList(in.Limits)
@@ -61,8 +67,8 @@ func expandPersistentVolumeClaim(p map[string]interface{}) (*corev1.PersistentVo
 	return pvc, nil
 }
 
-func expandPersistentVolumeClaimSpec(l []interface{}) (*v1.PersistentVolumeClaimSpec, error) {
-	obj := &v1.PersistentVolumeClaimSpec{}
+func expandPersistentVolumeClaimSpec(l []interface{}) (*corev1.PersistentVolumeClaimSpec, error) {
+	obj := &corev1.PersistentVolumeClaimSpec{}
 	if len(l) == 0 || l[0] == nil {
 		return obj, nil
 	}
@@ -80,13 +86,16 @@ func expandPersistentVolumeClaimSpec(l []interface{}) (*v1.PersistentVolumeClaim
 		obj.VolumeName = v
 	}
 	if v, ok := in["storage_class_name"].(string); ok && v != "" {
-		obj.StorageClassName = ptrToString(v)
+		obj.StorageClassName = ptr.To(v)
+	}
+	if v, ok := in["volume_mode"].(string); ok && v != "" {
+		obj.VolumeMode = ptr.To(corev1.PersistentVolumeMode(v))
 	}
 	return obj, nil
 }
 
-func expandResourceRequirements(l []interface{}) (*v1.ResourceRequirements, error) {
-	obj := &v1.ResourceRequirements{}
+func expandResourceRequirements(l []interface{}) (*corev1.ResourceRequirements, error) {
+	obj := &corev1.ResourceRequirements{}
 	if len(l) == 0 || l[0] == nil {
 		return obj, nil
 	}

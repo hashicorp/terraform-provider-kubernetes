@@ -1,0 +1,3 @@
+```release-note:bug
+Fix an issue with timeouts for `StatefulSet`, `Deployment`, and `DaemonSet` resources when in some cases changes of `Update` or `Create` timeout doesn't affect related actions.
+```

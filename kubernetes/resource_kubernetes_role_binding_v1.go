@@ -17,6 +17,7 @@ import (
 
 func resourceKubernetesRoleBindingV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "A RoleBinding may be used to grant permission at the namespace level",
 		CreateContext: resourceKubernetesRoleBindingV1Create,
 		ReadContext:   resourceKubernetesRoleBindingV1Read,
 		UpdateContext: resourceKubernetesRoleBindingV1Update,

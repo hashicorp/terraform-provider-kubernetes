@@ -1,6 +1,3 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "kubernetes_daemon_set_v1" "example" {
   metadata {
     name      = "terraform-example"

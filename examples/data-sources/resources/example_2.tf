@@ -1,6 +1,3 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 data "kubernetes_resources" "example" {
   api_version    = "v1"
   kind           = "Namespace"

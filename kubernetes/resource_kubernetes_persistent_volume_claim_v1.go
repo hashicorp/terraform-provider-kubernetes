@@ -31,6 +31,7 @@ func resourceKubernetesPersistentVolumeClaimV1() *schema.Resource {
 		Default:     true,
 	}
 	return &schema.Resource{
+		Description:   "This resource allows the user to request for and claim to a persistent volume.",
 		CreateContext: resourceKubernetesPersistentVolumeClaimV1Create,
 		ReadContext:   resourceKubernetesPersistentVolumeClaimV1Read,
 		UpdateContext: resourceKubernetesPersistentVolumeClaimV1Update,

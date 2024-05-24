@@ -24,6 +24,7 @@ func resourceKubernetesValidatingWebhookConfigurationV1() *schema.Resource {
 	apiDoc := admissionregistrationv1.ValidatingWebhookConfiguration{}.SwaggerDoc()
 	webhookDoc := admissionregistrationv1.ValidatingWebhook{}.SwaggerDoc()
 	return &schema.Resource{
+		Description:   "Validating Webhook Configuration configures a [validating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks).",
 		CreateContext: resourceKubernetesValidatingWebhookConfigurationV1Create,
 		ReadContext:   resourceKubernetesValidatingWebhookConfigurationV1Read,
 		UpdateContext: resourceKubernetesValidatingWebhookConfigurationV1Update,

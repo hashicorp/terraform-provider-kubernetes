@@ -21,6 +21,7 @@ import (
 
 func resourceKubernetesIngressV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "Ingress is a collection of rules that allow inbound connections to reach the endpoints defined by a backend. An Ingress can be configured to give services externally-reachable urls, load balance traffic, terminate SSL, offer name based virtual hosting etc.",
 		CreateContext: resourceKubernetesIngressV1Create,
 		ReadContext:   resourceKubernetesIngressV1Read,
 		UpdateContext: resourceKubernetesIngressV1Update,

@@ -19,6 +19,7 @@ import (
 
 func resourceKubernetesNodeTaint() *schema.Resource {
 	return &schema.Resource{
+		Description:   "[Node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) is a property of Pods that attracts them to a set of [nodes](https://kubernetes.io/docs/concepts/architecture/nodes/) (either as a preference or a hard requirement). Taints are the opposite -- they allow a node to repel a set of pods.",
 		CreateContext: resourceKubernetesNodeTaintCreate,
 		ReadContext:   resourceKubernetesNodeTaintRead,
 		UpdateContext: resourceKubernetesNodeTaintUpdate,

@@ -539,7 +539,7 @@ func testAccKubernetesStatefulSetV1ConfigBasic(name, imageName string) string {
   }
 
   spec {
-    min_ready_seconds = 10
+    min_ready_seconds      = 10
     pod_management_policy  = "OrderedReady"
     replicas               = 1
     revision_history_limit = 11
@@ -892,7 +892,7 @@ func testAccKubernetesStatefulSetV1ConfigUpdateMinReadySeconds(name string, imag
   }
 
   spec {
-    min_ready_seconds = %d
+    min_ready_seconds      = %d
     pod_management_policy  = "OrderedReady"
     replicas               = 1
     revision_history_limit = 11

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-provider-kubernetes/util"
 	"os"
 	"path/filepath"
 
@@ -40,9 +41,9 @@ func (p *KubernetesProvider) Configure(ctx context.Context, req provider.Configu
 
 func newKubernetesClientConfig(ctx context.Context, data KubernetesProviderModel) (*restclient.Config, error) {
 	overrides := &clientcmd.ConfigOverrides{}
-	loader := &clientcmd.ClientConfigLoadingRules{}
+	fileLoader := &clientcmd.ClientConfigLoadingRules{}
 
-	configPaths := []string{}
+	var configPaths []string
 	if v := data.ConfigPath.ValueString(); v != "" {
 		configPaths = []string{v}
 	} else if len(data.ConfigPaths) > 0 {
@@ -65,38 +66,31 @@ func newKubernetesClientConfig(ctx context.Context, data KubernetesProviderModel
 			expandedPaths = append(expandedPaths, path)
 		}
 		if len(expandedPaths) == 1 {
-			loader.ExplicitPath = expandedPaths[0]
+			fileLoader.ExplicitPath = expandedPaths[0]
 		} else {
-			loader.Precedence = expandedPaths
-		}
-
-		ctxSuffix := "; default context"
-
-		kubectx := data.ConfigContext.ValueString()
-		authInfo := data.ConfigContextAuthInfo.ValueString()
-		cluster := data.ConfigContextCluster.ValueString()
-		if kubectx != "" || authInfo != "" || cluster != "" {
-			ctxSuffix = "; overridden context"
-			if kubectx != "" {
-				overrides.CurrentContext = kubectx
-				ctxSuffix += fmt.Sprintf("; config ctx: %s", overrides.CurrentContext)
-				tflog.Debug(ctx, "Using custom current context", map[string]interface{}{"context": overrides.CurrentContext})
-			}
-
-			overrides.Context = clientcmdapi.Context{}
-			if authInfo != "" {
-				overrides.Context.AuthInfo = authInfo
-				ctxSuffix += fmt.Sprintf("; auth_info: %s", overrides.Context.AuthInfo)
-			}
-			if cluster != "" {
-				overrides.Context.Cluster = cluster
-				ctxSuffix += fmt.Sprintf("; cluster: %s", overrides.Context.Cluster)
-			}
-			tflog.Debug(ctx, "Using overridden context", map[string]interface{}{"context": overrides.Context})
+			fileLoader.Precedence = expandedPaths
 		}
 	}
-
 	// Overriding with static configuration
+
+	kubeCtx := data.ConfigContext.ValueString()
+	authInfo := data.ConfigContextAuthInfo.ValueString()
+	cluster := data.ConfigContextCluster.ValueString()
+	if kubeCtx != "" || authInfo != "" || cluster != "" {
+		if kubeCtx != "" {
+			overrides.CurrentContext = kubeCtx
+			tflog.Debug(ctx, "Using custom current context", map[string]interface{}{"context": overrides.CurrentContext})
+		}
+
+		overrides.Context = clientcmdapi.Context{}
+		if authInfo != "" {
+			overrides.Context.AuthInfo = authInfo
+		}
+		if cluster != "" {
+			overrides.Context.Cluster = cluster
+		}
+		tflog.Debug(ctx, "Using overridden context", map[string]interface{}{"context": overrides.Context})
+	}
 	overrides.ClusterInfo.InsecureSkipTLSVerify = data.Insecure.ValueBool()
 	overrides.ClusterInfo.TLSServerName = data.TLSServerName.ValueString()
 	overrides.ClusterInfo.CertificateAuthorityData = bytes.NewBufferString(data.ClusterCACertificate.ValueString()).Bytes()
@@ -140,7 +134,9 @@ func newKubernetesClientConfig(ctx context.Context, data KubernetesProviderModel
 		overrides.AuthInfo.Exec = exec
 	}
 
+	loader := util.NewConfigLoader(fileLoader, data.ConfigDataBase64.ValueString())
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
+
 	cfg, err := cc.ClientConfig()
 	if err != nil {
 		tflog.Warn(ctx, "Invalid provider configuration was supplied. Provider operations likely to fail", map[string]interface{}{

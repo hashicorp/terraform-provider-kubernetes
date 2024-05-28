@@ -21,7 +21,7 @@ func TestManifestDecode(t *testing.T) {
 	outputName := "test"
 
 	resource.UnitTest(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testManifestDecodeConfig("testdata/decode_single.yaml"),
@@ -51,7 +51,7 @@ func TestManifestDecode_ErrorOnMulti(t *testing.T) {
 	t.Parallel()
 
 	resource.UnitTest(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      testManifestDecodeConfig("testdata/decode_multi.yaml"),

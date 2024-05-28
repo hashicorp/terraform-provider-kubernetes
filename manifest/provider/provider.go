@@ -6,12 +6,12 @@ package provider
 import (
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
 // GetObjectTypeFromSchema returns a tftypes.Type that can wholy represent the schema input
-func GetObjectTypeFromSchema(schema *tfprotov5.Schema) tftypes.Type {
+func GetObjectTypeFromSchema(schema *tfprotov6.Schema) tftypes.Type {
 	bm := map[string]tftypes.Type{}
 
 	for _, att := range schema.Block.Attributes {
@@ -64,19 +64,19 @@ func GetDataSourceType(name string) (tftypes.Type, error) {
 }
 
 // GetProviderResourceSchema contains the definitions of all supported resources
-func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
-	return map[string]*tfprotov5.Schema{
+func GetProviderResourceSchema() map[string]*tfprotov6.Schema {
+	return map[string]*tfprotov6.Schema{
 		"kubernetes_manifest": {
 			Version: 1,
-			Block: &tfprotov5.SchemaBlock{
-				BlockTypes: []*tfprotov5.SchemaNestedBlock{
+			Block: &tfprotov6.SchemaBlock{
+				BlockTypes: []*tfprotov6.SchemaNestedBlock{
 					{
 						TypeName: "timeouts",
-						Nesting:  tfprotov5.SchemaNestedBlockNestingModeList,
+						Nesting:  tfprotov6.SchemaNestedBlockNestingModeList,
 						MinItems: 0,
 						MaxItems: 1,
-						Block: &tfprotov5.SchemaBlock{
-							Attributes: []*tfprotov5.SchemaAttribute{
+						Block: &tfprotov6.SchemaBlock{
+							Attributes: []*tfprotov6.SchemaAttribute{
 								{
 									Name:        "create",
 									Type:        tftypes.String,
@@ -100,12 +100,12 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 					},
 					{
 						TypeName: "field_manager",
-						Nesting:  tfprotov5.SchemaNestedBlockNestingModeList,
+						Nesting:  tfprotov6.SchemaNestedBlockNestingModeList,
 						MinItems: 0,
 						MaxItems: 1,
-						Block: &tfprotov5.SchemaBlock{
+						Block: &tfprotov6.SchemaBlock{
 							Description: "Configure field manager options.",
-							Attributes: []*tfprotov5.SchemaAttribute{
+							Attributes: []*tfprotov6.SchemaAttribute{
 								{
 									Name:            "name",
 									Type:            tftypes.String,
@@ -133,18 +133,18 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 					},
 					{
 						TypeName: "wait",
-						Nesting:  tfprotov5.SchemaNestedBlockNestingModeList,
+						Nesting:  tfprotov6.SchemaNestedBlockNestingModeList,
 						MinItems: 0,
 						MaxItems: 1,
-						Block: &tfprotov5.SchemaBlock{
+						Block: &tfprotov6.SchemaBlock{
 							Description: "Configure waiter options.",
-							BlockTypes: []*tfprotov5.SchemaNestedBlock{
+							BlockTypes: []*tfprotov6.SchemaNestedBlock{
 								{
 									TypeName: "condition",
-									Nesting:  tfprotov5.SchemaNestedBlockNestingModeList,
+									Nesting:  tfprotov6.SchemaNestedBlockNestingModeList,
 									MinItems: 0,
-									Block: &tfprotov5.SchemaBlock{
-										Attributes: []*tfprotov5.SchemaAttribute{
+									Block: &tfprotov6.SchemaBlock{
+										Attributes: []*tfprotov6.SchemaAttribute{
 											{
 												Name:        "status",
 												Type:        tftypes.String,
@@ -160,7 +160,7 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 									},
 								},
 							},
-							Attributes: []*tfprotov5.SchemaAttribute{
+							Attributes: []*tfprotov6.SchemaAttribute{
 								{
 									Name:        "rollout",
 									Type:        tftypes.Bool,
@@ -177,7 +177,7 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 						},
 					},
 				},
-				Attributes: []*tfprotov5.SchemaAttribute{
+				Attributes: []*tfprotov6.SchemaAttribute{
 					{
 						Name:        "manifest",
 						Type:        tftypes.DynamicPseudoType,
@@ -217,12 +217,12 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 }
 
 // GetProviderDataSourceSchema contains the definitions of all supported data sources
-func GetProviderDataSourceSchema() map[string]*tfprotov5.Schema {
-	return map[string]*tfprotov5.Schema{
+func GetProviderDataSourceSchema() map[string]*tfprotov6.Schema {
+	return map[string]*tfprotov6.Schema{
 		"kubernetes_resource": {
 			Version: 1,
-			Block: &tfprotov5.SchemaBlock{
-				Attributes: []*tfprotov5.SchemaAttribute{
+			Block: &tfprotov6.SchemaBlock{
+				Attributes: []*tfprotov6.SchemaAttribute{
 					{
 						Name:        "api_version",
 						Type:        tftypes.String,
@@ -243,15 +243,15 @@ func GetProviderDataSourceSchema() map[string]*tfprotov5.Schema {
 						Description: "The response from the API server.",
 					},
 				},
-				BlockTypes: []*tfprotov5.SchemaNestedBlock{
+				BlockTypes: []*tfprotov6.SchemaNestedBlock{
 					{
 						TypeName: "metadata",
-						Nesting:  tfprotov5.SchemaNestedBlockNestingModeList,
+						Nesting:  tfprotov6.SchemaNestedBlockNestingModeList,
 						MinItems: 1,
 						MaxItems: 1,
-						Block: &tfprotov5.SchemaBlock{
+						Block: &tfprotov6.SchemaBlock{
 							Description: "Metadata for the resource",
-							Attributes: []*tfprotov5.SchemaAttribute{
+							Attributes: []*tfprotov6.SchemaAttribute{
 								{
 									Name:        "name",
 									Type:        tftypes.String,
@@ -272,8 +272,8 @@ func GetProviderDataSourceSchema() map[string]*tfprotov5.Schema {
 		},
 		"kubernetes_resources": {
 			Version: 1,
-			Block: &tfprotov5.SchemaBlock{
-				Attributes: []*tfprotov5.SchemaAttribute{
+			Block: &tfprotov6.SchemaBlock{
+				Attributes: []*tfprotov6.SchemaAttribute{
 					{
 						Name:        "api_version",
 						Type:        tftypes.String,

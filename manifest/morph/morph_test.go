@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
@@ -542,7 +542,7 @@ func TestMorphValueToTypeDiagnostics(t *testing.T) {
 	samples := map[string]struct {
 		In        sampleInType
 		Attribute *tftypes.AttributePath
-		Diags     []*tfprotov5.Diagnostic
+		Diags     []*tfprotov6.Diagnostic
 	}{
 		"string->number": {
 			In: sampleInType{
@@ -550,9 +550,9 @@ func TestMorphValueToTypeDiagnostics(t *testing.T) {
 				T: tftypes.Number,
 			},
 			Attribute: tftypes.NewAttributePath().WithAttributeName("foo").WithElementKeyString("bar"),
-			Diags: []*tfprotov5.Diagnostic{
+			Diags: []*tfprotov6.Diagnostic{
 				{
-					Severity:  tfprotov5.DiagnosticSeverityError,
+					Severity:  tfprotov6.DiagnosticSeverityError,
 					Summary:   "String value doesn't parse as Number",
 					Detail:    "Error: strconv.ParseFloat: parsing \"12-4\": invalid syntax\n...at attribute:\nfoo[bar]",
 					Attribute: tftypes.NewAttributePath().WithAttributeName("foo").WithElementKeyString("bar"),
@@ -565,9 +565,9 @@ func TestMorphValueToTypeDiagnostics(t *testing.T) {
 				T: tftypes.Bool,
 			},
 			Attribute: tftypes.NewAttributePath().WithAttributeName("foo").WithElementKeyInt(42),
-			Diags: []*tfprotov5.Diagnostic{
+			Diags: []*tfprotov6.Diagnostic{
 				{
-					Severity:  tfprotov5.DiagnosticSeverityError,
+					Severity:  tfprotov6.DiagnosticSeverityError,
 					Summary:   "String value doesn't parse as Boolean",
 					Detail:    "Error: strconv.ParseBool: parsing \"meh\": invalid syntax\n...at attribute:\nfoo[42]",
 					Attribute: tftypes.NewAttributePath().WithAttributeName("foo").WithElementKeyInt(42),
@@ -579,9 +579,9 @@ func TestMorphValueToTypeDiagnostics(t *testing.T) {
 				V: tftypes.NewValue(tftypes.Bool, true),
 				T: tftypes.Number,
 			},
-			Diags: []*tfprotov5.Diagnostic{
+			Diags: []*tfprotov6.Diagnostic{
 				{
-					Severity: tfprotov5.DiagnosticSeverityError,
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Summary:  "Value incompatible with expected type",
 					Detail:   "Cannot convert Bool values into type Number\n ...at attribute\n",
 				},
@@ -592,9 +592,9 @@ func TestMorphValueToTypeDiagnostics(t *testing.T) {
 				V: tftypes.NewValue(tftypes.Number, new(big.Float).SetFloat64(12.4)),
 				T: tftypes.Set{ElementType: tftypes.Number},
 			},
-			Diags: []*tfprotov5.Diagnostic{
+			Diags: []*tfprotov6.Diagnostic{
 				{
-					Severity: tfprotov5.DiagnosticSeverityError,
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Summary:  "Value incompatible with expected type",
 					Detail:   "Cannot convert Number values into type Set[Number]\n ...at attribute\n",
 				},
@@ -609,15 +609,15 @@ func TestMorphValueToTypeDiagnostics(t *testing.T) {
 				}),
 				T: tftypes.List{ElementType: tftypes.Number},
 			},
-			Diags: []*tfprotov5.Diagnostic{
+			Diags: []*tfprotov6.Diagnostic{
 				{
-					Severity:  tfprotov5.DiagnosticSeverityError,
+					Severity:  tfprotov6.DiagnosticSeverityError,
 					Summary:   "String value doesn't parse as Number",
 					Detail:    "Error: strconv.ParseFloat: parsing \"baz\": invalid syntax\n...at attribute:\n[2]",
 					Attribute: tftypes.NewAttributePath().WithElementKeyInt(2),
 				},
 				{
-					Severity:  tfprotov5.DiagnosticSeverityError,
+					Severity:  tfprotov6.DiagnosticSeverityError,
 					Summary:   "Invalid List value element",
 					Detail:    "Error at attribute:\n[2]",
 					Attribute: tftypes.NewAttributePath().WithElementKeyInt(2),
@@ -639,15 +639,15 @@ func TestMorphValueToTypeDiagnostics(t *testing.T) {
 					"three": tftypes.Number,
 				}},
 			},
-			Diags: []*tfprotov5.Diagnostic{
+			Diags: []*tfprotov6.Diagnostic{
 				{
-					Severity:  tfprotov5.DiagnosticSeverityError,
+					Severity:  tfprotov6.DiagnosticSeverityError,
 					Summary:   "String value doesn't parse as Number",
 					Detail:    "Error: strconv.ParseFloat: parsing \"fourtytwo\": invalid syntax\n...at attribute:\nthree",
 					Attribute: tftypes.NewAttributePath().WithAttributeName("three"),
 				},
 				{
-					Severity:  tfprotov5.DiagnosticSeverityError,
+					Severity:  tfprotov6.DiagnosticSeverityError,
 					Summary:   "Failed to transform Object element into Object element type",
 					Detail:    "Error (see above) at attribute:\nthree",
 					Attribute: tftypes.NewAttributePath(),
@@ -678,9 +678,9 @@ func TestMorphValueToTypeDiagnostics(t *testing.T) {
 					"three": tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
 				}},
 			},
-			Diags: []*tfprotov5.Diagnostic{
+			Diags: []*tfprotov6.Diagnostic{
 				{
-					Severity:  tfprotov5.DiagnosticSeverityWarning,
+					Severity:  tfprotov6.DiagnosticSeverityWarning,
 					Summary:   "Attribute not found in schema",
 					Detail:    "Unable to find schema type for attribute:\nthree.bar",
 					Attribute: tftypes.NewAttributePath().WithAttributeName("three"),
@@ -709,7 +709,7 @@ func TestMorphValueToTypeDiagnostics(t *testing.T) {
 	}
 }
 
-func formatDiagnostics(diags []*tfprotov5.Diagnostic) string {
+func formatDiagnostics(diags []*tfprotov6.Diagnostic) string {
 	var b strings.Builder
 	for _, d := range diags {
 		b.WriteString(fmt.Sprintf("<Severity> [%s] <Summary> [%s] <Detail> [%s] <Attribute> [%s]\n", d.Severity, d.Summary, d.Detail, d.Attribute))

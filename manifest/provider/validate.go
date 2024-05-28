@@ -9,20 +9,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
 // ValidateResourceTypeConfig function
-func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req *tfprotov5.ValidateResourceTypeConfigRequest) (*tfprotov5.ValidateResourceTypeConfigResponse, error) {
-	resp := &tfprotov5.ValidateResourceTypeConfigResponse{}
+func (s *RawProviderServer) ValidateResourceConfig(ctx context.Context, req *tfprotov6.ValidateResourceConfigRequest) (*tfprotov6.ValidateResourceConfigResponse, error) {
+	resp := &tfprotov6.ValidateResourceConfigResponse{}
 	requiredKeys := []string{"apiVersion", "kind", "metadata"}
 	forbiddenKeys := []string{"status"}
 
 	rt, err := GetResourceType(req.TypeName)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to determine resource type",
 			Detail:   err.Error(),
 		})
@@ -32,8 +32,8 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 	// Decode proposed resource state
 	config, err := req.Config.Unmarshal(rt)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to unmarshal resource state",
 			Detail:   err.Error(),
 		})
@@ -46,8 +46,8 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 	configVal := make(map[string]tftypes.Value)
 	err = config.As(&configVal)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to extract resource state from SDK value",
 			Detail:   err.Error(),
 		})
@@ -56,8 +56,8 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 
 	manifest, ok := configVal["manifest"]
 	if !ok {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity:  tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity:  tfprotov6.DiagnosticSeverityError,
 			Summary:   "Manifest missing from resource configuration",
 			Detail:    "A manifest attribute containing a valid Kubernetes resource configuration is required.",
 			Attribute: att,
@@ -73,8 +73,8 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 			// Bailing out without error to allow the resource to be completed at a later stage.
 			return resp, nil
 		}
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity:  tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity:  tfprotov6.DiagnosticSeverityError,
 			Summary:   `Failed to extract "manifest" attribute value from resource configuration`,
 			Detail:    err.Error(),
 			Attribute: att,
@@ -85,8 +85,8 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 	for _, key := range requiredKeys {
 		if _, present := rawManifest[key]; !present {
 			kp := att.WithAttributeName(key)
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity:  tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity:  tfprotov6.DiagnosticSeverityError,
 				Summary:   `Attribute key missing from "manifest" value`,
 				Detail:    fmt.Sprintf("'%s' attribute key is missing from manifest configuration", key),
 				Attribute: kp,
@@ -97,8 +97,8 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 	for _, key := range forbiddenKeys {
 		if _, present := rawManifest[key]; present {
 			kp := att.WithAttributeName(key)
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity:  tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity:  tfprotov6.DiagnosticSeverityError,
 				Summary:   `Forbidden attribute key in "manifest" value`,
 				Detail:    fmt.Sprintf("'%s' attribute key is not allowed in manifest configuration", key),
 				Attribute: kp,
@@ -112,8 +112,8 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 	for k, v := range timeouts {
 		_, err := time.ParseDuration(v)
 		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity:  tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity:  tfprotov6.DiagnosticSeverityError,
 				Summary:   fmt.Sprintf("Error parsing timeout for %q", k),
 				Detail:    err.Error(),
 				Attribute: path.WithAttributeName(k),
@@ -142,8 +142,8 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 				}
 			}
 			if len(waiters) > 1 {
-				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-					Severity:  tfprotov5.DiagnosticSeverityError,
+				resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+					Severity:  tfprotov6.DiagnosticSeverityError,
 					Summary:   "Invalid wait configuration",
 					Detail:    fmt.Sprintf(`You may only set one of "%s".`, strings.Join(waiters, "\", \"")),
 					Attribute: tftypes.NewAttributePath().WithAttributeName("wait"),
@@ -152,8 +152,8 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 		}
 	}
 	if waitFor, ok := configVal["wait_for"]; ok && !waitFor.IsNull() {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity:  tfprotov5.DiagnosticSeverityWarning,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity:  tfprotov6.DiagnosticSeverityWarning,
 			Summary:   "Deprecated Attribute",
 			Detail:    `The "wait_for" attribute has been deprecated. Please use the "wait" block instead.`,
 			Attribute: tftypes.NewAttributePath().WithAttributeName("wait_for"),
@@ -163,11 +163,11 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 	return resp, nil
 }
 
-func (s *RawProviderServer) validateResourceOnline(manifest *tftypes.Value) (diags []*tfprotov5.Diagnostic) {
+func (s *RawProviderServer) validateResourceOnline(manifest *tftypes.Value) (diags []*tfprotov6.Diagnostic) {
 	rm, err := s.getRestMapper()
 	if err != nil {
-		diags = append(diags, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		diags = append(diags, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to create K8s RESTMapper client",
 			Detail:   err.Error(),
 		})
@@ -175,8 +175,8 @@ func (s *RawProviderServer) validateResourceOnline(manifest *tftypes.Value) (dia
 	}
 	gvk, err := GVKFromTftypesObject(manifest, rm)
 	if err != nil {
-		diags = append(diags, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		diags = append(diags, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to determine GroupVersionResource for manifest",
 			Detail:   err.Error(),
 		})
@@ -189,8 +189,8 @@ func (s *RawProviderServer) validateResourceOnline(manifest *tftypes.Value) (dia
 	ns, err := IsResourceNamespaced(gvk, rm)
 	if err != nil {
 		diags = append(diags,
-			&tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			&tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Detail:   err.Error(),
 				Summary:  fmt.Sprintf("Failed to discover scope of resource '%s'", gvk.String()),
 			})
@@ -202,8 +202,8 @@ func (s *RawProviderServer) validateResourceOnline(manifest *tftypes.Value) (dia
 	if ns {
 		if err != nil || len(restPath.Steps()) > 0 {
 			diags = append(diags,
-				&tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
+				&tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Detail:   fmt.Sprintf("Resources of type '%s' require a namespace", gvk.String()),
 					Summary:  "Namespace required",
 				})
@@ -211,8 +211,8 @@ func (s *RawProviderServer) validateResourceOnline(manifest *tftypes.Value) (dia
 		}
 		if nsVal.(tftypes.Value).IsNull() {
 			diags = append(diags,
-				&tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
+				&tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Detail:   fmt.Sprintf("Namespace for resource '%s' cannot be nil", gvk.String()),
 					Summary:  "Namespace required",
 				})
@@ -221,8 +221,8 @@ func (s *RawProviderServer) validateResourceOnline(manifest *tftypes.Value) (dia
 		err := nsVal.(tftypes.Value).As(&nsStr)
 		if nsStr == "" && err == nil {
 			diags = append(diags,
-				&tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
+				&tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Detail:   fmt.Sprintf("Namespace for resource '%s' cannot be empty", gvk.String()),
 					Summary:  "Namespace required",
 				})
@@ -230,8 +230,8 @@ func (s *RawProviderServer) validateResourceOnline(manifest *tftypes.Value) (dia
 	} else {
 		if err == nil && len(restPath.Steps()) == 0 && !nsVal.(tftypes.Value).IsNull() {
 			diags = append(diags,
-				&tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
+				&tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Detail:   fmt.Sprintf("Resources of type '%s' cannot have a namespace", gvk.String()),
 					Summary:  "Cluster level resource cannot take namespace",
 				})

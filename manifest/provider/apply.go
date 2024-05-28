@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/payload"
@@ -25,8 +25,8 @@ var defaultUpdateTimeout = "10m"
 var defaultDeleteTimeout = "10m"
 
 // ApplyResourceChange function
-func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprotov5.ApplyResourceChangeRequest) (*tfprotov5.ApplyResourceChangeResponse, error) {
-	resp := &tfprotov5.ApplyResourceChangeResponse{}
+func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprotov6.ApplyResourceChangeRequest) (*tfprotov6.ApplyResourceChangeResponse, error) {
+	resp := &tfprotov6.ApplyResourceChangeResponse{}
 
 	execDiag := s.canExecute()
 	if len(execDiag) > 0 {
@@ -36,8 +36,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 
 	rt, err := GetResourceType(req.TypeName)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to determine planned resource type",
 			Detail:   err.Error(),
 		})
@@ -46,8 +46,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 
 	applyPlannedState, err := req.PlannedState.Unmarshal(rt)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to unmarshal planned resource state",
 			Detail:   err.Error(),
 		})
@@ -57,8 +57,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 
 	applyPriorState, err := req.PriorState.Unmarshal(rt)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to unmarshal prior resource state",
 			Detail:   err.Error(),
 		})
@@ -68,8 +68,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 
 	config, err := req.Config.Unmarshal(rt)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to unmarshal manifest configuration",
 			Detail:   err.Error(),
 		})
@@ -78,8 +78,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 	confVals := make(map[string]tftypes.Value)
 	err = config.As(&confVals)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to extract attributes from resource configuration",
 			Detail:   err.Error(),
 		})
@@ -89,8 +89,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 	var plannedStateVal map[string]tftypes.Value = make(map[string]tftypes.Value)
 	err = applyPlannedState.As(&plannedStateVal)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to extract planned resource state values",
 			Detail:   err.Error(),
 		})
@@ -114,8 +114,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			atp, err := FieldPathToTftypesPath(vs)
 			if err != nil {
 				s.logger.Error("[Configure]", "[computed_fields] cannot parse field path element", err)
-				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
+				resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Summary:  "[computed_fields] cannot parse filed path element: " + vs,
 					Detail:   err.Error(),
 				})
@@ -135,8 +135,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 	c, err := s.getDynamicClient()
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics,
-			&tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			&tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Failed to retrieve Kubernetes dynamic client during apply",
 				Detail:   err.Error(),
 			})
@@ -145,8 +145,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 	m, err := s.getRestMapper()
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics,
-			&tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			&tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Failed to retrieve Kubernetes RESTMapper client during apply",
 				Detail:   err.Error(),
 			})
@@ -159,8 +159,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		// Apply resource
 		obj, ok := plannedStateVal["object"]
 		if !ok {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Failed to find object value in planned resource state",
 			})
 			return resp, nil
@@ -168,8 +168,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 
 		gvk, err := GVKFromTftypesObject(&obj, m)
 		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Failed to determine the type of the resource",
 				Detail:   fmt.Sprintf(`This can happen when the "apiVersion" or "kind" fields are not present in the manifest, or when the corresponding "kind" or "apiVersion" could not be found on the Kubernetes cluster.\nError: %s`, err),
 			})
@@ -205,8 +205,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			}
 			nv, d := morph.ValueToType(ppMan.(tftypes.Value), v.Type(), tftypes.NewAttributePath())
 			if len(d) > 0 {
-				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
+				resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Summary:  "Manifest configuration is incompatible with resource schema",
 					Detail:   "Detailed descriptions of errors will follow below.",
 				})
@@ -216,8 +216,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return nv, nil
 		})
 		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Failed to backfill computed values in proposed value",
 				Detail:   err.Error(),
 			})
@@ -268,8 +268,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		})
 		if err != nil {
 			resp.Diagnostics = append(resp.Diagnostics,
-				&tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
+				&tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Detail:   err.Error(),
 					Summary:  "Failed to sanitize empty block ahead of payload preparation",
 				})
@@ -299,8 +299,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		ns, err := IsResourceNamespaced(gvk, m)
 		if err != nil {
 			resp.Diagnostics = append(resp.Diagnostics,
-				&tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
+				&tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Detail:   err.Error(),
 					Summary:  fmt.Sprintf("Failed to discover scope of resource '%s'", rnn),
 				})
@@ -318,16 +318,16 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			_, err := rs.Get(ctx, rname, metav1.GetOptions{})
 			if err == nil {
 				resp.Diagnostics = append(resp.Diagnostics,
-					&tfprotov5.Diagnostic{
-						Severity: tfprotov5.DiagnosticSeverityError,
+					&tfprotov6.Diagnostic{
+						Severity: tfprotov6.DiagnosticSeverityError,
 						Summary:  "Cannot create resource that already exists",
 						Detail:   fmt.Sprintf("resource %q already exists", rnn),
 					})
 				return resp, nil
 			} else if !apierrors.IsNotFound(err) {
 				resp.Diagnostics = append(resp.Diagnostics,
-					&tfprotov5.Diagnostic{
-						Severity: tfprotov5.DiagnosticSeverityError,
+					&tfprotov6.Diagnostic{
+						Severity: tfprotov6.DiagnosticSeverityError,
 						Summary:  fmt.Sprintf("Failed to determine if resource %q exists", rnn),
 						Detail:   err.Error(),
 					})
@@ -338,8 +338,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		jsonManifest, err := uo.MarshalJSON()
 		if err != nil {
 			resp.Diagnostics = append(resp.Diagnostics,
-				&tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
+				&tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Detail:   err.Error(),
 					Summary:  fmt.Sprintf("Failed to marshall resource '%s' to JSON", rnn),
 				})
@@ -349,8 +349,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		// get fieldManager config
 		fieldManagerName, forceConflicts, err := s.getFieldManagerConfig(plannedStateVal)
 		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Could not extract field_manager config",
 				Detail:   err.Error(),
 			})
@@ -381,8 +381,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			s.logger.Error("[ApplyResourceChange][Apply]", "API error", dump(err), "API response", dump(result))
 			if apierrors.IsConflict(err) {
 				resp.Diagnostics = append(resp.Diagnostics,
-					&tfprotov5.Diagnostic{
-						Severity: tfprotov5.DiagnosticSeverityError,
+					&tfprotov6.Diagnostic{
+						Severity: tfprotov6.DiagnosticSeverityError,
 						Summary:  fmt.Sprintf(`There was a field manager conflict when trying to apply the manifest for %q`, rnn),
 						Detail: fmt.Sprintf(
 							"The API returned the following conflict: %q\n\n"+
@@ -395,8 +395,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 				resp.Diagnostics = append(resp.Diagnostics, APIStatusErrorToDiagnostics(status.Status())...)
 			} else {
 				resp.Diagnostics = append(resp.Diagnostics,
-					&tfprotov5.Diagnostic{
-						Severity: tfprotov5.DiagnosticSeverityError,
+					&tfprotov6.Diagnostic{
+						Severity: tfprotov6.DiagnosticSeverityError,
 						Detail:   err.Error(),
 						Summary:  fmt.Sprintf(`PATCH for resource "%s" failed to apply`, rnn),
 					})
@@ -427,15 +427,15 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			if err != nil {
 				if reason, ok := err.(WaiterError); ok {
 					resp.Diagnostics = append(resp.Diagnostics,
-						&tfprotov5.Diagnostic{
-							Severity: tfprotov5.DiagnosticSeverityError,
+						&tfprotov6.Diagnostic{
+							Severity: tfprotov6.DiagnosticSeverityError,
 							Summary:  "Operation timed out",
 							Detail:   reason.Error(),
 						})
 				} else {
 					resp.Diagnostics = append(resp.Diagnostics,
-						&tfprotov5.Diagnostic{
-							Severity: tfprotov5.DiagnosticSeverityError,
+						&tfprotov6.Diagnostic{
+							Severity: tfprotov6.DiagnosticSeverityError,
 							Summary:  "Error waiting for operation to complete",
 							Detail:   err.Error(),
 						})
@@ -446,8 +446,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			if err != nil {
 				s.logger.Error("[ApplyResourceChange][ReadAfterWait]", "API error", dump(err), "API response", dump(result))
 				resp.Diagnostics = append(resp.Diagnostics,
-					&tfprotov5.Diagnostic{
-						Severity: tfprotov5.DiagnosticSeverityError,
+					&tfprotov6.Diagnostic{
+						Severity: tfprotov6.DiagnosticSeverityError,
 						Summary:  fmt.Sprintf(`Failed to read resource %q after wait conditions`, rname),
 						Detail:   err.Error(),
 					})
@@ -459,8 +459,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		newResObject, err := payload.ToTFValue(RemoveServerSideFields(result.Object), tsch, th, tftypes.NewAttributePath())
 		if err != nil {
 			resp.Diagnostics = append(resp.Diagnostics,
-				&tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
+				&tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Summary:  "Conversion from Unstructured to tftypes.Value failed",
 					Detail:   err.Error(),
 				})
@@ -477,7 +477,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		newStateVal := tftypes.NewValue(applyPlannedState.Type(), plannedStateVal)
 		s.logger.Trace("[ApplyResourceChange][Apply]", "new state value", dump(newStateVal))
 
-		newResState, err := tfprotov5.NewDynamicValue(newStateVal.Type(), newStateVal)
+		newResState, err := tfprotov6.NewDynamicValue(newStateVal.Type(), newStateVal)
 		if err != nil {
 			return resp, err
 		}
@@ -487,8 +487,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		priorStateVal := make(map[string]tftypes.Value)
 		err = applyPriorState.As(&priorStateVal)
 		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Failed to extract prior resource state values",
 				Detail:   err.Error(),
 			})
@@ -496,8 +496,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		}
 		pco, ok := priorStateVal["object"]
 		if !ok {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Failed to find object value in prior resource state",
 			})
 			return resp, nil
@@ -542,8 +542,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		if err != nil {
 			rn := types.NamespacedName{Namespace: rnamespace, Name: rname}.String()
 			resp.Diagnostics = append(resp.Diagnostics,
-				&tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
+				&tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Summary:  fmt.Sprintf("Error deleting resource %s: %s", rn, err),
 					Detail:   err.Error(),
 				})
@@ -554,8 +554,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		for {
 			if time.Now().After(deadline) {
 				resp.Diagnostics = append(resp.Diagnostics,
-					&tfprotov5.Diagnostic{
-						Severity: tfprotov5.DiagnosticSeverityError,
+					&tfprotov6.Diagnostic{
+						Severity: tfprotov6.DiagnosticSeverityError,
 						Summary:  fmt.Sprintf("Timed out when waiting for resource %q to be deleted", rname),
 						Detail:   "Deletion timed out. This can happen when there is a finalizer on a resource. You may need to delete this resource manually with kubectl.",
 					})
@@ -568,8 +568,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 					break
 				}
 				resp.Diagnostics = append(resp.Diagnostics,
-					&tfprotov5.Diagnostic{
-						Severity: tfprotov5.DiagnosticSeverityError,
+					&tfprotov6.Diagnostic{
+						Severity: tfprotov6.DiagnosticSeverityError,
 						Summary:  "Error waiting for deletion.",
 						Detail:   fmt.Sprintf("Error when waiting for resource %q to be deleted: %v", rname, err),
 					})

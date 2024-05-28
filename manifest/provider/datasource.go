@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/payload"
@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func (s *RawProviderServer) ReadDataSource(ctx context.Context, req *tfprotov5.ReadDataSourceRequest) (*tfprotov5.ReadDataSourceResponse, error) {
+func (s *RawProviderServer) ReadDataSource(ctx context.Context, req *tfprotov6.ReadDataSourceRequest) (*tfprotov6.ReadDataSourceResponse, error) {
 	switch req.TypeName {
 	case "kubernetes_resource":
 		return s.ReadSingularDataSource(ctx, req)
@@ -28,19 +28,19 @@ func (s *RawProviderServer) ReadDataSource(ctx context.Context, req *tfprotov5.R
 		return s.ReadPluralDataSource(ctx, req)
 	}
 
-	resp := &tfprotov5.ReadDataSourceResponse{}
-	resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-		Severity: tfprotov5.DiagnosticSeverityError,
+	resp := &tfprotov6.ReadDataSourceResponse{}
+	resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+		Severity: tfprotov6.DiagnosticSeverityError,
 		Summary:  fmt.Sprintf("Unknown Data Source: %s", req.TypeName),
 	})
 	return resp, nil
 }
 
-func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfprotov5.ReadDataSourceRequest) (*tfprotov5.ReadDataSourceResponse, error) {
+func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfprotov6.ReadDataSourceRequest) (*tfprotov6.ReadDataSourceResponse, error) {
 
 	s.logger.Trace("[ReadDataSource][Request]\n%s\n", dump(*req))
 
-	resp := &tfprotov5.ReadDataSourceResponse{}
+	resp := &tfprotov6.ReadDataSourceResponse{}
 
 	execDiag := s.canExecute()
 	if len(execDiag) > 0 {
@@ -51,8 +51,8 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 	rt, err := GetDataSourceType(req.TypeName)
 
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to determine data source type",
 			Detail:   err.Error(),
 		})
@@ -61,8 +61,8 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 
 	config, err := req.Config.Unmarshal(rt)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to unmarshal data source configuration",
 			Detail:   err.Error(),
 		})
@@ -72,8 +72,8 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 	var dsConfig map[string]tftypes.Value
 	err = config.As(&dsConfig)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to extract attributes from data source configuration",
 			Detail:   err.Error(),
 		})
@@ -82,8 +82,8 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 
 	rm, err := s.getRestMapper()
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to get RESTMapper client",
 			Detail:   err.Error(),
 		})
@@ -92,8 +92,8 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 
 	client, err := s.getDynamicClient()
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "failed to get Dynamic client",
 			Detail:   err.Error(),
 		})
@@ -106,8 +106,8 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 
 	gvr, err := getGVR(apiVersion, kind, rm)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to determine resource GroupVersion",
 			Detail:   err.Error(),
 		})
@@ -117,8 +117,8 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 	gvk := gvr.GroupVersion().WithKind(kind)
 	ns, err := IsResourceNamespaced(gvk, rm)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed determine if resource is namespaced",
 			Detail:   err.Error(),
 		})
@@ -128,8 +128,8 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 
 	objectType, th, err := s.TFTypeFromOpenAPI(ctx, gvk, true)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to save resource state", // FIX ME
 			Detail:   err.Error(),
 		})
@@ -164,8 +164,8 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 		if apierrors.IsNotFound(err) {
 			return resp, nil
 		}
-		d := tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		d := tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to get data source",
 			Detail:   err.Error(),
 		}
@@ -177,8 +177,8 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 	for _, item := range res.Items {
 		nobj, err := payload.ToTFValue(item.Object, objectType, th, tftypes.NewAttributePath())
 		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Failed to convert API response to Terraform value type",
 				Detail:   err.Error(),
 			})
@@ -186,8 +186,8 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 		}
 		nobj, err = morph.DeepUnknown(objectType, nobj, tftypes.NewAttributePath())
 		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Failed to save resource state", // FIX ME
 				Detail:   err.Error(),
 			})
@@ -208,8 +208,8 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 	rawState := make(map[string]tftypes.Value)
 	err = config.As(&rawState)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to save resource state",
 			Detail:   err.Error(),
 		})
@@ -218,10 +218,10 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 	rawState["objects"] = morph.UnknownToNull(tuple)
 
 	v := tftypes.NewValue(rt, rawState)
-	state, err := tfprotov5.NewDynamicValue(v.Type(), v)
+	state, err := tfprotov6.NewDynamicValue(v.Type(), v)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to save resource state",
 			Detail:   err.Error(),
 		})
@@ -232,10 +232,10 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 }
 
 // ReadDataSource function
-func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfprotov5.ReadDataSourceRequest) (*tfprotov5.ReadDataSourceResponse, error) {
+func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfprotov6.ReadDataSourceRequest) (*tfprotov6.ReadDataSourceResponse, error) {
 	s.logger.Trace("[ReadDataSource][Request]\n%s\n", dump(*req))
 
-	resp := &tfprotov5.ReadDataSourceResponse{}
+	resp := &tfprotov6.ReadDataSourceResponse{}
 
 	execDiag := s.canExecute()
 	if len(execDiag) > 0 {
@@ -246,8 +246,8 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 	rt, err := GetDataSourceType(req.TypeName)
 
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to determine data source type",
 			Detail:   err.Error(),
 		})
@@ -256,8 +256,8 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 
 	config, err := req.Config.Unmarshal(rt)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to unmarshal data source configuration",
 			Detail:   err.Error(),
 		})
@@ -267,8 +267,8 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 	var dsConfig map[string]tftypes.Value
 	err = config.As(&dsConfig)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to extract attributes from data source configuration",
 			Detail:   err.Error(),
 		})
@@ -277,8 +277,8 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 
 	rm, err := s.getRestMapper()
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to get RESTMapper client",
 			Detail:   err.Error(),
 		})
@@ -287,8 +287,8 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 
 	client, err := s.getDynamicClient()
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "failed to get Dynamic client",
 			Detail:   err.Error(),
 		})
@@ -301,8 +301,8 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 
 	gvr, err := getGVR(apiVersion, kind, rm)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to determine resource GroupVersion",
 			Detail:   err.Error(),
 		})
@@ -312,8 +312,8 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 	gvk := gvr.GroupVersion().WithKind(kind)
 	ns, err := IsResourceNamespaced(gvk, rm)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed determine if resource is namespaced",
 			Detail:   err.Error(),
 		})
@@ -323,8 +323,8 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 
 	objectType, th, err := s.TFTypeFromOpenAPI(ctx, gvk, true)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to save resource state", // FIX ME
 			Detail:   err.Error(),
 		})
@@ -355,8 +355,8 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 		if apierrors.IsNotFound(err) {
 			return resp, nil
 		}
-		d := tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		d := tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to get data source",
 			Detail:   err.Error(),
 		}
@@ -366,8 +366,8 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 
 	nobj, err := payload.ToTFValue(res.Object, objectType, th, tftypes.NewAttributePath())
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to convert API response to Terraform value type",
 			Detail:   err.Error(),
 		})
@@ -376,8 +376,8 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 
 	nobj, err = morph.DeepUnknown(objectType, nobj, tftypes.NewAttributePath())
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to save resource state", // FIX ME
 			Detail:   err.Error(),
 		})
@@ -386,8 +386,8 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 	rawState := make(map[string]tftypes.Value)
 	err = config.As(&rawState)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to save resource state",
 			Detail:   err.Error(),
 		})
@@ -396,10 +396,10 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 	rawState["object"] = morph.UnknownToNull(nobj)
 
 	v := tftypes.NewValue(rt, rawState)
-	state, err := tfprotov5.NewDynamicValue(v.Type(), v)
+	state, err := tfprotov6.NewDynamicValue(v.Type(), v)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to save resource state",
 			Detail:   err.Error(),
 		})

@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/mod/semver"
@@ -30,9 +30,9 @@ import (
 const minTFVersion string = "v0.14.8"
 
 // ConfigureProvider function
-func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov5.ConfigureProviderRequest) (*tfprotov5.ConfigureProviderResponse, error) {
-	response := &tfprotov5.ConfigureProviderResponse{}
-	diags := []*tfprotov5.Diagnostic{}
+func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov6.ConfigureProviderRequest) (*tfprotov6.ConfigureProviderResponse, error) {
+	response := &tfprotov6.ConfigureProviderResponse{}
+	diags := []*tfprotov6.Diagnostic{}
 	var providerConfig map[string]tftypes.Value
 	var err error
 
@@ -42,8 +42,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	cfgType := GetObjectTypeFromSchema(GetProviderConfigSchema())
 	cfgVal, err := req.Config.Unmarshal(cfgType)
 	if err != nil {
-		response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Failed to decode ConfigureProvider request parameter",
 			Detail:   err.Error(),
 		})
@@ -52,8 +52,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	err = cfgVal.As(&providerConfig)
 	if err != nil {
 		// invalid configuration schema - this shouldn't happen, bail out now
-		response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Provider configuration: failed to extract 'config_path' value",
 			Detail:   err.Error(),
 		})
@@ -66,8 +66,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["experiments"].As(&experimentsBlock)
 		if err != nil {
 			// invalid configuration schema - this shouldn't happen, bail out now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: failed to extract 'experiments' value",
 				Detail:   err.Error(),
 			})
@@ -78,8 +78,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			err := experimentsBlock[0].As(&experimentsObj)
 			if err != nil {
 				// invalid configuration schema - this shouldn't happen, bail out now
-				response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
+				response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Summary:  "Provider configuration: failed to extract 'experiments' value",
 					Detail:   err.Error(),
 				})
@@ -89,8 +89,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 				err = experimentsObj["manifest_resource"].As(&providerEnabled)
 				if err != nil {
 					// invalid attribute type - this shouldn't happen, bail out for now
-					response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-						Severity: tfprotov5.DiagnosticSeverityError,
+					response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+						Severity: tfprotov6.DiagnosticSeverityError,
 						Summary:  "Provider configuration: failed to extract 'manifest_resource' value",
 						Detail:   err.Error(),
 					})
@@ -104,8 +104,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		if err != nil {
 			if err != nil {
 				// invalid attribute type - this shouldn't happen, bail out for now
-				response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
+				response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Summary:  "Provider configuration: failed to parse boolean from `TF_X_KUBERNETES_MANIFEST_RESOURCE` env var",
 					Detail:   err.Error(),
 				})
@@ -130,8 +130,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["config_path"].As(&configPath)
 		if err != nil {
 			// invalid attribute - this shouldn't happen, bail out now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: failed to extract 'config_path' value",
 				Detail:   err.Error(),
 			})
@@ -148,8 +148,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			_, err = os.Stat(configPathAbs)
 		}
 		if err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+			diags = append(diags, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityInvalid,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   fmt.Sprintf("'config_path' refers to an invalid path: %q: %v", configPathAbs, err),
 			})
@@ -163,8 +163,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		var configPaths []tftypes.Value
 		err = providerConfig["config_paths"].As(&configPaths)
 		if err != nil {
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: failed to extract 'config_paths' value",
 				Detail:   err.Error(),
 			})
@@ -188,8 +188,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 				_, err = os.Stat(absPath)
 			}
 			if err != nil {
-				diags = append(diags, &tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityInvalid,
+				diags = append(diags, &tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityInvalid,
 					Summary:  "Invalid attribute in provider configuration",
 					Detail:   fmt.Sprintf("'config_paths' refers to an invalid path: %q: %v", absPath, err),
 				})
@@ -205,8 +205,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	if !providerConfig["client_certificate"].IsNull() && providerConfig["client_certificate"].IsKnown() {
 		err = providerConfig["client_certificate"].As(&clientCertificate)
 		if err != nil {
-			response.Diagnostics = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+			response.Diagnostics = append(diags, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityInvalid,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "'client_certificate' type cannot be asserted: " + err.Error(),
 			})
@@ -219,8 +219,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	if len(clientCertificate) > 0 {
 		ccPEM, _ := pem.Decode([]byte(clientCertificate))
 		if ccPEM == nil || ccPEM.Type != "CERTIFICATE" {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+			diags = append(diags, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityInvalid,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "'client_certificate' is not a valid PEM encoded certificate",
 			})
@@ -235,8 +235,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["cluster_ca_certificate"].As(&clusterCaCertificate)
 		if err != nil {
 			// invalid attribute type - this shouldn't happen, bail out for now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: failed to extract 'cluster_ca_certificate' value",
 				Detail:   err.Error(),
 			})
@@ -249,8 +249,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	if len(clusterCaCertificate) > 0 {
 		ca, _ := pem.Decode([]byte(clusterCaCertificate))
 		if ca == nil || ca.Type != "CERTIFICATE" {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+			diags = append(diags, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityInvalid,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "'cluster_ca_certificate' is not a valid PEM encoded certificate",
 			})
@@ -265,8 +265,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["insecure"].As(&insecure)
 		if err != nil {
 			// invalid attribute type - this shouldn't happen, bail out for now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: failed to assert type of 'insecure' value",
 				Detail:   err.Error(),
 			})
@@ -276,8 +276,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	if insecureEnv, ok := os.LookupEnv("KUBE_INSECURE"); ok && insecureEnv != "" {
 		iv, err := strconv.ParseBool(insecureEnv)
 		if err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+			diags = append(diags, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityInvalid,
 				Summary:  "Invalid provider configuration",
 				Detail:   "Environment variable KUBE_INSECURE contains invalid value: " + err.Error(),
 			})
@@ -294,8 +294,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["tls_server_name"].As(&tlsServerName)
 		if err != nil {
 			// invalid attribute type - this shouldn't happen, bail out for now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: failed to assert type of 'tls_server_name' value",
 				Detail:   err.Error(),
 			})
@@ -318,8 +318,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["host"].As(&host)
 		if err != nil {
 			// invalid attribute path - this shouldn't happen, bail out for now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: failed to extract 'host' value",
 				Detail:   err.Error(),
 			})
@@ -333,16 +333,16 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	if len(host) > 0 {
 		_, err = url.ParseRequestURI(host)
 		if err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+			diags = append(diags, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityInvalid,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "'host' is not a valid URL",
 			})
 		}
 		hostURL, _, err := rest.DefaultServerURL(host, "", apimachineryschema.GroupVersion{}, defaultTLS)
 		if err != nil {
-			response.Diagnostics = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+			response.Diagnostics = append(diags, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityInvalid,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "Invalid value for 'host': " + err.Error(),
 			})
@@ -362,8 +362,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["client_key"].As(&clientKey)
 		if err != nil {
 			// invalid attribute type - this shouldn't happen, bail out for now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: ",
 				Detail:   "Failed to extract 'client_key' value" + err.Error(),
 			})
@@ -377,8 +377,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	if len(clientKey) > 0 {
 		ck, _ := pem.Decode([]byte(clientKey))
 		if ck == nil || !strings.Contains(ck.Type, "PRIVATE KEY") {
-			diags = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+			diags = append(diags, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityInvalid,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "'client_key' is not a valid PEM encoded private key",
 			})
@@ -398,8 +398,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["config_context"].As(&cfgContext)
 		if err != nil {
 			// invalid attribute type - this shouldn't happen, bail out for now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: failed to assert type of 'config_context' value",
 				Detail:   err.Error(),
 			})
@@ -420,8 +420,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["config_context_cluster"].As(&cfgCtxCluster)
 		if err != nil {
 			// invalid attribute type - this shouldn't happen, bail out for now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: failed to assert type of 'config_context_cluster' value",
 				Detail:   err.Error(),
 			})
@@ -440,8 +440,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["config_context_user"].As(&cfgContextAuthInfo)
 		if err != nil {
 			// invalid attribute type - this shouldn't happen, bail out for now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: failed to assert type of 'config_context_user' value",
 				Detail:   err.Error(),
 			})
@@ -460,8 +460,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["username"].As(&username)
 		if err != nil {
 			// invalid attribute type - this shouldn't happen, bail out for now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: failed to assert type of 'username' value",
 				Detail:   err.Error(),
 			})
@@ -478,8 +478,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["password"].As(&password)
 		if err != nil {
 			// invalid attribute type - this shouldn't happen, bail out for now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: failed to assert type of 'password' value",
 				Detail:   err.Error(),
 			})
@@ -496,8 +496,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["token"].As(&token)
 		if err != nil {
 			// invalid attribute type - this shouldn't happen, bail out for now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: failed to assert type of 'token' value",
 				Detail:   err.Error(),
 			})
@@ -514,8 +514,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["proxy_url"].As(&proxyURL)
 		if err != nil {
 			// invalid attribute type - this shouldn't happen, bail out for now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: failed to assert type of 'proxy_url' value",
 				Detail:   err.Error(),
 			})
@@ -532,8 +532,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["exec"].As(&execBlock)
 		if err != nil {
 			// invalid attribute type - this shouldn't happen, bail out for now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
+			response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+				Severity: tfprotov6.DiagnosticSeverityError,
 				Summary:  "Provider configuration: failed to assert type of 'exec' value",
 				Detail:   err.Error(),
 			})
@@ -545,8 +545,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			var execObj map[string]tftypes.Value
 			err := execBlock[0].As(&execObj)
 			if err != nil {
-				response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
+				response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+					Severity: tfprotov6.DiagnosticSeverityError,
 					Summary:  `Provider configuration: failed to assert type of "exec" block`,
 					Detail:   err.Error(),
 				})
@@ -557,8 +557,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 				err = execObj["api_version"].As(&apiv)
 				if err != nil {
 					// invalid attribute type - this shouldn't happen, bail out for now
-					response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-						Severity: tfprotov5.DiagnosticSeverityError,
+					response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+						Severity: tfprotov6.DiagnosticSeverityError,
 						Summary:  "Provider configuration: failed to assert type of 'api_version' value",
 						Detail:   err.Error(),
 					})
@@ -571,8 +571,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 				err = execObj["command"].As(&cmd)
 				if err != nil {
 					// invalid attribute type - this shouldn't happen, bail out for now
-					response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-						Severity: tfprotov5.DiagnosticSeverityError,
+					response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+						Severity: tfprotov6.DiagnosticSeverityError,
 						Summary:  "Provider configuration: failed to assert type of 'command' value",
 						Detail:   err.Error(),
 					})
@@ -585,8 +585,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 				err = execObj["args"].As(&xcmdArgs)
 				if err != nil {
 					// invalid attribute type - this shouldn't happen, bail out for now
-					response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-						Severity: tfprotov5.DiagnosticSeverityError,
+					response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+						Severity: tfprotov6.DiagnosticSeverityError,
 						Summary:  "Provider configuration: failed to assert type of 'args' value",
 						Detail:   err.Error(),
 					})
@@ -598,8 +598,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 					err := arg.As(&v)
 					if err != nil {
 						// invalid attribute type - this shouldn't happen, bail out for now
-						response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-							Severity: tfprotov5.DiagnosticSeverityError,
+						response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+							Severity: tfprotov6.DiagnosticSeverityError,
 							Summary:  "Provider configuration: failed to assert type of element in 'args' value",
 							Detail:   err.Error(),
 						})
@@ -613,8 +613,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 				err = execObj["env"].As(&xcmdEnvs)
 				if err != nil {
 					// invalid attribute type - this shouldn't happen, bail out for now
-					response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-						Severity: tfprotov5.DiagnosticSeverityError,
+					response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+						Severity: tfprotov6.DiagnosticSeverityError,
 						Summary:  "Provider configuration: failed to assert type of element in 'env' value",
 						Detail:   err.Error(),
 					})
@@ -626,8 +626,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 					err = v.As(&vs)
 					if err != nil {
 						// invalid attribute type - this shouldn't happen, bail out for now
-						response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-							Severity: tfprotov5.DiagnosticSeverityError,
+						response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+							Severity: tfprotov6.DiagnosticSeverityError,
 							Summary:  "Provider configuration: failed to assert type of element in 'env' value",
 							Detail:   err.Error(),
 						})
@@ -651,8 +651,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			// this is a terrible fix for if the configuration is a calculated value
 			return response, nil
 		}
-		response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		response.Diagnostics = append(response.Diagnostics, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Provider configuration: cannot load Kubernetes client config",
 			Detail:   err.Error(),
 		})
@@ -672,17 +672,17 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	return response, nil
 }
 
-func (s *RawProviderServer) canExecute() (resp []*tfprotov5.Diagnostic) {
+func (s *RawProviderServer) canExecute() (resp []*tfprotov6.Diagnostic) {
 	if !s.providerEnabled {
-		resp = append(resp, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp = append(resp, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Experimental feature not enabled.",
 			Detail:   "The `kubernetes_manifest` resource is an experimental feature and must be explicitly enabled in the provider configuration block.",
 		})
 	}
 	if semver.IsValid(s.hostTFVersion) && semver.Compare(s.hostTFVersion, minTFVersion) < 0 {
-		resp = append(resp, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
+		resp = append(resp, &tfprotov6.Diagnostic{
+			Severity: tfprotov6.DiagnosticSeverityError,
 			Summary:  "Incompatible terraform version",
 			Detail:   fmt.Sprintf("The `kubernetes_manifest` resource requires Terraform %s or above", minTFVersion),
 		})

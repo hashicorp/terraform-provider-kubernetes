@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
@@ -52,8 +53,8 @@ type KubernetesProviderModel struct {
 
 	ProxyURL types.String `tfsdk:"proxy_url"`
 
-	IgnoreAnnotations types.List `tfsdk:"ignore_annotations"`
-	IgnoreLabels      types.List `tfsdk:"ignore_labels"`
+	IgnoreAnnotations []types.String `tfsdk:"ignore_annotations"`
+	IgnoreLabels      []types.String `tfsdk:"ignore_labels"`
 
 	Exec []struct {
 		APIVersion types.String            `tfsdk:"api_version"`
@@ -184,7 +185,12 @@ func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequ
 }
 
 func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	resources := []func() resource.Resource{}
+	if os.Getenv("TF_X_KUBERNETES_CODEGEN_PLUGIN6") == "1" {
+		// NOTE only add resources if plugin6 experiment is enabled
+		resources = append(resources, generatedResources...)
+	}
+	return resources
 }
 
 func (p *KubernetesProvider) DataSources(ctx context.Context) []func() datasource.DataSource {

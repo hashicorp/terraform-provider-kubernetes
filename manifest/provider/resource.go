@@ -36,6 +36,26 @@ func GVRFromUnstructured(o *unstructured.Unstructured, m meta.RESTMapper) (schem
 // GVKFromTftypesObject extracts a canonical schema.GroupVersionKind out of the resource's
 // metadata by checking it against the discovery API via a RESTMapper
 func GVKFromTftypesObject(in *tftypes.Value, m meta.RESTMapper) (schema.GroupVersionKind, error) {
+	gvk, err := GVKFromTftypesObjectRaw(in)
+	if err != nil {
+		return schema.GroupVersionKind{}, err
+	}
+	mappings, err := m.RESTMappings(gvk.GroupKind())
+	if err != nil {
+		return schema.GroupVersionKind{}, err
+	}
+	apv := gvk.GroupVersion().String()
+	for _, m := range mappings {
+		if m.GroupVersionKind.GroupVersion().String() == apv {
+			return m.GroupVersionKind, nil
+		}
+	}
+	return schema.GroupVersionKind{}, errors.New("cannot select exact GV from REST mapper")
+}
+
+// GVKFromTftypesObjectRaw extracts a canonical schema.GroupVersionKind out of the resource's
+// metadata
+func GVKFromTftypesObjectRaw(in *tftypes.Value) (schema.GroupVersionKind, error) {
 	var obj map[string]tftypes.Value
 	err := in.As(&obj)
 	if err != nil {
@@ -55,16 +75,45 @@ func GVKFromTftypesObject(in *tftypes.Value, m meta.RESTMapper) (schema.GroupVer
 	if err != nil {
 		return schema.GroupVersionKind{}, err
 	}
-	mappings, err := m.RESTMappings(gv.WithKind(kind).GroupKind())
-	if err != nil {
-		return schema.GroupVersionKind{}, err
+	return gv.WithKind(kind), nil
+}
+
+// IsDeferred determines if resource should have skip Kubernetes API validation during plan.
+func IsDeferred(in *tftypes.Value) bool {
+	obj := make(map[string]tftypes.Value)
+
+	if err := in.As(&obj); err != nil {
+		return false
 	}
-	for _, m := range mappings {
-		if m.GroupVersionKind.GroupVersion().String() == apv {
-			return m.GroupVersionKind, nil
-		}
+	var deferred bool
+	if err := obj["deferred"].As(&deferred); err != nil {
+		return false
 	}
-	return schema.GroupVersionKind{}, errors.New("cannot select exact GV from REST mapper")
+	return deferred
+}
+
+// HasDefinedNamespace checks if a resource contains namespace filed
+// without querying the Kubernetes discovery API
+func HasDefinedNamespace(in *tftypes.Value) bool {
+	var (
+		manObj  map[string]tftypes.Value
+		metaObj map[string]tftypes.Value
+	)
+	if err := in.As(&manObj); err != nil {
+		return false
+	}
+	metaVal, ok := manObj["metadata"]
+	if !ok || metaVal.IsNull() {
+		return false
+	}
+	if err := metaVal.As(&metaObj); err != nil {
+		return false
+	}
+	ns, ok := metaObj["namespace"]
+	if !ok || ns.IsNull() {
+		return false
+	}
+	return true
 }
 
 // IsResourceNamespaced determines if a resource is namespaced or cluster-level

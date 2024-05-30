@@ -210,6 +210,12 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 						Description: "List of manifest fields whose values can be altered by the API server during 'apply'. Defaults to: [\"metadata.annotations\", \"metadata.labels\"]",
 						Optional:    true,
 					},
+					{
+						Name:        "deferred",
+						Type:        tftypes.Bool,
+						Description: "Skip resource existence validation on the API server during 'plan'.",
+						Optional:    true,
+					},
 				},
 			},
 		},

@@ -9,16 +9,21 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
-	"github.com/hashicorp/terraform-provider-kubernetes/manifest"
-	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
-	"github.com/hashicorp/terraform-provider-kubernetes/manifest/payload"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
+	"github.com/hashicorp/terraform-provider-kubernetes/manifest/payload"
 )
 
 func (s *RawProviderServer) dryRun(ctx context.Context, obj tftypes.Value, fieldManager string, forceConflicts bool, isNamespaced bool) error {
+	tflog.Warn(ctx, "hello")
 	c, err := s.getDynamicClient()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve Kubernetes dynamic client during apply: %v", err)
@@ -256,6 +261,18 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		return resp, nil
 	}
 
+	isDeffered := false
+	if defferedVal, ok := proposedVal["deferred"]; ok {
+		if err := defferedVal.As(&isDeffered); err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Failed to extract planned resource state from tftypes.Value",
+				Detail:   err.Error(),
+			})
+
+		}
+	}
+
 	ppMan, ok := proposedVal["manifest"]
 	if !ok {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
@@ -276,7 +293,11 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		})
 		return resp, nil
 	}
+
 	gvk, err := GVKFromTftypesObject(&ppMan, rm)
+	if isDeffered && meta.IsNoMatchError(err) {
+		gvk, err = GVKFromTftypesObjectRaw(&ppMan)
+	}
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -286,13 +307,19 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		return resp, nil
 	}
 
-	vdiags := s.validateResourceOnline(&ppMan)
-	if len(vdiags) > 0 {
-		resp.Diagnostics = append(resp.Diagnostics, vdiags...)
-		return resp, nil
+	if !isDeffered {
+		vdiags := s.validateResourceOnline(&ppMan)
+		if len(vdiags) > 0 {
+			resp.Diagnostics = append(resp.Diagnostics, vdiags...)
+			return resp, nil
+		}
 	}
 
 	ns, err := IsResourceNamespaced(gvk, rm)
+	if isDeffered && meta.IsNoMatchError(err) {
+		ns = HasDefinedNamespace(&ppMan)
+		err = nil
+	}
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -307,13 +334,19 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		)
 	}
 
+	isDynamic := false
+
 	// Request a complete type for the resource from the OpenAPI spec
 	objectType, hints, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
 	if err != nil {
-		return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
+		if !isDeffered {
+			return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
+		}
+		isDynamic = true
 	}
-
-	if !objectType.Is(tftypes.Object{}) {
+	if isDynamic {
+		objectType = tftypes.DynamicPseudoType
+	} else if !objectType.Is(tftypes.Object{}) {
 		// non-structural resources have no schema so we just use the
 		// type information we can get from the config
 		objectType = ppMan.Type()
@@ -350,8 +383,9 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		}
 	}
 
-	so := objectType.(tftypes.Object)
-	s.logger.Debug("[PlanUpdateResource]", "OAPI type", dump(so))
+	if so, ok := objectType.(tftypes.Object); ok {
+		s.logger.Debug("[PlanUpdateResource]", "OAPI type", dump(so))
+	}
 
 	// Transform the input manifest to adhere to the type model from the OpenAPI spec
 	morphedManifest, d := morph.ValueToType(ppMan, objectType, tftypes.NewAttributePath().WithAttributeName("object"))
@@ -366,16 +400,20 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	}
 	s.logger.Debug("[PlanResourceChange]", "morphed manifest", dump(morphedManifest))
 
-	completePropMan, err := morph.DeepUnknown(objectType, morphedManifest, tftypes.NewAttributePath().WithAttributeName("object"))
-	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity:  tfprotov5.DiagnosticSeverityError,
-			Summary:   "Failed to backfill manifest from OpenAPI type",
-			Detail:    fmt.Sprintf("This usually happens when the provider cannot fully process the schema retrieved from cluster. Please report this to the provider maintainers.\nError: %s", err.Error()),
-			Attribute: tftypes.NewAttributePath().WithAttributeName("object"),
-		})
-		return resp, nil
+	completePropMan := tftypes.NewValue(objectType, tftypes.UnknownValue)
+	if !isDynamic {
+		completePropMan, err = morph.DeepUnknown(objectType, morphedManifest, tftypes.NewAttributePath().WithAttributeName("object"))
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity:  tfprotov5.DiagnosticSeverityError,
+				Summary:   "Failed to backfill manifest from OpenAPI type",
+				Detail:    fmt.Sprintf("This usually happens when the provider cannot fully process the schema retrieved from cluster. Please report this to the provider maintainers.\nError: %s", err.Error()),
+				Attribute: tftypes.NewAttributePath().WithAttributeName("object"),
+			})
+			return resp, nil
+		}
 	}
+
 	s.logger.Debug("[PlanResourceChange]", "backfilled manifest", dump(completePropMan))
 
 	if proposedVal["object"].IsNull() {

@@ -34,6 +34,6 @@ jobs:
           terraform_wrapper: false
       - name: Run Tests
         env:
-          TESTARGS: -run '^TestAccKubernetesDeferredActions'
+          TF_ACC: 1
         run: |
-          make testacc
+          go test -v -run '^TestAccKubernetesDeferredActions' ./kubernetes/test-dfa

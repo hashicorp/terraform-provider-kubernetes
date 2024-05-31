@@ -12,11 +12,10 @@ on:
     inputs:
       terraformVersion:
         description: Terraform version
-        default: 1.9.0-alpha20240516
+        default: ${{ vars.TERRAFORM_VERSION_EXP }}
 
 env:
-  TERRAFORM_VERSION: 1.9.0-alpha20240516
-  #${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION_EXP }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION_EXP }}
 
 jobs:
   acceptance_tests:
@@ -28,11 +27,6 @@ jobs:
         uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version-file: 'go.mod'
-      # - name: Install Terraform
-      #   uses: hashicorp/setup-terraform@651471c36a6092792c552e8b1bef71e592b462d8 # v3.1.1
-      #   with:
-      #     terraform_version: ${{ env.TERRAFORM_VERSION }}
-      #     terraform_wrapper: false
       - name: Run Tests
         env:
           TF_ACC: 1

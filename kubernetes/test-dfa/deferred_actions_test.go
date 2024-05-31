@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/mux"
 )
 
@@ -25,6 +26,9 @@ var muxFactory = map[string]func() (tfprotov5.ProviderServer, error){
 
 func TestAccKubernetesDeferredActions_2_step(t *testing.T) {
 	resource.Test(t, resource.TestCase{
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_9_0),
+		},
 		AdditionalCLIOptions: &resource.AdditionalCLIOptions{
 			Plan:  resource.PlanOptions{AllowDeferral: true},
 			Apply: resource.ApplyOptions{AllowDeferral: true},

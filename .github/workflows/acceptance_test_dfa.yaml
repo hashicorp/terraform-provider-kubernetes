@@ -12,7 +12,7 @@ on:
     inputs:
       terraformVersion:
         description: Terraform version
-        default: ${{ vars.TERRAFORM_VERSION_EXP }}
+        default: 1.9.0-beta1
 
 env:
   TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION_EXP }}

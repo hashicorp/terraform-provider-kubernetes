@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_manifest" "crd_workspaces" {
   manifest = {
     "apiVersion" = "apiextensions.k8s.io/v1"

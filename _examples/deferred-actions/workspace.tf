@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 resource "kubernetes_namespace_v1" "demo_ns" {
   metadata {
     name = "demo-ns"

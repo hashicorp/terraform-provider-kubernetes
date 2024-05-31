@@ -15,7 +15,8 @@ on:
         default: 1.9.0-alpha20240516
 
 env:
-  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION_EXP }}
+  TERRAFORM_VERSION: 1.9.0-alpha20240516
+  #${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION_EXP }}
 
 jobs:
   acceptance_tests:

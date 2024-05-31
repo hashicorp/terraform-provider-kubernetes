@@ -54,9 +54,8 @@ func main() {
 		opts = append(opts, tf5server.WithDebug(ctx, reattachConfigCh, nil))
 	}
 
-	tf5server.Serve(providerName, func() tfprotov5.ProviderServer {return muxer}, opts...)
+	tf5server.Serve(providerName, func() tfprotov5.ProviderServer { return muxer }, opts...)
 }
-
 
 // convertReattachConfig converts plugin.ReattachConfig to tfexec.ReattachConfig
 func convertReattachConfig(reattachConfig *plugin.ReattachConfig) tfexec.ReattachConfig {

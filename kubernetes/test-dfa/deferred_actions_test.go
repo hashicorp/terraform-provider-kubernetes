@@ -18,7 +18,7 @@ import (
 )
 
 var muxFactory = map[string]func() (tfprotov5.ProviderServer, error){
-	"kubernetes": func() (tfprotov5.ProviderServer, error){
+	"kubernetes": func() (tfprotov5.ProviderServer, error) {
 		return mux.MuxServer(context.Background(), "Test")
 	},
 }
@@ -26,7 +26,7 @@ var muxFactory = map[string]func() (tfprotov5.ProviderServer, error){
 func TestAccKubernetesDeferredActions_2_step(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		AdditionalCLIOptions: &resource.AdditionalCLIOptions{
-			Plan: resource.PlanOptions{AllowDeferral: true},
+			Plan:  resource.PlanOptions{AllowDeferral: true},
 			Apply: resource.ApplyOptions{AllowDeferral: true},
 		},
 		Steps: []resource.TestStep{

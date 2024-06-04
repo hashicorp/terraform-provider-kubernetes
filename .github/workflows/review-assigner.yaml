@@ -32,7 +32,7 @@ jobs:
                          await github.rest.pulls.requestReviewers({
                              owner: context.repo.owner,
                              repo: context.repo.repo,
-                             assignees: ["BBBmau"], // this will be replaced with pagerduty resp
+                             reviewers: ["BBBmau"], // this will be replaced with pagerduty resp
                              pull_number: context.issue.number,
                          })
                      } catch(error){

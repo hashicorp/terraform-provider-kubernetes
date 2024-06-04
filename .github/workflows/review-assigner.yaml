@@ -17,7 +17,7 @@ jobs:
 
                  if (context.eventName == "issues"){
                      try{
-                         github.rest.issues.addAssignees({
+                         await github.rest.issues.addAssignees({
                              context.repo.owner,
                              context.repo.repo,
                              context.issue.number,
@@ -28,7 +28,7 @@ jobs:
                  }
                  //if (context.eventName == "pull_request"){
                  //    try{
-                 //        github.rest.pulls.requestReviewers({
+                 //        await github.rest.pulls.requestReviewers({
                  //            context.repo.owner,
                  //            context.repo.repo,
                  //            context.issue.number,

@@ -15,25 +15,25 @@ jobs:
           script: |
                 console.log("triggered by: " + context.eventName)
 
-                 //if (context.eventName == "issues"){
-                 //    try{
-                 //        await github.rest.issues.addAssignees({
-                 //            context.repo.owner,
-                 //            context.repo.repo,
-                 //            context.issue.number,
-                 //        })
-                 //    } catch(error){
-                 //        core.setFailed("error assigning assignee:" + error)
-                 //    }
-                 //}
-                 //if (context.eventName == "pull_request"){
-                 //    try{
-                 //        await github.rest.pulls.requestReviewers({
-                 //            context.repo.owner,
-                 //            context.repo.repo,
-                 //            context.issue.number,
-                 //        })
-                 //    } catch(error){
-                 //        core.setFailed("error assigning reviewer:" + error)
-                 //    }
-                 //}
+                 if (context.eventName == "issues"){
+                     try{
+                         await github.rest.issues.addAssignees({
+                             owner: context.repo.owner,
+                             repo: context.repo.repo,
+                             issue_number: context.issue.number, // issue.number is used for both issues and PRs
+                         })
+                     } catch(error){
+                         core.setFailed("error assigning assignee:" + error)
+                     }
+                 }
+                 if (context.eventName == "pull_request"){
+                     try{
+                         await github.rest.pulls.requestReviewers({
+                             owner: context.repo.owner,
+                             repo: context.repo.repo,
+                             pull_number: context.issue.number,
+                         })
+                     } catch(error){
+                         core.setFailed("error assigning reviewer:" + error)
+                     }
+                 }
